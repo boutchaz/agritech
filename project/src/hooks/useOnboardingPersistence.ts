@@ -119,13 +119,19 @@ export function useOnboardingPersistence(userId: string, email: string) {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    // If no userId provided, still mark as restored to avoid infinite loading
+    if (!userId) {
+      console.warn('[useOnboardingPersistence] No userId provided, using default state');
+      setState(getDefaultState(userId || '', email));
+      setIsRestored(true);
+      return;
+    }
 
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: OnboardingState = JSON.parse(saved);
-        
+
         if (parsed.version === STORAGE_VERSION && parsed.userId === userId) {
           const hoursSinceLastSave = (Date.now() - parsed.lastSavedAt) / (1000 * 60 * 60);
           if (hoursSinceLastSave < 24) {

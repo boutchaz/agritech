@@ -1205,7 +1205,8 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         stepIndex={tourState.stepIndex}
         continuous
         showSkipButton
-        scrollToFirstStep
+        scrollToFirstStep={false}
+        disableScrolling={true}
         spotlightClicks
         disableOverlayClose
         callback={handleJoyrideCallback}

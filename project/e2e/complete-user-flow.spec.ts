@@ -39,25 +39,18 @@ test.describe('Complete User Flow', () => {
     const testPassword = 'TestPassword123!';
 
     // Fill registration form
+    // Organization name is REQUIRED and must be filled first
+    await fillFormField(page, '[data-testid="register-organization"]', `E2E Test Organization ${timestamp}`);
     await fillFormField(page, 'input[type="email"]', testEmail);
     await fillFormField(page, '[data-testid="register-password"]', testPassword);
     await fillFormField(page, '[data-testid="register-confirm-password"]', testPassword);
 
-    // Fill name fields if present
-    const firstNameInput = page.locator('input[name="firstName"], input[name="first_name"]');
-    const lastNameInput = page.locator('input[name="lastName"], input[name="last_name"]');
-    if (await firstNameInput.isVisible()) {
-      await fillFormField(page, 'input[name="firstName"], input[name="first_name"]', 'E2E');
-    }
-    if (await lastNameInput.isVisible()) {
-      await fillFormField(page, 'input[name="lastName"], input[name="last_name"]', 'Test User');
-    }
-
     // Submit registration and wait for redirect
-    await page.click('button[type="submit"]');
-    
-    // Wait for redirect to select-trial or onboarding page
-    await page.waitForURL(/(organization|onboarding|select-trial)/, { timeout: 30000 });
+    // Use Promise.all to wait for both the click and navigation
+    await Promise.all([
+      page.waitForURL(/(organization|onboarding|select-trial)/, { timeout: 30000 }),
+      page.click('button[type="submit"]'),
+    ]);
 
     console.log('✅ Registration successful');
 
@@ -67,16 +60,16 @@ test.describe('Complete User Flow', () => {
     console.log('\n🏢 Step 2: Organization Creation');
 
     // Check if organization creation form is present
-    const orgForm = page.locator('[data-testid="create-organization-form"], form:has-text("organization" i)');
+    const orgForm = page.locator('[data-testid="create-organization-form"], form').filter({ hasText: /organization/i });
     if (await orgForm.isVisible({ timeout: 3000 })) {
       const orgName = `E2E Test Organization ${timestamp}`;
 
-      await fillFormField(page, 'input[name="name"], input[placeholder*="organization" i]', orgName);
+      await fillFormField(page, 'input[name="name"]', orgName);
 
       // Select country if present
-      const countrySelect = page.locator('select[name="country"], select[placeholder*="country" i]');
+      const countrySelect = page.locator('select[name="country"]').filter({ hasText: /morocco/i });
       if (await countrySelect.isVisible()) {
-        await page.selectOption('select[name="country"], select[placeholder*="country" i]', 'Morocco');
+        await page.selectOption('select[name="country"]', 'Morocco');
       }
 
       // Submit organization creation
@@ -117,19 +110,13 @@ test.describe('Complete User Flow', () => {
     await expect(startTrialButton).toBeVisible({ timeout: 5000 });
     await expect(startTrialButton).toBeEnabled({ timeout: 5000 });
     
-    // Click and wait for API response
+    // Click and wait for redirect to dashboard
     console.log('  → Clicking Start Trial button...');
+    // The trial creation redirects to dashboard using window.location.href
     await Promise.all([
-      page.waitForResponse(
-        (response) => response.url().includes('/api/v1/subscriptions/trial') && response.status() === 200,
-        { timeout: 20000 }
-      ),
+      page.waitForURL(/dashboard/, { timeout: 30000 }),
       startTrialButton.click(),
     ]);
-    console.log('  → Trial subscription API call successful');
-
-    // Wait for redirect to dashboard (uses window.location.href, so full page load)
-    await page.waitForURL(/dashboard/, { timeout: 20000 });
     console.log('✅ Trial selected, redirected to dashboard');
 
     // ========================================
@@ -141,8 +128,8 @@ test.describe('Complete User Flow', () => {
     await waitForLoadingComplete(page);
     await expect(page.locator('main, [role="main"]')).toBeVisible();
 
-    // Verify navigation sidebar exists
-    const navSidebar = page.locator('nav, aside, [role="navigation"]');
+    // Verify navigation sidebar exists (use first since there might be multiple navs)
+    const navSidebar = page.locator('nav, aside, [role="navigation"]').first();
     await expect(navSidebar).toBeVisible();
 
     console.log('✅ Dashboard loaded');
@@ -159,12 +146,12 @@ test.describe('Complete User Flow', () => {
     // Wait for farms API
     await page.waitForResponse(/\/api\/v1\/farms/, { timeout: 10000 });
 
-    // Click create farm button
-    const createFarmButton = page.locator('[data-testid="create-farm-button"], button:has-text("Add Farm"), button:has-text("Add")').first();
+    // Click create farm button (button is "New Farm" or "Create a farm")
+    const createFarmButton = page.locator('button').filter({ hasText: /New Farm|Create a farm/i }).first();
     await createFarmButton.click();
 
     // Wait for form
-    await page.waitForSelector('[data-testid="create-farm-form"], form:has-text("Farm" i)', { timeout: 5000 });
+    await expect(page.locator('form').filter({ hasText: /Farm/i })).toBeVisible({ timeout: 5000 });
 
     // Fill farm details
     const farmName = `E2E Test Farm ${timestamp}`;
@@ -192,12 +179,12 @@ test.describe('Complete User Flow', () => {
     // Wait for parcels API
     await page.waitForResponse(/\/api\/v1\/parcels/, { timeout: 10000 });
 
-    // Click create parcel button
-    const createParcelButton = page.locator('[data-testid="create-parcel-button"], button:has-text("Add Parcel"), button:has-text("Add")').first();
+    // Click create parcel button (button is "Add a parcel")
+    const createParcelButton = page.locator('button').filter({ hasText: /Add a parcel/i }).first();
     await createParcelButton.click();
 
     // Wait for form
-    await page.waitForSelector('[data-testid="create-parcel-form"], form:has-text("Parcel" i)', { timeout: 5000 });
+    await expect(page.locator('form').filter({ hasText: /Parcel/i })).toBeVisible({ timeout: 5000 });
 
     // Fill parcel details
     const parcelName = `E2E Test Parcel ${timestamp}`;

@@ -335,22 +335,6 @@ function SelectTrialPage() {
 
       console.log('✅ Trial subscription created:', data.subscription)
 
-      // Mark onboarding as completed in user profile
-      try {
-        const { error: updateError } = await authSupabase
-          .from('user_profiles')
-          .update({ onboarding_completed: true })
-          .eq('user_id', user.id)
-
-        if (updateError) {
-          console.warn('⚠️ Failed to mark onboarding as completed:', updateError)
-        } else {
-          console.log('✅ Onboarding marked as completed')
-        }
-      } catch (err) {
-        console.warn('⚠️ Error updating onboarding status:', err)
-      }
-
       // Ensure organization is saved to BOTH localStorage AND Zustand store
       // This is critical for API client to find the organization ID after page reload
       localStorage.setItem('currentOrganization', JSON.stringify(orgToUse))
@@ -393,8 +377,8 @@ function SelectTrialPage() {
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Use window.location.href to force a full page reload and ensure provider re-evaluates
-      // This prevents the redirect loop where provider redirects back to /select-trial
-      window.location.href = '/dashboard'
+      // Redirect to onboarding flow, not dashboard
+      window.location.href = '/onboarding'
     } catch (err) {
       console.error('Error creating trial subscription:', err)
       setError(err instanceof Error ? err.message : 'Failed to create trial subscription')

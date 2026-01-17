@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/components/MultiTenantAuthProvider'
 import Dashboard from '@/components/Dashboard'
 import ModernPageHeader from '@/components/ModernPageHeader'
-import { Home, Building2, Search } from 'lucide-react'
+import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
 import type { SensorData, DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
 import { useKBar } from 'kbar'
@@ -11,6 +11,15 @@ import { authSupabase } from '@/lib/auth-supabase'
 import { withRouteProtection } from '@/components/authorization/withRouteProtection'
 import { useTranslation } from 'react-i18next'
 import { useAutoStartTour } from '@/contexts/TourContext'
+import { useLiveMetrics, useLiveSummary, useActivityHeatmap } from '@/hooks/useLiveMetrics'
+import {
+  ConcurrentUsersWidget,
+  ActiveOperationsWidget,
+  FarmActivitiesWidget,
+  FeatureUsageWidget,
+  LiveSummaryCards,
+  ActivityHeatMap,
+} from '@/components/LiveDashboard'
 
 const mockSensorData: SensorData[] = [
   {
@@ -43,6 +52,9 @@ const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
+
+  // Live mode toggle state
+  const [isLiveMode, setIsLiveMode] = useState(false);
 
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
@@ -85,13 +97,33 @@ const AppContent: React.FC = () => {
     staleTime: 60000,
   });
 
+  // Fetch live metrics with auto-refresh (only when live mode is enabled)
+  const {
+    data: liveMetrics,
+    isLoading: metricsLoading,
+    refetch: refetchMetrics,
+  } = useLiveMetrics({ refetchInterval: 5000, enabled: isLiveMode });
+
+  // Fetch summary stats (only when live mode is enabled)
+  const {
+    data: liveSummary,
+    isLoading: summaryLoading,
+  } = useLiveSummary({ refetchInterval: 10000, enabled: isLiveMode });
+
+  // Fetch heatmap data (only when live mode is enabled)
+  const {
+    data: heatmapData,
+    isLoading: heatmapLoading,
+  } = useActivityHeatmap({ refetchInterval: 15000, enabled: isLiveMode });
+
   // Set page title
   useEffect(() => {
     const organizationName = currentOrganization?.name ?? 'Agritech Suite';
     const farmName = currentFarm?.name ? ` · ${currentFarm.name}` : '';
-    const title = `${organizationName}${farmName} | ${t('dashboard.pageTitle')}`;
+    const modeTitle = isLiveMode ? t('liveDashboard.title') : t('dashboard.pageTitle');
+    const title = `${organizationName}${farmName} | ${modeTitle}`;
     document.title = title;
-  }, [currentOrganization, currentFarm, t]);
+  }, [currentOrganization, currentFarm, t, isLiveMode]);
 
   // Structured data for SEO
   const structuredData = useMemo(() => {
@@ -126,25 +158,116 @@ const AppContent: React.FC = () => {
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
           ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
-          { icon: Home, label: t('nav.dashboard'), isActive: true }
+          { icon: isLiveMode ? Activity : Home, label: isLiveMode ? t('liveDashboard.title') : t('nav.dashboard'), isActive: true }
         ]}
-        title={t('dashboard.title')}
-        subtitle={t('dashboard.subtitle')}
-        actions={<QuickActionsButton />}
+        title={isLiveMode ? t('liveDashboard.title') : t('dashboard.title')}
+        subtitle={isLiveMode ? t('liveDashboard.subtitle') : t('dashboard.subtitle')}
+        actions={
+          <div className="flex items-center gap-3">
+            {/* Live Mode Toggle */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Live</span>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={isLiveMode}
+                  onChange={(e) => setIsLiveMode(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${isLiveMode ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-200 ${isLiveMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                </div>
+              </div>
+            </label>
+            {/* Live mode refresh button */}
+            {isLiveMode && (
+              <button
+                onClick={() => refetchMetrics()}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" />
+                {t('liveDashboard.refresh')}
+              </button>
+            )}
+            <QuickActionsButton />
+          </div>
+        }
       />
 
-      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {t('dashboard.unifiedView.title')}
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {t('dashboard.unifiedView.subtitle')}
-            </p>
-          </div>
-          <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
-        </div>
+      <div className="p-3 sm:p-4 lg:p-6 pb-6 space-y-6">
+        {isLiveMode ? (
+          <>
+            {/* Live Dashboard Content */}
+            <LiveSummaryCards summary={liveSummary} isLoading={summaryLoading} />
+
+            {/* Main Grid - Heat Map and Concurrent Users */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Heat Map - Takes 2 columns */}
+              <div className="lg:col-span-2">
+                <ActivityHeatMap
+                  data={heatmapData || []}
+                  isLoading={heatmapLoading}
+                  lastUpdated={liveMetrics?.lastUpdated}
+                />
+              </div>
+
+              {/* Concurrent Users */}
+              <div className="lg:col-span-1">
+                <ConcurrentUsersWidget
+                  users={liveMetrics?.concurrentUsers.users || []}
+                  total={liveMetrics?.concurrentUsers.total || 0}
+                  isLoading={metricsLoading}
+                />
+              </div>
+            </div>
+
+            {/* Secondary Grid - Operations and Activities */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Active Operations */}
+              <ActiveOperationsWidget
+                operations={liveMetrics?.activeOperations.operations || []}
+                total={liveMetrics?.activeOperations.total || 0}
+                byType={liveMetrics?.activeOperations.byType || {}}
+                isLoading={metricsLoading}
+              />
+
+              {/* Farm Activities */}
+              <FarmActivitiesWidget
+                activities={liveMetrics?.farmActivities.activities || []}
+                total={liveMetrics?.farmActivities.total || 0}
+                isLoading={metricsLoading}
+              />
+            </div>
+
+            {/* Feature Usage */}
+            <FeatureUsageWidget
+              features={liveMetrics?.featureUsage || []}
+              isLoading={metricsLoading}
+            />
+
+            {/* Last Updated Footer */}
+            {liveMetrics?.lastUpdated && (
+              <div className="text-center text-xs text-gray-500 dark:text-gray-400">
+                {t('liveDashboard.lastUpdated')}: {new Date(liveMetrics.lastUpdated).toLocaleString()}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Regular Dashboard Content */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {t('dashboard.unifiedView.title')}
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t('dashboard.unifiedView.subtitle')}
+                </p>
+              </div>
+              <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
+            </div>
+          </>
+        )}
       </div>
 
       <section aria-hidden="true" className="sr-only">

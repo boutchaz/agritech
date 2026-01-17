@@ -18,7 +18,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { useOnboardingPersistence, OnboardingState } from '../hooks/useOnboardingPersistence';
+import { useOnboardingBackendPersistence, OnboardingState } from '../hooks/useOnboardingBackendPersistence';
 import { Loader2 } from 'lucide-react';
 
 type ModuleSelection = OnboardingState['moduleSelection'];
@@ -111,6 +111,8 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   const {
     state,
     isRestored,
+    isSaving,
+    saveError,
     clearState,
     updateProfileData,
     updateOrganizationData,
@@ -119,7 +121,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
     updatePreferences,
     setCurrentStep,
     setExistingOrgId
-  } = useOnboardingPersistence(user?.id, user?.email);
+  } = useOnboardingBackendPersistence(user?.id, user?.email);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -832,6 +834,14 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8">
         {renderStepIndicator()}
 
+        {saveError && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-700">
+              ⚠️ Saving failed: {saveError}. Your changes are saved locally.
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-700">{error}</p>
@@ -885,19 +895,20 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
 
           <button
             onClick={handleNext}
-            disabled={loading ||
+            disabled={loading || isSaving ||
               (currentStep === 1 && (!profileData.first_name || !profileData.last_name)) ||
               (currentStep === 2 && (!organizationData.name || !organizationData.email)) ||
               (currentStep === 3 && (!farmData.name || !farmData.location || !farmData.size))
             }
             className={`
               ml-auto flex items-center space-x-2 px-6 py-3 rounded-lg font-semibold transition
-              ${loading ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700'}
+              ${(loading || isSaving) ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700'}
               text-white disabled:opacity-50 disabled:cursor-not-allowed
             `}
           >
+            {(loading || isSaving) && <Loader2 className="h-5 w-5 animate-spin" />}
             <span>{currentStep === 5 ? 'Terminer' : 'Suivant'}</span>
-            {currentStep < 5 && <ChevronRight className="h-5 w-5" />}
+            {currentStep < 5 && !isSaving && !loading && <ChevronRight className="h-5 w-5" />}
           </button>
         </div>
       </div>

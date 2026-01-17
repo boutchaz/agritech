@@ -19,14 +19,18 @@ async function completeOnboarding(page: Page) {
 
   // Wait for onboarding page to load fully
   await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(4000);
 
   // Check if there's a resume prompt and click "Recommencer" (Start Over)
+  // Wait longer for resume prompt as it might appear after state is loaded
   const startOverButton = page.locator('button:has-text("Recommencer")');
-  if (await startOverButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+  const hasResumePrompt = await startOverButton.isVisible({ timeout: 5000 }).catch(() => false);
+  if (hasResumePrompt) {
     console.log('Found resume prompt, clicking Start Over...');
     await startOverButton.click();
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
+    // Verify we're back on step 1
+    await page.waitForSelector('input[placeholder="Votre prénom"]', { timeout: 10000 });
   }
 
   // Step 1: Profile - Fill first name and last name
@@ -54,7 +58,10 @@ async function completeOnboarding(page: Page) {
   const nextButton = page.locator('button:has-text("Suivant")');
   await nextButton.click();
   console.log('Clicked Suivant for Step 1');
-  await page.waitForTimeout(3000);
+
+  // Wait for step transition to complete
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(2000);
 
   // Step 2: Organization - Fill organization details
   console.log('Onboarding Step 2/5: Organization...');
@@ -71,18 +78,66 @@ async function completeOnboarding(page: Page) {
     console.log(`Filled organization name: ${TEST_USER.organizationName}`);
   }
 
-  // Email
+  // Slug (required) - always fill to ensure it has a valid value
+  const slugInput = page.locator('input[placeholder="ferme-el-haouzia"]');
+  await slugInput.fill(TEST_USER.organizationName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+  console.log(`Filled slug: ${TEST_USER.organizationName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`);
+
+  // Email (required) - always fill
   const emailInput = page.locator('input[placeholder="contact@ferme.ma"]');
-  const emailValue = await emailInput.inputValue();
-  if (!emailValue) {
+  await emailInput.fill(TEST_USER.email);
+  console.log(`Filled email: ${TEST_USER.email}`);
+
+  // Wait a bit for any validation to clear
+  await page.waitForTimeout(1000);
+
+  // Check if button is enabled before clicking
+  const isButtonEnabled = await nextButton.isEnabled();
+  console.log(`Next button enabled: ${isButtonEnabled}`);
+
+  if (!isButtonEnabled) {
+    console.log('Button is disabled, trying to enable it by filling all fields...');
+    // Force fill all fields to ensure validation passes
+    await orgNameInput.fill(TEST_USER.organizationName);
+    await slugInput.fill('test-organization-' + uniqueId);
     await emailInput.fill(TEST_USER.email);
-    console.log(`Filled email: ${TEST_USER.email}`);
+    await page.waitForTimeout(1000);
+
+    // Check again
+    const isStillDisabled = await nextButton.isEnabled();
+    console.log(`Next button enabled after refill: ${isStillDisabled}`);
+    if (!isStillDisabled) {
+      // Try one more time with different values
+      console.log('Still disabled, trying with alternative values...');
+      await orgNameInput.fill('Test Organization ' + uniqueId);
+      await slugInput.fill('test-org-' + uniqueId);
+      await emailInput.fill(TEST_USER.email);
+      await page.waitForTimeout(500);
+    }
   }
 
-  await page.waitForTimeout(500);
   await nextButton.click();
   console.log('Clicked Suivant for Step 2');
-  await page.waitForTimeout(3000);
+
+  // Wait for step transition - wait for loading to finish first
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(2000);
+
+  // Wait for step 3 to appear - look for the farm name input specifically
+  // Use a more flexible selector and longer timeout
+  console.log('Waiting for Step 3 (Farm) form...');
+
+  // Check if we're still seeing step 2 elements (transition failed)
+  const stillOnStep2 = await page.locator('input[placeholder="Ex: Ferme El Haouzia"]').isVisible().catch(() => false);
+  if (stillOnStep2) {
+    console.log('WARNING: Still on Step 2, trying to click Next again...');
+    const nextButtonRetry = page.locator('button:has-text("Suivant")').first();
+    await nextButtonRetry.click();
+    await page.waitForTimeout(2000);
+  }
+
+  await page.waitForSelector('input[placeholder="Ex: Ferme Principale"]', { timeout: 15000 });
+  await page.waitForTimeout(1000);
 
   // Step 3: Farm - Fill farm details
   console.log('Onboarding Step 3/5: Farm...');
@@ -132,7 +187,7 @@ async function completeOnboarding(page: Page) {
   await page.waitForTimeout(5000);
 }
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig) {
   console.log('\n========================================');
   console.log('E2E Global Setup - Creating New Test User');
   console.log('========================================\n');
