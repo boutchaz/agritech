@@ -336,11 +336,10 @@ export class OnboardingService {
       }
     }
 
-    // Update user profile with language preference
+    // Update user profile with onboarding completion
     const { error: profileError } = await client
       .from('user_profiles')
       .update({
-        language: dto.language || 'fr',
         onboarding_completed: true,
         onboarding_completed_at: new Date().toISOString(),
         onboarding_state: null,
