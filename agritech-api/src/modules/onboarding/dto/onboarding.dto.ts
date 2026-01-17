@@ -9,76 +9,34 @@ export class OnboardingStateDto {
 
   @ApiPropertyOptional({ description: 'Profile data' })
   profileData?: {
-    @IsString()
-    @IsOptional()
     first_name?: string;
-    @IsString()
-    @IsOptional()
     last_name?: string;
-    @IsString()
-    @IsOptional()
     phone?: string;
-    @IsString()
-    @IsOptional()
     timezone?: string;
-    @IsString()
-    @IsOptional()
     language?: string;
   };
 
   @ApiPropertyOptional({ description: 'Organization data' })
   organizationData?: {
-    @IsString()
-    @IsOptional()
     name?: string;
-    @IsString()
-    @IsOptional()
     slug?: string;
-    @IsString()
-    @IsOptional()
     phone?: string;
-    @IsString()
-    @IsOptional()
     email?: string;
-    @IsEnum(['individual', 'business', 'farm'])
-    @IsOptional()
     account_type?: 'individual' | 'business' | 'farm';
-    @IsString()
-    @IsOptional()
     address?: string;
-    @IsString()
-    @IsOptional()
     city?: string;
-    @IsString()
-    @IsOptional()
     country?: string;
   };
 
   @ApiPropertyOptional({ description: 'Farm data' })
   farmData?: {
-    @IsString()
-    @IsOptional()
     name?: string;
-    @IsString()
-    @IsOptional()
     location?: string;
-    @IsNumber()
-    @IsOptional()
     size?: number;
-    @IsString()
-    @IsOptional()
     size_unit?: string;
-    @IsEnum(['main', 'sub'])
-    @IsOptional()
     farm_type?: 'main' | 'sub';
-    @IsString()
-    @IsOptional()
     description?: string;
-    @IsString()
-    @IsOptional()
     soil_type?: string;
-    @IsString()
-    @IsOptional()
     climate_zone?: string;
   };
 
@@ -96,24 +54,14 @@ export class OnboardingStateDto {
 
   @ApiPropertyOptional({ description: 'Preferences' })
   preferences?: {
-    @IsString()
-    @IsOptional()
     currency?: string;
-    @IsString()
-    @IsOptional()
     date_format?: string;
-    @IsBoolean()
-    @IsOptional()
     use_demo_data?: boolean;
-    @IsBoolean()
-    @IsOptional()
     enable_notifications?: boolean;
   };
 
   @ApiPropertyOptional({ description: 'Existing organization ID' })
-  @IsString()
-  @IsOptional()
-  existingOrgId?: string | null;
+  existingOrgId?: string;
 }
 
 export class SaveOnboardingProfileDto {
@@ -242,6 +190,6 @@ export class SaveOnboardingPreferencesDto {
   use_demo_data: boolean;
 
   @ApiProperty({ description: 'Enable notifications' })
-  @IsBoolean()
+  @Boolean()
   enable_notifications: boolean;
 }

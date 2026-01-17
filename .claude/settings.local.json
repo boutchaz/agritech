@@ -91,7 +91,8 @@
       "Bash(npm install:*)",
       "Bash(pkill:*)",
       "Bash(npm run start:*)",
-      "Bash(npm run db:migrate:*)"
+      "Bash(npm run db:migrate:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []
