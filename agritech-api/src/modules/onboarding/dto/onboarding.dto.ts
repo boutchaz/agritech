@@ -190,6 +190,6 @@ export class SaveOnboardingPreferencesDto {
   use_demo_data: boolean;
 
   @ApiProperty({ description: 'Enable notifications' })
-  @Boolean()
+  @IsBoolean()
   enable_notifications: boolean;
 }
