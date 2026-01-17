@@ -21,7 +21,7 @@ export const Route = createRootRoute({
             <TourProvider>
               <AbilityProvider>
                 <GlobalCommandPalette>
-                  <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                  <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-hidden">
                     <Outlet />
                     <OfflineIndicator />
                     <TourHelpButton />

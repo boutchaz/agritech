@@ -18,7 +18,7 @@ function OnboardingPage() {
         const { error: updateError } = await authSupabase
           .from('user_profiles')
           .update({ onboarding_completed: true })
-          .eq('user_id', user.id);
+          .eq('id', user.id);
 
         if (updateError) {
           console.warn('⚠️ Failed to mark onboarding as completed:', updateError);

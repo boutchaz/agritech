@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent body/html scrolling - only allow scroll in main content area */
+@layer base {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 /* Global, professional form styles */
 @layer base {
   /* Textual inputs, selects, and textareas */

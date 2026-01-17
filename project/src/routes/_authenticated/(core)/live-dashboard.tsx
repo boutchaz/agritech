@@ -86,7 +86,7 @@ const LiveDashboardPage: React.FC = () => {
         }
       />
 
-      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+      <div className="p-3 sm:p-4 lg:p-6 pb-6 space-y-6">
         {/* Summary Cards */}
         <LiveSummaryCards summary={liveSummary} isLoading={summaryLoading} />
 
