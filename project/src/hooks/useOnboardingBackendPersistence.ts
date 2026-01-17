@@ -1,57 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { onboardingApi, type OnboardingState } from '@/lib/api/onboarding';
+
+// Re-export the type for convenience
+export type { OnboardingState };
 
 const STORAGE_VERSION = 2; // Incremented from v1 (localStorage)
-
-export interface OnboardingState {
-  version: number;
-  userId: string;
-  currentStep: number;
-  profileData: {
-    first_name: string;
-    last_name: string;
-    phone: string;
-    timezone: string;
-    language: string;
-  };
-  organizationData: {
-    name: string;
-    slug: string;
-    phone: string;
-    email: string;
-    account_type: 'individual' | 'business' | 'farm';
-    address?: string;
-    city?: string;
-    country: string;
-  };
-  farmData: {
-    name: string;
-    location: string;
-    size: number;
-    size_unit: string;
-    farm_type: 'main' | 'sub';
-    description: string;
-    soil_type?: string;
-    climate_zone?: string;
-  };
-  moduleSelection: {
-    farm_management: boolean;
-    inventory: boolean;
-    sales: boolean;
-    procurement: boolean;
-    accounting: boolean;
-    hr: boolean;
-    analytics: boolean;
-    marketplace: boolean;
-  };
-  preferences: {
-    currency: string;
-    date_format: string;
-    use_demo_data: boolean;
-    enable_notifications: boolean;
-  };
-  existingOrgId: string | null;
-}
 
 const getDefaultState = (userId: string, email: string): OnboardingState => ({
   version: STORAGE_VERSION,
@@ -101,7 +54,7 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
 
 /**
  * Backend-persisted onboarding state hook
- * Stores onboarding progress in the database for cross-device synchronization
+ * Stores onboarding progress in the database via NestJS API for cross-device synchronization
  */
 export function useOnboardingBackendPersistence(userId: string, email: string) {
   const [state, setState] = useState<OnboardingState>(() => getDefaultState(userId || '', email));
@@ -109,7 +62,7 @@ export function useOnboardingBackendPersistence(userId: string, email: string) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Load onboarding state from database on mount
+  // Load onboarding state from backend API on mount
   useEffect(() => {
     if (!userId) {
       console.warn('[useOnboardingBackendPersistence] No userId provided, using default state');
@@ -121,29 +74,13 @@ export function useOnboardingBackendPersistence(userId: string, email: string) {
 
     const loadState = async () => {
       try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('onboarding_state, onboarding_current_step')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Failed to load onboarding state:', error);
-          setIsRestored(true);
-          return;
-        }
+        const savedState = await onboardingApi.getState();
 
         if (mounted) {
-          if (data?.onboarding_state) {
-            const parsed: OnboardingState = data.onboarding_state;
-
+          if (savedState) {
             // Validate version matches
-            if (parsed.version === STORAGE_VERSION && parsed.userId === userId) {
-              setState(parsed);
-              // Also sync current_step from database
-              if (data.onboarding_current_step && data.onboarding_current_step > parsed.currentStep) {
-                setState(prev => ({ ...prev, currentStep: data.onboarding_current_step }));
-              }
+            if (savedState.version === STORAGE_VERSION && savedState.userId === userId) {
+              setState(savedState);
             } else {
               // Version mismatch or different user, use default
               console.log('[useOnboardingBackendPersistence] Version mismatch or different user, using default state');
@@ -170,7 +107,7 @@ export function useOnboardingBackendPersistence(userId: string, email: string) {
     };
   }, [userId, email]);
 
-  // Save onboarding state to database
+  // Save onboarding state to backend API
   const saveState = useCallback(async (newState: Partial<OnboardingState>) => {
     const updated = { ...state, ...newState };
 
@@ -187,22 +124,12 @@ export function useOnboardingBackendPersistence(userId: string, email: string) {
     setSaveError(null);
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          onboarding_state: updated,
-          onboarding_current_step: updated.currentStep
-        })
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Failed to save onboarding state:', error);
-        setSaveError(error.message);
-        // Don't throw - allow local state to persist even if backend save fails
-      }
+      await onboardingApi.saveState(updated);
     } catch (err) {
-      console.error('Error saving onboarding state:', err);
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+      console.error('Failed to save onboarding state:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save';
+      setSaveError(errorMessage);
+      // Don't throw - allow local state to persist even if backend save fails
     } finally {
       setIsSaving(false);
     }
@@ -213,20 +140,10 @@ export function useOnboardingBackendPersistence(userId: string, email: string) {
     setState(getDefaultState(userId || '', email));
     setSaveError(null);
 
-    // Clear database state if userId exists
+    // Clear backend state if userId exists
     if (userId) {
       try {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({
-            onboarding_state: null,
-            onboarding_current_step: 1
-          })
-          .eq('id', userId);
-
-        if (error) {
-          console.error('Failed to clear onboarding state:', error);
-        }
+        await onboardingApi.clearState();
       } catch (err) {
         console.error('Error clearing onboarding state:', err);
       }

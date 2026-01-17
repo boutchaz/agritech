@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import {
   Building,
   Users,
@@ -20,6 +19,7 @@ import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { useOnboardingBackendPersistence, OnboardingState } from '../hooks/useOnboardingBackendPersistence';
 import { Loader2 } from 'lucide-react';
+import { onboardingApi } from '@/lib/api/onboarding';
 
 type ModuleSelection = OnboardingState['moduleSelection'];
 
@@ -157,13 +157,6 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
     }
   }, [organizationData.name, organizationData.slug, updateOrganizationData]);
 
-  // Check for existing data on mount (sync with database)
-  useEffect(() => {
-    if (isRestored) {
-      checkExistingData();
-    }
-  }, [user.id, isRestored]);
-
   // Prevent React Query refetch on visibility change during onboarding
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -178,53 +171,6 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
-
-  const checkExistingData = useCallback(async () => {
-    try {
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (existingProfile && existingProfile.first_name && !profileData.first_name) {
-        updateProfileData({
-          first_name: existingProfile.first_name || '',
-          last_name: existingProfile.last_name || '',
-          phone: existingProfile.phone || '',
-          timezone: existingProfile.timezone || 'Africa/Casablanca',
-          language: existingProfile.language || 'fr'
-        });
-      }
-
-      const { data: orgUsers } = await supabase
-        .from('organization_users')
-        .select('organization_id, organizations(*)')
-        .eq('user_id', user.id)
-        .limit(1);
-
-      if (orgUsers && orgUsers.length > 0) {
-        const org = (orgUsers[0] as any).organizations;
-        if (org && !existingOrgId) {
-          setExistingOrgId(org.id);
-          if (!organizationData.name) {
-            updateOrganizationData({
-              name: org.name || '',
-              slug: org.slug || '',
-              phone: org.phone || '',
-              email: org.email || user?.email || '',
-              account_type: org.account_type || 'farm',
-              address: org.address || '',
-              city: org.city || '',
-              country: org.country || 'MA'
-            });
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error checking existing data:', err);
-    }
-  }, [user.id, profileData.first_name, organizationData.name, existingOrgId, updateProfileData, updateOrganizationData, setExistingOrgId]);
 
   const handleStartOver = () => {
     clearState();
@@ -253,8 +199,12 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
         await saveModules();
         setCurrentStep(5);
       } else if (currentStep === 5) {
+        // savePreferencesAndComplete already calls completeOnboarding internally
         await savePreferences();
-        await completeOnboarding();
+        // Note: completeOnboarding is called inside savePreferencesAndComplete
+        // but we need to clear state and call onComplete
+        clearState();
+        onComplete();
       }
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue');
@@ -264,161 +214,30 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   };
 
   const saveProfile = async () => {
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({
-        id: user.id,
-        first_name: profileData.first_name,
-        last_name: profileData.last_name,
-        full_name: `${profileData.first_name} ${profileData.last_name}`,
-        phone: profileData.phone,
-        timezone: profileData.timezone,
-        language: profileData.language,
-        email: user.email
-      });
-
-    if (error) throw error;
+    await onboardingApi.saveProfile(profileData);
   };
 
   const saveOrganization = async () => {
-    if (existingOrgId) {
-      // Update existing
-      const { error } = await supabase
-        .from('organizations')
-        .update({
-          name: organizationData.name,
-          slug: organizationData.slug,
-          phone: organizationData.phone,
-          email: organizationData.email,
-          account_type: organizationData.account_type,
-          address: organizationData.address,
-          city: organizationData.city,
-          country: organizationData.country
-        })
-        .eq('id', existingOrgId);
-
-      if (error) throw error;
-    } else {
-      // Create new
-      const { data, error } = await supabase
-        .from('organizations')
-        .insert({
-          name: organizationData.name,
-          slug: organizationData.slug,
-          phone: organizationData.phone,
-          email: organizationData.email,
-          account_type: organizationData.account_type,
-          address: organizationData.address,
-          city: organizationData.city,
-          country: organizationData.country,
-          currency_code: preferences.currency,
-          timezone: profileData.timezone
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setExistingOrgId(data.id);
-
-      // Add user to organization
-      await supabase
-        .from('organization_users')
-        .insert({
-          organization_id: data.id,
-          user_id: user.id,
-          is_active: true
-        });
+    const result = await onboardingApi.saveOrganization(organizationData, existingOrgId || undefined);
+    if (result.id && !existingOrgId) {
+      setExistingOrgId(result.id);
     }
   };
 
   const saveFarm = async () => {
-    if (!existingOrgId) throw new Error('Organization not found');
-
-    // Insert farm directly
-    const { error } = await supabase
-      .from('farms')
-      .insert({
-        organization_id: existingOrgId,
-        name: farmData.name,
-        location: farmData.location,
-        size: farmData.size,
-        size_unit: farmData.size_unit,
-        soil_type: farmData.soil_type || null,
-        climate_zone: farmData.climate_zone || null,
-        description: farmData.description || null,
-        is_active: true
-      });
-
-    if (error) throw error;
+    await onboardingApi.saveFarm(farmData);
   };
 
   const saveModules = async () => {
-    if (!existingOrgId) return;
-
-    // Get selected module names
-    const selectedModuleNames = Object.entries(moduleSelection)
-      .filter(([_, enabled]) => enabled)
-      .map(([moduleName, _]) => moduleName);
-
-    if (selectedModuleNames.length === 0) return;
-
-    // Fetch module IDs from modules table
-    const { data: modules, error: modulesError } = await supabase
-      .from('modules')
-      .select('id, name')
-      .in('name', selectedModuleNames);
-
-    if (modulesError) throw modulesError;
-    if (!modules || modules.length === 0) return;
-
-    // Create organization_modules records
-    const modulesToInsert = modules.map(module => ({
-      organization_id: existingOrgId,
-      module_id: module.id,
-      is_active: true
-    }));
-
-    const { error } = await supabase
-      .from('organization_modules')
-      .upsert(modulesToInsert, { onConflict: 'organization_id,module_id' });
-
-    if (error) throw error;
+    await onboardingApi.saveModules(moduleSelection);
   };
 
   const savePreferences = async () => {
-    if (!existingOrgId) return;
-
-    // Update organization with preferences
-    const { error } = await supabase
-      .from('organizations')
-      .update({
-        currency_code: preferences.currency
-      })
-      .eq('id', existingOrgId);
-
-    if (error) throw error;
-
-    // Update user profile preferences
-    await supabase
-      .from('user_profiles')
-      .update({
-        language: profileData.language
-      })
-      .eq('id', user.id);
+    await onboardingApi.savePreferencesAndComplete(preferences);
   };
 
   const completeOnboarding = async () => {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({ onboarding_completed: true })
-      .eq('id', user.id);
-
-    if (error) throw error;
-
-    if (preferences.use_demo_data) {
-      console.log('Demo data setup would happen here');
-    }
-
+    // Already called in savePreferencesAndComplete
     clearState();
     onComplete();
   };
