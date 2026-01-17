@@ -5,9 +5,9 @@ relevantTo: [security]
 importance: 0.7
 relatedFiles: []
 usageStats:
-  loaded: 0
-  referenced: 0
-  successfulFeatures: 0
+  loaded: 2
+  referenced: 1
+  successfulFeatures: 1
 ---
 # security
 
@@ -22,3 +22,8 @@ usageStats:
 - **Situation:** Audit notes indicate some satellite-service endpoints do not enforce tenant context, creating an isolation hole outside the main API modules.
 - **Root cause:** Even with RLS and scoped deletes, auxiliary services can bypass tenant checks if they don’t validate organization context.
 - **How to avoid:** Requires adding tenant validation across service boundaries, possibly increasing auth and data-joining complexity.
+
+#### [Gotcha] FastAPI service currently unauthenticated with wildcard CORS (2026-01-17)
+- **Situation:** Audit found backend-service/app/main.py and app/api/indices.py expose endpoints without auth while allowing all origins
+- **Root cause:** Likely prioritized ease of local testing; no gateway/identity wired yet
+- **How to avoid:** Easier prototyping and cross-origin calls; higher exposure to unauthorized access and data exfiltration

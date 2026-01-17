@@ -16,7 +16,7 @@
   "dependencies": [],
   "workMode": "custom",
   "titleGenerating": false,
-  "status": "backlog",
+  "status": "waiting_approval",
   "id": "feature-1768582291128-t47cd3y2a",
   "descriptionHistory": [
     {
@@ -30,7 +30,8 @@
       "source": "edit"
     }
   ],
-  "startedAt": "2026-01-16T17:56:07.073Z",
-  "updatedAt": "2026-01-16T17:56:50.110Z",
-  "prUrl": "https://github.com/boutchaz/agritech/pull/2"
+  "startedAt": "2026-01-17T10:48:51.946Z",
+  "updatedAt": "2026-01-17T14:04:14.743Z",
+  "prUrl": "https://github.com/boutchaz/agritech/pull/2",
+  "justFinishedAt": "2026-01-17T14:04:14.743Z"
 }
