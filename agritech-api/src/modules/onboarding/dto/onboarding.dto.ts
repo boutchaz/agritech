@@ -1,5 +1,19 @@
-import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber, IsObject, Matches, MinLength, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class CheckSlugAvailabilityResponseDto {
+  @ApiProperty({ description: 'Whether the slug is available' })
+  available: boolean;
+
+  @ApiProperty({ description: 'The slug that was checked' })
+  slug: string;
+
+  @ApiPropertyOptional({ description: 'Suggested alternative if slug is taken' })
+  suggestion?: string;
+
+  @ApiPropertyOptional({ description: 'Error message if slug format is invalid' })
+  error?: string;
+}
 
 export class OnboardingStateDto {
   @ApiPropertyOptional({ description: 'State version for compatibility checking' })

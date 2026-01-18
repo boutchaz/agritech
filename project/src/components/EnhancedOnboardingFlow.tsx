@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Building,
   Users,
@@ -11,15 +11,17 @@ import {
   ChevronRight,
   Sparkles,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Loader2
 } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { useOnboardingBackendPersistence, OnboardingState } from '../hooks/useOnboardingBackendPersistence';
-import { Loader2 } from 'lucide-react';
-import { onboardingApi } from '@/lib/api/onboarding';
+import { onboardingApi, CheckSlugAvailabilityResponse } from '@/lib/api/onboarding';
 
 type ModuleSelection = OnboardingState['moduleSelection'];
 
@@ -126,6 +128,9 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [slugCheck, setSlugCheck] = useState<CheckSlugAvailabilityResponse | null>(null);
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
+  const slugCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { 
     currentStep, 
@@ -156,6 +161,44 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       }
     }
   }, [organizationData.name, organizationData.slug, updateOrganizationData]);
+
+  // Debounced slug availability check
+  useEffect(() => {
+    if (slugCheckTimeoutRef.current) {
+      clearTimeout(slugCheckTimeoutRef.current);
+    }
+
+    const slug = organizationData.slug;
+    if (!slug || slug.length < 3 || existingOrgId) {
+      setSlugCheck(null);
+      return;
+    }
+
+    setIsCheckingSlug(true);
+    slugCheckTimeoutRef.current = setTimeout(async () => {
+      try {
+        const result = await onboardingApi.checkSlugAvailability(slug);
+        setSlugCheck(result);
+      } catch (err) {
+        console.error('Failed to check slug availability:', err);
+        setSlugCheck(null);
+      } finally {
+        setIsCheckingSlug(false);
+      }
+    }, 500);
+
+    return () => {
+      if (slugCheckTimeoutRef.current) {
+        clearTimeout(slugCheckTimeoutRef.current);
+      }
+    };
+  }, [organizationData.slug, existingOrgId]);
+
+  const handleUseSuggestion = () => {
+    if (slugCheck?.suggestion) {
+      updateOrganizationData({ slug: slugCheck.suggestion });
+    }
+  };
 
   // Prevent React Query refetch on visibility change during onboarding
   useEffect(() => {
@@ -364,12 +407,62 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
       </FormField>
 
       <FormField label="Identifiant unique (slug)" required>
-        <Input
-          value={organizationData.slug}
-          onChange={(e) => updateOrganizationData({ slug: e.target.value })}
-          placeholder="ferme-el-haouzia"
-        />
-        <p className="text-xs text-gray-500 mt-1">URL: agritech.ma/{organizationData.slug}</p>
+        <div className="relative">
+          <Input
+            value={organizationData.slug}
+            onChange={(e) => updateOrganizationData({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+            placeholder="ferme-el-haouzia"
+            className={
+              slugCheck && !existingOrgId
+                ? slugCheck.available
+                  ? 'border-green-500 focus:border-green-500 focus:ring-green-500 pr-10'
+                  : 'border-red-500 focus:border-red-500 focus:ring-red-500 pr-10'
+                : ''
+            }
+          />
+          {!existingOrgId && organizationData.slug && organizationData.slug.length >= 3 && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              {isCheckingSlug ? (
+                <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+              ) : slugCheck?.available ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : slugCheck && !slugCheck.available ? (
+                <XCircle className="h-5 w-5 text-red-500" />
+              ) : null}
+            </div>
+          )}
+        </div>
+        <div className="mt-1 space-y-1">
+          <p className="text-xs text-gray-500">URL: agritech.ma/{organizationData.slug || 'votre-slug'}</p>
+          {slugCheck && !existingOrgId && (
+            <>
+              {slugCheck.available ? (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  Ce slug est disponible
+                </p>
+              ) : slugCheck.error ? (
+                <p className="text-xs text-red-600">{slugCheck.error}</p>
+              ) : (
+                <div className="text-xs text-red-600">
+                  <p className="flex items-center gap-1">
+                    <XCircle className="h-3 w-3" />
+                    Ce slug est déjà utilisé
+                  </p>
+                  {slugCheck.suggestion && (
+                    <button
+                      type="button"
+                      onClick={handleUseSuggestion}
+                      className="mt-1 text-emerald-600 hover:text-emerald-700 underline"
+                    >
+                      Utiliser "{slugCheck.suggestion}" à la place
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </FormField>
 
       <div className="grid grid-cols-2 gap-4">
@@ -639,8 +732,8 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
 
   if (!isRestored) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
+      <div className="min-h-full py-8 bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center my-auto">
           <Loader2 className="h-12 w-12 text-emerald-600 animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Chargement...</p>
         </div>
@@ -649,8 +742,8 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8">
+    <div className="min-h-full py-8 bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 my-auto">
         {renderStepIndicator()}
 
         {saveError && (
@@ -716,7 +809,7 @@ const EnhancedOnboardingFlow: React.FC<EnhancedOnboardingFlowProps> = ({ user, o
             onClick={handleNext}
             disabled={loading || isSaving ||
               (currentStep === 1 && (!profileData.first_name || !profileData.last_name)) ||
-              (currentStep === 2 && (!organizationData.name || !organizationData.email)) ||
+              (currentStep === 2 && (!organizationData.name || !organizationData.email || (!existingOrgId && slugCheck && !slugCheck.available))) ||
               (currentStep === 3 && (!farmData.name || !farmData.location || !farmData.size))
             }
             className={`

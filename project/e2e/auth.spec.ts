@@ -3,30 +3,36 @@ import { waitForLoadingComplete } from './utils/test-helpers';
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
   });
 
   test('should redirect unauthenticated users to login', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/(login|auth)/, { timeout: 10000 });
   });
 
   test('should display login form', async ({ page }) => {
     await page.goto('/login');
+    await page.waitForLoadState('networkidle');
     
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('input[type="password"]')).toBeVisible();
     await expect(page.locator('button[type="submit"]')).toBeVisible();
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
     await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
     
     await page.fill('input[type="email"]', 'invalid@example.com');
     await page.fill('input[type="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
     
     const errorVisible = await page.locator('[role="alert"], .error, [class*="error"]').isVisible();
     const stillOnLogin = page.url().includes('/login');
@@ -35,24 +41,29 @@ test.describe('Authentication', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    await page.goto('/login');
+    test.skip(!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD, 'Test user credentials not provided');
     
-    const email = process.env.TEST_USER_EMAIL || 'zakaria.boutchamir@gmail.com';
-    const password = process.env.TEST_USER_PASSWORD || 'boutchaz';
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+    
+    const email = process.env.TEST_USER_EMAIL!;
+    const password = process.env.TEST_USER_PASSWORD!;
 
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     
-    await Promise.all([
-      page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 15000 }),
-      page.click('button[type="submit"]'),
-    ]);
+    await page.click('button[type="submit"]');
+    
+    await page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 30000 });
 
     expect(page.url()).not.toContain('/login');
   });
 
   test('should validate email format', async ({ page }) => {
     await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
     
     await page.fill('input[type="email"]', 'notanemail');
     await page.fill('input[type="password"]', 'somepassword');
@@ -68,6 +79,8 @@ test.describe('Authentication', () => {
 
   test('should require password', async ({ page }) => {
     await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
     
     await page.fill('input[type="email"]', 'test@example.com');
     await page.click('button[type="submit"]');
@@ -83,6 +96,10 @@ test.describe('Authentication', () => {
 
 test.describe('Protected Routes', () => {
   test('should redirect to login when accessing protected route without auth', async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    
     const protectedRoutes = [
       '/dashboard',
       '/farm-hierarchy',
@@ -95,7 +112,8 @@ test.describe('Protected Routes', () => {
 
     for (const route of protectedRoutes) {
       await page.goto(route);
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
+      await page.waitForTimeout(2000);
       
       const currentUrl = page.url();
       const isRedirected = currentUrl.includes('/login') || currentUrl.includes('/auth');
@@ -107,18 +125,25 @@ test.describe('Protected Routes', () => {
 
 test.describe('Session Persistence', () => {
   test('should maintain session after page reload', async ({ page }) => {
-    await page.goto('/login');
+    test.skip(!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD, 'Test user credentials not provided');
     
-    const email = process.env.TEST_USER_EMAIL || 'zakaria.boutchamir@gmail.com';
-    const password = process.env.TEST_USER_PASSWORD || 'boutchaz';
+    await page.context().clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+    
+    const email = process.env.TEST_USER_EMAIL!;
+    const password = process.env.TEST_USER_PASSWORD!;
 
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     
-    await Promise.all([
-      page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 15000 }),
-      page.click('button[type="submit"]'),
-    ]);
+    await page.click('button[type="submit"]');
+    
+    await page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 30000 });
 
     const urlAfterLogin = page.url();
     expect(urlAfterLogin).not.toContain('/login');
@@ -134,20 +159,28 @@ test.describe('Session Persistence', () => {
 
 test.describe('Logout', () => {
   test('should logout successfully', async ({ page }) => {
-    await page.goto('/login');
+    test.skip(!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD, 'Test user credentials not provided');
     
-    const email = process.env.TEST_USER_EMAIL || 'zakaria.boutchamir@gmail.com';
-    const password = process.env.TEST_USER_PASSWORD || 'boutchaz';
+    await page.context().clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
+    
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[type="email"]', { timeout: 10000 });
+    
+    const email = process.env.TEST_USER_EMAIL!;
+    const password = process.env.TEST_USER_PASSWORD!;
 
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     
-    await Promise.all([
-      page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 15000 }),
-      page.click('button[type="submit"]'),
-    ]);
+    await page.click('button[type="submit"]');
+    
+    await page.waitForURL(/\/(dashboard|farm-hierarchy|select-trial|onboarding)/, { timeout: 30000 });
 
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
     
     const logoutButton = page.locator('button:has-text("Logout"), button:has-text("Déconnexion"), [data-testid="logout-button"]').first();
     

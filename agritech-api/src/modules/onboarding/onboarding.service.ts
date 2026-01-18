@@ -18,6 +18,96 @@ export class OnboardingService {
   constructor(private databaseService: DatabaseService) {}
 
   /**
+   * Check if a slug is available for use
+   */
+  async checkSlugAvailability(slug: string): Promise<{
+    available: boolean;
+    slug: string;
+    suggestion?: string;
+    error?: string;
+  }> {
+    // Validate slug format
+    const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    if (!slug || slug.length < 3) {
+      return {
+        available: false,
+        slug,
+        error: 'Slug must be at least 3 characters long',
+      };
+    }
+
+    if (slug.length > 50) {
+      return {
+        available: false,
+        slug,
+        error: 'Slug must be at most 50 characters long',
+      };
+    }
+
+    if (!slugRegex.test(slug)) {
+      return {
+        available: false,
+        slug,
+        error: 'Slug can only contain lowercase letters, numbers, and hyphens',
+      };
+    }
+
+    const client = this.databaseService.getAdminClient();
+
+    // Check if slug exists
+    const { data, error } = await client
+      .from('organizations')
+      .select('id, slug')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to check slug availability: ${error.message}`);
+      throw new InternalServerErrorException('Failed to check slug availability');
+    }
+
+    if (data) {
+      // Slug is taken, generate a suggestion
+      const suggestion = await this.generateSlugSuggestion(slug);
+      return {
+        available: false,
+        slug,
+        suggestion,
+      };
+    }
+
+    return {
+      available: true,
+      slug,
+    };
+  }
+
+  /**
+   * Generate a unique slug suggestion based on the original slug
+   */
+  private async generateSlugSuggestion(baseSlug: string): Promise<string> {
+    const client = this.databaseService.getAdminClient();
+
+    // Try adding numbers to the end
+    for (let i = 1; i <= 10; i++) {
+      const suggestion = `${baseSlug}-${i}`;
+      const { data } = await client
+        .from('organizations')
+        .select('id')
+        .eq('slug', suggestion)
+        .maybeSingle();
+
+      if (!data) {
+        return suggestion;
+      }
+    }
+
+    // If all simple numbers are taken, use a random suffix
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    return `${baseSlug}-${randomSuffix}`;
+  }
+
+  /**
    * Get onboarding state for the current user
    */
   async getState(userId: string) {
@@ -69,7 +159,7 @@ export class OnboardingService {
   /**
    * Clear onboarding state
    */
-  async clearState(userId: string) {
+  async clearState(userId: string): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client
@@ -85,12 +175,14 @@ export class OnboardingService {
       this.logger.error(`Failed to clear onboarding state: ${error.message}`);
       throw new InternalServerErrorException('Failed to clear onboarding state');
     }
+
+    return { success: true };
   }
 
   /**
    * Save user profile (Step 1)
    */
-  async saveProfile(userId: string, email: string, dto: SaveOnboardingProfileDto) {
+  async saveProfile(userId: string, email: string, dto: SaveOnboardingProfileDto): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client
@@ -111,6 +203,8 @@ export class OnboardingService {
       this.logger.error(`Failed to save profile: ${error.message}`);
       throw new InternalServerErrorException('Failed to save profile');
     }
+
+    return { success: true };
   }
 
   /**
@@ -170,6 +264,9 @@ export class OnboardingService {
 
       if (error) {
         this.logger.error(`Failed to create organization: ${error.message}`);
+        if (error.code === '23505' && error.message.includes('organizations_slug_key')) {
+          throw new BadRequestException('This organization slug is already taken. Please choose a different one.');
+        }
         throw new InternalServerErrorException('Failed to create organization');
       }
 
@@ -247,7 +344,7 @@ export class OnboardingService {
   /**
    * Save selected modules (Step 4)
    */
-  async saveModules(userId: string, dto: SaveOnboardingModulesDto) {
+  async saveModules(userId: string, dto: SaveOnboardingModulesDto): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
     // Get user's organization
@@ -271,7 +368,7 @@ export class OnboardingService {
       .map(([name, _]) => name);
 
     if (selectedModuleNames.length === 0) {
-      return;
+      return { success: true };
     }
 
     // Fetch module IDs
@@ -286,7 +383,7 @@ export class OnboardingService {
     }
 
     if (!modules || modules.length === 0) {
-      return;
+      return { success: true };
     }
 
     // Create organization_modules records
@@ -308,6 +405,8 @@ export class OnboardingService {
       this.logger.error(`Failed to save modules: ${insertError.message}`);
       throw new InternalServerErrorException('Failed to save modules');
     }
+
+    return { success: true };
   }
 
   /**
@@ -317,7 +416,7 @@ export class OnboardingService {
     userId: string,
     organizationId: string | null,
     dto: SaveOnboardingPreferencesDto,
-  ) {
+  ): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
     // Update organization with currency preference
@@ -352,12 +451,14 @@ export class OnboardingService {
       this.logger.error(`Failed to update profile: ${profileError.message}`);
       throw new InternalServerErrorException('Failed to update profile');
     }
+
+    return { success: true };
   }
 
   /**
    * Complete onboarding (mark as completed)
    */
-  async completeOnboarding(userId: string) {
+  async completeOnboarding(userId: string): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client
@@ -375,5 +476,7 @@ export class OnboardingService {
       this.logger.error(`Failed to complete onboarding: ${error.message}`);
       throw new InternalServerErrorException('Failed to complete onboarding');
     }
+
+    return { success: true };
   }
 }

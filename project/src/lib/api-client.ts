@@ -90,7 +90,6 @@ export async function apiRequest<T>(
     try {
       error = await response.json();
     } catch {
-      // If response is not JSON, create a meaningful error based on status
       if (response.status === 0 || response.status >= 500) {
         throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
       } else if (response.status === 401) {
@@ -110,7 +109,6 @@ export async function apiRequest<T>(
     
     const errorMessage = error?.message || error?.error || 'API request failed';
     
-    // Provide more helpful error messages for common issues
     if (errorMessage.includes('Connection error') || response.status === 0) {
       throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
     }
@@ -118,7 +116,24 @@ export async function apiRequest<T>(
     throw new Error(errorMessage);
   }
 
-  return response.json();
+  // Handle empty responses (204 No Content or empty body)
+  const contentLength = response.headers.get('content-length');
+  const contentType = response.headers.get('content-type');
+  
+  if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+    return {} as T;
+  }
+
+  // Try to parse JSON, return empty object if parsing fails
+  try {
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return {} as T;
+    }
+    return JSON.parse(text) as T;
+  } catch {
+    return {} as T;
+  }
 }
 
 /**
