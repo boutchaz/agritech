@@ -1,13 +1,25 @@
-import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber, IsObject } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class OnboardingStateDto {
-  @ApiProperty({ description: 'Current onboarding step (1-5)' })
+  @ApiPropertyOptional({ description: 'State version for compatibility checking' })
+  @IsNumber()
+  @IsOptional()
+  version?: number;
+
+  @ApiPropertyOptional({ description: 'User ID (for cross-device sync validation)' })
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @ApiPropertyOptional({ description: 'Current onboarding step (1-5)' })
   @IsNumber()
   @IsOptional()
   currentStep?: number;
 
   @ApiPropertyOptional({ description: 'Profile data' })
+  @IsObject()
+  @IsOptional()
   profileData?: {
     first_name?: string;
     last_name?: string;
@@ -17,6 +29,8 @@ export class OnboardingStateDto {
   };
 
   @ApiPropertyOptional({ description: 'Organization data' })
+  @IsObject()
+  @IsOptional()
   organizationData?: {
     name?: string;
     slug?: string;
@@ -29,6 +43,8 @@ export class OnboardingStateDto {
   };
 
   @ApiPropertyOptional({ description: 'Farm data' })
+  @IsObject()
+  @IsOptional()
   farmData?: {
     name?: string;
     location?: string;
@@ -41,6 +57,8 @@ export class OnboardingStateDto {
   };
 
   @ApiPropertyOptional({ description: 'Module selection' })
+  @IsObject()
+  @IsOptional()
   moduleSelection?: {
     farm_management?: boolean;
     inventory?: boolean;
@@ -53,6 +71,8 @@ export class OnboardingStateDto {
   };
 
   @ApiPropertyOptional({ description: 'Preferences' })
+  @IsObject()
+  @IsOptional()
   preferences?: {
     currency?: string;
     date_format?: string;
@@ -61,7 +81,9 @@ export class OnboardingStateDto {
   };
 
   @ApiPropertyOptional({ description: 'Existing organization ID' })
-  existingOrgId?: string;
+  @IsString()
+  @IsOptional()
+  existingOrgId?: string | null;
 }
 
 export class SaveOnboardingProfileDto {

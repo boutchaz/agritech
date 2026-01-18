@@ -257,6 +257,7 @@ All errors follow a standard format:
     .addTag('auth', 'Authentication - Login, signup, password reset, session management')
     .addTag('users', 'User Management - User profiles and preferences')
     .addTag('roles', 'Role Management - Role definitions and permissions')
+    .addTag('onboarding', 'Onboarding - New user onboarding flow')
     // Organization & Farm Management
     .addTag('organizations', 'Organization Management - Multi-tenant organization operations')
     .addTag('organization-users', 'Organization Users - User membership and roles within organizations')
