@@ -2,7 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testMatch": [
-    "**/*.spec.ts"
+    "**/*.integration-spec.ts"
   ],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
@@ -15,5 +15,6 @@
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/../src/$1",
     "^test/(.*)$": "<rootDir>/$1"
-  }
+  },
+  "setupFilesAfterEnv": ["<rootDir>/setup-mock-db.ts"]
 }

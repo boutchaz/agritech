@@ -97,15 +97,22 @@ export interface SaveOnboardingStateInput {
   existingOrgId?: string | null;
 }
 
+export interface CheckSlugAvailabilityResponse {
+  available: boolean;
+  slug: string;
+  suggestion?: string;
+  error?: string;
+}
+
 export const onboardingApi = {
-  /**
-   * Get current onboarding state for the user
-   */
+  async checkSlugAvailability(slug: string): Promise<CheckSlugAvailabilityResponse> {
+    return apiClient.get<CheckSlugAvailabilityResponse>(`${BASE_URL}/check-slug?slug=${encodeURIComponent(slug)}`);
+  },
+
   async getState(): Promise<OnboardingState | null> {
     try {
       return await apiClient.get<OnboardingState>(`${BASE_URL}/state`);
-    } catch (error) {
-      // Return null if no state exists (new user)
+    } catch {
       return null;
     }
   },
@@ -120,15 +127,15 @@ export const onboardingApi = {
   /**
    * Clear/reset onboarding state
    */
-  async clearState(): Promise<void> {
-    return apiClient.delete<void>(`${BASE_URL}/state`);
+  async clearState(): Promise<{ success: boolean }> {
+    return apiClient.delete<{ success: boolean }>(`${BASE_URL}/state`);
   },
 
   /**
    * Save user profile data (Step 1)
    */
-  async saveProfile(data: OnboardingProfileData): Promise<void> {
-    return apiClient.post<void>(`${BASE_URL}/profile`, data);
+  async saveProfile(data: OnboardingProfileData): Promise<{ success: boolean }> {
+    return apiClient.post<{ success: boolean }>(`${BASE_URL}/profile`, data);
   },
 
   /**
@@ -151,21 +158,21 @@ export const onboardingApi = {
   /**
    * Save selected modules (Step 4)
    */
-  async saveModules(moduleSelection: OnboardingModuleSelection): Promise<void> {
-    return apiClient.post<void>(`${BASE_URL}/modules`, { moduleSelection });
+  async saveModules(moduleSelection: OnboardingModuleSelection): Promise<{ success: boolean }> {
+    return apiClient.post<{ success: boolean }>(`${BASE_URL}/modules`, { moduleSelection });
   },
 
   /**
    * Save preferences and complete onboarding (Step 5)
    */
-  async savePreferencesAndComplete(data: OnboardingPreferences): Promise<void> {
-    return apiClient.post<void>(`${BASE_URL}/complete`, data);
+  async savePreferencesAndComplete(data: OnboardingPreferences): Promise<{ success: boolean }> {
+    return apiClient.post<{ success: boolean }>(`${BASE_URL}/complete`, data);
   },
 
   /**
    * Complete onboarding (marks onboarding as completed)
    */
-  async completeOnboarding(): Promise<void> {
-    return apiClient.post<void>(`${BASE_URL}/complete`, {});
+  async completeOnboarding(): Promise<{ success: boolean }> {
+    return apiClient.post<{ success: boolean }>(`${BASE_URL}/complete`, {});
   },
 };

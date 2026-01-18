@@ -1,7 +1,7 @@
-import { Controller, Get, Patch, Post, Delete, Body, UseGuards, Request, Param, Put } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Body, UseGuards, Request, Param, Put, Query } from '@nestjs/common';
 import { OnboardingService } from './onboarding.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
 import {
   OnboardingStateDto,
   SaveOnboardingProfileDto,
@@ -9,6 +9,7 @@ import {
   SaveOnboardingFarmDto,
   SaveOnboardingModulesDto,
   SaveOnboardingPreferencesDto,
+  CheckSlugAvailabilityResponseDto,
 } from './dto/onboarding.dto';
 
 @ApiTags('onboarding')
@@ -17,6 +18,16 @@ import {
 @ApiBearerAuth()
 export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService) {}
+
+  @Get('check-slug')
+  @ApiOperation({ summary: 'Check if organization slug is available' })
+  @ApiQuery({ name: 'slug', required: true, description: 'The slug to check' })
+  @ApiResponse({ status: 200, description: 'Slug availability check result', type: CheckSlugAvailabilityResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid slug format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async checkSlugAvailability(@Query('slug') slug: string): Promise<CheckSlugAvailabilityResponseDto> {
+    return this.onboardingService.checkSlugAvailability(slug);
+  }
 
   @Get('state')
   @ApiOperation({ summary: 'Get current onboarding state' })
