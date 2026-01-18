@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import {
   SaveOnboardingProfileDto,
