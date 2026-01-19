@@ -231,6 +231,10 @@ describe('AdminService', () => {
           data: { id: `row-${i}`, name: `Item ${i}` },
         }));
 
+        // For "Single record" and "Multiple new records" scenarios, records don't exist
+        // For "Update existing records" and "Skip existing records", records exist
+        const recordsExist = expectedUpdated > 0 || expectedSkipped > 0;
+
         mockClient.from.mockImplementation((table: string) => {
           const qb = createMockQueryBuilder();
           if (table === 'admin_job_logs') {
@@ -242,11 +246,14 @@ describe('AdminService', () => {
           } else if (table === ReferenceDataTable.ACCOUNT_TEMPLATES) {
             qb.select.mockReturnValue(qb);
             qb.eq.mockReturnValue(qb);
+            // Return existing record or null based on scenario
             qb.single.mockResolvedValue(
-              mockQueryResult({ id: 'existing-id' })
+              recordsExist
+                ? mockQueryResult({ id: 'existing-id' })
+                : mockQueryResult(null, { message: 'Not found' })
             );
             qb.insert.mockResolvedValue(mockQueryResult({}));
-            qb.update.mockResolvedValue(mockQueryResult({}));
+            qb.update.mockReturnValue(qb);
           }
           return qb;
         });
@@ -353,15 +360,16 @@ describe('AdminService', () => {
             qb.eq.mockReturnValue(qb);
           } else if (table === ReferenceDataTable.ACCOUNT_TEMPLATES) {
             const selectQb = createMockQueryBuilder();
-            selectQb.eq.mockReturnValue(selectQb);
-            selectQb.not.mockReturnValue(selectQb);
-            selectQb.then.mockResolvedValue(
-              mockQueryResult(
-                chartType === ChartOfAccountsType.MOROCCAN
-                  ? []
-                  : mockTemplates
-              )
-            );
+            const templateData = chartType === ChartOfAccountsType.MOROCCAN
+              ? []
+              : mockTemplates;
+            // Create a proper thenable object
+            const thenableResult = {
+              ...selectQb,
+              then: (resolve: any) => resolve(mockQueryResult(templateData)),
+            };
+            selectQb.eq.mockReturnValue(thenableResult);
+            selectQb.not.mockReturnValue(thenableResult);
             qb.select.mockReturnValue(selectQb);
           } else if (table === 'accounts') {
             qb.insert.mockResolvedValue(mockQueryResult({}));
@@ -818,38 +826,53 @@ describe('AdminService', () => {
         const selectQb = createMockQueryBuilder();
 
         if (table === 'organizations') {
-          const gteQb = createMockQueryBuilder();
-          gteQb.then.mockResolvedValue({ data: [], error: null, count: 10 });
-          selectQb.gte.mockReturnValue(gteQb);
-          qb.select.mockReturnValue(selectQb);
+          // First call doesn't use gte(), subsequent calls do
+          const thenableResult = {
+            ...selectQb,
+            then: (resolve: any) => resolve({ data: [], error: null, count: 10 }),
+            gte: jest.fn().mockReturnValue({
+              then: (resolve: any) => resolve({ data: [], error: null, count: 5 }),
+            }),
+          };
+          qb.select.mockReturnValue(thenableResult);
         } else if (table === 'organization_users') {
-          const eqQb = createMockQueryBuilder();
-          eqQb.then.mockResolvedValue({ data: [], error: null, count: 50 });
-          selectQb.eq.mockReturnValue(eqQb);
-          qb.select.mockReturnValue(selectQb);
+          const thenableResult = {
+            ...selectQb,
+            eq: jest.fn().mockReturnValue({
+              then: (resolve: any) => resolve({ data: [], error: null, count: 50 }),
+            }),
+            then: (resolve: any) => resolve({ data: [], error: null, count: 50 }),
+          };
+          qb.select.mockReturnValue(thenableResult);
         } else if (table === 'subscription_usage') {
-          selectQb.then.mockResolvedValue(
-            mockQueryResult([
+          const thenableResult = {
+            ...selectQb,
+            then: (resolve: any) => resolve(mockQueryResult([
               { mrr: 1000, arr: 12000 },
               { mrr: 2000, arr: 24000 },
-            ])
-          );
-          qb.select.mockReturnValue(selectQb);
+            ])),
+          };
+          qb.select.mockReturnValue(thenableResult);
         } else if (table === 'subscriptions') {
-          selectQb.then.mockResolvedValue(
-            mockQueryResult([
+          const thenableResult = {
+            ...selectQb,
+            then: (resolve: any) => resolve(mockQueryResult([
               {
                 plan_type: 'basic',
                 subscription_usage: { mrr: 1000 },
               },
-            ])
-          );
-          qb.select.mockReturnValue(selectQb);
+            ])),
+          };
+          qb.select.mockReturnValue(thenableResult);
         } else if (table === 'events') {
-          const gteQb = createMockQueryBuilder();
-          gteQb.then.mockResolvedValue({ data: [], error: null, count: 8 });
-          selectQb.gte.mockReturnValue(gteQb);
-          qb.select.mockReturnValue(selectQb);
+          const thenableResult = {
+            ...selectQb,
+            gte: jest.fn().mockReturnValue({
+              then: (resolve: any) => resolve({ data: [], error: null, count: 8 }),
+            }),
+            then: (resolve: any) => resolve({ data: [], error: null, count: 8 }),
+          };
+          qb.select.mockReturnValue(thenableResult);
         }
         return qb;
       });
@@ -950,17 +973,14 @@ describe('AdminService', () => {
         callCount++;
         const qb = createMockQueryBuilder();
         const selectQb = createMockQueryBuilder();
-        const eqQb = createMockQueryBuilder();
 
-        selectQb.eq.mockReturnValue(eqQb);
+        // Create proper thenable result based on call count
+        const thenableResult = {
+          ...selectQb,
+          then: (resolve: any) => resolve(mockQueryResult(callCount === 1 ? fromData : toData)),
+        };
 
-        // Make the eqQb thenable and return different data based on call count
-        if (callCount === 1) {
-          eqQb.then.mockResolvedValue(mockQueryResult(fromData));
-        } else {
-          eqQb.then.mockResolvedValue(mockQueryResult(toData));
-        }
-
+        selectQb.eq.mockReturnValue(thenableResult);
         qb.select.mockReturnValue(selectQb);
         return qb;
       });
@@ -1105,11 +1125,14 @@ describe('AdminService', () => {
     describe('Error Recovery', () => {
       it('should continue import after row error', async () => {
         const jobMock = { id: 'job-123' };
+        // Use rows WITHOUT ids so the error path is triggered (line 134 in service)
         const rows = [
-          { data: { id: '1', name: 'Valid Item' } },
-          { data: { id: '2', name: 'Invalid Item' } },
-          { data: { id: '3', name: 'Another Valid Item' } },
+          { data: { name: 'Valid Item' } },
+          { data: { name: 'Invalid Item' } },
+          { data: { name: 'Another Valid Item' } },
         ];
+
+        let insertCallCount = 0;
 
         mockClient.from.mockImplementation((table: string) => {
           const qb = createMockQueryBuilder();
@@ -1121,14 +1144,14 @@ describe('AdminService', () => {
             updateQb.eq.mockReturnValue(updateQb);
             qb.update.mockReturnValue(updateQb);
           } else if (table === ReferenceDataTable.ACCOUNT_TEMPLATES) {
-            let callCount = 0;
+            // Mock insert - fail on second call with error
             qb.insert.mockImplementation(() => {
-              callCount++;
-              if (callCount === 2) {
-                // Throw an error for the second item
-                throw new Error('Validation failed');
+              insertCallCount++;
+              if (insertCallCount === 2) {
+                // Return error on second insert
+                return Promise.resolve({ data: null, error: { message: 'Validation failed' } });
               }
-              return Promise.resolve(mockQueryResult({}));
+              return Promise.resolve({ data: {}, error: null });
             });
           }
           return qb;
@@ -1203,14 +1226,17 @@ describe('AdminService', () => {
             qb.select.mockReturnValue(selectQb);
           } else if (table === 'events') {
             const selectQb = createMockQueryBuilder();
-            const eqQb = createMockQueryBuilder();
-            const gteQb = createMockQueryBuilder();
 
-            // Make gteQb thenable
-            gteQb.then.mockResolvedValue({ data: [], error: null, count: 10 });
+            // Create proper thenable result
+            const thenableResult = {
+              ...selectQb,
+              then: (resolve: any) => resolve({ data: [], error: null, count: 10 }),
+            };
 
-            eqQb.gte.mockReturnValue(gteQb);
-            selectQb.eq.mockReturnValue(eqQb);
+            selectQb.eq.mockReturnValue({
+              ...selectQb,
+              gte: jest.fn().mockReturnValue(thenableResult),
+            });
             qb.select.mockReturnValue(selectQb);
           }
           return qb;

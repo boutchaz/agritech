@@ -330,3 +330,34 @@ export const resetMockClient = (mockClient: MockSupabaseClient): void => {
   mockClient.auth.admin.createUser.mockReset();
   mockClient.auth.admin.deleteUser.mockReset();
 };
+
+/**
+ * Creates a chainable mock query builder that properly handles async resolution
+ * This is needed for queries that don't end with .single() like findAll
+ */
+export const createChainableQueryBuilder = <T>(
+  data: T,
+  error: any = null,
+): MockQueryBuilder => {
+  const builder = createMockQueryBuilder();
+
+  // Create a thenable result that can be awaited
+  const makeThenable = (resultData: T, resultError: any = null) => ({
+    ...builder,
+    then: (resolve: (value: { data: T; error: any }) => void) => {
+      const result = { data: resultData, error: resultError };
+      resolve(result);
+      return Promise.resolve(result);
+    },
+    catch: (reject: (reason: any) => void) => Promise.resolve({ data: resultData, error: resultError }),
+  });
+
+  // Override chainable methods to return thenable at the end
+  const chainableMethods = ['select', 'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'is', 'in', 'contains', 'containedBy', 'range', 'order', 'limit', 'filter', 'or', 'and', 'not', 'match', 'textSearch', 'head'];
+
+  chainableMethods.forEach((method) => {
+    (builder[method as keyof MockQueryBuilder] as jest.Mock).mockReturnValue(makeThenable(data, error));
+  });
+
+  return builder;
+};
