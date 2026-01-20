@@ -12,7 +12,7 @@ import {
 export class OpenAIProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://api.openai.com/v1/chat/completions';
-  private readonly defaultModel = 'gpt-4-turbo-preview';
+  private readonly defaultModel = 'gpt-4o';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.OPENAI);
@@ -45,7 +45,7 @@ export class OpenAIProvider extends BaseAIProvider {
           model,
           messages: this.buildMessages(request.systemPrompt, request.userPrompt),
           temperature: request.config.temperature ?? 0.7,
-          max_tokens: request.config.maxTokens ?? 4096,
+          max_tokens: request.config.maxTokens ?? 16384,
           response_format: { type: 'json_object' },
         },
         {

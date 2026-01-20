@@ -243,6 +243,20 @@ export class OnboardingService {
 
       return { id: data.id };
     } else {
+      // Get organization_admin role ID
+      const { data: roleData, error: roleError } = await client
+        .from('roles')
+        .select('id')
+        .eq('name', 'organization_admin')
+        .single();
+
+      if (roleError || !roleData) {
+        this.logger.error(`Failed to find organization_admin role: ${roleError?.message || 'Not found'}`);
+        throw new InternalServerErrorException('Failed to find default role for organization');
+      }
+
+      const roleId = roleData.id;
+
       // Create new organization
       const { data, error } = await client
         .from('organizations')
@@ -272,13 +286,13 @@ export class OnboardingService {
 
       const organizationId = data.id;
 
-      // Add user to organization
+      // Add user to organization with organization_admin role
       const { error: orgUserError } = await client
         .from('organization_users')
         .insert({
           organization_id: organizationId,
           user_id: userId,
-          role_id: null, // Will be set to default owner role
+          role_id: roleId,
           is_active: true,
           created_at: new Date().toISOString(),
         });
