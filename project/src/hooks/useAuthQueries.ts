@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
 import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
+import { parcelsApi } from '../lib/api/parcels';
 import type { UserProfile, Farm } from '../lib/supabase';
-import { apiClient } from '../lib/api-client';
 
 // Query keys
 export const authKeys = {
@@ -115,13 +115,9 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           // Fetch all parcels for this organization to calculate total_area per farm
           let parcelsByFarm: Record<string, { totalArea: number }> = {};
           try {
-            const parcelsResult = await apiClient.get<{ success: boolean; parcels: any[] }>(
-              `/api/v1/parcels?organization_id=${organizationId}`,
-              {},
-              organizationId
-            );
-            if (parcelsResult?.parcels) {
-              parcelsByFarm = parcelsResult.parcels.reduce((acc: Record<string, { totalArea: number }>, parcel: any) => {
+            const parcelsData = await parcelsApi.getAll({ organization_id: organizationId }, organizationId);
+            if (Array.isArray(parcelsData)) {
+              parcelsByFarm = parcelsData.reduce((acc: Record<string, { totalArea: number }>, parcel: any) => {
                 const farmId = parcel.farm_id;
                 if (!farmId) return acc;
                 if (!acc[farmId]) {

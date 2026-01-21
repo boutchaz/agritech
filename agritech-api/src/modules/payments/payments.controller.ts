@@ -22,21 +22,30 @@ import {
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+    CanCreatePayment,
+    CanUpdatePayment,
+    CanDeletePayment,
+    CanReadPayments,
+} from '../casl/permissions.decorator';
 
 @ApiTags('payments')
 @ApiBearerAuth()
 @Controller('payments')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class PaymentsController {
     constructor(private readonly paymentsService: PaymentsService) { }
 
     @Post()
+    @CanCreatePayment()
     @ApiOperation({ summary: 'Create a new payment' })
     @ApiResponse({
         status: 201,
         description: 'Payment created successfully',
     })
     @ApiResponse({ status: 400, description: 'Bad request' })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to create payments' })
     async create(
         @Req() req,
         @Body() createPaymentDto: CreatePaymentDto,
@@ -60,6 +69,7 @@ export class PaymentsController {
     }
 
     @Post(':id/allocate')
+    @CanUpdatePayment()
     @ApiOperation({
         summary: 'Allocate payment to invoices (creates journal entry)',
         description: 'Allocates a payment to one or more invoices and creates corresponding double-entry journal entry. Replaces the allocate-payment Edge Function.',
@@ -71,6 +81,7 @@ export class PaymentsController {
     })
     @ApiResponse({ status: 404, description: 'Payment not found' })
     @ApiResponse({ status: 400, description: 'Invalid allocation or missing GL accounts' })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to allocate payments' })
     async allocatePayment(
         @Req() req,
         @Param('id') id: string,
@@ -96,11 +107,13 @@ export class PaymentsController {
     }
 
     @Get()
+    @CanReadPayments()
     @ApiOperation({ summary: 'Get paginated payments with sorting, search, and filters' })
     @ApiResponse({
         status: 200,
         description: 'Paginated list of payments retrieved successfully',
     })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to view payments' })
     async findAll(
         @Query() query: PaginatedPaymentQueryDto,
         @Headers('x-organization-id') organizationId: string,
@@ -113,6 +126,7 @@ export class PaymentsController {
     }
 
     @Get(':id')
+    @CanReadPayments()
     @ApiOperation({ summary: 'Get a single payment by ID' })
     @ApiParam({ name: 'id', description: 'Payment UUID' })
     @ApiResponse({
@@ -120,6 +134,7 @@ export class PaymentsController {
         description: 'Payment retrieved successfully',
     })
     @ApiResponse({ status: 404, description: 'Payment not found' })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to view payments' })
     async findOne(
         @Param('id') id: string,
         @Headers('x-organization-id') organizationId: string,
@@ -132,6 +147,7 @@ export class PaymentsController {
     }
 
     @Patch(':id/status')
+    @CanUpdatePayment()
     @ApiOperation({ summary: 'Update payment status' })
     @ApiParam({ name: 'id', description: 'Payment UUID' })
     @ApiResponse({
@@ -140,6 +156,7 @@ export class PaymentsController {
     })
     @ApiResponse({ status: 404, description: 'Payment not found' })
     @ApiResponse({ status: 400, description: 'Invalid status transition' })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to update payment status' })
     async updateStatus(
         @Param('id') id: string,
         @Body() updateStatusDto: UpdatePaymentStatusDto,
@@ -153,6 +170,7 @@ export class PaymentsController {
     }
 
     @Delete(':id')
+    @CanDeletePayment()
     @ApiOperation({ summary: 'Delete a payment (only drafts without allocations)' })
     @ApiParam({ name: 'id', description: 'Payment UUID' })
     @ApiResponse({
@@ -161,6 +179,7 @@ export class PaymentsController {
     })
     @ApiResponse({ status: 404, description: 'Payment not found' })
     @ApiResponse({ status: 400, description: 'Cannot delete payment' })
+    @ApiResponse({ status: 403, description: 'Insufficient permissions to delete payments' })
     async delete(
         @Param('id') id: string,
         @Headers('x-organization-id') organizationId: string,

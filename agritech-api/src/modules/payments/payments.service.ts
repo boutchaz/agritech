@@ -192,7 +192,7 @@ export class PaymentsService {
                 }
             }
 
-            // Get required GL accounts
+            // Get required GL accounts and verify chart of accounts exists
             const LEDGER_CODES = ['1110', '1200', '2110'];
             const { data: ledgerAccounts, error: ledgerError } = await supabaseClient
                 .from('accounts')
@@ -204,8 +204,26 @@ export class PaymentsService {
                 throw new BadRequestException(`Failed to load ledger accounts: ${ledgerError.message}`);
             }
 
+            // Check if chart of accounts exists and has required accounts
+            if (!ledgerAccounts || ledgerAccounts.length === 0) {
+                throw new BadRequestException(
+                    'Chart of accounts not configured. Please set up your chart of accounts before processing payments. ' +
+                    'Go to Accounting > Accounts > Apply Template to initialize your chart of accounts.'
+                );
+            }
+
+            const foundCodes = new Set(ledgerAccounts.map(acc => acc.code));
+            const missingCodes = LEDGER_CODES.filter(code => !foundCodes.has(code));
+
+            if (missingCodes.length > 0) {
+                throw new BadRequestException(
+                    `Required accounts missing from chart of accounts: ${missingCodes.join(', ')}. ` +
+                    'Please set up your chart of accounts with all required account codes before processing payments.'
+                );
+            }
+
             const ledgerMap = new Map<string, string>(
-                (ledgerAccounts ?? []).map((acc) => [acc.code, acc.id])
+                ledgerAccounts.map((acc) => [acc.code, acc.id])
             );
 
             // Determine cash account (use bank account's GL account if specified)

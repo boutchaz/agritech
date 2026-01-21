@@ -10,6 +10,19 @@ export interface Organization {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  // Contact and address fields
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  contact_person?: string;
+  website?: string;
+  tax_id?: string;
+  logo_url?: string;
+  account_type?: 'individual' | 'business' | 'farm';
 }
 
 export interface UpdateOrganizationInput {
@@ -18,6 +31,18 @@ export interface UpdateOrganizationInput {
   currency_code?: string;
   timezone?: string;
   is_active?: boolean;
+  // Contact and address fields
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  contact_person?: string;
+  website?: string;
+  tax_id?: string;
+  logo_url?: string;
 }
 
 const BASE_URL = '/api/v1/organizations';

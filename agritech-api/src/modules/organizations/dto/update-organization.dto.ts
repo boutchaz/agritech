@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean, IsEmail, Matches } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsURL } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateOrganizationDto {
@@ -27,6 +27,16 @@ export class UpdateOrganizationDto {
   @IsBoolean()
   is_active?: boolean;
 
+  // Contact fields
+  @ApiPropertyOptional({
+    description: 'Organization email address',
+    example: 'contact@example.com'
+  })
+  @IsOptional()
+  @IsString()
+  @IsEmail({}, { message: 'Email must be a valid email address' })
+  email?: string;
+
   @ApiPropertyOptional({
     description: 'Organization phone number (international format)',
     example: '+212 6 12 34 56 78'
@@ -39,11 +49,78 @@ export class UpdateOrganizationDto {
   phone?: string;
 
   @ApiPropertyOptional({
-    description: 'Organization email address',
-    example: 'contact@example.com'
+    description: 'Primary contact person name',
+    example: 'John Doe'
   })
   @IsOptional()
   @IsString()
-  @IsEmail({}, { message: 'Email must be a valid email address' })
-  email?: string;
+  contact_person?: string;
+
+  @ApiPropertyOptional({
+    description: 'Organization website URL',
+    example: 'https://example.com'
+  })
+  @IsOptional()
+  @IsString()
+  @IsURL({}, { message: 'Website must be a valid URL' })
+  website?: string;
+
+  // Address fields
+  @ApiPropertyOptional({
+    description: 'Street address',
+    example: '123 Main Street'
+  })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({
+    description: 'City',
+    example: 'Casablanca'
+  })
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @ApiPropertyOptional({
+    description: 'State/Province/Region',
+    example: 'Casablanca-Settat'
+  })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiPropertyOptional({
+    description: 'Postal/ZIP code',
+    example: '20250'
+  })
+  @IsOptional()
+  @IsString()
+  postal_code?: string;
+
+  @ApiPropertyOptional({
+    description: 'Country',
+    example: 'Morocco'
+  })
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  // Other fields
+  @ApiPropertyOptional({
+    description: 'Tax ID / Fiscal number',
+    example: '12345678'
+  })
+  @IsOptional()
+  @IsString()
+  tax_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Organization logo URL',
+    example: 'https://example.com/logo.png'
+  })
+  @IsOptional()
+  @IsString()
+  @IsURL({}, { message: 'Logo URL must be a valid URL' })
+  logo_url?: string;
 }

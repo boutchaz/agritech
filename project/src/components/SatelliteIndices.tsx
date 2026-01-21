@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer } from 'lucide-react';
+import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer, Upload, X, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { TimeSeriesResponse, IndexCalculationResponse, ExportFormat } from '../services/satelliteIndicesService';
 import TimeSeriesChart, { TemperatureDataPoint } from './TimeSeriesChart';
 import MultiIndexChart from './MultiIndexChart';
+import { useTifUpload } from '../hooks/useTifUpload';
 
 type DataExportFormat = 'JSON' | 'CSV' | 'PDF';
 type ImageExportFormat = ExportFormat;
@@ -13,6 +14,7 @@ interface Parcel {
   id: string;
   name: string;
   boundary?: number[][];
+  tif_image_url?: string | null;
 }
 
 interface SatelliteIndicesProps {
@@ -43,6 +45,21 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showTemperatureOverlay, setShowTemperatureOverlay] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  // TIF Image state
+  const [showTifModal, setShowTifModal] = useState(false);
+  const [tifImageUrl, setTifImageUrl] = useState<string | null>(parcel.tif_image_url || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // TIF upload hook
+  const { uploadTif, removeTif, isUploading, uploadProgress } = useTifUpload({
+    parcelId: parcel.id,
+    parcelName: parcel.name,
+    onSuccess: (imageUrl) => {
+      setTifImageUrl(imageUrl);
+      setShowTifModal(false);
+    },
+  });
 
   // Close export menu when clicking outside
   useEffect(() => {
@@ -316,6 +333,31 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             ))}
           </select>
           <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex items-center space-x-1 px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title="Importer image TIF depuis drone"
+          >
+            {isUploading ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Image className="h-3 w-3" />
+            )}
+            <span>{tifImageUrl ? 'Remplacer TIF' : 'Importer TIF'}</span>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".tif,.tiff,image/tiff,image/geotiff"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                uploadTif(file);
+              }
+            }}
+          />
+          <button
             onClick={() => window.location.reload()}
             className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             title="Actualiser"
@@ -350,6 +392,71 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           Série Temporelle
         </button>
       </div>
+
+      {/* TIF Image Section */}
+      {tifImageUrl && (
+        <div className="mb-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Image className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white">Image Drone</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Image orthomosaïque GeoTIFF</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => window.open(tifImageUrl, '_blank')}
+                className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                title="Ouvrir en plein écran"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                    removeTif();
+                    setTifImageUrl(null);
+                  }
+                }}
+                disabled={isUploading}
+                className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Supprimer l'image"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Image Preview */}
+          <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" style={{ maxHeight: '300px' }}>
+            <img
+              src={tifImageUrl}
+              alt="Image drone de la parcelle"
+              className="w-full h-auto object-contain cursor-pointer"
+              onClick={() => window.open(tifImageUrl, '_blank')}
+              onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12">Image non disponible</text></svg>');
+              }}
+            />
+          </div>
+
+          {uploadProgress > 0 && uploadProgress < 100 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                <span>Importation en cours...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">

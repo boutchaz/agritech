@@ -12,6 +12,7 @@ import { useCreatePayment, useUpdatePayment, type Payment, type CreatePaymentInp
 import { useCustomers } from '@/hooks/useCustomers';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { Loader2 } from 'lucide-react';
+import { getLocalDate } from '@/utils/date';
 
 const getPaymentSchema = (t: (key: string) => string) => z.object({
   payment_type: z.enum(['receive', 'pay']),
@@ -58,7 +59,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       remarks: payment.remarks,
     } : {
       payment_type: 'receive',
-      payment_date: new Date().toISOString().split('T')[0],
+      payment_date: getLocalDate(),
       amount: 0,
       payment_method: 'bank_transfer',
       status: 'draft',

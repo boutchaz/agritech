@@ -11,6 +11,36 @@ export interface CreateOrganizationDto {
     timezone?: string;
     isActive?: boolean;
     accountType?: 'individual' | 'business' | 'farm';
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    contactPerson?: string;
+    website?: string;
+    taxId?: string;
+    logoUrl?: string;
+}
+
+export interface UpdateOrganizationDto {
+    name?: string;
+    description?: string;
+    currencyCode?: string;
+    timezone?: string;
+    isActive?: boolean;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+    contactPerson?: string;
+    website?: string;
+    taxId?: string;
+    logoUrl?: string;
 }
 
 @Injectable()
@@ -74,6 +104,17 @@ export class OrganizationsService {
                     timezone: dto.timezone || 'Africa/Casablanca',
                     is_active: dto.isActive ?? true,
                     account_type: dto.accountType || 'business',
+                    email: dto.email,
+                    phone: dto.phone,
+                    address: dto.address,
+                    city: dto.city,
+                    state: dto.state,
+                    postal_code: dto.postalCode,
+                    country: dto.country,
+                    contact_person: dto.contactPerson,
+                    website: dto.website,
+                    tax_id: dto.taxId,
+                    logo_url: dto.logoUrl,
                 })
                 .select()
                 .single();
@@ -130,10 +171,10 @@ export class OrganizationsService {
             throw new ForbiddenException('You do not have access to this organization');
         }
 
-        // Fetch organization
+        // Fetch organization with all fields
         const { data: organization, error: fetchError } = await this.supabaseAdmin
             .from('organizations')
-            .select('id, name, description, slug, currency_code, timezone, is_active, created_at, updated_at')
+            .select('*')
             .eq('id', organizationId)
             .single();
 
@@ -145,7 +186,7 @@ export class OrganizationsService {
         return organization;
     }
 
-    async updateOrganization(userId: string, organizationId: string, updateData: any) {
+    async updateOrganization(userId: string, organizationId: string, updateData: UpdateOrganizationDto) {
         this.logger.log(`Updating organization ${organizationId} for user ${userId}`);
 
         // Verify user access and get role through foreign key join
@@ -176,13 +217,32 @@ export class OrganizationsService {
             throw new ForbiddenException('You do not have permission to update this organization');
         }
 
+        // Map camelCase to snake_case for database
+        const dbUpdateData: any = {
+            updated_at: new Date().toISOString(),
+        };
+
+        if (updateData.name !== undefined) dbUpdateData.name = updateData.name;
+        if (updateData.description !== undefined) dbUpdateData.description = updateData.description;
+        if (updateData.currencyCode !== undefined) dbUpdateData.currency_code = updateData.currencyCode;
+        if (updateData.timezone !== undefined) dbUpdateData.timezone = updateData.timezone;
+        if (updateData.isActive !== undefined) dbUpdateData.is_active = updateData.isActive;
+        if (updateData.email !== undefined) dbUpdateData.email = updateData.email;
+        if (updateData.phone !== undefined) dbUpdateData.phone = updateData.phone;
+        if (updateData.address !== undefined) dbUpdateData.address = updateData.address;
+        if (updateData.city !== undefined) dbUpdateData.city = updateData.city;
+        if (updateData.state !== undefined) dbUpdateData.state = updateData.state;
+        if (updateData.postalCode !== undefined) dbUpdateData.postal_code = updateData.postalCode;
+        if (updateData.country !== undefined) dbUpdateData.country = updateData.country;
+        if (updateData.contactPerson !== undefined) dbUpdateData.contact_person = updateData.contactPerson;
+        if (updateData.website !== undefined) dbUpdateData.website = updateData.website;
+        if (updateData.taxId !== undefined) dbUpdateData.tax_id = updateData.taxId;
+        if (updateData.logoUrl !== undefined) dbUpdateData.logo_url = updateData.logoUrl;
+
         // Update organization
         const { data: organization, error: updateError } = await this.supabaseAdmin
             .from('organizations')
-            .update({
-                ...updateData,
-                updated_at: new Date().toISOString(),
-            })
+            .update(dbUpdateData)
             .eq('id', organizationId)
             .select()
             .single();

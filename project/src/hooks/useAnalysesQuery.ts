@@ -29,17 +29,19 @@ export const parcelsKeys = {
 
 export function useParcels(farmId: string | undefined, organizationId?: string | undefined) {
   return useQuery({
-    queryKey: farmId 
-      ? [...parcelsKeys.byFarm(farmId), organizationId] 
+    queryKey: farmId
+      ? [...parcelsKeys.byFarm(farmId), organizationId]
       : ['parcels', 'organization', organizationId || ''],
     queryFn: async () => {
       if (farmId && organizationId) {
         const parcels = await parcelsApi.getAll({ farm_id: farmId }, organizationId);
-        return parcels || [];
+        // Ensure we always return an array, even if API returns unexpected response
+        return Array.isArray(parcels) ? parcels : [];
       }
       if (organizationId) {
         const parcels = await parcelsApi.getAll({ organization_id: organizationId }, organizationId);
-        return parcels || [];
+        // Ensure we always return an array, even if API returns unexpected response
+        return Array.isArray(parcels) ? parcels : [];
       }
       return [];
     },

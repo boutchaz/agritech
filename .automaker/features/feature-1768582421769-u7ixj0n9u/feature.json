@@ -9,7 +9,7 @@
   "model": "openai/gpt-5.2-codex",
   "thinkingLevel": "none",
   "reasoningEffort": "none",
-  "branchName": "feature/feature/develop-1768582287363-o754-1768582417613-f8tn",
+  "branchName": null,
   "priority": 2,
   "planningMode": "skip",
   "requirePlanApproval": false,

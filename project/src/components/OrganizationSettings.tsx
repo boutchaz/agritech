@@ -74,16 +74,16 @@ const OrganizationSettings: React.FC = () => {
           timezone: data.timezone,
           is_active: data.is_active,
           status: data.is_active ? 'active' : 'inactive',
-          // Fields not yet supported by API - keep as undefined
-          email: undefined,
-          phone: undefined,
-          address: undefined,
-          city: undefined,
-          state: undefined,
-          country: undefined,
-          postal_code: undefined,
-          contact_person: undefined,
-          website: undefined,
+          // Contact and address fields from API
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          country: data.country,
+          postal_code: data.postal_code,
+          contact_person: data.contact_person,
+          website: data.website,
           currency_symbol: undefined,
         });
       } catch (err) {
@@ -105,16 +105,23 @@ const OrganizationSettings: React.FC = () => {
     setSuccess(false);
 
     try {
+      // Send all fields to the API
       const updatedOrg = await organizationsApi.update(currentOrganization.id, {
         name: orgData.name,
         description: orgData.description,
-        // Note: Only fields supported by API (name, description, currency_code, timezone, is_active)
-        // Other fields like email, phone, address not yet supported by API
+        email: orgData.email,
+        phone: orgData.phone,
+        address: orgData.address,
+        city: orgData.city,
+        state: orgData.state,
+        postal_code: orgData.postal_code,
+        country: orgData.country,
+        contact_person: orgData.contact_person,
+        website: orgData.website,
       });
 
-      // Update local state with API response while preserving unsupported fields
+      // Update local state with API response
       setOrgData({
-        ...orgData,
         id: updatedOrg.id,
         name: updatedOrg.name,
         slug: updatedOrg.slug,
@@ -124,6 +131,17 @@ const OrganizationSettings: React.FC = () => {
         timezone: updatedOrg.timezone,
         is_active: updatedOrg.is_active,
         status: updatedOrg.is_active ? 'active' : 'inactive',
+        // Contact and address fields from API response
+        email: updatedOrg.email,
+        phone: updatedOrg.phone,
+        address: updatedOrg.address,
+        city: updatedOrg.city,
+        state: updatedOrg.state,
+        country: updatedOrg.country,
+        postal_code: updatedOrg.postal_code,
+        contact_person: updatedOrg.contact_person,
+        website: updatedOrg.website,
+        currency_symbol: orgData.currency_symbol,
       });
 
       // Invalidate ALL organization-related queries to ensure fresh data
@@ -137,10 +155,10 @@ const OrganizationSettings: React.FC = () => {
 
       setSuccess(true);
 
-      // Force reload after a delay to ensure new data is loaded
+      // Clear success message after 3 seconds
       setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        setSuccess(false);
+      }, 3000);
     } catch (err) {
       console.error('Error updating organization:', err);
       setError(t('organization.errors.saveError'));

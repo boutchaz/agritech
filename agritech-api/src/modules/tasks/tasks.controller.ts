@@ -12,6 +12,15 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+    CanManageTasks,
+    CanReadTasks,
+    CanCreateTask,
+    CanUpdateTask,
+    CanDeleteTask,
+} from '../casl/permissions.decorator';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -27,12 +36,13 @@ import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
   description: 'Organization ID for multi-tenant context',
   required: true,
 })
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get('my-tasks')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get all tasks assigned to the current user across all organizations' })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -41,6 +51,7 @@ export class TasksController {
   }
 
   @Get()
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get all tasks for an organization' })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -54,6 +65,7 @@ export class TasksController {
   }
 
   @Get('statistics')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get task statistics for an organization' })
   @ApiResponse({ status: 200, description: 'Task statistics retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -63,6 +75,7 @@ export class TasksController {
   }
 
   @Get(':taskId')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get a task by ID' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task retrieved successfully' })
@@ -77,6 +90,7 @@ export class TasksController {
   }
 
   @Post()
+  @CanCreateTask()
   @ApiOperation({ summary: 'Create a new task' })
   @ApiResponse({ status: 201, description: 'Task created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
@@ -90,6 +104,7 @@ export class TasksController {
   }
 
   @Patch(':taskId')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Update a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task updated successfully' })
@@ -106,6 +121,7 @@ export class TasksController {
   }
 
   @Patch(':taskId/assign')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Assign a task to a worker' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task assigned successfully' })
@@ -122,6 +138,7 @@ export class TasksController {
   }
 
   @Patch(':taskId/complete')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Complete a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task completed successfully' })
@@ -138,6 +155,7 @@ export class TasksController {
   }
 
   @Post(':taskId/complete-with-harvest')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Complete a harvest task and create harvest record' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Harvest task completed and harvest record created' })
@@ -154,6 +172,7 @@ export class TasksController {
   }
 
   @Delete(':taskId')
+  @CanDeleteTask()
   @ApiOperation({ summary: 'Delete a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task deleted successfully' })
@@ -172,6 +191,7 @@ export class TasksController {
   // =====================================================
 
   @Get('categories/all')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get all task categories for an organization' })
   @ApiResponse({ status: 200, description: 'Task categories retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -181,6 +201,7 @@ export class TasksController {
   }
 
   @Post('categories')
+  @CanCreateTask()
   @ApiOperation({ summary: 'Create a new task category' })
   @ApiResponse({ status: 201, description: 'Task category created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
@@ -198,6 +219,7 @@ export class TasksController {
   // =====================================================
 
   @Get(':taskId/comments')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get all comments for a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task comments retrieved successfully' })
@@ -210,6 +232,7 @@ export class TasksController {
   }
 
   @Post(':taskId/comments')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Add a comment to a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 201, description: 'Comment added successfully' })
@@ -229,6 +252,7 @@ export class TasksController {
   // =====================================================
 
   @Get(':taskId/time-logs')
+  @CanReadTasks()
   @ApiOperation({ summary: 'Get all time logs for a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Time logs retrieved successfully' })
@@ -241,6 +265,7 @@ export class TasksController {
   }
 
   @Post(':taskId/clock-in')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Clock in to a task (start time tracking)' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 201, description: 'Clock-in recorded successfully' })
@@ -257,6 +282,7 @@ export class TasksController {
   }
 
   @Patch('time-logs/:timeLogId/clock-out')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Clock out from a task (end time tracking)' })
   @ApiParam({ name: 'timeLogId', description: 'Time Log ID' })
   @ApiResponse({ status: 200, description: 'Clock-out recorded successfully' })

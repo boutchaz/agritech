@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,33 +38,54 @@ import { useAuth } from '@/components/MultiTenantAuthProvider';
 import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entries';
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
 import { toast } from 'sonner';
+import { getLocalDate } from '@/utils/date';
 
-// Zod schemas
-const stockEntryItemSchema = z.object({
-  item_id: z.string().min(1, 'Item is required'),
-  item_name: z.string().min(1, 'Item name is required'),
-  quantity: z.number().min(0.001, 'Quantity must be positive'),
-  unit: z.string().min(1, 'Unit is required'),
-  batch_number: z.string().optional().transform(val => val === '' ? undefined : val),
-  serial_number: z.string().optional().transform(val => val === '' ? undefined : val),
-  expiry_date: z.string().optional().transform(val => val === '' ? undefined : val),
-  cost_per_unit: z.number().optional(),
-  system_quantity: z.number().optional(),
-  physical_quantity: z.number().optional(),
-  notes: z.string().optional().transform(val => val === '' ? undefined : val),
-});
+// Zod schemas - Dynamic based on entry type
+const getStockEntrySchema = (entryType: StockEntryType) => {
+  // Base item schema with common fields
+  const baseStockEntryItemSchema = {
+    item_id: z.string().min(1, 'Item is required'),
+    item_name: z.string().min(1, 'Item name is required'),
+    quantity: z.number().min(0.001, 'Quantity must be positive'),
+    unit: z.string().min(1, 'Unit is required'),
+    batch_number: z.string().optional().transform(val => val === '' ? undefined : val),
+    serial_number: z.string().optional().transform(val => val === '' ? undefined : val),
+    expiry_date: z.string().optional().transform(val => val === '' ? undefined : val),
+    cost_per_unit: z.number().optional(),
+    notes: z.string().optional().transform(val => val === '' ? undefined : val),
+  };
 
-const stockEntrySchema = z.object({
-  entry_type: z.enum(['Material Receipt', 'Material Issue', 'Stock Transfer', 'Stock Reconciliation']),
-  entry_date: z.string().min(1, 'Date is required'),
-  from_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
-  to_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
-  purpose: z.string().optional().transform(val => val === '' ? undefined : val),
-  notes: z.string().optional().transform(val => val === '' ? undefined : val),
-  items: z.array(stockEntryItemSchema).min(1, 'At least one item is required'),
-});
+  // Reconciliation-specific schema requires system_quantity and physical_quantity
+  const reconciliationItemSchema = z.object({
+    ...baseStockEntryItemSchema,
+    system_quantity: z.number().min(0, 'System quantity is required for reconciliation'),
+    physical_quantity: z.number().min(0, 'Physical quantity is required for reconciliation'),
+  });
 
-type StockEntryFormData = z.infer<typeof stockEntrySchema>;
+  // Standard item schema (for Receipt, Issue, Transfer)
+  const standardItemSchema = z.object({
+    ...baseStockEntryItemSchema,
+    system_quantity: z.number().optional(),
+    physical_quantity: z.number().optional(),
+  });
+
+  // Use the appropriate item schema based on entry type
+  const itemSchema = entryType === 'Stock Reconciliation'
+    ? reconciliationItemSchema
+    : standardItemSchema;
+
+  return z.object({
+    entry_type: z.enum(['Material Receipt', 'Material Issue', 'Stock Transfer', 'Stock Reconciliation']),
+    entry_date: z.string().min(1, 'Date is required'),
+    from_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
+    to_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
+    purpose: z.string().optional().transform(val => val === '' ? undefined : val),
+    notes: z.string().optional().transform(val => val === '' ? undefined : val),
+    items: z.array(itemSchema).min(1, 'At least one item is required'),
+  });
+};
+
+type StockEntryFormData = any; // Will be inferred from dynamic schema
 
 interface StockEntryFormProps {
   open: boolean;
@@ -92,17 +113,22 @@ export default function StockEntryForm({
   });
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
 
+  // Dynamic schema based on selected type
+  const dynamicSchema = useMemo(() => getStockEntrySchema(selectedType), [selectedType]);
+
   const form = useForm<StockEntryFormData>({
-    resolver: zodResolver(stockEntrySchema),
+    resolver: zodResolver(dynamicSchema),
     defaultValues: {
       entry_type: defaultType,
-      entry_date: new Date().toISOString().split('T')[0],
+      entry_date: getLocalDate(),
       items: [
         {
           item_id: '',
           item_name: '',
           quantity: 1,
           unit: '',
+          system_quantity: 0,
+          physical_quantity: 0,
         },
       ],
     },
@@ -115,14 +141,37 @@ export default function StockEntryForm({
 
   const config = STOCK_ENTRY_TYPES[selectedType];
 
-  // Reset form when type changes
+  // Update resolver when type changes and reset warehouse fields
   useEffect(() => {
     form.setValue('entry_type', selectedType);
     form.setValue('from_warehouse_id', '');
     form.setValue('to_warehouse_id', '');
+    // Reset items to clear validation errors from previous type
+    form.setValue('items', [{
+      item_id: '',
+      item_name: '',
+      quantity: 1,
+      unit: '',
+      system_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
+      physical_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
+    }]);
   }, [selectedType, form]);
 
   const onSubmit = async (data: StockEntryFormData) => {
+    // Additional validation for reconciliation entries
+    if (selectedType === 'Stock Reconciliation') {
+      for (let i = 0; i < data.items.length; i++) {
+        const item = data.items[i];
+        if (item.system_quantity === null || item.system_quantity === undefined) {
+          toast.error(`Item #${i + 1}: System quantity is required for reconciliation`);
+          return;
+        }
+        if (item.physical_quantity === null || item.physical_quantity === undefined) {
+          toast.error(`Item #${i + 1}: Physical quantity is required for reconciliation`);
+          return;
+        }
+      }
+    }
     if (!currentOrganization?.id) {
       toast.error(t('stockEntries.toast.noOrganization'));
       return;
@@ -321,6 +370,8 @@ export default function StockEntryForm({
                     item_name: '',
                     quantity: 1,
                     unit: '',
+                    system_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
+                    physical_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
                   })
                 }
                 variant="outline"
@@ -421,15 +472,22 @@ export default function StockEntryForm({
                     {config.showReconciliationFields && (
                       <>
                         <div>
-                          <Label>{t('stockEntries.form.systemQuantity')}</Label>
+                          <Label>{t('stockEntries.form.systemQuantity')} {t('stockEntries.form.required')}</Label>
                           <Input
                             type="number"
                             step="0.001"
+                            placeholder="0.000"
                             {...form.register(`items.${index}.system_quantity`, {
                               valueAsNumber: true,
+                              required: selectedType === 'Stock Reconciliation',
                             })}
                             className="mt-1"
                           />
+                          {form.formState.errors.items?.[index]?.system_quantity && (
+                            <p className="text-sm text-red-600 mt-1">
+                              {form.formState.errors.items[index]?.system_quantity?.message}
+                            </p>
+                          )}
                         </div>
 
                         <div>
@@ -437,11 +495,18 @@ export default function StockEntryForm({
                           <Input
                             type="number"
                             step="0.001"
+                            placeholder="0.000"
                             {...form.register(`items.${index}.physical_quantity`, {
                               valueAsNumber: true,
+                              required: selectedType === 'Stock Reconciliation',
                             })}
                             className="mt-1"
                           />
+                          {form.formState.errors.items?.[index]?.physical_quantity && (
+                            <p className="text-sm text-red-600 mt-1">
+                              {form.formState.errors.items[index]?.physical_quantity?.message}
+                            </p>
+                          )}
                         </div>
                       </>
                     )}

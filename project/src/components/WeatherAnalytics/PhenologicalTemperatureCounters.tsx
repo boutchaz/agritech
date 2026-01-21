@@ -547,6 +547,113 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     return null;
   }
 
+  // Calculate universal temperature counters (5 fixed ranges)
+  const universalCounters = useMemo(() => {
+    if (!temperatureData || temperatureData.length === 0) {
+      return {
+        range1: 0, // < 0°C
+        range2: 0, // 0-7°C
+        range3: 0, // 7-15°C
+        range4: 0, // 15-35°C
+        range5: 0, // > 35°C
+        totalHours: 0,
+      };
+    }
+
+    let range1 = 0; // < 0°C
+    let range2 = 0; // 0-7°C
+    let range3 = 0; // 7-15°C
+    let range4 = 0; // 15-35°C
+    let range5 = 0; // > 35°C
+
+    temperatureData.forEach(day => {
+      const { current_min, current_max } = day;
+      const amplitude = (current_max - current_min) / 2;
+      const midpoint = (current_max + current_min) / 2;
+
+      // Simulate 24 hourly temperatures using sine wave approximation
+      for (let hour = 0; hour < 24; hour++) {
+        const hourlyTemp = midpoint + amplitude * Math.sin(((hour - 9) / 24) * 2 * Math.PI);
+
+        if (hourlyTemp < 0) {
+          range1++;
+        } else if (hourlyTemp >= 0 && hourlyTemp < 7) {
+          range2++;
+        } else if (hourlyTemp >= 7 && hourlyTemp < 15) {
+          range3++;
+        } else if (hourlyTemp >= 15 && hourlyTemp <= 35) {
+          range4++;
+        } else {
+          range5++; // > 35°C
+        }
+      }
+    });
+
+    const totalHours = temperatureData.length * 24;
+
+    return {
+      range1,
+      range2,
+      range3,
+      range4,
+      range5,
+      totalHours,
+    };
+  }, [temperatureData]);
+
+  const universalRanges = [
+    {
+      key: 'range1',
+      name: t('phenological.frostRange', 'Gel (< 0°C)'),
+      nameKey: 'phenological.frostRange',
+      description: t('phenological.frostRangeDesc', 'Risque de gel'),
+      tempRange: '< 0°C',
+      icon: <Snowflake className="h-5 w-5" />,
+      color: 'text-cyan-600',
+      bgColor: 'bg-cyan-50 dark:bg-cyan-900/20',
+    },
+    {
+      key: 'range2',
+      name: t('phenological.coldRange', 'Froid (0-7°C)'),
+      nameKey: 'phenological.coldRange',
+      description: t('phenological.coldRangeDesc', 'Températures froides'),
+      tempRange: '0-7°C',
+      icon: <Snowflake className="h-5 w-5" />,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+    },
+    {
+      key: 'range3',
+      name: t('phenological.coolRange', 'Frais (7-15°C)'),
+      nameKey: 'phenological.coolRange',
+      description: t('phenological.coolRangeDesc', 'Températures fraîches'),
+      tempRange: '7-15°C',
+      icon: <Leaf className="h-5 w-5" />,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    {
+      key: 'range4',
+      name: t('phenological.optimalRange', 'Optimal (15-35°C)'),
+      nameKey: 'phenological.optimalRange',
+      description: t('phenological.optimalRangeDesc', 'Zone de croissance optimale'),
+      tempRange: '15-35°C',
+      icon: <Sun className="h-5 w-5" />,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
+    },
+    {
+      key: 'range5',
+      name: t('phenological.heatRange', 'Chaleur (> 35°C)'),
+      nameKey: 'phenological.heatRange',
+      description: t('phenological.heatRangeDesc', 'Stress thermique'),
+      tempRange: '> 35°C',
+      icon: <Flame className="h-5 w-5" />,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50 dark:bg-red-900/20',
+    },
+  ];
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
@@ -556,15 +663,10 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('phenological.title', 'Temperature Counters by Phenological Stage')}
+              {t('phenological.title', 'Compteur Température')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('phenological.subtitle', 'Based on crop type')}: {' '}
-              <span className="font-medium capitalize">
-                {effectiveCropType === 'default'
-                  ? t('phenological.general', 'General')
-                  : effectiveCropType}
-              </span>
+              {t('phenological.subtitle', 'Analyse des températures par plage')}
             </p>
           </div>
         </div>
@@ -576,6 +678,127 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
             </span>
           </div>
         )}
+      </div>
+
+      {/* Universal Temperature Counter Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200">
+            {t('phenological.universalCounter', 'Compteur Universel')}
+          </h4>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('phenological.totalData', 'Total')}:{' '}
+            {temperatureData?.length || 0} {t('phenological.days', 'jours')} ({universalCounters.totalHours} {t('phenological.hours', 'heures')})
+          </span>
+        </div>
+
+        {/* Progress bar visualization */}
+        <div className="mb-4 h-6 rounded-full overflow-hidden flex">
+          <div
+            className="bg-cyan-500 transition-all duration-300"
+            style={{ width: `${(universalCounters.range1 / universalCounters.totalHours) * 100}%` }}
+            title={`< 0°C: ${Math.round((universalCounters.range1 / universalCounters.totalHours) * 100)}%`}
+          />
+          <div
+            className="bg-blue-500 transition-all duration-300"
+            style={{ width: `${(universalCounters.range2 / universalCounters.totalHours) * 100}%` }}
+            title={`0-7°C: ${Math.round((universalCounters.range2 / universalCounters.totalHours) * 100)}%`}
+          />
+          <div
+            className="bg-emerald-500 transition-all duration-300"
+            style={{ width: `${(universalCounters.range3 / universalCounters.totalHours) * 100}%` }}
+            title={`7-15°C: ${Math.round((universalCounters.range3 / universalCounters.totalHours) * 100)}%`}
+          />
+          <div
+            className="bg-amber-500 transition-all duration-300"
+            style={{ width: `${(universalCounters.range4 / universalCounters.totalHours) * 100}%` }}
+            title={`15-35°C: ${Math.round((universalCounters.range4 / universalCounters.totalHours) * 100)}%`}
+          />
+          <div
+            className="bg-red-500 transition-all duration-300"
+            style={{ width: `${(universalCounters.range5 / universalCounters.totalHours) * 100}%` }}
+            title={`> 35°C: ${Math.round((universalCounters.range5 / universalCounters.totalHours) * 100)}%`}
+          />
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mb-4 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-cyan-500"></div>
+            <span className="text-gray-600 dark:text-gray-400">&lt; 0°C</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-blue-500"></div>
+            <span className="text-gray-600 dark:text-gray-400">0-7°C</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-emerald-500"></div>
+            <span className="text-gray-600 dark:text-gray-400">7-15°C</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-amber-500"></div>
+            <span className="text-gray-600 dark:text-gray-400">15-35°C</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-red-500"></div>
+            <span className="text-gray-600 dark:text-gray-400">&gt; 35°C</span>
+          </div>
+        </div>
+
+        {/* Universal counters grid */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {universalRanges.map((range) => {
+            const hours = universalCounters[range.key as keyof typeof universalCounters] as number;
+            const percentage = universalCounters.totalHours > 0
+              ? (hours / universalCounters.totalHours) * 100
+              : 0;
+            const equivalentDays = Math.round((hours / 24) * 10) / 10;
+
+            return (
+              <div
+                key={range.key}
+                className={`${range.bgColor} rounded-xl p-4 border border-gray-100 dark:border-gray-700`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`${range.color}`}>
+                    {range.icon}
+                  </span>
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 px-2 py-0.5 rounded">
+                    {range.tempRange}
+                  </span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {hours.toLocaleString()}
+                  <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
+                    h
+                  </span>
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  <span>≈ {equivalentDays}j</span>
+                  <span className="text-gray-300 dark:text-gray-600">|</span>
+                  <span className={`font-medium ${percentage >= 20 ? range.color : ''}`}>
+                    {percentage.toFixed(1)}%
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2">
+                  {range.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {range.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Phenological Stage Counters Section */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4">
+          {t('phenological.byStage', 'Par Stade Phénologique')}: {effectiveCropType === 'default'
+            ? t('phenological.general', 'Général')
+            : effectiveCropType}
+        </h4>
       </div>
 
       <div className="space-y-6">

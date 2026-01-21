@@ -12,18 +12,28 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+    CanManageWorkers,
+    CanReadWorkers,
+    CanCreateWorker,
+    CanUpdateWorker,
+    CanDeleteWorker,
+} from '../casl/permissions.decorator';
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 
 @ApiTags('Workforce - Workers')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @Controller('organizations/:organizationId/workers')
 export class WorkersController {
   constructor(private readonly workersService: WorkersService) {}
 
   @Get()
+  @CanReadWorkers()
   @ApiOperation({ summary: 'Get all workers for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiQuery({ name: 'farmId', required: false, description: 'Filter by farm ID' })
@@ -39,6 +49,7 @@ export class WorkersController {
   }
 
   @Get('active')
+  @CanReadWorkers()
   @ApiOperation({ summary: 'Get all active workers for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 200, description: 'Active workers retrieved successfully' })
@@ -51,6 +62,7 @@ export class WorkersController {
   }
 
   @Get(':workerId')
+  @CanReadWorkers()
   @ApiOperation({ summary: 'Get a worker by ID' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
@@ -66,6 +78,7 @@ export class WorkersController {
   }
 
   @Get(':workerId/stats')
+  @CanReadWorkers()
   @ApiOperation({ summary: 'Get worker statistics' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
@@ -81,6 +94,7 @@ export class WorkersController {
   }
 
   @Post()
+  @CanCreateWorker()
   @ApiOperation({ summary: 'Create a new worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 201, description: 'Worker created successfully' })
@@ -95,6 +109,7 @@ export class WorkersController {
   }
 
   @Patch(':workerId')
+  @CanUpdateWorker()
   @ApiOperation({ summary: 'Update a worker' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
@@ -112,6 +127,7 @@ export class WorkersController {
   }
 
   @Patch(':workerId/deactivate')
+  @CanUpdateWorker()
   @ApiOperation({ summary: 'Deactivate a worker (soft delete)' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })
@@ -130,6 +146,7 @@ export class WorkersController {
   }
 
   @Delete(':workerId')
+  @CanDeleteWorker()
   @ApiOperation({ summary: 'Delete a worker (hard delete)' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'workerId', description: 'Worker ID' })

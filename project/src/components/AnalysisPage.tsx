@@ -26,7 +26,9 @@ const AnalysisPage: React.FC = () => {
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
   const { data: analyses = [], isLoading: loading, error } = useAnalysesByFarm(currentFarm?.id, activeTab, currentOrganization?.id);
-  const { data: parcels = [], isLoading: loadingParcels } = useParcels(currentFarm?.id, currentOrganization?.id);
+  const { data: parcelsData = [], isLoading: loadingParcels } = useParcels(currentFarm?.id, currentOrganization?.id);
+  // Ensure parcels is always an array, even if API returns unexpected response
+  const parcels = Array.isArray(parcelsData) ? parcelsData : [];
   const addAnalysisMutation = useAddAnalysis();
   const deleteAnalysisMutation = useDeleteAnalysis();
 

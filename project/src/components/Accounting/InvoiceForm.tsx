@@ -1,4 +1,5 @@
 import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { getLocalDate, getLocalDateOffset } from '@/utils/date';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -137,8 +138,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     resolver: zodResolver(getInvoiceSchema(t)),
     defaultValues: {
       invoice_type: 'sales',
-      invoice_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      invoice_date: getLocalDate(),
+      due_date: getLocalDateOffset(30), // 30 days from now
       farm_id: currentFarm?.id || null,
       parcel_id: null,
       items: [

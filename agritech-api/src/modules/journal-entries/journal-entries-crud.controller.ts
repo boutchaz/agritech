@@ -21,15 +21,23 @@ import {
 import { JournalEntriesService, CreateJournalEntryDto, UpdateJournalEntryDto } from './journal-entries.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+  CanReadJournalEntries,
+  CanCreateJournalEntry,
+  CanUpdateJournalEntry,
+  CanManageJournalEntries,
+} from '../casl/permissions.decorator';
 
 @ApiTags('journal-entries')
 @Controller('journal-entries')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class JournalEntriesCrudController {
   constructor(private readonly journalEntriesService: JournalEntriesService) {}
 
   @Get()
+  @CanReadJournalEntries()
   @ApiOperation({ summary: 'Get all journal entries with optional filters and pagination' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)' })
   @ApiQuery({ name: 'pageSize', required: false, description: 'Items per page' })
@@ -84,6 +92,7 @@ export class JournalEntriesCrudController {
   }
 
   @Get(':id')
+  @CanReadJournalEntries()
   @ApiOperation({ summary: 'Get a single journal entry by ID' })
   @ApiParam({ name: 'id', description: 'Journal entry ID' })
   @ApiResponse({ status: 200, description: 'Journal entry retrieved successfully' })
@@ -94,6 +103,7 @@ export class JournalEntriesCrudController {
   }
 
   @Post()
+  @CanCreateJournalEntry()
   @ApiOperation({ summary: 'Create a new journal entry' })
   @ApiResponse({ status: 201, description: 'Journal entry created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - entry not balanced' })
@@ -104,6 +114,7 @@ export class JournalEntriesCrudController {
   }
 
   @Patch(':id')
+  @CanUpdateJournalEntry()
   @ApiOperation({ summary: 'Update a draft journal entry' })
   @ApiParam({ name: 'id', description: 'Journal entry ID' })
   @ApiResponse({ status: 200, description: 'Journal entry updated successfully' })
@@ -120,6 +131,7 @@ export class JournalEntriesCrudController {
   }
 
   @Post(':id/post')
+  @CanUpdateJournalEntry()
   @ApiOperation({ summary: 'Post a draft journal entry' })
   @ApiParam({ name: 'id', description: 'Journal entry ID' })
   @ApiResponse({ status: 200, description: 'Journal entry posted successfully' })
@@ -131,6 +143,7 @@ export class JournalEntriesCrudController {
   }
 
   @Patch(':id/cancel')
+  @CanUpdateJournalEntry()
   @ApiOperation({ summary: 'Cancel a journal entry' })
   @ApiParam({ name: 'id', description: 'Journal entry ID' })
   @ApiResponse({ status: 200, description: 'Journal entry cancelled successfully' })
@@ -140,6 +153,7 @@ export class JournalEntriesCrudController {
   }
 
   @Delete(':id')
+  @CanManageJournalEntries()
   @ApiOperation({ summary: 'Delete a draft journal entry' })
   @ApiParam({ name: 'id', description: 'Journal entry ID' })
   @ApiResponse({ status: 200, description: 'Journal entry deleted successfully' })

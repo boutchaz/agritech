@@ -107,20 +107,24 @@ const CalendarContent: React.FC<{
   // Get tasks for selected date - show tasks that span across the selected date
   const selectedDateTasks = useMemo(() => {
     if (!selectedDate) return [];
+    // Normalize selected date to start of day in local time
     const selectedDateNormalized = new Date(selectedDate);
     selectedDateNormalized.setHours(0, 0, 0, 0);
 
     return tasks.filter(task => {
       if (!task.scheduled_start) return false;
 
-      const startDate = parseISO(task.scheduled_start);
-      startDate.setHours(0, 0, 0, 0);
+      // Parse ISO dates and compare using date strings to avoid timezone issues
+      const taskStart = parseISO(task.scheduled_start);
+      const taskEnd = task.due_date ? parseISO(task.due_date) : taskStart;
 
-      const endDate = task.due_date ? parseISO(task.due_date) : startDate;
-      endDate.setHours(23, 59, 59, 999);
+      // Convert all dates to YYYY-MM-DD format for comparison (timezone-safe)
+      const selectedDateStr = format(selectedDateNormalized, 'yyyy-MM-dd');
+      const startDateStr = format(taskStart, 'yyyy-MM-dd');
+      const endDateStr = format(taskEnd, 'yyyy-MM-dd');
 
       // Check if selected date falls within the task's date range
-      return selectedDateNormalized >= startDate && selectedDateNormalized <= endDate;
+      return selectedDateStr >= startDateStr && selectedDateStr <= endDateStr;
     });
   }, [selectedDate, tasks]);
 

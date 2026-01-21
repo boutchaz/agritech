@@ -1,6 +1,6 @@
 "use client";
 
-import { getDay, getDaysInMonth } from "date-fns";
+import { getDay, getDaysInMonth, format } from "date-fns";
 import { atom, useAtom } from "jotai";
 import {
   Check,
@@ -244,13 +244,13 @@ export const CalendarBody = ({ features, children, onDateClick }: CalendarBodyPr
       currentDate.setHours(0, 0, 0, 0); // Normalize to start of day
 
       result[day] = features.filter((feature) => {
-        const startDate = new Date(feature.startAt);
-        startDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(feature.endAt);
-        endDate.setHours(23, 59, 59, 999); // End of day for end date
+        // Use date string comparison to avoid timezone issues
+        const currentDateStr = format(currentDate, 'yyyy-MM-dd');
+        const startDateStr = format(new Date(feature.startAt), 'yyyy-MM-dd');
+        const endDateStr = format(new Date(feature.endAt), 'yyyy-MM-dd');
 
         // Check if current date falls within the feature's date range
-        return currentDate >= startDate && currentDate <= endDate;
+        return currentDateStr >= startDateStr && currentDateStr <= endDateStr;
       });
     }
     return result;

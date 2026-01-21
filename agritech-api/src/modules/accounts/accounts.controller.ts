@@ -2,11 +2,17 @@ import { Controller, Get, Post, Patch, Delete, Query, Param, Body, Req, UseGuard
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+    CanManageAccounts,
+    CanReadAccounts,
+} from '../casl/permissions.decorator';
 import { ApplyTemplateDto } from './dto/apply-template.dto';
 
 @ApiTags('accounts')
 @Controller('accounts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @ApiBearerAuth('JWT-auth')
 @ApiHeader({
   name: 'X-Organization-Id',
@@ -17,6 +23,7 @@ export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}
 
   @Get()
+  @CanReadAccounts()
   @ApiOperation({ summary: 'Get all accounts', description: 'Retrieve all accounts for the organization' })
   @ApiQuery({ name: 'is_active', required: false, type: Boolean, description: 'Filter by active status' })
   @ApiResponse({ status: 200, description: 'List of accounts returned successfully' })
@@ -34,6 +41,7 @@ export class AccountsController {
   }
 
   @Get(':id')
+  @CanReadAccounts()
   @ApiOperation({ summary: 'Get account by ID', description: 'Retrieve a single account by its ID' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account returned successfully' })
@@ -49,6 +57,7 @@ export class AccountsController {
   }
 
   @Post()
+  @CanManageAccounts()
   @ApiOperation({ summary: 'Create account', description: 'Create a new account in the chart of accounts' })
   @ApiResponse({ status: 201, description: 'Account created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid account data' })
@@ -65,6 +74,7 @@ export class AccountsController {
   }
 
   @Patch(':id')
+  @CanManageAccounts()
   @ApiOperation({ summary: 'Update account', description: 'Update an existing account' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account updated successfully' })
@@ -80,6 +90,7 @@ export class AccountsController {
   }
 
   @Delete(':id')
+  @CanManageAccounts()
   @ApiOperation({ summary: 'Delete account', description: 'Delete an account (only if no transactions)' })
   @ApiParam({ name: 'id', description: 'Account UUID' })
   @ApiResponse({ status: 200, description: 'Account deleted successfully' })
@@ -97,6 +108,7 @@ export class AccountsController {
   }
 
   @Post('seed-moroccan-chart')
+  @CanManageAccounts()
   @ApiOperation({ summary: 'Seed Moroccan chart of accounts', description: 'Initialize with Moroccan OHADA chart of accounts' })
   @ApiResponse({ status: 201, description: 'Chart of accounts seeded successfully' })
   async seedMoroccanChart(@Req() req: any) {
@@ -126,6 +138,7 @@ export class AccountsController {
   }
 
   @Post('templates/:countryCode/apply')
+  @CanManageAccounts()
   @ApiOperation({ summary: 'Apply chart of accounts template', description: 'Apply a country-specific chart of accounts template to the organization' })
   @ApiParam({ name: 'countryCode', description: 'Country code (e.g., MA, FR, SN)' })
   @ApiResponse({ status: 201, description: 'Template applied successfully' })

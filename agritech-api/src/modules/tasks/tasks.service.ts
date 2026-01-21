@@ -424,6 +424,7 @@ export class TasksService {
   /**
    * Complete a task
    * Creates journal entry if actual_cost is provided
+   * Creates work record if task is assigned to a worker
    */
   async complete(userId: string, organizationId: string, taskId: string, completeTaskDto: CompleteTaskDto) {
     await this.verifyOrganizationAccess(userId, organizationId);
@@ -432,7 +433,7 @@ export class TasksService {
     // Verify task belongs to organization and get full details
     const { data: existingTask } = await client
       .from('tasks')
-      .select('id, title, task_type, actual_cost')
+      .select('id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end')
       .eq('id', taskId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -465,6 +466,47 @@ export class TasksService {
 
     if (error) {
       throw new Error(`Failed to complete task: ${error.message}`);
+    }
+
+    // Create work record if task is assigned to a worker
+    // This connects the task system with the worker payment system
+    if (existingTask.assigned_to) {
+      try {
+        // Calculate hours worked from scheduled time or use default
+        let hoursWorked = 8; // Default to 8 hours
+        if (existingTask.scheduled_start && existingTask.scheduled_end) {
+          const startTime = new Date(existingTask.scheduled_start);
+          const endTime = new Date(existingTask.scheduled_end);
+          const diffMs = endTime.getTime() - startTime.getTime();
+          const calculatedHours = diffMs / (1000 * 60 * 60);
+          if (calculatedHours > 0 && calculatedHours < 24) {
+            hoursWorked = Math.round(calculatedHours * 100) / 100; // Round to 2 decimals
+          }
+        }
+
+        const { data: workRecord, error: workRecordError } = await client
+          .from('work_records')
+          .insert({
+            worker_id: existingTask.assigned_to,
+            work_date: now.split('T')[0], // Use current date
+            hours_worked: hoursWorked,
+            description: `Tâche: ${existingTask.title || 'Sans titre'} (ID: ${taskId})`,
+            status: 'completed',
+            task_id: taskId,
+            created_by: userId,
+          })
+          .select()
+          .single();
+
+        if (workRecordError) {
+          this.logger.warn(`Failed to create work record for task ${taskId}: ${workRecordError.message}`);
+        } else {
+          this.logger.log(`Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}`);
+        }
+      } catch (workRecordError) {
+        // Don't fail the task completion if work record creation fails
+        this.logger.error(`Failed to create work record for task ${taskId}: ${workRecordError.message}`, workRecordError.stack);
+      }
     }
 
     // Create journal entry if actual_cost is provided and > 0

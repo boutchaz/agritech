@@ -160,7 +160,7 @@ AgriTech is a multi-frontend, multi-service monorepo (Vite/React main app, NestJ
 
 ---
 
-## Appendix: Notable File References
+# Appendix: Notable File References
 - `project/src/lib/casl/ability.ts:53-366` — Rich, subscription-aware frontend permissions.
 - `agritech-api/src/modules/casl/casl-ability.factory.ts:15-65` — Minimal backend permissions lacking limits.
 - `agritech-api/src/modules/casl/policies.guard.ts:17-99` — Permissive when no policies defined; verbose logging.
