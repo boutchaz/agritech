@@ -4,6 +4,8 @@
  * Provides tracking functions for page views, events, and user interactions
  */
 
+import { clarity } from '@microsoft/clarity';
+
 export const GA_TRACKING_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 // Microsoft Clarity Project ID
@@ -59,7 +61,7 @@ export const initGA = (): void => {
 
 /**
  * Initialize Microsoft Clarity
- * Loads the Clarity tracking script and sets up the project
+ * Uses the official Microsoft Clarity React package
  * Deferred to prevent interference with router navigation
  */
 export const initClarity = (): void => {
@@ -67,34 +69,14 @@ export const initClarity = (): void => {
     return;
   }
 
-  // Prevent duplicate initialization
-  if (window.clarity) {
-    return;
-  }
-
   // Defer Clarity initialization to prevent router interference
-  // Clarity uses history.pushState which can trigger infinite redirects
-  // with TanStack Router's navigation listeners
-  requestIdleCallback(() => {
-    // Double-check after idle callback
-    if (window.clarity) {
-      return;
-    }
-
-    // Clarity initialization snippet
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    (function(c: any, l: Document, a: string, r: string, i: string) {
-      c[a] = c[a] || function() {
-        (c[a].q = c[a].q || []).push(arguments);
-      };
-      const t = l.createElement(r) as HTMLScriptElement;
-      t.async = true;
-      t.src = `https://www.clarity.ms/tag/${i}`;
-      const y = l.getElementsByTagName(r)[0];
-      y.parentNode?.insertBefore(t, y);
-    })(window, document, 'clarity', 'script', CLARITY_PROJECT_ID);
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-  }, { timeout: 2000 });
+  // The official package handles script loading and initialization properly
+  clarity.start({
+    projectId: CLARITY_PROJECT_ID,
+    upload: {
+      endpoint: 'https://www.clarity.ms/collect',
+    },
+  });
 };
 
 /**
@@ -115,11 +97,15 @@ export const initAnalytics = (): void => {
  * @param userId - Unique user identifier (email, UUID, etc.)
  */
 export const setClarityUserId = (userId: string): void => {
-  if (typeof window === 'undefined' || !window.clarity) {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  window.clarity('set', 'userId', userId);
+  try {
+    clarity.set('userId', userId);
+  } catch {
+    // Clarity not initialized yet
+  }
 };
 
 /**
@@ -128,14 +114,18 @@ export const setClarityUserId = (userId: string): void => {
  * @param value - Optional numeric value (e.g., duration, price)
  */
 export const trackClarityEvent = (eventName: string, value?: number): void => {
-  if (typeof window === 'undefined' || !window.clarity) {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  if (value !== undefined) {
-    window.clarity('event', eventName, value);
-  } else {
-    window.clarity('event', eventName);
+  try {
+    if (value !== undefined) {
+      clarity.event(eventName, value);
+    } else {
+      clarity.event(eventName);
+    }
+  } catch {
+    // Clarity not initialized yet
   }
 };
 
@@ -144,13 +134,17 @@ export const trackClarityEvent = (eventName: string, value?: number): void => {
  * @param properties - Object containing key-value pairs
  */
 export const setClarityUserProperties = (properties: Record<string, string | number | boolean>): void => {
-  if (typeof window === 'undefined' || !window.clarity) {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  Object.entries(properties).forEach(([key, value]) => {
-    window.clarity('set', key, String(value));
-  });
+  try {
+    Object.entries(properties).forEach(([key, value]) => {
+      clarity.set(key, String(value));
+    });
+  } catch {
+    // Clarity not initialized yet
+  }
 };
 
 /**
@@ -162,14 +156,18 @@ export const identifyClarityUser = (
   userId: string,
   attributes?: Record<string, string | number | boolean>
 ): void => {
-  if (typeof window === 'undefined' || !window.clarity) {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  window.clarity('identify', userId, attributes);
+  try {
+    clarity.identify(userId, attributes);
 
-  // Also set as custom property for filtering
-  setClarityUserProperties({ userId, ...(attributes ?? {}) });
+    // Also set as custom property for filtering
+    setClarityUserProperties({ userId, ...(attributes ?? {}) });
+  } catch {
+    // Clarity not initialized yet
+  }
 };
 
 /**
@@ -179,14 +177,18 @@ export const identifyClarityUser = (
  * @param value - Optional monetary value
  */
 export const trackClarityGoal = (goalName: string, value?: number): void => {
-  if (typeof window === 'undefined' || !window.clarity) {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  if (value !== undefined) {
-    window.clarity('event', goalName, value);
-  } else {
-    window.clarity('event', goalName);
+  try {
+    if (value !== undefined) {
+      clarity.event(goalName, value);
+    } else {
+      clarity.event(goalName);
+    }
+  } catch {
+    // Clarity not initialized yet
   }
 };
 
