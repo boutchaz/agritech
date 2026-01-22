@@ -98,17 +98,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     )
   );
 
-  console.log('🔍 Onboarding debug:', {
-    user: !!user,
-    loading,
-    profile: profile ? {
-      hasProfile: true,
-      fullName: profile.full_name,
-      onboardingCompleted: profile.onboarding_completed
-    } : { hasProfile: false },
-    organizationsCount: organizations.length,
-    needsOnboarding
-  });
+
 
   // Get Zustand store actions
   const setOrganizationInStore = useOrganizationStore(state => state.setCurrentOrganization);

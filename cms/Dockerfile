@@ -18,10 +18,10 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /srv/app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json ./
 
 # Install ALL dependencies (including dev dependencies for build)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy app files
 COPY . .
@@ -43,10 +43,10 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /srv/app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json ./
 
 # Install only production dependencies + TypeScript (needed for .ts config files)
-RUN pnpm install --frozen-lockfile --prod && \
+RUN pnpm install --prod && \
     pnpm add typescript @types/node
 
 # Copy built app from builder

@@ -1,6 +1,5 @@
 import { authSupabase } from './auth-supabase';
 import { useOrganizationStore } from '../stores/organizationStore';
-import { isTauriAvailable } from './runtime';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -22,10 +21,6 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
-  if (isTauriAvailable()) {
-    throw new Error('getApiHeaders is not available in desktop mode');
-  }
-
   const { data: { session }, error: sessionError } = await authSupabase.auth.getSession();
 
   if (sessionError) {
@@ -77,13 +72,6 @@ export async function apiRequest<T>(
   options: RequestInit = {},
   organizationId?: string | null
 ): Promise<T> {
-  if (isTauriAvailable()) {
-    throw new Error(
-      `API request attempted in desktop mode: ${url}. ` +
-      'Use the DataProvider or Tauri commands for local data access.'
-    );
-  }
-
   const headers = await getApiHeaders(organizationId);
   const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
 
