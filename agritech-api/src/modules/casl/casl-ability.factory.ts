@@ -114,7 +114,14 @@ export class CaslAbilityFactory {
             .single();
 
         if (error || !orgUser) {
-            // No access to this organization
+            console.error('[CaslAbilityFactory] Failed to fetch organization user:', {
+                userId: user.id,
+                organizationId,
+                error: error?.message || 'No organization_users record found',
+                errorCode: error?.code,
+                errorDetails: error?.details,
+                hint: error?.hint,
+            });
             return build({
                 detectSubjectType: (item: any) => item.constructor as any,
             } as any);

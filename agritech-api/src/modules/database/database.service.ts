@@ -34,7 +34,6 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       },
     });
 
-    // Admin client for service-level operations (bypasses RLS)
     if (supabaseServiceKey) {
       this.adminClient = createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
@@ -42,6 +41,9 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           persistSession: false,
         },
       });
+      this.logger.log('Admin client initialized with service role key');
+    } else {
+      this.logger.error('SUPABASE_SERVICE_ROLE_KEY not configured - admin operations will fail');
     }
 
     // Initialize PostgreSQL connection pool

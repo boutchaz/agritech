@@ -340,6 +340,7 @@ export class UsersService {
 
     /**
      * Get user's tour preferences (completed and dismissed tours)
+     * Returns empty arrays if user profile doesn't exist yet
      */
     async getTourPreferences(userId: string) {
         const client = this.databaseService.getAdminClient();
@@ -349,23 +350,21 @@ export class UsersService {
                 .from('user_profiles')
                 .select('completed_tours, dismissed_tours')
                 .eq('id', userId)
-                .single();
+                .maybeSingle();
 
-            if (error) {
-                this.logger.error(`Failed to get tour preferences: ${error.message}`);
-                throw new BadRequestException(`Failed to get tour preferences: ${error.message}`);
-            }
-
+            // Use .maybeSingle() instead of .single() to handle missing profiles gracefully
+            // Return default empty arrays for users without a profile
             return {
                 completed_tours: data?.completed_tours || [],
                 dismissed_tours: data?.dismissed_tours || [],
             };
         } catch (error) {
-            if (error instanceof BadRequestException) {
-                throw error;
-            }
             this.logger.error(`Failed to get tour preferences: ${error.message}`);
-            throw new InternalServerErrorException('Failed to get tour preferences');
+            // Return empty arrays on error instead of throwing - this allows the app to continue
+            return {
+                completed_tours: [],
+                dismissed_tours: [],
+            };
         }
     }
 
