@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { formatCurrency, getCurrency } from '../utils/currencies';
 
 /**

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
 import { quotesApi, type PaginatedQuoteQuery, type PaginatedResponse } from '../lib/api/quotes';
 

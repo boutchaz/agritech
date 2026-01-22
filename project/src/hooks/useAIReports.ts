@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { authSupabase } from '../lib/auth-supabase';
 import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo, type DataAvailabilityResponse, type CalibrationStatus, type CalibrateRequest, type FetchDataRequest, type AIReportJob, type AIReportJobStatus } from '../lib/api/ai-reports';
 

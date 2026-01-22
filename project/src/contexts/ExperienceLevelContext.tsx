@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import type {
   ExperienceLevel,
   ExperienceLevelConfig,

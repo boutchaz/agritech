@@ -1,17 +1,12 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod db;
 mod commands;
-mod auth;
-mod import;
-
-use tauri::Manager;
+mod db;
 
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            // Initialize database on startup
             let app_handle = app.handle();
             if let Err(e) = db::init_database(&app_handle) {
                 eprintln!("Failed to initialize database: {}", e);
@@ -24,6 +19,8 @@ fn main() {
             commands::auth::local_logout,
             commands::auth::get_current_user,
             commands::auth::check_auth_status,
+            commands::auth::local_setup,
+            commands::auth::check_has_users,
             // Organization commands
             commands::organizations::get_organizations,
             commands::organizations::get_organization_by_id,

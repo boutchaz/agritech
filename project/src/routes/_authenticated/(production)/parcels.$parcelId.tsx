@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useAuth } from '@/components/MultiTenantAuthProvider'
+import { useAuth } from '@/hooks/useAuth'
 import { useParcelById, useFarms } from '@/hooks/useParcelsQuery'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp } from 'lucide-react'

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { tasksApi, type PaginatedTaskQuery } from '../lib/api/tasks';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { PaginatedResponse } from '../lib/api/types';
 import type {
   TaskFilters,

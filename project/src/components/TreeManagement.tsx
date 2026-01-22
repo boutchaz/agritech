@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, Save, X, TreeDeciduous, Sprout, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useTreeCategories, usePlantationTypes } from '../hooks/useTreeManagement';
 
 interface TreeManagementProps {

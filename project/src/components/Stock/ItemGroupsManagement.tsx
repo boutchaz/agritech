@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, Loader2, FolderOpen, Package } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { ItemGroup } from '@/types/items';
 

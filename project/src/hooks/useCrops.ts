@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { cropsApi, type Crop } from '@/lib/api/crops';
 
 export type { Crop } from '@/lib/api/crops';

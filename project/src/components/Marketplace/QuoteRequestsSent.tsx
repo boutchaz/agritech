@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { quoteRequestsApi } from '../../lib/api/quote-requests';
 import {
   Mail,

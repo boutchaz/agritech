@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { receptionBatchesApi, type PaginatedReceptionBatchQuery } from '@/lib/api/reception-batches';
 import { warehousesApi } from '@/lib/api/warehouses';
 import type { PaginatedResponse } from '@/lib/api/types';

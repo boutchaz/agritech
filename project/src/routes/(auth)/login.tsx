@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
@@ -22,7 +22,6 @@ function LoginPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Redirect if already logged in
   if (user) {
     navigate({ to: '/dashboard' })
     return null
@@ -35,12 +34,11 @@ function LoginPage() {
 
     try {
       const response = await loginViaApi(email, password)
-
       if (response?.user) {
         window.location.href = '/dashboard'
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('auth.errors.generic')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('auth.errors.generic')
       setError(message.includes('Invalid') ? t('auth.errors.invalidCredentials') : message)
     } finally {
       setIsLoading(false)
@@ -52,8 +50,8 @@ function LoginPage() {
     setError(null)
     try {
       await signInWithGoogle()
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t('auth.errors.oauthFailed'))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('auth.errors.oauthFailed'))
       setIsOAuthLoading(null)
     }
   }
@@ -63,8 +61,8 @@ function LoginPage() {
     setError(null)
     try {
       await signInWithGitHub()
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t('auth.errors.oauthFailed'))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('auth.errors.oauthFailed'))
       setIsOAuthLoading(null)
     }
   }

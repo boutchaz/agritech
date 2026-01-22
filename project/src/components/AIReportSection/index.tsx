@@ -7,7 +7,7 @@ import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { AIReportPreview } from './AIReportPreview';
 import { AIReportExport } from './AIReportExport';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { productionIntelligenceApi } from '../../lib/api/production-intelligence';
 

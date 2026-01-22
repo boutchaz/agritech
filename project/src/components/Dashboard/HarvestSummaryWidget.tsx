@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { TrendingUp, ChevronRight, Calendar, Package as PackageIcon } from 'lucide-react';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useHarvests } from '../../hooks/useHarvests';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { useTranslation } from 'react-i18next';

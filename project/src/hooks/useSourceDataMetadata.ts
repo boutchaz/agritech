@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { sourceDataApi, getFreshnessLevel, getSufficiencyStatus } from '../lib/api/source-data';
 import type { SourceDataMetadata, DataFreshnessLevel, DataSourceInfo } from '../lib/api/source-data';
 

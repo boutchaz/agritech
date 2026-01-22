@@ -29,7 +29,7 @@ import { useSuppliers } from '@/hooks/useSuppliers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { usePurchaseTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { QuickCreateItem } from './QuickCreateItem';

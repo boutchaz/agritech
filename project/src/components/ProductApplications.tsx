@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, FileText, Calendar } from 'lucide-react';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { productApplicationsApi, ProductApplication } from '../lib/api/product-applications';
 import { inventoryApi, InventoryProduct } from '../lib/api/inventory';
 import { parcelsApi, Parcel } from '../lib/api/parcels';

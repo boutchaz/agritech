@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Users, UserCheck, Clock, ChevronRight, Activity } from 'lucide-react';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useTasks } from '../../hooks/useTasks';
 import { isToday } from 'date-fns';

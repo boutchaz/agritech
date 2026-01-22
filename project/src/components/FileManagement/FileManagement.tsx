@@ -47,7 +47,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { filesApi, FileRegistry } from '@/lib/api/files';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { formatBytes } from '@/lib/utils';
 
 export function FileManagement() {

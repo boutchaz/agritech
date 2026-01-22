@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { salesOrdersApi, type PaginatedSalesOrderQuery, type PaginatedResponse } from '../lib/api/sales-orders';
 
 // Raw sales order from database

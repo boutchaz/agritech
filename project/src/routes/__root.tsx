@@ -2,7 +2,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/router-devtools'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'sonner'
-import { MultiTenantAuthProvider } from '../components/MultiTenantAuthProvider'
+import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
@@ -16,7 +16,7 @@ export const Route = createRootRoute({
   component: () => (
     <ErrorBoundary>
       <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
-        <MultiTenantAuthProvider>
+        <AuthProviderSwitch>
           <ExperienceLevelProvider>
             <TourProvider>
               <AbilityProvider>
@@ -37,7 +37,7 @@ export const Route = createRootRoute({
               </AbilityProvider>
             </TourProvider>
           </ExperienceLevelProvider>
-        </MultiTenantAuthProvider>
+        </AuthProviderSwitch>
       </NetworkStatusProvider>
     </ErrorBoundary>
   ),

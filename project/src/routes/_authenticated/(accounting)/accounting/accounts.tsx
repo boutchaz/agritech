@@ -5,7 +5,7 @@ import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { MobileNavBar } from '@/components/MobileNavBar';
 import { Building2, BookOpen } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { ChartOfAccounts } from '@/components/Accounting/ChartOfAccounts';
 
 const AccountsContent = () => {

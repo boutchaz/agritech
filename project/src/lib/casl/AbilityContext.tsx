@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { createContextualCan } from '@casl/react';
-import { useAuth } from '../../components/MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useSubscription } from '../../hooks/useSubscription';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api-client';

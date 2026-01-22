@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Plus,
 } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import {
   useParcelPerformanceSummary,
   usePerformanceAlerts,

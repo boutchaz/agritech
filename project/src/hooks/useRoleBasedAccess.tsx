@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authSupabase } from '../lib/auth-supabase';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { UserRole, UserPermission, ResourceType, ActionType } from '../types/auth';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';

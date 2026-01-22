@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { harvestsApi, type PaginatedHarvestQuery } from '../lib/api/harvests';
 import { deliveriesApi } from '../lib/api/deliveries';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { PaginatedResponse } from '../lib/api/types';
 import type {
   HarvestRecord,

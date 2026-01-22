@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { warehousesApi, type Warehouse } from '@/lib/api/warehouses';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Fetch all active warehouses for the current organization

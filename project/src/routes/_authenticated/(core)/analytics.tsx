@@ -1,7 +1,7 @@
 import React from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import AnalysisPage from '@/components/AnalysisPage';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Beaker, FlaskConical, ArrowRight } from 'lucide-react';

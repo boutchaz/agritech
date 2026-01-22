@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload, MoreVertical, Pencil } from 'lucide-react';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useCurrency } from '../hooks/useCurrency';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';

@@ -44,7 +44,7 @@ import { useParcelsWithDetails } from '@/hooks/useParcelsWithDetails';
 import { useAssignableUsers } from '@/hooks/useAssignableUsers';
 import { useHarvests } from '@/hooks/useHarvests';
 import { useWarehouses } from '@/hooks/useWarehouses';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import type {
   CreateReceptionBatchDto,
   QualityGrade,

@@ -5,7 +5,7 @@ import {
   useCancelReceptionBatch,
   useDeleteReceptionBatch,
 } from '@/hooks/useReceptionBatches';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Table,
   TableBody,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 interface SubscriptionRequiredProps {
   reason?: 'no_subscription' | 'expired' | 'canceled' | 'past_due';

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { LayoutGrid, Save, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardSettingsApi } from '../lib/api/dashboard-settings';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
 import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { satelliteIndicesApi, SatelliteIndex } from '../lib/api/satellite-indices';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export interface LatestIndices {
   ndvi: number | null;

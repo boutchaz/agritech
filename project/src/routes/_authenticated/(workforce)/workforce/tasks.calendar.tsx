@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import TasksCalendar from '@/components/Tasks/TasksCalendar';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { farmsApi } from '@/lib/api/farms';
 
 function TasksCalendarPage() {

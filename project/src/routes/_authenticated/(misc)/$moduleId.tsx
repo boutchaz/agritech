@@ -1,6 +1,6 @@
 import React from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useAuth } from '@/components/MultiTenantAuthProvider'
+import { useAuth } from '@/hooks/useAuth'
 import ModuleView from '@/components/ModuleView'
 import type { Module, SensorData } from '@/types'
 

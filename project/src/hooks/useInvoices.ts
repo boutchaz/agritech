@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
 import { invoicesApi, type PaginatedInvoiceQuery } from '../lib/api/invoices';
 import type { PaginatedResponse } from '../lib/api/types';

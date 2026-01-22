@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { authSupabase } from '../lib/auth-supabase';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 

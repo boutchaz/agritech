@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { journalEntriesApi, type CreateJournalEntryInput, type UpdateJournalEntryInput, type JournalEntryFilters, type JournalEntryWithItems, type PaginatedJournalEntryQuery } from '../lib/api/journal-entries';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { PaginatedResponse } from '../lib/api/types';
 
 export type { CreateJournalEntryInput, UpdateJournalEntryInput, JournalEntryFilters, JournalEntryWithItems, PaginatedJournalEntryQuery };

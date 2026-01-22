@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useCan } from '@/lib/casl/AbilityContext';

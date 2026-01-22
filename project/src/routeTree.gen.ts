@@ -13,6 +13,8 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicCheckoutSuccessRouteImport } from './routes/(public)/checkout-success'
+import { Route as desktopSetupRouteImport } from './routes/(desktop)/setup'
+import { Route as desktopImportDataRouteImport } from './routes/(desktop)/import-data'
 import { Route as authSetPasswordRouteImport } from './routes/(auth)/set-password'
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
@@ -129,6 +131,16 @@ const publicPitchDeckRoute = publicPitchDeckRouteImport.update({
 const publicCheckoutSuccessRoute = publicCheckoutSuccessRouteImport.update({
   id: '/(public)/checkout-success',
   path: '/checkout-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const desktopSetupRoute = desktopSetupRouteImport.update({
+  id: '/(desktop)/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const desktopImportDataRoute = desktopImportDataRouteImport.update({
+  id: '/(desktop)/import-data',
+  path: '/import-data',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authSetPasswordRoute = authSetPasswordRouteImport.update({
@@ -717,6 +729,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/set-password': typeof authSetPasswordRoute
+  '/import-data': typeof desktopImportDataRoute
+  '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
   '/auth/callback': typeof authAuthCallbackRoute
@@ -744,8 +758,8 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
-  '/blog': typeof publicBlogIndexRoute
-  '/onboarding': typeof publicOnboardingIndexRoute
+  '/blog/': typeof publicBlogIndexRoute
+  '/onboarding/': typeof publicOnboardingIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
@@ -812,7 +826,7 @@ export interface FileRoutesByFullPath {
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
-  '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -820,6 +834,8 @@ export interface FileRoutesByTo {
   '/login': typeof authLoginRoute
   '/register': typeof authRegisterRoute
   '/set-password': typeof authSetPasswordRoute
+  '/import-data': typeof desktopImportDataRoute
+  '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
   '/auth/callback': typeof authAuthCallbackRoute
@@ -920,6 +936,8 @@ export interface FileRoutesById {
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/register': typeof authRegisterRoute
   '/(auth)/set-password': typeof authSetPasswordRoute
+  '/(desktop)/import-data': typeof desktopImportDataRoute
+  '/(desktop)/setup': typeof desktopSetupRoute
   '/(public)/checkout-success': typeof publicCheckoutSuccessRoute
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
@@ -1025,6 +1043,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/set-password'
+    | '/import-data'
+    | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
     | '/auth/callback'
@@ -1052,8 +1072,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/workers'
-    | '/blog'
-    | '/onboarding'
+    | '/blog/'
+    | '/onboarding/'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
@@ -1120,7 +1140,7 @@ export interface FileRouteTypes {
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId/'
-    | '/workforce/tasks'
+    | '/workforce/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1128,6 +1148,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/set-password'
+    | '/import-data'
+    | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
     | '/auth/callback'
@@ -1227,6 +1249,8 @@ export interface FileRouteTypes {
     | '/(auth)/login'
     | '/(auth)/register'
     | '/(auth)/set-password'
+    | '/(desktop)/import-data'
+    | '/(desktop)/setup'
     | '/(public)/checkout-success'
     | '/(public)/pitch-deck'
     | '/(auth)/auth/callback'
@@ -1332,6 +1356,8 @@ export interface RootRouteChildren {
   authLoginRoute: typeof authLoginRoute
   authRegisterRoute: typeof authRegisterRoute
   authSetPasswordRoute: typeof authSetPasswordRoute
+  desktopImportDataRoute: typeof desktopImportDataRoute
+  desktopSetupRoute: typeof desktopSetupRoute
   publicCheckoutSuccessRoute: typeof publicCheckoutSuccessRoute
   publicPitchDeckRoute: typeof publicPitchDeckRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
@@ -1346,7 +1372,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1369,6 +1395,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout-success'
       fullPath: '/checkout-success'
       preLoaderRoute: typeof publicCheckoutSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(desktop)/setup': {
+      id: '/(desktop)/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof desktopSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(desktop)/import-data': {
+      id: '/(desktop)/import-data'
+      path: '/import-data'
+      fullPath: '/import-data'
+      preLoaderRoute: typeof desktopImportDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/set-password': {
@@ -1402,14 +1442,14 @@ declare module '@tanstack/react-router' {
     '/(public)/onboarding/': {
       id: '/(public)/onboarding/'
       path: '/onboarding'
-      fullPath: '/onboarding'
+      fullPath: '/onboarding/'
       preLoaderRoute: typeof publicOnboardingIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/blog/': {
       id: '/(public)/blog/'
       path: '/blog'
-      fullPath: '/blog'
+      fullPath: '/blog/'
       preLoaderRoute: typeof publicBlogIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1976,7 +2016,7 @@ declare module '@tanstack/react-router' {
     '/_authenticated/(workforce)/workforce/tasks/': {
       id: '/_authenticated/(workforce)/workforce/tasks/'
       path: '/workforce/tasks'
-      fullPath: '/workforce/tasks'
+      fullPath: '/workforce/tasks/'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
@@ -2442,6 +2482,8 @@ const rootRouteChildren: RootRouteChildren = {
   authLoginRoute: authLoginRoute,
   authRegisterRoute: authRegisterRoute,
   authSetPasswordRoute: authSetPasswordRoute,
+  desktopImportDataRoute: desktopImportDataRoute,
+  desktopSetupRoute: desktopSetupRoute,
   publicCheckoutSuccessRoute: publicCheckoutSuccessRoute,
   publicPitchDeckRoute: publicPitchDeckRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,

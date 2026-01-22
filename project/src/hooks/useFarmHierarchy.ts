@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { farmHierarchyApi, type HierarchyFarm, type UserFarmRole } from '@/lib/api/farm-hierarchy';
 
 export type { HierarchyFarm, UserFarmRole } from '@/lib/api/farm-hierarchy';

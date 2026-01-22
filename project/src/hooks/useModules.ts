@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { modulesApi, type OrganizationModule, type UpdateModuleInput } from '../lib/api/modules';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export const useModules = () => {
   const { currentOrganization } = useAuth();

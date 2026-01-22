@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAbility } from '../../lib/casl/AbilityContext';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import type { Action, Subject } from '../../lib/casl/ability';
 
 interface ProtectedRouteProps {

@@ -1,0 +1,7 @@
+packages:
+  - 'project'
+  - 'agritech-api'
+  - 'admin-app'
+  - 'marketplace-frontend'
+  - 'cms'
+  - 'docs'

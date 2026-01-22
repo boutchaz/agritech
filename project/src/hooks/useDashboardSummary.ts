@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, type DashboardSummary } from '../services/dashboardService';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export function useDashboardSummary(farmId?: string) {
     const { currentOrganization } = useAuth();

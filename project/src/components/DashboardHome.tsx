@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, AlertCircle, CheckCircle, Activity, Users, Package, Loader2 } from 'lucide-react';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { appConfig } from '@/config/app';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
 

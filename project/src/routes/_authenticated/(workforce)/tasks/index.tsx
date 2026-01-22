@@ -3,7 +3,7 @@ import { useState } from 'react';
 import TasksList from '@/components/Tasks/TasksList';
 import TaskForm from '@/components/Tasks/TaskForm';
 import TaskDetailDialog from '@/components/Tasks/TaskDetailDialog';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { tasksApi } from '@/lib/api/tasks';
 import { farmsApi } from '@/lib/api/farms';

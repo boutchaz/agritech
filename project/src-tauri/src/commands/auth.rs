@@ -4,6 +4,15 @@ use tauri::AppHandle;
 use crate::db;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SetupData {
+    pub email: String,
+    pub password: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub organization_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LocalUser {
     pub id: String,
     pub email: String,
@@ -32,11 +41,11 @@ pub fn local_login(
 ) -> Result<LocalSession, String> {
     let conn = db::get_connection(&app_handle).map_err(|e| e.to_string())?;
 
-    let user: Result<LocalUser, _> = conn.query_row(
+    let (user, password_hash): (LocalUser, Option<String>) = conn.query_row(
         "SELECT id, email, first_name, last_name, full_name, password_hash FROM user_profiles WHERE email = ?",
         [&email],
         |row| {
-            let password_hash: Option<String> = row.get(5)?;
+            let hash: Option<String> = row.get(5)?;
             Ok((
                 LocalUser {
                     id: row.get(0)?,
@@ -45,15 +54,13 @@ pub fn local_login(
                     last_name: row.get(3)?,
                     full_name: row.get(4)?,
                 },
-                password_hash,
+                hash,
             ))
         },
     ).map_err(|_| "Invalid email or password".to_string())?;
 
-    let (user, password_hash) = user.map_err(|e: rusqlite::Error| e.to_string())?;
-
-    if let Some(hash) = password_hash {
-        let valid = bcrypt::verify(&password, &hash).unwrap_or(false);
+    if let Some(ref hash) = password_hash {
+        let valid = bcrypt::verify(&password, hash).unwrap_or(false);
         if !valid {
             return Err("Invalid email or password".to_string());
         }
@@ -85,7 +92,10 @@ pub fn local_logout(app_handle: AppHandle, session_id: String) -> Result<(), Str
 }
 
 #[tauri::command]
-pub fn get_current_user(app_handle: AppHandle, session_id: String) -> Result<Option<LocalUser>, String> {
+pub fn get_current_user(
+    app_handle: AppHandle,
+    session_id: String,
+) -> Result<Option<LocalUser>, String> {
     let conn = db::get_connection(&app_handle).map_err(|e| e.to_string())?;
 
     let result: Result<LocalUser, _> = conn.query_row(
@@ -145,4 +155,91 @@ pub fn check_auth_status(app_handle: AppHandle) -> Result<AuthStatus, String> {
             user: None,
         }),
     }
+}
+
+#[tauri::command]
+pub fn local_setup(app_handle: AppHandle, data: SetupData) -> Result<LocalSession, String> {
+    let conn = db::get_connection(&app_handle).map_err(|e| e.to_string())?;
+
+    let user_id = uuid::Uuid::new_v4().to_string();
+    let org_id = uuid::Uuid::new_v4().to_string();
+    let role_id = uuid::Uuid::new_v4().to_string();
+    let org_user_id = uuid::Uuid::new_v4().to_string();
+
+    let password_hash =
+        bcrypt::hash(&data.password, bcrypt::DEFAULT_COST).map_err(|e| e.to_string())?;
+
+    let full_name = match (&data.first_name, &data.last_name) {
+        (Some(f), Some(l)) => Some(format!("{} {}", f, l)),
+        (Some(f), None) => Some(f.clone()),
+        (None, Some(l)) => Some(l.clone()),
+        _ => None,
+    };
+
+    conn.execute(
+        "INSERT INTO roles (id, name, display_name, level, permissions) 
+         VALUES (?, 'organization_admin', 'Organization Admin', 2, '[]')
+         ON CONFLICT(name) DO UPDATE SET id = excluded.id",
+        [&role_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    let actual_role_id: String = conn
+        .query_row(
+            "SELECT id FROM roles WHERE name = 'organization_admin'",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO user_profiles (id, email, password_hash, first_name, last_name, full_name, password_set, onboarding_completed) 
+         VALUES (?, ?, ?, ?, ?, ?, 1, 1)",
+        rusqlite::params![&user_id, &data.email, &password_hash, &data.first_name, &data.last_name, &full_name],
+    ).map_err(|e| e.to_string())?;
+
+    let slug = data.organization_name.to_lowercase().replace(' ', "-");
+    conn.execute(
+        "INSERT INTO organizations (id, name, slug, is_active, onboarding_completed) VALUES (?, ?, ?, 1, 1)",
+        [&org_id, &data.organization_name, &slug],
+    ).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO organization_users (id, organization_id, user_id, role_id, is_active) VALUES (?, ?, ?, ?, 1)",
+        [&org_user_id, &org_id, &user_id, &actual_role_id],
+    ).map_err(|e| e.to_string())?;
+
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let expires_at = chrono::Utc::now()
+        .checked_add_signed(chrono::Duration::days(30))
+        .unwrap()
+        .to_rfc3339();
+
+    conn.execute(
+        "INSERT INTO local_sessions (id, user_id, expires_at) VALUES (?, ?, ?)",
+        [&session_id, &user_id, &expires_at],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(LocalSession {
+        user: LocalUser {
+            id: user_id,
+            email: data.email,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            full_name,
+        },
+        session_id,
+    })
+}
+
+#[tauri::command]
+pub fn check_has_users(app_handle: AppHandle) -> Result<bool, String> {
+    let conn = db::get_connection(&app_handle).map_err(|e| e.to_string())?;
+
+    let count: i32 = conn
+        .query_row("SELECT COUNT(*) FROM user_profiles", [], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
+    Ok(count > 0)
 }

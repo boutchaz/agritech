@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, Outlet, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import { MobileNavBar } from '@/components/MobileNavBar';
 import ModernPageHeader from '@/components/ModernPageHeader';

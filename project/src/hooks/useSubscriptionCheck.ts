@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export interface SubscriptionCheckResponse {
   isValid: boolean;

@@ -13,7 +13,7 @@ import {
   MiniCalendarDay,
 } from '../kibo-ui/mini-calendar';
 import { useTasks } from '../../hooks/useTasks';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import type { Task } from '../../types/tasks';
 
 const UpcomingTasksWidget: React.FC = () => {

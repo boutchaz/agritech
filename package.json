@@ -1,0 +1,42 @@
+{
+  "name": "agritech-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter agriprofy dev",
+    "dev:api": "pnpm --filter agritech-api start:dev",
+    "dev:admin": "pnpm --filter agritech-admin dev",
+    "dev:marketplace": "pnpm --filter marketplace-frontend dev",
+    "dev:cms": "pnpm --filter cms dev",
+    "dev:docs": "pnpm --filter agritech-docs start",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter agriprofy build",
+    "build:api": "pnpm --filter agritech-api build",
+    "build:admin": "pnpm --filter agritech-admin build",
+    "build:marketplace": "pnpm --filter marketplace-frontend build",
+    "build:cms": "pnpm --filter cms build",
+    "build:docs": "pnpm --filter agritech-docs build",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "type-check": "pnpm -r type-check",
+    "test": "pnpm --filter agriprofy test",
+    "test:api": "pnpm --filter agritech-api test",
+    "test:e2e": "pnpm --filter agriprofy test:e2e",
+    "clean": "pnpm -r exec rm -rf node_modules && rm -rf node_modules",
+    "clean:dist": "pnpm -r exec rm -rf dist",
+    "db:generate-types": "pnpm --filter agriprofy db:generate-types-remote",
+    "db:push": "pnpm --filter agriprofy db:push",
+    "db:reset": "pnpm --filter agriprofy db:reset",
+    "tauri:dev": "pnpm --filter agriprofy tauri:dev",
+    "tauri:build": "pnpm --filter agriprofy tauri:build",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

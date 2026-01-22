@@ -11,7 +11,7 @@ import {
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 
 interface IndicesCalculatorProps {
   parcelId: string;

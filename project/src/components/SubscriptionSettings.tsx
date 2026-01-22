@@ -16,7 +16,7 @@ import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
 import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
 import SubscriptionPlans from './SubscriptionPlans';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskAssignmentsApi, TaskAssignment, CreateTaskAssignmentDto, BulkCreateTaskAssignmentsDto, UpdateTaskAssignmentDto } from '../lib/api/task-assignments';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export function useTaskAssignments(taskId: string | undefined) {
   const { currentOrganization } = useAuth();

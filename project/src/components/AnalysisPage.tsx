@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { AnalysisType } from '../types/analysis';
 import { Select } from './ui/Select';
 import SoilAnalysisForm from './Analysis/SoilAnalysisFormRHF';

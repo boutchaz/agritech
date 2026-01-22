@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 
 export const Route = createFileRoute('/(public)/checkout-success')({

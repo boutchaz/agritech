@@ -1,5 +1,6 @@
 import { authSupabase } from './auth-supabase';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { isTauriAvailable } from './runtime';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -21,6 +22,10 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
+  if (isTauriAvailable()) {
+    throw new Error('getApiHeaders is not available in desktop mode');
+  }
+
   const { data: { session }, error: sessionError } = await authSupabase.auth.getSession();
 
   if (sessionError) {
@@ -33,7 +38,6 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
     throw new Error('No active session');
   }
 
-  // Use provided organizationId from context, or fall back to Zustand store
   const orgId = organizationId || getCurrentOrganizationId();
 
   console.log('[API Client] Building headers', {
@@ -51,7 +55,6 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
     'Pragma': 'no-cache',
   };
 
-  // Add organization ID header if available and valid (not "undefined" string)
   if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
     headers['X-Organization-Id'] = orgId;
     console.log('[API Client] Added X-Organization-Id header:', orgId);
@@ -64,6 +67,7 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
 
 /**
  * Make an authenticated API request with automatic organization ID header
+ * In desktop mode, this will throw an error for API calls that should use local data
  * @param url - Full URL or relative path (if relative, will use API_URL)
  * @param options - Request options
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
@@ -73,8 +77,14 @@ export async function apiRequest<T>(
   options: RequestInit = {},
   organizationId?: string | null
 ): Promise<T> {
+  if (isTauriAvailable()) {
+    throw new Error(
+      `API request attempted in desktop mode: ${url}. ` +
+      'Use the DataProvider or Tauri commands for local data access.'
+    );
+  }
+
   const headers = await getApiHeaders(organizationId);
-  // If url is already a full URL, use it; otherwise prepend API_URL
   const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
 
   const response = await fetch(fullUrl, {
@@ -116,7 +126,6 @@ export async function apiRequest<T>(
     throw new Error(errorMessage);
   }
 
-  // Handle empty responses (204 No Content or empty body)
   const contentLength = response.headers.get('content-length');
   const contentType = response.headers.get('content-type');
   
@@ -124,7 +133,6 @@ export async function apiRequest<T>(
     return {} as T;
   }
 
-  // Try to parse JSON, return empty object if parsing fails
   try {
     const text = await response.text();
     if (!text || text.trim() === '') {

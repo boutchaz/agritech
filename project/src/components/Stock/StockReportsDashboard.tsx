@@ -1,6 +1,6 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useStockMovements } from '@/hooks/useStockEntries';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';

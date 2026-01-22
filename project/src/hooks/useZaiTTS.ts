@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { chatApi } from '@/lib/api/chat';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UseZaiTTSOptions {
   language?: string;

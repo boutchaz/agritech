@@ -3,7 +3,7 @@ import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderPro
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useNavigate } from '@tanstack/react-router';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
 import {
   tourPreferencesApi,

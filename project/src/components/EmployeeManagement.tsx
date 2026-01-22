@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { FormField } from './ui/FormField';

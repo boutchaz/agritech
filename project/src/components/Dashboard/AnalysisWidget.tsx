@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { TestTube, TrendingUp, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useAnalysesByFarm } from '../../hooks/useAnalysesQuery';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';

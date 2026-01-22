@@ -1,4 +1,4 @@
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { getLocalDate, getLocalDateOffset } from '@/utils/date';
 import { Button } from '@/components/ui/button';
 import {

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentRecordsApi } from '../lib/api/payment-records';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type {
   PaymentFilters,
   CreatePaymentRecordRequest,

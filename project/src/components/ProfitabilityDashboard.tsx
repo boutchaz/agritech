@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles, Wheat, CalendarRange } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { profitabilityApi } from '../lib/api/profitability';
 import type { Cost, Revenue } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';

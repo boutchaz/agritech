@@ -34,7 +34,7 @@ import {
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { useItemSelection } from '@/hooks/useItems';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entries';
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
 import { toast } from 'sonner';

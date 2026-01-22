@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2, AlertTriangle, HardDrive, Calendar, TreeDeciduous } from 'lucide-react';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
 interface SettingsLayoutProps {

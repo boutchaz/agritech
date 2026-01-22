@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { taxesApi } from '../lib/api/taxes';
 import type { CreateTaxInput } from '../lib/api/taxes';
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
-import { useAuth } from '@/components/MultiTenantAuthProvider'
+import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import SettingsLayout from '@/components/SettingsLayout'

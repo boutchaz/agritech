@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { MapPin, ChevronDown, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {

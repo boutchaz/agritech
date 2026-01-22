@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from '@tanstack/react-router';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { AlertTriangle } from 'lucide-react';
 
 interface RoleProtectedRouteProps {

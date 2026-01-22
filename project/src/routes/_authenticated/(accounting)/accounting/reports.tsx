@@ -1,6 +1,6 @@
 import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, FileSpreadsheet, TrendingUp, Scale, BookOpen, Calendar, Users } from 'lucide-react';

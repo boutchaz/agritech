@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { Database } from '../types/database.types';
 import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
 import { paymentsApi, type PaginatedPaymentQuery, type PaginatedResponse } from '../lib/api/payments';

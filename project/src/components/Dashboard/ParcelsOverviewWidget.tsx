@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { MapPin, TrendingUp, ChevronRight, Layers } from 'lucide-react';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useFarms, useParcelsByFarms } from '../../hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 

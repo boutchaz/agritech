@@ -2,7 +2,7 @@ import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '@/lib/supabase';
 import { quotesApi } from '@/lib/api/quotes';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import {

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Wheat, Calendar, Star, MapPin, TrendingUp, Warehouse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 import { useFarms, useParcelsByFarm } from '../../hooks/useParcelsQuery';
 import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
 import { useWarehouses } from '../../hooks/useWarehouses';

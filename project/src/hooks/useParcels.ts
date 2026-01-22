@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { parcelsApi, type Parcel, type CreateParcelDto, type UpdateParcelDto } from '../lib/api/parcels';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export function useParcels(farmId: string | null) {
   const { currentOrganization } = useAuth();

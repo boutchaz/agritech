@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import EnhancedOnboardingFlow from '@/components/EnhancedOnboardingFlow';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { authSupabase } from '@/lib/auth-supabase';
 
 export const Route = createFileRoute('/(public)/onboarding/')({

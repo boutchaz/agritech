@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
-import { useAuth } from '@/components/MultiTenantAuthProvider'
+import { useAuth } from '@/hooks/useAuth'
 
 function SettingsIndexRedirect() {
   const { userRole: _userRole } = useAuth();

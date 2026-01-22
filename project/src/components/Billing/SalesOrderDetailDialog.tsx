@@ -26,7 +26,7 @@ import { useSalesOrder, useConvertOrderToInvoice, useIssueStock } from '@/hooks/
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
-import { useAuth } from '../MultiTenantAuthProvider';
+import { useAuth } from '../../hooks/useAuth';
 
 // Types for timeline
 type TimelineStepKey = 'confirmed' | 'processing' | 'delivered' | 'invoiced';

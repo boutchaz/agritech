@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi, type SendMessageDto, type ChatResponse } from '@/lib/api/chat';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Hook to send a chat message and get AI response

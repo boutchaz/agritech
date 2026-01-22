@@ -5,7 +5,7 @@ import {
   type CreateStructureInput,
   type UpdateStructureInput,
 } from '../lib/api/structures';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 export const useStructures = () => {
   const { currentOrganization } = useAuth();

@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Search, X, ChevronRight } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 interface BreadcrumbItem {
   icon?: React.ComponentType<{ className?: string }>;

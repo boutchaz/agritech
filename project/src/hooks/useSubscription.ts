@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authSupabase } from '../lib/auth-supabase';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import type { PlanType } from '../lib/polar';
 import { subscriptionsService } from '../services/subscriptionsService';
 

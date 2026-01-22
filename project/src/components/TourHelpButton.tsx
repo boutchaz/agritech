@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TourInfo {
   id: TourId;

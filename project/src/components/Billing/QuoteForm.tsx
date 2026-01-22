@@ -23,7 +23,7 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
 import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';

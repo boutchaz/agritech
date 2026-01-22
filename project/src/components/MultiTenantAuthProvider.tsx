@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useNavigate, useLocation } from '@tanstack/react-router';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { authSupabase } from '../lib/auth-supabase';
@@ -16,78 +16,10 @@ import {
 import { useSubscription } from '../hooks/useSubscription';
 import { isSubscriptionValid } from '../lib/polar';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
 
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  role: string;
-  role_id?: string;
-  is_active: boolean;
-  onboarding_completed?: boolean;
-  currency?: string;
-  timezone?: string;
-  language?: string;
-}
-
-interface Farm {
-  id: string;
-  name: string;
-  location: string;
-  size: number;
-  manager_name: string;
-}
-
-interface UserProfile {
-  id: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  avatar_url?: string;
-  phone?: string;
-  timezone: string;
-  language: string;
-  password_set?: boolean;
-  onboarding_completed?: boolean;
-}
-
-interface AuthContextType {
-  user: User | null;
-  profile: UserProfile | null;
-  organizations: Organization[];
-  currentOrganization: Organization | null;
-  farms: Farm[];
-  currentFarm: Farm | null;
-  userRole: UserRole | null;
-  loading: boolean;
-  needsOnboarding: boolean;
-  setCurrentOrganization: (org: Organization) => void;
-  setCurrentFarm: (farm: Farm) => void;
-  signOut: () => Promise<void>;
-  refreshUserData: () => Promise<void>;
-  hasRole: (roleName: string | string[]) => boolean;
-  isAtLeastRole: (roleName: string) => boolean;
-}
-
-export const AuthContext = createContext<AuthContextType>({
-  user: null,
-  profile: null,
-  organizations: [],
-  currentOrganization: null,
-  farms: [],
-  currentFarm: null,
-  userRole: null,
-  loading: true,
-  needsOnboarding: false,
-  setCurrentOrganization: () => { },
-  setCurrentFarm: () => { },
-  signOut: async () => { },
-  refreshUserData: async () => { },
-  hasRole: () => false,
-  isAtLeastRole: () => false,
-});
-
-export const useAuth = () => useContext(AuthContext);
+type Organization = AuthOrganization;
+type Farm = AuthFarm;
 
 const FALLBACK_ROLE_METADATA: Record<string, { display: string; level: number }> = {
   system_admin: { display: 'System Admin', level: 1 },
@@ -106,7 +38,6 @@ const toTitleCase = (value: string) =>
 
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { t } = useTranslation();
-  const _navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
@@ -167,25 +98,17 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     )
   );
 
-  // Debug onboarding state (temporarily disabled)
-  // console.log('🔍 Onboarding debug:', {
-  //   user: !!user,
-  //   loading,
-  //   profile: profile ? {
-  //     hasProfile: true,
-  //     firstName: profile.first_name,
-  //     lastName: profile.last_name,
-  //     hasRequiredFields: !!(profile.first_name && profile.last_name)
-  //   } : { hasProfile: false },
-  //   organizationsCount: organizations.length,
-  //   currentOrg: currentOrganization ? {
-  //     id: currentOrganization.id,
-  //     name: currentOrganization.name,
-  //     onboardingCompleted: currentOrganization.onboarding_completed
-  //   } : null,
-  //   needsOnboarding,
-  //   isOnOnboardingPage
-  // });
+  console.log('🔍 Onboarding debug:', {
+    user: !!user,
+    loading,
+    profile: profile ? {
+      hasProfile: true,
+      fullName: profile.full_name,
+      onboardingCompleted: profile.onboarding_completed
+    } : { hasProfile: false },
+    organizationsCount: organizations.length,
+    needsOnboarding
+  });
 
   // Get Zustand store actions
   const setOrganizationInStore = useOrganizationStore(state => state.setCurrentOrganization);

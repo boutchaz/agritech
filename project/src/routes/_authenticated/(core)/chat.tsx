@@ -5,7 +5,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useTranslation } from 'react-i18next';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Bot } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 const ChatPage: React.FC = () => {
   const { t } = useTranslation();

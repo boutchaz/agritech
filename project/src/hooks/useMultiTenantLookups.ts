@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authSupabase } from '../lib/auth-authSupabase';
-import { useAuth } from '../components/MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 
 // ============================================================================
 // TYPES

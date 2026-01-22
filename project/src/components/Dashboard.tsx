@@ -2,7 +2,7 @@ import React from 'react';
 import { Activity, AlertTriangle, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useDashboardSummary } from '../hooks/useDashboardSummary';
 import { useNavigate } from '@tanstack/react-router';
 import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';

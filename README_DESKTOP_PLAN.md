@@ -685,4 +685,44 @@ project/
 
 ---
 
+## Getting Started (Development)
+
+### Prerequisites
+
+1. **Rust toolchain** (install via [rustup](https://rustup.rs/))
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+2. **Tauri CLI** (included in devDependencies)
+
+3. **Platform-specific dependencies**:
+   - **macOS**: Xcode Command Line Tools
+   - **Windows**: Visual Studio Build Tools, WebView2
+   - **Linux**: `libwebkit2gtk-4.0-dev`, `build-essential`, `curl`, `wget`, `libssl-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`
+
+### Development
+
+```bash
+cd project
+
+# Install dependencies
+npm install
+
+# Run desktop app in dev mode
+npm run tauri:dev
+
+# Build for production
+npm run tauri:build
+```
+
+### Environment
+
+For desktop builds, use `.env.desktop`:
+```bash
+cp .env.desktop .env.local
+```
+
+---
+
 *Last updated: January 2026*

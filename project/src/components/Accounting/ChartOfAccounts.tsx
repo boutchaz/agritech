@@ -34,7 +34,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAccounts } from '@/hooks/useAccounts';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/types/database.types';
 
 type Account = Database['public']['Tables']['accounts']['Row'];

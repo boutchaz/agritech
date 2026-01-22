@@ -6,7 +6,7 @@ import { ExperienceLevelSelector } from './settings/ExperienceLevelSelector';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 

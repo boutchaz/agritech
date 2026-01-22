@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, Link, useLocation } from '@tanstack/react-router';
 import { CheckSquare, Calendar, Building2 } from 'lucide-react';
-import { useAuth } from '@/components/MultiTenantAuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { cn } from '@/lib/utils';

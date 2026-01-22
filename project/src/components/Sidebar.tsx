@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { appConfig } from '../config/app';
 
 import { ProtectedNavItem } from './authorization/ProtectedNavItem';

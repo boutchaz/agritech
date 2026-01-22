@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, Minus, RefreshCw, Settings, MapPin } from 'lu
 import { useTranslation } from 'react-i18next';
 import type { Module, SensorData } from '../types';
 import { parcelsApi } from '../lib/api/parcels';
-import { useAuth } from './MultiTenantAuthProvider';
+import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import ParcelCard from './ParcelCard';
 

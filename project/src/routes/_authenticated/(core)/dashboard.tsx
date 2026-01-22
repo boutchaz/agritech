@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@/components/MultiTenantAuthProvider'
+import { useAuth } from '@/hooks/useAuth'
 import Dashboard from '@/components/Dashboard'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
