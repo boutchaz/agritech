@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
 import { initGA, initClarity } from './lib/analytics'
+import { useAuthStore } from './stores/authStore'
 import './i18n/config'
 import './index.css'
 
@@ -52,14 +53,38 @@ async function init() {
   // Initialize Google Analytics early (doesn't interfere with router)
   initGA()
 
-  const { data: { session } } = await authSupabase.auth.getSession()
-  routerContext.auth.user = session?.user || null
-  routerContext.auth.isLoading = false
+  // IMPORTANT: Initialize router context from Zustand store FIRST
+  // This prevents infinite redirect loop between /login and /dashboard
+  // The Zustand store is persisted in localStorage and is immediately available
+  const authStore = useAuthStore.getState()
+  const storeUser = authStore.user
+  const storeIsAuthenticated = authStore.isAuthenticated
+
+  if (storeIsAuthenticated && storeUser) {
+    // User is authenticated according to Zustand store
+    routerContext.auth.user = { id: storeUser.id, email: storeUser.email }
+    routerContext.auth.isLoading = false
+  } else {
+    // No user in store, check Supabase
+    const { data: { session } } = await authSupabase.auth.getSession()
+    routerContext.auth.user = session?.user || null
+    routerContext.auth.isLoading = false
+  }
 
   // Subscribe to auth changes
   authSupabase.auth.onAuthStateChange((event, session) => {
     routerContext.auth.user = session?.user || null
     router.invalidate()
+
+    // Keep Zustand store in sync with Supabase
+    if (event === 'SIGNED_IN' && session?.user) {
+      useAuthStore.getState().setUser({
+        id: session.user.id,
+        email: session.user.email || '',
+      })
+    } else if (event === 'SIGNED_OUT') {
+      useAuthStore.getState().clearAuth()
+    }
 
     // Clear all cached data on sign in/out to ensure fresh data
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
@@ -75,7 +100,7 @@ async function init() {
 
   // If user is already logged in on initial load, initialize Clarity after a short delay
   // This ensures the router has fully stabilized before Clarity injects its script
-  if (session?.user) {
+  if (storeIsAuthenticated || routerContext.auth.user) {
     setTimeout(() => initClarity(), 1000)
   }
 
