@@ -12,21 +12,23 @@ RUN apk update && apk add --no-cache \
     vips-dev \
     git
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Set working directory
 WORKDIR /srv/app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install ALL dependencies (including dev dependencies for build)
-RUN npm install
+RUN pnpm install --frozen-lockfile
 
 # Copy app files
 COPY . .
 
 # Build admin panel
 ENV NODE_ENV=production
-RUN npm run build
+RUN pnpm build
 
 # Production stage
 FROM node:20-alpine
@@ -35,15 +37,17 @@ FROM node:20-alpine
 RUN apk update && apk add --no-cache \
     vips
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 # Set working directory
 WORKDIR /srv/app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml* ./
 
 # Install only production dependencies + TypeScript (needed for .ts config files)
-RUN npm install --only=production && \
-    npm install typescript @types/node
+RUN pnpm install --frozen-lockfile --prod && \
+    pnpm add typescript @types/node
 
 # Copy built app from builder
 COPY --from=builder /srv/app/dist ./dist
@@ -62,4 +66,4 @@ RUN mkdir -p .strapi .tmp
 EXPOSE 1337
 
 # Start Strapi
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]

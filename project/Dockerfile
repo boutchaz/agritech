@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine as builder
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 # Accept build arguments
@@ -33,17 +36,16 @@ ENV VITE_APP_URL=$VITE_APP_URL
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Copy package files
-COPY package*.json ./
-COPY yarn.lock ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
-RUN yarn install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy all project files
 COPY . .
 
 # Build the application
-RUN yarn build
+RUN pnpm build
 
 # Production stage
 FROM nginx:alpine
