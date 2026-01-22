@@ -3,6 +3,7 @@ import { authSupabase } from './auth-supabase';
 import { usersApi } from './api/users';
 import { farmsApi } from './api/farms';
 import { parcelsApi } from './api/parcels';
+import { useAuthStore } from '../stores/authStore';
 
 export function createWebDataProvider(): DataProvider {
   return {
@@ -17,29 +18,32 @@ export function createWebDataProvider(): DataProvider {
           },
         };
       },
-      
+
       async logout() {
+        useAuthStore.getState().clearAuth();
+        // Also clear Supabase for backward compatibility during migration
         await authSupabase.auth.signOut();
       },
-      
+
       async getCurrentUser() {
-        const { data: { session } } = await authSupabase.auth.getSession();
-        if (!session?.user) return null;
+        const authUser = useAuthStore.getState().user;
+        if (!authUser) return null;
         return {
-          id: session.user.id,
-          email: session.user.email || '',
+          id: authUser.id,
+          email: authUser.email,
         };
       },
-      
+
       async getSession() {
-        const { data: { session } } = await authSupabase.auth.getSession();
-        if (!session?.user) {
+        const authUser = useAuthStore.getState().user;
+        const isAuthenticated = useAuthStore.getState().isAuthenticated;
+        if (!isAuthenticated || !authUser) {
           return { user: null };
         }
         return {
           user: {
-            id: session.user.id,
-            email: session.user.email || '',
+            id: authUser.id,
+            email: authUser.email,
           },
         };
       },

@@ -16,6 +16,7 @@ import {
 import { useSubscription } from '../hooks/useSubscription';
 import { isSubscriptionValid } from '../lib/polar';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { useAuthStore } from '../stores/authStore';
 import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
 
 type Organization = AuthOrganization;
@@ -249,49 +250,50 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     };
 
     try {
-      // Direct query instead of RPC function
-      // Get role from organization_users and join with roles table
-      const { data: orgUser, error: orgUserError } = await authSupabase
-        .from('organization_users')
-        .select('role_id')
-        .eq('user_id', user.id)
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .maybeSingle();
+      // Use NestJS API endpoint to get user role
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const { getAccessToken } = await import('../stores/authStore');
+      const accessToken = getAccessToken();
 
-      if (orgUserError) throw orgUserError;
-
-      // If no org user found, user is not part of this organization
-      if (!orgUser) {
+      if (!accessToken) {
+        console.warn('⚠️ No access token for role fetch');
         setUserRole(null);
         return;
       }
 
-      // Get role details from roles table using role_id
-      let roleDetails = null;
-      try {
-        const { rolesApi } = await import('../lib/api/roles');
-        roleDetails = await rolesApi.getOne(orgUser.role_id);
-      } catch (error) {
-        console.warn('⚠️ Role lookup failed', error);
+      const response = await fetch(
+        `${API_URL}/api/v1/auth/me/role`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'X-Organization-Id': currentOrganization.id,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn('⚠️ Not authorized for role fetch');
+          setUserRole(null);
+          return;
+        }
+        throw new Error(`Role fetch failed: ${response.statusText}`);
       }
 
-      if (!roleDetails) {
-        console.warn('⚠️ Role not found for role_id', orgUser.role_id);
+      const data = await response.json();
 
-        // Fallback to a default viewer role if role lookup fails
-        setUserRole({
-          role_name: 'viewer',
-          role_display_name: 'Viewer',
-          role_level: 6
-        });
+      if (!data || !data.role) {
+        console.warn('⚠️ No role found for user in organization');
+        setUserRole(null);
         return;
       }
 
       setUserRole({
-        role_name: roleDetails.name,
-        role_display_name: roleDetails.display_name,
-        role_level: roleDetails.level
+        role_name: data.role.role_name,
+        role_display_name: data.role.role_display_name,
+        role_level: data.role.role_level
       });
     } catch (error) {
       console.error('Error fetching user role:', error);
@@ -415,40 +417,61 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Auth state management
   useEffect(() => {
-    // Check active sessions and set the user
-    authSupabase.auth.getSession().then(({ data: { session } }) => {
-      const sessionUser = session?.user ?? null;
-      setUser(sessionUser);
-      setShowAuth(!sessionUser);
+    // Check auth store for existing session
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      const authUser = state.user;
+      const isAuthenticated = state.isAuthenticated;
+
+      setUser(authUser ? { id: authUser.id, email: authUser.email } as User : null);
+      setShowAuth(!isAuthenticated);
       setAuthLoading(false);
     });
 
-    // Listen for changes on auth state (sign in, sign out, etc.)
-    const { data: { subscription } } = authSupabase.auth.onAuthStateChange(async (event, session) => {
-      const sessionUser = session?.user ?? null;
-      setUser(sessionUser);
+    // Also initialize from current store state
+    const currentUser = useAuthStore.getState().user;
+    const isAuthenticated = useAuthStore.getState().isAuthenticated;
 
-      if (sessionUser) {
-        setShowAuth(false);
-      } else {
+    if (isAuthenticated && currentUser) {
+      setUser({ id: currentUser.id, email: currentUser.email } as User);
+      setShowAuth(false);
+    } else {
+      setShowAuth(true);
+    }
+    setAuthLoading(false);
+
+    // For backward compatibility during migration, also listen to Supabase
+    authSupabase.auth.getSession().then(({ data: { session } }) => {
+      // If Supabase has a session but auth store doesn't, migrate it
+      if (session?.user && !isAuthenticated) {
+        useAuthStore.getState().setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+        });
+      }
+    });
+
+    // Listen for Supabase changes during migration period
+    const { data: { subscription: supabaseSubscription } } = authSupabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
         // Clear all user data on sign out
         setCurrentOrganization(null);
         setCurrentFarm(null);
         setShowAuth(true);
-        // Clear Zustand store
+        // Clear Zustand stores
         useOrganizationStore.getState().clearOrganization();
-        // localStorage is cleared by the signOut mutation
+        useAuthStore.getState().clearAuth();
 
         // Redirect to login on sign out (but not on initial load)
         if (event === 'SIGNED_OUT') {
           window.location.href = '/login';
         }
       }
-
-      setAuthLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      unsubscribe();
+      supabaseSubscription.unsubscribe();
+    };
   }, []);
 
 

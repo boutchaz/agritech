@@ -1,0 +1,86 @@
+{
+  "expo": {
+    "name": "AgriTech Field",
+    "slug": "agritech-field",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "agritech",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16a34a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agritech.field",
+      "infoPlist": {
+        "NSCameraUsageDescription": "AgriTech needs camera access to capture harvest photos and document crop conditions.",
+        "NSLocationWhenInUseUsageDescription": "AgriTech needs location access to record harvest locations and track deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "AgriTech needs background location for delivery tracking and geofenced clock-in.",
+        "NSFaceIDUsageDescription": "AgriTech uses Face ID for secure and quick authentication.",
+        "NSMicrophoneUsageDescription": "AgriTech needs microphone access for voice notes in the field."
+      }
+    },
+    "android": {
+      "package": "com.agritech.field",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#16a34a"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AgriTech to access your camera for harvest documentation."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow AgriTech to use your location for field tracking and geofencing.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AgriTech to access your photos for documentation."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow AgriTech to use Face ID for quick login."
+        }
+      ],
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import { authSupabase } from './auth-supabase';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -21,31 +21,34 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
-  const { data: { session }, error: sessionError } = await authSupabase.auth.getSession();
+  // Get access token from auth store
+  const accessToken = useAuthStore.getState().getAccessToken();
 
-  if (sessionError) {
-    console.error('[API Client] Error getting session:', sessionError);
-    throw new Error(`Session error: ${sessionError.message}`);
-  }
-
-  if (!session?.access_token) {
+  if (!accessToken) {
     console.error('[API Client] No active session found');
     throw new Error('No active session');
   }
 
+  // Check if token is expired
+  if (useAuthStore.getState().isTokenExpired()) {
+    console.error('[API Client] Token expired');
+    throw new Error('Session expired');
+  }
+
   const orgId = organizationId || getCurrentOrganizationId();
+  const user = useAuthStore.getState().user;
 
   console.log('[API Client] Building headers', {
     providedOrgId: organizationId,
     storeOrgId: getCurrentOrganizationId(),
     resolvedOrgId: orgId,
-    hasSession: !!session,
-    userId: session?.user?.id,
+    hasToken: !!accessToken,
+    userId: user?.id,
   });
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${session.access_token}`,
+    'Authorization': `Bearer ${accessToken}`,
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
   };

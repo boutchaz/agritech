@@ -4,6 +4,8 @@ import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
 import { parcelsApi } from '../lib/api/parcels';
 import type { UserProfile, Farm } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 // Query keys
 export const authKeys = {
@@ -176,8 +178,13 @@ export const useSignOut = () => {
 
   return useMutation({
     mutationFn: async () => {
+      // Clear auth store (tokens and user)
+      useAuthStore.getState().clearAuth();
+      // Clear organization store
+      useOrganizationStore.getState().clearOrganization();
+      // Also clear from Supabase for backward compatibility during migration
       const { error } = await authSupabase.auth.signOut();
-      if (error) throw error;
+      if (error) console.error('Supabase sign out error:', error);
     },
     onSuccess: () => {
       // Clear all auth-related queries

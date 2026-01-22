@@ -34,6 +34,10 @@
     "db:reset": "pnpm --filter agriprofy db:reset",
     "tauri:dev": "pnpm --filter agriprofy tauri:dev",
     "tauri:build": "pnpm --filter agriprofy tauri:build",
+    "mobile:start": "cd mobile && npm start",
+    "mobile:ios": "cd mobile && npm run ios",
+    "mobile:android": "cd mobile && npm run android",
+    "mobile:install": "cd mobile && npm install",
     "prepare": "husky"
   },
   "devDependencies": {

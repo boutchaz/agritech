@@ -4,6 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
+import { initAnalytics } from './lib/analytics'
 import './i18n/config'
 import './index.css'
 
@@ -48,6 +49,9 @@ declare module '@tanstack/react-router' {
 
 // Check auth state before rendering
 async function init() {
+  // Initialize analytics (Google Analytics + Microsoft Clarity)
+  initAnalytics()
+
   const { data: { session } } = await authSupabase.auth.getSession()
   routerContext.auth.user = session?.user || null
   routerContext.auth.isLoading = false

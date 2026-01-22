@@ -6,6 +6,15 @@ import { authSupabase } from '@/lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
+import {
+  trackOnboardingStart,
+  trackTrialPlanView,
+  trackTrialPlanSelect,
+  trackTrialStartAttempt,
+  trackTrialStartSuccess,
+  trackTrialStartFailure,
+  trackPageView,
+} from '@/lib/analytics'
 
 export const Route = createFileRoute('/(public)/onboarding/select-trial')({
   component: SelectTrialPage,
@@ -19,7 +28,18 @@ function SelectTrialPage() {
   const [isSettingUp, setIsSettingUp] = useState(false)
   const setupAttempted = useRef(false)
   const queryClient = useQueryClient()
-  
+
+  // Track page view on mount
+  useEffect(() => {
+    trackPageView({ title: 'Start Your Free Trial' })
+    trackOnboardingStart()
+
+    // Track all plan views on page load
+    Object.entries(SUBSCRIPTION_PLANS).forEach(([planType, plan]) => {
+      trackTrialPlanView(plan.name)
+    })
+  }, [])
+
   // Use organizations array as fallback if currentOrganization isn't set yet
   const hasOrganization = currentOrganization || (organizations && organizations.length > 0)
 
@@ -301,6 +321,9 @@ function SelectTrialPage() {
     setIsCreating(true)
     setError(null)
 
+    trackTrialStartAttempt(selectedPlan)
+    trackTrialPlanSelect(selectedPlan, SUBSCRIPTION_PLANS[selectedPlan].priceAmount)
+
     try {
       // Get the access token from the current session
       const { data: { session } } = await authSupabase.auth.getSession()
@@ -334,6 +357,7 @@ function SelectTrialPage() {
       }
 
       console.log('✅ Trial subscription created:', data.subscription)
+      trackTrialStartSuccess(selectedPlan)
 
       // Ensure organization is saved to BOTH localStorage AND Zustand store
       // This is critical for API client to find the organization ID after page reload
@@ -381,7 +405,9 @@ function SelectTrialPage() {
       window.location.href = '/onboarding'
     } catch (err) {
       console.error('Error creating trial subscription:', err)
-      setError(err instanceof Error ? err.message : 'Failed to create trial subscription')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create trial subscription'
+      setError(errorMessage)
+      trackTrialStartFailure(selectedPlan, errorMessage)
       setIsCreating(false)
     }
   }
@@ -410,6 +436,12 @@ function SelectTrialPage() {
             const isSelected = selectedPlan === planType
             const isEnterprise = planType === 'enterprise'
 
+            const handlePlanClick = () => {
+              if (!isEnterprise) {
+                setSelectedPlan(planType)
+              }
+            }
+
             return (
               <div
                 key={planType}
@@ -420,7 +452,7 @@ function SelectTrialPage() {
                     ? 'ring-2 ring-green-500 shadow-green-500/20'
                     : 'hover:shadow-xl'
                 } ${isEnterprise ? 'opacity-60' : ''}`}
-                onClick={() => !isEnterprise && setSelectedPlan(planType)}
+                onClick={handlePlanClick}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">

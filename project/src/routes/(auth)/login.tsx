@@ -1,12 +1,18 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { loginViaApi, signInWithGoogle, signInWithGitHub } from '@/lib/auth-api'
+import { loginViaApi, signInWithGoogle } from '@/lib/auth-api'
 import { useAuth } from '@/hooks/useAuth'
+import {
+  trackLoginAttempt,
+  trackLoginSuccess,
+  trackLoginFailure,
+  trackPageView,
+} from '@/lib/analytics'
 
 export const Route = createFileRoute('/(auth)/login')({
   component: LoginPage,
@@ -17,10 +23,15 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isOAuthLoading, setIsOAuthLoading] = useState<'google' | 'github' | null>(null)
+  const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const { user } = useAuth()
+
+  // Track page view on mount
+  useEffect(() => {
+    trackPageView({ title: t('auth.signIn.title') })
+  }, [t])
 
   if (user) {
     navigate({ to: '/dashboard' })
@@ -32,38 +43,37 @@ function LoginPage() {
     setIsLoading(true)
     setError(null)
 
+    trackLoginAttempt('email')
+
     try {
       const response = await loginViaApi(email, password)
       if (response?.user) {
+        trackLoginSuccess('email')
         window.location.href = '/dashboard'
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('auth.errors.generic')
-      setError(message.includes('Invalid') ? t('auth.errors.invalidCredentials') : message)
+      const errorMessage = message.includes('Invalid') ? t('auth.errors.invalidCredentials') : message
+      setError(errorMessage)
+      trackLoginFailure('email', errorMessage)
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
-    setIsOAuthLoading('google')
+    setIsOAuthLoading(true)
     setError(null)
+    trackLoginAttempt('google')
+
     try {
       await signInWithGoogle()
+      trackLoginSuccess('google')
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.errors.oauthFailed'))
-      setIsOAuthLoading(null)
-    }
-  }
-
-  const handleGitHubSignIn = async () => {
-    setIsOAuthLoading('github')
-    setError(null)
-    try {
-      await signInWithGitHub()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.errors.oauthFailed'))
-      setIsOAuthLoading(null)
+      const errorMessage = err instanceof Error ? err.message : t('auth.errors.oauthFailed')
+      setError(errorMessage)
+      trackLoginFailure('google', errorMessage)
+      setIsOAuthLoading(false)
     }
   }
 
@@ -83,10 +93,10 @@ function LoginPage() {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            disabled={isLoading || isOAuthLoading !== null}
+            disabled={isLoading || isOAuthLoading}
             className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isOAuthLoading === 'google' ? (
+            {isOAuthLoading ? (
               <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -100,25 +110,6 @@ function LoginPage() {
               </svg>
             )}
             <span>{t('auth.continueWithGoogle')}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleGitHubSignIn}
-            disabled={isLoading || isOAuthLoading !== null}
-            className="w-full flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3 px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isOAuthLoading === 'github' ? (
-              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-              </svg>
-            )}
-            <span>{t('auth.continueWithGitHub')}</span>
           </button>
         </div>
 
@@ -178,7 +169,7 @@ function LoginPage() {
 
           <button
             type="submit"
-            disabled={isLoading || isOAuthLoading !== null}
+            disabled={isLoading || isOAuthLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? t('auth.signingIn') : t('auth.signIn.button')}

@@ -1,3 +1,4 @@
+import { useAuthStore } from '../stores/authStore';
 import { authSupabase } from './auth-supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -57,27 +58,21 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
 
   const data: LoginResponse = await response.json();
 
-  // Set the session in Supabase client
-  const { error: sessionError } = await authSupabase.auth.setSession({
+  // Store tokens and user in auth store
+  useAuthStore.getState().setTokens({
     access_token: data.access_token,
     refresh_token: data.refresh_token,
+    expires_in: data.expires_in,
   });
 
-  if (sessionError) {
-    console.error('Failed to set session:', sessionError);
-    throw new Error('Failed to establish session');
-  }
-
-  // Verify the session was set correctly
-  const { data: sessionData } = await authSupabase.auth.getSession();
-  if (!sessionData.session) {
-    console.error('Session not established after setSession');
-    throw new Error('Session verification failed');
-  }
+  useAuthStore.getState().setUser({
+    id: data.user.id,
+    email: data.user.email,
+  });
 
   console.log('Session established successfully:', {
-    userId: sessionData.session.user.id,
-    email: sessionData.session.user.email,
+    userId: data.user.id,
+    email: data.user.email,
   });
 
   return data;
@@ -105,6 +100,8 @@ export async function loginAfterSignup(email: string, password: string): Promise
 }
 
 export async function signInWithGoogle(): Promise<void> {
+  // TODO: Migrate to NestJS OAuth endpoints when available
+  // Currently uses Supabase OAuth - requires backend implementation
   const { error } = await authSupabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -121,15 +118,3 @@ export async function signInWithGoogle(): Promise<void> {
   }
 }
 
-export async function signInWithGitHub(): Promise<void> {
-  const { error } = await authSupabase.auth.signInWithOAuth({
-    provider: 'github',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-}

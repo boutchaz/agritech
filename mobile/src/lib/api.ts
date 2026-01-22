@@ -1,0 +1,378 @@
+import * as SecureStore from 'expo-secure-store';
+import { Config } from '@/constants/config';
+
+const ACCESS_TOKEN_KEY = 'agritech_access_token';
+const REFRESH_TOKEN_KEY = 'agritech_refresh_token';
+const ORGANIZATION_ID_KEY = 'agritech_organization_id';
+
+interface ApiError {
+  statusCode: number;
+  message: string;
+  error?: string;
+}
+
+class ApiClient {
+  private baseUrl: string;
+  private accessToken: string | null = null;
+  private organizationId: string | null = null;
+
+  constructor() {
+    this.baseUrl = `${Config.API_URL}/api/v1`;
+  }
+
+  async initialize(): Promise<void> {
+    this.accessToken = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
+    this.organizationId = await SecureStore.getItemAsync(ORGANIZATION_ID_KEY);
+  }
+
+  async setTokens(accessToken: string, refreshToken?: string): Promise<void> {
+    this.accessToken = accessToken;
+    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    }
+  }
+
+  async clearTokens(): Promise<void> {
+    this.accessToken = null;
+    this.organizationId = null;
+    await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+    await SecureStore.deleteItemAsync(ORGANIZATION_ID_KEY);
+  }
+
+  async setOrganizationId(orgId: string): Promise<void> {
+    this.organizationId = orgId;
+    await SecureStore.setItemAsync(ORGANIZATION_ID_KEY, orgId);
+  }
+
+  getOrganizationId(): string | null {
+    return this.organizationId;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    if (this.organizationId) {
+      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error: ApiError = await response.json().catch(() => ({
+        statusCode: response.status,
+        message: response.statusText,
+      }));
+
+      if (response.status === 401) {
+        await this.clearTokens();
+      }
+
+      throw new Error(error.message || 'Request failed');
+    }
+
+    if (response.status === 204) {
+      return {} as T;
+    }
+
+    return response.json();
+  }
+
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  async uploadFile(
+    endpoint: string,
+    file: { uri: string; name: string; type: string }
+  ): Promise<{ url: string }> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const formData = new FormData();
+
+    formData.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as unknown as Blob);
+
+    const headers: HeadersInit = {};
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    if (this.organizationId) {
+      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
+    }
+
+    return response.json();
+  }
+}
+
+export const api = new ApiClient();
+
+export interface LoginResponse {
+  access_token: string;
+  refresh_token?: string;
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  role: string;
+}
+
+export interface Farm {
+  id: string;
+  name: string;
+  location: string | null;
+  size: number | null;
+  size_unit: string | null;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  due_date: string | null;
+  task_type: string | null;
+  farm_id: string;
+  parcel_id: string | null;
+  assigned_to: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  farm?: Farm;
+  parcel?: { id: string; name: string };
+  assigned_worker?: { id: string; first_name: string; last_name: string };
+}
+
+export interface HarvestRecord {
+  id: string;
+  organization_id: string;
+  farm_id: string;
+  parcel_id: string;
+  crop_id: string | null;
+  harvest_date: string;
+  quantity: number;
+  unit: string;
+  quality_grade: string | null;
+  quality_score: number | null;
+  notes: string | null;
+  photos: string[] | null;
+  status: string;
+  created_at: string;
+  farm?: Farm;
+  parcel?: { id: string; name: string };
+  crop?: { id: string; name: string };
+}
+
+export interface TimeLog {
+  id: string;
+  task_id: string;
+  worker_id: string;
+  clock_in: string;
+  clock_out: string | null;
+  location_in: { lat: number; lng: number } | null;
+  location_out: { lat: number; lng: number } | null;
+  duration_minutes: number | null;
+}
+
+export interface Parcel {
+  id: string;
+  name: string;
+  farm_id: string;
+  area: number | null;
+  area_unit: string | null;
+  current_crop: string | null;
+  status: string;
+}
+
+export const authApi = {
+  login: (email: string, password: string) =>
+    api.post<LoginResponse>('/auth/login', { email, password }),
+
+  getProfile: () => api.get<UserProfile>('/auth/me'),
+
+  getOrganizations: () => api.get<Organization[]>('/auth/organizations'),
+
+  getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),
+};
+
+export const tasksApi = {
+  getMyTasks: () => api.get<Task[]>('/tasks/my-tasks'),
+
+  getTasks: (filters?: { status?: string; farmId?: string; parcelId?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.farmId) params.append('farmId', filters.farmId);
+    if (filters?.parcelId) params.append('parcelId', filters.parcelId);
+    const query = params.toString();
+    return api.get<{ data: Task[]; total: number }>(`/tasks${query ? `?${query}` : ''}`);
+  },
+
+  getTask: (taskId: string) => api.get<Task>(`/tasks/${taskId}`),
+
+  getStatistics: () => api.get<{
+    total: number;
+    pending: number;
+    in_progress: number;
+    completed: number;
+    overdue: number;
+  }>('/tasks/statistics'),
+
+  updateTaskStatus: (taskId: string, status: Task['status']) =>
+    api.patch<Task>(`/tasks/${taskId}`, { status }),
+
+  completeTask: (taskId: string, data: { notes?: string; completion_data?: unknown }) =>
+    api.patch<Task>(`/tasks/${taskId}/complete`, data),
+
+  clockIn: (taskId: string, data: { location?: { lat: number; lng: number } }) =>
+    api.post<TimeLog>(`/tasks/${taskId}/clock-in`, data),
+
+  clockOut: (timeLogId: string, data: { location?: { lat: number; lng: number }; notes?: string }) =>
+    api.patch<TimeLog>(`/tasks/time-logs/${timeLogId}/clock-out`, data),
+
+  getTimeLogs: (taskId: string) => api.get<TimeLog[]>(`/tasks/${taskId}/time-logs`),
+
+  addComment: (taskId: string, content: string) =>
+    api.post(`/tasks/${taskId}/comments`, { content }),
+};
+
+export const harvestsApi = {
+  getHarvests: (filters?: { dateFrom?: string; dateTo?: string; farmId?: string }) => {
+    const orgId = api.getOrganizationId();
+    const params = new URLSearchParams();
+    if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
+    if (filters?.dateTo) params.append('dateTo', filters.dateTo);
+    if (filters?.farmId) params.append('farmId', filters.farmId);
+    const query = params.toString();
+    return api.get<{ data: HarvestRecord[]; total: number }>(
+      `/organizations/${orgId}/harvests${query ? `?${query}` : ''}`
+    );
+  },
+
+  getHarvest: (harvestId: string) => {
+    const orgId = api.getOrganizationId();
+    return api.get<HarvestRecord>(`/organizations/${orgId}/harvests/${harvestId}`);
+  },
+
+  createHarvest: (data: {
+    farm_id: string;
+    parcel_id: string;
+    crop_id?: string;
+    harvest_date: string;
+    quantity: number;
+    unit: string;
+    quality_grade?: string;
+    notes?: string;
+    photos?: string[];
+    location?: { lat: number; lng: number };
+  }) => {
+    const orgId = api.getOrganizationId();
+    return api.post<HarvestRecord>(`/organizations/${orgId}/harvests`, data);
+  },
+
+  updateHarvest: (harvestId: string, data: Partial<HarvestRecord>) => {
+    const orgId = api.getOrganizationId();
+    return api.patch<HarvestRecord>(`/organizations/${orgId}/harvests/${harvestId}`, data);
+  },
+
+  deleteHarvest: (harvestId: string) => {
+    const orgId = api.getOrganizationId();
+    return api.delete(`/organizations/${orgId}/harvests/${harvestId}`);
+  },
+};
+
+export const farmsApi = {
+  getFarms: () => {
+    return api.get<Farm[]>('/farms');
+  },
+
+  getFarm: (farmId: string) => {
+    return api.get<Farm>(`/farms/${farmId}`);
+  },
+};
+
+export const parcelsApi = {
+  getParcels: (farmId?: string) => {
+    const query = farmId ? `?farm_id=${farmId}` : '';
+    return api.get<Parcel[]>(`/parcels${query}`);
+  },
+
+  getParcel: (parcelId: string) => {
+    return api.get<Parcel>(`/parcels/${parcelId}`);
+  },
+};
+
+export const filesApi = {
+  uploadImage: (uri: string, folder: string = 'general') => {
+    const filename = uri.split('/').pop() || 'photo.jpg';
+    return api.uploadFile(`/files/upload?folder=${folder}`, {
+      uri,
+      name: filename,
+      type: 'image/jpeg',
+    });
+  },
+};

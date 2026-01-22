@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -7,6 +7,12 @@ import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Checkbox } from '@/components/ui/checkbox'
 import { signupViaApi, loginViaApi } from '@/lib/auth-api'
 import { useAuth } from '@/hooks/useAuth'
+import {
+  trackRegisterAttempt,
+  trackRegisterSuccess,
+  trackRegisterFailure,
+  trackPageView,
+} from '@/lib/analytics'
 
 export const Route = createFileRoute('/(auth)/register')({
   component: RegisterPage,
@@ -23,6 +29,11 @@ function RegisterPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
+  // Track page view on mount
+  useEffect(() => {
+    trackPageView({ title: 'Create your Agritech account' })
+  }, [])
+
   // Redirect if already logged in
   if (user) {
     navigate({ to: '/dashboard' })
@@ -34,9 +45,12 @@ function RegisterPage() {
     setIsLoading(true)
     setError(null)
 
+    trackRegisterAttempt()
+
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       setIsLoading(false)
+      trackRegisterFailure('password_mismatch')
       return
     }
 
@@ -67,13 +81,16 @@ function RegisterPage() {
         }))
       }
 
+      trackRegisterSuccess(includeDemoData)
       window.location.href = '/onboarding/select-trial'
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred during registration'
       if (message.includes('already exists') || message.includes('already registered')) {
         setError('A user with this email already exists')
+        trackRegisterFailure('email_already_exists')
       } else {
         setError(message)
+        trackRegisterFailure(message)
       }
       setIsLoading(false)
     }
