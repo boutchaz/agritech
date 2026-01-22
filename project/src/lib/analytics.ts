@@ -4,12 +4,12 @@
  * Provides tracking functions for page views, events, and user interactions
  */
 
-import { clarity } from '@microsoft/clarity';
+import Clarity from '@microsoft/clarity';
 
 export const GA_TRACKING_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
 
 // Microsoft Clarity Project ID
-// You can find this in your Clarity dashboard: https://clarity.microsoft.com/projects/
+// You can find this in your Clarity dashboard: https://Clarity.microsoft.com/projects/
 export const CLARITY_PROJECT_ID = 'v5m1rr7hof';
 
 interface GtagEvent {
@@ -61,22 +61,15 @@ export const initGA = (): void => {
 
 /**
  * Initialize Microsoft Clarity
- * Uses the official Microsoft Clarity React package
- * Deferred to prevent interference with router navigation
+ * Uses the official Microsoft Clarity package
  */
 export const initClarity = (): void => {
   if (typeof window === 'undefined' || !CLARITY_PROJECT_ID) {
     return;
   }
 
-  // Defer Clarity initialization to prevent router interference
-  // The official package handles script loading and initialization properly
-  clarity.start({
-    projectId: CLARITY_PROJECT_ID,
-    upload: {
-      endpoint: 'https://www.clarity.ms/collect',
-    },
-  });
+  // Initialize Clarity with project ID
+  Clarity.init(CLARITY_PROJECT_ID);
 };
 
 /**
@@ -102,7 +95,7 @@ export const setClarityUserId = (userId: string): void => {
   }
 
   try {
-    clarity.set('userId', userId);
+    Clarity.setTag('userId', userId);
   } catch {
     // Clarity not initialized yet
   }
@@ -111,19 +104,15 @@ export const setClarityUserId = (userId: string): void => {
 /**
  * Track a custom Clarity event
  * @param eventName - Name of the event to track
- * @param value - Optional numeric value (e.g., duration, price)
+ * @param _value - Optional numeric value (Clarity doesn't support values, but kept for API compatibility)
  */
-export const trackClarityEvent = (eventName: string, value?: number): void => {
+export const trackClarityEvent = (eventName: string, _value?: number): void => {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
-    if (value !== undefined) {
-      clarity.event(eventName, value);
-    } else {
-      clarity.event(eventName);
-    }
+    Clarity.event(eventName);
   } catch {
     // Clarity not initialized yet
   }
@@ -140,7 +129,7 @@ export const setClarityUserProperties = (properties: Record<string, string | num
 
   try {
     Object.entries(properties).forEach(([key, value]) => {
-      clarity.set(key, String(value));
+      Clarity.setTag(key, String(value));
     });
   } catch {
     // Clarity not initialized yet
@@ -150,21 +139,18 @@ export const setClarityUserProperties = (properties: Record<string, string | num
 /**
  * Identify user with custom attributes
  * @param userId - Unique user identifier
- * @param attributes - Optional custom attributes (role, plan, etc.)
+ * @param _attributes - Optional custom attributes (not directly supported by Clarity identify)
  */
 export const identifyClarityUser = (
   userId: string,
-  attributes?: Record<string, string | number | boolean>
+  _attributes?: Record<string, string | number | boolean>
 ): void => {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
-    clarity.identify(userId, attributes);
-
-    // Also set as custom property for filtering
-    setClarityUserProperties({ userId, ...(attributes ?? {}) });
+    Clarity.identify(userId);
   } catch {
     // Clarity not initialized yet
   }
@@ -174,19 +160,15 @@ export const identifyClarityUser = (
  * Track Clarity goal conversion
  * Use this to track important conversions (signups, purchases, etc.)
  * @param goalName - Name of the goal/conversion
- * @param value - Optional monetary value
+ * @param _value - Optional monetary value (Clarity doesn't support values, but kept for API compatibility)
  */
-export const trackClarityGoal = (goalName: string, value?: number): void => {
+export const trackClarityGoal = (goalName: string, _value?: number): void => {
   if (typeof window === 'undefined') {
     return;
   }
 
   try {
-    if (value !== undefined) {
-      clarity.event(goalName, value);
-    } else {
-      clarity.event(goalName);
-    }
+    Clarity.event(goalName);
   } catch {
     // Clarity not initialized yet
   }
