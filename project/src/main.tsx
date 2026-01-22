@@ -4,7 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
-import { initAnalytics } from './lib/analytics'
+import { initGA, initClarity } from './lib/analytics'
 import './i18n/config'
 import './index.css'
 
@@ -49,8 +49,8 @@ declare module '@tanstack/react-router' {
 
 // Check auth state before rendering
 async function init() {
-  // Initialize analytics (Google Analytics + Microsoft Clarity)
-  initAnalytics()
+  // Initialize Google Analytics early (doesn't interfere with router)
+  initGA()
 
   const { data: { session } } = await authSupabase.auth.getSession()
   routerContext.auth.user = session?.user || null
@@ -65,7 +65,19 @@ async function init() {
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
       queryClient.clear()
     }
+
+    // Initialize Clarity only after successful sign-in to avoid router interference
+    // Clarity uses history.pushState which can cause infinite redirects during auth flow
+    if (event === 'SIGNED_IN') {
+      initClarity()
+    }
   })
+
+  // If user is already logged in on initial load, initialize Clarity after a short delay
+  // This ensures the router has fully stabilized before Clarity injects its script
+  if (session?.user) {
+    setTimeout(() => initClarity(), 1000)
+  }
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
