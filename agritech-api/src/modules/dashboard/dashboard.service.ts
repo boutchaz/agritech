@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 
@@ -126,10 +126,39 @@ export class DashboardService {
         return this.databaseService.getAdminClient();
     }
 
+    /**
+     * Verify user belongs to the organization
+     * Similar to subscriptions.service.ts - allows onboarding flow to work before full CASL permissions
+     */
+    private async verifyOrganizationMembership(
+        userId: string,
+        organizationId: string,
+    ): Promise<void> {
+        const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
+            .from('organization_users')
+            .select('user_id, organization_id, role_id, is_active')
+            .eq('user_id', userId)
+            .eq('organization_id', organizationId)
+            .eq('is_active', true)
+            .maybeSingle();
+
+        if (orgUserError || !orgUser) {
+            Logger.warn(
+                `User ${userId} not found in organization ${organizationId}`,
+                'DashboardService',
+            );
+            throw new ForbiddenException(
+                'You do not have access to this organization',
+            );
+        }
+    }
+
     async getDashboardSummary(
+        userId: string,
         organizationId: string,
         farmId?: string,
     ): Promise<DashboardSummary> {
+        await this.verifyOrganizationMembership(userId, organizationId);
         const [parcelsData, tasksData, workersData, harvestsData, inventoryData] =
             await Promise.all([
                 this.getParcelsSummary(organizationId, farmId),
@@ -319,9 +348,11 @@ export class DashboardService {
     }
 
     async getWidgetData(
+        userId: string,
         organizationId: string,
         widgetType: string,
     ): Promise<WidgetData> {
+        await this.verifyOrganizationMembership(userId, organizationId);
         switch (widgetType) {
             case 'parcels':
                 return {
@@ -353,7 +384,8 @@ export class DashboardService {
         }
     }
 
-    async getDashboardSettings(userId: string, organizationId: string) {
+    async getDashboardSettings(userId: string, organizationId: string, requestUserId: string) {
+        await this.verifyOrganizationMembership(requestUserId, organizationId);
         const { data, error } = await this.supabaseAdmin
             .from('dashboard_settings')
             .select('*')
@@ -371,8 +403,10 @@ export class DashboardService {
     async upsertDashboardSettings(
         userId: string,
         organizationId: string,
+        requestUserId: string,
         settings: any,
     ) {
+        await this.verifyOrganizationMembership(requestUserId, organizationId);
         const { data, error } = await this.supabaseAdmin
             .from('dashboard_settings')
             .upsert(
@@ -398,7 +432,8 @@ export class DashboardService {
     /**
      * Get live dashboard metrics including concurrent users, active operations, and farm activities
      */
-    async getLiveMetrics(organizationId: string): Promise<LiveDashboardMetrics> {
+    async getLiveMetrics(userId: string, organizationId: string): Promise<LiveDashboardMetrics> {
+        await this.verifyOrganizationMembership(userId, organizationId);
         const now = new Date();
 
         const [
@@ -411,7 +446,7 @@ export class DashboardService {
             this.getConcurrentUsers(organizationId),
             this.getActiveOperations(organizationId),
             this.getRecentFarmActivities(organizationId),
-            this.getActivityHeatmap(organizationId),
+            this.getActivityHeatmap(userId, organizationId),
             this.getFeatureUsage(organizationId),
         ]);
 
@@ -428,7 +463,8 @@ export class DashboardService {
     /**
      * Get live dashboard summary stats for quick overview
      */
-    async getLiveSummary(organizationId: string): Promise<LiveDashboardSummary> {
+    async getLiveSummary(userId: string, organizationId: string): Promise<LiveDashboardSummary> {
+        await this.verifyOrganizationMembership(userId, organizationId);
         const [
             concurrentUsers,
             activeOperations,
@@ -710,7 +746,8 @@ export class DashboardService {
     /**
      * Get activity heatmap data based on farm and parcel locations
      */
-    async getActivityHeatmap(organizationId: string): Promise<ActivityHeatmapPoint[]> {
+    async getActivityHeatmap(userId: string, organizationId: string): Promise<ActivityHeatmapPoint[]> {
+        await this.verifyOrganizationMembership(userId, organizationId);
         // Get farms with their coordinates
         const { data: farms, error: farmsError } = await this.supabaseAdmin
             .from('farms')

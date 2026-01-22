@@ -1,0 +1,30 @@
+[package]
+name = "agritech-desktop"
+version = "0.1.0"
+description = "AgriTech Desktop - Standalone agricultural management"
+authors = ["AgriTech Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["shell-open", "dialog-all", "fs-all", "path-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
+bcrypt = "0.15"
+aes-gcm = "0.10"
+rand = "0.8"
+base64 = "0.21"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+directories = "5.0"
+zip = "0.6"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
