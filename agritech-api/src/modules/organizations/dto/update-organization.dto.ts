@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsURL } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsUrl } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateOrganizationDto {
@@ -62,7 +62,7 @@ export class UpdateOrganizationDto {
   })
   @IsOptional()
   @IsString()
-  @IsURL({}, { message: 'Website must be a valid URL' })
+  @IsUrl({}, { message: 'Website must be a valid URL' })
   website?: string;
 
   // Address fields
@@ -121,6 +121,6 @@ export class UpdateOrganizationDto {
   })
   @IsOptional()
   @IsString()
-  @IsURL({}, { message: 'Logo URL must be a valid URL' })
+  @IsUrl({}, { message: 'Logo URL must be a valid URL' })
   logo_url?: string;
 }
