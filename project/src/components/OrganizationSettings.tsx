@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot, Download } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
 import AIProvidersSettings from './settings/AIProvidersSettings';
+import ExportData from './settings/ExportData';
 
 interface OrganizationData {
   id: string;
@@ -30,7 +31,7 @@ interface OrganizationData {
   is_active?: boolean;
 }
 
-type SettingsTab = 'general' | 'ai-providers';
+type SettingsTab = 'general' | 'ai-providers' | 'export';
 
 const OrganizationSettings: React.FC = () => {
   const { currentOrganization, user } = useAuth();
@@ -42,7 +43,9 @@ const OrganizationSettings: React.FC = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      return tab === 'ai-providers' ? 'ai-providers' : 'general';
+      if (tab === 'ai-providers') return 'ai-providers';
+      if (tab === 'export') return 'export';
+      return 'general';
     }
     return 'general';
   };
@@ -202,6 +205,7 @@ const OrganizationSettings: React.FC = () => {
   const tabs = [
     { id: 'general' as const, label: t('organization.tabs.general', 'Général'), icon: Building },
     { id: 'ai-providers' as const, label: t('organization.tabs.aiProviders', 'Fournisseurs IA'), icon: Bot },
+    { id: 'export' as const, label: t('organization.tabs.export', 'Exporter'), icon: Download },
   ];
 
   return (
@@ -285,6 +289,11 @@ const OrganizationSettings: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <AIProvidersSettings />
         </div>
+      )}
+
+      {/* Export Data Tab */}
+      {activeTab === 'export' && (
+        <ExportData />
       )}
 
       {/* General Settings Tab */}
