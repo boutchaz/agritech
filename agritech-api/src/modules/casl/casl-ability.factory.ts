@@ -107,7 +107,7 @@ export class CaslAbilityFactory {
         const client = this.databaseService.getAdminClient();
         const { data: orgUser, error } = await client
             .from('organization_users')
-            .select('role_id, roles(name, level, permissions)')
+            .select('role_id, roles(name, level)')
             .eq('user_id', user.id)
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -130,14 +130,12 @@ export class CaslAbilityFactory {
         const role = orgUser.roles as any;
         const roleName = role?.name;
         const roleLevel = role?.level || 0;
-        const rolePermissions = role?.permissions || {};
 
         console.log('[CaslAbilityFactory] Creating ability for user:', {
             userId: user.id,
             organizationId,
             roleName,
             roleLevel,
-            permissions: rolePermissions,
         });
 
         // ============ SYSTEM ADMIN ============

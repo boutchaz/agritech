@@ -12157,6 +12157,15 @@ ADD COLUMN IF NOT EXISTS completed_tours text[] DEFAULT '{}';
 COMMENT ON COLUMN user_profiles.completed_tours IS 'Array of completed tour IDs (welcome, dashboard, farm-management, parcels, tasks, workers, inventory, accounting, satellite, reports)';
 
 -- =====================================================
+-- USER PROFILES DISMISSED TOURS (from 20250114000000_add_dismissed_tours.sql)
+-- =====================================================
+
+ALTER TABLE user_profiles
+ADD COLUMN IF NOT EXISTS dismissed_tours text[] DEFAULT '{}';
+
+COMMENT ON COLUMN user_profiles.dismissed_tours IS 'Array of permanently dismissed tour IDs. Tours in this array will never auto-start even if not completed.';
+
+-- =====================================================
 -- ORGANIZATION ACCOUNT MAPPINGS (from 20251231_organization_account_mappings.sql)
 -- =====================================================
 

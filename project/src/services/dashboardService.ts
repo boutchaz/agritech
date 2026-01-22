@@ -1,4 +1,5 @@
 import { apiClient } from '../lib/api-client';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 export interface DashboardSummary {
     parcels: {
@@ -34,18 +35,15 @@ export interface WidgetData {
 }
 
 /**
- * Get the current organization ID from localStorage
+ * Get the current organization ID from Zustand store
+ * This matches the approach used in api-client.ts for consistency
  */
 function getCurrentOrganizationId(): string | null {
   try {
-    const orgStr = localStorage.getItem('currentOrganization');
-    if (orgStr) {
-      const org = JSON.parse(orgStr);
-      return org.id || null;
-    }
-    return null;
+    const currentOrganization = useOrganizationStore.getState().currentOrganization;
+    return currentOrganization?.id || null;
   } catch (error) {
-    console.error('Error reading organization from localStorage:', error);
+    console.error('[DashboardService] Error reading organization from store:', error);
     return null;
   }
 }
