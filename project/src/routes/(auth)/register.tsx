@@ -34,9 +34,16 @@ function RegisterPage() {
     trackPageView({ title: 'Create your Agritech account' })
   }, [])
 
-  // Redirect if already logged in
+  // Redirect to dashboard if user is already logged in
+  // Using useEffect to prevent infinite navigation loop
+  useEffect(() => {
+    if (user) {
+      navigate({ to: '/dashboard' })
+    }
+  }, [user, navigate])
+
+  // Don't render register form if user exists
   if (user) {
-    navigate({ to: '/dashboard' })
     return null
   }
 

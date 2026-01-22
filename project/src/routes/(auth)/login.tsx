@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
@@ -33,8 +33,16 @@ function LoginPage() {
     trackPageView({ title: t('auth.signIn.title') })
   }, [t])
 
+  // Redirect to dashboard if user is already logged in
+  // Using useEffect to prevent infinite navigation loop
+  useEffect(() => {
+    if (user) {
+      navigate({ to: '/dashboard' })
+    }
+  }, [user, navigate])
+
+  // Don't render login form if user exists
   if (user) {
-    navigate({ to: '/dashboard' })
     return null
   }
 
