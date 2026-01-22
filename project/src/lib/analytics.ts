@@ -62,14 +62,19 @@ export const initGA = (): void => {
 /**
  * Initialize Microsoft Clarity
  * Uses the official Microsoft Clarity package
+ *
+ * TEMPORARILY DISABLED to debug redirect loop
  */
 export const initClarity = (): void => {
-  if (typeof window === 'undefined' || !CLARITY_PROJECT_ID) {
-    return;
-  }
+  // Temporarily disabled to test if Clarity is causing the redirect loop
+  // Re-enable after confirming the issue
+  return;
 
-  // Initialize Clarity with project ID
-  Clarity.init(CLARITY_PROJECT_ID);
+  // TODO: Re-enable after fixing redirect issue
+  // if (typeof window === 'undefined' || !CLARITY_PROJECT_ID) {
+  //   return;
+  // }
+  // Clarity.init(CLARITY_PROJECT_ID);
 };
 
 /**
