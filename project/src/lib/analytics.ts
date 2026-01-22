@@ -60,6 +60,7 @@ export const initGA = (): void => {
 /**
  * Initialize Microsoft Clarity
  * Loads the Clarity tracking script and sets up the project
+ * Deferred to prevent interference with router navigation
  */
 export const initClarity = (): void => {
   if (typeof window === 'undefined' || !CLARITY_PROJECT_ID) {
@@ -67,21 +68,33 @@ export const initClarity = (): void => {
   }
 
   // Prevent duplicate initialization
-  if ((window as any).clarity) {
+  if (window.clarity) {
     return;
   }
 
-  // Clarity initialization snippet
-  (function(c: any, l: Document, a: string, r: string, i: string, t: HTMLScriptElement, y: HTMLElement) {
-    c[a] = c[a] || function() {
-      (c[a].q = c[a].q || []).push(arguments);
-    };
-    t = l.createElement(r) as HTMLScriptElement;
-    t.async = true;
-    t.src = `https://www.clarity.ms/tag/${i}`;
-    y = l.getElementsByTagName(r)[0];
-    y.parentNode?.insertBefore(t, y);
-  })(window, document, 'clarity', 'script', CLARITY_PROJECT_ID);
+  // Defer Clarity initialization to prevent router interference
+  // Clarity uses history.pushState which can trigger infinite redirects
+  // with TanStack Router's navigation listeners
+  requestIdleCallback(() => {
+    // Double-check after idle callback
+    if (window.clarity) {
+      return;
+    }
+
+    // Clarity initialization snippet
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    (function(c: any, l: Document, a: string, r: string, i: string) {
+      c[a] = c[a] || function() {
+        (c[a].q = c[a].q || []).push(arguments);
+      };
+      const t = l.createElement(r) as HTMLScriptElement;
+      t.async = true;
+      t.src = `https://www.clarity.ms/tag/${i}`;
+      const y = l.getElementsByTagName(r)[0];
+      y.parentNode?.insertBefore(t, y);
+    })(window, document, 'clarity', 'script', CLARITY_PROJECT_ID);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+  }, { timeout: 2000 });
 };
 
 /**
@@ -299,7 +312,7 @@ export const setUserId = (userId: string): void => {
  * Set user properties for segmentation
  * @param properties - User properties object
  */
-export const setUserProperties = (properties: Record<string, any>): void => {
+export const setUserProperties = (properties: Record<string, string | number | boolean>): void => {
   if (typeof window === 'undefined' || !window.gtag || !GA_TRACKING_ID) {
     return;
   }
@@ -583,7 +596,7 @@ export const trackSettingChange = (settingName: string, value: string): void => 
  * Entity CRUD operations tracking
  */
 
-export const trackEntityCreate = (entityType: string, entityId?: string): void => {
+export const trackEntityCreate = (entityType: string, _entityId?: string): void => {
   trackEvent({
     action: 'entity_create',
     category: 'CRUD',
@@ -592,7 +605,7 @@ export const trackEntityCreate = (entityType: string, entityId?: string): void =
   trackClarityEvent(`create_${entityType}`);
 };
 
-export const trackEntityUpdate = (entityType: string, entityId?: string): void => {
+export const trackEntityUpdate = (entityType: string, _entityId?: string): void => {
   trackEvent({
     action: 'entity_update',
     category: 'CRUD',
@@ -601,7 +614,7 @@ export const trackEntityUpdate = (entityType: string, entityId?: string): void =
   trackClarityEvent(`update_${entityType}`);
 };
 
-export const trackEntityDelete = (entityType: string, entityId?: string): void => {
+export const trackEntityDelete = (entityType: string, _entityId?: string): void => {
   trackEvent({
     action: 'entity_delete',
     category: 'CRUD',
