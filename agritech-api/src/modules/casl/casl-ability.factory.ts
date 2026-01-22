@@ -179,6 +179,8 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.REPORT);
             can(Action.Manage, Subject.SATELLITE_ANALYSIS);
             can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD); // Can read dashboard
+            can(Action.Update, Subject.DASHBOARD); // Can update dashboard settings
             can(Action.Read, Subject.USER); // Can view users in org
             can(Action.Update, Subject.USER); // Can manage user roles
             can(Action.Read, Subject.ORGANIZATION);
@@ -242,6 +244,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
             can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD); // Can read dashboard
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY); // Cannot delete journal entries
             cannot(Action.Manage, Subject.ACCOUNT); // Cannot manage chart of accounts
@@ -288,6 +291,7 @@ export class CaslAbilityFactory {
 
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Create, Subject.QUALITY_CONTROL);
+            can(Action.Read, Subject.DASHBOARD); // Can read dashboard
 
             // Cannot access financial operations
             cannot(Action.Create, Subject.INVOICE);
@@ -317,6 +321,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.PARCEL);
             can(Action.Read, Subject.HARVEST);
             can(Action.Read, Subject.PRODUCT);
+            can(Action.Read, Subject.DASHBOARD); // Can read dashboard
 
             cannot(Action.Create, Subject.INVOICE);
             cannot(Action.Update, Subject.INVOICE);
@@ -369,6 +374,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
             can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD); // Can read dashboard
             can(Action.Read, Subject.USER);
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Read, Subject.ROLE);
