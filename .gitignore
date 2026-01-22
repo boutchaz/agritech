@@ -24,6 +24,15 @@ dist/
 build/
 .next/
 out/
+target/
+
+# Tauri
+**/src-tauri/target/
+*.dmg
+*.app
+
+# Tool caches
+.brv/
 
 # IDE
 .idea/
