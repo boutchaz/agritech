@@ -236,6 +236,200 @@ const ability = useAbility(); if (ability.can('delete', 'Farm')) { ... }
 
 ---
 
+## Desktop App (Tauri)
+
+### Overview
+The AgriTech Desktop app is a standalone offline-capable application built with **Tauri v1** (Rust backend + web frontend). It allows users to work without internet connection by importing organization data bundles.
+
+**Location:** `project/src-tauri/`
+
+### Key Features
+- **Offline-first**: Works completely offline with local SQLite database
+- **Data Import**: Import encrypted organization data bundles from the web app
+- **Full CRUD**: Manage farms, parcels, tasks, workers, harvests, inventory
+- **Local Authentication**: Secure bcrypt password hashing for offline login
+- **Cross-platform**: Builds for macOS, Windows, and Linux
+
+### Architecture
+```
+project/src-tauri/
+├── src/
+│   ├── main.rs           # Tauri app entry point
+│   ├── commands/         # Tauri IPC commands (Rust)
+│   │   ├── auth.rs       # Local login/logout/setup
+│   │   ├── farms.rs      # Farm CRUD operations
+│   │   ├── parcels.rs    # Parcel CRUD operations
+│   │   ├── organizations.rs
+│   │   ├── import.rs     # Bundle import/validation
+│   │   └── data.rs       # Generic table operations
+│   └── db/
+│       ├── mod.rs        # SQLite database initialization
+│       └── schema.sql    # Full database schema (856 lines)
+├── icons/                # App icons for all platforms
+├── Cargo.toml           # Rust dependencies
+└── tauri.conf.json      # Tauri configuration
+```
+
+### Database Schema
+The desktop app mirrors the cloud database with 35+ tables including:
+- **Core**: organizations, roles, user_profiles, organization_users
+- **Farm**: farms, parcels, structures, warehouses, cost_centers
+- **Workforce**: workers, tasks, task_assignments
+- **Harvest**: harvest_records, reception_batches
+- **Inventory**: items, item_groups, stock_entries, stock_entry_items
+- **Sales**: customers, quotes, sales_orders, invoices
+- **Purchasing**: suppliers, purchase_orders
+- **Accounting**: accounts, journal_entries, costs, revenues, payments
+
+### Commands
+
+```bash
+# Development (from project/ directory)
+pnpm tauri:dev           # Run desktop app with hot-reload
+
+# Build for production
+pnpm tauri:build         # Build for current platform
+
+# Build for specific platform (requires Rust toolchain)
+cd src-tauri && cargo build --release
+```
+
+### Dependencies (Rust)
+- `tauri` v1 - Desktop framework
+- `rusqlite` - SQLite database
+- `bcrypt` - Password hashing
+- `aes-gcm` - Encryption for data bundles
+- `uuid` - ID generation
+- `chrono` - Date/time handling
+
+### Data Bundle Import
+Users can export their organization data from the web app as an encrypted bundle and import it into the desktop app:
+
+1. Web app exports: farms, parcels, workers, tasks, harvests, inventory, etc.
+2. Bundle is encrypted with user-provided passphrase
+3. Desktop app validates and imports the bundle
+4. User can work offline with full data access
+
+---
+
+## Mobile App (Expo/React Native)
+
+### Overview
+**AgriTech Field** is a mobile companion app built with **Expo SDK 54** for field workers. It provides essential features for daily farm operations.
+
+**Location:** `mobile/`
+
+### Key Features
+- **Task Management**: View and complete assigned tasks
+- **Harvest Recording**: Log harvests with photos and GPS location
+- **Time Tracking**: Clock in/out with geofencing support
+- **Offline Support**: Works offline with SQLite sync
+- **Biometric Auth**: Face ID / fingerprint login
+- **Camera Integration**: Document crop conditions
+- **GPS Tracking**: Record harvest locations
+
+### Architecture
+```
+mobile/
+├── app/                  # Expo Router pages
+│   ├── _layout.tsx       # Root layout with providers
+│   ├── index.tsx         # Entry redirect
+│   ├── (auth)/           # Auth screens
+│   │   ├── _layout.tsx
+│   │   └── login.tsx
+│   ├── (tabs)/           # Main tab navigation
+│   │   ├── _layout.tsx   # Tab bar configuration
+│   │   ├── index.tsx     # Home dashboard
+│   │   ├── tasks.tsx     # Task list
+│   │   ├── harvest.tsx   # Harvest recording
+│   │   ├── clock.tsx     # Time tracking
+│   │   └── profile.tsx   # User profile
+│   ├── task/[id].tsx     # Task detail screen
+│   └── harvest/new.tsx   # New harvest modal
+├── src/
+│   ├── hooks/            # React Query hooks
+│   │   ├── useTasks.ts
+│   │   ├── useHarvests.ts
+│   │   └── useFarms.ts
+│   ├── stores/           # Zustand stores
+│   │   └── authStore.ts
+│   ├── lib/
+│   │   ├── api.ts        # API client
+│   │   └── offline.ts    # Offline sync logic
+│   ├── types/
+│   │   ├── auth.ts
+│   │   └── database.types.ts
+│   └── constants/
+│       ├── config.ts     # API URLs
+│       └── theme.ts      # Design tokens
+├── assets/               # Images and icons
+├── app.json              # Expo configuration
+└── package.json
+```
+
+### Tab Navigation
+| Tab | Icon | Description |
+|-----|------|-------------|
+| Home | `home` | Dashboard with today's summary |
+| Tasks | `checkbox` | View and complete assigned tasks |
+| Harvest | `leaf` | Record new harvests |
+| Clock | `time` | Clock in/out, view time entries |
+| Profile | `person` | User settings and logout |
+
+### Commands
+
+```bash
+cd mobile
+
+# Development
+npm start               # Start Expo dev server
+npm run ios            # Run on iOS simulator
+npm run android        # Run on Android emulator
+
+# Linting
+npm run lint           # Run ESLint
+npm run lint:fix       # Auto-fix lint issues
+npm run type-check     # TypeScript check
+
+# Build (requires EAS CLI)
+npx expo prebuild      # Generate native projects
+npx eas build         # Build for app stores
+```
+
+### Expo Plugins
+- `expo-router` - File-based routing
+- `expo-camera` - Harvest photo capture
+- `expo-location` - GPS tracking for harvests
+- `expo-local-authentication` - Biometric login
+- `expo-secure-store` - Secure token storage
+- `expo-sqlite` - Offline database
+- `expo-notifications` - Task reminders
+- `expo-image-picker` - Photo selection
+
+### Permissions (iOS/Android)
+| Permission | Purpose |
+|------------|---------|
+| Camera | Capture harvest photos, document crop conditions |
+| Location | Record harvest GPS, geofenced clock-in |
+| Background Location | Delivery tracking |
+| Face ID / Biometrics | Quick secure login |
+| Notifications | Task reminders |
+
+### Environment Variables
+```bash
+# mobile/.env
+API_URL=https://agritech-api.thebzlab.online
+SUPABASE_URL=your-supabase-url
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+### State Management
+- **Server State**: TanStack Query (React Query) for API data
+- **Client State**: Zustand for auth and local UI state
+- **Offline**: expo-sqlite for local cache
+
+---
+
 ## Before Committing
 
 ```bash
@@ -246,5 +440,6 @@ cd project && npm run lint:fix && npm run type-check && npm test
 
 ## Environment Variables
 
-**Frontend:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SATELLITE_SERVICE_URL`
+**Frontend:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SATELLITE_SERVICE_URL`, `VITE_API_URL`
 **Backend:** `GEE_SERVICE_ACCOUNT`, `GEE_PRIVATE_KEY`, `SUPABASE_URL`, `SUPABASE_KEY`
+**Mobile:** `API_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
