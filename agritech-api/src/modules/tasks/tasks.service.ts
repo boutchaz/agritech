@@ -1184,7 +1184,7 @@ export class TasksService {
     }
 
     // Validate location if provided and task has a parcel
-    let locationValidation = { valid: true };
+    let locationValidation: { valid: boolean; message?: string } = { valid: true };
     if (clockInData.location_lat && clockInData.location_lng && task.parcel_id) {
       locationValidation = await this.validateLocationInParcel(
         organizationId,

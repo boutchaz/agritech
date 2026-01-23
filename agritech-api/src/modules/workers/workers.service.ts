@@ -4,7 +4,7 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
 import { EmailService } from '../email/email.service';
 
-interface WorkerProfile {
+export interface WorkerProfile {
   id: string;
   first_name: string;
   last_name: string;
