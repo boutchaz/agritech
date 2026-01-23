@@ -1,15 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, X, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask, Building, MapPin } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Plus, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask, Building, MapPin } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { useAuth } from '../hooks/useAuth';
 import { useStructures, useCreateStructure, useUpdateStructure, useDeleteStructure } from '../hooks/useStructures';
+import { useFarms } from '../hooks/useParcelsQuery';
 import type { Structure as ApiStructure, CreateStructureInput } from '../lib/api/structures';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabase';
 import { useTranslation } from 'react-i18next';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 // Use the API Structure type
 type Structure = ApiStructure;
@@ -20,22 +28,17 @@ const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well'] as con
 // Basin shape keys for translation lookup
 const BASIN_SHAPE_KEYS = ['trapezoidal', 'rectangular', 'cubic', 'circular'] as const;
 
-interface Farm {
-  id: string;
-  name: string;
-}
-
 const InfrastructureManagement: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
   // API hooks
   const { data: structures = [], isLoading: loading, error: apiError } = useStructures();
+  const { data: farms = [] } = useFarms(currentOrganization?.id);
   const createStructure = useCreateStructure();
   const updateStructure = useUpdateStructure();
   const deleteStructure = useDeleteStructure();
 
-  const [farms, setFarms] = useState<Farm[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStructure, setEditingStructure] = useState<Structure | null>(null);
   const [activeTab, setActiveTab] = useState<'organization' | 'farm'>('organization');
@@ -52,29 +55,6 @@ const InfrastructureManagement: React.FC = () => {
   });
 
   const error = apiError ? 'Failed to fetch structures' : null;
-
-  useEffect(() => {
-    fetchFarms();
-  }, [currentOrganization]);
-
-  const fetchFarms = async () => {
-    try {
-      if (!currentOrganization) return;
-
-      const { data, error } = await supabase
-        .from('farms')
-        .select('id, name')
-        .eq('organization_id', currentOrganization.id)
-        .order('name');
-
-      if (error) throw error;
-      setFarms(data || []);
-    } catch (error) {
-      console.error('Error fetching farms:', error);
-    }
-  };
-
-  // fetchStructures is now handled by useStructures hook
 
   // Categorize structures
   const organizationStructures = useMemo(() =>
@@ -191,8 +171,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="stable_width"
                   type="number"
                   step="1"
+                  min="0"
                   value={details.width || ''}
-                  onChange={(e) => handleStructureDetailsChange('width', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('width', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -201,8 +182,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="stable_length"
                   type="number"
                   step="1"
+                  min="0"
                   value={details.length || ''}
-                  onChange={(e) => handleStructureDetailsChange('length', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('length', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -211,8 +193,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="stable_height"
                   type="number"
                   step="1"
+                  min="0"
                   value={details.height || ''}
-                  onChange={(e) => handleStructureDetailsChange('height', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('height', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -261,8 +244,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_radius"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.radius')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.radius', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.radius', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -271,8 +255,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_height"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.height')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -286,8 +271,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_top_width"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.top_width')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.top_width', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.top_width', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -296,8 +282,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_bottom_width"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.bottom_width')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.bottom_width', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.bottom_width', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -308,8 +295,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_length"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.length')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.length', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -318,8 +306,9 @@ const InfrastructureManagement: React.FC = () => {
                           id="basin_height2"
                           type="number"
                           step="0.01"
+                          min="0"
                           value={getNestedValue(details, 'dimensions.height')}
-                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
+                          onChange={(e) => handleStructureDetailsChange('dimensions.height', Math.max(0, Number(e.target.value) || 0))}
                           required
                         />
                       </FormField>
@@ -333,8 +322,9 @@ const InfrastructureManagement: React.FC = () => {
                         id="rect_width"
                         type="number"
                         step="0.01"
+                        min="0"
                         value={getNestedValue(details, 'dimensions.width')}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.width', Number(e.target.value) || 0)}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.width', Math.max(0, Number(e.target.value) || 0))}
                         required
                       />
                     </FormField>
@@ -343,8 +333,9 @@ const InfrastructureManagement: React.FC = () => {
                         id="rect_length"
                         type="number"
                         step="0.01"
+                        min="0"
                         value={getNestedValue(details, 'dimensions.length')}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.length', Number(e.target.value) || 0)}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.length', Math.max(0, Number(e.target.value) || 0))}
                         required
                       />
                     </FormField>
@@ -353,8 +344,9 @@ const InfrastructureManagement: React.FC = () => {
                         id="rect_height"
                         type="number"
                         step="0.01"
+                        min="0"
                         value={getNestedValue(details, 'dimensions.height')}
-                        onChange={(e) => handleStructureDetailsChange('dimensions.height', Number(e.target.value) || 0)}
+                        onChange={(e) => handleStructureDetailsChange('dimensions.height', Math.max(0, Number(e.target.value) || 0))}
                         required
                       />
                     </FormField>
@@ -383,8 +375,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="tech_width"
                   type="number"
                   step="0.1"
+                  min="0"
                   value={details.width || ''}
-                  onChange={(e) => handleStructureDetailsChange('width', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('width', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -393,8 +386,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="tech_length"
                   type="number"
                   step="0.1"
+                  min="0"
                   value={details.length || ''}
-                  onChange={(e) => handleStructureDetailsChange('length', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('length', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -403,8 +397,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="tech_height"
                   type="number"
                   step="0.1"
+                  min="0"
                   value={details.height || ''}
-                  onChange={(e) => handleStructureDetailsChange('height', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('height', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -430,8 +425,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="well_depth"
                   type="number"
                   step="1"
+                  min="0"
                   value={details.depth || ''}
-                  onChange={(e) => handleStructureDetailsChange('depth', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('depth', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -467,8 +463,9 @@ const InfrastructureManagement: React.FC = () => {
                   id="well_pump_power"
                   type="number"
                   step="1"
+                  min="0"
                   value={details.pump_power || ''}
-                  onChange={(e) => handleStructureDetailsChange('pump_power', Number(e.target.value))}
+                  onChange={(e) => handleStructureDetailsChange('pump_power', Math.max(0, Number(e.target.value)))}
                   required
                 />
               </FormField>
@@ -897,56 +894,164 @@ const InfrastructureManagement: React.FC = () => {
       )}
 
       {/* Add/Edit Structure Modal */}
-      {(showAddModal || editingStructure) && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-4 sm:p-6 max-w-full sm:max-w-lg mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 pb-2 -mx-4 sm:-mx-6 px-4 sm:px-6 border-b border-gray-200 dark:border-gray-700 mb-4">
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
-                {editingStructure ? t('infrastructure.modal.editTitle') : t('infrastructure.modal.addTitle')}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingStructure(null);
+      <Dialog
+        open={showAddModal || !!editingStructure}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowAddModal(false);
+            setEditingStructure(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
+              <Building2 className="w-6 h-6 text-green-600" />
+              <span>{editingStructure ? t('infrastructure.modal.editTitle') : t('infrastructure.modal.addTitle')}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Structure Type - Highlighted Section */}
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('infrastructure.fields.type')} *
+              </label>
+              <select
+                id="struct_type"
+                value={editingStructure?.type || newStructure.type}
+                onChange={(e) => {
+                  const type = e.target.value as Structure['type'];
+                  if (editingStructure) {
+                    setEditingStructure({
+                      ...editingStructure,
+                      type,
+                      structure_details: {}
+                    });
+                  } else {
+                    setNewStructure({
+                      ...newStructure,
+                      type,
+                      structure_details: {}
+                    });
+                  }
                 }}
-                className="text-gray-400 hover:text-gray-500 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label={t('infrastructure.actions.close')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
               >
-                <X className="h-5 w-5 sm:h-6 sm:w-6" />
-              </button>
+                {STRUCTURE_TYPE_KEYS.map(typeKey => (
+                  <option key={typeKey} value={typeKey}>
+                    {t(`infrastructure.types.${typeKey}`)}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <div className="space-y-4">
-              <FormField label={t('infrastructure.fields.name')} htmlFor="struct_name" required>
-                <Input
-                  id="struct_name"
-                  type="text"
-                  value={editingStructure?.name || newStructure.name}
-                  onChange={(e) => {
-                    if (editingStructure) {
-                      setEditingStructure({
-                        ...editingStructure,
-                        name: e.target.value
-                      });
-                    } else {
-                      setNewStructure({
-                        ...newStructure,
-                        name: e.target.value
-                      });
-                    }
-                  }}
-                  required
-                />
-              </FormField>
+            {/* Basic Information */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+                {t('infrastructure.sections.basicInfo', 'Basic Information')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('infrastructure.fields.name')} *
+                  </label>
+                  <input
+                    id="struct_name"
+                    type="text"
+                    value={editingStructure?.name || newStructure.name}
+                    onChange={(e) => {
+                      if (editingStructure) {
+                        setEditingStructure({
+                          ...editingStructure,
+                          name: e.target.value
+                        });
+                      } else {
+                        setNewStructure({
+                          ...newStructure,
+                          name: e.target.value
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    placeholder={t('infrastructure.placeholders.name', 'Enter structure name')}
+                    required
+                  />
+                </div>
 
-              <FormField label={t('infrastructure.scope.label')} htmlFor="struct_scope" required>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('infrastructure.fields.installationDate')} *
+                  </label>
+                  <input
+                    id="struct_installation"
+                    type="date"
+                    value={editingStructure?.installation_date || newStructure.installation_date}
+                    onChange={(e) => {
+                      if (editingStructure) {
+                        setEditingStructure({
+                          ...editingStructure,
+                          installation_date: e.target.value
+                        });
+                      } else {
+                        setNewStructure({
+                          ...newStructure,
+                          installation_date: e.target.value
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('infrastructure.fields.usage')}
+                  </label>
+                  <input
+                    id="struct_usage"
+                    type="text"
+                    value={editingStructure?.usage || newStructure.usage}
+                    onChange={(e) => {
+                      if (editingStructure) {
+                        setEditingStructure({
+                          ...editingStructure,
+                          usage: e.target.value
+                        });
+                      } else {
+                        setNewStructure({
+                          ...newStructure,
+                          usage: e.target.value
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    placeholder={t('infrastructure.fields.usagePlaceholder')}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+                {t('infrastructure.sections.assignment', 'Assignment')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('infrastructure.scope.label')} *
+                  </label>
+                  <div className="flex items-center gap-4 mt-2">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
                         checked={activeTab === 'organization' && !editingStructure?.farm_id}
-                        onChange={() => setActiveTab('organization')}
+                        onChange={() => {
+                          setActiveTab('organization');
+                          setSelectedFarmId(null);
+                        }}
                         className="text-green-600 focus:ring-green-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">{t('infrastructure.scope.organization')}</span>
@@ -958,133 +1063,70 @@ const InfrastructureManagement: React.FC = () => {
                         onChange={() => setActiveTab('farm')}
                         className="text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('infrastructure.scope.specificFarm')}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('infrastructure.scope.farm')}</span>
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {activeTab === 'organization'
-                      ? t('infrastructure.scope.organizationHint')
-                      : t('infrastructure.scope.farmHint')}
-                  </p>
                 </div>
-              </FormField>
 
-              {(activeTab === 'farm' || editingStructure?.farm_id) && farms.length > 0 && (
-                <FormField label={t('infrastructure.fields.farm')} htmlFor="struct_farm" required>
-                  <Select
-                    id="struct_farm"
-                    value={selectedFarmId || editingStructure?.farm_id || ''}
-                    onChange={(e) => setSelectedFarmId(e.target.value)}
-                    required
-                  >
-                    <option value="">{t('infrastructure.select')}</option>
-                    {farms.map(farm => (
-                      <option key={farm.id} value={farm.id}>
-                        {farm.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              )}
+                {(activeTab === 'farm' || editingStructure?.farm_id) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('infrastructure.fields.farm')} *
+                    </label>
+                    <select
+                      id="struct_farm"
+                      value={selectedFarmId || editingStructure?.farm_id || ''}
+                      onChange={(e) => setSelectedFarmId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      required
+                    >
+                      <option value="">{t('infrastructure.select')}</option>
+                      {farms.map(farm => (
+                        <option key={farm.id} value={farm.id}>
+                          {farm.name}
+                        </option>
+                      ))}
+                    </select>
+                    {farms.length === 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('infrastructure.noFarmsAvailable', 'No farms available. Please create a farm first.')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
 
-              <FormField label={t('infrastructure.fields.type')} htmlFor="struct_type" required>
-                <Select
-                  id="struct_type"
-                  value={editingStructure?.type || newStructure.type}
-                  onChange={(e) => {
-                    const type = (e.target as HTMLSelectElement).value as Structure['type'];
-                    if (editingStructure) {
-                      setEditingStructure({
-                        ...editingStructure,
-                        type,
-                        structure_details: {}
-                      });
-                    } else {
-                      setNewStructure({
-                        ...newStructure,
-                        type,
-                        structure_details: {}
-                      });
-                    }
-                  }}
-                  required
-                >
-                  {STRUCTURE_TYPE_KEYS.map(typeKey => (
-                    <option key={typeKey} value={typeKey}>
-                      {t(`infrastructure.types.${typeKey}`)}
-                    </option>
-                  ))}
-                </Select>
-              </FormField>
-
-              <FormField label={t('infrastructure.fields.installationDate')} htmlFor="struct_installation" required>
-                <Input
-                  id="struct_installation"
-                  type="date"
-                  value={editingStructure?.installation_date || newStructure.installation_date}
-                  onChange={(e) => {
-                    if (editingStructure) {
-                      setEditingStructure({
-                        ...editingStructure,
-                        installation_date: e.target.value
-                      });
-                    } else {
-                      setNewStructure({
-                        ...newStructure,
-                        installation_date: e.target.value
-                      });
-                    }
-                  }}
-                  required
-                />
-              </FormField>
-
-              <FormField label={t('infrastructure.fields.usage')} htmlFor="struct_usage">
-                <Input
-                  id="struct_usage"
-                  type="text"
-                  value={editingStructure?.usage || newStructure.usage}
-                  onChange={(e) => {
-                    if (editingStructure) {
-                      setEditingStructure({
-                        ...editingStructure,
-                        usage: e.target.value
-                      });
-                    } else {
-                      setNewStructure({
-                        ...newStructure,
-                        usage: e.target.value
-                      });
-                    }
-                  }}
-                  placeholder={t('infrastructure.fields.usagePlaceholder')}
-                />
-              </FormField>
-
-              {/* Structure-specific fields */}
+            {/* Structure Details */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+                {t('infrastructure.sections.details', 'Structure Details')}
+              </h3>
               {renderStructureFields()}
             </div>
-
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-end sticky bottom-0 bg-white dark:bg-gray-800 pt-4 -mx-4 sm:-mx-6 px-4 sm:px-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setEditingStructure(null);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('infrastructure.actions.cancel')}
-              </button>
-              <button
-                onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
-                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-md hover:shadow-lg"
-              >
-                {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingStructure(null);
+              }}
+            >
+              {t('infrastructure.actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

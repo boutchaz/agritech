@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banknote, Calculator, Loader2, AlertCircle } from 'lucide-react';
 import {
@@ -33,6 +33,9 @@ interface WorkerPaymentDialogProps {
   organizationId: string;
   onClose: () => void;
   onSuccess: () => void;
+  initialPeriodStart?: string;
+  initialPeriodEnd?: string;
+  initialPaymentType?: PaymentType;
 }
 
 function getPaymentTypeForWorker(workerType: string): PaymentType {
@@ -62,31 +65,50 @@ function getDefaultPeriodDates(): { start: string; end: string } {
   };
 }
 
+function getAllowedPaymentTypes(workerType: string): PaymentType[] {
+  switch (workerType) {
+    case 'fixed_salary':
+      return ['monthly_salary', 'bonus', 'overtime', 'advance'];
+    case 'daily_worker':
+      return ['daily_wage', 'bonus', 'overtime', 'advance'];
+    case 'metayage':
+      return ['metayage_share', 'bonus', 'advance'];
+    default:
+      return ['daily_wage'];
+  }
+}
+
 const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   open,
   worker,
   onClose,
   onSuccess,
+  initialPeriodStart,
+  initialPeriodEnd,
+  initialPaymentType,
 }) => {
   const { t } = useTranslation();
-  const defaultDates = getDefaultPeriodDates();
-  const [periodStart, setPeriodStart] = useState(defaultDates.start);
-  const [periodEnd, setPeriodEnd] = useState(defaultDates.end);
+  const defaultDates = useMemo(() => getDefaultPeriodDates(), []);
+  const [periodStart, setPeriodStart] = useState(initialPeriodStart || defaultDates.start);
+  const [periodEnd, setPeriodEnd] = useState(initialPeriodEnd || defaultDates.end);
   const [paymentType, setPaymentType] = useState<PaymentType>(getPaymentTypeForWorker(worker.worker_type));
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [calculatedPayment, setCalculatedPayment] = useState<CalculatePaymentResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const allowedPaymentTypes = getAllowedPaymentTypes(worker.worker_type);
 
   const calculatePayment = useCalculatePayment();
   const createPayment = useCreatePaymentRecord();
 
   useEffect(() => {
     if (open) {
-      setPaymentType(getPaymentTypeForWorker(worker.worker_type));
+      setPaymentType(initialPaymentType || getPaymentTypeForWorker(worker.worker_type));
+      setPeriodStart(initialPeriodStart || defaultDates.start);
+      setPeriodEnd(initialPeriodEnd || defaultDates.end);
       setCalculatedPayment(null);
       setError(null);
     }
-  }, [open, worker.worker_type]);
+  }, [open, worker.worker_type, initialPaymentType, initialPeriodStart, initialPeriodEnd, defaultDates]);
 
   const handleCalculate = async () => {
     setError(null);
@@ -116,6 +138,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
         period_start: periodStart,
         period_end: periodEnd,
         base_amount: calculatedPayment.base_amount,
+        advance_deduction: calculatedPayment.advance_deductions,
         days_worked: calculatedPayment.days_worked,
         hours_worked: calculatedPayment.hours_worked,
         tasks_completed: calculatedPayment.tasks_completed,
@@ -132,6 +155,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
         })),
         harvest_amount: calculatedPayment.harvest_amount,
         gross_revenue: calculatedPayment.gross_revenue,
+        total_charges: calculatedPayment.total_charges,
         metayage_percentage: calculatedPayment.metayage_percentage,
       });
       
@@ -228,15 +252,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 <SelectTrigger id="payment_type">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PAYMENT_TYPE_LABELS).map(([key, labels]) => (
-                    <SelectItem key={key} value={key}>
-                      {labels.fr}
+              <SelectContent>
+                  {allowedPaymentTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {PAYMENT_TYPE_LABELS[type].fr}
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+              </SelectContent>
+            </Select>
+          </div>
             <div className="space-y-2">
               <Label htmlFor="payment_method">{t('dialogs.workerPayment.paymentMethod')}</Label>
               <Select

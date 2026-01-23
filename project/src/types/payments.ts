@@ -211,6 +211,7 @@ export interface CalculatePaymentResponse {
   // Métayage specific
   harvest_amount?: number;
   gross_revenue?: number;
+  total_charges?: number;
   metayage_percentage?: number;
 }
 
@@ -218,10 +219,12 @@ export interface CreatePaymentRecordRequest {
   worker_id: string;
   farm_id: string;
   payment_type: PaymentType;
+  payment_method?: PaymentMethod;
   period_start: string;
   period_end: string;
   
   base_amount: number;
+  advance_deduction?: number;
   days_worked?: number;
   hours_worked?: number;
   tasks_completed?: number;
@@ -430,4 +433,3 @@ export function canApprovePayment(payment: PaymentRecord): boolean {
 export function canProcessPayment(payment: PaymentRecord): boolean {
   return payment.status === 'approved';
 }
-

@@ -2572,7 +2572,8 @@
       "organization": "المنظمة",
       "farm": "مزرعة محددة",
       "organizationHint": "متاحة لجميع مزارع المنظمة",
-      "farmHint": "مرتبطة بمزرعة محددة وتُحذف معها"
+      "farmHint": "مرتبطة بمزرعة محددة وتُحذف معها",
+      "farmSelectHint": "حدد المزرعة التي يجب تعيين هذه البنية التحتية لها"
     },
     "types": {
       "stable": "إسطبل",
@@ -3102,6 +3103,10 @@
     "subtitle": "إدارة العمال الزراعيين وحساب المزارعة",
     "loading": "جاري التحميل...",
     "loadingOrganization": "جاري تحميل المنظمة...",
+    "errors": {
+      "farmsFetchFailed": "تعذر تحميل المزارع",
+      "farmsFetchHint": "تحقق من الاتصال أو أعد المحاولة."
+    },
     "accessDenied": {
       "title": "الوصول مقيد",
       "description": "ليس لديك الصلاحيات اللازمة للوصول إلى إدارة الموظفين.",
@@ -3115,6 +3120,8 @@
     },
     "tabs": {
       "list": "إدارة الموظفين",
+      "payments": "المدفوعات",
+      "paymentsShort": "الرواتب",
       "calculator": "حاسبة المزارعة"
     },
     "list": {
@@ -3222,12 +3229,17 @@
       "bankAccount": "الحساب البنكي"
     },
     "payments": {
+      "overviewTitle": "نظرة عامة على الرواتب",
+      "empty": "لا توجد مدفوعات للعمال حتى الآن.",
       "date": "التاريخ",
+      "worker": "العامل",
+      "period": "الفترة",
       "type": "النوع",
       "amount": "المبلغ",
       "status": "الحالة",
       "method": "الطريقة",
       "actions": "الإجراءات",
+      "unknownWorker": "عامل غير معروف",
       "markAsPaid": "تحديد كمدفوع",
       "processSuccess": "تم تحديد الدفع كمدفوع",
       "processError": "فشل في معالجة الدفع"
@@ -3269,7 +3281,9 @@
       "grossRevenue": "الإيراد الإجمالي",
       "charges": "المصاريف",
       "share": "حصة العامل",
-      "status": "الحالة"
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "createPayment": "إنشاء دفعة"
     },
     "settlementStatuses": {
       "pending": "قيد الانتظار",

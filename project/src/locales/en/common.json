@@ -2678,7 +2678,8 @@
       "organization": "Organization",
       "farm": "Specific Farm",
       "organizationHint": "Accessible by all farms in the organization",
-      "farmHint": "Linked to a specific farm and deleted with it"
+      "farmHint": "Linked to a specific farm and deleted with it",
+      "farmSelectHint": "Select the farm to assign this infrastructure to"
     },
     "types": {
       "stable": "Stable",
@@ -2793,6 +2794,10 @@
     "subtitleAllFarms_plural": "{{count}} parcels - All farms",
     "loading": "Loading...",
     "loadingOrganization": "Loading organization...",
+    "errors": {
+      "farmsFetchFailed": "Unable to load farms",
+      "farmsFetchHint": "Check your connection or try again."
+    },
     "farms": "Farms",
     "farmsIn": "Farms in {{orgName}}",
     "clickToViewParcels": "Click to view parcels →",
@@ -2987,6 +2992,8 @@
     },
     "tabs": {
       "list": "Personnel Management",
+      "payments": "Payments",
+      "paymentsShort": "Pay",
       "calculator": "Sharecropping Calculator"
     },
     "list": {
@@ -3094,12 +3101,17 @@
       "bankAccount": "Bank Account"
     },
     "payments": {
+      "overviewTitle": "Payroll overview",
+      "empty": "No worker payments recorded yet.",
       "date": "Date",
+      "worker": "Worker",
+      "period": "Period",
       "type": "Type",
       "amount": "Amount",
       "status": "Status",
       "method": "Method",
       "actions": "Actions",
+      "unknownWorker": "Unknown worker",
       "markAsPaid": "Mark as Paid",
       "processSuccess": "Payment marked as paid",
       "processError": "Failed to process payment"
@@ -3141,7 +3153,9 @@
       "grossRevenue": "Gross Revenue",
       "charges": "Charges",
       "share": "Worker Share",
-      "status": "Status"
+      "status": "Status",
+      "actions": "Actions",
+      "createPayment": "Create payment"
     },
     "settlementStatuses": {
       "pending": "Pending",

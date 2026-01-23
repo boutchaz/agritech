@@ -213,7 +213,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
                 onChange={(e) => updateField('farm_id', e.target.value || null)}
               >
                 <option value="">{t('warehouses.form.noFarm')}</option>
-                {farms.data?.map((farm) => (
+                {farms.map((farm) => (
                   <option key={farm.id} value={farm.id}>
                     {farm.name}
                   </option>

@@ -35,6 +35,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import WorkerForm from '@/components/Workers/WorkerForm';
+import WorkerPaymentDialog from '@/components/Workers/WorkerPaymentDialog';
+import type { PaymentType } from '@/types/payments';
 
 function WorkerDetailPage() {
   const { t } = useTranslation();
@@ -45,6 +47,9 @@ function WorkerDetailPage() {
   const { format: formatCurrency } = useCurrency();
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [paymentPeriod, setPaymentPeriod] = useState<{ start: string; end: string } | null>(null);
+  const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
 
   const { data: worker, isLoading: workerLoading } = useWorker(
     currentOrganization?.id || null,
@@ -94,6 +99,13 @@ function WorkerDetailPage() {
     } finally {
       setProcessingPaymentId(null);
     }
+  };
+
+  const handleSettlementPayment = (settlement: any) => {
+    if (!settlement?.period_start || !settlement?.period_end) return;
+    setPaymentPeriod({ start: settlement.period_start, end: settlement.period_end });
+    setPaymentType('metayage_share');
+    setShowPaymentDialog(true);
   };
 
   if (!currentOrganization) {
@@ -471,7 +483,7 @@ function WorkerDetailPage() {
                               : '-'}
                           </td>
                           <td className="py-3 px-4 text-right">
-                            {payment.status === 'pending' && (
+                            {payment.status === 'approved' && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -603,6 +615,9 @@ function WorkerDetailPage() {
                           <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t('workers.settlements.status')}
                           </th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                            {t('workers.settlements.actions')}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -627,6 +642,17 @@ function WorkerDetailPage() {
                                 {t(`workers.settlementStatuses.${settlement.payment_status}`) || settlement.payment_status}
                               </Badge>
                             </td>
+                            <td className="py-3 px-4">
+                              {settlement.payment_status === 'pending' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSettlementPayment(settlement)}
+                                >
+                                  {t('workers.settlements.createPayment')}
+                                </Button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -638,6 +664,27 @@ function WorkerDetailPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {worker && (
+        <WorkerPaymentDialog
+          open={showPaymentDialog}
+          worker={worker}
+          organizationId={currentOrganization.id}
+          initialPeriodStart={paymentPeriod?.start}
+          initialPeriodEnd={paymentPeriod?.end}
+          initialPaymentType={paymentType || undefined}
+          onClose={() => {
+            setShowPaymentDialog(false);
+            setPaymentPeriod(null);
+            setPaymentType(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['worker-payments', workerId] });
+            queryClient.invalidateQueries({ queryKey: ['worker-payment-history', workerId] });
+            queryClient.invalidateQueries({ queryKey: ['metayage-settlements', currentOrganization.id, workerId] });
+          }}
+        />
+      )}
 
       {/* Edit Worker Form Modal */}
       {worker && (

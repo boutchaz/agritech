@@ -29,6 +29,19 @@ export class PaymentRecordsService {
     }
   }
 
+  private ensureValidPeriod(periodStart: string, periodEnd: string) {
+    const startDate = new Date(periodStart);
+    const endDate = new Date(periodEnd);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      throw new BadRequestException('Invalid period dates');
+    }
+
+    if (endDate < startDate) {
+      throw new BadRequestException('Period end date must be after start date');
+    }
+  }
+
   /**
    * Get all payment records for an organization with optional filters
    */
@@ -264,6 +277,13 @@ export class PaymentRecordsService {
     periodEnd: string,
     dailyRate: number,
   ): Promise<{ base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number }> {
+    const { data: workRecords, error: workRecordsError } = await client
+      .from('work_records')
+      .select('work_date, hours_worked, hourly_rate, total_payment')
+      .eq('worker_id', workerId)
+      .gte('work_date', periodStart)
+      .lte('work_date', periodEnd);
+
     const { data: pieceWorkRecords, error } = await client
       .from('piece_work_records')
       .select('work_date, total_amount, units_completed')
@@ -271,11 +291,11 @@ export class PaymentRecordsService {
       .gte('work_date', periodStart)
       .lte('work_date', periodEnd);
 
-    if (error) {
+    if (workRecordsError && error) {
       const startDate = new Date(periodStart);
       const endDate = new Date(periodEnd);
       const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      
+
       return {
         base_amount: dailyRate * daysInPeriod,
         days_worked: daysInPeriod,
@@ -285,15 +305,34 @@ export class PaymentRecordsService {
       };
     }
 
-    if (pieceWorkRecords && pieceWorkRecords.length > 0) {
-      const totalAmount = pieceWorkRecords.reduce((sum: number, record: any) => sum + (record.total_amount || 0), 0);
-      const uniqueDays = new Set(pieceWorkRecords.map((r: any) => r.work_date)).size;
-      const totalUnits = pieceWorkRecords.reduce((sum: number, record: any) => sum + (record.units_completed || 0), 0);
+    const validWorkRecords = workRecords || [];
+    const validPieceWorkRecords = pieceWorkRecords || [];
+
+    if (validWorkRecords.length > 0 || validPieceWorkRecords.length > 0) {
+      const workRecordTotal = validWorkRecords.reduce((sum: number, record: any) => {
+        const totalPayment = Number(record.total_payment);
+        if (!Number.isNaN(totalPayment)) {
+          return sum + totalPayment;
+        }
+        const hoursWorked = Number(record.hours_worked) || 0;
+        const hourlyRate = Number(record.hourly_rate) || 0;
+        if (hoursWorked > 0 && hourlyRate > 0) {
+          return sum + hoursWorked * hourlyRate;
+        }
+        return sum + dailyRate;
+      }, 0);
+
+      const pieceWorkTotal = validPieceWorkRecords.reduce((sum: number, record: any) => sum + (record.total_amount || 0), 0);
+      const workRecordDays = new Set(validWorkRecords.map((r: any) => r.work_date));
+      const pieceWorkDays = new Set(validPieceWorkRecords.map((r: any) => r.work_date));
+      const uniqueDays = new Set([...workRecordDays, ...pieceWorkDays]).size;
+      const totalHours = validWorkRecords.reduce((sum: number, record: any) => sum + (Number(record.hours_worked) || 0), 0);
+      const totalUnits = validPieceWorkRecords.reduce((sum: number, record: any) => sum + (record.units_completed || 0), 0);
 
       return {
-        base_amount: totalAmount,
+        base_amount: workRecordTotal + pieceWorkTotal,
         days_worked: uniqueDays,
-        hours_worked: uniqueDays * 8,
+        hours_worked: totalHours || uniqueDays * 8,
         tasks_completed: totalUnits,
         overtime_amount: 0,
       };
@@ -330,11 +369,15 @@ export class PaymentRecordsService {
    * Calculate payment for a worker
    */
   async calculatePayment(
+    userId: string,
+    organizationId: string,
     workerId: string,
     periodStart: string,
     periodEnd: string,
     includeAdvances: boolean,
   ) {
+    this.ensureValidPeriod(periodStart, periodEnd);
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
     // Get worker info
@@ -342,6 +385,7 @@ export class PaymentRecordsService {
       .from('workers')
       .select('*')
       .eq('id', workerId)
+      .eq('organization_id', organizationId)
       .single();
 
     if (workerError || !worker) {
@@ -349,6 +393,7 @@ export class PaymentRecordsService {
     }
 
     let calculationResult: { base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number };
+    let metayageSettlement: any = null;
 
     // Calculate based on worker type
     if (worker.worker_type === 'daily_worker') {
@@ -365,6 +410,30 @@ export class PaymentRecordsService {
         periodStart,
         periodEnd,
       );
+    } else if (worker.worker_type === 'metayage') {
+      const { data: settlement, error: settlementError } = await client
+        .from('metayage_settlements')
+        .select('*')
+        .eq('worker_id', workerId)
+        .eq('organization_id', organizationId)
+        .eq('period_start', periodStart)
+        .eq('period_end', periodEnd)
+        .neq('payment_status', 'paid')
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (settlementError || !settlement) {
+        throw new BadRequestException('No pending métayage settlement found for this period');
+      }
+
+      metayageSettlement = settlement;
+      calculationResult = {
+        base_amount: Number(settlement.worker_share_amount) || 0,
+        days_worked: 0,
+        hours_worked: 0,
+        tasks_completed: 0,
+        overtime_amount: 0,
+      };
     } else {
       calculationResult = {
         base_amount: 0,
@@ -375,10 +444,13 @@ export class PaymentRecordsService {
       };
     }
 
+    const grossAmount = calculationResult.base_amount + calculationResult.overtime_amount;
+
     // Get advance deductions if requested
     let advance_deductions = 0;
     if (includeAdvances) {
-      advance_deductions = await this.getWorkerAdvanceDeductions(client, workerId);
+      const outstandingAdvances = await this.getWorkerAdvanceDeductions(client, workerId);
+      advance_deductions = Math.min(outstandingAdvances, Math.max(0, grossAmount));
     }
 
     const response = {
@@ -395,9 +467,12 @@ export class PaymentRecordsService {
       bonuses: [],
       deductions: [],
       advance_deductions,
-      gross_amount: calculationResult.base_amount + calculationResult.overtime_amount,
+      gross_amount: grossAmount,
       total_deductions: advance_deductions,
-      net_amount: calculationResult.base_amount + calculationResult.overtime_amount - advance_deductions,
+      net_amount: grossAmount - advance_deductions,
+      gross_revenue: metayageSettlement?.gross_revenue,
+      total_charges: metayageSettlement?.total_charges,
+      metayage_percentage: metayageSettlement?.worker_percentage,
     };
 
     return response;
@@ -411,11 +486,52 @@ export class PaymentRecordsService {
     organizationId: string,
     paymentData: any,
   ) {
+    this.ensureValidPeriod(paymentData.period_start, paymentData.period_end);
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
+    const { data: worker, error: workerError } = await client
+      .from('workers')
+      .select('id, worker_type, farm_id')
+      .eq('id', paymentData.worker_id)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (workerError || !worker) {
+      throw new NotFoundException('Worker not found in organization');
+    }
+
+    const allowedPaymentTypes: Record<string, string[]> = {
+      fixed_salary: ['monthly_salary', 'bonus', 'overtime', 'advance'],
+      daily_worker: ['daily_wage', 'bonus', 'overtime', 'advance'],
+      metayage: ['metayage_share', 'bonus', 'advance'],
+    };
+
+    const allowedTypes = allowedPaymentTypes[worker.worker_type] || [];
+    if (!allowedTypes.includes(paymentData.payment_type)) {
+      throw new BadRequestException('Payment type not allowed for this worker');
+    }
+
+    const overlapStatuses = ['pending', 'approved', 'paid'];
+    if (['daily_wage', 'monthly_salary', 'metayage_share'].includes(paymentData.payment_type)) {
+      const { data: overlappingPayment } = await client
+        .from('payment_records')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('worker_id', paymentData.worker_id)
+        .eq('payment_type', paymentData.payment_type)
+        .in('status', overlapStatuses)
+        .lte('period_start', paymentData.period_end)
+        .gte('period_end', paymentData.period_start)
+        .maybeSingle();
+
+      if (overlappingPayment) {
+        throw new BadRequestException('A payment already exists for the selected period');
+      }
+    }
+
     // Validate and handle farm_id - it's required (NOT NULL) in the database
-    let farmId = paymentData.farm_id;
+    let farmId = paymentData.farm_id || worker.farm_id;
     if (!farmId || (typeof farmId === 'string' && farmId.trim() === '')) {
       // If worker has no farm, get the first farm from the organization as fallback
       const { data: farms, error: farmsError } = await client
@@ -435,6 +551,39 @@ export class PaymentRecordsService {
       farmId = farms.id;
     }
 
+    if (farmId) {
+      const { data: farm } = await client
+        .from('farms')
+        .select('id')
+        .eq('id', farmId)
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (!farm) {
+        throw new BadRequestException('Invalid farm for this organization');
+      }
+    }
+
+    let metayageSettlement: any = null;
+    if (paymentData.payment_type === 'metayage_share') {
+      const { data: settlement, error: settlementError } = await client
+        .from('metayage_settlements')
+        .select('*')
+        .eq('worker_id', paymentData.worker_id)
+        .eq('organization_id', organizationId)
+        .eq('period_start', paymentData.period_start)
+        .eq('period_end', paymentData.period_end)
+        .neq('payment_status', 'paid')
+        .order('created_at', { ascending: false })
+        .maybeSingle();
+
+      if (settlementError || !settlement) {
+        throw new BadRequestException('No pending métayage settlement found for this period');
+      }
+
+      metayageSettlement = settlement;
+    }
+
     // Extract bonuses and deductions arrays (they go to separate tables)
     const bonusesArray = paymentData.bonuses || [];
     const deductionsArray = paymentData.deductions || [];
@@ -442,6 +591,17 @@ export class PaymentRecordsService {
     // Calculate total amounts for NUMERIC fields
     const bonusesTotal = bonusesArray.reduce((sum: number, bonus: any) => sum + (Number(bonus.amount) || 0), 0);
     const deductionsTotal = deductionsArray.reduce((sum: number, deduction: any) => sum + (Number(deduction.amount) || 0), 0);
+    const baseAmount = Number(metayageSettlement?.worker_share_amount ?? paymentData.base_amount) || 0;
+
+    const grossAmount =
+      baseAmount +
+      bonusesTotal +
+      (Number(paymentData.overtime_amount) || 0) -
+      deductionsTotal;
+
+    const outstandingAdvances = await this.getWorkerAdvanceDeductions(client, paymentData.worker_id);
+    const requestedAdvanceDeduction = Number(paymentData.advance_deduction) || 0;
+    const finalAdvanceDeduction = Math.max(0, Math.min(requestedAdvanceDeduction, outstandingAdvances, Math.max(0, grossAmount)));
 
     // Prepare insert data, excluding arrays and setting calculated totals
     const { bonuses: _, deductions: __, ...restData } = paymentData;
@@ -450,6 +610,11 @@ export class PaymentRecordsService {
       farm_id: farmId, // Ensure farm_id is always set
       bonuses: bonusesTotal, // NUMERIC field - total amount
       deductions: deductionsTotal, // NUMERIC field - total amount
+      advance_deduction: finalAdvanceDeduction,
+      base_amount: metayageSettlement?.worker_share_amount ?? restData.base_amount,
+      gross_revenue: metayageSettlement?.gross_revenue ?? restData.gross_revenue,
+      total_charges: metayageSettlement?.total_charges ?? restData.total_charges,
+      metayage_percentage: metayageSettlement?.worker_percentage ?? restData.metayage_percentage,
       organization_id: organizationId,
       calculated_by: userId,
     };
@@ -500,46 +665,6 @@ export class PaymentRecordsService {
       if (deductionError) {
         throw new BadRequestException(`Failed to create payment deductions: ${deductionError.message}`);
       }
-    }
-
-    // Create journal entry for the payment
-    try {
-      // Get worker name for journal entry description
-      const { data: worker } = await client
-        .from('workers')
-        .select('first_name, last_name')
-        .eq('id', payment.worker_id)
-        .maybeSingle();
-
-      const workerName = worker
-        ? `${worker.first_name} ${worker.last_name}`
-        : 'Worker';
-
-      const paymentDate = payment.period_end
-        ? new Date(payment.period_end)
-        : new Date();
-
-      const journalEntry = await this.accountingAutomationService.createJournalEntryFromWorkerPayment(
-        organizationId,
-        payment.id,
-        payment.net_amount || 0,
-        paymentDate,
-        workerName,
-        payment.payment_type || 'salary',
-        userId,
-        payment.farm_id || undefined,
-      );
-
-      if (journalEntry?.id) {
-        // Journal entry is already linked via reference_id and reference_type
-        this.logger.log(`Journal entry ${journalEntry.id} created for payment ${payment.id}`);
-      }
-    } catch (journalError) {
-      // Log error but don't fail payment creation if journal entry fails
-      this.logger.error(
-        `Failed to create journal entry for payment ${payment.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
-      );
-      // Payment is still created, just without journal entry
     }
 
     return payment;
@@ -593,6 +718,21 @@ export class PaymentRecordsService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
+    const { data: existingPayment } = await client
+      .from('payment_records')
+      .select('id, status')
+      .eq('id', paymentId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!existingPayment) {
+      throw new NotFoundException('Payment record not found');
+    }
+
+    if (existingPayment.status !== 'approved') {
+      throw new BadRequestException('Payment must be approved before processing');
+    }
+
     const { data, error } = await client
       .from('payment_records')
       .update({
@@ -611,6 +751,56 @@ export class PaymentRecordsService {
 
     if (error) {
       throw new BadRequestException(`Failed to process payment: ${error.message}`);
+    }
+
+    if ((data.advance_deduction || 0) > 0) {
+      const { data: advances } = await client
+        .from('payment_advances')
+        .select('id, remaining_balance')
+        .eq('organization_id', organizationId)
+        .eq('worker_id', data.worker_id)
+        .eq('status', 'approved')
+        .gt('remaining_balance', 0)
+        .order('requested_date', { ascending: true });
+
+      let remainingDeduction = Number(data.advance_deduction) || 0;
+
+      for (const advance of advances || []) {
+        if (remainingDeduction <= 0) break;
+        const advanceBalance = Number(advance.remaining_balance) || 0;
+        const deduction = Math.min(advanceBalance, remainingDeduction);
+        const newBalance = Math.max(0, advanceBalance - deduction);
+
+        await client
+          .from('payment_advances')
+          .update({
+            remaining_balance: newBalance,
+            status: newBalance === 0 ? 'paid' : 'approved',
+          })
+          .eq('id', advance.id)
+          .eq('organization_id', organizationId);
+
+        remainingDeduction -= deduction;
+      }
+
+      if (remainingDeduction > 0) {
+        this.logger.warn(`Advance deduction exceeds remaining balance for worker ${data.worker_id}`);
+      }
+    }
+
+    if (data.payment_type === 'metayage_share') {
+      await client
+        .from('metayage_settlements')
+        .update({
+          payment_status: 'paid',
+          payment_date: data.payment_date,
+          payment_method: data.payment_method,
+        })
+        .eq('organization_id', organizationId)
+        .eq('worker_id', data.worker_id)
+        .eq('period_start', data.period_start)
+        .eq('period_end', data.period_end)
+        .neq('payment_status', 'paid');
     }
 
     // Create journal entry for the payment if it doesn't already exist

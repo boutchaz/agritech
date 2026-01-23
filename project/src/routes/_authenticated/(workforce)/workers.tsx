@@ -1,9 +1,10 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings } from 'lucide-react';
+import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
+import WorkersPaymentsList from '@/components/Workers/WorkersPaymentsList';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
@@ -22,6 +23,7 @@ function WorkersPage() {
   const location = useLocation();
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
   const [farmsLoading, setFarmsLoading] = useState(true);
+  const [farmsError, setFarmsError] = useState<string | null>(null);
 
   // Check if we're on a child route (like /workers/:workerId)
   const isChildRoute = location.pathname !== '/workers' && location.pathname !== '/workers/';
@@ -36,6 +38,7 @@ function WorkersPage() {
     }
 
     try {
+      setFarmsError(null);
       const data = await farmsApi.getAll(
         { organization_id: currentOrganization.id },
         currentOrganization.id
@@ -59,6 +62,7 @@ function WorkersPage() {
     } catch (error) {
       console.error('Error fetching farms:', error);
       setFarms([]); // Set empty array on error
+      setFarmsError(t('workers.errors.farmsFetchFailed'));
     } finally {
       setFarmsLoading(false);
     }
@@ -149,6 +153,29 @@ function WorkersPage() {
             </div>
           ) : (
             <div className="space-y-4 sm:space-y-6">
+              {farmsError && (
+                <Alert variant="destructive" className="flex-col sm:flex-row">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <AlertTitle className="text-sm sm:text-base">{farmsError}</AlertTitle>
+                      <AlertDescription className="text-xs sm:text-sm mt-1">
+                        {t('workers.errors.farmsFetchHint')}
+                      </AlertDescription>
+                    </div>
+                  </div>
+                  <div className="mt-3 sm:mt-0 sm:ml-4 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-nowrap w-full sm:w-auto"
+                      onClick={fetchFarms}
+                    >
+                      {t('app.retry')}
+                    </Button>
+                  </div>
+                </Alert>
+              )}
               {/* Info banner linking to users settings */}
               <Alert className="flex-col sm:flex-row">
                 <div className="flex items-start gap-2">
@@ -172,11 +199,16 @@ function WorkersPage() {
 
               {/* Tabs with shadcn/ui */}
               <Tabs defaultValue="list" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-auto">
+                <TabsList className="grid w-full grid-cols-3 h-auto">
                   <TabsTrigger value="list" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
                     <Users className="w-4 h-4 flex-shrink-0" />
                     <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
                     <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="payments" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
+                    <Banknote className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
+                    <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
                   </TabsTrigger>
                   <TabsTrigger value="calculator" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4" data-tour="worker-payments">
                     <Calculator className="w-4 h-4 flex-shrink-0" />
@@ -190,6 +222,10 @@ function WorkersPage() {
                     organizationId={currentOrganization.id}
                     farms={farms}
                   />
+                </TabsContent>
+
+                <TabsContent value="payments" className="mt-4 sm:mt-6">
+                  <WorkersPaymentsList organizationId={currentOrganization.id} />
                 </TabsContent>
 
                 <TabsContent value="calculator" className="mt-4 sm:mt-6">

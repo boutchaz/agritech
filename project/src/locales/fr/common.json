@@ -2673,7 +2673,8 @@
       "organization": "Organisation",
       "farm": "Ferme spécifique",
       "organizationHint": "Accessible par toutes les fermes de l'organisation",
-      "farmHint": "Liée à une ferme spécifique et supprimée avec elle"
+      "farmHint": "Liée à une ferme spécifique et supprimée avec elle",
+      "farmSelectHint": "Sélectionnez la ferme à laquelle cette infrastructure doit être affectée"
     },
     "types": {
       "stable": "Écurie",
@@ -2788,6 +2789,10 @@
     "subtitleAllFarms_plural": "{{count}} parcelles - Toutes les fermes",
     "loading": "Chargement...",
     "loadingOrganization": "Chargement de l'organisation...",
+    "errors": {
+      "farmsFetchFailed": "Impossible de charger les fermes",
+      "farmsFetchHint": "Vérifiez votre connexion ou réessayez."
+    },
     "farms": "Fermes",
     "farmsIn": "Fermes dans {{orgName}}",
     "clickToViewParcels": "Cliquer pour voir les parcelles →",
@@ -2982,6 +2987,8 @@
     },
     "tabs": {
       "list": "Gestion du Personnel",
+      "payments": "Paiements",
+      "paymentsShort": "Paie",
       "calculator": "Calculateur Métayage"
     },
     "list": {
@@ -3089,12 +3096,17 @@
       "bankAccount": "Compte bancaire"
     },
     "payments": {
+      "overviewTitle": "Vue d'ensemble de la paie",
+      "empty": "Aucun paiement de personnel enregistré pour le moment.",
       "date": "Date",
+      "worker": "Employé",
+      "period": "Période",
       "type": "Type",
       "amount": "Montant",
       "status": "Statut",
       "method": "Méthode",
       "actions": "Actions",
+      "unknownWorker": "Employé inconnu",
       "markAsPaid": "Marquer comme payé",
       "processSuccess": "Paiement marqué comme payé",
       "processError": "Échec du traitement du paiement"
@@ -3136,7 +3148,9 @@
       "grossRevenue": "Revenu brut",
       "charges": "Charges",
       "share": "Part du travailleur",
-      "status": "Statut"
+      "status": "Statut",
+      "actions": "Actions",
+      "createPayment": "Créer un paiement"
     },
     "settlementStatuses": {
       "pending": "En attente",

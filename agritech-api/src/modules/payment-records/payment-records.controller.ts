@@ -102,6 +102,8 @@ export class PaymentRecordsController {
    */
   @Post('calculate')
   async calculatePayment(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
     @Body()
     calculateDto: {
       worker_id: string;
@@ -110,7 +112,10 @@ export class PaymentRecordsController {
       include_advances?: boolean;
     },
   ) {
+    const userId = req.user?.id || req.user?.sub;
     return this.paymentRecordsService.calculatePayment(
+      userId,
+      organizationId,
       calculateDto.worker_id,
       calculateDto.period_start,
       calculateDto.period_end,

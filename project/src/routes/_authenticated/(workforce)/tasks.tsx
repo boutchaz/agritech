@@ -44,7 +44,9 @@ function TasksLayout() {
           <nav className="flex space-x-8" aria-label={t('tasks.navigation')}>
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.to;
+              const isActive = item.to === '/tasks'
+                ? location.pathname === item.to || location.pathname === '/tasks/'
+                : location.pathname.startsWith(item.to);
 
               return (
                 <Link
