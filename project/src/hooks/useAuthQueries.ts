@@ -6,6 +6,7 @@ import { parcelsApi } from '../lib/api/parcels';
 import type { UserProfile, Farm } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { trackLogout } from '../lib/analytics';
 
 // Query keys
 export const authKeys = {
@@ -178,6 +179,9 @@ export const useSignOut = () => {
 
   return useMutation({
     mutationFn: async () => {
+      // Track logout before clearing auth
+      trackLogout();
+
       // Clear auth store (tokens and user)
       useAuthStore.getState().clearAuth();
       // Clear organization store

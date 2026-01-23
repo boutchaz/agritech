@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,7 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/constants/theme';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,24 +19,66 @@ const queryClient = new QueryClient({
   },
 });
 
+function CustomSplashScreen() {
+  return (
+    <View style={styles.splashContainer}>
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoText}>AgriTech</Text>
+        <Text style={styles.logoSubtext}>Field</Text>
+      </View>
+      <ActivityIndicator size="large" color={colors.white} style={styles.loader} />
+    </View>
+  );
+}
+
 export default function RootLayout() {
-  const { refreshSession, isLoading } = useAuthStore();
+  const [appIsReady, setAppIsReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     async function prepare() {
       try {
-        await refreshSession();
+        const { refreshSession } = useAuthStore.getState();
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+        
+        await Promise.race([
+          refreshSession(),
+          timeoutPromise
+        ]).catch((e) => {
+          console.warn('Session refresh failed or timed out:', e);
+        });
       } catch (e) {
-        console.warn('Failed to refresh session:', e);
+        console.warn('Failed to prepare app:', e);
+        if (mounted) setError(String(e));
       } finally {
-        await SplashScreen.hideAsync();
+        if (mounted) {
+          setAppIsReady(true);
+          SplashScreen.hideAsync().catch(() => {});
+        }
       }
     }
+    
     prepare();
-  }, [refreshSession]);
+    
+    return () => { mounted = false; };
+  }, []);
 
-  if (isLoading) {
-    return null;
+  if (!appIsReady) {
+    return <CustomSplashScreen />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Something went wrong</Text>
+        <Text style={styles.errorDetail}>{error}</Text>
+      </View>
+    );
   }
 
   return (
@@ -53,6 +96,7 @@ export default function RootLayout() {
             },
           }}
         >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
@@ -74,3 +118,48 @@ export default function RootLayout() {
     </QueryClientProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    backgroundColor: colors.primary[600],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: colors.white,
+    letterSpacing: 2,
+  },
+  logoSubtext: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: colors.primary[100],
+    marginTop: -4,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: colors.red[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.red[600],
+    marginBottom: 10,
+  },
+  errorDetail: {
+    fontSize: 14,
+    color: colors.red[500],
+    textAlign: 'center',
+  },
+});

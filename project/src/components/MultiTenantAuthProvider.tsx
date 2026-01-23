@@ -18,6 +18,11 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { useAuthStore, waitForHydration } from '../stores/authStore';
 import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
+import {
+  setAnalyticsUserProperties,
+  trackSessionStart,
+  type AnalyticsUserProperties,
+} from '../lib/analytics';
 
 type Organization = AuthOrganization;
 type Farm = AuthFarm;
@@ -413,6 +418,56 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   useEffect(() => {
     fetchUserRole();
   }, [user?.id, currentOrganization?.id]);
+
+  // Track session start and set user properties when authenticated
+  useEffect(() => {
+    if (user && profile && currentOrganization && userRole && !loading) {
+      // Track session start
+      trackSessionStart();
+
+      // Determine organization size
+      const orgSize = getOrganizationSize(organizations.length, farms.length);
+
+      // Determine subscription tier from subscription data
+      // Default to 'free' if no subscription data available
+      const subscriptionTier = 'free'; // TODO: Get from actual subscription data
+      const trialStatus = 'none'; // TODO: Get from actual trial data
+
+      // Set user properties for analytics segmentation
+      const userProps: AnalyticsUserProperties = {
+        userId: user.id,
+        email: user.email,
+        signUpDate: profile.created_at || new Date().toISOString(),
+        organizationId: currentOrganization.id,
+        organizationSize: orgSize,
+        subscriptionTier: subscriptionTier,
+        trialStatus: trialStatus,
+        role: userRole.role_name as AnalyticsUserProperties['role'],
+        farmCount: farms.length,
+        totalHectares: calculateTotalHectares(farms),
+        platform: 'web',
+      };
+
+      setAnalyticsUserProperties(userProps);
+    }
+  }, [user?.id, profile, currentOrganization?.id, userRole, loading, farms, organizations]);
+
+/**
+ * Calculate total hectares from farms
+ */
+function calculateTotalHectares(farms: Farm[]): number {
+  return farms.reduce((total, farm) => total + (farm.hectares || 0), 0);
+}
+
+/**
+ * Determine organization size based on number of organizations and farms
+ */
+function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
+  if (orgCount === 1 && farmCount <= 1) return 'solo';
+  if (orgCount <= 2 && farmCount <= 5) return 'small';
+  if (orgCount <= 5 && farmCount <= 20) return 'medium';
+  return 'large';
+}
 
   useEffect(() => {
     const initAuth = async () => {

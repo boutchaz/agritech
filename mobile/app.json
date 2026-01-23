@@ -80,7 +80,10 @@
     "extra": {
       "eas": {
         "projectId": "your-eas-project-id"
-      }
+      },
+      "firebaseAnalyticsEnabled": true,
+      "ga4MeasurementId": "G-XXXXXXXXXX",
+      "ga4ApiSecret": "your-ga4-api-secret"
     }
   }
 }

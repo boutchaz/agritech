@@ -2,13 +2,13 @@ import Constants from 'expo-constants';
 
 const ENV = {
   development: {
-    API_URL: 'http://localhost:3000',
+    API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://agritech-api.thebzlab.online',
   },
   staging: {
-    API_URL: process.env.EXPO_PUBLIC_API_URL || '',
+    API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://agritech-api.thebzlab.online',
   },
   production: {
-    API_URL: process.env.EXPO_PUBLIC_API_URL || '',
+    API_URL: process.env.EXPO_PUBLIC_API_URL || 'https://agritech-api.thebzlab.online',
   },
 };
 
@@ -31,8 +31,8 @@ export const Config = {
 };
 
 export const APP_CONFIG = {
-  APP_NAME: 'AgriTech Field',
-  VERSION: Constants.expoConfig?.version || '1.0.0',
+  APP_NAME: Constants.expoConfig?.name || 'AgriTech Field',
+  VERSION: Constants.expoConfig?.version ?? Constants.manifest?.version ?? '1.0.0',
   OFFLINE_SYNC_INTERVAL: 30000,
   MAX_OFFLINE_QUEUE_SIZE: 1000,
   LOCATION_UPDATE_INTERVAL: 10000,

@@ -1,3 +1,72 @@
+// Device Analytics Headers
+interface DeviceInfo {
+    deviceType: 'web' | 'mobile' | 'desktop';
+    deviceOs: string;
+    appVersion: string;
+    deviceId: string;
+}
+
+function getDeviceInfo(): DeviceInfo {
+    // Check if running in Tauri desktop app
+    const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+
+    let deviceType: 'web' | 'mobile' | 'desktop' = 'web';
+    if (isTauri) {
+        deviceType = 'desktop';
+    } else if (typeof navigator !== 'undefined') {
+        // Mobile detection
+        const userAgent = navigator.userAgent;
+        if (/Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+            deviceType = 'mobile';
+        }
+    }
+
+    // Get or generate device ID
+    let deviceId: string | null = null;
+    if (typeof window !== 'undefined') {
+        deviceId = localStorage.getItem('agritech_marketplace_device_id');
+    }
+    if (!deviceId) {
+        deviceId = `marketplace_${deviceType}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('agritech_marketplace_device_id', deviceId);
+        }
+    }
+
+    // Detect OS
+    let deviceOs = 'unknown';
+    if (typeof navigator !== 'undefined') {
+        const userAgent = navigator.userAgent;
+        if (userAgent.includes('Windows')) deviceOs = 'windows';
+        else if (userAgent.includes('Mac')) deviceOs = 'macos';
+        else if (userAgent.includes('Linux')) deviceOs = 'linux';
+        else if (userAgent.includes('Android')) deviceOs = 'android';
+        else if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) deviceOs = 'ios';
+        else deviceOs = 'web';
+    }
+
+    // Get app version from package.json or build info
+    const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0';
+
+    return {
+        deviceType,
+        deviceOs: isTauri ? `tauri-${deviceOs}` : deviceOs,
+        appVersion,
+        deviceId,
+    };
+}
+
+function getAnalyticsHeaders(): Record<string, string> {
+    const deviceInfo = getDeviceInfo();
+    return {
+        'X-Device-Type': deviceInfo.deviceType,
+        'X-Device-OS': deviceInfo.deviceOs,
+        'X-App-Version': deviceInfo.appVersion,
+        'X-Device-Id': deviceInfo.deviceId,
+        'X-Client-App': 'marketplace',
+    };
+}
+
 export class ApiClient {
     private static get baseUrl() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -14,8 +83,10 @@ export class ApiClient {
         const url = `${this.baseUrl}${endpoint}`;
 
         const token = this.getAuthToken();
+        const analyticsHeaders = getAnalyticsHeaders();
         let headers: Record<string, string> = {
             'Content-Type': 'application/json',
+            ...analyticsHeaders,
             ...((options.headers as Record<string, string>) || {}),
         };
 

@@ -1,9 +1,56 @@
 import * as SecureStore from 'expo-secure-store';
-import { Config } from '@/constants/config';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import * as Device from 'expo-device';
+import { Config, APP_CONFIG } from '@/constants/config';
+import { trackError } from './gtm';
 
 const ACCESS_TOKEN_KEY = 'agritech_access_token';
 const REFRESH_TOKEN_KEY = 'agritech_refresh_token';
 const ORGANIZATION_ID_KEY = 'agritech_organization_id';
+const DEVICE_ID_KEY = 'agritech_device_id';
+
+// Device Analytics Headers
+interface DeviceInfo {
+  deviceType: 'mobile' | 'tablet' | 'desktop';
+  deviceOs: string;
+  appVersion: string;
+  deviceId: string;
+}
+
+async function getDeviceInfo(): Promise<DeviceInfo> {
+  // Get or generate unique device ID
+  let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  if (!deviceId) {
+    deviceId = Constants.deviceId || Constants.sessionId || `mobile_${Date.now()}`;
+    await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+  }
+
+  // Determine device type
+  let deviceType: 'mobile' | 'tablet' | 'desktop' = 'mobile';
+  if (Device.deviceType === Device.DeviceType.TABLET) {
+    deviceType = 'tablet';
+  } else if (Platform.OS === 'web' && Device.deviceType === Device.DeviceType.DESKTOP) {
+    deviceType = 'desktop';
+  }
+
+  return {
+    deviceType,
+    deviceOs: `${Platform.OS}-${Platform.Version}`,
+    appVersion: APP_CONFIG.VERSION,
+    deviceId,
+  };
+}
+
+async function getAnalyticsHeaders(): Promise<Record<string, string>> {
+  const deviceInfo = await getDeviceInfo();
+  return {
+    'X-Device-Type': deviceInfo.deviceType,
+    'X-Device-OS': deviceInfo.deviceOs,
+    'X-App-Version': deviceInfo.appVersion,
+    'X-Device-Id': deviceInfo.deviceId,
+  };
+}
 
 interface ApiError {
   statusCode: number;
@@ -56,8 +103,11 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
+    const analyticsHeaders = await getAnalyticsHeaders();
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      ...analyticsHeaders,
       ...options.headers,
     };
 
@@ -79,6 +129,9 @@ class ApiClient {
         statusCode: response.status,
         message: response.statusText,
       }));
+
+      // Track API error with GTM
+      await trackError(error.message || 'Request failed', `${endpoint} (${response.status})`);
 
       if (response.status === 401) {
         await this.clearTokens();
@@ -129,7 +182,11 @@ class ApiClient {
       type: file.type,
     } as unknown as Blob);
 
-    const headers: HeadersInit = {};
+    const analyticsHeaders = await getAnalyticsHeaders();
+
+    const headers: HeadersInit = {
+      ...analyticsHeaders,
+    };
 
     if (this.accessToken) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;

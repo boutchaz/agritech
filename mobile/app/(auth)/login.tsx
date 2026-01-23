@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, spacing, borderRadius, fontSize } from '@/constants/theme';
@@ -22,8 +23,19 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasBiometric, setHasBiometric] = useState(false);
+  const router = useRouter();
 
-  const { signIn, authenticateWithBiometric, biometricEnabled } = useAuthStore();
+  const signIn = useAuthStore((s) => s.signIn);
+  const authenticateWithBiometric = useAuthStore((s) => s.authenticateWithBiometric);
+  const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      console.log('[Login] User authenticated, redirecting to tabs...');
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     checkBiometric();
@@ -44,7 +56,9 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       const success = await authenticateWithBiometric();
-      if (!success) {
+      if (success) {
+        router.replace('/(tabs)');
+      } else {
         Alert.alert('Biometric Failed', 'Please use your email and password.');
       }
     } catch (error) {
@@ -62,8 +76,12 @@ export default function LoginScreen() {
 
     setIsSubmitting(true);
     try {
+      console.log('[Login] Attempting sign in...');
       await signIn(email.trim(), password);
+      console.log('[Login] Sign in successful, navigating...');
+      router.replace('/(tabs)');
     } catch (error) {
+      console.error('[Login] Sign in failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed';
       Alert.alert('Login Failed', message);
     } finally {

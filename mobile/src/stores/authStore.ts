@@ -1,10 +1,32 @@
 import { create } from 'zustand';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 import { api, authApi, type UserProfile, type Organization, type Farm } from '@/lib/api';
+import {
+  trackAuth,
+  trackAction,
+  trackLoginAttempt,
+  trackLoginSuccess,
+  trackLoginFailure,
+  trackLogout,
+  trackBiometricAuth,
+  trackAppOpen,
+  setUserProperties,
+  type MobileAnalyticsUserProperties,
+} from '@/lib/gtm';
 
 const BIOMETRIC_KEY = 'agritech_biometric_enabled';
 const CREDENTIALS_KEY = 'agritech_credentials';
+
+/**
+ * Determine organization size based on organization data
+ */
+function getOrganizationSize(org: Organization): 'solo' | 'small' | 'medium' | 'large' {
+  // TODO: Implement based on actual organization metrics
+  // For now, default to 'small'
+  return 'small';
+}
 
 export type UserRole =
   | 'system_admin'
@@ -56,10 +78,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   signIn: async (email: string, password: string) => {
     set({ isLoading: true });
     try {
+      // Track login attempt
+      await trackLoginAttempt('email');
+
       const response = await authApi.login(email, password);
-      
+
       await api.setTokens(response.access_token, response.refresh_token);
-      
+
       const [profile, organizations] = await Promise.all([
         authApi.getProfile(),
         authApi.getOrganizations(),
@@ -90,8 +115,38 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           JSON.stringify({ email, password })
         );
       }
+
+      // Track successful login
+      await trackLoginSuccess('email');
+      await trackAuth('login', 'success');
+      await trackAction('login', 'authentication', 'manual');
+      await trackAppOpen();
+
+      // Set user properties after successful login
+      const role = get().role;
+      if (profile && currentOrganization && role) {
+        const orgSize = getOrganizationSize(currentOrganization);
+        const userProps: MobileAnalyticsUserProperties = {
+          userId: profile.id,
+          email: profile.email,
+          signUpDate: profile.created_at || new Date().toISOString(),
+          organizationId: currentOrganization.id,
+          organizationSize: orgSize,
+          subscriptionTier: 'trial', // TODO: Get from actual subscription data
+          trialStatus: 'active', // TODO: Get from actual trial data
+          role: role,
+          farmCount: organizations.length,
+          totalHectares: 0, // TODO: Calculate from farm data
+          platform: 'mobile',
+          appVersion: Constants.expoConfig?.version || '1.0.0',
+        };
+        await setUserProperties(userProps);
+      }
     } catch (error) {
       set({ isLoading: false });
+      // Track failed login
+      await trackLoginFailure('email', 'authentication_failed');
+      await trackAuth('login', 'failed');
       throw error;
     }
   },
@@ -99,7 +154,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   signOut: async () => {
     set({ isLoading: true });
     try {
+      // Track logout before clearing tokens
+      await trackLogout();
+      await trackAuth('logout', 'success');
+
       await api.clearTokens();
+
       set({
         user: null,
         profile: null,
@@ -195,8 +255,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (result.success) {
       await SecureStore.setItemAsync(BIOMETRIC_KEY, 'true');
       set({ biometricEnabled: true });
+      await trackBiometricAuth(true);
       return true;
     }
+    await trackBiometricAuth(false);
     return false;
   },
 
@@ -208,14 +270,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   authenticateWithBiometric: async () => {
     const biometricEnabled = await SecureStore.getItemAsync(BIOMETRIC_KEY);
-    if (biometricEnabled !== 'true') return false;
+    if (biometricEnabled !== 'true') {
+      await trackBiometricAuth(false);
+      return false;
+    }
 
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: 'Login to AgriTech',
       fallbackLabel: 'Use password',
     });
 
-    if (!result.success) return false;
+    if (!result.success) {
+      await trackBiometricAuth(false);
+      return false;
+    }
+
+    await trackBiometricAuth(true);
 
     const credentialsStr = await SecureStore.getItemAsync(CREDENTIALS_KEY);
     if (!credentialsStr) return false;

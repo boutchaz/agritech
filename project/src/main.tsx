@@ -4,7 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
-import { initGA, initClarity } from './lib/analytics'
+import { initGA, initClarity, markRouterNavigating, markRouterStable } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
 import './i18n/config'
 import './index.css'
@@ -90,8 +90,21 @@ async function init() {
     // Initialize Clarity only after successful sign-in to avoid router interference
     // Clarity uses history.pushState which can cause infinite redirects during auth flow
     if (event === 'SIGNED_IN') {
-      initClarity()
+      // Delay Clarity init to ensure router has stabilized after auth redirect
+      setTimeout(() => {
+        markRouterStable()
+        initClarity()
+      }, 500)
     }
+  })
+
+  // Track router state for Clarity safety
+  router.subscribe('onBeforeNavigate', () => {
+    markRouterNavigating()
+  })
+
+  router.subscribe('onResolved', () => {
+    markRouterStable()
   })
 
   // If user is already logged in on initial load, initialize Clarity after a short delay

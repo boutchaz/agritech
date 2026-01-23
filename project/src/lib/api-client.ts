@@ -3,6 +3,60 @@ import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Device Analytics Headers
+interface DeviceInfo {
+  deviceType: 'web' | 'desktop';
+  deviceOs: string;
+  appVersion: string;
+  deviceId: string;
+}
+
+function getDeviceInfo(): DeviceInfo {
+  // Check if running in Tauri desktop app
+  const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+
+  const deviceType = isTauri ? 'desktop' : 'web';
+
+  // Get or generate device ID
+  let deviceId = localStorage.getItem('agritech_device_id');
+  if (!deviceId) {
+    deviceId = `${deviceType}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    localStorage.setItem('agritech_device_id', deviceId);
+  }
+
+  // Detect OS
+  let deviceOs = 'unknown';
+  if (typeof navigator !== 'undefined') {
+    const userAgent = navigator.userAgent;
+    if (userAgent.includes('Windows')) deviceOs = 'windows';
+    else if (userAgent.includes('Mac')) deviceOs = 'macos';
+    else if (userAgent.includes('Linux')) deviceOs = 'linux';
+    else if (userAgent.includes('Android')) deviceOs = 'android';
+    else if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) deviceOs = 'ios';
+    else deviceOs = 'web';
+  }
+
+  // Get app version from package.json or build info
+  const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+
+  return {
+    deviceType,
+    deviceOs: isTauri ? `tauri-${deviceOs}` : deviceOs,
+    appVersion,
+    deviceId,
+  };
+}
+
+function getAnalyticsHeaders(): Record<string, string> {
+  const deviceInfo = getDeviceInfo();
+  return {
+    'X-Device-Type': deviceInfo.deviceType,
+    'X-Device-OS': deviceInfo.deviceOs,
+    'X-App-Version': deviceInfo.appVersion,
+    'X-Device-Id': deviceInfo.deviceId,
+  };
+}
+
 /**
  * Get the current organization ID from Zustand store
  */
@@ -46,11 +100,14 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
     userId: user?.id,
   });
 
+  const analyticsHeaders = getAnalyticsHeaders();
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${accessToken}`,
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
+    ...analyticsHeaders,
   };
 
   if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
