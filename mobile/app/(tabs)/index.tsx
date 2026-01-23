@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, spacing, borderRadius, fontSize, shadows } from '@/constants/theme';
+import { useMyTasks, useTaskStatistics } from '@/hooks/useTasks';
+import { format, startOfDay, endOfDay, isToday } from 'date-fns';
 
 interface QuickActionProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -27,12 +29,13 @@ function QuickAction({ icon, title, subtitle, color, onPress }: QuickActionProps
 
 interface StatCardProps {
   title: string;
-  value: string;
+  value: string | number;
   icon: keyof typeof Ionicons.glyphMap;
   trend?: 'up' | 'down';
+  isLoading?: boolean;
 }
 
-function StatCard({ title, value, icon, trend }: StatCardProps) {
+function StatCard({ title, value, icon, trend, isLoading }: StatCardProps) {
   return (
     <View style={styles.statCard}>
       <View style={styles.statHeader}>
@@ -45,7 +48,11 @@ function StatCard({ title, value, icon, trend }: StatCardProps) {
           />
         )}
       </View>
-      <Text style={styles.statValue}>{value}</Text>
+      {isLoading ? (
+        <ActivityIndicator size="small" color={colors.gray[400]} style={styles.statLoading} />
+      ) : (
+        <Text style={styles.statValue}>{value}</Text>
+      )}
       <Text style={styles.statTitle}>{title}</Text>
     </View>
   );
@@ -56,10 +63,17 @@ export default function HomeScreen() {
   const { profile, currentFarm } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
+  const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useMyTasks();
+  const { data: statistics, isLoading: statsLoading, refetch: refetchStats } = useTaskStatistics();
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    try {
+      await Promise.all([refetchTasks(), refetchStats()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchTasks, refetchStats]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -67,6 +81,28 @@ export default function HomeScreen() {
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   };
+
+  // Calculate today's stats from actual data
+  const todayTasks = tasks?.filter((task) => {
+    if (!task.due_date) return false;
+    return isToday(new Date(task.due_date));
+  }) || [];
+
+  const pendingTasksCount = tasks?.filter((t) => t.status === 'pending').length || 0;
+  const completedTasksCount = tasks?.filter((t) => t.status === 'completed').length || 0;
+  const todayTasksCount = todayTasks.length;
+
+  // Calculate hours worked - this would need to come from time logs API
+  // For now, we'll use a placeholder that could be enhanced with real data
+  const hoursToday = statistics ? '—' : '—';
+  const hoursWeek = statistics ? '—' : '—';
+
+  // Get recent activity from tasks
+  const recentActivity = tasks?.slice(0, 3).map((task) => ({
+    type: task.status === 'completed' ? 'completed' : task.status === 'in_progress' ? 'in_progress' : 'pending',
+    text: task.title,
+    time: format(new Date(task.updated_at || task.created_at), 'MMM dd, HH:mm'),
+  })) || [];
 
   return (
     <ScrollView
@@ -92,10 +128,31 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.statsGrid}>
-        <StatCard title="Today's Tasks" value="5" icon="checkbox" trend="up" />
-        <StatCard title="Completed" value="3" icon="checkmark-circle" />
-        <StatCard title="Hours Today" value="4.5h" icon="time" />
-        <StatCard title="This Week" value="32h" icon="calendar" />
+        <StatCard
+          title="Today's Tasks"
+          value={todayTasksCount}
+          icon="checkbox"
+          trend={todayTasksCount > 0 ? 'up' : undefined}
+          isLoading={tasksLoading}
+        />
+        <StatCard
+          title="Pending"
+          value={pendingTasksCount}
+          icon="list-outline"
+          isLoading={tasksLoading}
+        />
+        <StatCard
+          title="Completed"
+          value={completedTasksCount}
+          icon="checkmark-circle"
+          isLoading={tasksLoading}
+        />
+        <StatCard
+          title="Hours Today"
+          value={hoursToday}
+          icon="time"
+          isLoading={statsLoading}
+        />
       </View>
 
       <View style={styles.section}>
@@ -135,32 +192,41 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Activity</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.activityList}>
-          <View style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: colors.primary[500] }]} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Harvest recorded - Parcel A1</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
+          {recentActivity.length > 0 ? (
+            recentActivity.map((activity, index) => (
+              <View key={index} style={styles.activityItem}>
+                <View
+                  style={[
+                    styles.activityDot,
+                    {
+                      backgroundColor:
+                        activity.type === 'completed'
+                          ? colors.primary[500]
+                          : activity.type === 'in_progress'
+                          ? colors.blue[500]
+                          : colors.yellow[500],
+                    },
+                  ]}
+                />
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityText}>
+                    {activity.type === 'completed' ? 'Task completed - ' : activity.type === 'in_progress' ? 'Task started - ' : 'New task - '}
+                    {activity.text}
+                  </Text>
+                  <Text style={styles.activityTime}>{activity.time}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyActivity}>
+              <Text style={styles.emptyActivityText}>No recent activity</Text>
             </View>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: colors.blue[500] }]} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Task completed - Irrigation check</Text>
-              <Text style={styles.activityTime}>4 hours ago</Text>
-            </View>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={[styles.activityDot, { backgroundColor: colors.yellow[500] }]} />
-            <View style={styles.activityContent}>
-              <Text style={styles.activityText}>Clocked in at 08:00 AM</Text>
-              <Text style={styles.activityTime}>Today</Text>
-            </View>
-          </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -219,6 +285,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.xs,
+  },
+  statLoading: {
+    marginTop: spacing.xs,
   },
   statValue: {
     fontSize: fontSize['2xl'],
@@ -304,5 +373,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.gray[400],
     marginTop: 2,
+  },
+  emptyActivity: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyActivityText: {
+    fontSize: fontSize.sm,
+    color: colors.gray[500],
   },
 });
