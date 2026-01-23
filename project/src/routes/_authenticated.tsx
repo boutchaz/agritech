@@ -2,8 +2,6 @@ import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
-import OrganizationSwitcher from '../components/OrganizationSwitcher'
-import FarmSwitcher from '../components/FarmSwitcher'
 import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
@@ -12,11 +10,16 @@ import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
 import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
+import { useAuthStore } from '../stores/authStore'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
-    // Check authentication before loading protected routes
-    const { user } = await context.auth
+    const contextUser = context.auth?.user
+    const storeState = useAuthStore.getState()
+    const storeUser = storeState.isAuthenticated ? storeState.user : null
+    
+    const user = contextUser || storeUser
+    
     if (!user) {
       throw redirect({
         to: '/login',
@@ -30,7 +33,7 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const { user, signOut, currentOrganization } = useAuth()
+  const { currentOrganization } = useAuth()
   const { data: subscription, isLoading: subscriptionLoading } = useSubscription()
   const { i18n } = useTranslation()
   const [isDarkMode, setIsDarkMode] = useState(false)
