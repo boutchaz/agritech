@@ -120,6 +120,8 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     watch,
     setValue,
     reset,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<WorkerFormData>({
     resolver: zodResolver(createWorkerSchema(t)),
@@ -243,6 +245,19 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     }
   }, [metayageType, workerType, setValue]);
 
+  // Validate email when platform access is enabled
+  useEffect(() => {
+    if (grantPlatformAccess && !watchEmail) {
+      setError('email', {
+        type: 'manual',
+        message: t('workers.form.validation.emailRequiredForPlatformAccess'),
+      });
+    } else if (!grantPlatformAccess && errors.email?.type === 'manual') {
+      // Clear the manual error if platform access is disabled
+      clearErrors('email');
+    }
+  }, [grantPlatformAccess, watchEmail]);
+
   const onSubmit = async (data: WorkerFormData) => {
     try {
       let workerId = worker?.id;
@@ -300,9 +315,34 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             console.error('Failed to grant platform access');
             toast.error(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error granting platform access:', error);
-          toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+          // Parse API error response and set field-level errors
+          const apiError = error?.response?.data || error;
+
+          if (apiError?.message && typeof apiError.message === 'string') {
+            // Check if it's a validation error with field information
+            if (apiError.message.includes('Invalid input') && apiError.details) {
+              // Set errors for each field that has validation issues
+              Object.entries(apiError.details).forEach(([field, message]: [string, any]) => {
+                setError(field as any, {
+                  type: 'manual',
+                  message: typeof message === 'string' ? message : message?.message || String(message),
+                });
+              });
+            } else {
+              toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.message}`);
+            }
+          } else if (apiError?.error) {
+            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.error}`);
+          } else {
+            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          }
+
+          // Don't close the dialog on error
+          setPlatformAccessLoading(false);
+          return; // Exit early, don't call onSuccess/onClose
         } finally {
           setPlatformAccessLoading(false);
         }

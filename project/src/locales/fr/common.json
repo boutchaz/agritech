@@ -3330,6 +3330,7 @@
         "firstNameMin": "Le prénom doit contenir au moins 2 caractères",
         "lastNameMin": "Le nom doit contenir au moins 2 caractères",
         "emailInvalid": "Email invalide",
+        "emailRequiredForPlatformAccess": "Un email est requis pour accorder l'accès à la plateforme",
         "monthlySalaryRequired": "Le salaire mensuel est requis pour ce type de travailleur",
         "dailyRateRequired": "Le taux journalier est requis pour ce type de travailleur",
         "metayagePercentageRequired": "Le pourcentage de métayage est requis pour ce type de travailleur",

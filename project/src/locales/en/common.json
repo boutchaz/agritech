@@ -3335,6 +3335,7 @@
         "firstNameMin": "First name must be at least 2 characters",
         "lastNameMin": "Last name must be at least 2 characters",
         "emailInvalid": "Invalid email",
+        "emailRequiredForPlatformAccess": "Email is required to grant platform access",
         "monthlySalaryRequired": "Monthly salary is required for this worker type",
         "dailyRateRequired": "Daily rate is required for this worker type",
         "metayagePercentageRequired": "Metayage percentage is required for this worker type",

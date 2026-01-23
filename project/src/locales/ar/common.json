@@ -3515,6 +3515,7 @@
         "firstNameMin": "يجب أن يحتوي الاسم الأول على حرفين على الأقل",
         "lastNameMin": "يجب أن يحتوي اسم العائلة على حرفين على الأقل",
         "emailInvalid": "بريد إلكتروني غير صالح",
+        "emailRequiredForPlatformAccess": "البريد الإلكتروني مطلوب لمنح الوصول للمنصة",
         "monthlySalaryRequired": "الراتب الشهري مطلوب للموظف براتب ثابت",
         "dailyRateRequired": "الأجر اليومي مطلوب للعامل اليومي",
         "metayagePercentageRequired": "نسبة المشاركة مطلوبة",
