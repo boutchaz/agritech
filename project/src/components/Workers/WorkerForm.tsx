@@ -119,36 +119,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<WorkerFormData>({
     resolver: zodResolver(createWorkerSchema(t)),
     mode: 'onBlur',
-    defaultValues: worker ? {
-      first_name: worker.first_name,
-      last_name: worker.last_name,
-      cin: worker.cin || '',
-      phone: worker.phone || '',
-      email: worker.email || '',
-      address: worker.address || '',
-      date_of_birth: worker.date_of_birth || '',
-      worker_type: worker.worker_type,
-      position: worker.position || '',
-      hire_date: worker.hire_date,
-      farm_id: worker.farm_id || '',
-      is_cnss_declared: worker.is_cnss_declared,
-      cnss_number: worker.cnss_number || '',
-      monthly_salary: worker.monthly_salary,
-      daily_rate: worker.daily_rate,
-      metayage_type: worker.metayage_type,
-      metayage_percentage: worker.metayage_percentage,
-      calculation_basis: worker.calculation_basis,
-      specialties: worker.specialties || [],
-      certifications: worker.certifications || [],
-      payment_frequency: worker.payment_frequency,
-      bank_account: worker.bank_account || '',
-      payment_method: worker.payment_method || '',
-      notes: worker.notes || '',
-    } : {
+    defaultValues: {
       first_name: '',
       last_name: '',
       worker_type: 'fixed_salary',
@@ -158,6 +134,67 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       certifications: [],
     },
   });
+
+  // Reset form when worker prop changes (for editing)
+  useEffect(() => {
+    if (worker) {
+      reset({
+        first_name: worker.first_name,
+        last_name: worker.last_name,
+        cin: worker.cin || '',
+        phone: worker.phone || '',
+        email: worker.email || '',
+        address: worker.address || '',
+        date_of_birth: worker.date_of_birth || '',
+        worker_type: worker.worker_type,
+        position: worker.position || '',
+        hire_date: worker.hire_date,
+        farm_id: worker.farm_id || '',
+        is_cnss_declared: worker.is_cnss_declared,
+        cnss_number: worker.cnss_number || '',
+        monthly_salary: worker.monthly_salary,
+        daily_rate: worker.daily_rate,
+        metayage_type: worker.metayage_type,
+        metayage_percentage: worker.metayage_percentage,
+        calculation_basis: worker.calculation_basis,
+        specialties: worker.specialties || [],
+        certifications: worker.certifications || [],
+        payment_frequency: worker.payment_frequency,
+        bank_account: worker.bank_account || '',
+        payment_method: worker.payment_method || '',
+        notes: worker.notes || '',
+      });
+      setGrantPlatformAccess(!!worker.user_id);
+    } else {
+      reset({
+        first_name: '',
+        last_name: '',
+        cin: '',
+        phone: '',
+        email: '',
+        address: '',
+        date_of_birth: '',
+        worker_type: 'fixed_salary',
+        position: '',
+        hire_date: new Date().toISOString().split('T')[0],
+        farm_id: '',
+        is_cnss_declared: false,
+        cnss_number: '',
+        monthly_salary: undefined,
+        daily_rate: undefined,
+        metayage_type: undefined,
+        metayage_percentage: undefined,
+        calculation_basis: undefined,
+        specialties: [],
+        certifications: [],
+        payment_frequency: undefined,
+        bank_account: '',
+        payment_method: '',
+        notes: '',
+      });
+      setGrantPlatformAccess(false);
+    }
+  }, [worker, open, reset]);
 
   const watchEmail = watch('email');
   const workerType = watch('worker_type');
@@ -240,42 +277,32 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         setPlatformAccessLoading(true);
 
         try {
-          const { supabase } = await import('../../lib/supabase');
-          const { data: { session } } = await supabase.auth.getSession();
+          const { apiClient } = await import('../../lib/api-client');
 
-          if (!session) {
-            throw new Error('Not authenticated');
-          }
-
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/grant-worker-access`,
+          const result = await apiClient.post<{ success: boolean; message: string; tempPassword?: string }>(
+            `/organizations/${organizationId}/workers/${workerId}/grant-platform-access`,
             {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                worker_id: workerId,
-                email: cleanedData.email,
-                first_name: cleanedData.first_name,
-                last_name: cleanedData.last_name,
-                organization_id: organizationId
-              })
-            }
+              email: cleanedData.email,
+              first_name: cleanedData.first_name,
+              last_name: cleanedData.last_name,
+            },
+            {},
+            organizationId
           );
 
-          const result = await response.json();
-
-          if (!result.success) {
-            console.error('Failed to grant platform access:', result.error);
-            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${result.error}`);
+          if (result.success) {
+            // Show the temporary password to the user
+            const passwordMsg = result.tempPassword
+              ? `${t('workers.form.success.workerCreatedWithAccess')}. ${t('workers.form.success.temporaryPassword')}: ${result.tempPassword}`
+              : result.message;
+            toast.success(passwordMsg);
           } else {
-            toast.success(result.message || t('workers.form.success.workerCreatedWithAccess'));
+            console.error('Failed to grant platform access');
+            toast.error(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
           }
         } catch (error) {
           console.error('Error granting platform access:', error);
-          toast.error(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
+          toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
           setPlatformAccessLoading(false);
         }

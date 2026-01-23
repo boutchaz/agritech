@@ -1,11 +1,34 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
+import { EmailService } from '../email/email.service';
+
+interface WorkerProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  organization_id: string;
+  farm_id?: string;
+  is_active: boolean;
+  worker_type?: string;
+  photo_url?: string;
+  hourly_rate?: number;
+  daily_rate?: number;
+  monthly_salary?: number;
+}
 
 @Injectable()
 export class WorkersService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(WorkersService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly emailService: EmailService,
+  ) {}
   /**
    * Verify user has access to the organization
    */
@@ -667,5 +690,371 @@ export class WorkersService {
     }
 
     return { share: data };
+  }
+
+  /**
+   * Get current worker's profile (linked to user account)
+   */
+  async findMyProfile(userId: string): Promise<WorkerProfile> {
+    const client = this.databaseService.getAdminClient();
+
+    // First, get the worker record linked to this user
+    const { data: worker, error } = await client
+      .from('workers')
+      .select(`
+        *,
+        organizations(name),
+        farms(name)
+      `)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to fetch worker profile: ${error.message}`);
+    }
+
+    if (!worker) {
+      throw new NotFoundException('Worker profile not found for this user');
+    }
+
+    return {
+      id: worker.id,
+      first_name: worker.first_name,
+      last_name: worker.last_name,
+      email: worker.email || undefined,
+      phone: worker.phone || undefined,
+      position: worker.position || undefined,
+      organization_id: worker.organization_id,
+      farm_id: worker.farm_id || undefined,
+      is_active: worker.is_active,
+      worker_type: worker.worker_type || undefined,
+      photo_url: worker.photo_url || undefined,
+      hourly_rate: worker.hourly_rate || undefined,
+      daily_rate: worker.daily_rate || undefined,
+      monthly_salary: worker.monthly_salary || undefined,
+    };
+  }
+
+  /**
+   * Get tasks assigned to current worker
+   */
+  async findMyTasks(userId: string, status?: string, limit?: number) {
+    const worker = await this.findMyProfile(userId);
+    const client = this.databaseService.getAdminClient();
+
+    let query = client
+      .from('tasks')
+      .select(`
+        *,
+        farms(name),
+        parcels(name)
+      `)
+      .eq('assigned_to', worker.id)
+      .order('due_date', { ascending: true });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data: tasks, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch worker tasks: ${error.message}`);
+    }
+
+    return (tasks || []).map(task => ({
+      ...task,
+      farm_name: task.farms?.name,
+      parcel_name: task.parcels?.name,
+    }));
+  }
+
+  /**
+   * Get time logs for current worker
+   */
+  async findMyTimeLogs(userId: string, startDate?: string, endDate?: string, limit?: number) {
+    const worker = await this.findMyProfile(userId);
+    const client = this.databaseService.getAdminClient();
+
+    let query = client
+      .from('task_time_logs')
+      .select(`
+        *,
+        tasks(id, title),
+        workers(first_name, last_name)
+      `)
+      .eq('worker_id', worker.id)
+      .order('clock_in', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('clock_in', startDate);
+    }
+
+    if (endDate) {
+      query = query.lte('clock_in', endDate);
+    }
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data: timeLogs, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch time logs: ${error.message}`);
+    }
+
+    return (timeLogs || []).map(log => ({
+      ...log,
+      task: log.tasks,
+      worker: log.workers,
+    }));
+  }
+
+  /**
+   * Get performance statistics for current worker
+   */
+  async findMyStatistics(userId: string) {
+    const worker = await this.findMyProfile(userId);
+    const client = this.databaseService.getAdminClient();
+
+    // Get task statistics
+    const { data: tasks } = await client
+      .from('tasks')
+      .select('status, due_date')
+      .eq('assigned_to', worker.id);
+
+    const totalTasks = tasks?.length || 0;
+    const completedTasks = tasks?.filter(t => t.status === 'completed').length || 0;
+    const inProgressTasks = tasks?.filter(t => t.status === 'in_progress').length || 0;
+    const pendingTasks = tasks?.filter(t => t.status === 'pending').length || 0;
+
+    // Check for overdue tasks
+    const now = new Date().toISOString();
+    const overdueTasks = tasks?.filter(t =>
+      t.status !== 'completed' &&
+      t.due_date &&
+      new Date(t.due_date) < new Date(now)
+    ).length || 0;
+
+    // Get time log statistics
+    const { data: timeLogs } = await client
+      .from('task_time_logs')
+      .select('duration_minutes, clock_out')
+      .eq('worker_id', worker.id)
+      .not('clock_out', 'is', null);
+
+    const totalMinutes = timeLogs?.reduce((sum, log) => sum + (log.duration_minutes || 0), 0) || 0;
+    const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+
+    // Get work records stats
+    const { data: workRecords } = await client
+      .from('work_records')
+      .select('amount_paid, payment_status')
+      .eq('worker_id', worker.id);
+
+    const totalEarnings = workRecords?.reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
+    const pendingPayments = workRecords?.filter(r => r.payment_status === 'pending').length || 0;
+
+    return {
+      worker: {
+        id: worker.id,
+        first_name: worker.first_name,
+        last_name: worker.last_name,
+      },
+      tasks: {
+        total: totalTasks,
+        completed: completedTasks,
+        inProgress: inProgressTasks,
+        pending: pendingTasks,
+        overdue: overdueTasks,
+        completionRate: totalTasks > 0 ? Math.round(completedTasks / totalTasks * 100) : 0,
+      },
+      time: {
+        totalHours,
+        totalMinutes,
+        totalSessions: timeLogs?.length || 0,
+      },
+      payments: {
+        totalEarnings,
+        pendingPayments,
+      },
+    };
+  }
+
+  /**
+   * Grant platform access to a worker
+   * Creates a Supabase auth user, user profile, and links them to the organization
+   */
+  async grantPlatformAccess(
+    userId: string,
+    organizationId: string,
+    workerId: string,
+    email: string,
+    firstName: string,
+    lastName: string,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    const client = this.databaseService.getAdminClient();
+
+    // Verify worker belongs to organization and doesn't already have a user_id
+    const { data: worker } = await client
+      .from('workers')
+      .select('id, user_id, email')
+      .eq('id', workerId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    if (worker.user_id) {
+      throw new Error('Worker already has platform access');
+    }
+
+    // Generate a random password
+    const tempPassword = this.generateRandomPassword();
+
+    // Create Supabase auth user
+    const { data: authUser, error: authError } = await client.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+        full_name: `${firstName} ${lastName}`,
+      },
+    });
+
+    if (authError || !authUser.user) {
+      throw new Error(`Failed to create auth user: ${authError?.message}`);
+    }
+
+    const authUserId = authUser.user.id;
+
+    try {
+      // Create user profile
+      const { error: profileError } = await client
+        .from('user_profiles')
+        .insert({
+          id: authUserId,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`,
+          language: 'fr',
+          timezone: 'Africa/Casablanca',
+          onboarding_completed: true,
+          password_set: false,
+        });
+
+      if (profileError) {
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
+      }
+
+      // Get farm_worker role
+      const { data: role } = await client
+        .from('roles')
+        .select('id')
+        .eq('name', 'farm_worker')
+        .single();
+
+      if (!role) {
+        throw new Error('Farm worker role not found');
+      }
+
+      // Add user to organization
+      const { error: orgUserError } = await client
+        .from('organization_users')
+        .insert({
+          user_id: authUserId,
+          organization_id: organizationId,
+          role_id: role.id,
+          is_active: true,
+        });
+
+      if (orgUserError) {
+        throw new Error(`Failed to add user to organization: ${orgUserError.message}`);
+      }
+
+      // Update worker with user_id
+      const { error: updateError } = await client
+        .from('workers')
+        .update({ user_id: authUserId })
+        .eq('id', workerId);
+
+      if (updateError) {
+        throw new Error(`Failed to update worker: ${updateError.message}`);
+      }
+
+      // Store temporary password with 7-day expiration
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      const { error: passwordUpdateError } = await client
+        .from('workers')
+        .update({
+          temp_password: tempPassword,
+          temp_password_expires_at: expiresAt.toISOString(),
+        })
+        .eq('id', workerId);
+
+      if (passwordUpdateError) {
+        this.logger.warn(`Failed to store temp password: ${passwordUpdateError.message}`);
+        // Non-fatal - continue anyway
+      }
+
+      // Get organization name for email
+      const { data: org } = await client
+        .from('organizations')
+        .select('name')
+        .eq('id', organizationId)
+        .single();
+
+      const organizationName = org?.name || 'AgriTech';
+
+      // Send welcome email with temporary password
+      try {
+        await this.emailService.sendUserCreatedEmail(
+          email,
+          firstName,
+          lastName,
+          tempPassword,
+          organizationName,
+        );
+        this.logger.log(`Welcome email sent to ${email}`);
+      } catch (emailError) {
+        this.logger.warn(`Failed to send welcome email: ${emailError.message}`);
+        // Non-fatal - user was created successfully
+      }
+
+      return {
+        success: true,
+        message: `Platform access granted. Temporary password: ${tempPassword}`,
+        userId: authUserId,
+        tempPassword,
+      };
+    } catch (error) {
+      // Rollback: delete the auth user if anything fails
+      await client.auth.admin.deleteUser(authUserId);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate a random temporary password
+   */
+  private generateRandomPassword(): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 16; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
   }
 }

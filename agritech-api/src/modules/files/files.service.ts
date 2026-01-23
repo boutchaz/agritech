@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 
@@ -37,6 +37,58 @@ export class FilesService {
     }
 
     return data;
+  }
+
+  /**
+   * Upload a file to Supabase storage and return the public URL
+   */
+  async uploadFile(file: Express.Multer.File, folder?: string, organizationId?: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const folderPath = folder || 'general';
+    const fileName = `${folderPath}/${timestamp}-${sanitizedName}`;
+
+    // Upload to Supabase storage
+    const { data, error } = await client.storage
+      .from('files')
+      .upload(fileName, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      });
+
+    if (error) {
+      this.logger.error(`Failed to upload file: ${error.message}`);
+      throw new BadRequestException(`Failed to upload file: ${error.message}`);
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = client.storage
+      .from('files')
+      .getPublicUrl(fileName);
+
+    // Optionally register the file in the tracking system if organizationId is provided
+    if (organizationId) {
+      try {
+        await this.registerFile(organizationId, {
+          bucket_name: 'files',
+          file_path: fileName,
+          file_name: file.originalname,
+          file_size: file.size,
+          mime_type: file.mimetype,
+          entity_type: folderPath,
+          entity_id: null,
+          field_name: null,
+        });
+      } catch (error) {
+        // Log error but don't fail the upload
+        this.logger.warn(`Failed to register uploaded file: ${error.message}`);
+      }
+    }
+
+    return { url: publicUrl };
   }
 
   /**

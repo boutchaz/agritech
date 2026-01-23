@@ -296,4 +296,49 @@ export class TasksController {
   ) {
     return this.tasksService.clockOut(req.user.id, timeLogId, clockOutDto);
   }
+
+  @Get('time-logs/active-session')
+  @CanReadTasks()
+  @ApiOperation({ summary: "Get current user's active time session" })
+  @ApiResponse({ status: 200, description: 'Active session retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'No active session found' })
+  async getActiveSession(@Request() req) {
+    return this.tasksService.getMyActiveSession(req.user.id);
+  }
+
+  @Post(':taskId/clock-in-with-validation')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Clock in with location validation' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  @ApiResponse({ status: 201, description: 'Clock-in recorded with location validation' })
+  @ApiResponse({ status: 400, description: 'Bad request - location validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
+  async clockInWithValidation(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Body() clockInDto: any,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.clockInWithValidation(
+      req.user.id,
+      organizationId,
+      taskId,
+      clockInDto,
+    );
+  }
+
+  @Post('time-logs/auto-clock-out')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Auto-clock-out stale sessions (admin function)' })
+  @ApiResponse({ status: 200, description: 'Stale sessions processed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async autoClockOutStaleSessions(
+    @Request() req,
+    @Query('maxHours') maxHours?: string,
+  ) {
+    const maxHoursNum = maxHours ? parseInt(maxHours, 10) : 12;
+    return this.tasksService.autoClockOutStaleSessions(maxHoursNum);
+  }
 }

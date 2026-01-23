@@ -275,4 +275,29 @@ export class WorkersController {
       data.totalCharges,
     );
   }
+
+  @Post(':workerId/grant-platform-access')
+  @CanUpdateWorker()
+  @ApiOperation({ summary: 'Grant platform access to a worker' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'workerId', description: 'Worker ID' })
+  @ApiResponse({ status: 200, description: 'Platform access granted successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - worker already has access or invalid email' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Worker not found' })
+  async grantPlatformAccess(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+    @Body() data: { email: string; first_name: string; last_name: string },
+  ) {
+    return this.workersService.grantPlatformAccess(
+      req.user.id,
+      organizationId,
+      workerId,
+      data.email,
+      data.first_name,
+      data.last_name,
+    );
+  }
 }

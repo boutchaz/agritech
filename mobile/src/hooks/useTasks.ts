@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tasksApi, type Task } from '@/lib/api';
+import { tasksApi, filesApi, type Task } from '@/lib/api';
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -51,6 +51,18 @@ export function useTaskTimeLogs(taskId: string) {
     queryFn: () => tasksApi.getTimeLogs(taskId),
     enabled: !!taskId,
     staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useUploadTaskPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ uri, folder }: { uri: string; folder?: string }) =>
+      filesApi.uploadImage(uri, folder || 'tasks'),
+    onSuccess: () => {
+      // Invalidate relevant queries if needed
+    },
   });
 }
 

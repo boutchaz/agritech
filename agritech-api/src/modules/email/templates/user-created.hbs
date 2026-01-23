@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to AgriTech</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #2e7d32; }
+    .content { background-color: #fff; padding: 20px; border-radius: 6px; }
+    .button { display: inline-block; padding: 12px 30px; background-color: #2e7d32; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button:hover { background-color: #1b5e20; }
+    .password-box { background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 20px 0; text-align: center; }
+    .password { font-size: 18px; font-weight: bold; color: #2e7d32; letter-spacing: 2px; }
+    .warning { color: #d32f2f; font-size: 14px; margin-top: 10px; }
+    .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">AgriTech</div>
+    </div>
+    <div class="content">
+      <h2>Welcome to AgriTech!</h2>
+      <p>Dear <strong>{{firstName}} {{lastName}}</strong>,</p>
+      <p>Your account has been successfully created for <strong>{{organizationName}}</strong>.</p>
+      <p>You can now access the AgriTech platform to manage your agricultural activities.</p>
+
+      <div class="password-box">
+        <p>Your temporary password is:</p>
+        <div class="password">{{tempPassword}}</div>
+        <p class="warning">⚠️ Please change your password after your first login for security reasons.</p>
+      </div>
+
+      <p style="text-align: center;">
+        <a href="{{loginUrl}}" class="button">Login to AgriTech</a>
+      </p>
+
+      <p><strong>Login URL:</strong> <a href="{{loginUrl}}">{{loginUrl}}</a></p>
+      <p><strong>Your email:</strong> {{email}}</p>
+
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+      <p><em>If you have any questions or need assistance, please contact your organization administrator.</em></p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2025 AgriTech. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

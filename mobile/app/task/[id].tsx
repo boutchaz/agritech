@@ -2,12 +2,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fontSize, shadows } from '@/constants/theme';
-import { useTask, useUpdateTaskStatus, useClockIn, useCompleteTask, useAddTaskComment } from '@/hooks/useTasks';
+import { useTask, useUpdateTaskStatus, useClockIn, useCompleteTask, useAddTaskComment, useUploadTaskPhoto } from '@/hooks/useTasks';
 import { format } from 'date-fns';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Image } from 'react-native';
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 
@@ -39,6 +38,7 @@ export default function TaskDetailScreen() {
   const clockInMutation = useClockIn();
   const completeTaskMutation = useCompleteTask();
   const addCommentMutation = useAddTaskComment();
+  const uploadPhotoMutation = useUploadTaskPhoto();
 
   const status = task ? STATUS_CONFIG[task.status as TaskStatus] : null;
   const priority = task ? PRIORITY_CONFIG[task.priority] : null;
@@ -87,8 +87,16 @@ export default function TaskDetailScreen() {
             });
 
             if (!result.canceled && result.assets[0]) {
-              // TODO: Upload photo to server
-              Alert.alert('Photo Added', 'Photo will be uploaded when you save the task');
+              try {
+                await uploadPhotoMutation.mutateAsync({
+                  uri: result.assets[0].uri,
+                  folder: 'tasks',
+                });
+                Alert.alert('Success', 'Photo uploaded successfully');
+                refetch();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to upload photo');
+              }
             }
           },
         },
@@ -101,8 +109,16 @@ export default function TaskDetailScreen() {
             });
 
             if (!result.canceled && result.assets[0]) {
-              // TODO: Upload photo to server
-              Alert.alert('Photo Added', 'Photo will be uploaded when you save the task');
+              try {
+                await uploadPhotoMutation.mutateAsync({
+                  uri: result.assets[0].uri,
+                  folder: 'tasks',
+                });
+                Alert.alert('Success', 'Photo uploaded successfully');
+                refetch();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to upload photo');
+              }
             }
           },
         },

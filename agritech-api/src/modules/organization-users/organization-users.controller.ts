@@ -117,4 +117,30 @@ export class OrganizationUsersController {
     const organizationId = req.headers['x-organization-id'];
     return this.organizationUsersService.delete(userId, organizationId);
   }
+
+  @Get(':userId/temp-password')
+  @ApiOperation({ summary: 'Get temporary password for a worker user' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Temporary password retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User or temporary password not found' })
+  async getTempPassword(@Req() req, @Param('userId') userId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.organizationUsersService.getTempPassword(userId, organizationId);
+  }
+
+  @Post(':userId/reset-password')
+  @ApiOperation({ summary: 'Reset password for a user' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resetPassword(@Req() req, @Param('userId') userId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.organizationUsersService.resetPassword(userId, organizationId);
+  }
 }

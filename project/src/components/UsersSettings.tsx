@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye } from 'lucide-react';
+import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { FormField } from './ui/FormField';
@@ -50,6 +50,13 @@ const UsersSettings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showInviteUser, setShowInviteUser] = useState(false);
   const [_editingUser, _setEditingUser] = useState<OrganizationUser | null>(null);
+
+  // Password management state
+  const [passwordDialogUser, setPasswordDialogUser] = useState<OrganizationUser | null>(null);
+  const [tempPassword, setTempPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordExpiresAt, setPasswordExpiresAt] = useState('');
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
 
   const [inviteUser, setInviteUser] = useState<InviteUser>({
     email: '',
@@ -207,6 +214,55 @@ const UsersSettings: React.FC = () => {
       setError(t('users.remove.failed'));
       toast.error(t('users.remove.failed'));
     }
+  };
+
+  // View temporary password for a worker user
+  const handleViewPassword = async (user: OrganizationUser) => {
+    if (!currentOrganization?.id) return;
+
+    setPasswordLoading(true);
+    setPasswordDialogUser(user);
+    setTempPassword('');
+    setCopiedToClipboard(false);
+
+    try {
+      const result = await organizationUsersApi.getTempPassword(currentOrganization.id, user.user_id);
+      setTempPassword(result.temp_password);
+      setPasswordExpiresAt(result.expires_at);
+    } catch (err) {
+      console.error('Error fetching temporary password:', err);
+      toast.error(err instanceof Error ? err.message : t('users.password.fetchFailed'));
+      setPasswordDialogUser(null);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Reset password for a user
+  const handleResetPassword = async () => {
+    if (!currentOrganization?.id || !passwordDialogUser) return;
+
+    setPasswordLoading(true);
+
+    try {
+      const result = await organizationUsersApi.resetPassword(currentOrganization.id, passwordDialogUser.user_id);
+      setTempPassword(result.temp_password);
+      setPasswordExpiresAt(result.expires_at);
+      toast.success(t('users.password.resetSuccess'));
+    } catch (err) {
+      console.error('Error resetting password:', err);
+      toast.error(err instanceof Error ? err.message : t('users.password.resetFailed'));
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  // Copy password to clipboard
+  const handleCopyPassword = () => {
+    navigator.clipboard.writeText(tempPassword);
+    setCopiedToClipboard(true);
+    setTimeout(() => setCopiedToClipboard(false), 2000);
+    toast.success(t('users.password.copied'));
   };
 
   useEffect(() => {
@@ -434,6 +490,17 @@ const UsersSettings: React.FC = () => {
                             >
                               {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                             </button>
+
+                            {/* Password Management - for worker users */}
+                            {user.role?.name === 'farm_worker' && (
+                              <button
+                                onClick={() => handleViewPassword(user)}
+                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                                title={t('users.actions.viewPassword')}
+                              >
+                                <Key className="h-4 w-4" />
+                              </button>
+                            )}
                           </>
                         )}
 
@@ -560,6 +627,106 @@ const UsersSettings: React.FC = () => {
                 {loading ? t('users.invite.inviting') : t('users.invite.invite')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Dialog */}
+      {passwordDialogUser && (
+        <div className="modal-overlay">
+          <div className="modal-panel p-6 max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center space-x-2">
+                <Key className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {t('users.password.title')}
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setPasswordDialogUser(null);
+                  setTempPassword('');
+                  setPasswordExpiresAt('');
+                  setCopiedToClipboard(false);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              {t('users.password.description', { email: passwordDialogUser.profile?.email })}
+            </p>
+
+            {passwordLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              </div>
+            ) : tempPassword ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('users.password.tempPassword')}
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono text-gray-900 dark:text-white">
+                      {tempPassword}
+                    </code>
+                    <button
+                      onClick={handleCopyPassword}
+                      className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                      title={t('users.password.copy')}
+                    >
+                      {copiedToClipboard ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US') })}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    {t('users.password.warning')}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <button
+                    onClick={() => {
+                      setPasswordDialogUser(null);
+                      setTempPassword('');
+                      setPasswordExpiresAt('');
+                      setCopiedToClipboard(false);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                  >
+                    {t('users.password.close')}
+                  </button>
+                  <button
+                    onClick={handleResetPassword}
+                    disabled={passwordLoading}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+                  >
+                    {t('users.password.reset')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('users.password.noPassword')}
+                </p>
+                <button
+                  onClick={handleResetPassword}
+                  disabled={passwordLoading}
+                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
+                >
+                  {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

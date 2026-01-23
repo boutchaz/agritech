@@ -1657,6 +1657,26 @@
       "success": "User removed successfully",
       "failed": "Failed to remove user"
     },
+    "password": {
+      "title": "Password Management",
+      "description": "View or reset password for {{email}}",
+      "tempPassword": "Temporary Password",
+      "expiresAt": "Expires: {{date}}",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "reset": "Reset Password",
+      "resetting": "Resetting...",
+      "resetSuccess": "Password has been reset successfully",
+      "resetFailed": "Failed to reset password",
+      "fetchFailed": "Failed to fetch password",
+      "noPassword": "No temporary password available. Please reset the password to generate a new one.",
+      "warning": "Please share this password securely. It will expire in 7 days.",
+      "close": "Close",
+      "viewPassword": "View Password"
+    },
+    "actions": {
+      "viewPassword": "View Password"
+    },
     "errors": {
       "loadFailed": "Failed to load users"
     }
@@ -3335,7 +3355,8 @@
         "workerCreatedAccessFailedTryUsers": "Worker created. To grant platform access, go to Settings > Users."
       },
       "success": {
-        "workerCreatedWithAccess": "Worker created with platform access"
+        "workerCreatedWithAccess": "Worker created with platform access",
+        "temporaryPassword": "Temporary password"
       },
       "platformAccess": {
         "enabled": "Platform access will be granted to this worker",

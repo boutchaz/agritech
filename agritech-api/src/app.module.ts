@@ -75,6 +75,7 @@ import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
 import { QualityControlModule } from './modules/quality-control/quality-control.module';
 import { AdoptionModule } from './modules/adoption/adoption.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { EmailModule } from './modules/email/email.module';
 
 @Module({
   imports: [
@@ -167,6 +168,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     AIReportsModule,
     OrganizationAISettingsModule,
     ChatModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

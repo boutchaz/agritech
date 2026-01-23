@@ -1652,6 +1652,26 @@
       "success": "Utilisateur retiré avec succès",
       "failed": "Échec du retrait de l'utilisateur"
     },
+    "password": {
+      "title": "Gestion du mot de passe",
+      "description": "Voir ou réinitialiser le mot de passe pour {{email}}",
+      "tempPassword": "Mot de passe temporaire",
+      "expiresAt": "Expire : {{date}}",
+      "copy": "Copier",
+      "copied": "Copié !",
+      "reset": "Réinitialiser le mot de passe",
+      "resetting": "Réinitialisation...",
+      "resetSuccess": "Le mot de passe a été réinitialisé avec succès",
+      "resetFailed": "Échec de la réinitialisation du mot de passe",
+      "fetchFailed": "Échec de la récupération du mot de passe",
+      "noPassword": "Aucun mot de passe temporaire disponible. Veuillez réinitialiser le mot de passe pour en générer un nouveau.",
+      "warning": "Veuillez partager ce mot de passe de manière sécurisée. Il expirera dans 7 jours.",
+      "close": "Fermer",
+      "viewPassword": "Voir le mot de passe"
+    },
+    "actions": {
+      "viewPassword": "Voir le mot de passe"
+    },
     "errors": {
       "loadFailed": "Échec du chargement des utilisateurs"
     }
@@ -3330,7 +3350,8 @@
         "workerCreatedAccessFailedTryUsers": "Travailleur créé. Pour accorder l'accès plateforme, allez dans Paramètres > Utilisateurs."
       },
       "success": {
-        "workerCreatedWithAccess": "Travailleur créé avec accès à la plateforme"
+        "workerCreatedWithAccess": "Travailleur créé avec accès à la plateforme",
+        "temporaryPassword": "Mot de passe temporaire"
       },
       "platformAccess": {
         "enabled": "L'accès à la plateforme sera accordé à ce travailleur",

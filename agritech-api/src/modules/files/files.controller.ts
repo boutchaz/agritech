@@ -10,6 +10,9 @@ import {
   UseGuards,
   Request,
   Headers,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +21,9 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FilesService } from './files.service';
 import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
@@ -30,6 +35,24 @@ import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload a file to Supabase storage' })
+  @ApiConsumes('multipart/form-data')
+  @ApiQuery({ name: 'folder', required: false, description: 'Folder path in storage bucket (e.g., tasks, harvests)' })
+  @ApiResponse({ status: 201, description: 'File uploaded successfully', schema: { example: { url: 'https://...' } } })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('folder') folder?: string,
+    @Headers('x-organization-id') organizationId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    return this.filesService.uploadFile(file, folder, organizationId);
+  }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new file in the tracking system' })

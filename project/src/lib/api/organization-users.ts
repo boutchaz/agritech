@@ -151,4 +151,35 @@ export const organizationUsersApi = {
       `/api/v1/users/organizations/${organizationId}/users/${userId}`
     );
   },
+
+  /**
+   * Get temporary password for a worker user
+   */
+  async getTempPassword(organizationId: string, userId: string): Promise<{
+    temp_password: string;
+    expires_at: string;
+  }> {
+    return apiClient.get(
+      `/api/v1/organization-users/${userId}/temp-password`,
+      {},
+      organizationId
+    );
+  },
+
+  /**
+   * Reset password for a user
+   */
+  async resetPassword(organizationId: string, userId: string): Promise<{
+    success: boolean;
+    temp_password: string;
+    expires_at: string;
+    message: string;
+  }> {
+    return apiClient.post(
+      `/api/v1/organization-users/${userId}/reset-password`,
+      {},
+      {},
+      organizationId
+    );
+  },
 };

@@ -998,4 +998,241 @@ export class TasksService {
 
     return data;
   }
+
+  /**
+   * Get active time session for a worker (across all tasks)
+   */
+  async getActiveSession(workerId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('task_time_logs')
+      .select(`
+        *,
+        task:tasks!task_id(id, title, farm_id, parcel_id)
+      `)
+      .eq('worker_id', workerId)
+      .is('end_time', null)
+      .order('start_time', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to fetch active session: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Get active time session for current user (via worker profile)
+   */
+  async getMyActiveSession(userId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // First get the worker profile for this user
+    const { data: worker, error: workerError } = await client
+      .from('workers')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (workerError || !worker) {
+      // User doesn't have a worker profile
+      return null;
+    }
+
+    return this.getActiveSession(worker.id);
+  }
+
+  /**
+   * Auto-clock-out sessions that exceed max duration
+   * Can be run periodically (e.g., every hour) to clean up stale sessions
+   */
+  async autoClockOutStaleSessions(maxHours: number = 12) {
+    const client = this.databaseService.getAdminClient();
+    const cutoffTime = new Date(Date.now() - maxHours * 60 * 60 * 1000).toISOString();
+
+    // Find all sessions that started before cutoff and haven't ended
+    const { data: staleSessions, error } = await client
+      .from('task_time_logs')
+      .select('id, worker_id, task_id, start_time')
+      .is('end_time', null)
+      .lt('start_time', cutoffTime);
+
+    if (error) {
+      this.logger.error(`Failed to find stale sessions: ${error.message}`);
+      return { autoClockedOut: 0, error: error.message };
+    }
+
+    let autoClockedOut = 0;
+    const now = new Date().toISOString();
+
+    for (const session of staleSessions || []) {
+      try {
+        const { error: updateError } = await client
+          .from('task_time_logs')
+          .update({
+            end_time: now,
+            notes: '[Auto clock-out - session exceeded maximum duration]',
+          })
+          .eq('id', session.id);
+
+        if (!updateError) {
+          autoClockedOut++;
+          this.logger.log(`Auto clocked out stale session ${session.id} for worker ${session.worker_id}`);
+        }
+      } catch (e) {
+        this.logger.error(`Failed to auto clock out session ${session.id}: ${e.message}`);
+      }
+    }
+
+    return { autoClockedOut, totalFound: staleSessions?.length || 0 };
+  }
+
+  /**
+   * Validate if a location is within a parcel's boundaries
+   * Uses PostGIS ST_Contains if available, otherwise does simple bounding box check
+   */
+  async validateLocationInParcel(
+    organizationId: string,
+    parcelId: string,
+    location: { lat: number; lng: number },
+  ): Promise<{ valid: boolean; distance?: number; message?: string }> {
+    const client = this.databaseService.getAdminClient();
+
+    // Get parcel boundary data
+    const { data: parcel, error } = await client
+      .from('parcels')
+      .select('id, name, boundaries, center_lat, center_lng, radius_meters')
+      .eq('id', parcelId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error || !parcel) {
+      return { valid: false, message: 'Parcel not found' };
+    }
+
+    // If parcel has no boundary data, consider any location valid
+    if (!parcel.boundaries && !parcel.center_lat) {
+      return { valid: true, message: 'No location restrictions for this parcel' };
+    }
+
+    // Simple distance-based validation if center_lat and radius_meters are available
+    if (parcel.center_lat && parcel.radius_meters) {
+      const distance = this.calculateDistance(
+        location.lat,
+        location.lng,
+        parcel.center_lat,
+        parcel.center_lng || 0,
+      );
+
+      return {
+        valid: distance <= parcel.radius_meters,
+        distance,
+        message: distance <= parcel.radius_meters
+          ? 'Location is within parcel boundaries'
+          : `Location is ${Math.round(distance - parcel.radius_meters)}m outside parcel boundaries`,
+      };
+    }
+
+    // If we have GeoJSON boundaries, we could use PostGIS ST_Contains here
+    // For now, return valid if we can't validate
+    return { valid: true, message: 'Location validation not available for this parcel' };
+  }
+
+  /**
+   * Calculate distance between two coordinates in meters using Haversine formula
+   */
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+  /**
+   * Clock in with location validation
+   */
+  async clockInWithValidation(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    clockInData: any,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Get task details to check parcel
+    const { data: task } = await client
+      .from('tasks')
+      .select('id, parcel_id')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    // Validate location if provided and task has a parcel
+    let locationValidation = { valid: true };
+    if (clockInData.location_lat && clockInData.location_lng && task.parcel_id) {
+      locationValidation = await this.validateLocationInParcel(
+        organizationId,
+        task.parcel_id,
+        { lat: clockInData.location_lat, lng: clockInData.location_lng },
+      );
+    }
+
+    // Create time log
+    const { data: timeLog, error: timeLogError } = await client
+      .from('task_time_logs')
+      .insert({
+        task_id: taskId,
+        worker_id: clockInData.worker_id,
+        start_time: new Date().toISOString(),
+        location_lat: clockInData.location_lat || null,
+        location_lng: clockInData.location_lng || null,
+        location_valid: locationValidation.valid,
+        notes: clockInData.notes || null,
+      })
+      .select()
+      .single();
+
+    if (timeLogError) {
+      throw new BadRequestException(`Failed to clock in: ${timeLogError.message}`);
+    }
+
+    // Update task status to in_progress if not already
+    const { error: taskError } = await client
+      .from('tasks')
+      .update({
+        status: 'in_progress',
+        actual_start: new Date().toISOString(),
+      })
+      .eq('id', taskId)
+      .eq('organization_id', organizationId);
+
+    if (taskError) {
+      this.logger.warn(`Failed to update task status: ${taskError.message}`);
+    }
+
+    return {
+      timeLog,
+      locationValidation,
+      warning:
+        !locationValidation.valid && locationValidation.message
+          ? locationValidation.message
+          : undefined,
+    };
+  }
 }

@@ -34,6 +34,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useCurrency } from '@/hooks/useCurrency';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import WorkerForm from '@/components/Workers/WorkerForm';
 
 function WorkerDetailPage() {
   const { t } = useTranslation();
@@ -43,11 +44,14 @@ function WorkerDetailPage() {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const { data: worker, isLoading: workerLoading } = useWorker(
     currentOrganization?.id || null,
     workerId
   );
+
+  const { data: farms = [] } = useFarms(currentOrganization?.id || '');
 
   const { data: stats } = useWorkerStats(
     currentOrganization?.id || null,
@@ -191,7 +195,7 @@ function WorkerDetailPage() {
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate({ to: '/workers' })}>
+            <Button variant="outline" onClick={() => setShowEditForm(true)}>
               <Edit className="h-4 w-4 mr-2" />
               {t('workers.actions.edit')}
             </Button>
@@ -634,6 +638,21 @@ function WorkerDetailPage() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Edit Worker Form Modal */}
+      {worker && (
+        <WorkerForm
+          open={showEditForm}
+          worker={worker}
+          organizationId={currentOrganization.id}
+          farms={farms.map((f: any) => ({ id: f.id, name: f.name }))}
+          onClose={() => setShowEditForm(false)}
+          onSuccess={() => {
+            setShowEditForm(false);
+            queryClient.invalidateQueries({ queryKey: ['worker', currentOrganization.id, workerId] });
+          }}
+        />
+      )}
     </div>
   );
 }

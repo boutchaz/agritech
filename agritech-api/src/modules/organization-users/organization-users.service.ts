@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { EmailService } from '../email/email.service';
 import {
   OrganizationUserFiltersDto,
   CreateOrganizationUserDto,
@@ -10,7 +11,10 @@ import {
 export class OrganizationUsersService {
   private readonly logger = new Logger(OrganizationUsersService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly emailService: EmailService,
+  ) {}
 
   /**
    * Get all organization users with optional filters
@@ -273,5 +277,135 @@ export class OrganizationUsersService {
     }
 
     return { message: 'User removed from organization successfully' };
+  }
+
+  /**
+   * Get temporary password for a worker user
+   * Organization admins can view the temporary password for worker accounts
+   */
+  async getTempPassword(userId: string, organizationId: string): Promise<any> {
+    const client = this.databaseService.getAdminClient();
+
+    // First verify user is in the organization
+    const { data: orgUser } = await client
+      .from('organization_users')
+      .select('user_id')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new NotFoundException('User not found in organization');
+    }
+
+    // Check if this is a worker with a temporary password
+    const { data: worker } = await client
+      .from('workers')
+      .select('temp_password, temp_password_expires_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('User is not a worker or has no temporary password');
+    }
+
+    if (!worker.temp_password) {
+      throw new NotFoundException('No temporary password available. The password may have been used or expired.');
+    }
+
+    // Check if password has expired
+    if (worker.temp_password_expires_at) {
+      const expiresAt = new Date(worker.temp_password_expires_at);
+      if (expiresAt < new Date()) {
+        throw new Error('Temporary password has expired. Please reset the password.');
+      }
+    }
+
+    return {
+      temp_password: worker.temp_password,
+      expires_at: worker.temp_password_expires_at,
+    };
+  }
+
+  /**
+   * Reset password for a user in the organization
+   * Generates a new temporary password and returns it
+   */
+  async resetPassword(userId: string, organizationId: string): Promise<any> {
+    const client = this.databaseService.getAdminClient();
+
+    // Verify user is in the organization
+    await this.findOne(userId, organizationId);
+
+    // Check if this is a worker
+    const { data: worker } = await client
+      .from('workers')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const isWorker = !!worker;
+
+    // Generate new temporary password
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let tempPassword = '';
+    for (let i = 0; i < 16; i++) {
+      tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Update Supabase auth user password
+    const { error: updateError } = await client.auth.admin.updateUserById(userId, {
+      password: tempPassword,
+    });
+
+    if (updateError) {
+      throw new BadRequestException(`Failed to reset password: ${updateError.message}`);
+    }
+
+    // If this is a worker, store the temporary password with expiration
+    if (worker) {
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      const { error: workerUpdateError } = await client
+        .from('workers')
+        .update({
+          temp_password: tempPassword,
+          temp_password_expires_at: expiresAt.toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (workerUpdateError) {
+        this.logger.warn(`Failed to store worker temp password: ${workerUpdateError.message}`);
+        // Non-fatal - continue anyway
+      }
+    }
+
+    // Get user email and name for sending the email
+    const { data: profile } = await client
+      .from('user_profiles')
+      .select('email, first_name')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // Send password reset email
+    if (profile?.email) {
+      try {
+        await this.emailService.sendPasswordResetEmail(
+          profile.email,
+          profile.first_name || 'User',
+          tempPassword,
+        );
+        this.logger.log(`Password reset email sent to ${profile.email}`);
+      } catch (emailError) {
+        this.logger.warn(`Failed to send password reset email: ${emailError.message}`);
+        // Non-fatal - password was reset successfully
+      }
+    }
+
+    return {
+      success: true,
+      temp_password: tempPassword,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      message: 'Password has been reset. Please share the new temporary password with the user.',
+    };
   }
 }
