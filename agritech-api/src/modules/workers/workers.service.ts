@@ -1019,18 +1019,17 @@ export class WorkersService {
       const organizationName = org?.name || 'AgriTech';
 
       // Send welcome email with temporary password
-      try {
-        await this.emailService.sendUserCreatedEmail(
-          email,
-          firstName,
-          lastName,
-          tempPassword,
-          organizationName,
-        );
+      const emailSent = await this.emailService.sendUserCreatedEmail(
+        email,
+        firstName,
+        lastName,
+        tempPassword,
+        organizationName,
+      );
+      if (emailSent) {
         this.logger.log(`Welcome email sent to ${email}`);
-      } catch (emailError) {
-        this.logger.warn(`Failed to send welcome email: ${emailError.message}`);
-        // Non-fatal - user was created successfully
+      } else {
+        this.logger.debug(`Welcome email not sent (email service disabled) to ${email}`);
       }
 
       return {

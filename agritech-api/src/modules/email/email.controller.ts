@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, BadRequestException } from '@nestjs/common';
 import { EmailService } from './email.service';
 
 @Controller('email')
@@ -7,7 +7,10 @@ export class EmailController {
 
   @Post('test')
   async sendTestEmail(@Body() body: { to: string }) {
-    await this.emailService.sendTestEmail(body.to);
+    const sent = await this.emailService.sendTestEmail(body.to);
+    if (!sent) {
+      throw new BadRequestException('Email service is not configured');
+    }
     return { message: 'Test email sent successfully' };
   }
 
@@ -19,13 +22,16 @@ export class EmailController {
     tempPassword: string;
     organizationName: string;
   }) {
-    await this.emailService.sendUserCreatedEmail(
+    const sent = await this.emailService.sendUserCreatedEmail(
       body.to,
       body.firstName,
       body.lastName,
       body.tempPassword,
       body.organizationName,
     );
+    if (!sent) {
+      throw new BadRequestException('Email service is not configured');
+    }
     return { message: 'User created email sent successfully' };
   }
 
@@ -35,11 +41,14 @@ export class EmailController {
     firstName: string;
     tempPassword: string;
   }) {
-    await this.emailService.sendPasswordResetEmail(
+    const sent = await this.emailService.sendPasswordResetEmail(
       body.to,
       body.firstName,
       body.tempPassword,
     );
+    if (!sent) {
+      throw new BadRequestException('Email service is not configured');
+    }
     return { message: 'Password reset email sent successfully' };
   }
 }

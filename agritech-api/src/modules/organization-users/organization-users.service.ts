@@ -388,16 +388,15 @@ export class OrganizationUsersService {
 
     // Send password reset email
     if (profile?.email) {
-      try {
-        await this.emailService.sendPasswordResetEmail(
-          profile.email,
-          profile.first_name || 'User',
-          tempPassword,
-        );
+      const emailSent = await this.emailService.sendPasswordResetEmail(
+        profile.email,
+        profile.first_name || 'User',
+        tempPassword,
+      );
+      if (emailSent) {
         this.logger.log(`Password reset email sent to ${profile.email}`);
-      } catch (emailError) {
-        this.logger.warn(`Failed to send password reset email: ${emailError.message}`);
-        // Non-fatal - password was reset successfully
+      } else {
+        this.logger.debug(`Password reset email not sent (email service disabled) to ${profile.email}`);
       }
     }
 

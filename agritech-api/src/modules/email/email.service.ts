@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as hbs from 'handlebars';
@@ -14,6 +14,7 @@ export interface EmailOptions {
 
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   private transporter: nodemailer.Transporter;
   private templates: Map<string, hbs.TemplateDelegate> = new Map();
 
@@ -29,15 +30,43 @@ export class EmailService {
     });
   }
 
-  async sendEmail(options: EmailOptions): Promise<void> {
-    const html = await this.renderTemplate(options.template, options.context);
+  isConfigured(): boolean {
+    const enabled = this.configService.get<string>('EMAIL_ENABLED', 'true') === 'true';
+    if (!enabled) {
+      this.logger.warn('Email sending is disabled via EMAIL_ENABLED flag');
+      return false;
+    }
 
-    await this.transporter.sendMail({
-      from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
-      to: options.to,
-      subject: options.subject,
-      html,
-    });
+    const host = this.configService.get<string>('SMTP_HOST');
+    const user = this.configService.get<string>('SMTP_USER');
+    const pass = this.configService.get<string>('SMTP_PASS');
+
+    const isValid = !!(host && user && pass);
+    if (!isValid) {
+      this.logger.warn('SMTP configuration incomplete. Set SMTP_HOST, SMTP_USER, and SMTP_PASS');
+    }
+    return isValid;
+  }
+
+  async sendEmail(options: EmailOptions): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    try {
+      const html = await this.renderTemplate(options.template, options.context);
+      await this.transporter.sendMail({
+        from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
+        to: options.to,
+        subject: options.subject,
+        html,
+      });
+      this.logger.log(`Email sent successfully to ${options.to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send email: ${error.message}`);
+      return false;
+    }
   }
 
   async sendUserCreatedEmail(
@@ -46,8 +75,8 @@ export class EmailService {
     lastName: string,
     tempPassword: string,
     organizationName: string,
-  ): Promise<void> {
-    await this.sendEmail({
+  ): Promise<boolean> {
+    return this.sendEmail({
       to: email,
       subject: 'Welcome to AgriTech - Your Account Details',
       template: 'user-created',
@@ -66,8 +95,8 @@ export class EmailService {
     email: string,
     firstName: string,
     tempPassword: string,
-  ): Promise<void> {
-    await this.sendEmail({
+  ): Promise<boolean> {
+    return this.sendEmail({
       to: email,
       subject: 'Your Password Has Been Reset',
       template: 'password-reset',
@@ -95,8 +124,8 @@ export class EmailService {
     return template(context);
   }
 
-  async sendTestEmail(to: string): Promise<void> {
-    await this.sendEmail({
+  async sendTestEmail(to: string): Promise<boolean> {
+    return this.sendEmail({
       to,
       subject: 'Test Email from AgriTech',
       template: 'test',
