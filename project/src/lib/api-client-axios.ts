@@ -11,6 +11,51 @@ export interface FieldError {
 }
 
 /**
+ * Error pattern mapping for custom error messages that don't include field names
+ * Maps regex patterns to field names
+ */
+interface ErrorPattern {
+  pattern: RegExp;
+  getField: (match: RegExpMatchArray) => string;
+  getMessage: (match: RegExpMatchArray) => string;
+}
+
+// Common error patterns that don't start with field names
+const ERROR_PATTERNS: ErrorPattern[] = [
+  // "Invalid input: expected number, received null" -> Detect numeric fields that received null
+  {
+    pattern: /^(Invalid input):\s*expected\s+(number|string|boolean|date),\s*received\s+(null|empty|undefined)/i,
+    getField: () => {
+      // Can't determine field from this pattern alone
+      return null;
+    },
+    getMessage: (match) => `This field requires a valid ${match[2].toLowerCase()}`,
+  },
+  // "Invalid option: expected one of "x", "y", "z"" -> Detect enum validation errors
+  {
+    pattern: /^(Invalid option):\s*expected\s+one\s+of\s+(.+)$/i,
+    getField: (match) => {
+      const optionsStr = match[2];
+      // Map common enum values to field names
+      if (optionsStr.includes('khammass') || optionsStr.includes('rebaa') || optionsStr.includes('tholth')) {
+        return 'metayage_type';
+      }
+      if (optionsStr.includes('gross_revenue') || optionsStr.includes('net_revenue')) {
+        return 'calculation_basis';
+      }
+      if (optionsStr.includes('monthly') || optionsStr.includes('daily') || optionsStr.includes('per_task') || optionsStr.includes('harvest_share')) {
+        return 'payment_frequency';
+      }
+      if (optionsStr.includes('fixed_salary') || optionsStr.includes('daily_worker') || optionsStr.includes('metayage')) {
+        return 'worker_type';
+      }
+      return null;
+    },
+    getMessage: (match) => match[0],
+  },
+];
+
+/**
  * Custom API error that preserves the original response data
  * and parses NestJS validation errors into field-level errors
  */
@@ -33,33 +78,73 @@ export class ApiError extends Error {
    * 1. Array format: { message: ["field constraint", ...] }
    * 2. Custom details format: { details: { field: message, ... } }
    * 3. Detailed errors format: { errors: [{ field, errors: [...] }] }
+   * 4. Field constraints format: { fieldErrors: { field: { constraints: [...] } } }
    *
    * Field name formats supported:
    * - Simple: email, first_name, user_id
    * - Nested: items.0.item_id, address.city
    * - Array notation: items[0].name (converted to items.0.name)
+   *
+   * For errors without field names (e.g., "Invalid input: expected number"),
+   * attempts to map based on error patterns.
    */
   private static parseFieldErrors(data: any): FieldError[] {
     const fieldErrors: FieldError[] = [];
 
     if (!data) return fieldErrors;
 
+    // Check for fieldErrors object format (most detailed, includes field names)
+    // { fieldErrors: { email: { constraints: ["isEmail"] }, ... } }
+    if (data.fieldErrors && typeof data.fieldErrors === 'object') {
+      Object.entries(data.fieldErrors).forEach(([field, errorData]: [string, any]) => {
+        const constraints = errorData?.constraints || errorData?.errors || [];
+        if (Array.isArray(constraints)) {
+          constraints.forEach((constraint: any) => {
+            const msg = typeof constraint === 'string' ? constraint : JSON.stringify(constraint);
+            fieldErrors.push({
+              field,
+              message: this.formatConstraintMessage(field, msg),
+            });
+          });
+        } else {
+          fieldErrors.push({
+            field,
+            message: 'Invalid value',
+          });
+        }
+      });
+      // Return early if we found fieldErrors format (most reliable)
+      if (fieldErrors.length > 0) return fieldErrors;
+    }
+
     // Handle NestJS ValidationPipe array format (default)
     // { message: ["email should not be empty", "first_name must be longer...", ...] }
     if (Array.isArray(data.message)) {
       data.message.forEach((errorMsg: string) => {
-        // Match: "field_name error message here"
-        // Supports:
-        // - Simple: "email should not be empty"
-        // - Underscore: "first_name must be longer"
-        // - Nested: "items.0.item_id should not be empty" (if API returns full path)
-        // Match field name at start (letters, numbers, underscores, dots)
+        // Try to match field name at start (letters, numbers, underscores, dots)
         const match = errorMsg.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)\s+(.+)$/);
+
         if (match) {
           fieldErrors.push({
             field: match[1],
             message: match[2],
           });
+        } else {
+          // Error message doesn't start with field name
+          // Try to match against known patterns
+          for (const pattern of ERROR_PATTERNS) {
+            const patternMatch = errorMsg.match(pattern.pattern);
+            if (patternMatch) {
+              const fieldName = pattern.getField(patternMatch);
+              if (fieldName) {
+                fieldErrors.push({
+                  field: fieldName,
+                  message: pattern.getMessage(patternMatch),
+                });
+              }
+              break; // Use first matching pattern
+            }
+          }
         }
       });
     }
@@ -90,6 +175,26 @@ export class ApiError extends Error {
     }
 
     return fieldErrors;
+  }
+
+  /**
+   * Format constraint error messages to be more user-friendly
+   */
+  private static formatConstraintMessage(field: string, constraint: string): string {
+    const constraintMappings: Record<string, string> = {
+      'isEmail': 'Must be a valid email address',
+      'isNumber': 'Must be a number',
+      'isString': 'Must be a string',
+      'isBoolean': 'Must be true or false',
+      'isEnum': 'Invalid option selected',
+      'min': 'Value is too small',
+      'max': 'Value is too large',
+      'minLength': 'Too short',
+      'maxLength': 'Too long',
+      'isNotEmpty': 'Cannot be empty',
+    };
+
+    return constraintMappings[constraint] || constraint;
   }
 
   /**
