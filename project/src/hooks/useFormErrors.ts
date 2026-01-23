@@ -6,6 +6,22 @@ import { UseFormSetError } from 'react-hook-form';
  * Generic hook to handle form submission errors
  * Parses NestJS validation errors and sets them on form fields
  *
+ * ## Supported Error Formats
+ *
+ * 1. NestJS ValidationPipe array format (default):
+ *    { message: ["email should not be empty", "first_name must be longer..."] }
+ *
+ * 2. Custom details format:
+ *    { details: { email: "Email is required", ... } }
+ *
+ * 3. Detailed errors format (from custom exception factory):
+ *    { errors: [{ field: "email", errors: ["Email is required"] }] }
+ *
+ * ## Field Name Matching
+ *
+ * Field names from API must match form field names exactly. Use `fieldMappings` for
+ * cases where they differ (e.g., API uses snake_case, form uses camelCase):
+ *
  * @example
  * const { handleFormError } = useFormErrors();
  *
@@ -14,8 +30,23 @@ import { UseFormSetError } from 'react-hook-form';
  * } catch (error) {
  *   handleFormError(error, setError);
  * }
+ *
+ * @example With custom field mappings for API/Form name differences
+ * const { handleFormError } = useFormErrors({
+ *   fieldMappings: {
+ *     'first_name': 'firstName',  // API: first_name -> Form: firstName
+ *     'user_id': 'userId',
+ *   }
+ * });
  */
-export function useFormErrors<FieldValues extends Record<string, any> = any>() {
+export function useFormErrors<FieldValues extends Record<string, any> = any>(
+  options?: {
+    fieldMappings?: Record<string, string>;
+    defaultFieldError?: string;
+  }
+) {
+  const { fieldMappings = {}, defaultFieldError } = options || {};
+
   /**
    * Handle form submission error
    * Parses ApiError and sets field-level errors using react-hook-form's setError
@@ -46,16 +77,19 @@ export function useFormErrors<FieldValues extends Record<string, any> = any>() {
     // Handle ApiError with field errors
     if (error instanceof ApiError) {
       if (error.hasFieldErrors()) {
-        // Set each field error
+        // Set each field error with optional field name mapping
         error.fieldErrors.forEach((fieldError) => {
-          setError(fieldError.field as any, {
+          // Apply field name mapping if configured
+          const formField = fieldMappings[fieldError.field] || fieldError.field;
+
+          setError(formField as any, {
             type: 'manual',
             message: fieldError.message,
           });
         });
 
         if (toastOnError) {
-          toast.error(toastMessage || 'Please correct the errors in the form');
+          toast.error(toastMessage || defaultFieldError || 'Please correct the errors in the form');
         }
         return true;
       }

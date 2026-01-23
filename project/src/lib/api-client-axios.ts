@@ -29,19 +29,32 @@ export class ApiError extends Error {
 
   /**
    * Parse NestJS ValidationPipe errors into field errors
-   * Handles both array format: { message: ["field constraint", ...] }
-   * and custom details format: { details: { field: message, ... } }
+   * Handles multiple formats:
+   * 1. Array format: { message: ["field constraint", ...] }
+   * 2. Custom details format: { details: { field: message, ... } }
+   * 3. Detailed errors format: { errors: [{ field, errors: [...] }] }
+   *
+   * Field name formats supported:
+   * - Simple: email, first_name, user_id
+   * - Nested: items.0.item_id, address.city
+   * - Array notation: items[0].name (converted to items.0.name)
    */
   private static parseFieldErrors(data: any): FieldError[] {
     const fieldErrors: FieldError[] = [];
 
     if (!data) return fieldErrors;
 
-    // Handle NestJS ValidationPipe array format
+    // Handle NestJS ValidationPipe array format (default)
     // { message: ["email should not be empty", "first_name must be longer...", ...] }
     if (Array.isArray(data.message)) {
       data.message.forEach((errorMsg: string) => {
-        const match = errorMsg.match(/^(\w+)\s+(.+)$/);
+        // Match: "field_name error message here"
+        // Supports:
+        // - Simple: "email should not be empty"
+        // - Underscore: "first_name must be longer"
+        // - Nested: "items.0.item_id should not be empty" (if API returns full path)
+        // Match field name at start (letters, numbers, underscores, dots)
+        const match = errorMsg.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)\s+(.+)$/);
         if (match) {
           fieldErrors.push({
             field: match[1],
@@ -52,11 +65,27 @@ export class ApiError extends Error {
     }
 
     // Handle custom details format
-    // { details: { email: "Email is required", ... } }
+    // { details: { email: "Email is required", first_name: "First name required" } }
     if (data.details && typeof data.details === 'object') {
       Object.entries(data.details).forEach(([field, message]: [string, any]) => {
         const msg = typeof message === 'string' ? message : message?.message || String(message);
         fieldErrors.push({ field, message: msg });
+      });
+    }
+
+    // Handle NestJS detailed errors format (from custom exception factory)
+    // { errors: [{ field: "email", errors: ["Email is required"] }] }
+    if (Array.isArray(data.errors)) {
+      data.errors.forEach((errorObj: any) => {
+        if (errorObj.field && errorObj.errors) {
+          const messages = Array.isArray(errorObj.errors) ? errorObj.errors : [errorObj.errors];
+          messages.forEach((msg: string) => {
+            fieldErrors.push({
+              field: errorObj.field,
+              message: msg,
+            });
+          });
+        }
       });
     }
 
