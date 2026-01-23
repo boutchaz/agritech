@@ -2,6 +2,22 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 import { supabase } from './supabase';
 import { useOrganizationStore } from '@/stores/organizationStore';
 
+/**
+ * Custom API error that preserves the original response data
+ * This allows field-level validation errors to be properly displayed
+ */
+export class ApiError extends Error {
+  public statusCode: number;
+  public responseData: any;
+
+  constructor(message: string, statusCode: number, responseData?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.statusCode = statusCode;
+    this.responseData = responseData;
+  }
+}
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 /**
@@ -88,7 +104,8 @@ function createApiClient(): AxiosInstance {
           break;
       }
 
-      return Promise.reject(new Error(message));
+      // Throw ApiError with original response data preserved
+      return Promise.reject(new ApiError(message, status, data));
     }
   );
 

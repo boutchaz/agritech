@@ -15,13 +15,19 @@ class AllExceptionsFilter implements ExceptionFilter {
     const requestId = (request as any).requestId || 'unknown';
 
     let status = 500;
-    let message = 'Internal server error';
+    let message: any = 'Internal server error';
     let stack = '';
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      message = typeof exceptionResponse === 'string' ? exceptionResponse : JSON.stringify(exceptionResponse);
+
+      // Preserve the original error structure for validation errors
+      if (typeof exceptionResponse === 'object') {
+        message = exceptionResponse;
+      } else {
+        message = exceptionResponse;
+      }
       stack = exception.stack || '';
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -38,12 +44,22 @@ class AllExceptionsFilter implements ExceptionFilter {
       console.error(`==========================================================\n`);
     }
 
-    response.status(status).json({
+    // Build response object, preserving validation error structure
+    const responseBody: any = {
       statusCode: status,
-      message,
       timestamp: new Date().toISOString(),
       path: request.url,
-    });
+    };
+
+    // Preserve the full error structure for validation errors
+    if (typeof message === 'object' && message !== null) {
+      // For ValidationPipe errors, preserve the message array
+      Object.assign(responseBody, message);
+    } else {
+      responseBody.message = message;
+    }
+
+    response.status(status).json(responseBody);
   }
 }
 

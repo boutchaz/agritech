@@ -319,9 +319,25 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           console.error('Error granting platform access:', error);
 
           // Parse API error response and set field-level errors
-          const apiError = error?.response?.data || error;
+          const apiError = error?.responseData || error?.response?.data || error;
 
-          if (apiError?.message && typeof apiError.message === 'string') {
+          // Handle NestJS ValidationPipe format: { message: ["field constraint", ...], error: "Bad Request" }
+          if (apiError?.message && Array.isArray(apiError.message)) {
+            // Parse NestJS validation error messages
+            apiError.message.forEach((errorMsg: string) => {
+              // Parse messages like "email should not be empty", "first_name must be longer than or equal to 2 characters"
+              const match = errorMsg.match(/^(\w+)\s+(.+)$/);
+              if (match) {
+                const [, fieldName, ...messageParts] = match;
+                const fieldMessage = messageParts.join(' ');
+                setError(fieldName as any, {
+                  type: 'manual',
+                  message: fieldMessage,
+                });
+              }
+            });
+            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.message.join(', ')}`);
+          } else if (apiError?.message && typeof apiError.message === 'string') {
             // Check if it's a validation error with field information
             if (apiError.message.includes('Invalid input') && apiError.details) {
               // Set errors for each field that has validation issues
@@ -350,8 +366,33 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
       onSuccess?.();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving worker:', error);
+
+      // Parse API error response and set field-level errors
+      const apiError = error?.responseData || error?.response?.data || error;
+
+      // Handle NestJS ValidationPipe format: { message: ["field constraint", ...], error: "Bad Request" }
+      if (apiError?.message && Array.isArray(apiError.message)) {
+        // Parse NestJS validation error messages
+        apiError.message.forEach((errorMsg: string) => {
+          // Parse messages like "email should not be empty", "first_name must be longer than or equal to 2 characters"
+          const match = errorMsg.match(/^(\w+)\s+(.+)$/);
+          if (match) {
+            const [, fieldName, ...messageParts] = match;
+            const fieldMessage = messageParts.join(' ');
+            setError(fieldName as any, {
+              type: 'manual',
+              message: fieldMessage,
+            });
+          }
+        });
+        toast.error(t('common.errors.validation'));
+      } else if (apiError?.message && typeof apiError.message === 'string') {
+        toast.error(apiError.message);
+      } else {
+        toast.error(t('common.errors.generic'));
+      }
     }
   };
 
