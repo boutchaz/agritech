@@ -33,6 +33,9 @@ RUN pnpm install --prod
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy email templates
+COPY --from=builder /app/src/modules/email/templates ./dist/modules/email/templates
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
