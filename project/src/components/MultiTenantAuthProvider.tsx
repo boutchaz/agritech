@@ -415,10 +415,27 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     fetchUserRole();
   }, [user?.id, currentOrganization?.id]);
 
-  // Auth state management
   useEffect(() => {
-    // Check auth store for existing session
+    const initAuth = () => {
+      const state = useAuthStore.getState();
+      
+      if (!state._hasHydrated) {
+        return;
+      }
+
+      const authUser = state.user;
+      const isAuthenticated = state.isAuthenticated;
+
+      setUser(authUser ? { id: authUser.id, email: authUser.email } as User : null);
+      setShowAuth(!isAuthenticated);
+      setAuthLoading(false);
+    };
+
     const unsubscribe = useAuthStore.subscribe((state) => {
+      if (!state._hasHydrated) {
+        return;
+      }
+
       const authUser = state.user;
       const isAuthenticated = state.isAuthenticated;
 
@@ -427,21 +444,11 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       setAuthLoading(false);
     });
 
-    // Also initialize from current store state
-    const currentUser = useAuthStore.getState().user;
-    const isAuthenticated = useAuthStore.getState().isAuthenticated;
-
-    if (isAuthenticated && currentUser) {
-      setUser({ id: currentUser.id, email: currentUser.email } as User);
-      setShowAuth(false);
-    } else {
-      setShowAuth(true);
-    }
-    setAuthLoading(false);
+    initAuth();
 
     // For backward compatibility during migration, also listen to Supabase
     authSupabase.auth.getSession().then(({ data: { session } }) => {
-      // If Supabase has a session but auth store doesn't, migrate it
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
       if (session?.user && !isAuthenticated) {
         useAuthStore.getState().setUser({
           id: session.user.id,
@@ -453,15 +460,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     // Listen for Supabase changes during migration period
     const { data: { subscription: supabaseSubscription } } = authSupabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        // Clear all user data on sign out
         setCurrentOrganization(null);
         setCurrentFarm(null);
         setShowAuth(true);
-        // Clear Zustand stores
         useOrganizationStore.getState().clearOrganization();
         useAuthStore.getState().clearAuth();
 
-        // Redirect to login on sign out (but not on initial load)
         if (event === 'SIGNED_OUT') {
           window.location.href = '/login';
         }

@@ -17,11 +17,13 @@ interface AuthState {
   tokens: AuthTokens | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
+  _hasHydrated: boolean;
   setTokens: (tokens: AuthTokens) => void;
   setUser: (user: AuthUser | null) => void;
   clearAuth: () => void;
   getAccessToken: () => string | null;
   isTokenExpired: () => boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
       tokens: null,
       user: null,
       isAuthenticated: false,
+      _hasHydrated: false,
 
       setTokens: (tokens) => {
         // Calculate expiration time
@@ -65,9 +68,36 @@ export const useAuthStore = create<AuthState>()(
         if (!tokens?.expires_at) return true;
         return Date.now() >= tokens.expires_at;
       },
+
+      setHasHydrated: (state) => {
+        set({ _hasHydrated: state });
+      },
     }),
     {
       name: 'auth-storage', // localStorage key
+      onRehydrateStorage: () => (state) => {
+        // Called when hydration is complete
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
+
+// Helper to get access token outside of React components
+export const getAccessToken = () => useAuthStore.getState().getAccessToken();
+
+// Helper to wait for hydration (useful for init functions)
+export const waitForHydration = (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (useAuthStore.getState()._hasHydrated) {
+      resolve();
+      return;
+    }
+    const unsubscribe = useAuthStore.subscribe((state) => {
+      if (state._hasHydrated) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+};

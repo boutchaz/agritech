@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { authSupabase } from './lib/auth-supabase'
 import { initGA, initClarity } from './lib/analytics'
-import { useAuthStore } from './stores/authStore'
+import { useAuthStore, waitForHydration } from './stores/authStore'
 import './i18n/config'
 import './index.css'
 
@@ -48,24 +48,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Check auth state before rendering
 async function init() {
-  // Initialize Google Analytics early (doesn't interfere with router)
   initGA()
 
-  // IMPORTANT: Initialize router context from Zustand store FIRST
-  // This prevents infinite redirect loop between /login and /dashboard
-  // The Zustand store is persisted in localStorage and is immediately available
+  // Wait for Zustand store to hydrate from localStorage before making auth decisions
+  await waitForHydration()
+
   const authStore = useAuthStore.getState()
   const storeUser = authStore.user
   const storeIsAuthenticated = authStore.isAuthenticated
 
   if (storeIsAuthenticated && storeUser) {
-    // User is authenticated according to Zustand store
     routerContext.auth.user = { id: storeUser.id, email: storeUser.email }
     routerContext.auth.isLoading = false
   } else {
-    // No user in store, check Supabase
     const { data: { session } } = await authSupabase.auth.getSession()
     routerContext.auth.user = session?.user || null
     routerContext.auth.isLoading = false
