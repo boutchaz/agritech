@@ -14,6 +14,7 @@ import {
 } from '../../types/workers';
 import { useCreateWorker, useUpdateWorker } from '../../hooks/useWorkers';
 import { useCurrency } from '../../hooks/useCurrency';
+import { useFormErrors } from '../../hooks/useFormErrors';
 import {
   Dialog,
   DialogContent,
@@ -101,6 +102,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  const { handleFormError } = useFormErrors<WorkerFormData>();
   const isEditing = !!worker;
 
   // Ensure farms is always an array
@@ -315,46 +317,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             console.error('Failed to grant platform access');
             toast.error(t('workers.form.errors.workerCreatedAccessFailedTryUsers'));
           }
-        } catch (error: any) {
-          console.error('Error granting platform access:', error);
-
-          // Parse API error response and set field-level errors
-          const apiError = error?.responseData || error?.response?.data || error;
-
-          // Handle NestJS ValidationPipe format: { message: ["field constraint", ...], error: "Bad Request" }
-          if (apiError?.message && Array.isArray(apiError.message)) {
-            // Parse NestJS validation error messages
-            apiError.message.forEach((errorMsg: string) => {
-              // Parse messages like "email should not be empty", "first_name must be longer than or equal to 2 characters"
-              const match = errorMsg.match(/^(\w+)\s+(.+)$/);
-              if (match) {
-                const [, fieldName, ...messageParts] = match;
-                const fieldMessage = messageParts.join(' ');
-                setError(fieldName as any, {
-                  type: 'manual',
-                  message: fieldMessage,
-                });
-              }
-            });
-            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.message.join(', ')}`);
-          } else if (apiError?.message && typeof apiError.message === 'string') {
-            // Check if it's a validation error with field information
-            if (apiError.message.includes('Invalid input') && apiError.details) {
-              // Set errors for each field that has validation issues
-              Object.entries(apiError.details).forEach(([field, message]: [string, any]) => {
-                setError(field as any, {
-                  type: 'manual',
-                  message: typeof message === 'string' ? message : message?.message || String(message),
-                });
-              });
-            } else {
-              toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.message}`);
-            }
-          } else if (apiError?.error) {
-            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${apiError.error}`);
-          } else {
-            toast.error(`${t('workers.form.errors.workerCreatedButAccessFailed')}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          }
+        } catch (error: unknown) {
+          // Use generic error handler
+          handleFormError(error, setError, {
+            toastMessage: t('workers.form.errors.workerCreatedButAccessFailed'),
+          });
 
           // Don't close the dialog on error
           setPlatformAccessLoading(false);
@@ -366,33 +333,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
       onSuccess?.();
       onClose();
-    } catch (error: any) {
-      console.error('Error saving worker:', error);
-
-      // Parse API error response and set field-level errors
-      const apiError = error?.responseData || error?.response?.data || error;
-
-      // Handle NestJS ValidationPipe format: { message: ["field constraint", ...], error: "Bad Request" }
-      if (apiError?.message && Array.isArray(apiError.message)) {
-        // Parse NestJS validation error messages
-        apiError.message.forEach((errorMsg: string) => {
-          // Parse messages like "email should not be empty", "first_name must be longer than or equal to 2 characters"
-          const match = errorMsg.match(/^(\w+)\s+(.+)$/);
-          if (match) {
-            const [, fieldName, ...messageParts] = match;
-            const fieldMessage = messageParts.join(' ');
-            setError(fieldName as any, {
-              type: 'manual',
-              message: fieldMessage,
-            });
-          }
-        });
-        toast.error(t('common.errors.validation'));
-      } else if (apiError?.message && typeof apiError.message === 'string') {
-        toast.error(apiError.message);
-      } else {
-        toast.error(t('common.errors.generic'));
-      }
+    } catch (error: unknown) {
+      // Use generic error handler for worker create/update errors
+      handleFormError(error, setError);
     }
   };
 

@@ -3,18 +3,81 @@ import { supabase } from './supabase';
 import { useOrganizationStore } from '@/stores/organizationStore';
 
 /**
+ * Parsed field error from NestJS validation
+ */
+export interface FieldError {
+  field: string;
+  message: string;
+}
+
+/**
  * Custom API error that preserves the original response data
- * This allows field-level validation errors to be properly displayed
+ * and parses NestJS validation errors into field-level errors
  */
 export class ApiError extends Error {
   public statusCode: number;
   public responseData: any;
+  public fieldErrors: FieldError[];
 
   constructor(message: string, statusCode: number, responseData?: any) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
     this.responseData = responseData;
+    this.fieldErrors = ApiError.parseFieldErrors(responseData);
+  }
+
+  /**
+   * Parse NestJS ValidationPipe errors into field errors
+   * Handles both array format: { message: ["field constraint", ...] }
+   * and custom details format: { details: { field: message, ... } }
+   */
+  private static parseFieldErrors(data: any): FieldError[] {
+    const fieldErrors: FieldError[] = [];
+
+    if (!data) return fieldErrors;
+
+    // Handle NestJS ValidationPipe array format
+    // { message: ["email should not be empty", "first_name must be longer...", ...] }
+    if (Array.isArray(data.message)) {
+      data.message.forEach((errorMsg: string) => {
+        const match = errorMsg.match(/^(\w+)\s+(.+)$/);
+        if (match) {
+          fieldErrors.push({
+            field: match[1],
+            message: match[2],
+          });
+        }
+      });
+    }
+
+    // Handle custom details format
+    // { details: { email: "Email is required", ... } }
+    if (data.details && typeof data.details === 'object') {
+      Object.entries(data.details).forEach(([field, message]: [string, any]) => {
+        const msg = typeof message === 'string' ? message : message?.message || String(message);
+        fieldErrors.push({ field, message: msg });
+      });
+    }
+
+    return fieldErrors;
+  }
+
+  /**
+   * Check if this error has field-level validation errors
+   */
+  public hasFieldErrors(): boolean {
+    return this.fieldErrors.length > 0;
+  }
+
+  /**
+   * Get all error messages as a string
+   */
+  public getErrorMessages(): string {
+    if (this.hasFieldErrors()) {
+      return this.fieldErrors.map(e => `${e.field}: ${e.message}`).join(', ');
+    }
+    return this.message;
   }
 }
 
