@@ -200,8 +200,8 @@ export interface HarvestFilters {
   farm_id?: string;
   parcel_id?: string;
   crop_id?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   quality_grade?: QualityGrade | QualityGrade[];
   intended_for?: IntendedFor;
 }
@@ -237,8 +237,8 @@ export interface DeliveryFilters {
   delivery_type?: DeliveryType | DeliveryType[];
   farm_id?: string;
   driver_id?: string;
-  date_from?: string;
-  date_to?: string;
+  dateFrom?: string;
+  dateTo?: string;
   customer_name?: string;
 }
 

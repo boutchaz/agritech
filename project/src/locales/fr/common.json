@@ -3245,6 +3245,138 @@
         "paymentConfigurationRequired": "Veuillez fournir la configuration de paiement requise pour le type sélectionné",
         "updateFailed": "Échec de la mise à jour de la configuration de paiement"
       }
+    },
+    "form": {
+      "title": {
+        "add": "Ajouter un travailleur",
+        "edit": "Modifier le travailleur"
+      },
+      "sections": {
+        "personalInfo": "Informations personnelles",
+        "employmentDetails": "Détails de l'emploi",
+        "compensation": "Rémunération",
+        "paymentSettings": "Paramètres de paiement",
+        "skillsAndCertifications": "Compétences et Certifications",
+        "platformAccess": "Accès à la plateforme"
+      },
+      "fields": {
+        "workerType": "Type de travailleur",
+        "firstName": "Prénom",
+        "lastName": "Nom",
+        "cin": "Numéro CIN",
+        "phone": "Téléphone",
+        "email": "Email",
+        "address": "Adresse",
+        "dateOfBirth": "Date de naissance",
+        "position": "Poste",
+        "farm": "Ferme",
+        "hireDate": "Date d'embauche",
+        "declaredToCNSS": "Déclaré à la CNSS",
+        "cnssNumber": "Numéro CNSS",
+        "monthlySalary": "Salaire mensuel ({{currency}})",
+        "dailyRate": "Taux journalier ({{currency}})",
+        "metayageType": "Type de métayage",
+        "metayagePercentage": "Pourcentage de métayage (%)",
+        "calculationBasis": "Base de calcul",
+        "paymentFrequency": "Fréquence de paiement",
+        "paymentMethod": "Mode de paiement",
+        "bankAccount": "Compte bancaire",
+        "specialties": "Spécialités",
+        "certifications": "Certifications",
+        "notes": "Notes"
+      },
+      "placeholders": {
+        "firstName": "ex: Jean",
+        "lastName": "ex: Dupont",
+        "cin": "ex: AB123456",
+        "phone": "ex: +212 6 00 00 00 00",
+        "email": "ex: jean.dupont@email.com",
+        "address": "Adresse complète",
+        "position": "ex: Chef d'équipe",
+        "cnssNumber": "ex: 123456789",
+        "monthlySalary": "ex: 4500.00",
+        "dailyRate": "ex: 150.00",
+        "metayagePercentage": "ex: 20",
+        "bankAccount": "ex: RIB 123 456 78901234567890 12",
+        "specialties": "ex: Plantation, Récolte",
+        "certifications": "ex: Certificat phytosanitaire",
+        "notes": "Notes supplémentaires..."
+      },
+      "options": {
+        "noFarm": "Aucune ferme",
+        "select": "Sélectionner..."
+      },
+      "validation": {
+        "firstNameMin": "Le prénom doit contenir au moins 2 caractères",
+        "lastNameMin": "Le nom doit contenir au moins 2 caractères",
+        "emailInvalid": "Email invalide",
+        "monthlySalaryRequired": "Le salaire mensuel est requis pour ce type de travailleur",
+        "dailyRateRequired": "Le taux journalier est requis pour ce type de travailleur",
+        "metayagePercentageRequired": "Le pourcentage de métayage est requis pour ce type de travailleur",
+        "metayageTypeRequired": "Le type de métayage est requis pour ce type de travailleur",
+        "noFarmAvailable": "Aucune ferme disponible. Veuillez d'abord créer une ferme."
+      },
+      "buttons": {
+        "add": "Ajouter",
+        "cancel": "Annuler",
+        "create": "Créer",
+        "update": "Mettre à jour",
+        "saving": "Enregistrement..."
+      },
+      "errors": {
+        "correctFollowingErrors": "Veuillez corriger les erreurs suivantes:",
+        "errorInField": "Erreur dans le champ",
+        "workerCreatedButAccessFailed": "Travailleur créé mais échec de l'accès à la plateforme",
+        "workerCreatedAccessFailedTryUsers": "Travailleur créé. Pour accorder l'accès plateforme, allez dans Paramètres > Utilisateurs."
+      },
+      "success": {
+        "workerCreatedWithAccess": "Travailleur créé avec accès à la plateforme"
+      },
+      "platformAccess": {
+        "enabled": "L'accès à la plateforme sera accordé à ce travailleur",
+        "disabled": "L'accès à la plateforme ne sera pas accordé",
+        "emailRequired": "Un email est requis pour accorder l'accès à la plateforme",
+        "alreadyHasAccess": "Ce travailleur a déjà accès à la plateforme"
+      },
+      "metayageInfo": {
+        "title": "Types de métayage",
+        "khammass": {
+          "title": "Khammass (1/5)",
+          "description": "Le travailleur reçoit 1/5 (20%) du revenu"
+        },
+        "rebaa": {
+          "title": "Rebâa (1/4)",
+          "description": "Le travailleur reçoit 1/4 (25%) du revenu"
+        },
+        "tholth": {
+          "title": "Tholth (1/3)",
+          "description": "Le travailleur reçoit 1/3 (33%) du revenu"
+        }
+      },
+      "paymentFrequencyHint": {
+        "fixedSalary": "Les salariés fixes sont généralement payés mensuellement",
+        "dailyWorker": "Les ouvriers journaliers sont payés quotidiennement ou à la tâche",
+        "metayage": "Les métayers sont payés par part de récolte"
+      },
+      "paymentFrequencyInfo": {
+        "title": "Fréquences de paiement",
+        "monthly": "Mensuel",
+        "monthlyDescription": "Paiement une fois par mois",
+        "daily": "Journalier",
+        "dailyDescription": "Paiement à la fin de chaque journée de travail",
+        "dailyWorkerDailyDescription": "Paiement à la fin de chaque journée de travail",
+        "perTask": "À la tâche",
+        "perTaskDescription": "Paiement basé sur le nombre d'unités complétées",
+        "harvestShare": "Part de récolte",
+        "harvestShareDescription": "Paiement basé sur la part de récolte convenue"
+      },
+      "paymentMethods": {
+        "cash": "Espèces",
+        "bankTransfer": "Virement bancaire",
+        "check": "Chèque",
+        "mobileMoney": "Mobile Money"
+      },
+      "bankAccountHint": "Requis pour les paiements par virement bancaire"
     }
   },
   "campaigns": {

@@ -60,12 +60,12 @@ export function useHarvest(organizationId: string, harvestId: string | null) {
   });
 }
 
-export function useHarvestStatistics(organizationId: string, filters?: { date_from?: string; date_to?: string }) {
+export function useHarvestStatistics(organizationId: string, filters?: { dateFrom?: string; dateTo?: string }) {
   // Fetch harvests and compute statistics client-side
   // This replaces the non-existent get_harvest_statistics RPC function
   const { data: harvests = [] } = useHarvests(organizationId, {
-    date_from: filters?.date_from || new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
-    date_to: filters?.date_to || new Date().toISOString().split('T')[0],
+    dateFrom: filters?.dateFrom || new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString().split('T')[0],
+    dateTo: filters?.dateTo || new Date().toISOString().split('T')[0],
   });
 
   return useQuery({

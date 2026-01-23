@@ -1,12 +1,17 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TimeLog, Task } from '@/lib/api';
+import { persist } from 'zustand/middleware';
+import { zustandStorage } from '@/lib/storage';
 
 interface ActiveTimeSession {
   timeLogId: string | null;
   taskId: string | null;
-  task: Task | null;
+  task: {
+    id: string;
+    title: string;
+    status: string;
+    farm?: { id: string; name: string };
+    parcel?: { id: string; name: string };
+  } | null;
   clockInTime: string | null;
   location: { lat: number; lng: number } | null;
 }
@@ -33,7 +38,7 @@ export const useTimeTrackingStore = create<TimeTrackingState & TimeTrackingActio
     }),
     {
       name: 'agritech-time-tracking',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: zustandStorage,
     }
   )
 );

@@ -21,7 +21,7 @@ const STATUS_CONFIG: Record<TaskStatus, { color: string; label: string; nextActi
 const PRIORITY_CONFIG: Record<string, { color: string; label: string }> = {
   low: { color: colors.gray[500], label: 'Low' },
   medium: { color: colors.blue[500], label: 'Medium' },
-  high: { color: colors.orange[500], label: 'High' },
+  high: { color: colors.yellow[600], label: 'High' },
   urgent: { color: colors.red[500], label: 'Urgent' },
 };
 
