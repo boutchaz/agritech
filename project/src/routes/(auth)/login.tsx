@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate, redirect } from '@tanstack/react-router'
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
@@ -13,8 +13,20 @@ import {
   trackLoginFailure,
   trackPageView,
 } from '@/lib/analytics'
+import { useAuthStore, waitForHydration } from '@/stores/authStore'
 
 export const Route = createFileRoute('/(auth)/login')({
+  beforeLoad: async ({ context }) => {
+    await waitForHydration()
+    
+    const contextUser = context.auth?.user
+    const storeState = useAuthStore.getState()
+    const storeUser = storeState.isAuthenticated ? storeState.user : null
+    
+    if (contextUser || storeUser) {
+      throw redirect({ to: '/dashboard' })
+    }
+  },
   component: LoginPage,
 })
 

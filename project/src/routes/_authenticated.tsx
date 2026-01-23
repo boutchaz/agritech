@@ -10,10 +10,12 @@ import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
 import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore, waitForHydration } from '../stores/authStore'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
+    await waitForHydration()
+    
     const contextUser = context.auth?.user
     const storeState = useAuthStore.getState()
     const storeUser = storeState.isAuthenticated ? storeState.user : null
