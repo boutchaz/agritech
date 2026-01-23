@@ -466,18 +466,16 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       }
     });
 
-    // Listen for Supabase changes during migration period
-    const { data: { subscription: supabaseSubscription } } = authSupabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
+    // Listen for Supabase sign-out only (for backwards compatibility)
+    // Don't clear auth on missing session - we use NestJS auth, not Supabase
+    const { data: { subscription: supabaseSubscription } } = authSupabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_OUT') {
         setCurrentOrganization(null);
         setCurrentFarm(null);
         setShowAuth(true);
         useOrganizationStore.getState().clearOrganization();
         useAuthStore.getState().clearAuth();
-
-        if (event === 'SIGNED_OUT') {
-          window.location.href = '/login';
-        }
+        window.location.href = '/login';
       }
     });
 
