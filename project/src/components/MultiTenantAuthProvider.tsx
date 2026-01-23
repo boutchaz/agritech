@@ -16,7 +16,7 @@ import {
 import { useSubscription } from '../hooks/useSubscription';
 
 import { useOrganizationStore } from '../stores/organizationStore';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore, waitForHydration } from '../stores/authStore';
 import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
 
 type Organization = AuthOrganization;
@@ -415,13 +415,10 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }, [user?.id, currentOrganization?.id]);
 
   useEffect(() => {
-    const initAuth = () => {
-      const state = useAuthStore.getState();
+    const initAuth = async () => {
+      await waitForHydration();
       
-      if (!state._hasHydrated) {
-        return;
-      }
-
+      const state = useAuthStore.getState();
       const authUser = state.user;
       const isAuthenticated = state.isAuthenticated;
 
