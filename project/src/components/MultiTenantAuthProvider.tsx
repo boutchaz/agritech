@@ -92,7 +92,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // });
 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
-  const needsOnboarding = !!(
+  // IMPORTANT: Only calculate needsOnboarding if the session is actually valid
+  const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
+  const needsOnboarding = isSessionValid && !!(
     user && !loading && (
       // No profile yet (missing required fields)
       !profile || !profile.full_name ||
@@ -553,8 +555,20 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
   // Redirect to onboarding if user needs onboarding
   useEffect(() => {
     if (!loading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
-      // User needs to complete onboarding
-      window.location.href = '/onboarding';
+      // IMPORTANT: Validate session is actually valid before redirecting to onboarding
+      // This prevents redirecting users with expired tokens to onboarding
+      const isTokenValid = !useAuthStore.getState().isTokenExpired();
+      const hasAccessToken = !!useAuthStore.getState().getAccessToken();
+
+      // Only redirect to onboarding if the session is truly valid
+      if (isTokenValid && hasAccessToken) {
+        window.location.href = '/onboarding';
+      } else {
+        // Session is invalid - clear auth and redirect to login
+        console.warn('[AuthProvider] Invalid session detected, clearing auth and redirecting to login');
+        useAuthStore.getState().clearAuth();
+        window.location.href = '/login';
+      }
     }
   }, [loading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
 

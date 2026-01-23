@@ -76,7 +76,21 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage', // localStorage key
       onRehydrateStorage: () => (state) => {
-        // Called when hydration is complete
+        // IMPORTANT: Check if tokens are expired on hydration
+        // This fixes the issue where users get stuck on onboarding with expired tokens
+        if (state) {
+          const isExpired = state.tokens?.expires_at
+            ? Date.now() >= state.tokens.expires_at
+            : true;
+
+          if (isExpired && state.isAuthenticated) {
+            // Clear expired auth state
+            state.tokens = null;
+            state.user = null;
+            state.isAuthenticated = false;
+          }
+        }
+        // Mark hydration as complete
         state?.setHasHydrated(true);
       },
     }

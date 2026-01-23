@@ -3,6 +3,35 @@ import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+// Flag to prevent multiple redirects to login
+let isRedirectingToLogin = false;
+
+/**
+ * Handle session expiration by clearing auth state and redirecting to login
+ */
+function handleSessionExpired(): void {
+  // Prevent multiple redirects
+  if (isRedirectingToLogin) {
+    return;
+  }
+
+  isRedirectingToLogin = true;
+
+  // Clear all auth-related data
+  useAuthStore.getState().clearAuth();
+  useOrganizationStore.getState().clearOrganization();
+  localStorage.removeItem('currentOrganization');
+  localStorage.removeItem('currentFarm');
+
+  // Redirect to login after a short delay to allow error handling
+  setTimeout(() => {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    isRedirectingToLogin = false;
+  }, 100);
+}
+
 // Device Analytics Headers
 interface DeviceInfo {
   deviceType: 'web' | 'desktop';
@@ -80,13 +109,18 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
 
   if (!accessToken) {
     console.error('[API Client] No active session found');
-    throw new Error('No active session');
+    // If the auth store thinks we're authenticated but there's no token, clear the invalid state
+    if (useAuthStore.getState().isAuthenticated) {
+      handleSessionExpired();
+    }
+    throw new Error('No active session. Please log in again.');
   }
 
   // Check if token is expired
   if (useAuthStore.getState().isTokenExpired()) {
     console.error('[API Client] Token expired');
-    throw new Error('Session expired');
+    handleSessionExpired();
+    throw new Error('Session expired. Please log in again.');
   }
 
   const orgId = organizationId || getCurrentOrganizationId();
@@ -151,7 +185,9 @@ export async function apiRequest<T>(
       if (response.status === 0 || response.status >= 500) {
         throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
       } else if (response.status === 401) {
-        throw new Error('Authentication failed. Please refresh the page and try again.');
+        // Clear auth state and redirect to login
+        handleSessionExpired();
+        throw new Error('Session expired. Please log in again.');
       } else if (response.status === 403) {
         throw new Error('Access denied. You may not have permission to perform this action.');
       } else if (response.status === 404) {
@@ -164,13 +200,13 @@ export async function apiRequest<T>(
         };
       }
     }
-    
+
     const errorMessage = error?.message || error?.error || 'API request failed';
-    
+
     if (errorMessage.includes('Connection error') || response.status === 0) {
       throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
     }
-    
+
     throw new Error(errorMessage);
   }
 

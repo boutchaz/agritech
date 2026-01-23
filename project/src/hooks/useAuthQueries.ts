@@ -27,6 +27,18 @@ export const useUserProfile = (userId: string | undefined) => {
         const data = await usersApi.getMe();
         return data;
       } catch (error) {
+        // Check for session expired error (401)
+        if (error instanceof Error && (
+          error.message?.includes('Session expired') ||
+          error.message?.includes('No active session') ||
+          error.message?.includes('Authentication failed')
+        )) {
+          // Clear auth state - the API client should handle redirect
+          console.warn('⚠️ Session expired while fetching profile');
+          useAuthStore.getState().clearAuth();
+          // Return null to stop retries
+          return null;
+        }
         // Re-throw network errors to trigger retry
         if (error instanceof Error && (
           error.message?.includes('Failed to fetch') ||
@@ -44,6 +56,14 @@ export const useUserProfile = (userId: string | undefined) => {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
+      // Don't retry if session expired
+      if (error instanceof Error && (
+        error.message?.includes('Session expired') ||
+        error.message?.includes('No active session') ||
+        error.message?.includes('Authentication failed')
+      )) {
+        return false;
+      }
       // Retry up to 3 times for network errors
       if (failureCount < 3 && error instanceof Error && (
         error.message?.includes('Failed to fetch') ||
@@ -71,6 +91,18 @@ export const useUserOrganizations = (userId: string | undefined) => {
         console.log('🔍 User organizations from API:', { data });
         return data || [];
       } catch (error) {
+        // Check for session expired error (401)
+        if (error instanceof Error && (
+          error.message?.includes('Session expired') ||
+          error.message?.includes('No active session') ||
+          error.message?.includes('Authentication failed')
+        )) {
+          // Clear auth state - the API client should handle redirect
+          console.warn('⚠️ Session expired while fetching organizations');
+          useAuthStore.getState().clearAuth();
+          // Return empty array to stop retries
+          return [];
+        }
         // Re-throw network errors to trigger retry
         if (error instanceof Error && (
           error.message?.includes('Failed to fetch') ||
@@ -87,6 +119,14 @@ export const useUserOrganizations = (userId: string | undefined) => {
     enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error) => {
+      // Don't retry if session expired
+      if (error instanceof Error && (
+        error.message?.includes('Session expired') ||
+        error.message?.includes('No active session') ||
+        error.message?.includes('Authentication failed')
+      )) {
+        return false;
+      }
       // Retry up to 3 times for network errors
       if (failureCount < 3 && error instanceof Error && (
         error.message?.includes('Failed to fetch') ||
@@ -164,12 +204,43 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
         // Fallback for direct array response
         return Array.isArray(data) ? data : [];
       } catch (error) {
+        // Check for session expired error (401)
+        if (error instanceof Error && (
+          error.message?.includes('Session expired') ||
+          error.message?.includes('No active session') ||
+          error.message?.includes('Authentication failed')
+        )) {
+          // Clear auth state - the API client should handle redirect
+          console.warn('⚠️ Session expired while fetching farms');
+          useAuthStore.getState().clearAuth();
+          return [];
+        }
         console.error('Error fetching farms:', error);
         return [];
       }
     },
     enabled: !!organizationId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes,
+    retry: (failureCount, error) => {
+      // Don't retry if session expired
+      if (error instanceof Error && (
+        error.message?.includes('Session expired') ||
+        error.message?.includes('No active session') ||
+        error.message?.includes('Authentication failed')
+      )) {
+        return false;
+      }
+      // Retry up to 3 times for network errors
+      if (failureCount < 3 && error instanceof Error && (
+        error.message?.includes('Failed to fetch') ||
+        error.message?.includes('NetworkError') ||
+        error.message?.includes('Network request failed')
+      )) {
+        return true;
+      }
+      return false;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000), // Exponential backoff
   });
 };
 
