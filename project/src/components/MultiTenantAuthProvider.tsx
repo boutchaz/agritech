@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { authSupabase } from '../lib/auth-supabase';
 import type { User } from '@supabase/supabase-js';
 import type { UserRole } from '../types/auth';
-import SubscriptionRequired from './SubscriptionRequired';
+
 import {
   useUserProfile,
   useUserOrganizations,
@@ -14,7 +14,7 @@ import {
   useRefreshUserData
 } from '../hooks/useAuthQueries';
 import { useSubscription } from '../hooks/useSubscription';
-import { isSubscriptionValid } from '../lib/polar';
+
 import { useOrganizationStore } from '../stores/organizationStore';
 import { useAuthStore } from '../stores/authStore';
 import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
@@ -58,8 +58,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
-  // Pass currentOrganization directly to avoid circular dependency
-  const { data: subscription, isLoading: subscriptionLoading } = useSubscription(currentOrganization);
+  const { isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -479,9 +478,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }, []);
 
 
-  // Check if current route is public or trial selection
+  // Check if current route is public
   const isPublicRoute = publicRoutes.includes(location.pathname) || location.pathname.startsWith('/blog');
-  const isOnSelectTrialPage = location.pathname.startsWith('/onboarding/select-trial');
   const isOnSetPasswordPage = location.pathname.startsWith('/set-password');
 
   // Redirect to set-password if user hasn't set their password
@@ -510,50 +508,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [loading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
 
-  // Redirect to trial selection if user has organization but no subscription
-  // Only redirect if subscription query is not loading and has completed (either with data or error)
-  // Don't redirect if subscription query is still loading or has network errors
-  useEffect(() => {
-    const subscriptionQuery = queryClient.getQueryState(['subscription', currentOrganization?.id || 'none']);
-    const isSubscriptionQueryLoading = subscriptionQuery?.status === 'pending' || subscriptionLoading;
-    // Treat 403 errors as temporary (auth timing issue) to prevent false redirect to trial
-    const hasSubscriptionError = subscriptionQuery?.error && subscriptionQuery.error instanceof Error &&
-      (subscriptionQuery.error.message?.includes('Failed to fetch') ||
-        subscriptionQuery.error.message?.includes('NetworkError') ||
-        subscriptionQuery.error.message?.includes('403') ||
-        subscriptionQuery.error.message?.includes('Forbidden'));
 
-    // Debug logging for subscription redirect decision
-    console.log('[AuthProvider] Subscription redirect check:', {
-      loading,
-      subscriptionLoading,
-      isSubscriptionQueryLoading,
-      hasSubscriptionError,
-      hasUser: !!user,
-      hasCurrentOrg: !!currentOrganization,
-      currentOrgId: currentOrganization?.id,
-      subscription,
-      subscriptionQueryStatus: subscriptionQuery?.status,
-      isOnSelectTrialPage,
-      isPublicRoute,
-      isOnSetPasswordPage,
-      pathname: location.pathname,
-    });
-
-    // Don't redirect if:
-    // 1. Still loading subscription
-    // 2. Subscription query has network errors (might be temporary)
-    // 3. Already on select-trial page
-    // 4. On public route
-    // 5. On set-password page
-    // 6. Subscription query is still pending
-    if (!loading && !isSubscriptionQueryLoading && !hasSubscriptionError && user && currentOrganization && !subscription && !isOnSelectTrialPage && !isPublicRoute && !isOnSetPasswordPage) {
-      // User has an organization but no subscription - redirect to trial selection
-      // Only redirect if subscription query has completed without errors
-      console.log('[AuthProvider] Redirecting to /onboarding/select-trial - no subscription found');
-      window.location.href = '/onboarding/select-trial';
-    }
-  }, [loading, subscriptionLoading, user, currentOrganization, subscription, isOnSelectTrialPage, isPublicRoute, isOnSetPasswordPage, queryClient, location.pathname]);
 
   const value = {
     user,
@@ -592,28 +547,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     return null;
   }
 
-  // Check subscription status (block access if no valid subscription)
-  const hasValidSubscription = isSubscriptionValid(subscription);
-  const isOnSettingsPage = location.pathname.startsWith('/settings');
-  const isOnCheckoutSuccessPage = location.pathname.startsWith('/checkout-success');
-  const protectedRoutes = !isPublicRoute && !isOnSettingsPage && !isOnOnboardingPage && !isOnCheckoutSuccessPage && !isOnSelectTrialPage;
-
-  // Block access if no valid subscription (except on settings pages)
-  if (!hasValidSubscription && protectedRoutes && currentOrganization && user) {
-    const reason = !subscription
-      ? 'no_subscription'
-      : subscription.status === 'canceled'
-        ? 'canceled'
-        : subscription.status === 'past_due'
-          ? 'past_due'
-          : 'expired';
-    return (
-      <AuthContext.Provider value={value}>
-        <SubscriptionRequired reason={reason} />
-      </AuthContext.Provider>
-    );
-  }
-
-  // Show main app (onboarding redirect is handled by useEffect above)
+  // Subscription blocking is handled by _authenticated.tsx for authenticated routes
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
