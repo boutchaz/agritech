@@ -82,6 +82,30 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
     purpose: z.string().optional().transform(val => val === '' ? undefined : val),
     notes: z.string().optional().transform(val => val === '' ? undefined : val),
     items: z.array(itemSchema).min(1, 'At least one item is required'),
+  }).superRefine((data, ctx) => {
+    if ((entryType === 'Material Issue' || entryType === 'Stock Transfer') && !data.from_warehouse_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Source warehouse is required',
+        path: ['from_warehouse_id'],
+      });
+    }
+
+    if ((entryType === 'Material Receipt' || entryType === 'Stock Transfer' || entryType === 'Stock Reconciliation') && !data.to_warehouse_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Target warehouse is required',
+        path: ['to_warehouse_id'],
+      });
+    }
+
+    if (entryType === 'Stock Transfer' && data.from_warehouse_id && data.to_warehouse_id && data.from_warehouse_id === data.to_warehouse_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Source and target warehouses must be different',
+        path: ['to_warehouse_id'],
+      });
+    }
   });
 };
 
@@ -112,6 +136,24 @@ export default function StockEntryForm({
     is_stock_item: true 
   });
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
+  const typeStyles = {
+    green: {
+      active: 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-400',
+      icon: 'text-green-600 dark:text-green-400',
+    },
+    orange: {
+      active: 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-400',
+      icon: 'text-orange-600 dark:text-orange-400',
+    },
+    blue: {
+      active: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400',
+      icon: 'text-blue-600 dark:text-blue-400',
+    },
+    purple: {
+      active: 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400',
+      icon: 'text-purple-600 dark:text-purple-400',
+    },
+  } as const;
 
   // Dynamic schema based on selected type
   const dynamicSchema = useMemo(() => getStockEntrySchema(selectedType), [selectedType]);
@@ -141,6 +183,30 @@ export default function StockEntryForm({
 
   const config = STOCK_ENTRY_TYPES[selectedType];
 
+  useEffect(() => {
+    if (open) {
+      setSelectedType(defaultType);
+      form.reset({
+        entry_type: defaultType,
+        entry_date: getLocalDate(),
+        from_warehouse_id: '',
+        to_warehouse_id: '',
+        purpose: '',
+        notes: '',
+        items: [
+          {
+            item_id: '',
+            item_name: '',
+            quantity: 1,
+            unit: '',
+            system_quantity: defaultType === 'Stock Reconciliation' ? 0 : undefined,
+            physical_quantity: defaultType === 'Stock Reconciliation' ? 0 : undefined,
+          },
+        ],
+      });
+    }
+  }, [open, defaultType, form]);
+
   // Update resolver when type changes and reset warehouse fields
   useEffect(() => {
     form.setValue('entry_type', selectedType);
@@ -155,6 +221,7 @@ export default function StockEntryForm({
       system_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
       physical_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
     }]);
+    form.clearErrors();
   }, [selectedType, form]);
 
   const onSubmit = async (data: StockEntryFormData) => {
@@ -228,6 +295,7 @@ export default function StockEntryForm({
                   : type.icon === 'ArrowRightLeft'
                   ? ArrowRightLeft
                   : ClipboardCheck;
+              const style = typeStyles[type.color as keyof typeof typeStyles];
 
               return (
                 <button
@@ -236,11 +304,11 @@ export default function StockEntryForm({
                   onClick={() => setSelectedType(type.type)}
                   className={`p-4 border-2 rounded-lg text-left transition-all ${
                     selectedType === type.type
-                      ? `border-${type.color}-500 bg-${type.color}-50`
+                      ? style.active
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 mb-2 text-${type.color}-600`} />
+                  <Icon className={`w-6 h-6 mb-2 ${style.icon}`} />
                   <div className="font-medium text-sm">{type.label}</div>
                   <div className="text-xs text-gray-500 mt-1">{type.description}</div>
                 </button>
@@ -407,9 +475,9 @@ export default function StockEntryForm({
                         onValueChange={(itemId) => {
                           const selectedItem = items.find(item => item.id === itemId);
                           if (selectedItem) {
-                            form.setValue(`items.${index}.item_id`, itemId);
-                            form.setValue(`items.${index}.item_name`, selectedItem.item_name);
-                            form.setValue(`items.${index}.unit`, selectedItem.default_unit);
+                            form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
+                            form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
+                            form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
                           }
                         }}
                       >
