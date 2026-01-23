@@ -114,6 +114,34 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      // Use detailed error format that includes field names
+      // This enables generic frontend error handling without string matching
+      exceptionFactory: (errors) => {
+        // Return detailed errors with field names
+        // Format: { errors: [{ property: "field_name", constraints: {}, message: "..." }] }
+        const formattedErrors = errors.map((error) => {
+          const constraints = error.constraints || {};
+          const messages = Object.values(constraints);
+          return {
+            property: error.property,
+            constraints,
+            messages,
+            message: messages.join('. ') || 'Validation failed',
+            // Include nested errors (for nested objects/arrays)
+            children: error.children?.map((child) => ({
+              property: child.property,
+              constraints: child.constraints,
+              messages: Object.values(child.constraints || {}),
+            })),
+          };
+        });
+
+        return new BadRequestException({
+          statusCode: 400,
+          message: 'Validation failed',
+          errors: formattedErrors,
+        });
+      },
     }),
   );
 

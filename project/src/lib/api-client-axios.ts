@@ -11,51 +11,6 @@ export interface FieldError {
 }
 
 /**
- * Error pattern mapping for custom error messages that don't include field names
- * Maps regex patterns to field names
- */
-interface ErrorPattern {
-  pattern: RegExp;
-  getField: (match: RegExpMatchArray) => string;
-  getMessage: (match: RegExpMatchArray) => string;
-}
-
-// Common error patterns that don't start with field names
-const ERROR_PATTERNS: ErrorPattern[] = [
-  // "Invalid input: expected number, received null" -> Detect numeric fields that received null
-  {
-    pattern: /^(Invalid input):\s*expected\s+(number|string|boolean|date),\s*received\s+(null|empty|undefined)/i,
-    getField: () => {
-      // Can't determine field from this pattern alone
-      return null;
-    },
-    getMessage: (match) => `This field requires a valid ${match[2].toLowerCase()}`,
-  },
-  // "Invalid option: expected one of "x", "y", "z"" -> Detect enum validation errors
-  {
-    pattern: /^(Invalid option):\s*expected\s+one\s+of\s+(.+)$/i,
-    getField: (match) => {
-      const optionsStr = match[2];
-      // Map common enum values to field names
-      if (optionsStr.includes('khammass') || optionsStr.includes('rebaa') || optionsStr.includes('tholth')) {
-        return 'metayage_type';
-      }
-      if (optionsStr.includes('gross_revenue') || optionsStr.includes('net_revenue')) {
-        return 'calculation_basis';
-      }
-      if (optionsStr.includes('monthly') || optionsStr.includes('daily') || optionsStr.includes('per_task') || optionsStr.includes('harvest_share')) {
-        return 'payment_frequency';
-      }
-      if (optionsStr.includes('fixed_salary') || optionsStr.includes('daily_worker') || optionsStr.includes('metayage')) {
-        return 'worker_type';
-      }
-      return null;
-    },
-    getMessage: (match) => match[0],
-  },
-];
-
-/**
  * Custom API error that preserves the original response data
  * and parses NestJS validation errors into field-level errors
  */
@@ -74,83 +29,78 @@ export class ApiError extends Error {
 
   /**
    * Parse NestJS ValidationPipe errors into field errors
-   * Handles multiple formats:
-   * 1. Array format: { message: ["field constraint", ...] }
-   * 2. Custom details format: { details: { field: message, ... } }
-   * 3. Detailed errors format: { errors: [{ field, errors: [...] }] }
-   * 4. Field constraints format: { fieldErrors: { field: { constraints: [...] } } }
+   * Handles multiple formats in order of preference:
+   * 1. Custom exception factory format (NEW - most reliable):
+   *    { errors: [{ property: "field_name", constraints: {}, messages: [...] }] }
+   * 2. Array format: { message: ["field constraint", ...] }
+   * 3. Details format: { details: { field: message, ... } }
    *
-   * Field name formats supported:
-   * - Simple: email, first_name, user_id
-   * - Nested: items.0.item_id, address.city
-   * - Array notation: items[0].name (converted to items.0.name)
-   *
-   * For errors without field names (e.g., "Invalid input: expected number"),
-   * attempts to map based on error patterns.
+   * This is a generic solution that works for ALL NestJS modules when using
+   * the custom exceptionFactory format. No string matching required.
    */
   private static parseFieldErrors(data: any): FieldError[] {
     const fieldErrors: FieldError[] = [];
 
     if (!data) return fieldErrors;
 
-    // Check for fieldErrors object format (most detailed, includes field names)
-    // { fieldErrors: { email: { constraints: ["isEmail"] }, ... } }
-    if (data.fieldErrors && typeof data.fieldErrors === 'object') {
-      Object.entries(data.fieldErrors).forEach(([field, errorData]: [string, any]) => {
-        const constraints = errorData?.constraints || errorData?.errors || [];
-        if (Array.isArray(constraints)) {
-          constraints.forEach((constraint: any) => {
-            const msg = typeof constraint === 'string' ? constraint : JSON.stringify(constraint);
+    // PRIORITY 1: Custom exception factory format (most reliable)
+    // { errors: [{ property: "field_name", constraints: {}, messages: [...] }] }
+    if (Array.isArray(data.errors)) {
+      data.errors.forEach((errorObj: any) => {
+        const field = errorObj.property || errorObj.field;
+        if (field) {
+          // Use messages array if available, otherwise format from constraints
+          const messages = errorObj.messages || (errorObj.constraints ? Object.values(errorObj.constraints) : []);
+          const messageList = Array.isArray(messages) ? messages : [messages];
+
+          messageList.forEach((msg: any) => {
             fieldErrors.push({
               field,
-              message: this.formatConstraintMessage(field, msg),
+              message: typeof msg === 'string' ? msg : String(msg),
             });
           });
-        } else {
-          fieldErrors.push({
-            field,
-            message: 'Invalid value',
-          });
+
+          // Handle nested children (for nested objects/arrays)
+          if (errorObj.children && Array.isArray(errorObj.children)) {
+            errorObj.children.forEach((child: any) => {
+              const childField = child.property;
+              if (childField) {
+                const childMessages = child.messages || (child.constraints ? Object.values(child.constraints) : []);
+                const childList = Array.isArray(childMessages) ? childMessages : [childMessages];
+                childList.forEach((msg: any) => {
+                  fieldErrors.push({
+                    field: `${field}.${childField}`,
+                    message: typeof msg === 'string' ? msg : String(msg),
+                  });
+                });
+              }
+            });
+          }
         }
       });
-      // Return early if we found fieldErrors format (most reliable)
+
+      // Return early if we found the detailed errors format
       if (fieldErrors.length > 0) return fieldErrors;
     }
 
-    // Handle NestJS ValidationPipe array format (default)
+    // PRIORITY 2: Standard NestJS ValidationPipe array format
     // { message: ["email should not be empty", "first_name must be longer...", ...] }
     if (Array.isArray(data.message)) {
       data.message.forEach((errorMsg: string) => {
-        // Try to match field name at start (letters, numbers, underscores, dots)
         const match = errorMsg.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)\s+(.+)$/);
-
         if (match) {
           fieldErrors.push({
             field: match[1],
             message: match[2],
           });
-        } else {
-          // Error message doesn't start with field name
-          // Try to match against known patterns
-          for (const pattern of ERROR_PATTERNS) {
-            const patternMatch = errorMsg.match(pattern.pattern);
-            if (patternMatch) {
-              const fieldName = pattern.getField(patternMatch);
-              if (fieldName) {
-                fieldErrors.push({
-                  field: fieldName,
-                  message: pattern.getMessage(patternMatch),
-                });
-              }
-              break; // Use first matching pattern
-            }
-          }
         }
       });
+
+      if (fieldErrors.length > 0) return fieldErrors;
     }
 
-    // Handle custom details format
-    // { details: { email: "Email is required", first_name: "First name required" } }
+    // PRIORITY 3: Custom details format
+    // { details: { email: "Email is required", ... } }
     if (data.details && typeof data.details === 'object') {
       Object.entries(data.details).forEach(([field, message]: [string, any]) => {
         const msg = typeof message === 'string' ? message : message?.message || String(message);
@@ -158,43 +108,7 @@ export class ApiError extends Error {
       });
     }
 
-    // Handle NestJS detailed errors format (from custom exception factory)
-    // { errors: [{ field: "email", errors: ["Email is required"] }] }
-    if (Array.isArray(data.errors)) {
-      data.errors.forEach((errorObj: any) => {
-        if (errorObj.field && errorObj.errors) {
-          const messages = Array.isArray(errorObj.errors) ? errorObj.errors : [errorObj.errors];
-          messages.forEach((msg: string) => {
-            fieldErrors.push({
-              field: errorObj.field,
-              message: msg,
-            });
-          });
-        }
-      });
-    }
-
     return fieldErrors;
-  }
-
-  /**
-   * Format constraint error messages to be more user-friendly
-   */
-  private static formatConstraintMessage(field: string, constraint: string): string {
-    const constraintMappings: Record<string, string> = {
-      'isEmail': 'Must be a valid email address',
-      'isNumber': 'Must be a number',
-      'isString': 'Must be a string',
-      'isBoolean': 'Must be true or false',
-      'isEnum': 'Invalid option selected',
-      'min': 'Value is too small',
-      'max': 'Value is too large',
-      'minLength': 'Too short',
-      'maxLength': 'Too long',
-      'isNotEmpty': 'Cannot be empty',
-    };
-
-    return constraintMappings[constraint] || constraint;
   }
 
   /**
