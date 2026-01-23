@@ -43,6 +43,8 @@ interface SignupData {
 }
 
 export async function loginViaApi(email: string, password: string): Promise<LoginResponse> {
+  console.log('[loginViaApi] Starting login for:', email);
+  
   const response = await fetch(`${API_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: {
@@ -51,12 +53,16 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
     body: JSON.stringify({ email, password }),
   });
 
+  console.log('[loginViaApi] Response status:', response.status);
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Login failed' }));
+    console.error('[loginViaApi] Login failed:', error);
     throw new Error(error.message || 'Invalid email or password');
   }
 
   const data: LoginResponse = await response.json();
+  console.log('[loginViaApi] Login response received:', { userId: data.user.id, email: data.user.email });
 
   // Store tokens and user in auth store
   useAuthStore.getState().setTokens({
@@ -64,15 +70,20 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
     refresh_token: data.refresh_token,
     expires_in: data.expires_in,
   });
+  console.log('[loginViaApi] Tokens stored in Zustand');
 
   useAuthStore.getState().setUser({
     id: data.user.id,
     email: data.user.email,
   });
+  console.log('[loginViaApi] User stored in Zustand');
 
-  console.log('Session established successfully:', {
-    userId: data.user.id,
-    email: data.user.email,
+  // Verify store state
+  const storeState = useAuthStore.getState();
+  console.log('[loginViaApi] Zustand store state after login:', {
+    isAuthenticated: storeState.isAuthenticated,
+    user: storeState.user,
+    hasTokens: !!storeState.tokens,
   });
 
   return data;
