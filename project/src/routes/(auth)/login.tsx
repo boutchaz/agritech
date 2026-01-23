@@ -69,6 +69,8 @@ function LoginPage() {
       const response = await loginViaApi(email, password)
       if (response?.user) {
         trackLoginSuccess('email')
+        // Small delay to ensure Zustand persists to localStorage before redirect
+        await new Promise(resolve => setTimeout(resolve, 100))
         window.location.href = '/dashboard'
       }
     } catch (err) {
