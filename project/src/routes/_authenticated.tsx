@@ -14,26 +14,15 @@ import { useAuthStore, waitForHydration } from '../stores/authStore'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
-    console.log('[_authenticated beforeLoad] Starting auth check for:', location.href)
-    
     await waitForHydration()
-    console.log('[_authenticated beforeLoad] Hydration complete')
     
     const contextUser = context.auth?.user
     const storeState = useAuthStore.getState()
     const storeUser = storeState.isAuthenticated ? storeState.user : null
     
-    console.log('[_authenticated beforeLoad] Auth state:', {
-      contextUser: !!contextUser,
-      storeUser: !!storeUser,
-      isAuthenticated: storeState.isAuthenticated,
-      hasHydrated: storeState._hasHydrated,
-    })
-    
     const user = contextUser || storeUser
     
     if (!user) {
-      console.log('[_authenticated beforeLoad] No user found, redirecting to login')
       throw redirect({
         to: '/login',
         search: {
@@ -41,8 +30,6 @@ export const Route = createFileRoute('/_authenticated')({
         },
       })
     }
-    
-    console.log('[_authenticated beforeLoad] User found, allowing access')
   },
   component: AuthenticatedLayout,
 })

@@ -416,28 +416,15 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   useEffect(() => {
     const initAuth = async () => {
-      console.log('[MultiTenantAuthProvider] initAuth starting, waiting for hydration...');
       await waitForHydration();
-      console.log('[MultiTenantAuthProvider] Hydration complete');
       
       const state = useAuthStore.getState();
       const authUser = state.user;
       const isAuthenticated = state.isAuthenticated;
 
-      console.log('[MultiTenantAuthProvider] Auth state from Zustand:', {
-        hasUser: !!authUser,
-        isAuthenticated,
-        userId: authUser?.id,
-      });
-
       setUser(authUser ? { id: authUser.id, email: authUser.email } as User : null);
       setShowAuth(!isAuthenticated);
       setAuthLoading(false);
-      
-      console.log('[MultiTenantAuthProvider] State updated:', {
-        showAuth: !isAuthenticated,
-        authLoading: false,
-      });
     };
 
     const unsubscribe = useAuthStore.subscribe((state) => {
