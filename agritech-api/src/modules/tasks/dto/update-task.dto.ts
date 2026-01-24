@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsIn, IsNumber, IsDateString, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsNumber, IsDateString, IsUUID, IsArray, Min, Max } from 'class-validator';
 import { CreateTaskDto } from './create-task.dto';
 
 export class UpdateTaskDto {
@@ -12,6 +12,14 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Task type',
+    enum: ['planting', 'harvesting', 'irrigation', 'fertilization', 'maintenance', 'general', 'pest_control', 'pruning', 'soil_preparation']
+  })
+  @IsOptional()
+  @IsIn(['planting', 'harvesting', 'irrigation', 'fertilization', 'maintenance', 'general', 'pest_control', 'pruning', 'soil_preparation'])
+  task_type?: string;
 
   @ApiPropertyOptional({
     description: 'Task status',
@@ -28,6 +36,47 @@ export class UpdateTaskDto {
   @IsOptional()
   @IsIn(['low', 'medium', 'high', 'urgent'])
   priority?: string;
+
+  @ApiPropertyOptional({ description: 'Farm ID' })
+  @IsOptional()
+  @IsUUID()
+  farm_id?: string;
+
+  @ApiPropertyOptional({ description: 'Parcel ID' })
+  @IsOptional()
+  @IsUUID()
+  parcel_id?: string;
+
+  @ApiPropertyOptional({ description: 'Crop ID' })
+  @IsOptional()
+  @IsUUID()
+  crop_id?: string;
+
+  @ApiPropertyOptional({ description: 'Worker ID to assign the task to' })
+  @IsOptional()
+  @IsUUID()
+  assigned_to?: string;
+
+  @ApiPropertyOptional({ description: 'Scheduled start date (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  scheduled_start?: string;
+
+  @ApiPropertyOptional({ description: 'Scheduled end date (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  scheduled_end?: string;
+
+  @ApiPropertyOptional({ description: 'Due date (ISO 8601)' })
+  @IsOptional()
+  @IsDateString()
+  due_date?: string;
+
+  @ApiPropertyOptional({ description: 'Estimated duration in hours' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  estimated_duration?: number;
 
   @ApiPropertyOptional({ description: 'Completion percentage (0-100)' })
   @IsOptional()
@@ -64,6 +113,43 @@ export class UpdateTaskDto {
   @Min(1)
   @Max(5)
   quality_rating?: number;
+
+  @ApiPropertyOptional({
+    description: 'Payment type',
+    enum: ['daily', 'per_unit', 'monthly', 'metayage']
+  })
+  @IsOptional()
+  @IsIn(['daily', 'per_unit', 'monthly', 'metayage'])
+  payment_type?: string;
+
+  @ApiPropertyOptional({ description: 'Work unit ID for piece-work' })
+  @IsOptional()
+  @IsUUID()
+  work_unit_id?: string;
+
+  @ApiPropertyOptional({ description: 'Units required for the task' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  units_required?: number;
+
+  @ApiPropertyOptional({ description: 'Rate per unit' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  rate_per_unit?: number;
+
+  @ApiPropertyOptional({ description: 'Required skills' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  required_skills?: string[];
+
+  @ApiPropertyOptional({ description: 'Equipment required' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  equipment_required?: string[];
 
   @ApiPropertyOptional({ description: 'Additional notes' })
   @IsOptional()

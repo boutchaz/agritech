@@ -72,6 +72,7 @@ import { FiscalYearsModule } from './modules/fiscal-years/fiscal-years.module';
 import { BiologicalAssetsModule } from './modules/biological-assets/biological-assets.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
+import { CropsModule } from './modules/crops/crops.module';
 import { QualityControlModule } from './modules/quality-control/quality-control.module';
 import { AdoptionModule } from './modules/adoption/adoption.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
@@ -151,6 +152,7 @@ import { EmailModule } from './modules/email/email.module';
     BiologicalAssetsModule,
     CampaignsModule,
     CropCyclesModule,
+    CropsModule,
     QualityControlModule,
 
     DocumentTemplatesModule,

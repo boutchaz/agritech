@@ -1,4 +1,5 @@
-import { supabase } from '../supabase';
+import { apiClient } from '../api-client';
+import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
 
 export interface Crop {
   id: string;
@@ -24,59 +25,71 @@ export interface Crop {
   variety_name?: string;
 }
 
+export interface CropFilters {
+  farm_id?: string;
+  parcel_id?: string;
+  variety_id?: string;
+  status?: string;
+  search?: string;
+}
+
+export interface CreateCropInput {
+  farm_id: string;
+  parcel_id?: string;
+  variety_id: string;
+  name: string;
+  planting_date?: string;
+  expected_harvest_date?: string;
+  actual_harvest_date?: string;
+  planted_area?: number;
+  expected_yield?: number;
+  actual_yield?: number;
+  yield_unit?: string;
+  status?: string;
+  notes?: string;
+}
+
 export const cropsApi = {
   async getAll(organizationId: string, farmId?: string, parcelId?: string): Promise<Crop[]> {
-    let query = supabase
-      .from('crops')
-      .select(`
-        *,
-        farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
-        crop_varieties(id, name)
-      `)
-      .eq('farms.organization_id', organizationId)
-      .order('name');
+    requireOrganizationId(organizationId, 'cropsApi.getAll');
 
-    if (farmId) {
-      query = query.eq('farm_id', farmId);
-    }
+    const filters: CropFilters = {};
+    if (farmId) filters.farm_id = farmId;
+    if (parcelId) filters.parcel_id = parcelId;
 
-    if (parcelId) {
-      query = query.eq('parcel_id', parcelId);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    return (data || []).map((crop: any) => ({
-      ...crop,
-      farm_name: crop.farms?.name,
-      parcel_name: crop.parcels?.parcel_name,
-      variety_name: crop.crop_varieties?.name,
-    }));
+    const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/crops`, filters as Record<string, unknown>);
+    return apiClient.get<Crop[]>(url);
   },
 
   async getById(organizationId: string, cropId: string): Promise<Crop | null> {
-    const { data, error } = await supabase
-      .from('crops')
-      .select(`
-        *,
-        farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
-        crop_varieties(id, name)
-      `)
-      .eq('id', cropId)
-      .eq('farms.organization_id', organizationId)
-      .single();
+    requireOrganizationId(organizationId, 'cropsApi.getById');
 
-    if (error) throw error;
-    if (!data) return null;
+    try {
+      return await apiClient.get<Crop>(`/api/v1/organizations/${organizationId}/crops/${cropId}`);
+    } catch (error) {
+      // Return null if not found (404)
+      if ((error as { status?: number })?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
 
-    return {
-      ...data,
-      farm_name: data.farms?.name,
-      parcel_name: data.parcels?.parcel_name,
-      variety_name: data.crop_varieties?.name,
-    };
+  async create(organizationId: string, data: CreateCropInput): Promise<Crop> {
+    requireOrganizationId(organizationId, 'cropsApi.create');
+
+    return apiClient.post<Crop>(`/api/v1/organizations/${organizationId}/crops`, data);
+  },
+
+  async update(organizationId: string, cropId: string, data: Partial<CreateCropInput>): Promise<Crop> {
+    requireOrganizationId(organizationId, 'cropsApi.update');
+
+    return apiClient.patch<Crop>(`/api/v1/organizations/${organizationId}/crops/${cropId}`, data);
+  },
+
+  async delete(organizationId: string, cropId: string): Promise<void> {
+    requireOrganizationId(organizationId, 'cropsApi.delete');
+
+    return apiClient.delete(`/api/v1/organizations/${organizationId}/crops/${cropId}`);
   },
 };
