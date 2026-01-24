@@ -263,6 +263,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       if (!accessToken) {
         console.warn('⚠️ No access token for role fetch');
+        // Fall back to role from organization object if available
+        if (currentOrganization.role) {
+          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
+          setUserRole(resolveFallbackRole(currentOrganization.role));
+          return;
+        }
         setUserRole(null);
         return;
       }
@@ -281,7 +287,13 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          console.warn('⚠️ Not authorized for role fetch');
+          console.warn('⚠️ Not authorized for role fetch, status:', response.status);
+          // Fall back to role from organization object if available
+          if (currentOrganization.role) {
+            console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
+            setUserRole(resolveFallbackRole(currentOrganization.role));
+            return;
+          }
           setUserRole(null);
           return;
         }
@@ -291,7 +303,13 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const data = await response.json();
 
       if (!data || !data.role) {
-        console.warn('⚠️ No role found for user in organization');
+        console.warn('⚠️ No role found for user in organization from API');
+        // Fall back to role from organization object if available
+        if (currentOrganization.role) {
+          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
+          setUserRole(resolveFallbackRole(currentOrganization.role));
+          return;
+        }
         setUserRole(null);
         return;
       }
@@ -303,6 +321,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       });
     } catch (error) {
       console.error('Error fetching user role:', error);
+      // Fall back to role from organization object if available
+      if (currentOrganization.role) {
+        console.warn('ℹ️ Fallback: Using role from organization object on error:', currentOrganization.role);
+        setUserRole(resolveFallbackRole(currentOrganization.role));
+        return;
+      }
       setUserRole(resolveFallbackRole(null));
     }
   };
@@ -334,12 +358,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Set default organization when organizations load
   useEffect(() => {
-    console.log('[AuthProvider] Organization effect:', {
-      organizationsCount: organizations.length,
-      hasCurrentOrg: !!currentOrganization,
-      organizations: organizations.map(o => ({ id: o.id, name: o.name })),
-    });
-
     if (organizations.length > 0 && !currentOrganization) {
       // Try to restore from Zustand store first, then localStorage
       const storedOrg = useOrganizationStore.getState().currentOrganization;
@@ -370,7 +388,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       // Use restored org or default to first organization
       const finalOrg = orgToRestore || organizations[0];
-      console.log('[AuthProvider] Setting current organization:', finalOrg);
       setCurrentOrganization(finalOrg);
 
       // IMPORTANT: Also save to localStorage so services can read it immediately

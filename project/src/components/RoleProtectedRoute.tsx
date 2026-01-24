@@ -1,7 +1,6 @@
 import React from 'react';
-import { Navigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -18,15 +17,54 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   allowedRoles,
   redirectTo = '/settings/profile'
 }) => {
-  const { userRole, loading } = useAuth();
+  const { userRole, loading, currentOrganization, refreshUserData } = useAuth();
 
-  // Show loading state while checking role
-  if (loading || !userRole) {
+  // Show loading state while checking role (only during initial load)
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">Vérification des permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no role after loading completes, show error with retry option
+  if (!userRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+          <div className="mx-auto w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Rôle non détecté
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Impossible de charger vos permissions pour cette organisation.
+          </p>
+          {currentOrganization && (
+            <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+              Organisation: {currentOrganization.name}
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => refreshUserData()}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Réessayer
+            </button>
+            <button
+              onClick={() => window.location.href = redirectTo}
+              className="inline-flex items-center justify-center px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors"
+            >
+              Retour
+            </button>
+          </div>
         </div>
       </div>
     );
