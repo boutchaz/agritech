@@ -22,7 +22,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '../ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '../ui/drawer';
 import { Button } from '../ui/button';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 // Zod schema factory function with conditional validation
 const createWorkerSchema = (t: any) => z.object({
@@ -110,6 +112,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const createWorker = useCreateWorker();
   const updateWorker = useUpdateWorker();
   const { symbol: currencySymbol } = useCurrency();
+  const isMobile = useIsMobile();
 
   const [specialtyInput, setSpecialtyInput] = useState('');
   const [certificationInput, setCertificationInput] = useState('');
@@ -361,18 +364,47 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     setValue('certifications', certifications.filter((_, i) => i !== index));
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
-            <UserPlus className="w-6 h-6 text-blue-600" />
-            <span>{isEditing ? t('workers.form.title.edit') : t('workers.form.title.add')}</span>
-          </DialogTitle>
-        </DialogHeader>
+  // Form header content
+  const headerContent = (
+    <div className="flex items-center gap-3 text-gray-900 dark:text-white">
+      <UserPlus className="w-6 h-6 text-blue-600" />
+      <span>{isEditing ? t('workers.form.title.edit') : t('workers.form.title.add')}</span>
+    </div>
+  );
 
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+  // Form footer content
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onClose}
+      >
+        {t('workers.form.buttons.cancel')}
+      </Button>
+      <Button
+        type="submit"
+        form="worker-form"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <span>{t('workers.form.buttons.saving')}</span>
+          </>
+        ) : (
+          <>
+            <Save className="w-4 h-4 mr-2" />
+            <span>{isEditing ? t('workers.form.buttons.update') : t('workers.form.buttons.create')}</span>
+          </>
+        )}
+      </Button>
+    </>
+  );
+
+  // Form content (shared between mobile and desktop)
+  const formContent = (
+    <form id="worker-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Error Summary */}
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -970,33 +1002,38 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             />
           </div>
 
-          {/* Form Actions */}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
-              {t('workers.form.buttons.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  <span>{t('workers.form.buttons.saving')}</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  <span>{isEditing ? t('workers.form.buttons.update') : t('workers.form.buttons.create')}</span>
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </form>
+  );
+
+  // Render Drawer on mobile, Dialog on desktop
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] bg-white dark:bg-gray-800">
+          <DrawerHeader>
+            <DrawerTitle>{headerContent}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-10rem)]">
+            {formContent}
+          </div>
+          <DrawerFooter className="flex-row justify-end gap-2">
+            {footerContent}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
+        <DialogHeader>
+          <DialogTitle>{headerContent}</DialogTitle>
+        </DialogHeader>
+        {formContent}
+        <DialogFooter>
+          {footerContent}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

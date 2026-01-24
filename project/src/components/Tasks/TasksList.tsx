@@ -252,81 +252,81 @@ const TasksList: React.FC<TasksListProps> = ({
       </div>
 
       {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
         {/* Pending */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-gray-400">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('tasks.stats.pending')}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{t('tasks.stats.pending')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
             </div>
-            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <Clock className="w-5 h-5 text-gray-500" />
+            <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hidden sm:block">
+              <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500" />
             </div>
           </div>
         </div>
 
         {/* In Progress */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-blue-500">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide">{t('tasks.stats.inProgress')}</p>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.in_progress}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.in_progress}</p>
             </div>
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Play className="w-5 h-5 text-blue-600" />
+            <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
+              <Play className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
             </div>
           </div>
         </div>
 
         {/* Completed */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-green-500">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-green-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide">{t('tasks.stats.completed')}</p>
-              <p className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
+              <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide truncate">{t('tasks.stats.completed')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
             </div>
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg hidden sm:block">
+              <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
             </div>
           </div>
         </div>
 
         {/* Overdue */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-red-500">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide">{t('tasks.stats.overdue')}</p>
-              <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
+              <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide truncate">{t('tasks.stats.overdue')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
             </div>
-            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-600" />
+            <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
+              <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
             </div>
           </div>
         </div>
 
         {/* Due Today */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-orange-500">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-orange-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wide">{t('tasks.stats.dueToday', 'Due Today')}</p>
-              <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.dueToday}</p>
+              <p className="text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wide truncate">{t('tasks.stats.dueToday', 'Due Today')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.dueToday}</p>
             </div>
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Flame className="w-5 h-5 text-orange-600" />
+            <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg hidden sm:block">
+              <Flame className="w-4 sm:w-5 h-4 sm:h-5 text-orange-600" />
             </div>
           </div>
         </div>
 
         {/* Completion Rate */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow border-l-4 border-emerald-500">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-emerald-500">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">{t('tasks.stats.completionRate', 'Completion')}</p>
-              <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide truncate">{t('tasks.stats.completionRate', 'Completion')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
             </div>
-            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-              <Target className="w-5 h-5 text-emerald-600" />
+            <div className="p-1.5 sm:p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hidden sm:block">
+              <Target className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-600" />
             </div>
           </div>
           {/* Mini progress bar */}
@@ -435,8 +435,8 @@ const TasksList: React.FC<TasksListProps> = ({
         </div>
 
         {/* Sorting controls */}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-600 dark:text-gray-400">{t('tasks.listPage.sortBy')}:</span>
+        <div className="flex items-center gap-2 text-sm overflow-x-auto pb-1">
+          <span className="text-gray-600 dark:text-gray-400 flex-shrink-0">{t('tasks.listPage.sortBy')}:</span>
           <button
             onClick={() => tableState.handleSort('scheduled_start')}
             className={`flex items-center gap-1 px-2 py-1 rounded ${
@@ -641,48 +641,51 @@ const TasksList: React.FC<TasksListProps> = ({
                       </div>
 
                       {/* Quick Actions */}
-                      <div className="flex items-center gap-2 ml-4" onClick={(e) => e.stopPropagation()}>
-                        {canStart && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            onClick={(e) => handleQuickStart(e, task.id)}
-                            disabled={updateTask.isPending}
-                          >
-                            <Play className="w-4 h-4 mr-1" />
-                            {t('tasks.start', 'Start')}
-                          </Button>
-                        )}
+                      <div className="flex items-center gap-2 ml-2 sm:ml-4" onClick={(e) => e.stopPropagation()}>
+                        {/* Show quick action buttons only on desktop */}
+                        <div className="hidden md:flex items-center gap-2">
+                          {canStart && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              onClick={(e) => handleQuickStart(e, task.id)}
+                              disabled={updateTask.isPending}
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              {t('tasks.start', 'Start')}
+                            </Button>
+                          )}
 
-                        {canPause && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-amber-600 border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                            onClick={(e) => handleQuickPause(e, task.id)}
-                            disabled={updateTask.isPending}
-                          >
-                            <Pause className="w-4 h-4 mr-1" />
-                            {t('tasks.pause', 'Pause')}
-                          </Button>
-                        )}
+                          {canPause && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-amber-600 border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                              onClick={(e) => handleQuickPause(e, task.id)}
+                              disabled={updateTask.isPending}
+                            >
+                              <Pause className="w-4 h-4 mr-1" />
+                              {t('tasks.pause', 'Pause')}
+                            </Button>
+                          )}
 
-                        {canComplete && (
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={(e) => handleQuickComplete(e, task)}
-                            disabled={updateTask.isPending}
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            {task.task_type === 'harvesting'
-                              ? t('tasks.completeHarvest', 'Harvest')
-                              : t('tasks.complete', 'Complete')}
-                          </Button>
-                        )}
+                          {canComplete && (
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={(e) => handleQuickComplete(e, task)}
+                              disabled={updateTask.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              {task.task_type === 'harvesting'
+                                ? t('tasks.completeHarvest', 'Harvest')
+                                : t('tasks.complete', 'Complete')}
+                            </Button>
+                          )}
+                        </div>
 
-                        {/* More Actions Dropdown */}
+                        {/* More Actions Dropdown - always visible */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="ghost">
@@ -693,6 +696,30 @@ const TasksList: React.FC<TasksListProps> = ({
                             <DropdownMenuItem onClick={() => onSelectTask?.(task.id)}>
                               {t('tasks.viewDetails', 'View Details')}
                             </DropdownMenuItem>
+                            {/* Show quick actions in dropdown on mobile */}
+                            <div className="md:hidden">
+                              <DropdownMenuSeparator />
+                              {canStart && (
+                                <DropdownMenuItem onClick={(e) => handleQuickStart(e as unknown as React.MouseEvent, task.id)}>
+                                  <Play className="w-4 h-4 mr-2 text-blue-600" />
+                                  {t('tasks.start', 'Start')}
+                                </DropdownMenuItem>
+                              )}
+                              {canPause && (
+                                <DropdownMenuItem onClick={(e) => handleQuickPause(e as unknown as React.MouseEvent, task.id)}>
+                                  <Pause className="w-4 h-4 mr-2 text-amber-600" />
+                                  {t('tasks.pause', 'Pause')}
+                                </DropdownMenuItem>
+                              )}
+                              {canComplete && (
+                                <DropdownMenuItem onClick={(e) => handleQuickComplete(e as unknown as React.MouseEvent, task)}>
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  {task.task_type === 'harvesting'
+                                    ? t('tasks.completeHarvest', 'Harvest')
+                                    : t('tasks.complete', 'Complete')}
+                                </DropdownMenuItem>
+                              )}
+                            </div>
                             <DropdownMenuSeparator />
                             {task.status !== 'cancelled' && (
                               <DropdownMenuItem

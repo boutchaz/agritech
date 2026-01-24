@@ -2,7 +2,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Badge } from '@/components/ui/badge';
 import { type Payment, useDeletePayment } from '@/hooks/useAccountingPayments';
 import { CreditCard, Calendar, Building2, FileText, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
@@ -23,6 +25,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
   mode: initialMode = 'view',
 }) => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);
   const deletePayment = useDeletePayment();
   const [allocationOpen, setAllocationOpen] = React.useState(false);
@@ -77,37 +80,37 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{mode === 'edit' ? t('dialogs.paymentDetail.editTitle') : t('dialogs.paymentDetail.title')}</span>
-            {mode === 'view' && (
-              <Badge className={`${getStatusColor(payment.status)} flex items-center gap-1`}>
-                {getStatusIcon(payment.status)}
-                {payment.status || 'draft'}
-              </Badge>
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'edit' ? t('dialogs.paymentDetail.editDescription') : `${t('dialogs.paymentDetail.paymentNumber')} ${payment.payment_number}`}
-          </DialogDescription>
-        </DialogHeader>
+  // Header content shared between mobile and desktop
+  const headerContent = (
+    <div className="flex items-center justify-between w-full">
+      <span>{mode === 'edit' ? t('dialogs.paymentDetail.editTitle') : t('dialogs.paymentDetail.title')}</span>
+      {mode === 'view' && (
+        <Badge className={`${getStatusColor(payment.status)} flex items-center gap-1`}>
+          {getStatusIcon(payment.status)}
+          {payment.status || 'draft'}
+        </Badge>
+      )}
+    </div>
+  );
 
-        {mode === 'edit' ? (
-          <PaymentForm
-            payment={payment}
-            onSuccess={() => {
-              onOpenChange(false);
-              setMode('view');
-            }}
-            onCancel={() => setMode('view')}
-          />
-        ) : (
-          <div className="space-y-6">
+  const descriptionText = mode === 'edit'
+    ? t('dialogs.paymentDetail.editDescription')
+    : `${t('dialogs.paymentDetail.paymentNumber')} ${payment.payment_number}`;
+
+  // Main content shared between mobile and desktop
+  const mainContent = mode === 'edit' ? (
+    <PaymentForm
+      payment={payment}
+      onSuccess={() => {
+        onOpenChange(false);
+        setMode('view');
+      }}
+      onCancel={() => setMode('view')}
+    />
+  ) : (
+    <div className="space-y-6">
             {/* Payment Header */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-gray-500" />
                 <div>
@@ -133,7 +136,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             </div>
 
             {/* Party Information */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.paymentType')}</p>
                 <Badge variant={payment.payment_type === 'received' ? 'default' : 'secondary'}>
@@ -153,7 +156,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             </div>
 
             {/* Payment Method */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.paymentMethod')}</p>
                 <p className="font-medium capitalize">{payment.payment_method.replace('_', ' ')}</p>
@@ -225,15 +228,51 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
                 </Button>
               )}
             </div>
-          </div>
-        )}
-      </DialogContent>
+    </div>
+  );
+
+  // Render Drawer on mobile, Dialog on desktop
+  if (isMobile) {
+    return (
+      <>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader>
+              <DrawerTitle>{headerContent}</DrawerTitle>
+              <DrawerDescription>{descriptionText}</DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-10rem)]">
+              {mainContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+        <PaymentAllocationDialog
+          payment={payment}
+          open={allocationOpen}
+          onOpenChange={setAllocationOpen}
+          onAllocated={() => onOpenChange(false)}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{headerContent}</DialogTitle>
+            <DialogDescription>{descriptionText}</DialogDescription>
+          </DialogHeader>
+          {mainContent}
+        </DialogContent>
+      </Dialog>
       <PaymentAllocationDialog
         payment={payment}
         open={allocationOpen}
         onOpenChange={setAllocationOpen}
         onAllocated={() => onOpenChange(false)}
       />
-    </Dialog>
+    </>
   );
 };

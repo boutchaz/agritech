@@ -9,8 +9,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerFooter,
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -130,6 +140,7 @@ export default function StockEntryForm({
 }: StockEntryFormProps) {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const isMobile = useIsMobile();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
   const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
@@ -269,23 +280,46 @@ export default function StockEntryForm({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {config.icon === 'PackagePlus' && <PackagePlus className="w-5 h-5" />}
-            {config.icon === 'PackageMinus' && <PackageMinus className="w-5 h-5" />}
-            {config.icon === 'ArrowRightLeft' && <ArrowRightLeft className="w-5 h-5" />}
-            {config.icon === 'ClipboardCheck' && <ClipboardCheck className="w-5 h-5" />}
-            {t('stockEntries.form.createTitle')}
-          </DialogTitle>
-          <DialogDescription>{config.description}</DialogDescription>
-        </DialogHeader>
+  // Header content shared between mobile and desktop
+  const headerContent = (
+    <div className="flex items-center gap-2">
+      {config.icon === 'PackagePlus' && <PackagePlus className="w-5 h-5" />}
+      {config.icon === 'PackageMinus' && <PackageMinus className="w-5 h-5" />}
+      {config.icon === 'ArrowRightLeft' && <ArrowRightLeft className="w-5 h-5" />}
+      {config.icon === 'ClipboardCheck' && <ClipboardCheck className="w-5 h-5" />}
+      {t('stockEntries.form.createTitle')}
+    </div>
+  );
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+  // Footer content shared between mobile and desktop
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+        disabled={createEntry.isPending}
+      >
+        {t('stockEntries.form.cancel')}
+      </Button>
+      <Button type="submit" form="stock-entry-form" disabled={createEntry.isPending}>
+        {createEntry.isPending ? (
+          <>
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            {t('stockEntries.form.creating')}
+          </>
+        ) : (
+          `${t('stockEntries.form.create')} ${selectedType}`
+        )}
+      </Button>
+    </>
+  );
+
+  // Form content shared between mobile and desktop
+  const formContent = (
+    <form id="stock-entry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Entry Type Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
             {Object.values(STOCK_ENTRY_TYPES).map((type) => {
               const Icon =
                 type.icon === 'PackagePlus'
@@ -302,15 +336,15 @@ export default function StockEntryForm({
                   key={type.type}
                   type="button"
                   onClick={() => setSelectedType(type.type)}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  className={`p-2 md:p-4 border-2 rounded-lg text-left transition-all ${
                     selectedType === type.type
                       ? style.active
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`w-6 h-6 mb-2 ${style.icon}`} />
-                  <div className="font-medium text-sm">{type.label}</div>
-                  <div className="text-xs text-gray-500 mt-1">{type.description}</div>
+                  <Icon className={`w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2 ${style.icon}`} />
+                  <div className="font-medium text-xs md:text-sm">{type.label}</div>
+                  <div className="text-xs text-gray-500 mt-1 hidden md:block">{type.description}</div>
                 </button>
               );
             })}
@@ -467,7 +501,7 @@ export default function StockEntryForm({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                     <div>
                       <Label>{t('stockEntries.form.item')} {t('stockEntries.form.required')}</Label>
                       <Select
@@ -637,28 +671,40 @@ export default function StockEntryForm({
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createEntry.isPending}
-            >
-              {t('stockEntries.form.cancel')}
-            </Button>
-            <Button type="submit" disabled={createEntry.isPending}>
-              {createEntry.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {t('stockEntries.form.creating')}
-                </>
-              ) : (
-                `${t('stockEntries.form.create')} ${selectedType}`
-              )}
-            </Button>
-          </div>
         </form>
+  );
+
+  // Render Drawer on mobile, Dialog on desktop
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader>
+            <DrawerTitle>{headerContent}</DrawerTitle>
+            <DrawerDescription>{config.description}</DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-12rem)]">
+            {formContent}
+          </div>
+          <DrawerFooter className="flex-row justify-end gap-2">
+            {footerContent}
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{headerContent}</DialogTitle>
+          <DialogDescription>{config.description}</DialogDescription>
+        </DialogHeader>
+        {formContent}
+        <DialogFooter className="pt-4 border-t">
+          {footerContent}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
