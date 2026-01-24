@@ -154,7 +154,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
   return (
     <div className="flex h-full relative">
-      {/* Mobile Menu Button - Fixed and always visible on mobile */}
+      {/* Mobile Menu Button - Fixed FAB for quick access */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="md:hidden fixed bottom-6 right-6 z-[60] h-14 w-14 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-2xl flex items-center justify-center transition-all active:scale-95"
@@ -258,6 +258,42 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
+        {/* Mobile Menu Bar - Shows current section and menu toggle */}
+        <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex items-center justify-between w-full"
+          >
+            <div className="flex items-center gap-3">
+              {(() => {
+                const currentItem = menuItems.find(item => isActive(item.path));
+                if (currentItem) {
+                  const Icon = currentItem.icon;
+                  return (
+                    <>
+                      <Icon className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {currentItem.name}
+                      </span>
+                    </>
+                  );
+                }
+                return (
+                  <>
+                    <Menu className="h-5 w-5 text-gray-600" />
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {t('settings.title')}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <span className="text-sm">{t('settings.menu.changeSection', 'Menu')}</span>
+              <Menu className="h-5 w-5" />
+            </div>
+          </button>
+        </div>
         {children}
       </div>
     </div>
