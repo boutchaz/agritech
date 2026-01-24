@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Dashboard from '@/components/Dashboard'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
-import type { SensorData, DashboardSettings } from '@/types'
+import type { DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
@@ -27,16 +27,8 @@ import {
   trackPageView,
 } from '@/lib/analytics'
 
-const mockSensorData: SensorData[] = [
-  {
-    id: '1',
-    type: 'moisture',
-    value: 68,
-    unit: '%',
-    timestamp: new Date(),
-    location: 'Parcelle A'
-  }
-];
+// Sensor data is now fetched via useSensorData hook in Dashboard component
+// No mock data needed - the hook handles real sensor connections when available
 
 const defaultDashboardSettings: DashboardSettings = {
   showSoilData: true,
@@ -286,7 +278,7 @@ const AppContent: React.FC = () => {
                   {t('dashboard.unifiedView.subtitle')}
                 </p>
               </div>
-              <Dashboard sensorData={mockSensorData} settings={dashboardSettings} />
+              <Dashboard sensorData={[]} settings={dashboardSettings} />
             </div>
           </>
         )}

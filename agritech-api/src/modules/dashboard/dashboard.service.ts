@@ -745,9 +745,13 @@ export class DashboardService {
 
     /**
      * Get activity heatmap data based on farm and parcel locations
+     * Uses real coordinates from farms, parcels, and their activity data
      */
     async getActivityHeatmap(userId: string, organizationId: string): Promise<ActivityHeatmapPoint[]> {
         await this.verifyOrganizationMembership(userId, organizationId);
+
+        const heatmapPoints: ActivityHeatmapPoint[] = [];
+
         // Get farms with their coordinates
         const { data: farms, error: farmsError } = await this.supabaseAdmin
             .from('farms')
@@ -756,26 +760,25 @@ export class DashboardService {
 
         if (farmsError) {
             console.error('Error fetching farms for heatmap:', farmsError);
-            return [];
         }
 
-        const heatmapPoints: ActivityHeatmapPoint[] = [];
-
+        // Process farms with coordinates
         for (const farm of farms || []) {
             const coordinates = farm.coordinates as any;
             if (!coordinates?.lat || !coordinates?.lng) continue;
 
             // Count activities for this farm
-            const { count: taskCount } = await this.supabaseAdmin
-                .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .eq('farm_id', farm.id)
-                .in('status', ['in_progress', 'pending', 'completed']);
-
-            const { count: harvestCount } = await this.supabaseAdmin
-                .from('harvest_records')
-                .select('*', { count: 'exact', head: true })
-                .eq('farm_id', farm.id);
+            const [{ count: taskCount }, { count: harvestCount }] = await Promise.all([
+                this.supabaseAdmin
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('farm_id', farm.id)
+                    .in('status', ['in_progress', 'pending', 'completed']),
+                this.supabaseAdmin
+                    .from('harvest_records')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('farm_id', farm.id),
+            ]);
 
             const totalCount = (taskCount || 0) + (harvestCount || 0);
 
@@ -783,59 +786,143 @@ export class DashboardService {
                 heatmapPoints.push({
                     lat: coordinates.lat,
                     lng: coordinates.lng,
-                    intensity: Math.min(totalCount / 100, 1), // Normalize intensity
+                    intensity: Math.min(totalCount / 50, 1), // Normalize intensity
                     activityType: 'farming',
                     count: totalCount,
                 });
             }
         }
 
-        // If no real data, return some default points for demo
-        if (heatmapPoints.length === 0) {
-            const defaultLat = 33.5731;
-            const defaultLng = -7.5898;
-            const activityTypes = ['harvest', 'irrigation', 'maintenance', 'planting', 'inspection'];
+        // Get parcels with coordinates (as fallback or additional data points)
+        const farmIds = (farms || []).map(f => f.id);
+        if (farmIds.length > 0) {
+            const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+                .from('parcels')
+                .select('id, name, farm_id, coordinates, center_point, crop_type')
+                .in('farm_id', farmIds);
 
-            return Array.from({ length: 10 }, (_, i) => ({
-                lat: defaultLat + (Math.random() - 0.5) * 1.0,
-                lng: defaultLng + (Math.random() - 0.5) * 1.0,
-                intensity: Math.random() * 0.8 + 0.2,
-                activityType: activityTypes[i % activityTypes.length],
-                count: Math.floor(Math.random() * 20) + 1,
-            }));
+            if (!parcelsError && parcels) {
+                for (const parcel of parcels) {
+                    // Try to get coordinates from parcel (coordinates or center_point)
+                    const coords = parcel.coordinates as any;
+                    const centerPoint = parcel.center_point as any;
+
+                    let lat: number | null = null;
+                    let lng: number | null = null;
+
+                    if (coords?.lat && coords?.lng) {
+                        lat = coords.lat;
+                        lng = coords.lng;
+                    } else if (centerPoint?.lat && centerPoint?.lng) {
+                        lat = centerPoint.lat;
+                        lng = centerPoint.lng;
+                    } else if (Array.isArray(coords) && coords.length > 0) {
+                        // If coordinates is a polygon array, calculate centroid
+                        const sumLat = coords.reduce((sum: number, c: any) => sum + (c.lat || c[1] || 0), 0);
+                        const sumLng = coords.reduce((sum: number, c: any) => sum + (c.lng || c[0] || 0), 0);
+                        lat = sumLat / coords.length;
+                        lng = sumLng / coords.length;
+                    }
+
+                    if (lat && lng) {
+                        // Count activities for this parcel
+                        const [{ count: parcelTaskCount }, { count: parcelHarvestCount }] = await Promise.all([
+                            this.supabaseAdmin
+                                .from('tasks')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('parcel_id', parcel.id)
+                                .in('status', ['in_progress', 'pending', 'completed']),
+                            this.supabaseAdmin
+                                .from('harvest_records')
+                                .select('*', { count: 'exact', head: true })
+                                .eq('parcel_id', parcel.id),
+                        ]);
+
+                        const parcelActivityCount = (parcelTaskCount || 0) + (parcelHarvestCount || 0);
+
+                        if (parcelActivityCount > 0) {
+                            // Determine activity type based on crop or task
+                            const activityType = parcel.crop_type?.toLowerCase().includes('harvest')
+                                ? 'harvest'
+                                : parcel.crop_type
+                                    ? 'cultivation'
+                                    : 'farming';
+
+                            heatmapPoints.push({
+                                lat,
+                                lng,
+                                intensity: Math.min(parcelActivityCount / 30, 1),
+                                activityType,
+                                count: parcelActivityCount,
+                            });
+                        }
+                    }
+                }
+            }
         }
 
+        // Return empty array if no data - let frontend decide how to handle
+        // No more random mock data in production
         return heatmapPoints;
     }
 
     /**
-     * Get feature usage statistics
+     * Get feature usage statistics based on real data counts
      */
     private async getFeatureUsage(organizationId: string): Promise<FeatureUsage[]> {
-        // Get counts for different features
+        // Get counts for different features - all real data
         const [
             { count: tasksCount },
             { count: harvestsCount },
             { count: inventoryCount },
             { count: workersCount },
             { count: parcelsCount },
+            { count: farmsCount },
+            { count: salesCount },
         ] = await Promise.all([
             this.supabaseAdmin.from('tasks').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('harvest_records').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('inventory').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('workers').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('parcels').select('*', { count: 'exact', head: true }),
+            this.supabaseAdmin.from('farms').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
+            this.supabaseAdmin.from('sales').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
         ]);
 
+        // Calculate trend based on recent activity (tasks updated in last 7 days vs previous 7 days)
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+        const [
+            { count: recentTasks },
+            { count: previousTasks },
+        ] = await Promise.all([
+            this.supabaseAdmin.from('tasks').select('*', { count: 'exact', head: true })
+                .eq('organization_id', organizationId)
+                .gte('updated_at', sevenDaysAgo),
+            this.supabaseAdmin.from('tasks').select('*', { count: 'exact', head: true })
+                .eq('organization_id', organizationId)
+                .gte('updated_at', fourteenDaysAgo)
+                .lt('updated_at', sevenDaysAgo),
+        ]);
+
+        // Determine overall trend based on task activity
+        const calculateTrend = (current: number, previous: number): 'up' | 'down' | 'stable' => {
+            if (current > previous * 1.1) return 'up';
+            if (current < previous * 0.9) return 'down';
+            return 'stable';
+        };
+
+        const overallTrend = calculateTrend(recentTasks || 0, previousTasks || 0);
+
         const features = [
-            { feature: 'Tasks', count: tasksCount || 0 },
-            { feature: 'Harvests', count: harvestsCount || 0 },
-            { feature: 'Inventory', count: inventoryCount || 0 },
-            { feature: 'Workers', count: workersCount || 0 },
-            { feature: 'Parcels', count: parcelsCount || 0 },
-            { feature: 'Dashboard', count: 100 }, // Dashboard always has high usage
-            { feature: 'Analytics', count: Math.floor(Math.random() * 50) + 10 },
-            { feature: 'Reports', count: Math.floor(Math.random() * 30) + 5 },
+            { feature: 'Tasks', count: tasksCount || 0, trend: overallTrend },
+            { feature: 'Harvests', count: harvestsCount || 0, trend: 'stable' as const },
+            { feature: 'Inventory', count: inventoryCount || 0, trend: 'stable' as const },
+            { feature: 'Workers', count: workersCount || 0, trend: 'stable' as const },
+            { feature: 'Parcels', count: parcelsCount || 0, trend: 'stable' as const },
+            { feature: 'Farms', count: farmsCount || 0, trend: 'stable' as const },
+            { feature: 'Sales', count: salesCount || 0, trend: 'stable' as const },
         ];
 
         const total = features.reduce((sum, f) => sum + f.count, 0);
@@ -845,7 +932,7 @@ export class DashboardService {
                 feature: f.feature,
                 count: f.count,
                 percentage: total > 0 ? Math.round((f.count / total) * 100) : 0,
-                trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)] as 'up' | 'down' | 'stable',
+                trend: f.trend,
             }))
             .sort((a, b) => b.count - a.count);
     }

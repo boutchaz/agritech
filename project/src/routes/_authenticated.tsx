@@ -11,6 +11,7 @@ import { isSubscriptionValid } from '../lib/polar'
 import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
+import { useActivityTracking } from '../hooks/useActivityTracking'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -42,6 +43,9 @@ function AuthenticatedLayout() {
   const [activeModule, setActiveModule] = useState('dashboard')
   const isRTL = i18n.language === 'ar'
   const { style: sidebarStyle } = useSidebarMargin(isRTL)
+
+  // Track user activity for live dashboard concurrent users
+  useActivityTracking()
 
   // Mock modules data - this should come from your state management
   const modules = [

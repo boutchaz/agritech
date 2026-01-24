@@ -212,6 +212,8 @@ export const workersApi = {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return apiClient.get<any[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records${queryString}`,
+      {},
+      organizationId,
     );
   },
 
@@ -222,6 +224,8 @@ export const workersApi = {
     return apiClient.post<any>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records`,
       data,
+      {},
+      organizationId,
     );
   },
 
@@ -237,6 +241,8 @@ export const workersApi = {
     return apiClient.patch<any>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records/${recordId}`,
       data,
+      {},
+      organizationId,
     );
   },
 
@@ -246,6 +252,8 @@ export const workersApi = {
   async getMetayageSettlements(organizationId: string, workerId: string): Promise<any[]> {
     return apiClient.get<any[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
+      {},
+      organizationId,
     );
   },
 
@@ -256,6 +264,8 @@ export const workersApi = {
     return apiClient.post<any>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
       data,
+      {},
+      organizationId,
     );
   },
 
@@ -271,6 +281,8 @@ export const workersApi = {
     return apiClient.post<{ share: number }>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/calculate-metayage-share`,
       { grossRevenue, totalCharges },
+      {},
+      organizationId,
     );
   },
 };

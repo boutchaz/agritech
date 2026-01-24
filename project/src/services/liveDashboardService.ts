@@ -83,6 +83,7 @@ export interface LiveDashboardSummary {
 class LiveDashboardService {
   /**
    * Get live dashboard metrics including concurrent users, active operations, and farm activities
+   * Returns real data from the API - no mock fallback to ensure data accuracy
    */
   async getLiveMetrics(organizationId: string): Promise<LiveDashboardMetrics> {
     if (!organizationId) {
@@ -98,13 +99,27 @@ class LiveDashboardService {
       return response;
     } catch (error) {
       console.error('Error fetching live metrics from API:', error);
-      // Fallback to mock data if API fails
-      return this.generateMockLiveMetrics(organizationId);
+      // Return empty state instead of mock data for production accuracy
+      // Mock data is only used in development or when explicitly enabled
+      if (import.meta.env.DEV) {
+        console.warn('Using mock data in development mode');
+        return this.generateMockLiveMetrics(organizationId);
+      }
+      // Return empty metrics structure in production
+      return {
+        concurrentUsers: { total: 0, users: [] },
+        activeOperations: { total: 0, byType: {}, operations: [] },
+        farmActivities: { total: 0, activities: [] },
+        heatmapData: [],
+        featureUsage: [],
+        lastUpdated: new Date().toISOString(),
+      };
     }
   }
 
   /**
    * Get live dashboard summary stats
+   * Returns real data from the API
    */
   async getLiveSummary(organizationId: string): Promise<LiveDashboardSummary> {
     if (!organizationId) {
@@ -120,13 +135,25 @@ class LiveDashboardService {
       return response;
     } catch (error) {
       console.error('Error fetching live summary from API:', error);
-      // Fallback to mock data if API fails
-      return this.generateMockSummary(organizationId);
+      if (import.meta.env.DEV) {
+        console.warn('Using mock summary data in development mode');
+        return this.generateMockSummary(organizationId);
+      }
+      // Return empty summary in production
+      return {
+        concurrentUsersCount: 0,
+        activeOperationsCount: 0,
+        activeFarmsCount: 0,
+        totalActivitiesLast24h: 0,
+        peakUsageTime: '--',
+        mostActiveFeature: '--',
+      };
     }
   }
 
   /**
    * Get heatmap data for geographic activity visualization
+   * Returns real coordinates from the API
    */
   async getActivityHeatmap(organizationId: string): Promise<ActivityHeatmapPoint[]> {
     if (!organizationId) {
@@ -142,8 +169,12 @@ class LiveDashboardService {
       return response;
     } catch (error) {
       console.error('Error fetching heatmap data from API:', error);
-      // Fallback to mock data if API fails
-      return this.generateMockHeatmapData();
+      if (import.meta.env.DEV) {
+        console.warn('Using mock heatmap data in development mode');
+        return this.generateMockHeatmapData();
+      }
+      // Return empty heatmap in production
+      return [];
     }
   }
 
@@ -151,7 +182,7 @@ class LiveDashboardService {
    * Generate mock live metrics data for fallback/development
    * Used when API is unavailable
    */
-  private generateMockLiveMetrics(organizationId: string): LiveDashboardMetrics {
+  private generateMockLiveMetrics(_organizationId: string): LiveDashboardMetrics {
     const now = new Date();
 
     // Generate concurrent users
@@ -255,7 +286,7 @@ class LiveDashboardService {
   /**
    * Generate mock summary data for fallback
    */
-  private generateMockSummary(organizationId: string): LiveDashboardSummary {
+  private generateMockSummary(_organizationId: string): LiveDashboardSummary {
     return {
       concurrentUsersCount: Math.floor(Math.random() * 10) + 3,
       activeOperationsCount: Math.floor(Math.random() * 15) + 5,
