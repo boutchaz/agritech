@@ -306,6 +306,24 @@ export interface Parcel {
   status: string;
 }
 
+// CASL Ability Types
+export interface RoleInfo {
+  name: string;
+  display_name: string;
+  level: number;
+}
+
+export interface AbilityRule {
+  action: string;
+  subject: string;
+  inverted?: boolean;
+}
+
+export interface UserAbilities {
+  role: RoleInfo | null;
+  abilities: AbilityRule[];
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     api.post<LoginResponse>('/auth/login', { email, password }),
@@ -318,6 +336,12 @@ export const authApi = {
   getOrganizations: () => api.get<Organization[]>('/auth/organizations'),
 
   getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),
+
+  /**
+   * Get CASL abilities for the current user
+   * This is the single source of truth for permissions
+   */
+  getAbilities: () => api.get<UserAbilities>('/auth/me/abilities'),
 };
 
 export const tasksApi = {

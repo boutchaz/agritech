@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
-import { api, authApi, type UserProfile, type Organization, type Farm } from '@/lib/api';
+import { api, authApi, type UserProfile, type Organization, type Farm, type UserAbilities } from '@/lib/api';
+import { createAbility, type Ability } from '@/lib/ability';
 import {
   trackAuth,
   trackAction,
@@ -44,6 +45,10 @@ export interface AuthState {
   currentFarm: Farm | null;
   role: UserRole | null;
   permissions: string[];
+  /** CASL abilities from backend - source of truth for permissions */
+  abilities: UserAbilities | null;
+  /** CASL ability instance for permission checking */
+  ability: Ability;
   isLoading: boolean;
   isAuthenticated: boolean;
   biometricEnabled: boolean;
@@ -59,6 +64,8 @@ export interface AuthActions {
   disableBiometric: () => void;
   authenticateWithBiometric: () => Promise<boolean>;
   loadUserRole: () => Promise<void>;
+  /** Load CASL abilities from backend (source of truth for permissions) */
+  loadAbilities: () => Promise<void>;
 }
 
 interface AuthStore extends AuthState, AuthActions {}
@@ -71,6 +78,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   currentFarm: null,
   role: null,
   permissions: [],
+  abilities: null,
+  ability: createAbility(null),
   isLoading: true,
   isAuthenticated: false,
   biometricEnabled: false,
@@ -106,7 +115,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
 
       if (currentOrganization) {
-        await get().loadUserRole();
+        // Load both user role (legacy) and CASL abilities (source of truth)
+        await Promise.all([
+          get().loadUserRole(),
+          get().loadAbilities(),
+        ]);
       }
 
       if (get().biometricEnabled) {
@@ -168,6 +181,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         currentFarm: null,
         role: null,
         permissions: [],
+        abilities: null,
+        ability: createAbility(null),
         isAuthenticated: false,
         isLoading: false,
       });
@@ -208,7 +223,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
 
         if (currentOrganization) {
-          await get().loadUserRole();
+          // Load both user role (legacy) and CASL abilities (source of truth)
+          await Promise.all([
+            get().loadUserRole(),
+            get().loadAbilities(),
+          ]);
         }
       } else {
         set({ isLoading: false });
@@ -224,7 +243,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setCurrentOrganization: async (org: Organization) => {
     await api.setOrganizationId(org.id);
     set({ currentOrganization: org, currentFarm: null });
-    await get().loadUserRole();
+    // Load both user role (legacy) and CASL abilities when organization changes
+    await Promise.all([
+      get().loadUserRole(),
+      get().loadAbilities(),
+    ]);
   },
 
   setCurrentFarm: (farm: Farm) => {
@@ -237,6 +260,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ role: role as UserRole, permissions });
     } catch (error) {
       console.warn('Failed to load user role:', error);
+    }
+  },
+
+  loadAbilities: async () => {
+    try {
+      const abilities = await authApi.getAbilities();
+      const ability = createAbility(abilities);
+      set({
+        abilities,
+        ability,
+        // Also update role from abilities if available
+        role: abilities.role?.name as UserRole || get().role,
+      });
+    } catch (error) {
+      console.warn('Failed to load abilities:', error);
+      // Keep using existing ability if fetch fails
     }
   },
 
