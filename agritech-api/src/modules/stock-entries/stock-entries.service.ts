@@ -1239,8 +1239,7 @@ export class StockEntriesService {
       // Update remaining quantity
       await client.query(
         `UPDATE stock_valuation
-         SET remaining_quantity = remaining_quantity - $1,
-             updated_at = NOW()
+         SET remaining_quantity = remaining_quantity - $1
          WHERE id = $2`,
         [consumeQty, batch.id],
       );
