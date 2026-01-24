@@ -940,10 +940,10 @@ export class WorkersService {
     const authUserId = authUser.user.id;
 
     try {
-      // Create user profile
+      // Create or update user profile (may already exist via trigger)
       const { error: profileError } = await client
         .from('user_profiles')
-        .insert({
+        .upsert({
           id: authUserId,
           email,
           first_name: firstName,
@@ -953,6 +953,8 @@ export class WorkersService {
           timezone: 'Africa/Casablanca',
           onboarding_completed: true,
           password_set: false,
+        }, {
+          onConflict: 'id',
         });
 
       if (profileError) {
