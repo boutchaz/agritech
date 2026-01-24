@@ -37,6 +37,14 @@ export class UsersController {
         return this.usersService.getUserOrganizations(req.user.id);
     }
 
+    @Post('me/activity')
+    @ApiOperation({ summary: 'Track user activity for live dashboard' })
+    @ApiResponse({ status: 200, description: 'Activity tracked successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async trackActivity(@Request() req) {
+        return this.usersService.trackActivity(req.user.id);
+    }
+
     // Tour Preferences Endpoints
 
     @Get('me/tour-preferences')

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
-import { authSupabase } from '@/lib/auth-supabase';
+import { usersApi } from '@/lib/api/users';
 
 /**
  * Hook to track user activity and update their last activity timestamp.
@@ -9,7 +9,7 @@ import { authSupabase } from '@/lib/auth-supabase';
  * Updates the user's profile every 2 minutes while the tab is active.
  */
 export function useActivityTracking() {
-  const { user, currentOrganization } = useAuth();
+  const { user } = useAuth();
   const lastUpdateRef = useRef<number>(0);
   const MIN_UPDATE_INTERVAL = 2 * 60 * 1000; // 2 minutes
 
@@ -24,20 +24,8 @@ export function useActivityTracking() {
       lastUpdateRef.current = now;
 
       try {
-        // Update the user's profile updated_at timestamp
-        await authSupabase
-          .from('profiles')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', user.id);
-
-        // Also update organization_users last_login if in an organization
-        if (currentOrganization?.id) {
-          await authSupabase
-            .from('organization_users')
-            .update({ last_login: new Date().toISOString() })
-            .eq('user_id', user.id)
-            .eq('organization_id', currentOrganization.id);
-        }
+        // Update the user's activity timestamp via NestJS API
+        await usersApi.trackActivity();
       } catch {
         // Silently fail - activity tracking is non-critical
       }
@@ -72,5 +60,5 @@ export function useActivityTracking() {
       window.removeEventListener('keydown', handleActivity);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user?.id, currentOrganization?.id]);
+  }, [user?.id]);
 }

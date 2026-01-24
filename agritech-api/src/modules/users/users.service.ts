@@ -102,6 +102,32 @@ export class UsersService {
     }
 
     /**
+     * Track user activity by updating their profile's updated_at timestamp
+     * Used for live dashboard concurrent users feature
+     */
+    async trackActivity(userId: string) {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const { error } = await client
+                .from('user_profiles')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', userId);
+
+            if (error) {
+                this.logger.error(`Failed to track activity: ${error.message}`);
+                // Non-critical, don't throw - just return failure
+                return { success: false };
+            }
+
+            return { success: true };
+        } catch (error) {
+            this.logger.error(`Failed to track activity: ${error.message}`);
+            return { success: false };
+        }
+    }
+
+    /**
      * Get all organizations that a user belongs to
      * Includes role information from organization_users join
      */

@@ -71,4 +71,12 @@ export const usersApi = {
   async getMyOrganizations(): Promise<OrganizationWithRole[]> {
     return apiClient.get<OrganizationWithRole[]>(`${BASE_URL}/me/organizations`);
   },
+
+  /**
+   * Update user activity timestamp for live dashboard tracking
+   * This is a lightweight endpoint that just touches the updated_at timestamp
+   */
+  async trackActivity(): Promise<void> {
+    return apiClient.post<void>(`${BASE_URL}/me/activity`, {});
+  },
 };
