@@ -297,7 +297,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           const { apiClient } = await import('../../lib/api-client');
 
           const result = await apiClient.post<{ success: boolean; message: string; tempPassword?: string }>(
-            `/organizations/${organizationId}/workers/${workerId}/grant-platform-access`,
+            `/api/v1/organizations/${organizationId}/workers/${workerId}/grant-platform-access`,
             {
               email: cleanedData.email,
               first_name: cleanedData.first_name,
