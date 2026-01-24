@@ -205,29 +205,30 @@ const OrganizationSettings: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Building className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Building className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {t('organization.title')}
           </h2>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <a
             href={`https://marketplace.thebzlab.online/sellers/${orgData.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
           >
             <ExternalLink className="h-4 w-4" />
-            <span>Preview on Marketplace</span>
+            <span className="hidden sm:inline">Preview on Marketplace</span>
+            <span className="sm:hidden">Preview</span>
           </a>
           {activeTab === 'general' && (
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -241,15 +242,15 @@ const OrganizationSettings: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex space-x-4">
+      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <nav className="flex space-x-2 sm:space-x-4 min-w-max">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-3 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-green-500 text-green-600 dark:text-green-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
@@ -409,8 +410,8 @@ const OrganizationSettings: React.FC = () => {
             <MapPin className="inline h-5 w-5 mr-2" />
             {t('organization.sections.address')}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('organization.fields.address')}
               </label>

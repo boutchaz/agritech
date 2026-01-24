@@ -311,15 +311,15 @@ const UsersSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Users className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {t('users.title')}
           </h2>
           {currentOrganization && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">
               {currentOrganization.name}
             </span>
           )}
@@ -335,7 +335,7 @@ const UsersSettings: React.FC = () => {
         >
           <button
             onClick={() => setShowInviteUser(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
           >
             <Plus className="h-4 w-4" />
             <span>{t('users.invite.button')}</span>
@@ -349,8 +349,8 @@ const UsersSettings: React.FC = () => {
         currentCount={users.length}
       />
 
-      <div className="flex items-center justify-between">
-        <p className="text-gray-600 dark:text-gray-400">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           {t('users.description')}
         </p>
         <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -379,8 +379,119 @@ const UsersSettings: React.FC = () => {
           </p>
         </div>
       ) : (
+        <>
+          {/* Mobile Card Layout */}
+          <div className="md:hidden space-y-3">
+          {users.map((user) => {
+            const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
+            const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+            const canModify = can('update', 'User') &&
+              (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            return (
+              <div key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div className="flex items-start gap-3">
+                  <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                    {user.profile?.avatar_url ? (
+                      <img
+                        src={user.profile.avatar_url}
+                        alt={fullName}
+                        className="h-12 w-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {initials}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900 dark:text-white truncate">
+                        {fullName}
+                      </span>
+                      {user.user_id === currentUser?.id && (
+                        <span className="text-xs text-gray-500">({t('users.you')})</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {user.profile?.email}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        {getRoleIcon(user.role.name)}
+                        <span className={`px-2 text-xs font-semibold rounded-full ${getRoleColor(user.role.name)}`}>
+                          {user.role.display_name}
+                        </span>
+                      </div>
+                      <span className={`px-2 text-xs font-semibold rounded-full
+                        ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
+                      >
+                        {user.is_active ? t('users.status.active') : t('users.status.inactive')}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      {t('users.table.joinedOn')}: {new Date(user.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                {(canModify || (can('remove', 'User') && user.user_id !== currentUser?.id)) && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t dark:border-gray-700 flex-wrap">
+                    {canModify && (
+                      <>
+                        <select
+                          value={user.role_id}
+                          onChange={(e) => handleUpdateUserRole(user.user_id, e.target.value)}
+                          className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white flex-1 min-w-0"
+                          disabled={user.user_id === currentUser?.id}
+                        >
+                          {getAvailableRoles().map(role => (
+                            <option key={role.id} value={role.id}>
+                              {role.display_name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
+                          className={`p-2 rounded-lg ${user.is_active ?
+                            'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' :
+                            'text-green-600 bg-green-50 dark:bg-green-900/20'}`}
+                          title={user.is_active ? t('users.actions.deactivate') : t('users.actions.activate')}
+                          disabled={user.user_id === currentUser?.id}
+                        >
+                          {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                        </button>
+                        {user.role?.name === 'farm_worker' && (
+                          <button
+                            onClick={() => handleViewPassword(user)}
+                            className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
+                            title={t('users.actions.viewPassword')}
+                          >
+                            <Key className="h-4 w-4" />
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {can('remove', 'User') && user.user_id !== currentUser?.id && (
+                      <button
+                        onClick={() => handleRemoveUser(user.user_id)}
+                        className="p-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg"
+                        title={t('users.actions.remove')}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop Table Layout */}
+        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -521,6 +632,7 @@ const UsersSettings: React.FC = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Invite User Modal */}
@@ -563,7 +675,7 @@ const UsersSettings: React.FC = () => {
                 </FormField>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField label={t('users.invite.fields.firstName')} htmlFor="invite_first_name">
                   <Input
                     id="invite_first_name"
@@ -608,21 +720,21 @@ const UsersSettings: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-6 flex justify-end space-x-3">
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
               <button
                 onClick={() => {
                   setShowInviteUser(false);
                   setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
                   setError(null);
                 }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600"
               >
                 {t('users.invite.cancel')}
               </button>
               <button
                 onClick={handleInviteUser}
                 disabled={!inviteUser.email || !inviteUser.role_id || loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? t('users.invite.inviting') : t('users.invite.invite')}
               </button>
