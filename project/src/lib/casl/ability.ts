@@ -180,125 +180,103 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('update', 'BiologicalAsset');
   }
 
-  // Farm Worker - Daily operational access
+  // Farm Worker - Basic operations
   if (role.name === 'farm_worker') {
-    // Core navigation - workers need to see farm structure and resources
-    can('read', 'Dashboard');
-    can('read', 'Farm');
-    can('read', 'FarmHierarchy'); // Need to understand farm structure
-    can('read', 'Parcel');
-    can('read', 'Stock'); // Need to see available materials/inventory
-    can('read', 'Infrastructure'); // Need to know where warehouses/buildings are
-    can('read', 'Chat');
-    can('read', 'Settings');
-    can('update', 'Settings'); // Can update their profile
-
-    // Personnel - can view workers and manage their own tasks
-    can('read', 'Employee');
-    can('read', 'DayLaborer');
-    can('read', 'Worker');
-    can('read', 'Task');
-    can('update', 'Task'); // Can update their assigned tasks
-    can('create', 'Task'); // Can create tasks (e.g., report issues)
-
-    // Field work - analysis and costs
     can('create', 'Analysis');
     can('read', 'Analysis');
     can('update', 'Analysis');
+    can('read', 'Parcel');
+    can('read', 'Farm');
     can('create', 'Cost');
     can('read', 'Cost');
-    can('read', 'Utility'); // Can view utilities/expenses
+    can('read', 'Employee');
+    can('read', 'DayLaborer');
+    can('read', 'Worker');
+    can('read', 'Dashboard');
+    can('read', 'Chat');
+    can('read', 'Task');
+    can('update', 'Task'); // Can update their assigned tasks
+    can('read', 'Settings');
+    can('update', 'Settings'); // Can update their profile
 
-    // Production - core daily work
+    // Accounting - Farm workers can create invoices and view reports
+    can('read', 'Account');
+    can('create', 'Invoice');
+    can('read', 'Invoice');
+    can('create', 'Payment');
+    can('read', 'Payment');
+    can('read', 'JournalEntry');
+    can('read', 'AccountingReport');
+
+    // Work Units & Piece-Work - Farm workers can view their own piece-work
+    can('read', 'WorkUnit'); // Can view work units
+    can('read', 'PieceWork'); // Can view piece-work records (their own)
+
+    // Harvest & Reception - Farm workers can view and create
     can('read', 'Harvest');
     can('create', 'Harvest');
-    can('update', 'Harvest'); // Can update harvest records
     can('read', 'ReceptionBatch');
     can('create', 'ReceptionBatch');
     can('read', 'QualityControl');
+
+    // Agricultural Accounting - Farm workers can view production tracking data
+    can('read', 'FiscalYear');
     can('read', 'Campaign');
     can('read', 'CropCycle');
     can('read', 'BiologicalAsset');
-    can('read', 'FiscalYear');
+  }
 
-    // Work Units & Piece-Work - workers can view their own piece-work
-    can('read', 'WorkUnit');
-    can('read', 'PieceWork');
+  // Day Laborer - Very limited access (only tasks and profile)
+  if (role.name === 'day_laborer') {
+    can('read', 'Task'); // Can only view their assigned tasks
+    can('update', 'Task'); // Can update their assigned tasks (clock in/out, progress)
+    can('read', 'Settings'); // Can view their profile settings
+    can('update', 'Settings'); // Can update their profile
 
-    // Reports - basic reporting access
-    can('read', 'Report'); // Can view reports relevant to their work
+    // Work Units & Piece-Work - Day laborers can view their own piece-work
+    can('read', 'PieceWork'); // Can view their own piece-work records only
+  }
 
-    // Limited accounting - only view, no create/edit
+  // Viewer - Read-only access
+  if (role.name === 'viewer') {
+    can('read', 'Farm');
+    can('read', 'Parcel');
+    can('read', 'Analysis');
+    can('read', 'Cost');
+    can('read', 'Revenue');
+    can('read', 'Worker');
+    can('read', 'Dashboard');
+    can('read', 'Chat');
+    can('read', 'FarmHierarchy');
+    can('read', 'Task');
+    can('read', 'Report');
+    can('read', 'Settings');
+
+    // Accounting - Viewers can only read accounting data
     can('read', 'Account');
     can('read', 'Invoice');
     can('read', 'Payment');
     can('read', 'JournalEntry');
+    can('read', 'CostCenter');
+    can('read', 'AccountMapping');
+    can('read', 'Tax');
+    can('read', 'BankAccount');
     can('read', 'AccountingReport');
-  }
 
-  // Day Laborer - Minimal access focused on their daily tasks
-  if (role.name === 'day_laborer') {
-    // Basic navigation - need a dashboard to see their work
-    can('read', 'Dashboard'); // Simple dashboard with their tasks
-    can('read', 'Settings'); // Can view their profile settings
-    can('update', 'Settings'); // Can update their profile
+    // Work Units & Piece-Work - Viewers can only read
+    can('read', 'WorkUnit'); // Can view work units
+    can('read', 'PieceWork'); // Can view piece-work records
 
-    // Tasks - core functionality for day laborers
-    can('read', 'Task'); // Can only view their assigned tasks
-    can('update', 'Task'); // Can update their assigned tasks (clock in/out, progress)
-
-    // Basic context - need to understand where they're working
-    can('read', 'Farm'); // Know which farm they're at
-    can('read', 'Parcel'); // Know which parcel they're working on
-
-    // Work Units & Piece-Work - Day laborers can view their own piece-work
-    can('read', 'WorkUnit'); // Can see work unit types
-    can('read', 'PieceWork'); // Can view their own piece-work records only
-
-    // Harvest - day laborers often help with harvesting
-    can('read', 'Harvest');
-    can('create', 'Harvest'); // Can record harvest work
-  }
-
-  // Viewer - Read-only access for stakeholders, consultants, observers
-  // Focused on production overview, NOT sensitive financial data
-  if (role.name === 'viewer') {
-    // Core navigation - overview access
-    can('read', 'Dashboard');
-    can('read', 'Farm');
-    can('read', 'FarmHierarchy');
-    can('read', 'Parcel');
-    can('read', 'Infrastructure');
-    can('read', 'Stock');
-    can('read', 'Chat');
-    can('read', 'Settings'); // Own profile only
-
-    // Production data - main focus for viewers
-    can('read', 'Analysis');
+    // Harvest & Reception - Viewers can only read
     can('read', 'Harvest');
     can('read', 'ReceptionBatch');
     can('read', 'QualityControl');
+
+    // Agricultural Accounting - Viewers can only read
+    can('read', 'FiscalYear');
     can('read', 'Campaign');
     can('read', 'CropCycle');
     can('read', 'BiologicalAsset');
-    can('read', 'FiscalYear');
-
-    // Personnel - can see team but no details
-    can('read', 'Worker');
-    can('read', 'Task');
-
-    // Reports - summary reports only
-    can('read', 'Report');
-    can('read', 'AccountingReport'); // Summary financial reports
-
-    // Work tracking
-    can('read', 'WorkUnit');
-    can('read', 'PieceWork');
-
-    // NOTE: Viewers intentionally do NOT have access to:
-    // - Invoice, Payment, JournalEntry (sensitive financial transactions)
-    // - Account, CostCenter, AccountMapping, Tax, BankAccount (financial configuration)
-    // - Cost, Revenue, Utility (detailed expense/revenue data)
   }
 
   // ============================================
