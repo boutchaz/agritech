@@ -12,6 +12,7 @@ import { UsersService } from '../users/users.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { DemoDataService } from '../demo-data/demo-data.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
+import { CaslAbilityFactory } from '../casl/casl-ability.factory';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     private organizationsService: OrganizationsService,
     private demoDataService: DemoDataService,
     private adoptionService: AdoptionService,
+    private caslAbilityFactory: CaslAbilityFactory,
   ) { }
 
   /**
@@ -862,5 +864,13 @@ export class AuthService {
         action: rp.permissions.action,
       })),
     };
+  }
+
+  /**
+   * Get user's CASL abilities for frontend/mobile permission sync
+   * This is the SOURCE OF TRUTH for permissions across all platforms
+   */
+  async getUserAbilities(userId: string, organizationId: string) {
+    return this.caslAbilityFactory.getAbilitiesForUser({ id: userId }, organizationId);
   }
 }

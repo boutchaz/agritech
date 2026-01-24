@@ -446,4 +446,285 @@ export class CaslAbilityFactory {
         const roleLevel = (orgUser.roles as any)?.level || 0;
         return roleLevel >= minimumLevel;
     }
+
+    /**
+     * Get user's CASL abilities as a JSON-serializable format
+     * This is the SOURCE OF TRUTH for frontend/mobile permissions
+     */
+    async getAbilitiesForUser(user: any, organizationId: string): Promise<{
+        role: { name: string; display_name: string; level: number } | null;
+        abilities: Array<{ action: string; subject: string; inverted?: boolean }>;
+    }> {
+        const client = this.databaseService.getAdminClient();
+
+        if (!user || !organizationId) {
+            return { role: null, abilities: [] };
+        }
+
+        // Fetch user's role in this organization
+        const { data: orgUser, error } = await client
+            .from('organization_users')
+            .select('role_id, roles(name, display_name, level)')
+            .eq('user_id', user.id)
+            .eq('organization_id', organizationId)
+            .eq('is_active', true)
+            .single();
+
+        if (error || !orgUser) {
+            console.error('[CaslAbilityFactory] Failed to fetch organization user for abilities:', {
+                userId: user.id,
+                organizationId,
+                error: error?.message,
+            });
+            return { role: null, abilities: [] };
+        }
+
+        const role = orgUser.roles as any;
+        const roleName = role?.name;
+
+        const abilities: Array<{ action: string; subject: string; inverted?: boolean }> = [];
+
+        // Helper to add positive permission
+        const can = (action: Action, subject: Subject | string) => {
+            abilities.push({ action, subject: subject as string });
+        };
+
+        // Helper to add negative permission (cannot)
+        const cannot = (action: Action, subject: Subject | string) => {
+            abilities.push({ action, subject: subject as string, inverted: true });
+        };
+
+        // Build abilities based on role (same logic as createForUser)
+        if (roleName === 'system_admin') {
+            can(Action.Manage, 'all');
+        } else if (roleName === 'organization_admin') {
+            // Full access within organization
+            can(Action.Manage, Subject.FARM);
+            can(Action.Manage, Subject.PARCEL);
+            can(Action.Manage, Subject.WAREHOUSE);
+            can(Action.Manage, Subject.INVOICE);
+            can(Action.Manage, Subject.PAYMENT);
+            can(Action.Manage, Subject.JOURNAL_ENTRY);
+            can(Action.Manage, Subject.ACCOUNT);
+            can(Action.Manage, Subject.CUSTOMER);
+            can(Action.Manage, Subject.SUPPLIER);
+            can(Action.Manage, Subject.WORKER);
+            can(Action.Manage, Subject.TASK);
+            can(Action.Manage, Subject.PIECE_WORK);
+            can(Action.Manage, Subject.HARVEST);
+            can(Action.Manage, Subject.CROP_CYCLE);
+            can(Action.Manage, Subject.PRODUCT_APPLICATION);
+            can(Action.Manage, Subject.STOCK_ENTRY);
+            can(Action.Manage, Subject.PRODUCT);
+            can(Action.Manage, Subject.BIOLOGICAL_ASSET);
+            can(Action.Manage, Subject.ANALYSIS);
+            can(Action.Manage, Subject.SOIL_ANALYSIS);
+            can(Action.Manage, Subject.PLANT_ANALYSIS);
+            can(Action.Manage, Subject.WATER_ANALYSIS);
+            can(Action.Manage, Subject.SALES_ORDER);
+            can(Action.Manage, Subject.PURCHASE_ORDER);
+            can(Action.Manage, Subject.QUOTE);
+            can(Action.Manage, Subject.DELIVERY);
+            can(Action.Manage, Subject.RECEPTION_BATCH);
+            can(Action.Manage, Subject.QUALITY_CONTROL);
+            can(Action.Manage, Subject.LAB_SERVICE);
+            can(Action.Manage, Subject.FINANCIAL_REPORT);
+            can(Action.Manage, Subject.REPORT);
+            can(Action.Manage, Subject.SATELLITE_ANALYSIS);
+            can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD);
+            can(Action.Update, Subject.DASHBOARD);
+            can(Action.Read, Subject.USER);
+            can(Action.Update, Subject.USER);
+            can(Action.Read, Subject.ORGANIZATION);
+            can(Action.Update, Subject.ORGANIZATION);
+            can(Action.Manage, Subject.ROLE);
+        } else if (roleName === 'farm_manager') {
+            // Farm operations
+            can(Action.Manage, Subject.FARM);
+            can(Action.Manage, Subject.PARCEL);
+            can(Action.Manage, Subject.WAREHOUSE);
+            can(Action.Manage, Subject.TASK);
+            can(Action.Manage, Subject.WORKER);
+            can(Action.Manage, Subject.PIECE_WORK);
+            can(Action.Manage, Subject.HARVEST);
+            can(Action.Manage, Subject.CROP_CYCLE);
+            can(Action.Manage, Subject.PRODUCT_APPLICATION);
+            can(Action.Manage, Subject.PRODUCT);
+            can(Action.Manage, Subject.BIOLOGICAL_ASSET);
+            can(Action.Manage, Subject.ANALYSIS);
+            can(Action.Manage, Subject.SOIL_ANALYSIS);
+            can(Action.Manage, Subject.PLANT_ANALYSIS);
+            can(Action.Manage, Subject.WATER_ANALYSIS);
+            can(Action.Manage, Subject.STOCK_ENTRY);
+            can(Action.Manage, Subject.DELIVERY);
+            can(Action.Manage, Subject.RECEPTION_BATCH);
+            can(Action.Manage, Subject.QUALITY_CONTROL);
+
+            // Invoices and payments
+            can(Action.Create, Subject.INVOICE);
+            can(Action.Read, Subject.INVOICE);
+            can(Action.Update, Subject.INVOICE);
+            can(Action.Delete, Subject.INVOICE);
+            can(Action.Create, Subject.PAYMENT);
+            can(Action.Read, Subject.PAYMENT);
+            can(Action.Update, Subject.PAYMENT);
+
+            // Quotes and orders
+            can(Action.Create, Subject.QUOTE);
+            can(Action.Read, Subject.QUOTE);
+            can(Action.Update, Subject.QUOTE);
+            can(Action.Delete, Subject.QUOTE);
+            can(Action.Create, Subject.SALES_ORDER);
+            can(Action.Read, Subject.SALES_ORDER);
+            can(Action.Update, Subject.SALES_ORDER);
+            can(Action.Create, Subject.PURCHASE_ORDER);
+            can(Action.Read, Subject.PURCHASE_ORDER);
+            can(Action.Update, Subject.PURCHASE_ORDER);
+
+            // Read access to financial
+            can(Action.Read, Subject.JOURNAL_ENTRY);
+            can(Action.Read, Subject.ACCOUNT);
+            can(Action.Read, Subject.CUSTOMER);
+            can(Action.Read, Subject.SUPPLIER);
+            can(Action.Read, Subject.FINANCIAL_REPORT);
+            can(Action.Read, Subject.REPORT);
+            can(Action.Read, Subject.SATELLITE_ANALYSIS);
+            can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD);
+
+            cannot(Action.Delete, Subject.JOURNAL_ENTRY);
+            cannot(Action.Manage, Subject.ACCOUNT);
+        } else if (roleName === 'farm_worker') {
+            // Tasks
+            can(Action.Read, Subject.TASK);
+            can(Action.Update, Subject.TASK);
+            can(Action.Create, Subject.TASK);
+
+            // View farms and parcels
+            can(Action.Read, Subject.FARM);
+            can(Action.Read, Subject.PARCEL);
+            can(Action.Read, Subject.WAREHOUSE);
+
+            // Production
+            can(Action.Read, Subject.HARVEST);
+            can(Action.Create, Subject.HARVEST);
+            can(Action.Update, Subject.HARVEST);
+            can(Action.Read, Subject.CROP_CYCLE);
+            can(Action.Read, Subject.PRODUCT_APPLICATION);
+            can(Action.Create, Subject.PRODUCT_APPLICATION);
+            can(Action.Update, Subject.PRODUCT_APPLICATION);
+            can(Action.Read, Subject.PRODUCT);
+            can(Action.Read, Subject.BIOLOGICAL_ASSET);
+            can(Action.Read, Subject.ANALYSIS);
+            can(Action.Read, Subject.SOIL_ANALYSIS);
+            can(Action.Read, Subject.PLANT_ANALYSIS);
+            can(Action.Read, Subject.WATER_ANALYSIS);
+            can(Action.Read, Subject.STOCK_ENTRY);
+            can(Action.Create, Subject.STOCK_ENTRY);
+            can(Action.Update, Subject.STOCK_ENTRY);
+            can(Action.Read, Subject.DELIVERY);
+            can(Action.Update, Subject.DELIVERY);
+            can(Action.Read, Subject.RECEPTION_BATCH);
+            can(Action.Update, Subject.RECEPTION_BATCH);
+            can(Action.Read, Subject.QUALITY_CONTROL);
+            can(Action.Create, Subject.QUALITY_CONTROL);
+            can(Action.Read, Subject.DASHBOARD);
+
+            // NO financial operations
+            cannot(Action.Create, Subject.INVOICE);
+            cannot(Action.Update, Subject.INVOICE);
+            cannot(Action.Delete, Subject.INVOICE);
+            cannot(Action.Read, Subject.INVOICE);
+            cannot(Action.Create, Subject.PAYMENT);
+            cannot(Action.Update, Subject.PAYMENT);
+            cannot(Action.Delete, Subject.PAYMENT);
+            cannot(Action.Read, Subject.PAYMENT);
+            cannot(Action.Manage, Subject.JOURNAL_ENTRY);
+            cannot(Action.Manage, Subject.ACCOUNT);
+            cannot(Action.Manage, Subject.CUSTOMER);
+            cannot(Action.Manage, Subject.SUPPLIER);
+            cannot(Action.Create, Subject.SALES_ORDER);
+            cannot(Action.Create, Subject.PURCHASE_ORDER);
+            cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+        } else if (roleName === 'day_laborer') {
+            can(Action.Read, Subject.TASK);
+            can(Action.Update, Subject.TASK);
+            can(Action.Read, Subject.FARM);
+            can(Action.Read, Subject.PARCEL);
+            can(Action.Read, Subject.HARVEST);
+            can(Action.Read, Subject.PRODUCT);
+            can(Action.Read, Subject.DASHBOARD);
+
+            cannot(Action.Create, Subject.INVOICE);
+            cannot(Action.Update, Subject.INVOICE);
+            cannot(Action.Delete, Subject.INVOICE);
+            cannot(Action.Read, Subject.INVOICE);
+            cannot(Action.Create, Subject.PAYMENT);
+            cannot(Action.Update, Subject.PAYMENT);
+            cannot(Action.Delete, Subject.PAYMENT);
+            cannot(Action.Read, Subject.PAYMENT);
+            cannot(Action.Manage, Subject.JOURNAL_ENTRY);
+            cannot(Action.Manage, Subject.ACCOUNT);
+            cannot(Action.Manage, Subject.CUSTOMER);
+            cannot(Action.Manage, Subject.SUPPLIER);
+            cannot(Action.Manage, Subject.WORKER);
+            cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+        } else if (roleName === 'viewer') {
+            // Read-only access
+            can(Action.Read, Subject.FARM);
+            can(Action.Read, Subject.PARCEL);
+            can(Action.Read, Subject.WAREHOUSE);
+            can(Action.Read, Subject.INVOICE);
+            can(Action.Read, Subject.PAYMENT);
+            can(Action.Read, Subject.JOURNAL_ENTRY);
+            can(Action.Read, Subject.ACCOUNT);
+            can(Action.Read, Subject.CUSTOMER);
+            can(Action.Read, Subject.SUPPLIER);
+            can(Action.Read, Subject.WORKER);
+            can(Action.Read, Subject.TASK);
+            can(Action.Read, Subject.PIECE_WORK);
+            can(Action.Read, Subject.HARVEST);
+            can(Action.Read, Subject.CROP_CYCLE);
+            can(Action.Read, Subject.PRODUCT_APPLICATION);
+            can(Action.Read, Subject.STOCK_ENTRY);
+            can(Action.Read, Subject.PRODUCT);
+            can(Action.Read, Subject.BIOLOGICAL_ASSET);
+            can(Action.Read, Subject.ANALYSIS);
+            can(Action.Read, Subject.SOIL_ANALYSIS);
+            can(Action.Read, Subject.PLANT_ANALYSIS);
+            can(Action.Read, Subject.WATER_ANALYSIS);
+            can(Action.Read, Subject.SALES_ORDER);
+            can(Action.Read, Subject.PURCHASE_ORDER);
+            can(Action.Read, Subject.QUOTE);
+            can(Action.Read, Subject.DELIVERY);
+            can(Action.Read, Subject.RECEPTION_BATCH);
+            can(Action.Read, Subject.QUALITY_CONTROL);
+            can(Action.Read, Subject.LAB_SERVICE);
+            can(Action.Read, Subject.FINANCIAL_REPORT);
+            can(Action.Read, Subject.REPORT);
+            can(Action.Read, Subject.SATELLITE_ANALYSIS);
+            can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Read, Subject.DASHBOARD);
+            can(Action.Read, Subject.USER);
+            can(Action.Read, Subject.ORGANIZATION);
+            can(Action.Read, Subject.ROLE);
+
+            cannot(Action.Create, 'all');
+            cannot(Action.Update, 'all');
+            cannot(Action.Delete, 'all');
+        } else {
+            // Default minimal access
+            can(Action.Read, Subject.TASK);
+        }
+
+        return {
+            role: {
+                name: role?.name || '',
+                display_name: role?.display_name || '',
+                level: role?.level || 0,
+            },
+            abilities,
+        };
+    }
 }

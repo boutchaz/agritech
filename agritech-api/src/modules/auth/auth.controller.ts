@@ -116,6 +116,50 @@ export class AuthController {
     return this.authService.getUserRoleAndPermissions(req.user.id, organizationId);
   }
 
+  @Get('me/abilities')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
+  @ApiOperation({
+    summary: 'Get CASL abilities for current user',
+    description: 'Returns CASL-compatible abilities that can be used directly by frontend/mobile for permission checks. This is the single source of truth for permissions.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User abilities retrieved',
+    schema: {
+      type: 'object',
+      properties: {
+        role: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', example: 'farm_worker' },
+            display_name: { type: 'string', example: 'Farm Worker' },
+            level: { type: 'number', example: 40 },
+          },
+        },
+        abilities: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              action: { type: 'string', example: 'read' },
+              subject: { type: 'string', example: 'Farm' },
+              inverted: { type: 'boolean', example: false },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getUserAbilities(
+    @Request() req,
+    @Headers('x-organization-id') organizationId: string,
+  ) {
+    return this.authService.getUserAbilities(req.user.id, organizationId);
+  }
+
   @Post('setup-organization')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
