@@ -3,20 +3,10 @@ import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   Home,
-  Trees as Tree,
-  Fish,
   Leaf,
   Settings,
   Sun,
   Moon,
-  Sprout,
-  Bird,
-  Bug,
-  Droplets,
-  Flower2,
-  Beef,
-  Sheet as Sheep,
-  Egg,
   Map,
   Package,
   Building2,
@@ -64,7 +54,7 @@ interface SidebarProps {
 const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed';
 
 const Sidebar: React.FC<SidebarProps> = ({
-  modules,
+  modules: _modules,
   onModuleChange,
   isDarkMode,
   onThemeToggle,
@@ -123,8 +113,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showMarketplace, setShowMarketplace] = useState(() =>
     getInitialSectionState(['/marketplace/quote-requests'])
   );
-  const [showAgricultureModules, setShowAgricultureModules] = useState(false);
-  const [showElevageModules, setShowElevageModules] = useState(false);
 
   // Auto-expand parent section when navigating to a child route
   useEffect(() => {
@@ -157,37 +145,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
   const scrollPositionRef = React.useRef(0);
   const SCROLL_STORAGE_KEY = 'sidebarScrollTop';
-
-  const getModuleIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'Tree':
-        return <Tree className="h-5 w-5" />;
-      case 'Fish':
-        return <Fish className="h-5 w-5" />;
-      case 'Sprout':
-        return <Sprout className="h-5 w-5" />;
-      case 'Bird':
-        return <Bird className="h-5 w-5" />;
-      case 'Home':
-        return <Home className="h-5 w-5" />;
-      case 'Bug':
-        return <Bug className="h-5 w-5" />;
-      case 'Droplets':
-        return <Droplets className="h-5 w-5" />;
-      case 'Flower2':
-        return <Flower2 className="h-5 w-5" />;
-      case 'Beef':
-        return <Beef className="h-5 w-5" />;
-      case 'Sheep':
-        return <Sheep className="h-5 w-5" />;
-      case 'Camel':
-        return <Leaf className="h-5 w-5 rotate-45" />;
-      case 'Egg':
-        return <Egg className="h-5 w-5" />;
-      default:
-        return <Leaf className="h-5 w-5" />;
-    }
-  };
 
   const handleNavigation = (path: string, e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -227,8 +184,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     return () => viewport.removeEventListener('scroll', onScroll);
   }, [scrollViewportRef.current]);
 
-  const agricultureModules = modules.filter(m => m.category === 'agriculture');
-  const elevageModules = modules.filter(m => m.category === 'elevage');
 
   const getButtonClassName = (isActive: boolean, additionalClasses?: string) => {
     return cn(
@@ -938,101 +893,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </ProtectedNavItem>
 
-            {/* ========== AGRICULTURE MODULES ========== */}
-            {agricultureModules.length > 0 && (
-              <>
-                <Separator className="my-3" />
-                <div className="space-y-1">
-                  {isCollapsed ? (
-                    <div className="hidden lg:block">
-                      <CollapsedSectionPopover icon={Sprout} title={`${t('nav.agriculture')} (${agricultureModules.length})`}>
-                        {agricultureModules.map((module) => (
-                          <PopoverNavItem
-                            key={module.id}
-                            path={`/${module.id}`}
-                            label={module.name}
-                            isActive={currentPath === `/${module.id}`}
-                          />
-                        ))}
-                      </CollapsedSectionPopover>
-                    </div>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        className={getSectionHeaderClassName()}
-                        onClick={() => setShowAgricultureModules(!showAgricultureModules)}
-                      >
-                        <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                          {renderIcon(Sprout)}
-                          {renderSectionTitle(`${t('nav.agriculture')} (${agricultureModules.length})`)}
-                        </div>
-                        {renderChevron(showAgricultureModules)}
-                      </Button>
-                      {showAgricultureModules && agricultureModules.map((module) => (
-                        <Button
-                          key={module.id}
-                          variant="ghost"
-                          className={getSubItemClassName(currentPath === `/${module.id}`)}
-                          onClick={(e) => handleNavigation(`/${module.id}`, e)}
-                        >
-                          <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
-                          {renderText(module.name)}
-                        </Button>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* ========== ELEVAGE MODULES ========== */}
-            {elevageModules.length > 0 && (
-              <>
-                <Separator className="my-3" />
-                <div className="space-y-1">
-                  {isCollapsed ? (
-                    <div className="hidden lg:block">
-                      <CollapsedSectionPopover icon={Beef} title={`${t('nav.elevage')} (${elevageModules.length})`}>
-                        {elevageModules.map((module) => (
-                          <PopoverNavItem
-                            key={module.id}
-                            path={`/${module.id}`}
-                            label={module.name}
-                            isActive={currentPath === `/${module.id}`}
-                          />
-                        ))}
-                      </CollapsedSectionPopover>
-                    </div>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        className={getSectionHeaderClassName()}
-                        onClick={() => setShowElevageModules(!showElevageModules)}
-                      >
-                        <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                          {renderIcon(Beef)}
-                          {renderSectionTitle(`${t('nav.elevage')} (${elevageModules.length})`)}
-                        </div>
-                        {renderChevron(showElevageModules)}
-                      </Button>
-                      {showElevageModules && elevageModules.map((module) => (
-                        <Button
-                          key={module.id}
-                          variant="ghost"
-                          className={getSubItemClassName(currentPath === `/${module.id}`)}
-                          onClick={(e) => handleNavigation(`/${module.id}`, e)}
-                        >
-                          <span className={cn("flex-shrink-0", isRTL ? "ml-2" : "mr-2")}>{getModuleIcon(module.icon)}</span>
-                          {renderText(module.name)}
-                        </Button>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
           </nav>
         </ScrollArea>
 
