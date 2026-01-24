@@ -22,7 +22,7 @@ export function useReceptionBatches(filters: ReceptionBatchFilters = {}) {
         throw new Error('No organization selected');
       }
 
-      return receptionBatchesApi.getAll(currentOrganization.id, filters);
+      return receptionBatchesApi.getAll(filters, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 30000,
@@ -74,7 +74,7 @@ export function useHarvestReceptionBatches(harvestId: string | undefined) {
       if (!harvestId) throw new Error('Harvest ID is required');
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      return receptionBatchesApi.getAll(currentOrganization.id, { harvest_id: harvestId });
+      return receptionBatchesApi.getAll({ harvest_id: harvestId }, currentOrganization.id);
     },
     enabled: !!harvestId && !!currentOrganization?.id,
   });
@@ -93,7 +93,7 @@ export function useReceptionBatchStats(filters: ReceptionBatchFilters = {}) {
         throw new Error('No organization selected');
       }
 
-      const data = await receptionBatchesApi.getAll(currentOrganization.id, filters);
+      const data = await receptionBatchesApi.getAll(filters, currentOrganization.id);
 
       const stats: ReceptionBatchStats = {
         total_batches: data.length,
