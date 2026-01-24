@@ -15,7 +15,7 @@ export class ReceptionBatchesService {
   ): Promise<void> {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
-      .from('organization_members')
+      .from('organization_users')
       .select('id')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
@@ -408,15 +408,49 @@ export class ReceptionBatchesService {
       query = query.eq('quality_grade', filters.quality_grade);
     }
 
-    if (filters?.date_from) {
-      query = query.gte('reception_date', filters.date_from);
+    const dateFrom = filters?.date_from || filters?.dateFrom;
+    const dateTo = filters?.date_to || filters?.dateTo;
+
+    if (dateFrom) {
+      query = query.gte('reception_date', dateFrom);
     }
 
-    if (filters?.date_to) {
-      query = query.lte('reception_date', filters.date_to);
+    if (dateTo) {
+      query = query.lte('reception_date', dateTo);
     }
 
-    query = query.order('reception_date', { ascending: false });
+    // Handle sorting
+    const sortBy = filters?.sortBy || 'reception_date';
+    const sortDir = filters?.sortDir || 'desc';
+    query = query.order(sortBy, { ascending: sortDir === 'asc' });
+
+    // Handle pagination
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 10;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Get total count first
+    const countQuery = client
+      .from('reception_batches')
+      .select('*', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
+    // Apply same filters to count query
+    if (filters?.warehouse_id) countQuery.eq('warehouse_id', filters.warehouse_id);
+    if (filters?.parcel_id) countQuery.eq('parcel_id', filters.parcel_id);
+    if (filters?.crop_id) countQuery.eq('crop_id', filters.crop_id);
+    if (filters?.harvest_id) countQuery.eq('harvest_id', filters.harvest_id);
+    if (filters?.status) countQuery.eq('status', filters.status);
+    if (filters?.decision) countQuery.eq('decision', filters.decision);
+    if (filters?.quality_grade) countQuery.eq('quality_grade', filters.quality_grade);
+    if (dateFrom) countQuery.gte('reception_date', dateFrom);
+    if (dateTo) countQuery.lte('reception_date', dateTo);
+
+    const { count } = await countQuery;
+
+    // Apply pagination
+    query = query.range(from, to);
 
     const { data, error } = await query;
 
@@ -424,7 +458,13 @@ export class ReceptionBatchesService {
       throw new BadRequestException(`Failed to fetch reception batches: ${error.message}`);
     }
 
-    return data || [];
+    return {
+      data: data || [],
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize),
+    };
   }
 
   // Get single batch

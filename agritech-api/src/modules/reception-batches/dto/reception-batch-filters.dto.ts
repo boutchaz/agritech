@@ -1,7 +1,31 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsUUID, IsEnum, IsDateString, IsInt, Min, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class ReceptionBatchFiltersDto {
+  @ApiPropertyOptional({ description: 'Page number (1-based)', default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ description: 'Number of items per page', default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+
+  @ApiPropertyOptional({ description: 'Field to sort by', default: 'reception_date' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'], default: 'desc' })
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  sortDir?: 'asc' | 'desc';
   @ApiPropertyOptional({ description: 'Filter by warehouse ID' })
   @IsOptional()
   @IsUUID()
@@ -43,10 +67,20 @@ export class ReceptionBatchFiltersDto {
   @IsDateString()
   date_from?: string;
 
+  @ApiPropertyOptional({ description: 'Filter from date (YYYY-MM-DD) - alias for date_from' })
+  @IsOptional()
+  @IsDateString()
+  dateFrom?: string;
+
   @ApiPropertyOptional({ description: 'Filter to date (YYYY-MM-DD)' })
   @IsOptional()
   @IsDateString()
   date_to?: string;
+
+  @ApiPropertyOptional({ description: 'Filter to date (YYYY-MM-DD) - alias for date_to' })
+  @IsOptional()
+  @IsDateString()
+  dateTo?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by quality grade',
