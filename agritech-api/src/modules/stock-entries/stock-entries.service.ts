@@ -1057,12 +1057,20 @@ export class StockEntriesService {
     warehouseId: string,
     requiredQuantity: number,
   ): Promise<void> {
-    // Lock and get current stock balance with FOR UPDATE to prevent race conditions
+    // First, lock the relevant rows to prevent race conditions
+    // We lock the stock_movements rows for this item/warehouse combination
+    await client.query(
+      `SELECT id FROM stock_movements
+       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       FOR UPDATE`,
+      [organizationId, itemId, warehouseId],
+    );
+
+    // Then calculate the balance (rows are now locked within this transaction)
     const result = await client.query(
       `SELECT COALESCE(SUM(quantity), 0) as balance
        FROM stock_movements
-       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
-       FOR UPDATE`,
+       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3`,
       [organizationId, itemId, warehouseId],
     );
 

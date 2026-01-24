@@ -683,6 +683,18 @@ export class AuthService {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
 
+    this.logger.log(`Password reset requested for email: ${email}, redirectTo: ${redirectTo}`);
+    this.logger.debug(`Using Supabase URL: ${supabaseUrl}`);
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      this.logger.error('Supabase configuration missing - SUPABASE_URL or SUPABASE_ANON_KEY not set');
+      // Still return success to prevent information leakage
+      return {
+        success: true,
+        message: 'If an account exists with this email, a password reset link will be sent.',
+      };
+    }
+
     const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: false,
@@ -690,16 +702,23 @@ export class AuthService {
       },
     });
 
-    this.logger.log(`Password reset requested for email: ${email}`);
+    try {
+      const { data, error } = await freshClient.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
 
-    const { error } = await freshClient.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
-
-    if (error) {
-      this.logger.error(`Failed to send password reset email: ${error.message}`);
-      // Don't reveal if email exists or not for security
-      // Always return success to prevent email enumeration
+      if (error) {
+        this.logger.error(`Failed to send password reset email - Code: ${error.code}, Status: ${error.status}, Message: ${error.message}, Name: ${error.name}`);
+        this.logger.error(`Full error object: ${JSON.stringify(error, null, 2)}`);
+        // Don't reveal if email exists or not for security
+        // Always return success to prevent email enumeration
+      } else {
+        this.logger.log(`Password reset email sent successfully to: ${email}`);
+        this.logger.debug(`Response data: ${JSON.stringify(data)}`);
+      }
+    } catch (err) {
+      this.logger.error(`Exception sending password reset email: ${err.message}`);
+      this.logger.error(`Exception stack: ${err.stack}`);
     }
 
     return {
