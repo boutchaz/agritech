@@ -25,6 +25,32 @@ export class LoginDto {
   password: string;
 }
 
+export class ChangePasswordDto {
+  @ApiProperty({ example: 'newStrongPassword123!' })
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'user@example.com' })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({ example: 'https://agritech-dashboard.thebzlab.online/auth/callback', description: 'URL to redirect after password reset' })
+  @IsString()
+  @IsNotEmpty()
+  redirectTo: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'newStrongPassword123!' })
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
+}
+
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
@@ -110,5 +136,45 @@ export class AuthController {
       req.user.email,
       setupDto.organizationName,
     );
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, dto.newPassword);
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @ApiOperation({ summary: 'Request password reset email' })
+  @ApiResponse({ status: 200, description: 'Password reset email sent' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email, dto.redirectTo);
+  }
+
+  @Post('reset-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reset password using recovery token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired token' })
+  async resetPassword(@Request() req, @Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(req.user.id, dto.newPassword);
+  }
+
+  @Post('refresh-token')
+  @Public()
+  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refreshToken(@Body() body: { refreshToken: string }) {
+    return this.authService.refreshToken(body.refreshToken);
   }
 }

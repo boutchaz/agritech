@@ -546,7 +546,7 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
       return;
     }
 
-    if (!loading && !profileLoading && user && profile && profile.password_set === false && !isOnSetPasswordPage && !isPublicRoute) {
+    if (!loading && !profileLoading && user && profile && profile.password_set !== true && !isOnSetPasswordPage && !isPublicRoute) {
       // User hasn't set their password - redirect to set-password
       window.location.href = '/set-password';
     }

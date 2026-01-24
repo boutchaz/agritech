@@ -3,7 +3,8 @@ import React, { useState } from 'react'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
-import { authSupabase } from '@/lib/auth-supabase'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const Route = createFileRoute('/(auth)/forgot-password')({
   component: ForgotPasswordPage,
@@ -27,12 +28,20 @@ function ForgotPasswordPage() {
     setError(null)
 
     try {
-      const { error: resetError } = await authSupabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      })
+      const response = await fetch(`${API_URL}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }),
+      });
 
-      if (resetError) {
-        throw resetError
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to send reset email');
       }
 
       setIsSubmitted(true)

@@ -312,6 +312,9 @@ export const authApi = {
 
   getProfile: () => api.get<UserProfile>('/auth/me'),
 
+  changePassword: (newPassword: string) =>
+    api.post<{ success: boolean }>('/auth/change-password', { newPassword }),
+
   getOrganizations: () => api.get<Organization[]>('/auth/organizations'),
 
   getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),

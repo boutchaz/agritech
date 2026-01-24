@@ -218,6 +218,46 @@ export class AuthService {
   }
 
   /**
+   * Change current user password and mark password_set
+   */
+  async changePassword(userId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters long');
+    }
+
+    const client = this.databaseService.getAdminClient();
+
+    const { error: updateError } = await client.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+
+    if (updateError) {
+      throw new BadRequestException(`Failed to update password: ${updateError.message}`);
+    }
+
+    await client
+      .from('user_profiles')
+      .upsert({
+        id: userId,
+        password_set: true,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'id',
+      });
+
+    // Clear worker temp password if applicable
+    await client
+      .from('workers')
+      .update({
+        temp_password: null,
+        temp_password_expires_at: null,
+      })
+      .eq('user_id', userId);
+
+    return { success: true };
+  }
+
+  /**
    * Check if user has required role level
    * Roles hierarchy: system_admin(1) > organization_admin(2) > farm_manager(3) > farm_worker(4) > day_laborer(5) > viewer(6)
    */
@@ -632,6 +672,108 @@ export class AuthService {
         id: newOrg.id,
         name: newOrg.name,
         slug: newOrg.slug,
+      },
+    };
+  }
+
+  /**
+   * Send password reset email
+   */
+  async forgotPassword(email: string, redirectTo: string) {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+
+    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    this.logger.log(`Password reset requested for email: ${email}`);
+
+    const { error } = await freshClient.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+
+    if (error) {
+      this.logger.error(`Failed to send password reset email: ${error.message}`);
+      // Don't reveal if email exists or not for security
+      // Always return success to prevent email enumeration
+    }
+
+    return {
+      success: true,
+      message: 'If an account exists with this email, a password reset link will be sent.',
+    };
+  }
+
+  /**
+   * Reset password (called after user clicks reset link and is authenticated with recovery token)
+   */
+  async resetPassword(userId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters long');
+    }
+
+    const client = this.databaseService.getAdminClient();
+
+    const { error: updateError } = await client.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+
+    if (updateError) {
+      this.logger.error(`Failed to reset password: ${updateError.message}`);
+      throw new BadRequestException('Failed to reset password');
+    }
+
+    // Mark password as set in profile
+    await client
+      .from('user_profiles')
+      .upsert({
+        id: userId,
+        password_set: true,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'id',
+      });
+
+    this.logger.log(`Password reset successfully for user: ${userId}`);
+
+    return { success: true, message: 'Password reset successfully' };
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshToken(refreshToken: string) {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+
+    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    const { data, error } = await freshClient.auth.refreshSession({
+      refresh_token: refreshToken,
+    });
+
+    if (error || !data.session) {
+      this.logger.error(`Failed to refresh token: ${error?.message}`);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        fullName: data.user.user_metadata?.full_name || '',
       },
     };
   }
