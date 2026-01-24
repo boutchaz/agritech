@@ -3886,7 +3886,30 @@
       "pending": "Pending",
       "inProgress": "In Progress",
       "completed": "Completed",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "dueToday": "Due Today",
+      "completionRate": "Completion",
+      "hoursLogged": "Hours"
+    },
+    "selected": "task(s) selected",
+    "selectAll": "Select all",
+    "changeStatus": "Change Status",
+    "start": "Start",
+    "pause": "Pause",
+    "complete": "Complete",
+    "completeHarvest": "Harvest",
+    "cancel": "Cancel Task",
+    "viewDetails": "View Details",
+    "estimated": "est.",
+    "logged": "logged",
+    "status": {
+      "inProgress": "Start",
+      "paused": "Pause",
+      "completed": "Complete",
+      "cancelled": "Cancel"
+    },
+    "type": {
+      "harvesting": "Harvest"
     },
     "listPage": {
       "title": "Task Management",
@@ -3927,10 +3950,15 @@
       "newTask": "New Task",
       "noTasksOnDate": "No tasks scheduled for this date",
       "tasksOnDate": "Tasks on {{date}}",
+      "tasksOnDateCount": "task(s)",
       "selectDate": "Select a date",
       "clickDateToView": "Click on a date to view tasks",
       "loading": "Loading calendar...",
       "assigned": "Assigned",
+      "legend": "Legend",
+      "stats": {
+        "total": "Total"
+      },
       "monthPicker": {
         "button": "Month",
         "empty": "No month found",

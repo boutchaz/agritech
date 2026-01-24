@@ -31,6 +31,21 @@ interface TaskFormProps {
   onSuccess: () => void;
 }
 
+// Helper to format date for input (YYYY-MM-DD)
+const formatDateForInput = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  // If already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  // If ISO format with time, extract date part
+  if (dateStr.includes('T')) return dateStr.split('T')[0];
+  // Try to parse as date
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) {
+    return date.toISOString().split('T')[0];
+  }
+  return '';
+};
+
 const TaskForm: React.FC<TaskFormProps> = ({
   task,
   organizationId,
@@ -38,6 +53,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onClose,
   onSuccess,
 }) => {
+  // Default dates for new tasks: today as start, 7 days from now as due date
+  const today = new Date().toISOString().split('T')[0];
+  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
   const [formData, setFormData] = useState<Partial<CreateTaskRequest>>({
     title: task?.title || '',
     description: task?.description || '',
@@ -46,8 +65,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
     farm_id: task?.farm_id || '',
     parcel_id: task?.parcel_id || undefined,
     assigned_to: task?.assigned_to || undefined,
-    scheduled_start: task?.scheduled_start?.split('T')[0] || '',
-    due_date: task?.due_date || '',
+    scheduled_start: task ? formatDateForInput(task.scheduled_start) : today,
+    due_date: task ? formatDateForInput(task.due_date) : nextWeek,
     estimated_duration: task?.estimated_duration || 8,
     notes: task?.notes || '',
     payment_type: task?.payment_type || 'daily',
@@ -156,6 +175,23 @@ const TaskForm: React.FC<TaskFormProps> = ({
     e.preventDefault();
     setValidationError(null);
 
+    // Validate required dates
+    if (!formData.scheduled_start) {
+      setValidationError('La date de début est requise.');
+      return;
+    }
+
+    if (!formData.due_date) {
+      setValidationError('La date limite est requise.');
+      return;
+    }
+
+    // Validate date order
+    if (formData.due_date < formData.scheduled_start) {
+      setValidationError('La date limite doit être après la date de début.');
+      return;
+    }
+
     // Validate: harvesting tasks require a parcel_id for "Complete with Harvest" workflow
     if (formData.task_type === 'harvesting' && !formData.parcel_id) {
       setValidationError('Les tâches de récolte nécessitent une parcelle pour permettre l\'enregistrement de la récolte.');
@@ -164,10 +200,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
     try {
       // Clean up form data: convert empty strings to undefined for optional fields
+      // Convert dates to ISO format for backend
       const cleanedData = Object.fromEntries(
         Object.entries(formData).map(([key, value]) => {
+          // Convert date fields to ISO format (add time component)
+          if ((key === 'scheduled_start' || key === 'due_date') && value && typeof value === 'string') {
+            // If it's a date-only string (YYYY-MM-DD), convert to ISO format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+              return [key, `${value}T00:00:00.000Z`];
+            }
+            return [key, value];
+          }
           // Convert empty strings to undefined so Postgres can handle them
-          if (value === '' && ['scheduled_start', 'due_date', 'assigned_to', 'parcel_id', 'farm_id', 'notes', 'description'].includes(key)) {
+          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description'].includes(key)) {
             return [key, undefined];
           }
           return [key, value];
@@ -474,25 +519,48 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* Dates & Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="scheduled_start">Date début</Label>
+              <Label htmlFor="scheduled_start">Date début *</Label>
               <Input
                 id="scheduled_start"
                 type="date"
+                required
                 min={new Date().toISOString().split('T')[0]}
-                value={formData.scheduled_start}
-                onChange={(e) => setFormData({ ...formData, scheduled_start: e.target.value })}
+                value={formData.scheduled_start || ''}
+                onChange={(e) => {
+                  const dateValue = e.target.value;
+                  setFormData({
+                    ...formData,
+                    scheduled_start: dateValue,
+                    // Auto-set due_date to scheduled_start if not set or if earlier
+                    due_date: formData.due_date && formData.due_date >= dateValue
+                      ? formData.due_date
+                      : dateValue
+                  });
+                }}
+                className={!formData.scheduled_start ? 'border-amber-400' : ''}
               />
+              {!formData.scheduled_start && (
+                <p className="text-xs text-amber-600">Requis</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="due_date">Date limite</Label>
+              <Label htmlFor="due_date">Date limite *</Label>
               <Input
                 id="due_date"
                 type="date"
+                required
                 min={formData.scheduled_start || new Date().toISOString().split('T')[0]}
-                value={formData.due_date}
+                value={formData.due_date || ''}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                className={!formData.due_date ? 'border-amber-400' : ''}
               />
+              {!formData.due_date && (
+                <p className="text-xs text-amber-600">Requis</p>
+              )}
+              {formData.scheduled_start && formData.due_date && formData.due_date < formData.scheduled_start && (
+                <p className="text-xs text-red-600">La date limite doit être après la date de début</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -501,8 +569,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 id="estimated_duration"
                 type="number"
                 min="1"
-                value={formData.estimated_duration}
-                onChange={(e) => setFormData({ ...formData, estimated_duration: parseInt(e.target.value) })}
+                value={formData.estimated_duration || ''}
+                onChange={(e) => setFormData({ ...formData, estimated_duration: parseInt(e.target.value) || undefined })}
               />
             </div>
           </div>

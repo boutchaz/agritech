@@ -3704,7 +3704,30 @@
       "pending": "En attente",
       "inProgress": "En cours",
       "completed": "Terminées",
-      "overdue": "En retard"
+      "overdue": "En retard",
+      "dueToday": "Aujourd'hui",
+      "completionRate": "Achèvement",
+      "hoursLogged": "Heures"
+    },
+    "selected": "tâche(s) sélectionnée(s)",
+    "selectAll": "Tout sélectionner",
+    "changeStatus": "Changer le statut",
+    "start": "Démarrer",
+    "pause": "Pause",
+    "complete": "Terminer",
+    "completeHarvest": "Récolter",
+    "cancel": "Annuler",
+    "viewDetails": "Voir les détails",
+    "estimated": "est.",
+    "logged": "enreg.",
+    "status": {
+      "inProgress": "Démarrer",
+      "paused": "Mettre en pause",
+      "completed": "Terminer",
+      "cancelled": "Annuler"
+    },
+    "type": {
+      "harvesting": "Récolte"
     },
     "listPage": {
       "title": "Gestion des Tâches",
@@ -3745,10 +3768,15 @@
       "newTask": "Nouvelle tâche",
       "noTasksOnDate": "Aucune tâche prévue pour cette date",
       "tasksOnDate": "Tâches du {{date}}",
+      "tasksOnDateCount": "tâche(s)",
       "selectDate": "Sélectionnez une date",
       "clickDateToView": "Cliquez sur une date pour voir les tâches",
       "loading": "Chargement du calendrier...",
       "assigned": "Assigné",
+      "legend": "Légende",
+      "stats": {
+        "total": "Total"
+      },
       "monthPicker": {
         "button": "Mois",
         "empty": "Aucun mois trouvé",
