@@ -656,38 +656,32 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* ========== SALES & PURCHASING SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-billing">
-              {isCollapsed ? (
-                <div className="hidden lg:block">
-                  <CollapsedSectionPopover icon={ShoppingCart} title={t('nav.salesPurchasing')}>
-                    <ProtectedNavItem action="read" subject="Invoice">
+            <ProtectedNavItem action="read" subject="Invoice">
+              <Separator className="my-3" />
+              <div className="space-y-1" data-tour="nav-billing">
+                {isCollapsed ? (
+                  <div className="hidden lg:block">
+                    <CollapsedSectionPopover icon={ShoppingCart} title={t('nav.salesPurchasing')}>
                       <PopoverNavItem path="/accounting/quotes" label={t('nav.quotes')} isActive={currentPath === '/accounting/quotes'} />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Invoice">
                       <PopoverNavItem path="/accounting/sales-orders" label={t('nav.salesOrders')} isActive={currentPath === '/accounting/sales-orders'} />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Invoice">
                       <PopoverNavItem path="/accounting/purchase-orders" label={t('nav.purchaseOrders')} isActive={currentPath === '/accounting/purchase-orders'} />
-                    </ProtectedNavItem>
-                  </CollapsedSectionPopover>
-                </div>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className={getSectionHeaderClassName()}
-                    onClick={() => setShowSalesPurchasing(!showSalesPurchasing)}
-                  >
-                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                      {renderIcon(ShoppingCart)}
-                      {renderSectionTitle(t('nav.salesPurchasing'))}
-                    </div>
-                    {renderChevron(showSalesPurchasing)}
-                  </Button>
-                  {showSalesPurchasing && (
-                    <>
-                      <ProtectedNavItem action="read" subject="Invoice">
+                    </CollapsedSectionPopover>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className={getSectionHeaderClassName()}
+                      onClick={() => setShowSalesPurchasing(!showSalesPurchasing)}
+                    >
+                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                        {renderIcon(ShoppingCart)}
+                        {renderSectionTitle(t('nav.salesPurchasing'))}
+                      </div>
+                      {renderChevron(showSalesPurchasing)}
+                    </Button>
+                    {showSalesPurchasing && (
+                      <>
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/accounting/quotes')}
@@ -695,8 +689,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.quotes'))}
                         </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/accounting/sales-orders')}
@@ -704,8 +696,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.salesOrders'))}
                         </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Invoice">
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/accounting/purchase-orders')}
@@ -713,12 +703,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.purchaseOrders'))}
                         </Button>
-                      </ProtectedNavItem>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </ProtectedNavItem>
 
             {/* ========== ACCOUNTING SECTION ========== */}
             <Separator className="my-3" />
@@ -803,42 +793,34 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </ProtectedNavItem>
 
-            {/* ========== CONFIGURATION SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-settings">
-              {isCollapsed ? (
-                <div className="hidden lg:block">
-                  <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
-                    <ProtectedNavItem action="read" subject="Invoice">
+            {/* ========== CONFIGURATION SECTION (Admin only) ========== */}
+            <ProtectedNavItem action="manage" subject="User">
+              <Separator className="my-3" />
+              <div className="space-y-1" data-tour="nav-settings">
+                {isCollapsed ? (
+                  <div className="hidden lg:block">
+                    <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
                       <PopoverNavItem path="/accounting/customers" label={t('nav.customers')} isActive={currentPath === '/accounting/customers'} />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Stock">
                       <PopoverNavItem path="/stock/suppliers" label={t('nav.suppliers')} isActive={currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers')} />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Stock">
                       <PopoverNavItem path="/stock/warehouses" label={t('nav.warehouses')} isActive={currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses')} />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Settings">
                       <PopoverNavItem path="/settings/profile" label={t('nav.settings')} isActive={currentPath.startsWith('/settings')} />
-                    </ProtectedNavItem>
-                  </CollapsedSectionPopover>
-                </div>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className={getSectionHeaderClassName()}
-                    onClick={() => setShowConfiguration(!showConfiguration)}
-                  >
-                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                      {renderIcon(Settings)}
-                      {renderSectionTitle(t('nav.configuration'))}
-                    </div>
-                    {renderChevron(showConfiguration)}
-                  </Button>
-                  {showConfiguration && (
-                    <>
-                      <ProtectedNavItem action="read" subject="Invoice">
+                    </CollapsedSectionPopover>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className={getSectionHeaderClassName()}
+                      onClick={() => setShowConfiguration(!showConfiguration)}
+                    >
+                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                        {renderIcon(Settings)}
+                        {renderSectionTitle(t('nav.configuration'))}
+                      </div>
+                      {renderChevron(showConfiguration)}
+                    </Button>
+                    {showConfiguration && (
+                      <>
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/accounting/customers')}
@@ -846,8 +828,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.customers'))}
                         </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Stock">
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
@@ -855,8 +835,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.suppliers'))}
                         </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Stock">
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
@@ -864,8 +842,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.warehouses'))}
                         </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Settings">
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(currentPath.startsWith('/settings'))}
@@ -873,70 +849,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t('nav.settings'))}
                         </Button>
-                      </ProtectedNavItem>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </ProtectedNavItem>
+
 
             {/* ========== MARKETPLACE ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1">
-              {isCollapsed ? (
-                <div className="hidden lg:block">
-                  <CollapsedSectionPopover icon={ShoppingBag} title="Marketplace">
-                    <PopoverNavItem path="/marketplace/quote-requests/received" label="Demandes reçues" isActive={currentPath === '/marketplace/quote-requests/received'} />
-                    <PopoverNavItem path="/marketplace/quote-requests/sent" label="Demandes envoyées" isActive={currentPath === '/marketplace/quote-requests/sent'} />
-                    <a
-                      href="https://marketplace.thebzlab.online"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <Button
-                        variant="ghost"
-                        className={cn(
-                          "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group"
-                        )}
-                      >
-                        <div className="flex items-center w-full">
-                          <span className="flex-1">Voir la marketplace</span>
-                          <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      </Button>
-                    </a>
-                  </CollapsedSectionPopover>
-                </div>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className={getSectionHeaderClassName()}
-                    onClick={() => setShowMarketplace(!showMarketplace)}
-                  >
-                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                      {renderIcon(ShoppingBag)}
-                      {renderSectionTitle("Marketplace")}
-                    </div>
-                    {renderChevron(showMarketplace)}
-                  </Button>
-                  {showMarketplace && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        className={getSubItemClassName(currentPath === '/marketplace/quote-requests/received')}
-                        onClick={(e) => handleNavigation('/marketplace/quote-requests/received', e)}
-                      >
-                        {renderText("Demandes reçues")}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className={getSubItemClassName(currentPath === '/marketplace/quote-requests/sent')}
-                        onClick={(e) => handleNavigation('/marketplace/quote-requests/sent', e)}
-                      >
-                        {renderText("Demandes envoyées")}
-                      </Button>
+            <ProtectedNavItem action="read" subject="Invoice">
+              <Separator className="my-3" />
+              <div className="space-y-1">
+                {isCollapsed ? (
+                  <div className="hidden lg:block">
+                    <CollapsedSectionPopover icon={ShoppingBag} title="Marketplace">
+                      <PopoverNavItem path="/marketplace/quote-requests/received" label="Demandes reçues" isActive={currentPath === '/marketplace/quote-requests/received'} />
+                      <PopoverNavItem path="/marketplace/quote-requests/sent" label="Demandes envoyées" isActive={currentPath === '/marketplace/quote-requests/sent'} />
                       <a
                         href="https://marketplace.thebzlab.online"
                         target="_blank"
@@ -945,19 +874,69 @@ const Sidebar: React.FC<SidebarProps> = ({
                       >
                         <Button
                           variant="ghost"
-                          className={cn(getSubItemClassName(false), "group")}
+                          className={cn(
+                            "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group"
+                          )}
                         >
-                          <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
-                            <span className="flex-1">{renderText("Voir la marketplace")}</span>
+                          <div className="flex items-center w-full">
+                            <span className="flex-1">Voir la marketplace</span>
                             <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </Button>
                       </a>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                    </CollapsedSectionPopover>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className={getSectionHeaderClassName()}
+                      onClick={() => setShowMarketplace(!showMarketplace)}
+                    >
+                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                        {renderIcon(ShoppingBag)}
+                        {renderSectionTitle("Marketplace")}
+                      </div>
+                      {renderChevron(showMarketplace)}
+                    </Button>
+                    {showMarketplace && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/marketplace/quote-requests/received')}
+                          onClick={(e) => handleNavigation('/marketplace/quote-requests/received', e)}
+                        >
+                          {renderText("Demandes reçues")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/marketplace/quote-requests/sent')}
+                          onClick={(e) => handleNavigation('/marketplace/quote-requests/sent', e)}
+                        >
+                          {renderText("Demandes envoyées")}
+                        </Button>
+                        <a
+                          href="https://marketplace.thebzlab.online"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block"
+                        >
+                          <Button
+                            variant="ghost"
+                            className={cn(getSubItemClassName(false), "group")}
+                          >
+                            <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
+                              <span className="flex-1">{renderText("Voir la marketplace")}</span>
+                              <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </Button>
+                        </a>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </ProtectedNavItem>
 
             {/* ========== AGRICULTURE MODULES ========== */}
             {agricultureModules.length > 0 && (
