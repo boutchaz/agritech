@@ -9,11 +9,16 @@ export enum Subject {
     USER = 'User',
     ORGANIZATION = 'Organization',
     ROLE = 'Role',
+    SUBSCRIPTION = 'Subscription',
 
     // Physical resources
     FARM = 'Farm',
     PARCEL = 'Parcel',
     WAREHOUSE = 'Warehouse',
+    INFRASTRUCTURE = 'Infrastructure',
+    STRUCTURE = 'Structure',
+    TREE = 'Tree',
+    FARM_HIERARCHY = 'FarmHierarchy',
 
     // Financial resources
     INVOICE = 'Invoice',
@@ -23,23 +28,35 @@ export enum Subject {
     CUSTOMER = 'Customer',
     SUPPLIER = 'Supplier',
     FINANCIAL_REPORT = 'FinancialReport',
+    COST_CENTER = 'CostCenter',
+    TAX = 'Tax',
+    BANK_ACCOUNT = 'BankAccount',
+    PERIOD = 'Period',
+    ACCOUNTING_REPORT = 'AccountingReport',
+    ACCOUNT_MAPPING = 'AccountMapping',
 
     // People & Workforce
     WORKER = 'Worker',
+    EMPLOYEE = 'Employee',
+    DAY_LABORER = 'DayLaborer',
     TASK = 'Task',
     PIECE_WORK = 'PieceWork',
+    WORK_UNIT = 'WorkUnit',
 
     // Production
     HARVEST = 'Harvest',
     CROP_CYCLE = 'CropCycle',
+    CAMPAIGN = 'Campaign',
+    FISCAL_YEAR = 'FiscalYear',
     PRODUCT_APPLICATION = 'ProductApplication',
     ANALYSIS = 'Analysis',
     SOIL_ANALYSIS = 'SoilAnalysis',
     PLANT_ANALYSIS = 'PlantAnalysis',
     WATER_ANALYSIS = 'WaterAnalysis',
 
-    // Inventory
+    // Inventory & Stock
     PRODUCT = 'Product',
+    STOCK = 'Stock',
     STOCK_ENTRY = 'StockEntry',
     STOCK_ITEM = 'StockItem',
     BIOLOGICAL_ASSET = 'BiologicalAsset',
@@ -58,13 +75,26 @@ export enum Subject {
     // Reporting & Analytics
     REPORT = 'Report',
     SATELLITE_ANALYSIS = 'SatelliteAnalysis',
+    SATELLITE_REPORT = 'SatelliteReport',
     PRODUCTION_INTELLIGENCE = 'ProductionIntelligence',
     DASHBOARD = 'Dashboard',
+    ANALYTICS = 'Analytics',
+    SENSOR = 'Sensor',
 
     // Financial analytics
     COST = 'Cost',
     REVENUE = 'Revenue',
     INVENTORY = 'Inventory',
+    UTILITY = 'Utility',
+
+    // Communication
+    CHAT = 'Chat',
+
+    // Settings & Configuration
+    SETTINGS = 'Settings',
+
+    // API
+    API = 'API',
 
     // System
     ALL = 'all',
@@ -502,19 +532,35 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.FARM);
             can(Action.Manage, Subject.PARCEL);
             can(Action.Manage, Subject.WAREHOUSE);
+            can(Action.Manage, Subject.INFRASTRUCTURE);
+            can(Action.Manage, Subject.STRUCTURE);
+            can(Action.Manage, Subject.TREE);
+            can(Action.Read, Subject.FARM_HIERARCHY);
             can(Action.Manage, Subject.INVOICE);
             can(Action.Manage, Subject.PAYMENT);
             can(Action.Manage, Subject.JOURNAL_ENTRY);
             can(Action.Manage, Subject.ACCOUNT);
             can(Action.Manage, Subject.CUSTOMER);
             can(Action.Manage, Subject.SUPPLIER);
+            can(Action.Manage, Subject.COST_CENTER);
+            can(Action.Manage, Subject.TAX);
+            can(Action.Manage, Subject.BANK_ACCOUNT);
+            can(Action.Manage, Subject.ACCOUNT_MAPPING);
+            can(Action.Read, Subject.ACCOUNTING_REPORT);
             can(Action.Manage, Subject.WORKER);
+            can(Action.Manage, Subject.EMPLOYEE);
+            can(Action.Manage, Subject.DAY_LABORER);
             can(Action.Manage, Subject.TASK);
             can(Action.Manage, Subject.PIECE_WORK);
+            can(Action.Manage, Subject.WORK_UNIT);
             can(Action.Manage, Subject.HARVEST);
             can(Action.Manage, Subject.CROP_CYCLE);
+            can(Action.Manage, Subject.CAMPAIGN);
+            can(Action.Manage, Subject.FISCAL_YEAR);
             can(Action.Manage, Subject.PRODUCT_APPLICATION);
+            can(Action.Manage, Subject.STOCK);
             can(Action.Manage, Subject.STOCK_ENTRY);
+            can(Action.Manage, Subject.STOCK_ITEM);
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
             can(Action.Manage, Subject.ANALYSIS);
@@ -531,24 +577,38 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.FINANCIAL_REPORT);
             can(Action.Manage, Subject.REPORT);
             can(Action.Manage, Subject.SATELLITE_ANALYSIS);
+            can(Action.Manage, Subject.SATELLITE_REPORT);
             can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
+            can(Action.Manage, Subject.UTILITY);
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Update, Subject.DASHBOARD);
+            can(Action.Read, Subject.CHAT);
             can(Action.Read, Subject.USER);
             can(Action.Update, Subject.USER);
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Update, Subject.ORGANIZATION);
+            can(Action.Read, Subject.SUBSCRIPTION);
+            can(Action.Update, Subject.SUBSCRIPTION);
+            can(Action.Read, Subject.SETTINGS);
+            can(Action.Update, Subject.SETTINGS);
             can(Action.Manage, Subject.ROLE);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
             can(Action.Manage, Subject.PARCEL);
             can(Action.Manage, Subject.WAREHOUSE);
+            can(Action.Manage, Subject.INFRASTRUCTURE);
+            can(Action.Read, Subject.FARM_HIERARCHY);
             can(Action.Manage, Subject.TASK);
             can(Action.Manage, Subject.WORKER);
+            can(Action.Manage, Subject.EMPLOYEE);
+            can(Action.Manage, Subject.DAY_LABORER);
             can(Action.Manage, Subject.PIECE_WORK);
+            can(Action.Manage, Subject.WORK_UNIT);
             can(Action.Manage, Subject.HARVEST);
             can(Action.Manage, Subject.CROP_CYCLE);
+            can(Action.Manage, Subject.CAMPAIGN);
+            can(Action.Read, Subject.FISCAL_YEAR);
             can(Action.Manage, Subject.PRODUCT_APPLICATION);
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
@@ -556,10 +616,16 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);
             can(Action.Manage, Subject.WATER_ANALYSIS);
+            can(Action.Manage, Subject.STOCK);
             can(Action.Manage, Subject.STOCK_ENTRY);
+            can(Action.Manage, Subject.STOCK_ITEM);
             can(Action.Manage, Subject.DELIVERY);
             can(Action.Manage, Subject.RECEPTION_BATCH);
             can(Action.Manage, Subject.QUALITY_CONTROL);
+            can(Action.Manage, Subject.UTILITY);
+            can(Action.Read, Subject.CHAT);
+            can(Action.Read, Subject.SETTINGS);
+            can(Action.Update, Subject.SETTINGS);
 
             // Invoices and payments
             can(Action.Create, Subject.INVOICE);
@@ -587,9 +653,15 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.ACCOUNT);
             can(Action.Read, Subject.CUSTOMER);
             can(Action.Read, Subject.SUPPLIER);
+            can(Action.Read, Subject.COST_CENTER);
+            can(Action.Read, Subject.TAX);
+            can(Action.Read, Subject.BANK_ACCOUNT);
+            can(Action.Read, Subject.ACCOUNT_MAPPING);
+            can(Action.Read, Subject.ACCOUNTING_REPORT);
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
+            can(Action.Read, Subject.SATELLITE_REPORT);
             can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Read, Subject.DASHBOARD);
 
@@ -605,12 +677,25 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.FARM);
             can(Action.Read, Subject.PARCEL);
             can(Action.Read, Subject.WAREHOUSE);
+            can(Action.Read, Subject.FARM_HIERARCHY);
+            can(Action.Read, Subject.CHAT);
+            can(Action.Read, Subject.SETTINGS);
+            can(Action.Update, Subject.SETTINGS);
+
+            // Workers (view only)
+            can(Action.Read, Subject.WORKER);
+            can(Action.Read, Subject.EMPLOYEE);
+            can(Action.Read, Subject.DAY_LABORER);
+            can(Action.Read, Subject.PIECE_WORK);
+            can(Action.Read, Subject.WORK_UNIT);
 
             // Production
             can(Action.Read, Subject.HARVEST);
             can(Action.Create, Subject.HARVEST);
             can(Action.Update, Subject.HARVEST);
             can(Action.Read, Subject.CROP_CYCLE);
+            can(Action.Read, Subject.CAMPAIGN);
+            can(Action.Read, Subject.FISCAL_YEAR);
             can(Action.Read, Subject.PRODUCT_APPLICATION);
             can(Action.Create, Subject.PRODUCT_APPLICATION);
             can(Action.Update, Subject.PRODUCT_APPLICATION);
@@ -620,12 +705,14 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SOIL_ANALYSIS);
             can(Action.Read, Subject.PLANT_ANALYSIS);
             can(Action.Read, Subject.WATER_ANALYSIS);
+            can(Action.Read, Subject.STOCK);
             can(Action.Read, Subject.STOCK_ENTRY);
             can(Action.Create, Subject.STOCK_ENTRY);
             can(Action.Update, Subject.STOCK_ENTRY);
             can(Action.Read, Subject.DELIVERY);
             can(Action.Update, Subject.DELIVERY);
             can(Action.Read, Subject.RECEPTION_BATCH);
+            can(Action.Create, Subject.RECEPTION_BATCH);
             can(Action.Update, Subject.RECEPTION_BATCH);
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Create, Subject.QUALITY_CONTROL);
@@ -655,6 +742,9 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.HARVEST);
             can(Action.Read, Subject.PRODUCT);
             can(Action.Read, Subject.DASHBOARD);
+            can(Action.Read, Subject.PIECE_WORK);
+            can(Action.Read, Subject.SETTINGS);
+            can(Action.Update, Subject.SETTINGS);
 
             cannot(Action.Create, Subject.INVOICE);
             cannot(Action.Update, Subject.INVOICE);
@@ -675,19 +765,33 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.FARM);
             can(Action.Read, Subject.PARCEL);
             can(Action.Read, Subject.WAREHOUSE);
+            can(Action.Read, Subject.INFRASTRUCTURE);
+            can(Action.Read, Subject.FARM_HIERARCHY);
             can(Action.Read, Subject.INVOICE);
             can(Action.Read, Subject.PAYMENT);
             can(Action.Read, Subject.JOURNAL_ENTRY);
             can(Action.Read, Subject.ACCOUNT);
             can(Action.Read, Subject.CUSTOMER);
             can(Action.Read, Subject.SUPPLIER);
+            can(Action.Read, Subject.COST_CENTER);
+            can(Action.Read, Subject.TAX);
+            can(Action.Read, Subject.BANK_ACCOUNT);
+            can(Action.Read, Subject.ACCOUNT_MAPPING);
+            can(Action.Read, Subject.ACCOUNTING_REPORT);
             can(Action.Read, Subject.WORKER);
+            can(Action.Read, Subject.EMPLOYEE);
+            can(Action.Read, Subject.DAY_LABORER);
             can(Action.Read, Subject.TASK);
             can(Action.Read, Subject.PIECE_WORK);
+            can(Action.Read, Subject.WORK_UNIT);
             can(Action.Read, Subject.HARVEST);
             can(Action.Read, Subject.CROP_CYCLE);
+            can(Action.Read, Subject.CAMPAIGN);
+            can(Action.Read, Subject.FISCAL_YEAR);
             can(Action.Read, Subject.PRODUCT_APPLICATION);
+            can(Action.Read, Subject.STOCK);
             can(Action.Read, Subject.STOCK_ENTRY);
+            can(Action.Read, Subject.STOCK_ITEM);
             can(Action.Read, Subject.PRODUCT);
             can(Action.Read, Subject.BIOLOGICAL_ASSET);
             can(Action.Read, Subject.ANALYSIS);
@@ -704,11 +808,14 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
+            can(Action.Read, Subject.SATELLITE_REPORT);
             can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Read, Subject.DASHBOARD);
+            can(Action.Read, Subject.CHAT);
             can(Action.Read, Subject.USER);
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Read, Subject.ROLE);
+            can(Action.Read, Subject.SETTINGS);
 
             cannot(Action.Create, 'all');
             cannot(Action.Update, 'all');
