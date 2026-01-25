@@ -1,6 +1,6 @@
 'use client';
 
-import { ScriptProps, useEffect } from 'react';
+import { useEffect } from 'react';
 import Script from 'next/script';
 
 const GTM_CONTAINER_ID = process.env.NEXT_PUBLIC_GTM_CONTAINER_ID || '';
