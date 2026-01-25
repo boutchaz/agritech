@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import EnhancedOnboardingFlow from '@/components/EnhancedOnboardingFlow';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import { useAuth } from '@/hooks/useAuth';
 import { authSupabase } from '@/lib/auth-supabase';
 
@@ -9,7 +9,7 @@ export const Route = createFileRoute('/(public)/onboarding/')({
 
 function OnboardingPage() {
   const navigate = useNavigate();
-  const { user, isLoading, refreshUserData } = useAuth();
+  const { user, loading, refreshUserData } = useAuth();
 
   const handleOnboardingComplete = async () => {
     // Mark onboarding as completed in user profile
@@ -21,13 +21,13 @@ function OnboardingPage() {
           .eq('id', user.id);
 
         if (updateError) {
-          console.warn('⚠️ Failed to mark onboarding as completed:', updateError);
+          console.warn('Failed to mark onboarding as completed:', updateError);
         } else {
-          console.log('✅ Onboarding marked as completed');
+          console.log('Onboarding marked as completed');
         }
       }
     } catch (err) {
-      console.warn('⚠️ Error updating onboarding status:', err);
+      console.warn('Error updating onboarding status:', err);
     }
 
     // Refresh auth data to get updated onboarding_completed flag
@@ -38,12 +38,15 @@ function OnboardingPage() {
   };
 
   // Show loading while checking auth
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-25" />
+            <div className="absolute inset-0 bg-emerald-500 rounded-full animate-pulse" />
+          </div>
+          <p className="text-gray-600">Chargement...</p>
         </div>
       </div>
     );
@@ -56,7 +59,7 @@ function OnboardingPage() {
   }
 
   return (
-    <EnhancedOnboardingFlow
+    <OnboardingWizard
       user={user}
       onComplete={handleOnboardingComplete}
     />

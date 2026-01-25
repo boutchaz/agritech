@@ -79,6 +79,7 @@ Start your digital transformation journey today and experience the power of inte
     tags: ['getting started', 'farm management', 'digital transformation'],
     seo_title: 'Digital Farm Management Guide | AgriTech Platform',
     seo_description: 'Learn how to get started with digital farm management using our comprehensive AgriTech platform. Manage farms, parcels, crops, and finances in one place.',
+    imageFilePath: 'cms/seed-assets/digital-farm-management.png',
   },
   {
     title: 'From Harvest to Finance: Automating Your Agricultural Accounting',
@@ -148,6 +149,7 @@ Enable the harvest-to-finance workflow in your settings and start experiencing t
     tags: ['automation', 'accounting', 'harvest', 'workflow', 'finance'],
     seo_title: 'Automated Agricultural Accounting | Harvest to Finance Workflow',
     seo_description: 'Automate your agricultural accounting with our harvest-to-finance workflow. Eliminate manual data entry and ensure accurate financial records.',
+    imageFilePath: 'cms/seed-assets/harvest-finance-automation.png',
   },
   {
     title: 'Smart Inventory Management for Agricultural Products',
@@ -217,6 +219,7 @@ Transform your warehouse operations with intelligent inventory management design
     tags: ['inventory', 'warehouse', 'stock management', 'batch tracking'],
     seo_title: 'Agricultural Inventory Management System | Stock Tracking',
     seo_description: 'Optimize warehouse operations with smart inventory management for agricultural products. Track batches, quality grades, and stock movements.',
+    imageFilePath: 'cms/seed-assets/smart-inventory-management.png',
   },
   {
     title: 'Maximizing Parcel Profitability with Data-Driven Insights',
@@ -298,6 +301,7 @@ Let data guide your agricultural decisions and maximize the profitability of eve
     tags: ['profitability', 'analytics', 'data-driven', 'parcel management', 'ROI'],
     seo_title: 'Parcel Profitability Analysis for Farms | AgriTech Analytics',
     seo_description: 'Maximize farm profitability with data-driven parcel analysis. Track costs, revenues, and ROI to make informed agricultural decisions.',
+    imageFilePath: 'cms/seed-assets/parcel-profitability.png',
   },
   {
     title: 'Worker Management and Payment Automation',
@@ -400,6 +404,7 @@ Transform your workforce management with automation designed for agricultural op
     tags: ['workers', 'payroll', 'automation', 'workforce management', 'payments'],
     seo_title: 'Agricultural Worker Management & Payment Automation',
     seo_description: 'Streamline workforce management with automated time tracking, performance monitoring, and integrated payroll for agricultural workers.',
+    imageFilePath: 'cms/seed-assets/worker-management-payment.png',
   },
   {
     title: 'Sustainable Agriculture: Tracking Environmental Impact',
@@ -502,6 +507,7 @@ Build a more sustainable agricultural operation while maintaining profitability 
     tags: ['sustainability', 'environment', 'organic', 'certification', 'carbon footprint'],
     seo_title: 'Sustainable Agriculture & Environmental Impact Tracking',
     seo_description: 'Track and reduce environmental impact in agriculture. Monitor water usage, chemical applications, and carbon emissions for sustainable farming.',
+    imageFilePath: 'cms/seed-assets/sustainable-agriculture-tracking.png',
   },
   {
     title: 'Precision Farming with Satellite Imagery and IoT Sensors',
@@ -599,6 +605,7 @@ Embrace precision farming technologies to stay competitive and sustainable in mo
     tags: ['precision farming', 'satellite imagery', 'IoT', 'technology', 'sensors'],
     seo_title: 'Precision Farming with Satellite & IoT | AgriTech',
     seo_description: 'Discover how satellite imagery and IoT sensors are transforming agriculture. Optimize yields and reduce waste with precision farming technology.',
+    imageFilePath: 'cms/seed-assets/precision-farming.png',
   },
   {
     title: 'Effective Harvest Planning and Yield Optimization',
@@ -726,6 +733,7 @@ Optimize your harvest operations with careful planning and execution to maximize
     tags: ['harvest', 'yield optimization', 'planning', 'quality control', 'production'],
     seo_title: 'Harvest Planning & Yield Optimization Guide | AgriTech',
     seo_description: 'Master harvest planning to maximize yields and minimize losses. Learn strategies for effective harvest management and yield optimization.',
+    imageFilePath: 'cms/seed-assets/harvest-planning-yield.png',
   },
   {
     title: 'Building a Resilient Agricultural Supply Chain',
@@ -871,6 +879,7 @@ Build a resilient supply chain that can adapt to challenges while maintaining qu
     tags: ['supply chain', 'logistics', 'resilience', 'quality', 'distribution'],
     seo_title: 'Resilient Agricultural Supply Chain | AgriTech Guide',
     seo_description: 'Build a resilient agricultural supply chain that withstands disruptions. Learn strategies for supply chain management and risk mitigation.',
+    imageFilePath: 'cms/seed-assets/resilient-supply-chain.png',
   },
   {
     title: 'Financial Planning and Budgeting for Agricultural Operations',
@@ -1044,5 +1053,6 @@ Master financial planning and budgeting to ensure your agricultural operation re
     tags: ['financial planning', 'budgeting', 'accounting', 'cash flow', 'profitability'],
     seo_title: 'Financial Planning & Budgeting for Agriculture | AgriTech',
     seo_description: 'Master financial planning and budgeting for agricultural operations. Learn strategies for cost management, cash flow, and profitability.',
+    imageFilePath: 'cms/seed-assets/financial-planning-budgeting.png',
   },
 ];

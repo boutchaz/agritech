@@ -1,4 +1,6 @@
 import type { Core } from '@strapi/strapi';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   cropCategoriesFromPlantingData,
   treeTypesFromPlantingData,
@@ -310,6 +312,58 @@ const intendedUses = [
   { name: 'Self-Consumption', name_fr: 'Autoconsommation', name_ar: 'الاستهلاك الذاتي', value: 'self_consumption', icon: '🏠', sort_order: 7, is_global: true },
 ];
 
+async function uploadFromPath(strapi: Core.Strapi, filePath: string, fileName: string) {
+  try {
+    const absolutePath = path.resolve(process.cwd(), filePath);
+
+    if (!fs.existsSync(absolutePath)) {
+      strapi.log.warn(`⚠️ File not found for seeding: ${absolutePath}`);
+      return null;
+    }
+
+    const stats = fs.statSync(absolutePath);
+    const uploadService = strapi.plugin('upload').service('upload');
+
+    // Check if file already exists by name
+    const existingFiles = await strapi.entityService.findMany('plugin::upload.file', {
+      filters: { name: fileName },
+    });
+
+    if (existingFiles && existingFiles.length > 0) {
+      return existingFiles[0].id;
+    }
+
+    strapi.log.info(`📤 Uploading ${fileName}...`);
+
+    // Create the file object for Strapi upload service
+    // Note: implementation details may vary by Strapi version, this works for v4/v5 generic file upload
+    const uploadedFiles = await uploadService.upload({
+      data: {
+        fileInfo: {
+          name: fileName,
+          alternativeText: fileName,
+          caption: fileName,
+        },
+      },
+      files: {
+        path: absolutePath,
+        name: fileName,
+        type: 'image/png', // Assumption: seed images are likely png/jpg. Could be dynamic.
+        size: stats.size,
+      },
+    });
+
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      return uploadedFiles[0].id;
+    }
+
+    return null;
+  } catch (error: any) {
+    strapi.log.error(`❌ Error uploading file ${fileName}: ${error.message}`);
+    return null;
+  }
+}
+
 // Generic seed function
 async function seedCollection(
   strapi: Core.Strapi,
@@ -569,11 +623,21 @@ async function seedBlogs(strapi: Core.Strapi) {
       }
 
       try {
-        const { category_slug, ...postData } = post;
+        const { category_slug, imageFilePath, ...postData } = post as any;
         const postPayload: any = {
           ...postData,
           publishedAt: new Date(),
         };
+
+        // Handle image upload if provided
+        if (imageFilePath) {
+          const imageName = path.basename(imageFilePath);
+          const imageId = await uploadFromPath(strapi, imageFilePath, imageName);
+
+          if (imageId) {
+            postPayload.featured_image = imageId;
+          }
+        }
 
         // Add category relation if category exists
         if (category_slug && categoryMap.has(category_slug)) {
@@ -598,7 +662,7 @@ async function seedBlogs(strapi: Core.Strapi) {
 }
 
 export default {
-  register(/* { strapi }: { strapi: Core.Strapi } */) {},
+  register(/* { strapi }: { strapi: Core.Strapi } */) { },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     strapi.log.info('🌱 Starting reference data seeding...');
@@ -607,16 +671,16 @@ export default {
     await seedCollection(strapi, 'api::soil-type.soil-type', soilTypes, 'value', 'Soil Types');
     await seedCollection(strapi, 'api::irrigation-type.irrigation-type', irrigationTypes, 'value', 'Irrigation Types');
     await seedCollection(strapi, 'api::tree-category.tree-category', treeCategories, 'value', 'Tree Categories');
-    
+
     // Seed crop categories from plantingSystemData.ts
     await seedCollection(strapi, 'api::crop-category.crop-category', cropCategories, 'value', 'Crop Categories');
-    
+
     // Seed crop types with category relations
     await seedCropTypes(strapi);
-    
+
     // Seed varieties with crop type relations
     await seedVarieties(strapi);
-    
+
     await seedCollection(strapi, 'api::unit-of-measure.unit-of-measure', unitsOfMeasure, 'value', 'Units of Measure');
     await seedCollection(strapi, 'api::quality-grade.quality-grade', qualityGrades, 'value', 'Quality Grades');
     await seedCollection(strapi, 'api::task-priority.task-priority', taskPriorities, 'value', 'Task Priorities');
