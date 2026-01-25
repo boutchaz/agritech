@@ -27,12 +27,13 @@ export interface AuthUserProfile {
   first_name: string | null;
   last_name: string | null;
   full_name: string | null;
-  avatar_url?: string;
-  phone?: string;
-  timezone: string;
-  language: string;
-  password_set?: boolean;
-  onboarding_completed?: boolean;
+  avatar_url?: string | null;
+  phone?: string | null;
+  timezone: string | null;
+  language: string | null;
+  password_set?: boolean | null;
+  onboarding_completed?: boolean | null;
+  created_at?: string | null;
 }
 
 export interface AuthUser {

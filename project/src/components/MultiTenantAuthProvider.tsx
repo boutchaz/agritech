@@ -13,6 +13,7 @@ import {
   useSignOut,
   useRefreshUserData
 } from '../hooks/useAuthQueries';
+import type { OrganizationWithRole } from '../lib/api/users';
 import { useSubscription } from '../hooks/useSubscription';
 
 import { useOrganizationStore } from '../stores/organizationStore';
@@ -77,19 +78,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
     waitingForOrganization;
 
-  // Debug loading state (temporarily disabled)
-  // console.log('🔍 MultiTenantAuthProvider loading state:', {
-  //   authLoading,
-  //   profileLoading,
-  //   orgsLoading,
-  //   farmsLoading,
-  //   subscriptionLoading,
-  //   waitingForOrganization,
-  //   isOnOnboardingPage,
-  //   loading,
-  //   organizationsCount: organizations.length,
-  //   hasCurrentOrg: !!currentOrganization
-  // });
 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
   // IMPORTANT: Only calculate needsOnboarding if the session is actually valid
@@ -125,7 +113,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       name: org.name,
       description: undefined,
       slug: org.slug || undefined,
-      currency_code: org.currency || undefined,
+      currency_code: (org as unknown as OrganizationWithRole).currency_code || org.currency || undefined,
       timezone: org.timezone || undefined,
       is_active: org.is_active,
       created_at: new Date().toISOString(),
@@ -400,7 +388,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
         name: finalOrg.name,
         description: undefined,
         slug: finalOrg.slug || undefined,
-        currency_code: finalOrg.currency || undefined,
+        currency_code: (finalOrg as unknown as OrganizationWithRole).currency_code || undefined,
         timezone: finalOrg.timezone || undefined,
         is_active: finalOrg.is_active,
         created_at: new Date().toISOString(),
@@ -475,7 +463,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
  * Calculate total hectares from farms
  */
 function calculateTotalHectares(farms: Farm[]): number {
-  return farms.reduce((total, farm) => total + (farm.hectares || 0), 0);
+  return farms.reduce((total, farm) => total + (farm.size || 0), 0);
 }
 
 /**
@@ -592,7 +580,7 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
 
   const value = {
-    user,
+    user: user ? { id: user.id, email: user.email || '' } : null,
     profile: profile || null,
     organizations,
     currentOrganization,
