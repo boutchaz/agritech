@@ -19,8 +19,10 @@ import { Route as authSetPasswordRouteImport } from './routes/(auth)/set-passwor
 import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
+import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_authenticated/pest-alerts/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
 import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
+import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
@@ -164,6 +166,12 @@ const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPestAlertsIndexRoute =
+  AuthenticatedPestAlertsIndexRouteImport.update({
+    id: '/pest-alerts/',
+    path: '/pest-alerts/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
   id: '/(public)/onboarding/',
   path: '/onboarding/',
@@ -174,6 +182,12 @@ const publicBlogIndexRoute = publicBlogIndexRouteImport.update({
   path: '/blog/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedPestAlertsReportIdRoute =
+  AuthenticatedPestAlertsReportIdRouteImport.update({
+    id: '/pest-alerts/$reportId',
+    path: '/pest-alerts/$reportId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkersRoute =
   AuthenticatedworkforceWorkersRouteImport.update({
     id: '/(workforce)/workers',
@@ -766,8 +780,10 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
+  '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
@@ -868,8 +884,10 @@ export interface FileRoutesByTo {
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
+  '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
@@ -975,8 +993,10 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
+  '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
@@ -1083,8 +1103,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/workers'
+    | '/pest-alerts/$reportId'
     | '/blog/'
     | '/onboarding/'
+    | '/pest-alerts/'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
@@ -1185,8 +1207,10 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/quality-control'
     | '/workers'
+    | '/pest-alerts/$reportId'
     | '/blog'
     | '/onboarding'
+    | '/pest-alerts'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
@@ -1291,8 +1315,10 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
+    | '/_authenticated/pest-alerts/$reportId'
     | '/(public)/blog/'
     | '/(public)/onboarding/'
+    | '/_authenticated/pest-alerts/'
     | '/_authenticated/(accounting)/accounting/accounts'
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
@@ -1452,6 +1478,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/pest-alerts/': {
+      id: '/_authenticated/pest-alerts/'
+      path: '/pest-alerts'
+      fullPath: '/pest-alerts/'
+      preLoaderRoute: typeof AuthenticatedPestAlertsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/(public)/onboarding/': {
       id: '/(public)/onboarding/'
       path: '/onboarding'
@@ -1465,6 +1498,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/blog/'
       preLoaderRoute: typeof publicBlogIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/pest-alerts/$reportId': {
+      id: '/_authenticated/pest-alerts/$reportId'
+      path: '/pest-alerts/$reportId'
+      fullPath: '/pest-alerts/$reportId'
+      preLoaderRoute: typeof AuthenticatedPestAlertsReportIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workers': {
       id: '/_authenticated/(workforce)/workers'
@@ -2417,6 +2457,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
   AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRouteWithChildren
+  AuthenticatedPestAlertsReportIdRoute: typeof AuthenticatedPestAlertsReportIdRoute
+  AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
   AuthenticatedproductionProductionCropCyclesRoute: typeof AuthenticatedproductionProductionCropCyclesRoute
   AuthenticatedproductionProductionHarvestsRoute: typeof AuthenticatedproductionProductionHarvestsRoute
   AuthenticatedproductionProductionIntelligenceRoute: typeof AuthenticatedproductionProductionIntelligenceRoute
@@ -2467,6 +2509,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceTasksRouteWithChildren,
   AuthenticatedworkforceWorkersRoute:
     AuthenticatedworkforceWorkersRouteWithChildren,
+  AuthenticatedPestAlertsReportIdRoute: AuthenticatedPestAlertsReportIdRoute,
+  AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
   AuthenticatedproductionProductionCropCyclesRoute:
     AuthenticatedproductionProductionCropCyclesRoute,
   AuthenticatedproductionProductionHarvestsRoute:

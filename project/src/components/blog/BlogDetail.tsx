@@ -184,9 +184,9 @@ export function BlogDetail({ slug }: BlogDetailProps) {
             </div>
           )}
 
-          {/* Content */}
+          {/* Content – styled via .blog-content (AGRIVI-like typography) */}
           <div
-            className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-green-600 dark:prose-a:text-green-400 prose-img:rounded-xl prose-headings:scroll-mt-20"
+            className="blog-content"
             dangerouslySetInnerHTML={{ __html: processedContent }}
           />
 

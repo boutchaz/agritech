@@ -78,6 +78,8 @@ import { AdoptionModule } from './modules/adoption/adoption.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { EmailModule } from './modules/email/email.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PestAlertsModule } from './modules/pest-alerts/pest-alerts.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
 
 @Module({
   imports: [
@@ -173,6 +175,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ChatModule,
     EmailModule,
     NotificationsModule,
+    PestAlertsModule,
+    ComplianceModule,
   ],
   controllers: [AppController],
   providers: [
