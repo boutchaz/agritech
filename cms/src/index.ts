@@ -6,6 +6,7 @@ import {
   vegetableCropsFromPlantingData,
   oliveVarietiesFromPlantingData,
 } from './planting-system-data';
+import { blogCategories, blogPosts } from './blog-seed-data';
 
 // =====================================================
 // REFERENCE DATA - EN/FR/AR TRANSLATIONS
@@ -502,6 +503,100 @@ async function seedVarieties(strapi: Core.Strapi) {
   }
 }
 
+// Seed blog categories and posts
+async function seedBlogs(strapi: Core.Strapi) {
+  try {
+    // Step 1: Seed blog categories
+    const existingCategories = await strapi.entityService.findMany('api::blog-category.blog-category', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const existingCategorySlugs = new Set(
+      (existingCategories || []).map((cat: any) => cat.slug).filter(Boolean)
+    );
+
+    const categoryMap = new Map<string, number>();
+    let categoriesCreated = 0;
+    let categoriesSkipped = 0;
+
+    for (const category of blogCategories) {
+      if (existingCategorySlugs.has(category.slug)) {
+        // Get existing category ID
+        const existing = (existingCategories || []).find((c: any) => c.slug === category.slug);
+        if (existing) {
+          categoryMap.set(category.slug, existing.id);
+        }
+        categoriesSkipped++;
+        continue;
+      }
+
+      try {
+        const result = await strapi.entityService.create('api::blog-category.blog-category', {
+          data: {
+            ...category,
+            publishedAt: new Date(),
+          },
+        });
+        categoryMap.set(category.slug, result.id);
+        categoriesCreated++;
+      } catch (error: any) {
+        strapi.log.warn(`Failed to create blog category ${category.name}: ${error.message}`);
+      }
+    }
+
+    if (categoriesCreated > 0 || categoriesSkipped > 0) {
+      strapi.log.info(`  ✅ Blog Categories: ${categoriesCreated} created, ${categoriesSkipped} skipped`);
+    }
+
+    // Step 2: Seed blog posts
+    const existingPosts = await strapi.entityService.findMany('api::blog.blog', {
+      filters: {},
+      publicationState: 'preview',
+    });
+
+    const existingPostSlugs = new Set(
+      (existingPosts || []).map((post: any) => post.slug).filter(Boolean)
+    );
+
+    let postsCreated = 0;
+    let postsSkipped = 0;
+
+    for (const post of blogPosts) {
+      if (existingPostSlugs.has(post.slug)) {
+        postsSkipped++;
+        continue;
+      }
+
+      try {
+        const { category_slug, ...postData } = post;
+        const postPayload: any = {
+          ...postData,
+          publishedAt: new Date(),
+        };
+
+        // Add category relation if category exists
+        if (category_slug && categoryMap.has(category_slug)) {
+          postPayload.blog_category = categoryMap.get(category_slug);
+        }
+
+        await strapi.entityService.create('api::blog.blog', {
+          data: postPayload,
+        });
+        postsCreated++;
+      } catch (error: any) {
+        strapi.log.warn(`Failed to create blog post ${post.title}: ${error.message}`);
+      }
+    }
+
+    if (postsCreated > 0 || postsSkipped > 0) {
+      strapi.log.info(`  ✅ Blog Posts: ${postsCreated} created, ${postsSkipped} skipped`);
+    }
+  } catch (error: any) {
+    strapi.log.error(`Error seeding blogs: ${error.message}`);
+  }
+}
+
 export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
@@ -532,6 +627,9 @@ export default {
     await seedCollection(strapi, 'api::cost-category.cost-category', costCategories, 'value', 'Cost Categories');
     await seedCollection(strapi, 'api::worker-type.worker-type', workerTypes, 'value', 'Worker Types');
     await seedCollection(strapi, 'api::marketplace-category.marketplace-category', marketplaceCategories, 'slug', 'Marketplace Categories');
+
+    // Seed blog categories and posts
+    await seedBlogs(strapi);
 
     strapi.log.info('✅ Reference data seeding completed');
   },

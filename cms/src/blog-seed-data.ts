@@ -1,48 +1,5 @@
-/**
- * Seed script to create blog categories and posts for AgriTech platform
- *
- * Prerequisites:
- * 1. Strapi must be running
- * 2. Blog and Blog Category content types must be created
- * 3. API permissions must be configured in Strapi admin:
- *    - Settings > Users & Permissions plugin > Roles > Public
- *    - Enable: find, findOne for Blog and Blog-Category
- *
- * Usage:
- *   node cms/scripts/seed-blogs.js
- */
-
-const API_URL = process.env.STRAPI_API_URL || 'https://cms.thebzlab.online/api';
-const API_TOKEN = process.env.STRAPI_API_TOKEN || 'a1d558d8dc0385d8bad341ad1bc1023b666174e3cbe6762dcbcacbc36469fbef502ff0510cd7a582f2e17117d33df44fb8397a5f283461e03eb7139bf2044bd26390a340e79840f65c1469cf79f58741037e8259de45f5b3214f0e1501ca5d8f4ef5fc53abef598a2f635a30779e580620248f43e535d0decbe7b8146a69603e';
-
-// Helper function to make API requests
-async function apiRequest(endpoint, method = 'GET', data = null) {
-  const url = `${API_URL}${endpoint}`;
-  const options = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_TOKEN}`,
-    },
-  };
-
-  if (data) {
-    options.body = JSON.stringify({ data });
-  }
-
-  const response = await fetch(url, options);
-  const result = await response.json();
-
-  if (!response.ok) {
-    console.error(`Error ${method} ${endpoint}:`, result);
-    throw new Error(result.error?.message || 'API request failed');
-  }
-
-  return result;
-}
-
 // Blog Categories based on AgriTech platform features
-const categories = [
+export const blogCategories = [
   {
     name: 'Farm Management',
     slug: 'farm-management',
@@ -76,7 +33,7 @@ const categories = [
 ];
 
 // Blog Posts showcasing AgriTech platform capabilities
-const blogPosts = [
+export const blogPosts = [
   {
     title: 'Getting Started with Digital Farm Management',
     slug: 'getting-started-digital-farm-management',
@@ -1089,71 +1046,3 @@ Master financial planning and budgeting to ensure your agricultural operation re
     seo_description: 'Master financial planning and budgeting for agricultural operations. Learn strategies for cost management, cash flow, and profitability.',
   },
 ];
-
-// Main seeding function
-async function seedBlogs() {
-  console.log('🌱 Starting blog seeding process...\n');
-
-  try {
-    // Step 1: Create categories
-    console.log('📁 Creating blog categories...');
-    const createdCategories = {};
-
-    for (const category of categories) {
-      try {
-        const result = await apiRequest('/blog-categories', 'POST', category);
-        createdCategories[category.slug] = result.data.id;
-        console.log(`✅ Created category: ${category.name}`);
-      } catch (error) {
-        console.error(`❌ Failed to create category ${category.name}:`, error.message);
-      }
-    }
-
-    console.log(`\n✅ Created ${Object.keys(createdCategories).length}/${categories.length} categories\n`);
-
-    // Step 2: Create blog posts
-    console.log('📝 Creating blog posts...');
-    let createdPosts = 0;
-
-    for (const post of blogPosts) {
-      try {
-        const { category_slug, ...postData } = post;
-
-        // Add category relation if category was created
-        if (createdCategories[category_slug]) {
-          postData.blog_category = createdCategories[category_slug];
-        }
-
-        const result = await apiRequest('/blogs', 'POST', postData);
-        console.log(`✅ Created post: ${post.title}`);
-
-        // Publish the post if it's featured
-        if (post.is_featured) {
-          try {
-            await apiRequest(`/blogs/${result.data.id}`, 'PUT', {
-              ...postData,
-              publishedAt: new Date().toISOString()
-            });
-            console.log(`  📢 Published featured post`);
-          } catch (error) {
-            console.error(`  ⚠️  Failed to publish:`, error.message);
-          }
-        }
-
-        createdPosts++;
-      } catch (error) {
-        console.error(`❌ Failed to create post ${post.title}:`, error.message);
-      }
-    }
-
-    console.log(`\n✅ Created ${createdPosts}/${blogPosts.length} blog posts\n`);
-    console.log('🎉 Blog seeding completed successfully!');
-
-  } catch (error) {
-    console.error('❌ Seeding failed:', error.message);
-    process.exit(1);
-  }
-}
-
-// Run the seeding
-seedBlogs();
