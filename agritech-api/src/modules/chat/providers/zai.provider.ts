@@ -106,57 +106,101 @@ export class ZaiProvider extends BaseAIProvider {
      throw lastError;
    }
 
-   async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
-     const model = request.config.model || this.defaultModel;
-     const apiKey = this.getEffectiveApiKey();
+    async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
+      const model = request.config.model || this.defaultModel;
+      const apiKey = this.getEffectiveApiKey();
 
-     if (!this.validateConfig()) {
-       throw new Error('Z.ai API key is not configured');
-     }
+      if (!this.validateConfig()) {
+        throw new Error('Z.ai API key is not configured');
+      }
 
-     this.logger.log(`Generating with Z.ai model: ${model}`);
+      this.logger.log(`Generating with Z.ai model: ${model}`);
 
-     return this.retryWithBackoff(async () => {
-       try {
-         const response = await axios.post(
-           this.apiUrl,
-           {
-             model,
-             messages: this.buildMessages(request.systemPrompt, request.userPrompt),
-             temperature: request.config.temperature ?? 0.7,
-             max_tokens: request.config.maxTokens ?? 8192,
-           },
-           {
-             headers: {
-               Authorization: `Bearer ${apiKey}`,
-               'Content-Type': 'application/json',
-             },
-             timeout: 180000, // 3 minutes timeout for chat with context
-           },
-         );
+      return this.retryWithBackoff(async () => {
+        try {
+          const response = await axios.post(
+            this.apiUrl,
+            {
+              model,
+              messages: this.buildMessages(request.systemPrompt, request.userPrompt),
+              temperature: request.config.temperature ?? 0.7,
+              max_tokens: request.config.maxTokens ?? 8192,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              timeout: 180000, // 3 minutes timeout for chat with context
+            },
+          );
 
-         const content = response.data.choices?.[0]?.message?.content || '';
-         const tokensUsed = response.data.usage?.total_tokens;
+          const content = response.data.choices?.[0]?.message?.content || '';
+          const tokensUsed = response.data.usage?.total_tokens;
 
-         this.logger.log(`Z.ai generation complete. Tokens used: ${tokensUsed}`);
+          this.logger.log(`Z.ai generation complete. Tokens used: ${tokensUsed}`);
 
-         return {
-           content,
-           provider: 'zai' as AIProvider,
-           model,
-           tokensUsed,
-           generatedAt: new Date(),
-         };
-       } catch (error) {
-         if (axios.isAxiosError(error)) {
-           const errorMessage = (error as AxiosError).response?.data
-             ? JSON.stringify((error as AxiosError).response?.data)
-             : error.message;
-           this.logger.error(`Z.ai API error: ${errorMessage}`);
-           throw new Error(`Z.ai API error: ${errorMessage}`);
-         }
-         return this.handleError(error, 'Z.ai generation');
-       }
-     });
-   }
+          return {
+            content,
+            provider: 'zai' as AIProvider,
+            model,
+            tokensUsed,
+            generatedAt: new Date(),
+          };
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            const errorMessage = (error as AxiosError).response?.data
+              ? JSON.stringify((error as AxiosError).response?.data)
+              : error.message;
+            this.logger.error(`Z.ai API error: ${errorMessage}`);
+            throw new Error(`Z.ai API error: ${errorMessage}`);
+          }
+          return this.handleError(error, 'Z.ai generation');
+        }
+      });
+    }
+
+    /**
+     * Generate response with simulated streaming
+     * Splits the full response into words and yields them with delays
+     * for a more natural streaming experience
+     */
+    async generateStream(request: {
+      systemPrompt: string;
+      userPrompt: string;
+      config: any;
+      onToken: (token: string) => void;
+      onComplete: () => void;
+      onError: (error: Error) => void;
+    }): Promise<void> {
+      try {
+        // Use existing generate() to get full response
+        const response = await this.generate({
+          systemPrompt: request.systemPrompt,
+          userPrompt: request.userPrompt,
+          config: request.config,
+        });
+
+        // Simulate streaming by splitting into words
+        const words = response.content.split(' ');
+
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          // Add space after word except for the last word
+          const token = i < words.length - 1 ? word + ' ' : word;
+
+          // Emit token
+          request.onToken(token);
+
+          // Delay between words for realistic streaming (50ms = ~20 words per second)
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+
+        // Streaming complete
+        request.onComplete();
+      } catch (error) {
+        this.logger.error(`Streaming failed: ${error.message}`, error.stack);
+        request.onError(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
 }

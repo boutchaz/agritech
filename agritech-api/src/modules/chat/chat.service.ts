@@ -312,10 +312,12 @@ export class ChatService {
 
     this.logger.log(`Building context for chat request in org ${organizationId}`);
 
-    // Load conversation history (last 5 messages)
+    // Load conversation history (last 10 messages for better context retention)
+    // 10 messages provides optimal balance between context awareness and token efficiency
+    // Allows AI to maintain conversation continuity across multi-turn interactions
     const shouldSaveHistory = dto.save_history !== false;
     const recentMessages = shouldSaveHistory
-      ? await this.getRecentConversationHistory(userId, organizationId, 5)
+      ? await this.getRecentConversationHistory(userId, organizationId, 10)
       : [];
 
      // Build context from all modules in parallel for performance
@@ -386,6 +388,16 @@ export class ChatService {
         },
         timestamp: Date.now(),
       });
+
+      // Calculate and log cost
+      const tokensUsed = response.tokensUsed || 0;
+      const costPerToken = 0.00001; // $0.01 per 1000 tokens (Z.ai GLM-4.5-Flash pricing)
+      const estimatedCost = tokensUsed * costPerToken;
+
+      this.logger.log(
+        `Chat cost: ${tokensUsed} tokens, ~$${estimatedCost.toFixed(4)} ` +
+        `(org: ${organizationId}, user: ${userId}, model: ${response.model})`
+      );
 
       // Save assistant response to history
       if (shouldSaveHistory) {

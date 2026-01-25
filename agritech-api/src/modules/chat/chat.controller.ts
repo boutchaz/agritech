@@ -18,6 +18,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { SendMessageDto, ChatResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -27,11 +28,12 @@ import { Response } from 'express';
 @ApiTags('Chat')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ThrottlerGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Send chat message and get AI response',
     description:
@@ -58,6 +60,10 @@ export class ChatController {
   @ApiResponse({
     status: 403,
     description: 'Forbidden - no access to organization',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests - rate limit exceeded (10 messages per minute)',
   })
   async sendMessage(
     @Req() req,
