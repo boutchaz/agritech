@@ -516,7 +516,7 @@ async function seedBlogs(strapi: Core.Strapi) {
       (existingCategories || []).map((cat: any) => cat.slug).filter(Boolean)
     );
 
-    const categoryMap = new Map<string, number>();
+    const categoryMap = new Map<string, number | string>();
     let categoriesCreated = 0;
     let categoriesSkipped = 0;
 
