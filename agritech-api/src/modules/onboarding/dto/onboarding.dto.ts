@@ -200,6 +200,7 @@ export class SaveOnboardingFarmDto {
 
 export class SaveOnboardingModulesDto {
   @ApiProperty({ description: 'Module selection' })
+  @IsObject()
   moduleSelection: {
     farm_management: boolean;
     inventory: boolean;
