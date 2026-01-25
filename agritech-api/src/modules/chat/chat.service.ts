@@ -81,10 +81,29 @@ interface AccountingContext {
 
 interface InventoryContext {
   items_count: number;
-  items: Array<{ id: string; name: string; code: string; stock: number; unit: string }>;
+  items: Array<{
+    id: string;
+    name: string;
+    code: string;
+    stock: number;
+    unit: string;
+    minimum_stock_level?: number;
+    is_low_stock: boolean;
+    total_value?: number;
+  }>;
   warehouses_count: number;
-  warehouses: Array<{ id: string; name: string; location: string }>;
+  warehouses: Array<{ id: string; name: string; location: string; farm_name?: string }>;
   recent_stock_movements_count: number;
+  low_stock_count: number;
+  low_stock_items: Array<{
+    name: string;
+    code: string;
+    current_stock: number;
+    minimum_level: number;
+    unit: string;
+    shortage: number;
+  }>;
+  total_inventory_value: number;
 }
 
 interface ProductionContext {
@@ -95,6 +114,8 @@ interface ProductionContext {
     quantity: string;
     quality: string;
     status: string;
+    lot_number?: string;
+    parcel_name?: string;
   }>;
   recent_quality_checks_count: number;
   recent_deliveries_count: number;
@@ -1134,63 +1155,155 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<InventoryContext> {
     try {
-       // Get all items, not just active ones - limit to 10 most recent
-       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
-       const { data: items, error: itemsError } = await client
-         .from('items')
-         .select('id, item_name, item_code, default_unit')
-         .eq('organization_id', organizationId)
-         .limit(10);
-      
-      if (itemsError) {
-        this.logger.error(`Error fetching items: ${itemsError.message}`);
+      // Get stock levels from stock_valuation view (actual stock quantities)
+      // This is the same approach used by getFarmStockLevels in items.service.ts
+      const { data: stockData, error: stockError } = await client
+        .from('stock_valuation')
+        .select(`
+          item_id,
+          warehouse_id,
+          remaining_quantity,
+          total_cost,
+          warehouse:warehouses!inner(
+            id,
+            name,
+            location,
+            farm_id,
+            farm:farms(id, name)
+          ),
+          item:items!inner(
+            id,
+            item_code,
+            item_name,
+            default_unit,
+            minimum_stock_level,
+            is_active
+          )
+        `)
+        .eq('organization_id', organizationId)
+        .gt('remaining_quantity', 0);
+
+      if (stockError) {
+        this.logger.error(`Error fetching stock valuation: ${stockError.message}`);
       }
 
-      // Get all warehouses, not just active ones
+      // Get all warehouses (including empty ones)
       const { data: warehouses, error: warehousesError } = await client
         .from('warehouses')
-        .select('*')
-        .eq('organization_id', organizationId);
-      
+        .select(`
+          id,
+          name,
+          location,
+          farm_id,
+          farm:farms(id, name)
+        `)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
       if (warehousesError) {
         this.logger.error(`Error fetching warehouses: ${warehousesError.message}`);
       }
 
-       const { data: stockEntries, error: stockEntriesError } = await client
-         .from('stock_entries')
-         .select('id, entry_type, entry_date')
-         .eq('organization_id', organizationId)
-         .gte(
-           'entry_date',
-           new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('entry_date', { ascending: false })
-         .limit(10); // Reduced from 20 to 10 to optimize prompt size
-      
+      // Get recent stock movements count
+      const { data: stockEntries, error: stockEntriesError } = await client
+        .from('stock_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .gte(
+          'entry_date',
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        );
+
       if (stockEntriesError) {
         this.logger.error(`Error fetching stock entries: ${stockEntriesError.message}`);
       }
 
-      this.logger.log(`Loaded inventory context: ${items?.length || 0} items, ${warehouses?.length || 0} warehouses`);
+      // Aggregate stock by item
+      const itemMap = new Map<string, {
+        id: string;
+        name: string;
+        code: string;
+        stock: number;
+        unit: string;
+        minimum_stock_level?: number;
+        is_low_stock: boolean;
+        total_value: number;
+      }>();
+
+      let totalInventoryValue = 0;
+
+      (stockData || []).forEach((row: any) => {
+        const item = row.item;
+        if (!item) return;
+
+        const itemId = item.id;
+        const quantity = parseFloat(row.remaining_quantity || 0);
+        const value = parseFloat(row.total_cost || 0);
+        const minStock = item.minimum_stock_level
+          ? parseFloat(item.minimum_stock_level)
+          : undefined;
+
+        totalInventoryValue += value;
+
+        if (!itemMap.has(itemId)) {
+          itemMap.set(itemId, {
+            id: itemId,
+            name: item.item_name,
+            code: item.item_code,
+            stock: 0,
+            unit: item.default_unit,
+            minimum_stock_level: minStock,
+            is_low_stock: false,
+            total_value: 0,
+          });
+        }
+
+        const itemData = itemMap.get(itemId)!;
+        itemData.stock += quantity;
+        itemData.total_value += value;
+
+        // Check if stock is below minimum
+        if (minStock !== undefined && itemData.stock < minStock) {
+          itemData.is_low_stock = true;
+        }
+      });
+
+      const items = Array.from(itemMap.values());
+
+      // Build low stock items array for quick reference
+      const lowStockItems = items
+        .filter((item) => item.is_low_stock && item.minimum_stock_level !== undefined)
+        .map((item) => ({
+          name: item.name,
+          code: item.code,
+          current_stock: item.stock,
+          minimum_level: item.minimum_stock_level!,
+          unit: item.unit,
+          shortage: item.minimum_stock_level! - item.stock,
+        }))
+        .sort((a, b) => b.shortage - a.shortage); // Sort by shortage (most critical first)
+
+      this.logger.log(
+        `Loaded inventory context: ${items.length} items with stock, ` +
+        `${lowStockItems.length} low stock items, ${warehouses?.length || 0} warehouses, ` +
+        `total value: ${totalInventoryValue.toFixed(2)}`
+      );
 
       return {
-        items_count: items?.length || 0,
-        items:
-          items?.map((i: any) => ({
-            id: i.id,
-            name: i.item_name,
-            code: i.item_code,
-            stock: 0, // Stock is calculated from stock_entries, not stored
-            unit: i.default_unit,
-          })) || [],
+        items_count: items.length,
+        items: items.slice(0, 20), // Limit to 20 items for prompt size
         warehouses_count: warehouses?.length || 0,
         warehouses:
           warehouses?.map((w: any) => ({
             id: w.id,
             name: w.name,
-            location: w.location,
+            location: w.location || 'N/A',
+            farm_name: w.farm?.name,
           })) || [],
         recent_stock_movements_count: stockEntries?.length || 0,
+        low_stock_count: lowStockItems.length,
+        low_stock_items: lowStockItems.slice(0, 10), // Limit to 10 for prompt size
+        total_inventory_value: totalInventoryValue,
       };
     } catch (error) {
       this.logger.error(`Error in getInventoryContext: ${error.message}`, error.stack);
@@ -1200,6 +1313,9 @@ Determine which modules are relevant based on the query's intent and content. Re
         warehouses_count: 0,
         warehouses: [],
         recent_stock_movements_count: 0,
+        low_stock_count: 0,
+        low_stock_items: [],
+        total_inventory_value: 0,
       };
     }
   }
@@ -1209,63 +1325,95 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<ProductionContext> {
     try {
-       const { data: harvests, error: harvestsError } = await client
-         .from('harvest_records')
-         .select('id, harvest_date, quantity, unit, quality_grade, status')
-         .eq('organization_id', organizationId)
-         .gte(
-           'harvest_date',
-           new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('harvest_date', { ascending: false })
-         .limit(10); // Reduced from 30 to 10 to optimize prompt size
-      
+      const { data: harvests, error: harvestsError } = await client
+        .from('harvest_records')
+        .select(`
+          id,
+          harvest_date,
+          quantity,
+          unit,
+          quality_grade,
+          status,
+          lot_number,
+          parcel:parcels(id, name, crop_type),
+          crop_cycle:crop_cycles(id, cycle_name, crop_type, variety_name)
+        `)
+        .eq('organization_id', organizationId)
+        .gte(
+          'harvest_date',
+          new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('harvest_date', { ascending: false })
+        .limit(15);
+
       if (harvestsError) {
         this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
       }
 
-       const { data: qualityChecks, error: qualityChecksError } = await client
-         .from('quality_inspections')
-         .select('*')
-         .eq('organization_id', organizationId)
-         .gte(
-           'inspection_date',
-           new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('inspection_date', { ascending: false })
-         .limit(10); // Reduced from 20 to 10 to optimize prompt size
-      
+      const { data: qualityChecks, error: qualityChecksError } = await client
+        .from('quality_inspections')
+        .select(`
+          id,
+          inspection_date,
+          inspection_type,
+          overall_grade,
+          notes,
+          parcel:parcels(id, name)
+        `)
+        .eq('organization_id', organizationId)
+        .gte(
+          'inspection_date',
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('inspection_date', { ascending: false })
+        .limit(10);
+
       if (qualityChecksError) {
         this.logger.error(`Error fetching quality checks: ${qualityChecksError.message}`);
       }
 
-       const { data: deliveries, error: deliveriesError } = await client
-         .from('deliveries')
-         .select('*')
-         .eq('organization_id', organizationId)
-         .gte(
-           'delivery_date',
-           new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('delivery_date', { ascending: false })
-         .limit(10); // Reduced from 20 to 10 to optimize prompt size
-      
+      const { data: deliveries, error: deliveriesError } = await client
+        .from('deliveries')
+        .select(`
+          id,
+          delivery_date,
+          status,
+          total_quantity,
+          customer:customers(id, name)
+        `)
+        .eq('organization_id', organizationId)
+        .gte(
+          'delivery_date',
+          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        )
+        .order('delivery_date', { ascending: false })
+        .limit(10);
+
       if (deliveriesError) {
         this.logger.error(`Error fetching deliveries: ${deliveriesError.message}`);
       }
 
-      this.logger.log(`Loaded production context: ${harvests?.length || 0} harvests, ${qualityChecks?.length || 0} quality checks, ${deliveries?.length || 0} deliveries`);
+      this.logger.log(
+        `Loaded production context: ${harvests?.length || 0} harvests, ` +
+        `${qualityChecks?.length || 0} quality checks, ${deliveries?.length || 0} deliveries`
+      );
 
       return {
         recent_harvests_count: harvests?.length || 0,
         harvests:
-          harvests?.map((h: any) => ({
-            date: h.harvest_date,
-            crop: 'N/A', // Crop info requires join with crops table
-            quantity: `${h.quantity} ${h.unit}`,
-            quality: h.quality_grade || 'N/A',
-            status: h.status,
-          })) || [],
+          harvests?.map((h: any) => {
+            const cropName = h.crop_cycle?.crop_type || h.parcel?.crop_type || 'Unknown';
+            const variety = h.crop_cycle?.variety_name;
+            return {
+              date: h.harvest_date,
+              crop: variety ? `${cropName} (${variety})` : cropName,
+              quantity: `${h.quantity} ${h.unit}`,
+              quality: h.quality_grade || 'N/A',
+              status: h.status,
+              lot_number: h.lot_number,
+              parcel_name: h.parcel?.name,
+            };
+          }) || [],
         recent_quality_checks_count: qualityChecks?.length || 0,
         recent_deliveries_count: deliveries?.length || 0,
       };
@@ -2007,12 +2155,19 @@ Fiscal Year: ${context.accounting.current_fiscal_year?.name || 'Not set'}
 INVENTORY DATA
 ====================================================
 ${context.inventory ? `
-Items: ${context.inventory.items_count}
-${context.inventory.items.slice(0, 10).map((i) => `- ${i.name}: ${i.stock} ${i.unit}`).join('\n')}
-${context.inventory.items.length > 10 ? `\n... and ${context.inventory.items.length - 10} more items` : ''}
+Total Items with Stock: ${context.inventory.items_count}
+Total Inventory Value: ${context.inventory.total_inventory_value.toFixed(2)}
+
+${context.inventory.low_stock_count > 0 ? `⚠️ LOW STOCK ALERT: ${context.inventory.low_stock_count} item(s) below minimum level!
+${context.inventory.low_stock_items.map((i) => `- ${i.name} (${i.code}): ${i.current_stock} ${i.unit} (MIN: ${i.minimum_level} ${i.unit}) - SHORTAGE: ${i.shortage.toFixed(2)} ${i.unit}`).join('\n')}
+` : 'All items are at or above minimum stock levels.'}
+
+Stock Levels by Item:
+${context.inventory.items.slice(0, 15).map((i) => `- ${i.name} (${i.code}): ${i.stock.toFixed(2)} ${i.unit}${i.minimum_stock_level ? ` (min: ${i.minimum_stock_level})` : ''}${i.is_low_stock ? ' ⚠️ LOW' : ''}${i.total_value ? ` - Value: ${i.total_value.toFixed(2)}` : ''}`).join('\n')}
+${context.inventory.items.length > 15 ? `\n... and ${context.inventory.items.length - 15} more items` : ''}
 
 Warehouses: ${context.inventory.warehouses_count}
-${context.inventory.warehouses.map((w) => `- ${w.name} (${w.location})`).join('\n')}
+${context.inventory.warehouses.map((w) => `- ${w.name}${w.farm_name ? ` (Farm: ${w.farm_name})` : ''} - ${w.location}`).join('\n')}
 
 Recent Stock Movements (last 30 days): ${context.inventory.recent_stock_movements_count}
 ` : 'No inventory data available.'}
@@ -2022,7 +2177,8 @@ PRODUCTION DATA
 ====================================================
 ${context.production ? `
 Recent Harvests (last 365 days): ${context.production.recent_harvests_count}
-${context.production.harvests.slice(0, 5).map((h) => `- ${h.date}: ${h.crop} - ${h.quantity} (${h.quality})`).join('\n')}
+${context.production.harvests.slice(0, 10).map((h) => `- ${h.date}: ${h.crop} - ${h.quantity} (Grade: ${h.quality}, Status: ${h.status})${h.parcel_name ? ` [${h.parcel_name}]` : ''}${h.lot_number ? ` Lot: ${h.lot_number}` : ''}`).join('\n')}
+${context.production.harvests.length > 10 ? `\n... and ${context.production.harvests.length - 10} more harvests` : ''}
 
 Recent Quality Checks (last 90 days): ${context.production.recent_quality_checks_count}
 Recent Deliveries (last 90 days): ${context.production.recent_deliveries_count}

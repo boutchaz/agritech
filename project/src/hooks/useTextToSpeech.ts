@@ -39,6 +39,22 @@ export function useTextToSpeech(
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       synthRef.current = window.speechSynthesis;
       setIsSupported(true);
+
+      // Wait for voices to load
+      const loadVoices = () => {
+        const voices = synthRef.current?.getVoices() || [];
+        if (voices.length > 0) {
+          console.log(`Loaded ${voices.length} voices`);
+        }
+      };
+
+      // Voices may load asynchronously
+      if (synthRef.current.onvoiceschanged !== undefined) {
+        synthRef.current.onvoiceschanged = loadVoices;
+      }
+
+      // Try loading immediately
+      loadVoices();
     }
 
     return () => {
@@ -47,6 +63,45 @@ export function useTextToSpeech(
         synthRef.current.cancel();
       }
     };
+  }, []);
+
+  const selectBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
+    if (!synthRef.current) return null;
+
+    const voices = synthRef.current.getVoices();
+    if (voices.length === 0) return null;
+
+    // Filter voices by language
+    const langVoices = voices.filter(v => v.lang.startsWith(lang.split('-')[0]));
+
+    // Prioritize high-quality voices
+    const priorities = [
+      // Neural/Premium voices (best quality)
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('neural'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('premium'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('enhanced'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('natural'),
+      // Google voices (good quality)
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('google'),
+      // Microsoft voices (good quality)
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('microsoft'),
+      // Female voices (often sound more natural)
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('female'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('samantha'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('amelie'),
+      (v: SpeechSynthesisVoice) => v.name.toLowerCase().includes('zira'),
+      // Local voices (faster, no network)
+      (v: SpeechSynthesisVoice) => v.localService,
+    ];
+
+    // Try each priority
+    for (const priority of priorities) {
+      const voice = langVoices.find(priority);
+      if (voice) return voice;
+    }
+
+    // Fallback to first voice for language
+    return langVoices[0] || voices[0];
   }, []);
 
   const speak = useCallback(
@@ -63,8 +118,17 @@ export function useTextToSpeech(
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = language;
-      utterance.rate = rate;
-      utterance.pitch = pitch;
+      
+      // Select best voice
+      const bestVoice = selectBestVoice(language);
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+        // console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`);
+      }
+
+      // Optimize for natural speech
+      utterance.rate = rate !== 1.0 ? rate : 0.95; // Default to slightly slower if not specified
+      utterance.pitch = pitch !== 1.0 ? pitch : 1.0; // Normal pitch
       utterance.volume = volume;
 
       utterance.onstart = () => {
