@@ -136,9 +136,9 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
       if (filters.offset) params.append('offset', String(filters.offset));
 
       const queryString = params.toString();
-      const url = `/notifications${queryString ? `?${queryString}` : ''}`;
+      const url = `/api/v1/notifications${queryString ? `?${queryString}` : ''}`;
 
-      return apiClient.get(url, organizationId!);
+      return apiClient.get(url, {}, organizationId!);
     },
     enabled: !!organizationId && !!user,
     staleTime: 30000, // 30 seconds
@@ -149,7 +149,8 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
     queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId],
     queryFn: async () => {
       const response = await apiClient.get<{ count: number }>(
-        '/notifications/unread/count',
+        '/api/v1/notifications/unread/count',
+        {},
         organizationId!
       );
       return response.count;
@@ -161,7 +162,7 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   // Mark as read mutation
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      await apiClient.patch(`/notifications/${notificationId}/read`, {}, organizationId!);
+      await apiClient.patch(`/api/v1/notifications/${notificationId}/read`, {}, {}, organizationId!);
       // Also notify via socket for other connected clients
       socketManager.sendMarkRead(notificationId);
     },
@@ -174,7 +175,7 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   // Mark all as read mutation
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post('/notifications/read-all', {}, organizationId!);
+      await apiClient.post('/api/v1/notifications/read-all', {}, {}, organizationId!);
       // Also notify via socket for other connected clients
       socketManager.sendMarkAllRead();
     },
@@ -217,7 +218,8 @@ export function useUnreadNotificationCount(): number {
     queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId],
     queryFn: async () => {
       const response = await apiClient.get<{ count: number }>(
-        '/notifications/unread/count',
+        '/api/v1/notifications/unread/count',
+        {},
         organizationId!
       );
       return response.count;
