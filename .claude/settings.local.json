@@ -97,7 +97,8 @@
       "Bash(npm run test:*)",
       "Bash(npm run test:e2e:*)",
       "Bash(npm run test:e2e:integration:*)",
-      "Bash(brv:*)"
+      "Bash(brv:*)",
+      "Bash(pnpm build:video:*)"
     ],
     "deny": [],
     "ask": []

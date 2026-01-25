@@ -438,17 +438,16 @@ const LandingPage: React.FC = () => {
         <section className="relative z-20 -mt-20 sm:-mt-32 px-4 sm:px-6 lg:px-8 mb-12 sm:mb-16">
           <div className="max-w-6xl mx-auto">
             <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 dark:border-gray-800/50 bg-gray-900/5 aspect-[16/10] sm:aspect-[16/9] group">
-              {/* 
-              TODO: Replace this placeholder with:
-              <img src="/assets/dashboard-preview.png" alt="Agritech Dashboard" className="w-full h-full object-cover" />
-            */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
-                <div className="text-center p-6">
-                  <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">Dashboard Preview</p>
-                  <p className="text-sm text-gray-400 mt-2">Place your specific app screenshot here</p>
-                </div>
-              </div>
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover"
+                poster="/assets/video-poster.jpg"
+              >
+                <source src="/assets/agritech-promo.mp4" type="video/mp4" />
+              </video>
 
               {/* Overlay Gradient for depth */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />

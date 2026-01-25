@@ -77,7 +77,7 @@ export default function LoginScreen() {
     setIsSubmitting(true);
     try {
       console.log('[Login] Attempting sign in...');
-      await signIn(email.trim(), password);
+      await signIn(email.trim(), password.trim());
       console.log('[Login] Sign in successful, navigating...');
       router.replace('/(tabs)');
     } catch (error) {
@@ -142,6 +142,8 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                autoCorrect={false}
+                autoCapitalize="none"
                 editable={!isSubmitting}
               />
               <TouchableOpacity

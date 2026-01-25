@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useWorker, useWorkerStats, useWorkRecords, useMetayageSettlements } from '@/hooks/useWorkers';
 import { useWorkerPayments, useProcessPayment } from '@/hooks/usePayments';
+import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
