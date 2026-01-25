@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Calendar, Clock, User, ArrowLeft, Tag, Share2, Facebook, Twitter, Linkedin, Copy, Check } from 'lucide-react';
+import { Calendar, Clock, User, ArrowLeft, Tag } from 'lucide-react';
 import { marked } from 'marked';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import { blogsApi } from '../../lib/api/blogs';
 import { BlogCard } from './BlogCard';
 import { ReadingProgress } from './ReadingProgress';
@@ -18,9 +18,7 @@ export function BlogDetail({ slug }: BlogDetailProps) {
   const { data: post, isLoading, error } = useQuery({
     queryKey: ['blog', slug],
     queryFn: async () => {
-      console.log('[BlogDetail] Fetching blog:', slug);
       const result = await blogsApi.getBlogBySlug(slug);
-      console.log('[BlogDetail] Blog fetched:', result?.title);
       return result;
     },
   });
@@ -31,7 +29,40 @@ export function BlogDetail({ slug }: BlogDetailProps) {
     enabled: !!post,
   });
 
-  console.log('[BlogDetail] Render state:', { slug, isLoading, hasPost: !!post, hasError: !!error });
+  // All hooks must run unconditionally before any early returns
+  const htmlContent = useMemo(() => {
+    if (!post?.content) return '';
+    const result = marked(post.content, {
+      breaks: true,
+      gfm: true,
+    });
+    return typeof result === 'string' ? result : '';
+  }, [post?.content]);
+
+  const { processedContent, headings } = useMemo(() => {
+    if (!htmlContent || typeof window === 'undefined') {
+      return { processedContent: htmlContent, headings: [] as Array<{ id: string; text: string; level: string }> };
+    }
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const headingElements = doc.querySelectorAll('h2, h3');
+    const extractedHeadings: Array<{ id: string; text: string; level: string }> = [];
+    let headingIndex = 0;
+    headingElements.forEach((heading) => {
+      const id = `heading-${headingIndex}`;
+      heading.id = id;
+      extractedHeadings.push({
+        id,
+        text: heading.textContent || '',
+        level: heading.tagName.toLowerCase(),
+      });
+      headingIndex++;
+    });
+    return {
+      processedContent: doc.body.innerHTML,
+      headings: extractedHeadings,
+    };
+  }, [htmlContent]);
 
   if (isLoading) {
     return (
@@ -80,9 +111,7 @@ export function BlogDetail({ slug }: BlogDetailProps) {
     );
   }
 
-  // Image URL should already be a full URL from the NestJS API
   const imageUrl = post.featured_image?.url || null;
-
   const formattedDate = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -90,49 +119,7 @@ export function BlogDetail({ slug }: BlogDetailProps) {
         day: 'numeric',
       })
     : null;
-
-  // Convert markdown to HTML
-  const htmlContent = useMemo(() => {
-    if (!post.content) return '';
-    const result = marked(post.content, {
-      breaks: true,
-      gfm: true,
-    });
-    // Handle both sync and async marked versions
-    return typeof result === 'string' ? result : '';
-  }, [post.content]);
-
   const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/blog/${slug}` : '';
-  
-  // Add IDs to headings in content and extract headings for TOC
-  const { processedContent, headings } = useMemo(() => {
-    if (!htmlContent || typeof window === 'undefined') {
-      return { processedContent: htmlContent, headings: [] };
-    }
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlContent, 'text/html');
-    const headingElements = doc.querySelectorAll('h2, h3');
-    
-    const extractedHeadings: Array<{ id: string; text: string; level: string }> = [];
-    let headingIndex = 0;
-    
-    headingElements.forEach((heading) => {
-      const id = `heading-${headingIndex}`;
-      heading.id = id;
-      extractedHeadings.push({
-        id,
-        text: heading.textContent || '',
-        level: heading.tagName.toLowerCase(),
-      });
-      headingIndex++;
-    });
-    
-    return {
-      processedContent: doc.body.innerHTML,
-      headings: extractedHeadings,
-    };
-  }, [htmlContent]);
 
   return (
     <>
