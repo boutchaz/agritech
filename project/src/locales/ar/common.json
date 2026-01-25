@@ -39,6 +39,11 @@
     "unknownError": "خطأ غير معروف",
     "none": "لا يوجد"
   },
+  "farmSwitcher": {
+    "selectFarm": "اختر مزرعة",
+    "noFarmsAvailable": "لا توجد مزارع متاحة",
+    "addFarm": "إضافة مزرعة"
+  },
   "common": {
     "edit": "تعديل",
     "cancel": "إلغاء",

@@ -39,6 +39,11 @@
     "unknownError": "Erreur inconnue",
     "none": "Aucun"
   },
+  "farmSwitcher": {
+    "selectFarm": "Sélectionner une ferme",
+    "noFarmsAvailable": "Aucune ferme disponible",
+    "addFarm": "Ajouter une ferme"
+  },
   "common": {
     "edit": "Modifier",
     "cancel": "Annuler",

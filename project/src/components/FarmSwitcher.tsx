@@ -1,85 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { authSupabase } from '../lib/auth-supabase';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-interface Farm {
-  id: string;
-  name: string;
-  location: string;
-  size: number;
-}
+import type { AuthFarm } from '../contexts/AuthContext';
 
 interface FarmSwitcherProps {
-  currentFarmId: string;
-  onFarmChange: (farmId: string) => void;
+  currentFarmId?: string;
+  onFarmChange?: (farmId: string) => void;
 }
 
 const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
   const navigate = useNavigate();
-  const { currentOrganization, currentFarm } = useAuth();
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [_error, setError] = useState<string | null>(null);
+  const { t } = useTranslation('common');
+  const { farms, currentFarm, setCurrentFarm, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    fetchFarms();
-  }, [currentOrganization?.id]);
-
-  const fetchFarms = async () => {
-    if (!currentOrganization?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) return;
-
-      const response = await fetch(`${apiUrl}/api/v1/farms?organization_id=${currentOrganization.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'x-organization-id': currentOrganization.id,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch farms');
-
-      const data = await response.json();
-      const farmsData = data.farms || data || [];
-      
-      // Map API response to Farm interface (handle both farm_id/farm_name and id/name formats)
-      const mappedFarms = farmsData.map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string; location?: string; address?: string; farm_size?: number; size?: number }) => ({
-        id: farm.farm_id || farm.id || '',
-        name: farm.farm_name || farm.name || '',
-        location: farm.location || farm.address || '',
-        size: farm.farm_size || farm.size || 0,
-      }));
-      
-      setFarms(mappedFarms);
-    } catch (error) {
-      console.error('Error fetching farms:', error);
-      setError('Failed to fetch farms');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAddFarm = () => {
     setIsOpen(false);
     navigate({ to: '/farm-hierarchy' });
   };
 
-  // Use currentFarm from context if available, otherwise find it in local farms list
-  const displayFarm = currentFarm 
-    ? { id: currentFarm.id, name: currentFarm.name, location: currentFarm.location || '', size: currentFarm.size || 0 }
-    : farms.find(farm => farm.id === currentFarmId);
+  const handleFarmSelect = (farm: AuthFarm) => {
+    // Update context
+    setCurrentFarm(farm);
+    // Call prop callback if provided (for backward compatibility)
+    if (onFarmChange) {
+      onFarmChange(farm.id);
+    }
+    setIsOpen(false);
+  };
+
+  // Determine which farm ID is selected
+  const selectedFarmId = currentFarmId || currentFarm?.id;
 
   if (loading) {
     return (
@@ -94,7 +47,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
         className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
       >
         <span className="text-sm font-medium truncate max-w-[150px]">
-          {displayFarm?.name || 'Sélectionner une ferme'}
+          {currentFarm?.name || t('farmSwitcher.selectFarm')}
         </span>
         <ChevronDown className="h-4 w-4 text-gray-500" />
       </button>
@@ -104,29 +57,30 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
           <div className="py-1">
             {farms.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                Aucune ferme disponible
+                {t('farmSwitcher.noFarmsAvailable')}
               </div>
             ) : (
               farms.map(farm => (
                 <button
                   key={farm.id}
-                  onClick={() => {
-                    onFarmChange(farm.id);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleFarmSelect(farm)}
                   className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
-                    farm.id === currentFarmId
+                    farm.id === selectedFarmId
                       ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{farm.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {farm.location} • {farm.size} ha
-                    </div>
+                    {(farm.location || farm.size) && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {farm.location && <span>{farm.location}</span>}
+                        {farm.location && farm.size && <span> • </span>}
+                        {farm.size && <span>{farm.size} ha</span>}
+                      </div>
+                    )}
                   </div>
-                  {farm.id === currentFarmId && (
+                  {farm.id === selectedFarmId && (
                     <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2" />
                   )}
                 </button>
@@ -138,7 +92,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
                 className="w-full text-left px-4 py-2.5 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center space-x-2 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                <span>Ajouter une ferme</span>
+                <span>{t('farmSwitcher.addFarm')}</span>
               </button>
             </div>
           </div>

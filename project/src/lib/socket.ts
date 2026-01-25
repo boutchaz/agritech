@@ -1,8 +1,18 @@
+import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { authSupabase } from './auth-supabase';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const SOCKET_URL = API_URL.replace('/api/v1', '');
+// Get the base URL for WebSocket connection
+// Use VITE_SOCKET_URL if set, otherwise derive from VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_URL.replace(/\/api\/v\d+\/?$/, '');
+
+// Log on module load
+if (typeof window !== 'undefined') {
+  console.log('[Socket] Module loaded');
+  console.log('[Socket] API_URL:', API_URL);
+  console.log('[Socket] SOCKET_URL:', SOCKET_URL);
+}
 
 export interface NotificationData {
   id: string;
@@ -53,9 +63,12 @@ class SocketManager {
         return;
       }
 
-      console.log('[Socket] Connecting to:', `${SOCKET_URL}/notifications`);
+      const socketUrl = `${SOCKET_URL}/notifications`;
+      console.log('[Socket] Connecting to:', socketUrl);
+      console.log('[Socket] With token:', session.access_token.substring(0, 20) + '...');
+      console.log('[Socket] Organization:', organizationId);
 
-      this.socket = io(`${SOCKET_URL}/notifications`, {
+      this.socket = io(socketUrl, {
         query: {
           token: session.access_token,
           organizationId,
@@ -66,6 +79,8 @@ class SocketManager {
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         timeout: 10000,
+        // Add path explicitly if needed
+        // path: '/socket.io',
       });
 
       this.setupEventListeners();
@@ -215,6 +230,3 @@ export function useSocketStatus(): SocketStatus {
 
   return status;
 }
-
-// Import for useState and useEffect - this will be used by consumers
-import { useState, useEffect } from 'react';

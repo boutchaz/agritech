@@ -35,8 +35,18 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
 
   // Connect to WebSocket when organization is available
   useEffect(() => {
+    console.log('[useNotifications] Effect triggered', {
+      organizationId,
+      userId: user?.id,
+      hasUser: !!user,
+      hasOrg: !!organizationId
+    });
+
     if (organizationId && user) {
+      console.log('[useNotifications] Connecting to WebSocket...');
       socketManager.connect(organizationId);
+    } else {
+      console.log('[useNotifications] Skipping WebSocket - missing user or org');
     }
 
     return () => {
