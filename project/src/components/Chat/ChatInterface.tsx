@@ -41,6 +41,7 @@ export function ChatInterface() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  const [loadingStage, setLoadingStage] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState(false); // Live voice chat mode
 
   // Select best voice for language (Z.ai voices: tongtong, xiaochen, chuichui, jam, kazi, douji, luodo)
@@ -190,11 +191,17 @@ export function ChatInterface() {
 
     console.log('Sending message:', messageText);
 
+    setLoadingStage(t('chat.loading.analyzing', 'Analyzing your question...'));
+    
+    setTimeout(() => setLoadingStage(t('chat.loading.loadingData', 'Loading data...')), 1000);
+    setTimeout(() => setLoadingStage(t('chat.loading.generating', 'Generating response...')), 2500);
+
     try {
       sendMessage(
         { query: messageText, language: currentLanguage, save_history: true },
         {
           onSuccess: (data) => {
+            setLoadingStage(null);
             console.log('Message sent successfully:', data);
             const assistantMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
@@ -216,6 +223,7 @@ export function ChatInterface() {
             }
           },
           onError: (error: any) => {
+            setLoadingStage(null);
             console.error('Chat error:', error);
             
             // Provide more helpful error messages
@@ -300,7 +308,7 @@ If the problem persists, please contact support.`;
         }, 1000);
       }
     }
-  }, [voiceMode, currentLanguage, sendMessage, resetTranscript, isListening, startListening]);
+  }, [voiceMode, currentLanguage, sendMessage, resetTranscript, isListening, startListening, t]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -362,7 +370,7 @@ If the problem persists, please contact support.`;
         return () => clearTimeout(sendTimer);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [voiceMode, isListening, transcript, isSending, resetTranscript, proceedWithSend]);
 
   // Track last played message to avoid replaying
@@ -540,8 +548,13 @@ If the problem persists, please contact support.`;
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="bg-muted rounded-lg px-4 py-2">
+                <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
+                  {loadingStage && (
+                    <span className="text-sm text-muted-foreground animate-pulse">
+                      {loadingStage}
+                    </span>
+                  )}
                 </div>
               </div>
             )}

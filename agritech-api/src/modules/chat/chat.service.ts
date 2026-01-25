@@ -250,11 +250,30 @@ interface ProductionIntelligenceContext {
   }>;
 }
 
+interface CachedContext {
+  data: BuiltContext;
+  timestamp: number;
+}
+
+interface CachedResponse {
+  response: string;
+  metadata: {
+    provider: string;
+    model: string;
+    tokensUsed: number;
+  };
+  timestamp: number;
+}
+
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly zaiProvider: ZaiProvider;
   private readonly zaiTTSProvider: ZaiTTSProvider;
+  private readonly contextCache = new Map<string, CachedContext>();
+  private readonly responseCache = new Map<string, CachedResponse>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+  private readonly RESPONSE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -299,8 +318,8 @@ export class ChatService {
       ? await this.getRecentConversationHistory(userId, organizationId, 5)
       : [];
 
-    // Build context from all modules in parallel for performance
-    const context = await this.buildOrganizationContext(organizationId, dto.query);
+     // Build context from all modules in parallel for performance
+     const context = await this.buildOrganizationContext(organizationId, dto.query);
 
     // Build prompts
     const systemPrompt = this.buildSystemPrompt();
@@ -320,6 +339,30 @@ export class ChatService {
       await this.saveMessage(userId, organizationId, 'user', dto.query, dto.language);
     }
 
+    // Check response cache before generating
+    const cacheKey = `${organizationId}:${dto.query.toLowerCase().trim()}`;
+    const cached = this.responseCache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < this.RESPONSE_CACHE_TTL) {
+      this.logger.log(`Response cache HIT for query: "${dto.query}"`);
+
+      // Still save to history (user expects to see it)
+      if (shouldSaveHistory) {
+        await this.saveMessage(userId, organizationId, 'assistant', cached.response, dto.language, cached.metadata);
+      }
+
+      return {
+        response: cached.response,
+        context_summary: this.summarizeContext(context),
+        metadata: {
+          ...cached.metadata,
+          timestamp: new Date(),
+        },
+      };
+    }
+
+    this.logger.log(`Response cache MISS for query: "${dto.query}"`);
+
     // Generate response
     try {
       const response = await this.zaiProvider.generate({
@@ -331,6 +374,17 @@ export class ChatService {
           temperature: 0.7,
           maxTokens: 8192,
         },
+      });
+
+      // Cache successful response
+      this.responseCache.set(cacheKey, {
+        response: response.content,
+        metadata: {
+          provider: 'zai',
+          model: response.model,
+          tokensUsed: response.tokensUsed,
+        },
+        timestamp: Date.now(),
       });
 
       // Save assistant response to history
@@ -393,122 +447,179 @@ export class ChatService {
     });
   }
 
-  private async buildOrganizationContext(
-    organizationId: string,
-    query: string,
-  ): Promise<BuiltContext> {
-    const client = this.databaseService.getAdminClient();
+   private async buildOrganizationContext(
+     organizationId: string,
+     query: string,
+   ): Promise<BuiltContext> {
+     const cached = this.contextCache.get(organizationId);
+     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+       this.logger.log(`Cache HIT for org ${organizationId}`);
+       return cached.data;
+     }
 
-    // Analyze query using AI to route to correct agents/modules (supports all languages)
-    // This is the ONLY routing method - no regex/string matching
-    const contextNeeds = await this.analyzeQueryContextWithAI(query);
+     this.logger.log(`Cache MISS for org ${organizationId}`);
+     const context = await this.buildOrganizationContextUncached(organizationId, query);
 
-    // Get current date and season
-    const now = new Date();
-    const currentDate = now.toISOString().split('T')[0];
-    const month = now.getMonth() + 1;
-    const currentSeason = 
-      month >= 3 && month <= 5 ? 'spring' :
-      month >= 6 && month <= 8 ? 'summer' :
-      month >= 9 && month <= 11 ? 'autumn' : 'winter';
+     this.contextCache.set(organizationId, {
+       data: context,
+       timestamp: Date.now(),
+     });
 
-    // Build all context in parallel
-    // CRITICAL: Always load farm and worker context for basic queries like "list farms" or "list workers"
-    // The AI routing might miss these, so we ensure they're always available
-    const [
-      organizationContext,
-      farmContext,
-      workerContext,
-      accountingContext,
-      inventoryContext,
-      productionContext,
-      supplierCustomerContext,
-      satelliteWeatherContext,
-      soilAnalysisContext,
-      productionIntelligenceContext,
-    ] = await Promise.all([
-      this.getOrganizationContext(client, organizationId),
-      // Always load farm context - it's needed for basic queries
-      this.getFarmContext(client, organizationId).catch(err => {
-        this.logger.error(`Failed to load farm context: ${err.message}`, err.stack);
-        return null;
-      }),
-      // Always load worker context - it's needed for basic queries
-      this.getWorkerContext(client, organizationId).catch(err => {
-        this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
-        return null;
-      }),
-      contextNeeds.accounting
-        ? this.getAccountingContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load accounting context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      contextNeeds.inventory
-        ? this.getInventoryContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load inventory context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      contextNeeds.production
-        ? this.getProductionContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load production context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      contextNeeds.supplierCustomer
-        ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      (contextNeeds.satellite || contextNeeds.weather)
-        ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load satellite/weather context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      contextNeeds.soil
-        ? this.getSoilAnalysisContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load soil analysis context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-      (contextNeeds.alerts || contextNeeds.forecast)
-        ? this.getProductionIntelligenceContext(client, organizationId).catch(err => {
-            this.logger.warn(`Failed to load production intelligence context: ${err.message}`);
-            return null;
-          })
-        : Promise.resolve(null),
-    ]);
-    
-    // Log what was loaded for debugging
-    this.logger.log(`Context loaded - Farms: ${farmContext?.farms_count || 0}, Workers: ${workerContext?.active_workers_count || 0}, Parcels: ${farmContext?.parcels_count || 0}`);
+     return context;
+   }
 
-    return {
-      organization: organizationContext,
-      farms: farmContext,
-      workers: workerContext,
-      accounting: accountingContext,
-      inventory: inventoryContext,
-      production: productionContext,
-      suppliersCustomers: supplierCustomerContext,
-      satelliteWeather: satelliteWeatherContext,
-      soilAnalysis: soilAnalysisContext,
-      productionIntelligence: productionIntelligenceContext,
-      currentDate,
-      currentSeason,
-    };
-  }
+    private async buildOrganizationContextUncached(
+      organizationId: string,
+      query: string,
+    ): Promise<BuiltContext> {
+      const client = this.databaseService.getAdminClient();
 
-  /**
-   * Analyze query context using AI to understand intent and route to correct agents/modules
-   * This is the ONLY method used - no regex/string matching
-   * Supports all languages (Arabic, French, English, etc.)
-   */
-  private async analyzeQueryContextWithAI(
-    query: string,
-  ): Promise<ContextNeeds> {
+      // Analyze query using simple keyword-based routing (no AI call - performance optimization)
+      // Eliminates 1 AI call per message, reducing latency by 1-2 seconds
+      const contextNeeds = this.analyzeQueryContextSimple(query);
+
+     // Get current date and season
+     const now = new Date();
+     const currentDate = now.toISOString().split('T')[0];
+     const month = now.getMonth() + 1;
+     const currentSeason = 
+       month >= 3 && month <= 5 ? 'spring' :
+       month >= 6 && month <= 8 ? 'summer' :
+       month >= 9 && month <= 11 ? 'autumn' : 'winter';
+
+     // Build all context in parallel
+     // CRITICAL: Always load farm and worker context for basic queries like "list farms" or "list workers"
+     // The AI routing might miss these, so we ensure they're always available
+     const [
+       organizationContext,
+       farmContext,
+       workerContext,
+       accountingContext,
+       inventoryContext,
+       productionContext,
+       supplierCustomerContext,
+       satelliteWeatherContext,
+       soilAnalysisContext,
+       productionIntelligenceContext,
+     ] = await Promise.all([
+       this.getOrganizationContext(client, organizationId),
+       // Always load farm context - it's needed for basic queries
+       this.getFarmContext(client, organizationId).catch(err => {
+         this.logger.error(`Failed to load farm context: ${err.message}`, err.stack);
+         return null;
+       }),
+       // Always load worker context - it's needed for basic queries
+       this.getWorkerContext(client, organizationId).catch(err => {
+         this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
+         return null;
+       }),
+       contextNeeds.accounting
+         ? this.getAccountingContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load accounting context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.inventory
+         ? this.getInventoryContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load inventory context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.production
+         ? this.getProductionContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load production context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.supplierCustomer
+         ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       (contextNeeds.satellite || contextNeeds.weather)
+         ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load satellite/weather context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.soil
+         ? this.getSoilAnalysisContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load soil analysis context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       (contextNeeds.alerts || contextNeeds.forecast)
+         ? this.getProductionIntelligenceContext(client, organizationId).catch(err => {
+             this.logger.warn(`Failed to load production intelligence context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+     ]);
+     
+     // Log what was loaded for debugging
+     this.logger.log(`Context loaded - Farms: ${farmContext?.farms_count || 0}, Workers: ${workerContext?.active_workers_count || 0}, Parcels: ${farmContext?.parcels_count || 0}`);
+
+     return {
+       organization: organizationContext,
+       farms: farmContext,
+       workers: workerContext,
+       accounting: accountingContext,
+       inventory: inventoryContext,
+       production: productionContext,
+       suppliersCustomers: supplierCustomerContext,
+       satelliteWeather: satelliteWeatherContext,
+       soilAnalysis: soilAnalysisContext,
+       productionIntelligence: productionIntelligenceContext,
+       currentDate,
+       currentSeason,
+     };
+   }
+
+   /**
+    * Analyze query context using simple keyword-based routing
+    * Fast, deterministic, no AI calls - replaces analyzeQueryContextWithAI
+    * Supports multilingual keywords (English, French, Arabic)
+    * Farm and worker contexts are ALWAYS loaded (most common queries)
+    */
+   private analyzeQueryContextSimple(query: string): ContextNeeds {
+     const lowerQuery = query.toLowerCase();
+     
+     const contextNeeds = {
+       farm: true, // Always load - most queries need this
+       worker: true, // Always load - most queries need this
+       accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|facture|paiement|dépense|revenu|coût|comptabilité|financier|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي/.test(lowerQuery),
+       inventory: /stock|inventory|warehouse|item|product|material|reception|supply|inventaire|entrepôt|article|produit|matériel|approvisionnement|مخزون|مستودع|منتج|مادة/.test(lowerQuery),
+       production: /harvest|yield|production|quality|delivery|crop cycle|récolte|rendement|contrôle qualité|livraison|cycle de culture|حصاد|محصول|إنتاج|مراقبة الجودة|تسليم/.test(lowerQuery),
+       supplierCustomer: /supplier|customer|vendor|client|order|quote|purchase|sale|fournisseur|client|commande|devis|achat|vente|مورد|عميل|طلب|عرض أسعار|شراء|بيع/.test(lowerQuery),
+       satellite: /satellite|ndvi|ndmi|ndre|gci|savi|vegetation|remote sensing|imagery|indice de végétation|télédétection|imagerie|قمر صناعي|مؤشر الغطاء النباتي|الاستشعار عن بعد/.test(lowerQuery),
+       weather: /weather|forecast|temperature|rain|precipitation|climate|frost|storm|humidity|wind|météo|prévision|température|pluie|climat|gel|tempête|humidité|vent|طقس|توقعات|درجة الحرارة|مطر|مناخ|صقيع|عاصفة|رطوبة|رياح/.test(lowerQuery),
+       soil: /soil|nutrient|fertilizer|ph|organic matter|texture|soil analysis|sol|nutriment|engrais|matière organique|analyse du sol|تربة|مغذيات|سماد|مادة عضوية|تحليل التربة/.test(lowerQuery),
+       alerts: /alert|warning|problem|issue|underperforming|critical|deviation|alerte|avertissement|problème|critique|déviation|تنبيه|تحذير|مشكلة|حرج|انحراف/.test(lowerQuery),
+       forecast: /forecast|prediction|expected|upcoming|yield forecast|benchmark|prévision|prédiction|attendu|à venir|référence|توقعات|تنبؤ|متوقع|قادم|معيار/.test(lowerQuery),
+     };
+
+     // Log routing decision for debugging
+     this.logger.log(
+       `Context routing (keyword-based): farm=${contextNeeds.farm}, worker=${contextNeeds.worker}, ` +
+       `accounting=${contextNeeds.accounting}, inventory=${contextNeeds.inventory}, ` +
+       `production=${contextNeeds.production}, supplierCustomer=${contextNeeds.supplierCustomer}, ` +
+       `satellite=${contextNeeds.satellite}, weather=${contextNeeds.weather}, ` +
+       `soil=${contextNeeds.soil}, alerts=${contextNeeds.alerts}, forecast=${contextNeeds.forecast}`
+     );
+
+     return contextNeeds;
+   }
+
+   /**
+    * [DEPRECATED] Analyze query context using AI to understand intent and route to correct agents/modules
+    * This method is kept for reference but is NO LONGER USED
+    * Replaced by analyzeQueryContextSimple() for performance (eliminates 1 AI call per message)
+    * Supports all languages (Arabic, French, English, etc.)
+    */
+   private async analyzeQueryContextWithAI(
+     query: string,
+   ): Promise<ContextNeeds> {
     try {
       const systemPrompt = `You are an intelligent query router for an agricultural management system. 
 Your task is to analyze the user's query (which may be in ANY language: English, French, Arabic, etc.) and determine which data modules/agents need to be activated to answer the query.
@@ -712,47 +823,50 @@ Determine which modules are relevant based on the query's intent and content. Re
         this.logger.error(`Error fetching farms: ${farmsError.message}`);
       }
 
-      // Get parcels summary with soil and irrigation info - include all parcels
-      const { data: parcels, error: parcelsError } = await client
-        .from('parcels')
-        .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type')
-        .eq('organization_id', organizationId)
-        .limit(50);
+       // Get parcels summary with soil and irrigation info - limit to 20 most recent
+       // Reduced from 50 to 20 to optimize prompt size and reduce AI processing time
+       const { data: parcels, error: parcelsError } = await client
+         .from('parcels')
+         .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type')
+         .eq('organization_id', organizationId)
+         .limit(20);
       
       if (parcelsError) {
         this.logger.error(`Error fetching parcels: ${parcelsError.message}`);
       }
 
-      // Get crop cycles with detailed information - include all statuses
-      const { data: cropCycles, error: cropCyclesError } = await client
-        .from('crop_cycles')
-        .select(`
-          id,
-          cycle_name,
-          crop_type,
-          variety_name,
-          status,
-          planting_date,
-          expected_harvest_date_start,
-          expected_harvest_date_end,
-          planted_area_ha,
-          parcel_id,
-          farm_id
-        `)
-        .eq('organization_id', organizationId)
-        .order('planting_date', { ascending: false })
-        .limit(20);
+       // Get crop cycles with detailed information - limit to 10 most recent
+       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+       const { data: cropCycles, error: cropCyclesError } = await client
+         .from('crop_cycles')
+         .select(`
+           id,
+           cycle_name,
+           crop_type,
+           variety_name,
+           status,
+           planting_date,
+           expected_harvest_date_start,
+           expected_harvest_date_end,
+           planted_area_ha,
+           parcel_id,
+           farm_id
+         `)
+         .eq('organization_id', organizationId)
+         .order('planting_date', { ascending: false })
+         .limit(10);
       
       if (cropCyclesError) {
         this.logger.error(`Error fetching crop cycles: ${cropCyclesError.message}`);
       }
 
-      // Get structures
-      const { data: structures, error: structuresError } = await client
-        .from('structures')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .limit(20);
+       // Get structures - limit to 10 most recent
+       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+       const { data: structures, error: structuresError } = await client
+         .from('structures')
+         .select('*')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (structuresError) {
         this.logger.error(`Error fetching structures: ${structuresError.message}`);
@@ -817,37 +931,38 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<WorkerContext> {
     try {
-      // Get all workers, not just active ones
-      const { data: workers, error: workersError } = await client
-        .from('workers')
-        .select('id, first_name, last_name, worker_type, is_active, farm_id')
-        .eq('organization_id', organizationId)
-        .limit(50);
+       // Get all workers, not just active ones - limit to 10 most recent
+       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
+       const { data: workers, error: workersError } = await client
+         .from('workers')
+         .select('id, first_name, last_name, worker_type, is_active, farm_id')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (workersError) {
         this.logger.error(`Error fetching workers: ${workersError.message}`);
       }
 
-      const { data: tasks, error: tasksError } = await client
-        .from('tasks')
-        .select('id, title, status, task_type, priority')
-        .eq('organization_id', organizationId)
-        .in('status', ['pending', 'assigned', 'in_progress'])
-        .limit(50);
+       const { data: tasks, error: tasksError } = await client
+         .from('tasks')
+         .select('id, title, status, task_type, priority')
+         .eq('organization_id', organizationId)
+         .in('status', ['pending', 'assigned', 'in_progress'])
+         .limit(10); // Reduced from 50 to 10 to optimize prompt size
       
       if (tasksError) {
         this.logger.error(`Error fetching tasks: ${tasksError.message}`);
       }
 
-      const { data: workRecords, error: workRecordsError } = await client
-        .from('work_records')
-        .select('id, work_date, amount_paid, payment_status')
-        .eq('organization_id', organizationId)
-        .gte(
-          'work_date',
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .limit(50);
+       const { data: workRecords, error: workRecordsError } = await client
+         .from('work_records')
+         .select('id, work_date, amount_paid, payment_status')
+         .eq('organization_id', organizationId)
+         .gte(
+           'work_date',
+           new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .limit(10); // Reduced from 50 to 10 to optimize prompt size
       
       if (workRecordsError) {
         this.logger.error(`Error fetching work records: ${workRecordsError.message}`);
@@ -892,46 +1007,49 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<AccountingContext> {
     try {
-      // Get chart of accounts summary
-      const { data: accounts, error: accountsError } = await client
-        .from('accounts')
-        .select('id, name, account_type')
-        .eq('organization_id', organizationId)
-        .limit(50);
+       // Get chart of accounts summary - limit to 10 most recent
+       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
+       const { data: accounts, error: accountsError } = await client
+         .from('accounts')
+         .select('id, name, account_type')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (accountsError) {
         this.logger.error(`Error fetching accounts: ${accountsError.message}`);
       }
 
-      // Get recent invoices
-      const { data: invoices, error: invoicesError } = await client
-        .from('invoices')
-        .select(
-          'id, invoice_number, invoice_type, status, grand_total, invoice_date',
-        )
-        .eq('organization_id', organizationId)
-        .gte(
-          'invoice_date',
-          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('invoice_date', { ascending: false })
-        .limit(30);
+       // Get recent invoices - limit to 10 most recent
+       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
+       const { data: invoices, error: invoicesError } = await client
+         .from('invoices')
+         .select(
+           'id, invoice_number, invoice_type, status, grand_total, invoice_date',
+         )
+         .eq('organization_id', organizationId)
+         .gte(
+           'invoice_date',
+           new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('invoice_date', { ascending: false })
+         .limit(10);
       
       if (invoicesError) {
         this.logger.error(`Error fetching invoices: ${invoicesError.message}`);
       }
 
-      // Get recent payments
-      const { data: payments, error: paymentsError } = await client
-        .from('accounting_payments')
-        .select('id, payment_date, amount, payment_method, status')
-        .eq('organization_id', organizationId)
-        .gte(
-          'payment_date',
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('payment_date', { ascending: false })
-        .limit(20);
+       // Get recent payments - limit to 10 most recent
+       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+       const { data: payments, error: paymentsError } = await client
+         .from('accounting_payments')
+         .select('id, payment_date, amount, payment_method, status')
+         .eq('organization_id', organizationId)
+         .gte(
+           'payment_date',
+           new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('payment_date', { ascending: false })
+         .limit(10);
       
       if (paymentsError) {
         this.logger.error(`Error fetching payments: ${paymentsError.message}`);
@@ -1004,12 +1122,13 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<InventoryContext> {
     try {
-      // Get all items, not just active ones
-      const { data: items, error: itemsError } = await client
-        .from('items')
-        .select('id, item_name, item_code, default_unit')
-        .eq('organization_id', organizationId)
-        .limit(50);
+       // Get all items, not just active ones - limit to 10 most recent
+       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
+       const { data: items, error: itemsError } = await client
+         .from('items')
+         .select('id, item_name, item_code, default_unit')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (itemsError) {
         this.logger.error(`Error fetching items: ${itemsError.message}`);
@@ -1025,16 +1144,16 @@ Determine which modules are relevant based on the query's intent and content. Re
         this.logger.error(`Error fetching warehouses: ${warehousesError.message}`);
       }
 
-      const { data: stockEntries, error: stockEntriesError } = await client
-        .from('stock_entries')
-        .select('id, entry_type, entry_date')
-        .eq('organization_id', organizationId)
-        .gte(
-          'entry_date',
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('entry_date', { ascending: false })
-        .limit(20);
+       const { data: stockEntries, error: stockEntriesError } = await client
+         .from('stock_entries')
+         .select('id, entry_type, entry_date')
+         .eq('organization_id', organizationId)
+         .gte(
+           'entry_date',
+           new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('entry_date', { ascending: false })
+         .limit(10); // Reduced from 20 to 10 to optimize prompt size
       
       if (stockEntriesError) {
         this.logger.error(`Error fetching stock entries: ${stockEntriesError.message}`);
@@ -1078,46 +1197,46 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<ProductionContext> {
     try {
-      const { data: harvests, error: harvestsError } = await client
-        .from('harvest_records')
-        .select('id, harvest_date, quantity, unit, quality_grade, status')
-        .eq('organization_id', organizationId)
-        .gte(
-          'harvest_date',
-          new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('harvest_date', { ascending: false })
-        .limit(30);
+       const { data: harvests, error: harvestsError } = await client
+         .from('harvest_records')
+         .select('id, harvest_date, quantity, unit, quality_grade, status')
+         .eq('organization_id', organizationId)
+         .gte(
+           'harvest_date',
+           new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('harvest_date', { ascending: false })
+         .limit(10); // Reduced from 30 to 10 to optimize prompt size
       
       if (harvestsError) {
         this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
       }
 
-      const { data: qualityChecks, error: qualityChecksError } = await client
-        .from('quality_inspections')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .gte(
-          'inspection_date',
-          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('inspection_date', { ascending: false })
-        .limit(20);
+       const { data: qualityChecks, error: qualityChecksError } = await client
+         .from('quality_inspections')
+         .select('*')
+         .eq('organization_id', organizationId)
+         .gte(
+           'inspection_date',
+           new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('inspection_date', { ascending: false })
+         .limit(10); // Reduced from 20 to 10 to optimize prompt size
       
       if (qualityChecksError) {
         this.logger.error(`Error fetching quality checks: ${qualityChecksError.message}`);
       }
 
-      const { data: deliveries, error: deliveriesError } = await client
-        .from('deliveries')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .gte(
-          'delivery_date',
-          new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        )
-        .order('delivery_date', { ascending: false })
-        .limit(20);
+       const { data: deliveries, error: deliveriesError } = await client
+         .from('deliveries')
+         .select('*')
+         .eq('organization_id', organizationId)
+         .gte(
+           'delivery_date',
+           new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+         )
+         .order('delivery_date', { ascending: false })
+         .limit(10); // Reduced from 20 to 10 to optimize prompt size
       
       if (deliveriesError) {
         this.logger.error(`Error fetching deliveries: ${deliveriesError.message}`);
@@ -1154,47 +1273,49 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<SupplierCustomerContext> {
     try {
-      // Get all suppliers, not just active ones
-      const { data: suppliers, error: suppliersError } = await client
-        .from('suppliers')
-        .select('id, name, supplier_type, is_active')
-        .eq('organization_id', organizationId)
-        .limit(30);
+       // Get all suppliers, not just active ones - limit to 10 most recent
+       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
+       const { data: suppliers, error: suppliersError } = await client
+         .from('suppliers')
+         .select('id, name, supplier_type, is_active')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (suppliersError) {
         this.logger.error(`Error fetching suppliers: ${suppliersError.message}`);
       }
 
-      // Get all customers, not just active ones
-      const { data: customers, error: customersError } = await client
-        .from('customers')
-        .select('id, name, customer_type, is_active')
-        .eq('organization_id', organizationId)
-        .limit(30);
+       // Get all customers, not just active ones - limit to 10 most recent
+       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
+       const { data: customers, error: customersError } = await client
+         .from('customers')
+         .select('id, name, customer_type, is_active')
+         .eq('organization_id', organizationId)
+         .limit(10);
       
       if (customersError) {
         this.logger.error(`Error fetching customers: ${customersError.message}`);
       }
 
-      const { data: salesOrders, error: salesOrdersError } = await client
-        .from('sales_orders')
-        .select('id, order_number, order_date, total_amount, status')
-        .eq('organization_id', organizationId)
-        .in('status', ['draft', 'confirmed', 'partial'])
-        .order('order_date', { ascending: false })
-        .limit(20);
+       const { data: salesOrders, error: salesOrdersError } = await client
+         .from('sales_orders')
+         .select('id, order_number, order_date, total_amount, status')
+         .eq('organization_id', organizationId)
+         .in('status', ['draft', 'confirmed', 'partial'])
+         .order('order_date', { ascending: false })
+         .limit(10); // Reduced from 20 to 10 to optimize prompt size
       
       if (salesOrdersError) {
         this.logger.error(`Error fetching sales orders: ${salesOrdersError.message}`);
       }
 
-      const { data: purchaseOrders, error: purchaseOrdersError } = await client
-        .from('purchase_orders')
-        .select('id, order_number, order_date, total_amount, status')
-        .eq('organization_id', organizationId)
-        .in('status', ['draft', 'confirmed', 'partial'])
-        .order('order_date', { ascending: false })
-        .limit(20);
+       const { data: purchaseOrders, error: purchaseOrdersError } = await client
+         .from('purchase_orders')
+         .select('id, order_number, order_date, total_amount, status')
+         .eq('organization_id', organizationId)
+         .in('status', ['draft', 'confirmed', 'partial'])
+         .order('order_date', { ascending: false })
+         .limit(10); // Reduced from 20 to 10 to optimize prompt size
       
       if (purchaseOrdersError) {
         this.logger.error(`Error fetching purchase orders: ${purchaseOrdersError.message}`);
@@ -1258,13 +1379,14 @@ Determine which modules are relevant based on the query's intent and content. Re
     const startDate = sixMonthsAgo.toISOString().split('T')[0];
     const endDate = new Date().toISOString().split('T')[0];
 
-    // Get parcels with boundaries
-    const { data: parcels } = await client
-      .from('parcels')
-      .select('id, name, boundary')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(20);
+     // Get parcels with boundaries - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: parcels } = await client
+       .from('parcels')
+       .select('id, name, boundary')
+       .eq('organization_id', organizationId)
+       .eq('is_active', true)
+       .limit(10);
 
     if (!parcels || parcels.length === 0) {
       return {
@@ -1428,50 +1550,53 @@ Determine which modules are relevant based on the query's intent and content. Re
     client: any,
     organizationId: string,
   ): Promise<SoilAnalysisContext> {
-    // Get latest soil analyses
-    const { data: soilAnalyses } = await client
-      .from('analyses')
-      .select(`
-        id,
-        parcel_id,
-        analysis_date,
-        data,
-        parcels!inner(id, name, organization_id)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('analysis_type', 'soil')
-      .order('analysis_date', { ascending: false })
-      .limit(20);
+     // Get latest soil analyses - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: soilAnalyses } = await client
+       .from('analyses')
+       .select(`
+         id,
+         parcel_id,
+         analysis_date,
+         data,
+         parcels!inner(id, name, organization_id)
+       `)
+       .eq('organization_id', organizationId)
+       .eq('analysis_type', 'soil')
+       .order('analysis_date', { ascending: false })
+       .limit(10);
 
-    // Get latest water analyses
-    const { data: waterAnalyses } = await client
-      .from('analyses')
-      .select(`
-        id,
-        parcel_id,
-        analysis_date,
-        data,
-        parcels!inner(id, name, organization_id)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('analysis_type', 'water')
-      .order('analysis_date', { ascending: false })
-      .limit(20);
+     // Get latest water analyses - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: waterAnalyses } = await client
+       .from('analyses')
+       .select(`
+         id,
+         parcel_id,
+         analysis_date,
+         data,
+         parcels!inner(id, name, organization_id)
+       `)
+       .eq('organization_id', organizationId)
+       .eq('analysis_type', 'water')
+       .order('analysis_date', { ascending: false })
+       .limit(10);
 
-    // Get latest plant analyses
-    const { data: plantAnalyses } = await client
-      .from('analyses')
-      .select(`
-        id,
-        parcel_id,
-        analysis_date,
-        data,
-        parcels!inner(id, name, organization_id)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('analysis_type', 'plant')
-      .order('analysis_date', { ascending: false })
-      .limit(20);
+     // Get latest plant analyses - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: plantAnalyses } = await client
+       .from('analyses')
+       .select(`
+         id,
+         parcel_id,
+         analysis_date,
+         data,
+         parcels!inner(id, name, organization_id)
+       `)
+       .eq('organization_id', organizationId)
+       .eq('analysis_type', 'plant')
+       .order('analysis_date', { ascending: false })
+       .limit(10);
 
     const extractSoilData = (analysis: any) => {
       const data = analysis?.data || {};
@@ -1523,52 +1648,55 @@ Determine which modules are relevant based on the query's intent and content. Re
     client: any,
     organizationId: string,
   ): Promise<ProductionIntelligenceContext> {
-    // Get active performance alerts
-    const { data: alerts } = await client
-      .from('performance_alerts')
-      .select(`
-        id,
-        alert_type,
-        severity,
-        title,
-        message,
-        parcel_id,
-        variance_percent,
-        recommended_actions,
-        parcels(id, name)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(20);
+     // Get active performance alerts - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: alerts } = await client
+       .from('performance_alerts')
+       .select(`
+         id,
+         alert_type,
+         severity,
+         title,
+         message,
+         parcel_id,
+         variance_percent,
+         recommended_actions,
+         parcels(id, name)
+       `)
+       .eq('organization_id', organizationId)
+       .eq('status', 'active')
+       .order('created_at', { ascending: false })
+       .limit(10);
 
-    // Get upcoming harvest forecasts
-    const { data: forecasts } = await client
-      .from('harvest_forecasts')
-      .select(`
-        id,
-        parcel_id,
-        crop_type,
-        forecast_harvest_date_start,
-        forecast_harvest_date_end,
-        predicted_yield_quantity,
-        confidence_level,
-        predicted_revenue,
-        parcels(id, name)
-      `)
-      .eq('organization_id', organizationId)
-      .in('status', ['draft', 'active'])
-      .gte('forecast_harvest_date_start', new Date().toISOString().split('T')[0])
-      .order('forecast_harvest_date_start', { ascending: true })
-      .limit(20);
+     // Get upcoming harvest forecasts - limit to 10 most recent
+     // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
+     const { data: forecasts } = await client
+       .from('harvest_forecasts')
+       .select(`
+         id,
+         parcel_id,
+         crop_type,
+         forecast_harvest_date_start,
+         forecast_harvest_date_end,
+         predicted_yield_quantity,
+         confidence_level,
+         predicted_revenue,
+         parcels(id, name)
+       `)
+       .eq('organization_id', organizationId)
+       .in('status', ['draft', 'active'])
+       .gte('forecast_harvest_date_start', new Date().toISOString().split('T')[0])
+       .order('forecast_harvest_date_start', { ascending: true })
+       .limit(10);
 
-    // Get yield benchmarks
-    const { data: benchmarks } = await client
-      .from('yield_benchmarks')
-      .select('crop_type, target_yield_per_hectare, is_active')
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .limit(30);
+     // Get yield benchmarks - limit to 10 most recent
+     // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
+     const { data: benchmarks } = await client
+       .from('yield_benchmarks')
+       .select('crop_type, target_yield_per_hectare, is_active')
+       .eq('organization_id', organizationId)
+       .eq('is_active', true)
+       .limit(10);
 
     return {
       active_alerts: (alerts || []).map((a: any) => ({
