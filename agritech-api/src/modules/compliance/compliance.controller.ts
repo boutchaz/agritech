@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +21,9 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 import { ComplianceService } from './compliance.service';
+import { ComplianceReportsService } from './compliance-reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
@@ -37,7 +40,10 @@ import { CreateEvidenceDto } from './dto/create-evidence.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ComplianceController {
-  constructor(private complianceService: ComplianceService) {}
+  constructor(
+    private complianceService: ComplianceService,
+    private complianceReportsService: ComplianceReportsService,
+  ) {}
 
   // ============================================================================
   // CERTIFICATION ENDPOINTS
@@ -387,5 +393,59 @@ export class ComplianceController {
   async getDashboard(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.complianceService.getDashboardStats(organizationId);
+  }
+
+  // ============================================================================
+  // REPORTS ENDPOINTS
+  // ============================================================================
+
+  @Get('certifications/:id/report/pdf')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Generate GlobalGAP compliance PDF report',
+    description:
+      'Generate a comprehensive PDF report for a GlobalGAP certification including requirements, checks, and summary',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Certification ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'PDF report generated successfully',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Certification not found' })
+  async generatePDFReport(
+    @Request() req,
+    @Param('id') certificationId: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const organizationId = req.headers['x-organization-id'] as string;
+
+    const pdfBuffer =
+      await this.complianceReportsService.generateGlobalGAPReport(
+        certificationId,
+        organizationId,
+      );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="globalgap-report-${certificationId}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.send(pdfBuffer);
   }
 }
