@@ -11,6 +11,21 @@ export interface NotificationFilters {
   offset?: number;
 }
 
+export interface NotificationTypeFilter {
+  value: string;
+  label: string;
+}
+
+export interface NotificationStatusFilter {
+  value: 'all' | 'unread' | 'important';
+  label: string;
+}
+
+export interface NotificationTimeFilter {
+  value: 'all' | 'today' | 'week' | 'month' | 'older';
+  label: string;
+}
+
 export interface UseNotificationsReturn {
   notifications: NotificationData[];
   unreadCount: number;
@@ -21,15 +36,56 @@ export interface UseNotificationsReturn {
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refetch: () => void;
+  // New: Filters and pagination
+  typeFilter: string;
+  setTypeFilter: (filter: string) => void;
+  statusFilter: string;
+  setStatusFilter: (filter: string) => void;
+  timeFilter: string;
+  setTimeFilter: (filter: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  hasNextPage: boolean;
+  fetchNextPage: () => void;
+  isFetchingNextPage: boolean;
+  // New: Sound controls
+  isSoundEnabled: boolean;
+  toggleSound: (enabled?: boolean) => void;
+  // New: Important notifications
+  importantNotifications: Set<string>;
+  toggleImportant: (id: string) => void;
 }
 
 const NOTIFICATIONS_QUERY_KEY = 'notifications';
 const UNREAD_COUNT_QUERY_KEY = 'notifications-unread-count';
+const PAGE_SIZE = 20;
 
 export function useNotifications(filters: NotificationFilters = {}): UseNotificationsReturn {
   const { user, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('disconnected');
+
+  // Filter states
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Pagination states
+  const [page, setPage] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+
+  // Sound control state
+  const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem('notification-sound-enabled');
+    return stored !== 'false'; // Default to true
+  });
+
+  // Important notifications state
+  const [importantNotifications, setImportantNotifications] = useState<Set<string>>(() => {
+    const stored = localStorage.getItem('important-notifications');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
 
   const organizationId = currentOrganization?.id;
 
@@ -60,9 +116,61 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
     return unsubscribe;
   }, []);
 
+  // Toggle sound
+  const toggleSound = useCallback((enabled?: boolean) => {
+    const newValue = enabled ?? !isSoundEnabled;
+    setIsSoundEnabled(newValue);
+    localStorage.setItem('notification-sound-enabled', String(newValue));
+  }, [isSoundEnabled]);
+
+  // Toggle important
+  const toggleImportant = useCallback((id: string) => {
+    setImportantNotifications((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      localStorage.setItem('important-notifications', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
   // Subscribe to real-time notifications
   useEffect(() => {
     const handleNewNotification = (notification: NotificationData) => {
+      // Play sound if enabled
+      if (isSoundEnabled) {
+        try {
+          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContext) {
+            const audioContext = new AudioContext();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.15);
+          }
+        } catch (error) {
+          console.warn('Failed to play notification sound:', error);
+        }
+      }
+
+      // Haptic feedback for mobile
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
       // Add to cache
       queryClient.setQueryData<NotificationData[]>(
         [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
@@ -118,7 +226,19 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
       unsubRead();
       unsubAllRead();
     };
-  }, [organizationId, filters, queryClient]);
+  }, [organizationId, filters, queryClient, isSoundEnabled]);
+
+  // Build query params from filters
+  const queryParams = useCallback(() => {
+    const params = new URLSearchParams();
+    if (filters.isRead !== undefined) params.append('isRead', String(filters.isRead));
+    if (filters.type && filters.type !== 'all') params.append('type', filters.type);
+    const limit = filters.limit || PAGE_SIZE;
+    params.append('limit', String(limit));
+    const offset = filters.offset || (page * limit);
+    params.append('offset', String(offset));
+    return { queryString: params.toString(), limit, offset };
+  }, [filters, page]);
 
   // Fetch notifications
   const {
@@ -126,23 +246,31 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
     isLoading,
     error,
     refetch,
+    isFetching: isFetchingNextPage,
   } = useQuery<NotificationData[], Error>({
-    queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
+    queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId, filters, page],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (filters.isRead !== undefined) params.append('isRead', String(filters.isRead));
-      if (filters.type) params.append('type', filters.type);
-      if (filters.limit) params.append('limit', String(filters.limit));
-      if (filters.offset) params.append('offset', String(filters.offset));
+      const { queryString, limit, offset } = queryParams();
 
-      const queryString = params.toString();
       const url = `/api/v1/notifications${queryString ? `?${queryString}` : ''}`;
 
-      return apiClient.get(url, {}, organizationId!);
+      const result = await apiClient.get(url, {}, organizationId!);
+
+      // Check if there's a next page
+      setHasNextPage(result.length === limit);
+
+      return result;
     },
     enabled: !!organizationId && !!user,
     staleTime: 30000, // 30 seconds
   });
+
+  // Fetch next page
+  const fetchNextPage = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      setPage((prev) => prev + 1);
+    }
+  }, [hasNextPage, isFetchingNextPage]);
 
   // Fetch unread count
   const { data: unreadCount = 0 } = useQuery<number, Error>({
@@ -206,6 +334,25 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
     markAsRead,
     markAllAsRead,
     refetch,
+    // New: Filters
+    typeFilter,
+    setTypeFilter,
+    statusFilter,
+    setStatusFilter,
+    timeFilter,
+    setTimeFilter,
+    searchQuery,
+    setSearchQuery,
+    // New: Pagination
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    // New: Sound controls
+    isSoundEnabled,
+    toggleSound,
+    // New: Important notifications
+    importantNotifications,
+    toggleImportant,
   };
 }
 

@@ -31,6 +31,7 @@ import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './rout
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
 import { Route as AuthenticatedmiscUtilitiesRouteImport } from './routes/_authenticated/(misc)/utilities'
+import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_authenticated/(misc)/notifications'
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
@@ -231,6 +232,12 @@ const AuthenticatedmiscUtilitiesRoute =
   AuthenticatedmiscUtilitiesRouteImport.update({
     id: '/(misc)/utilities',
     path: '/utilities',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedmiscNotificationsRoute =
+  AuthenticatedmiscNotificationsRouteImport.update({
+    id: '/(misc)/notifications',
+    path: '/notifications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedmiscMarketplaceRoute =
@@ -748,6 +755,7 @@ export interface FileRoutesByFullPath {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
@@ -851,6 +859,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
@@ -955,6 +964,7 @@ export interface FileRoutesById {
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
@@ -1062,6 +1072,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/notifications'
     | '/utilities'
     | '/campaigns'
     | '/crop-cycles'
@@ -1165,6 +1176,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/notifications'
     | '/utilities'
     | '/campaigns'
     | '/crop-cycles'
@@ -1268,6 +1280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
+    | '/_authenticated/(misc)/notifications'
     | '/_authenticated/(misc)/utilities'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
@@ -1521,6 +1534,13 @@ declare module '@tanstack/react-router' {
       path: '/utilities'
       fullPath: '/utilities'
       preLoaderRoute: typeof AuthenticatedmiscUtilitiesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(misc)/notifications': {
+      id: '/_authenticated/(misc)/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedmiscNotificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(misc)/marketplace': {
@@ -2386,6 +2406,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRoute
@@ -2428,6 +2449,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:
     AuthenticatedmiscMarketplaceRouteWithChildren,
+  AuthenticatedmiscNotificationsRoute: AuthenticatedmiscNotificationsRoute,
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:

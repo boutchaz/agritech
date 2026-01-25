@@ -45,31 +45,119 @@
     "addFarm": "إضافة مزرعة"
   },
   "common": {
-    "edit": "تعديل",
-    "cancel": "إلغاء",
-    "none": "لا يوجد",
-    "errors": {
-      "generic": "حدث خطأ. يرجى المحاولة مرة أخرى.",
-      "network": "خطأ في الشبكة. تحقق من اتصالك.",
-      "notFound": "غير موجود",
-      "unauthorized": "وصول غير مصرح به",
-      "validation": "يرجى تصحيح الأخطاء في النموذج"
+    "views": {
+      "map": "عرض الخريطة",
+      "list": "عرض القائمة",
+      "grid": "عرض الشبكة",
+      "cards": "عرض البطاقات",
+      "grouped": "عرض مجمع",
+      "dashboard": "عرض لوحة التحكم"
     },
-    "confirm": {
-      "delete": "هل أنت متأكد من رغبتك في حذف هذا العنصر؟",
-      "unsavedChanges": "لديك تغييرات غير محفوظة. هل أنت متأكد من رغبتك في المغادرة؟"
+    "actions": {
+      "refresh": "تحديث",
+      "download": "تحميل",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "manage": "إدارة",
+      "manageRoles": "إدارة الأدوار",
+      "editFarm": "تعديل المزرعة",
+      "deleteFarm": "حذف المزرعة",
+      "editRole": "تعديل الدور",
+      "removeRole": "إزالة الدور",
+      "createReceptionBatch": "إنشاء دفعة استلام",
+      "viewDetails": "عرض التفاصيل",
+      "payWage": "دفع الأجر",
+      "deactivate": "إلغاء التفعيل",
+      "editToEnableAccess": "تعديل لتفعيل الوصول",
+      "downloadReport": "تحميل التقرير",
+      "downloadInvoice": "تحميل الفاتورة",
+      "downloadMap": "تحميل الخريطة",
+      "filtersAndSort": "الفلاتر والترتيب",
+      "goToMyLocation": "الانتقال إلى موقعي",
+      "searchLocation": "البحث عن موقع",
+      "exitFullscreen": "الخروج من ملء الشاشة (Esc)",
+      "addNewAccount": "إضافة حساب جديد",
+      "addNewTax": "إضافة ضريبة جديدة",
+      "changeLanguage": "تغيير اللغة"
     },
-    "irrigation": {
-      "drip": "التنقيط",
-      "sprinkler": "الرش",
-      "gravity": "الجاذبية",
-      "pivot": "المحوري",
-      "submersion": "الغمر",
-      "rainfed": "بعلي",
-      "none": "لا يوجد (بعلي)"
+    "placeholders": {
+      "searchLocation": "البحث عن مكان في المغرب...",
+      "parcelName": "اسم القطعة",
+      "cropType": "مثال: طماطم",
+      "rootstock": "مثال: GF677",
+      "search": "بحث...",
+      "selectDate": "اختر تاريخ ببيانات قمر صناعي",
+      "searchArticles": "البحث في المقالات...",
+      "searchFiles": "البحث عن ملف...",
+      "selectBucket": "اختر حاوية",
+      "typeOrganizationName": "اكتب اسم المنظمة",
+      "additionalNotes": "ملاحظات إضافية..."
     },
-    "noData": "لا توجد بيانات متاحة",
-    "selectOption": "اختر خياراً"
+    "form": {
+      "name": "الاسم",
+      "description": "الوصف",
+      "area": "المساحة",
+      "unit": "الوحدة",
+      "soilType": "نوع التربة",
+      "irrigationType": "نوع الري",
+      "variety": "الصنف",
+      "plantingDate": "تاريخ الزراعة",
+      "plantingType": "نوع الزراعة"
+    },
+    "satellite": {
+      "refreshData": "تحديث البيانات",
+      "showTemperature": "عرض درجة الحرارة وقت مرور القمر الصناعي (11 صباحاً)"
+    },
+    "roiCalculator": {
+      "title": "احسب عائد الاستثمار",
+      "subtitle": "اكتشف في 30 ثانية كم توفر أغريتيك كل عام. احصل على تقرير مخصص عبر البريد الإلكتروني.",
+      "calculatorTitle": "حاسبة العائد على الاستثمار",
+      "calculatorSubtitle": "اكتشف المبلغ الذي يمكنك توفيره مع أغريتيك",
+      "farmSize": "المساحة الزراعية (هكتار)",
+      "farmSizeUnit": "هكتار",
+      "currentYield": "الغلة الحالية (طن/هكتار)",
+      "currentYieldUnit": "طن/هكتار",
+      "cropType": "نوع المحصول",
+      "laborCost": "تكلفة العمالة (درهم/سنة)",
+      "fertilizerCost": "تكلفة الأسمدة (درهم/سنة)",
+      "waterCost": "تكلفة المياه/الري (درهم/سنة)",
+      "results": "النتائج المقدرة",
+      "yieldIncrease": "زيادة الغلة",
+      "laborSavings": "توفير العمالة",
+      "inputSavings": "توفير المدخلات",
+      "totalAnnualSavings": "إجمالي التوفير السنوي",
+      "perYear": "/سنة",
+      "roi": "العائد على الاستثمار",
+      "paybackPeriod": "فترة الاسترداد",
+      "months": "أشهر",
+      "lessThan1Month": "< 1 شهر",
+      "receiveReport": "احصل على تقريري المفصل",
+      "emailReportTitle": "احصل على تقرير العائد على الاستثمار المفصل",
+      "emailReportSubtitle": "احصل على تحليل مخصص لعائد الاستثمار الخاص بك عبر البريد الإلكتروني",
+      "estimatedAnnualSavings": "التوفير السنوي المقدر",
+      "emailLabel": "عنوان البريد الإلكتروني المهني",
+      "emailPlaceholder": "بريدك@الإلكتروني.com",
+      "planOfInterest": "الخطة المطلوبة",
+      "receiveFreeReport": "احصل على تقريري المجاني",
+      "noCommitment": "بدون التزام. لن يتم مشاركة بريدك الإلكتروني أبداً.",
+      "backToCalculator": "← العودة إلى الحاسبة",
+      "calculateNewRoi": "حساب عائد جديد",
+      "thankYouTitle": "شكراً لطلبك!",
+      "thankYouMessage": "تم إرسال تقرير العائد على الاستثمار المخصص إلى <strong>{{email}}</strong>. سيتصل بك فريقنا خلال 24 ساعة.",
+      "disclaimer": "*تقديرات بناءً على متوسطات القطاع. قد تختلف النتائج الفعلية.",
+      "crops": {
+        "vegetables": "خضروات",
+        "fruits": "فواكه",
+        "cereals": "حبوب",
+        "citrus": "حمضيات",
+        "olives": "زيتون"
+      },
+      "plans": {
+        "starter": "المبتدئ",
+        "professional": "المحترف",
+        "enterprise": "المؤسسات"
+      }
+    }
   },
   "liveDashboard": {
     "title": "لوحة القيادة المباشرة",
@@ -246,7 +334,7 @@
     }
   },
   "dashboard": {
-    "title": "إدارة عمليات المزرعة",
+    "title": "لوحة التحكم",
     "subtitle": "حلل مزارعك وفرقك وأدائك المالي في مكان واحد",
     "loading": "جاري تحميل المنظمة...",
     "heroTitle": "إدارة عمليات المزرعة الزراعية",
@@ -332,7 +420,19 @@
         "addParcel": "إضافة قطعة"
       },
       "soil": {
-        "ph": "درجة حموضة التربة"
+        "title": "تحليلات التربة",
+        "total": "الإجمالي",
+        "analyses": "تحليلات",
+        "recent": "حديثة",
+        "last30Days": "آخر 30 يوم",
+        "needsAttention": "{{count}} قطعة تحتاج إلى انتباه",
+        "needsAttention_plural": "{{count}} قطع تحتاج إلى انتباه",
+        "outOfNorm": "الأس الهيدروجيني أو مستويات العناصر الغذائية خارج المعيار",
+        "latestAnalysis": "آخر تحليل",
+        "parcel": "القطعة",
+        "allInNorm": "جميع التحليلات ضمن المعايير",
+        "empty": "لا يوجد تحليل للتربة",
+        "addAnalysis": "إضافة تحليل"
       },
       "climate": {
         "temperature": "درجة الحرارة"
@@ -435,21 +535,6 @@
           "paused": "متوقفة"
         }
       },
-      "soil": {
-        "title": "تحليلات التربة",
-        "total": "الإجمالي",
-        "analyses": "تحليلات",
-        "recent": "حديثة",
-        "last30Days": "آخر 30 يوم",
-        "needsAttention": "{{count}} قطعة تحتاج إلى انتباه",
-        "needsAttention_plural": "{{count}} قطع تحتاج إلى انتباه",
-        "outOfNorm": "الأس الهيدروجيني أو مستويات العناصر الغذائية خارج المعيار",
-        "latestAnalysis": "آخر تحليل",
-        "parcel": "القطعة",
-        "allInNorm": "جميع التحليلات ضمن المعايير",
-        "empty": "لا يوجد تحليل للتربة",
-        "addAnalysis": "إضافة تحليل"
-      },
       "analysis": {
         "title": "التحليلات",
         "tabs": {
@@ -499,7 +584,6 @@
         "purchase": "شراء"
       }
     },
-    "title": "لوحة التحكم",
     "description": "قم بتخصيص عرض لوحة التحكم الخاصة بك عن طريق اختيار البيانات المراد عرضها وتخطيطها.",
     "saving": "جاري الحفظ...",
     "sections": {
@@ -1616,9 +1700,7 @@
       "inactive": "غير نشط"
     },
     "actions": {
-      "activate": "تفعيل",
-      "deactivate": "إلغاء التفعيل",
-      "remove": "إزالة من المنظمة"
+      "viewPassword": "عرض كلمة المرور"
     },
     "invite": {
       "title": "دعوة مستخدم",
@@ -1674,9 +1756,6 @@
       "close": "إغلاق",
       "viewPassword": "عرض كلمة المرور"
     },
-    "actions": {
-      "viewPassword": "عرض كلمة المرور"
-    },
     "errors": {
       "loadFailed": "فشل تحميل المستخدمين"
     }
@@ -1697,8 +1776,16 @@
     "used": "تم استخدامه {{count}} مرة",
     "used_plural": "تم استخدامه {{count}} مرة",
     "cancel": "إلغاء",
-    "create": "إنشاء",
-    "update": "تحديث",
+    "create": {
+      "success": "تم إنشاء وحدة العمل بنجاح",
+      "failed": "فشل إنشاء وحدة العمل",
+      "failedDescription": "حدث خطأ أثناء إنشاء وحدة العمل."
+    },
+    "update": {
+      "success": "تم تحديث وحدة العمل بنجاح",
+      "failed": "فشل تحديث وحدة العمل",
+      "failedDescription": "حدث خطأ أثناء تحديث وحدة العمل."
+    },
     "categories": {
       "count": "العدد (وحدات، أشجار، صناديق)",
       "weight": "الوزن (كجم، أطنان)",
@@ -1733,16 +1820,6 @@
       "codeMaxLength": "يجب أن يكون الرمز 20 حرفًا أو أقل",
       "nameRequired": "الاسم مطلوب",
       "nameMaxLength": "يجب أن يكون الاسم 100 حرف أو أقل"
-    },
-    "create": {
-      "success": "تم إنشاء وحدة العمل بنجاح",
-      "failed": "فشل إنشاء وحدة العمل",
-      "failedDescription": "حدث خطأ أثناء إنشاء وحدة العمل."
-    },
-    "update": {
-      "success": "تم تحديث وحدة العمل بنجاح",
-      "failed": "فشل تحديث وحدة العمل",
-      "failedDescription": "حدث خطأ أثناء تحديث وحدة العمل."
     },
     "delete": {
       "confirm": "هل أنت متأكد من أنك تريد حذف وحدة العمل هذه؟ لا يمكن التراجع عن هذا الإجراء.",
@@ -2494,71 +2571,6 @@
     "setPassword": {
       "passwordPlaceholder": "أدخل كلمة المرور",
       "confirmPlaceholder": "تأكيد كلمة المرور"
-    }
-  },
-  "common": {
-    "views": {
-      "map": "عرض الخريطة",
-      "list": "عرض القائمة",
-      "grid": "عرض الشبكة",
-      "cards": "عرض البطاقات",
-      "grouped": "عرض مجمع",
-      "dashboard": "عرض لوحة التحكم"
-    },
-    "actions": {
-      "refresh": "تحديث",
-      "download": "تحميل",
-      "edit": "تعديل",
-      "delete": "حذف",
-      "manage": "إدارة",
-      "manageRoles": "إدارة الأدوار",
-      "editFarm": "تعديل المزرعة",
-      "deleteFarm": "حذف المزرعة",
-      "editRole": "تعديل الدور",
-      "removeRole": "إزالة الدور",
-      "createReceptionBatch": "إنشاء دفعة استلام",
-      "viewDetails": "عرض التفاصيل",
-      "payWage": "دفع الأجر",
-      "deactivate": "إلغاء التفعيل",
-      "editToEnableAccess": "تعديل لتفعيل الوصول",
-      "downloadReport": "تحميل التقرير",
-      "downloadInvoice": "تحميل الفاتورة",
-      "downloadMap": "تحميل الخريطة",
-      "filtersAndSort": "الفلاتر والترتيب",
-      "goToMyLocation": "الانتقال إلى موقعي",
-      "searchLocation": "البحث عن موقع",
-      "exitFullscreen": "الخروج من ملء الشاشة (Esc)",
-      "addNewAccount": "إضافة حساب جديد",
-      "addNewTax": "إضافة ضريبة جديدة",
-      "changeLanguage": "تغيير اللغة"
-    },
-    "placeholders": {
-      "searchLocation": "البحث عن مكان في المغرب...",
-      "parcelName": "اسم القطعة",
-      "cropType": "مثال: طماطم",
-      "rootstock": "مثال: GF677",
-      "search": "بحث...",
-      "selectDate": "اختر تاريخ ببيانات قمر صناعي",
-      "searchArticles": "البحث في المقالات...",
-      "searchFiles": "البحث عن ملف...",
-      "selectBucket": "اختر حاوية",
-      "typeOrganizationName": "اكتب اسم المنظمة",
-      "additionalNotes": "ملاحظات إضافية..."
-    },
-    "form": {
-      "name": "الاسم",
-      "description": "الوصف",
-      "area": "المساحة",
-      "unit": "الوحدة",
-      "soilType": "نوع التربة",
-      "irrigationType": "نوع الري",
-      "variety": "الصنف",
-      "plantingDate": "تاريخ الزراعة",
-      "plantingType": "نوع الزراعة"
-    },
-    "satellite": {
-      "refreshData": "تحديث البيانات",
-      "showTemperature": "عرض درجة الحرارة وقت مرور القمر الصناعي (11 صباحاً)"
     }
   },
   "infrastructure": {

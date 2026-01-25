@@ -1,21 +1,47 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Bell, Check, CheckCheck, ExternalLink, Loader2, Wifi, WifiOff } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  ExternalLink,
+  Loader2,
+  Wifi,
+  WifiOff,
+  X,
+  Star,
+  Filter,
+} from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
-import { useNotifications, useUnreadNotificationCount } from '@/hooks/useNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { socketManager, NotificationData } from '@/lib/socket';
+import { NotificationItem } from './notifications/NotificationItem';
+import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
+import { NotificationQuickActions } from './notifications/NotificationQuickActions';
 
-interface NotificationItemProps {
+interface EnhancedNotificationItemProps {
   notification: NotificationData;
   onMarkRead: (id: string) => void;
+  onDismiss: (id: string) => void;
+  onToggleImportant: (id: string) => void;
   onClick: () => void;
+  isNew?: boolean;
+  isImportant?: boolean;
 }
 
-function NotificationItem({ notification, onMarkRead, onClick }: NotificationItemProps) {
+function EnhancedNotificationItem({
+  notification,
+  onMarkRead,
+  onDismiss,
+  onToggleImportant,
+  onClick,
+  isNew = false,
+  isImportant = false,
+}: EnhancedNotificationItemProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'task_assigned':
@@ -39,6 +65,29 @@ function NotificationItem({ notification, onMarkRead, onClick }: NotificationIte
     }
   };
 
+  const getTypeStyle = (type: string) => {
+    switch (type) {
+      case 'task_assigned':
+        return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400';
+      case 'task_status_changed':
+        return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400';
+      case 'order_status_changed':
+        return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400';
+      case 'quote_received':
+        return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400';
+      case 'quote_responded':
+        return 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400';
+      case 'harvest_completed':
+        return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400';
+      case 'low_inventory':
+        return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
+      case 'payment_processed':
+        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      default:
+        return 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-400';
+    }
+  };
+
   const getTimeAgo = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -54,10 +103,12 @@ function NotificationItem({ notification, onMarkRead, onClick }: NotificationIte
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
+        'group relative flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200',
+        'hover:shadow-sm hover:scale-[1.01]',
         !notification.is_read
-          ? 'bg-primary/5 hover:bg-primary/10'
-          : 'hover:bg-muted/50'
+          ? `${getTypeStyle(notification.type)}`
+          : 'hover:bg-muted/50',
+        isNew && 'notification-slide-in'
       )}
       onClick={onClick}
     >
@@ -68,33 +119,63 @@ function NotificationItem({ notification, onMarkRead, onClick }: NotificationIte
         <p
           className={cn(
             'text-sm truncate',
-            !notification.is_read ? 'font-medium' : 'text-muted-foreground'
+            !notification.is_read ? 'font-semibold' : 'text-muted-foreground'
           )}
         >
           {notification.title}
+          {isImportant && (
+            <Star className="inline-block ml-1 h-3 w-3 text-amber-500 fill-amber-500" />
+          )}
         </p>
         {notification.message && (
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+          <p className="text-xs opacity-80 mt-0.5 line-clamp-2">
             {notification.message}
           </p>
         )}
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs opacity-60 mt-1">
           {getTimeAgo(notification.created_at)}
         </p>
       </div>
-      {!notification.is_read && (
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!notification.is_read && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkRead(notification.id);
+            }}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 shrink-0"
+          className={cn(
+            'h-7 w-7 transition-colors',
+            isImportant ? 'text-amber-500' : 'text-muted-foreground'
+          )}
           onClick={(e) => {
             e.stopPropagation();
-            onMarkRead(notification.id);
+            onToggleImportant(notification.id);
           }}
         >
-          <Check className="h-3 w-3" />
+          <Star className={cn('h-3.5 w-3.5', isImportant && 'fill-current')} />
         </Button>
-      )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss(notification.id);
+          }}
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -102,6 +183,18 @@ function NotificationItem({ notification, onMarkRead, onClick }: NotificationIte
 export function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [newNotificationIds, setNewNotificationIds] = useState<Set<string>>(new Set());
+  const [isBellAnimating, setIsBellAnimating] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const [importantNotifications, setImportantNotifications] = useState<Set<string>>(() => {
+    const stored = localStorage.getItem('important-notifications');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
+
+  // Filter states
+  const [typeFilter, setTypeFilter] = useState<NotificationTypeFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<NotificationStatusFilter>('all');
+
   const {
     notifications,
     unreadCount,
@@ -112,9 +205,39 @@ export function NotificationBell() {
     markAllAsRead,
   } = useNotifications({ limit: 20 });
 
-  // Show toast for new notifications
+  // Filter notifications
+  const filteredNotifications = React.useMemo(() => {
+    return notifications.filter((n) => {
+      if (typeFilter !== 'all' && n.type !== typeFilter) return false;
+      if (statusFilter === 'unread' && n.is_read) return false;
+      if (statusFilter === 'important' && !importantNotifications.has(n.id)) return false;
+      return true;
+    });
+  }, [notifications, typeFilter, statusFilter, importantNotifications]);
+
+  // Calculate filter counts
+  const filterCounts = React.useMemo(() => {
+    const counts: Partial<Record<NotificationTypeFilter, number>> = {};
+    counts.all = notifications.length;
+    notifications.forEach((n) => {
+      counts[n.type as NotificationTypeFilter] = (counts[n.type as NotificationTypeFilter] || 0) + 1;
+    });
+    return counts;
+  }, [notifications]);
+
+  const importantCount = importantNotifications.size;
+
+  // Show toast and animate bell for new notifications
   useEffect(() => {
     const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
+      // Add to new notifications set for animation
+      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
+
+      // Trigger bell shake animation
+      setIsBellAnimating(true);
+      setTimeout(() => setIsBellAnimating(false), 500);
+
+      // Show toast
       toast(notification.title, {
         description: notification.message,
         action: notification.data?.taskId || notification.data?.orderId ? {
@@ -122,6 +245,15 @@ export function NotificationBell() {
           onClick: () => handleNotificationClick(notification),
         } : undefined,
       });
+
+      // Remove from new notifications after animation
+      setTimeout(() => {
+        setNewNotificationIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notification.id);
+          return next;
+        });
+      }, 3000);
     });
 
     return unsubscribe;
@@ -151,34 +283,104 @@ export function NotificationBell() {
     toast.success('All notifications marked as read');
   }, [markAllAsRead]);
 
+  const handleToggleImportant = useCallback((id: string) => {
+    setImportantNotifications((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        toast.success('Removed from important');
+      } else {
+        next.add(id);
+        toast.success('Marked as important');
+      }
+      localStorage.setItem('important-notifications', JSON.stringify([...next]));
+      return next;
+    });
+  }, []);
+
+  const handleDismiss = useCallback((id: string) => {
+    // In a real app, this would call an API to dismiss the notification
+    toast.success('Notification dismissed');
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setTypeFilter('all');
+    setStatusFilter('all');
+  }, []);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      // Add scale animation when opening
+      if (isOpen && bellRef.current) {
+        bellRef.current.classList.add('bell-scale');
+        setTimeout(() => bellRef.current?.classList.remove('bell-scale'), 200);
+      }
+    }}>
       <PopoverTrigger asChild>
         <Button
+          ref={bellRef}
           variant="ghost"
           size="icon"
-          className="relative h-9 w-9"
+          className={cn(
+            'relative h-9 w-9 transition-transform',
+            isBellAnimating && 'bell-shake'
+          )}
           aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
+            <>
+              <span
+                className={cn(
+                  'absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white',
+                  unreadCount > 0 && 'glow-pulse'
+                )}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+              {/* Pulse ring effect */}
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
+            </>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between border-b px-4 py-3">
+      <PopoverContent
+        className="w-80 p-0 glass-morphism"
+        align="end"
+        sideOffset={4}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-4 py-3 bg-muted/30">
           <div className="flex items-center gap-2">
             <h4 className="font-semibold">Notifications</h4>
-            {socketStatus === 'connected' ? (
-              <Wifi className="h-3 w-3 text-green-500" />
-            ) : socketStatus === 'connecting' ? (
-              <Loader2 className="h-3 w-3 animate-spin text-yellow-500" />
-            ) : (
-              <WifiOff className="h-3 w-3 text-muted-foreground" />
-            )}
+            <div
+              className={cn(
+                'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium',
+                socketStatus === 'connected'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : socketStatus === 'connecting'
+                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+              )}
+            >
+              {socketStatus === 'connected' ? (
+                <>
+                  <Wifi className="h-2.5 w-2.5" />
+                  Live
+                </>
+              ) : socketStatus === 'connecting' ? (
+                <>
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  Connecting
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-2.5 w-2.5" />
+                  Offline
+                </>
+              )}
+            </div>
           </div>
           {unreadCount > 0 && (
             <Button
@@ -188,37 +390,78 @@ export function NotificationBell() {
               onClick={handleMarkAllRead}
             >
               <CheckCheck className="h-3 w-3 mr-1" />
-              Mark all read
+              Mark all
             </Button>
           )}
         </div>
 
+        {/* Compact Filters */}
+        <div className="border-b px-3 py-2 bg-muted/10">
+          <NotificationFilters
+            typeFilter={typeFilter}
+            statusFilter={statusFilter}
+            timeFilter="all"
+            onTypeChange={setTypeFilter}
+            onStatusChange={setStatusFilter}
+            onTimeChange={() => {}}
+            unreadCount={unreadCount}
+            importantCount={importantCount}
+            compact
+            counts={filterCounts}
+          />
+        </div>
+
+        {/* Notifications List */}
         <ScrollArea className="h-80">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : notifications.length === 0 ? (
+          ) : filteredNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
               <Bell className="h-8 w-8 mb-2 opacity-50" />
-              <p className="text-sm">No notifications yet</p>
+              <p className="text-sm">
+                {typeFilter !== 'all' || statusFilter !== 'all'
+                  ? 'No notifications match your filters'
+                  : 'No notifications yet'}
+              </p>
+              {(typeFilter !== 'all' || statusFilter !== 'all') && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-xs"
+                  onClick={handleClearFilters}
+                >
+                  Clear filters
+                </Button>
+              )}
             </div>
           ) : (
-            <div className="divide-y">
-              {notifications.map((notification) => (
-                <NotificationItem
+            <div className="divide-y p-1">
+              {filteredNotifications.map((notification, index) => (
+                <div
                   key={notification.id}
-                  notification={notification}
-                  onMarkRead={markAsRead}
-                  onClick={() => handleNotificationClick(notification)}
-                />
+                  className="stagger-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                >
+                  <EnhancedNotificationItem
+                    notification={notification}
+                    onMarkRead={markAsRead}
+                    onDismiss={handleDismiss}
+                    onToggleImportant={handleToggleImportant}
+                    onClick={() => handleNotificationClick(notification)}
+                    isNew={newNotificationIds.has(notification.id)}
+                    isImportant={importantNotifications.has(notification.id)}
+                  />
+                </div>
               ))}
             </div>
           )}
         </ScrollArea>
 
+        {/* Footer */}
         {notifications.length > 0 && (
-          <div className="border-t p-2">
+          <div className="border-t p-2 bg-muted/10">
             <Button
               variant="ghost"
               size="sm"

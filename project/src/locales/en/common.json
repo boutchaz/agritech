@@ -45,31 +45,119 @@
     "addFarm": "Add a farm"
   },
   "common": {
-    "edit": "Edit",
-    "cancel": "Cancel",
-    "none": "None",
-    "errors": {
-      "generic": "An error occurred. Please try again.",
-      "network": "Network error. Please check your connection.",
-      "notFound": "Not found",
-      "unauthorized": "Unauthorized access",
-      "validation": "Please correct the errors in the form"
+    "views": {
+      "map": "Map view",
+      "list": "List view",
+      "grid": "Grid view",
+      "cards": "Card view",
+      "grouped": "Grouped view",
+      "dashboard": "Dashboard view"
     },
-    "confirm": {
-      "delete": "Are you sure you want to delete this item?",
-      "unsavedChanges": "You have unsaved changes. Are you sure you want to leave?"
+    "actions": {
+      "refresh": "Refresh",
+      "download": "Download",
+      "edit": "Edit",
+      "delete": "Delete",
+      "manage": "Manage",
+      "manageRoles": "Manage Roles",
+      "editFarm": "Edit Farm",
+      "deleteFarm": "Delete Farm",
+      "editRole": "Edit Role",
+      "removeRole": "Remove Role",
+      "createReceptionBatch": "Create Reception Batch",
+      "viewDetails": "View details",
+      "payWage": "Pay wage",
+      "deactivate": "Deactivate",
+      "editToEnableAccess": "Edit to enable access",
+      "downloadReport": "Download report",
+      "downloadInvoice": "Download invoice",
+      "downloadMap": "Download map",
+      "filtersAndSort": "Filters and sort",
+      "goToMyLocation": "Go to my location",
+      "searchLocation": "Search location",
+      "exitFullscreen": "Exit fullscreen (Esc)",
+      "addNewAccount": "Add new account",
+      "addNewTax": "Add new tax",
+      "changeLanguage": "Change language"
     },
-    "irrigation": {
-      "drip": "Drip",
-      "sprinkler": "Sprinkler",
-      "gravity": "Gravity",
-      "pivot": "Pivot",
-      "submersion": "Submersion",
-      "rainfed": "Rainfed (Bour)",
-      "none": "None (Bour)"
+    "placeholders": {
+      "searchLocation": "Search for a place in Morocco...",
+      "parcelName": "Parcel name",
+      "cropType": "Ex: Tomatoes",
+      "rootstock": "Ex: GF677",
+      "search": "Search...",
+      "selectDate": "Select date with satellite data",
+      "searchArticles": "Search articles...",
+      "searchFiles": "Search files...",
+      "selectBucket": "Select a bucket",
+      "typeOrganizationName": "Type the organization name",
+      "additionalNotes": "Additional notes..."
     },
-    "noData": "No data available",
-    "selectOption": "Select an option"
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "area": "Area",
+      "unit": "Unit",
+      "soilType": "Soil type",
+      "irrigationType": "Irrigation type",
+      "variety": "Variety",
+      "plantingDate": "Planting date",
+      "plantingType": "Planting type"
+    },
+    "satellite": {
+      "refreshData": "Refresh data",
+      "showTemperature": "Show temperature at satellite pass time (11h)"
+    },
+    "roiCalculator": {
+      "title": "Calculate your return on investment",
+      "subtitle": "Discover in 30 seconds how much AgriTech can save you each year. Get a personalized report by email.",
+      "calculatorTitle": "ROI Calculator",
+      "calculatorSubtitle": "Discover how much you could save with AgriTech",
+      "farmSize": "Farm size (hectares)",
+      "farmSizeUnit": "ha",
+      "currentYield": "Current yield (tonnes/ha)",
+      "currentYieldUnit": "t/ha",
+      "cropType": "Crop type",
+      "laborCost": "Labor cost (MAD/year)",
+      "fertilizerCost": "Fertilizer cost (MAD/year)",
+      "waterCost": "Water/irrigation cost (MAD/year)",
+      "results": "Estimated results",
+      "yieldIncrease": "Yield increase",
+      "laborSavings": "Labor savings",
+      "inputSavings": "Input savings",
+      "totalAnnualSavings": "Total annual savings",
+      "perYear": "/year",
+      "roi": "ROI",
+      "paybackPeriod": "Break-even",
+      "months": "months",
+      "lessThan1Month": "< 1 month",
+      "receiveReport": "Receive my detailed report",
+      "emailReportTitle": "Receive your detailed ROI report",
+      "emailReportSubtitle": "Get a personalized analysis of your return on investment by email",
+      "estimatedAnnualSavings": "Estimated annual savings",
+      "emailLabel": "Professional email address",
+      "emailPlaceholder": "your@email.com",
+      "planOfInterest": "Plan of interest",
+      "receiveFreeReport": "Receive my free report",
+      "noCommitment": "No commitment. Your email will never be shared.",
+      "backToCalculator": "← Back to calculator",
+      "calculateNewRoi": "Calculate a new ROI",
+      "thankYouTitle": "Thank you for your request!",
+      "thankYouMessage": "Your personalized ROI report has been sent to <strong>{{email}}</strong>. Our team will contact you within 24h.",
+      "disclaimer": "*Estimates based on industry averages. Actual results may vary.",
+      "crops": {
+        "vegetables": "Vegetables",
+        "fruits": "Fruits",
+        "cereals": "Cereals",
+        "citrus": "Citrus",
+        "olives": "Olives"
+      },
+      "plans": {
+        "starter": "Starter",
+        "professional": "Professional",
+        "enterprise": "Enterprise"
+      }
+    }
   },
   "liveDashboard": {
     "title": "Live Dashboard",
@@ -246,7 +334,7 @@
     }
   },
   "dashboard": {
-    "title": "Farm Operations Dashboard",
+    "title": "Dashboard",
     "subtitle": "Analyze your farms, teams, and financial performance in one place",
     "loading": "Loading organization...",
     "heroTitle": "Farm operations management",
@@ -332,7 +420,19 @@
         "addParcel": "Add a parcel"
       },
       "soil": {
-        "ph": "Soil pH"
+        "title": "Soil Analysis",
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Recent",
+        "last30Days": "last 30 days",
+        "needsAttention": "{{count}} parcel needs attention",
+        "needsAttention_plural": "{{count}} parcels need attention",
+        "outOfNorm": "pH or nutrient levels out of norm",
+        "latestAnalysis": "Latest analysis",
+        "parcel": "Parcel",
+        "allInNorm": "All analyses are within norms",
+        "empty": "No soil analysis",
+        "addAnalysis": "Add an analysis"
       },
       "climate": {
         "temperature": "Temperature"
@@ -435,21 +535,6 @@
           "paused": "Paused"
         }
       },
-      "soil": {
-        "title": "Soil Analysis",
-        "total": "Total",
-        "analyses": "analyses",
-        "recent": "Recent",
-        "last30Days": "last 30 days",
-        "needsAttention": "{{count}} parcel needs attention",
-        "needsAttention_plural": "{{count}} parcels need attention",
-        "outOfNorm": "pH or nutrient levels out of norm",
-        "latestAnalysis": "Latest analysis",
-        "parcel": "Parcel",
-        "allInNorm": "All analyses are within norms",
-        "empty": "No soil analysis",
-        "addAnalysis": "Add an analysis"
-      },
       "analysis": {
         "title": "Analyses",
         "tabs": {
@@ -499,7 +584,6 @@
         "purchase": "Purchase"
       }
     },
-    "title": "Dashboard",
     "description": "Customize your dashboard display by choosing which data to show and their layout.",
     "saving": "Saving...",
     "sections": {
@@ -1621,9 +1705,7 @@
       "inactive": "Inactive"
     },
     "actions": {
-      "activate": "Activate",
-      "deactivate": "Deactivate",
-      "remove": "Remove from organization"
+      "viewPassword": "View Password"
     },
     "invite": {
       "title": "Invite User",
@@ -1679,9 +1761,6 @@
       "close": "Close",
       "viewPassword": "View Password"
     },
-    "actions": {
-      "viewPassword": "View Password"
-    },
     "errors": {
       "loadFailed": "Failed to load users"
     }
@@ -1702,8 +1781,16 @@
     "used": "Used {{count}} times",
     "used_plural": "Used {{count}} times",
     "cancel": "Cancel",
-    "create": "Create",
-    "update": "Update",
+    "create": {
+      "success": "Work unit created successfully",
+      "failed": "Failed to create work unit",
+      "failedDescription": "An error occurred while creating the work unit."
+    },
+    "update": {
+      "success": "Work unit updated successfully",
+      "failed": "Failed to update work unit",
+      "failedDescription": "An error occurred while updating the work unit."
+    },
     "categories": {
       "count": "Count (units, trees, boxes)",
       "weight": "Weight (kg, tons)",
@@ -1738,16 +1825,6 @@
       "codeMaxLength": "Code must be 20 characters or less",
       "nameRequired": "Name is required",
       "nameMaxLength": "Name must be 100 characters or less"
-    },
-    "create": {
-      "success": "Work unit created successfully",
-      "failed": "Failed to create work unit",
-      "failedDescription": "An error occurred while creating the work unit."
-    },
-    "update": {
-      "success": "Work unit updated successfully",
-      "failed": "Failed to update work unit",
-      "failedDescription": "An error occurred while updating the work unit."
     },
     "delete": {
       "confirm": "Are you sure you want to delete this work unit? This cannot be undone.",
@@ -2215,9 +2292,63 @@
     },
     "payments": {
       "title": "Payments",
-      "subtitle": "Track and manage incoming and outgoing payments",
-      "referencePlaceholder": "Check number, transaction ID, etc.",
-      "notesPlaceholder": "Additional notes about this payment"
+      "subtitle": "Manage payment transactions",
+      "form": {
+        "title": {
+          "new": "New Payment",
+          "edit": "Edit Payment"
+        },
+        "fields": {
+          "paymentType": "Payment Type",
+          "paymentDate": "Payment Date",
+          "customer": "Customer",
+          "supplier": "Supplier",
+          "optional": "Optional",
+          "partyName": "Party Name",
+          "name": "Name",
+          "amount": "Amount",
+          "paymentMethod": "Payment Method",
+          "referenceNumber": "Reference Number",
+          "remarks": "Remarks",
+          "status": "Status"
+        },
+        "paymentTypes": {
+          "received": "Payment Received",
+          "made": "Payment Made"
+        },
+        "methods": {
+          "cash": "Cash",
+          "bankTransfer": "Bank Transfer",
+          "check": "Check",
+          "mobileMoney": "Mobile Money"
+        },
+        "statuses": {
+          "draft": "Draft",
+          "submitted": "Submitted",
+          "cancelled": "Cancelled"
+        },
+        "actions": {
+          "select": "Select",
+          "enter": "Enter"
+        },
+        "placeholders": {
+          "referenceNumber": "Check number, transaction ID, etc.",
+          "remarks": "Additional notes about this payment"
+        },
+        "validation": {
+          "partyNameRequired": "Party name is required",
+          "paymentDateRequired": "Payment date is required",
+          "amountMin": "Amount must be greater than 0"
+        },
+        "errors": {
+          "saveFailed": "Failed to save payment:"
+        },
+        "buttons": {
+          "cancel": "Cancel",
+          "create": "Create Payment",
+          "update": "Update Payment"
+        }
+      }
     },
     "reports": {
       "title": "Financial Reports",
@@ -2383,66 +2514,6 @@
           "saveError": "Failed to {{action}} invoice"
         }
       }
-    },
-    "payments": {
-      "title": "Payments",
-      "subtitle": "Manage payment transactions",
-      "form": {
-        "title": {
-          "new": "New Payment",
-          "edit": "Edit Payment"
-        },
-        "fields": {
-          "paymentType": "Payment Type",
-          "paymentDate": "Payment Date",
-          "customer": "Customer",
-          "supplier": "Supplier",
-          "optional": "Optional",
-          "partyName": "Party Name",
-          "name": "Name",
-          "amount": "Amount",
-          "paymentMethod": "Payment Method",
-          "referenceNumber": "Reference Number",
-          "remarks": "Remarks",
-          "status": "Status"
-        },
-        "paymentTypes": {
-          "received": "Payment Received",
-          "made": "Payment Made"
-        },
-        "methods": {
-          "cash": "Cash",
-          "bankTransfer": "Bank Transfer",
-          "check": "Check",
-          "mobileMoney": "Mobile Money"
-        },
-        "statuses": {
-          "draft": "Draft",
-          "submitted": "Submitted",
-          "cancelled": "Cancelled"
-        },
-        "actions": {
-          "select": "Select",
-          "enter": "Enter"
-        },
-        "placeholders": {
-          "referenceNumber": "Check number, transaction ID, etc.",
-          "remarks": "Additional notes about this payment"
-        },
-        "validation": {
-          "partyNameRequired": "Party name is required",
-          "paymentDateRequired": "Payment date is required",
-          "amountMin": "Amount must be greater than 0"
-        },
-        "errors": {
-          "saveFailed": "Failed to save payment:"
-        },
-        "buttons": {
-          "cancel": "Cancel",
-          "create": "Create Payment",
-          "update": "Update Payment"
-        }
-      }
     }
   },
   "billingModule": {
@@ -2600,71 +2671,6 @@
     "setPassword": {
       "passwordPlaceholder": "Enter your password",
       "confirmPlaceholder": "Confirm your password"
-    }
-  },
-  "common": {
-    "views": {
-      "map": "Map view",
-      "list": "List view",
-      "grid": "Grid view",
-      "cards": "Card view",
-      "grouped": "Grouped view",
-      "dashboard": "Dashboard view"
-    },
-    "actions": {
-      "refresh": "Refresh",
-      "download": "Download",
-      "edit": "Edit",
-      "delete": "Delete",
-      "manage": "Manage",
-      "manageRoles": "Manage Roles",
-      "editFarm": "Edit Farm",
-      "deleteFarm": "Delete Farm",
-      "editRole": "Edit Role",
-      "removeRole": "Remove Role",
-      "createReceptionBatch": "Create Reception Batch",
-      "viewDetails": "View details",
-      "payWage": "Pay wage",
-      "deactivate": "Deactivate",
-      "editToEnableAccess": "Edit to enable access",
-      "downloadReport": "Download report",
-      "downloadInvoice": "Download invoice",
-      "downloadMap": "Download map",
-      "filtersAndSort": "Filters and sort",
-      "goToMyLocation": "Go to my location",
-      "searchLocation": "Search location",
-      "exitFullscreen": "Exit fullscreen (Esc)",
-      "addNewAccount": "Add new account",
-      "addNewTax": "Add new tax",
-      "changeLanguage": "Change language"
-    },
-    "placeholders": {
-      "searchLocation": "Search for a place in Morocco...",
-      "parcelName": "Parcel name",
-      "cropType": "Ex: Tomatoes",
-      "rootstock": "Ex: GF677",
-      "search": "Search...",
-      "selectDate": "Select date with satellite data",
-      "searchArticles": "Search articles...",
-      "searchFiles": "Search files...",
-      "selectBucket": "Select a bucket",
-      "typeOrganizationName": "Type the organization name",
-      "additionalNotes": "Additional notes..."
-    },
-    "form": {
-      "name": "Name",
-      "description": "Description",
-      "area": "Area",
-      "unit": "Unit",
-      "soilType": "Soil type",
-      "irrigationType": "Irrigation type",
-      "variety": "Variety",
-      "plantingDate": "Planting date",
-      "plantingType": "Planting type"
-    },
-    "satellite": {
-      "refreshData": "Refresh data",
-      "showTemperature": "Show temperature at satellite pass time (11h)"
     }
   },
   "infrastructure": {
@@ -4434,7 +4440,13 @@
     "panelTitle": "Source Data",
     "sourceDataTitle": "Source Data Transparency",
     "dataPoints": "data points",
-    "sources": "sources",
+    "sources": {
+      "satellite": "Satellite Data",
+      "weather": "Weather Data",
+      "soil": "Soil Analysis",
+      "water": "Water Analysis",
+      "plant": "Plant Analysis"
+    },
     "viewDetails": "View Details",
     "refreshData": "Refresh Data",
     "refreshStale": "Refresh Stale Data",
@@ -4476,13 +4488,6 @@
       "minimum": "Minimum",
       "recommended": "Recommended",
       "optimal": "Optimal"
-    },
-    "sources": {
-      "satellite": "Satellite Data",
-      "weather": "Weather Data",
-      "soil": "Soil Analysis",
-      "water": "Water Analysis",
-      "plant": "Plant Analysis"
     },
     "satellite": {
       "indices": "Indices",

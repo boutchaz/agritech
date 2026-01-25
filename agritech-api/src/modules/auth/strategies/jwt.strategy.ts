@@ -44,11 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       return user;
     } catch (error) {
       console.warn('[JwtStrategy] Supabase validation failed:', error.message);
-      // If Supabase validation fails but payload exists, use payload
-      if (payload && payload.sub) {
-        console.log('[JwtStrategy] Falling back to JWT payload');
-        return { id: payload.sub, email: payload.email };
-      }
+      // Always require Supabase validation - no fallback
       throw new UnauthorizedException('Invalid token');
     }
   }

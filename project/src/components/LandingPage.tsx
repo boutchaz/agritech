@@ -29,6 +29,7 @@ import {
 import { blogsApi } from '../lib/api/blogs';
 import { SUBSCRIPTION_PLANS } from '../lib/polar';
 import LanguageSwitcher from './LanguageSwitcher';
+import ROICalculator from './ROICalculator';
 import heroBg from '../assets/hero-bg.avif';
 import { Button } from '@/components/ui/button';
 import {
@@ -612,6 +613,28 @@ const LandingPage: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* ROI Calculator */}
+        <section
+          id="roi-calculator"
+          className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800"
+          aria-labelledby="landing-roi-title"
+        >
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <h2
+                id="landing-roi-title"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
+              >
+                {t('common.roiCalculator.title')}
+              </h2>
+              <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                {t('common.roiCalculator.subtitle')}
+              </p>
+            </div>
+            <ROICalculator />
           </div>
         </section>
 

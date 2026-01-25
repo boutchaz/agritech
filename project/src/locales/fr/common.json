@@ -45,31 +45,119 @@
     "addFarm": "Ajouter une ferme"
   },
   "common": {
-    "edit": "Modifier",
-    "cancel": "Annuler",
-    "none": "Aucun",
-    "errors": {
-      "generic": "Une erreur est survenue. Veuillez réessayer.",
-      "network": "Erreur réseau. Vérifiez votre connexion.",
-      "notFound": "Non trouvé",
-      "unauthorized": "Accès non autorisé",
-      "validation": "Veuillez corriger les erreurs dans le formulaire"
+    "views": {
+      "map": "Vue carte",
+      "list": "Vue liste",
+      "grid": "Vue grille",
+      "cards": "Vue cartes",
+      "grouped": "Vue groupée",
+      "dashboard": "Vue tableau de bord"
     },
-    "confirm": {
-      "delete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
-      "unsavedChanges": "Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter ?"
+    "actions": {
+      "refresh": "Actualiser",
+      "download": "Télécharger",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "manage": "Gérer",
+      "manageRoles": "Gérer les rôles",
+      "editFarm": "Modifier la ferme",
+      "deleteFarm": "Supprimer la ferme",
+      "editRole": "Modifier le rôle",
+      "removeRole": "Supprimer le rôle",
+      "createReceptionBatch": "Créer un lot de réception",
+      "viewDetails": "Voir les détails",
+      "payWage": "Payer le salaire",
+      "deactivate": "Désactiver",
+      "editToEnableAccess": "Modifier pour activer l'accès",
+      "downloadReport": "Télécharger le rapport",
+      "downloadInvoice": "Télécharger la facture",
+      "downloadMap": "Télécharger la carte",
+      "filtersAndSort": "Filtres et tri",
+      "goToMyLocation": "Aller à ma position",
+      "searchLocation": "Rechercher un lieu",
+      "exitFullscreen": "Quitter le plein écran (Échap)",
+      "addNewAccount": "Ajouter un nouveau compte",
+      "addNewTax": "Ajouter une nouvelle taxe",
+      "changeLanguage": "Changer de langue"
     },
-    "irrigation": {
-      "drip": "Goutte à goutte",
-      "sprinkler": "Aspersion",
-      "gravity": "Gravitaire",
-      "pivot": "Pivot",
-      "submersion": "Submersion",
-      "rainfed": "Pluvial (Bour)",
-      "none": "Aucune (Bour)"
+    "placeholders": {
+      "searchLocation": "Rechercher un lieu au Maroc...",
+      "parcelName": "Nom de la parcelle",
+      "cropType": "Ex : Tomates",
+      "rootstock": "Ex : GF677",
+      "search": "Rechercher...",
+      "selectDate": "Sélectionner une date avec données satellite",
+      "searchArticles": "Rechercher des articles...",
+      "searchFiles": "Rechercher un fichier...",
+      "selectBucket": "Sélectionner un bucket",
+      "typeOrganizationName": "Tapez le nom de l'organisation",
+      "additionalNotes": "Notes supplémentaires..."
     },
-    "noData": "Aucune donnée disponible",
-    "selectOption": "Sélectionnez une option"
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "area": "Surface",
+      "unit": "Unité",
+      "soilType": "Type de sol",
+      "irrigationType": "Type d'irrigation",
+      "variety": "Variété",
+      "plantingDate": "Date de plantation",
+      "plantingType": "Type de plantation"
+    },
+    "satellite": {
+      "refreshData": "Actualiser les données",
+      "showTemperature": "Afficher la température au moment du passage satellite (11h)"
+    },
+    "roiCalculator": {
+      "title": "Calculez votre retour sur investissement",
+      "subtitle": "Découvrez en 30 secondes combien AgriTech peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
+      "calculatorTitle": "Calculateur ROI",
+      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgriTech",
+      "farmSize": "Surface agricole (hectares)",
+      "farmSizeUnit": "ha",
+      "currentYield": "Rendement actuel (tonnes/ha)",
+      "currentYieldUnit": "t/ha",
+      "cropType": "Type de culture",
+      "laborCost": "Coût main d'œuvre (MAD/an)",
+      "fertilizerCost": "Coût engrais (MAD/an)",
+      "waterCost": "Coût eau/irrigation (MAD/an)",
+      "results": "Résultats estimés",
+      "yieldIncrease": "Augmentation de rendement",
+      "laborSavings": "Économies main d'œuvre",
+      "inputSavings": "Économies intrants",
+      "totalAnnualSavings": "Total économies annuelles",
+      "perYear": "/an",
+      "roi": "ROI",
+      "paybackPeriod": "Seuil de rentabilité",
+      "months": "mois",
+      "lessThan1Month": "< 1 mois",
+      "receiveReport": "Recevoir mon rapport détaillé",
+      "emailReportTitle": "Recevez votre rapport ROI détaillé",
+      "emailReportSubtitle": "Obtenez une analyse personnalisée de votre retour sur investissement par email",
+      "estimatedAnnualSavings": "Économies annuelles estimées",
+      "emailLabel": "Adresse email professionnelle",
+      "emailPlaceholder": "votre@email.com",
+      "planOfInterest": "Plan d'intérêt",
+      "receiveFreeReport": "Recevoir mon rapport gratuit",
+      "noCommitment": "Sans engagement. Votre email ne sera jamais partagé.",
+      "backToCalculator": "← Retour au calculateur",
+      "calculateNewRoi": "Calculer un nouveau ROI",
+      "thankYouTitle": "Merci pour votre demande !",
+      "thankYouMessage": "Votre rapport ROI personnalisé a été envoyé à <strong>{{email}}</strong>. Notre équipe vous contactera sous 24h.",
+      "disclaimer": "*Estimations basées sur des moyennes sectorielles. Résultats réels variables.",
+      "crops": {
+        "vegetables": "Légumes",
+        "fruits": "Fruits",
+        "cereals": "Céréales",
+        "citrus": "Agrumes",
+        "olives": "Oliviers"
+      },
+      "plans": {
+        "starter": "Starter",
+        "professional": "Professional",
+        "enterprise": "Enterprise"
+      }
+    }
   },
   "liveDashboard": {
     "title": "Tableau de bord en direct",
@@ -246,7 +334,7 @@
     }
   },
   "dashboard": {
-    "title": "Pilotage de l'exploitation",
+    "title": "Tableau de bord",
     "subtitle": "Analysez vos fermes, vos équipes et votre performance financière en un seul endroit",
     "loading": "Chargement de l'organisation...",
     "heroTitle": "Pilotage de l'exploitation agricole",
@@ -332,7 +420,19 @@
         "addParcel": "Ajouter une parcelle"
       },
       "soil": {
-        "ph": "pH du sol"
+        "title": "Analyses du Sol",
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Récentes",
+        "last30Days": "derniers 30j",
+        "needsAttention": "{{count}} parcelle nécessite une attention",
+        "needsAttention_plural": "{{count}} parcelles nécessitent une attention",
+        "outOfNorm": "pH ou niveaux de nutriments hors norme",
+        "latestAnalysis": "Dernière analyse",
+        "parcel": "Parcelle",
+        "allInNorm": "Toutes les analyses sont dans les normes",
+        "empty": "Aucune analyse du sol",
+        "addAnalysis": "Ajouter une analyse"
       },
       "climate": {
         "temperature": "Température"
@@ -435,21 +535,6 @@
           "paused": "En pause"
         }
       },
-      "soil": {
-        "title": "Analyses du Sol",
-        "total": "Total",
-        "analyses": "analyses",
-        "recent": "Récentes",
-        "last30Days": "derniers 30j",
-        "needsAttention": "{{count}} parcelle nécessite une attention",
-        "needsAttention_plural": "{{count}} parcelles nécessitent une attention",
-        "outOfNorm": "pH ou niveaux de nutriments hors norme",
-        "latestAnalysis": "Dernière analyse",
-        "parcel": "Parcelle",
-        "allInNorm": "Toutes les analyses sont dans les normes",
-        "empty": "Aucune analyse du sol",
-        "addAnalysis": "Ajouter une analyse"
-      },
       "analysis": {
         "title": "Analyses",
         "tabs": {
@@ -499,7 +584,6 @@
         "purchase": "Achat"
       }
     },
-    "title": "Tableau de bord",
     "description": "Personnalisez l'affichage de votre tableau de bord en choisissant les données à afficher et leur disposition.",
     "saving": "Sauvegarde...",
     "sections": {
@@ -1616,9 +1700,7 @@
       "inactive": "Inactif"
     },
     "actions": {
-      "activate": "Activer",
-      "deactivate": "Désactiver",
-      "remove": "Retirer de l'organisation"
+      "viewPassword": "Voir le mot de passe"
     },
     "invite": {
       "title": "Inviter un utilisateur",
@@ -1674,9 +1756,6 @@
       "close": "Fermer",
       "viewPassword": "Voir le mot de passe"
     },
-    "actions": {
-      "viewPassword": "Voir le mot de passe"
-    },
     "errors": {
       "loadFailed": "Échec du chargement des utilisateurs"
     }
@@ -1697,8 +1776,16 @@
     "used": "Utilisé {{count}} fois",
     "used_plural": "Utilisé {{count}} fois",
     "cancel": "Annuler",
-    "create": "Créer",
-    "update": "Mettre à jour",
+    "create": {
+      "success": "Unité de travail créée avec succès",
+      "failed": "Échec de la création de l'unité de travail",
+      "failedDescription": "Une erreur s'est produite lors de la création de l'unité de travail."
+    },
+    "update": {
+      "success": "Unité de travail mise à jour avec succès",
+      "failed": "Échec de la mise à jour de l'unité de travail",
+      "failedDescription": "Une erreur s'est produite lors de la mise à jour de l'unité de travail."
+    },
     "categories": {
       "count": "Nombre (unités, arbres, caisses)",
       "weight": "Poids (kg, tonnes)",
@@ -1733,16 +1820,6 @@
       "codeMaxLength": "Le code doit contenir 20 caractères ou moins",
       "nameRequired": "Le nom est requis",
       "nameMaxLength": "Le nom doit contenir 100 caractères ou moins"
-    },
-    "create": {
-      "success": "Unité de travail créée avec succès",
-      "failed": "Échec de la création de l'unité de travail",
-      "failedDescription": "Une erreur s'est produite lors de la création de l'unité de travail."
-    },
-    "update": {
-      "success": "Unité de travail mise à jour avec succès",
-      "failed": "Échec de la mise à jour de l'unité de travail",
-      "failedDescription": "Une erreur s'est produite lors de la mise à jour de l'unité de travail."
     },
     "delete": {
       "confirm": "Êtes-vous sûr de vouloir supprimer cette unité de travail ? Cette action ne peut pas être annulée.",
@@ -2210,9 +2287,63 @@
     },
     "payments": {
       "title": "Paiements",
-      "subtitle": "Suivez et gérez les paiements entrants et sortants",
-      "referencePlaceholder": "Numéro de chèque, ID de transaction, etc.",
-      "notesPlaceholder": "Notes supplémentaires sur ce paiement"
+      "subtitle": "Gérer les transactions de paiement",
+      "form": {
+        "title": {
+          "new": "Nouveau Paiement",
+          "edit": "Modifier le Paiement"
+        },
+        "fields": {
+          "paymentType": "Type de Paiement",
+          "paymentDate": "Date de Paiement",
+          "customer": "Client",
+          "supplier": "Fournisseur",
+          "optional": "Optionnel",
+          "partyName": "Nom de la Tiers",
+          "name": "Nom",
+          "amount": "Montant",
+          "paymentMethod": "Méthode de Paiement",
+          "referenceNumber": "Numéro de Référence",
+          "remarks": "Remarques",
+          "status": "Statut"
+        },
+        "paymentTypes": {
+          "received": "Paiement Reçu",
+          "made": "Paiement Effectué"
+        },
+        "methods": {
+          "cash": "Espèces",
+          "bankTransfer": "Virement Bancaire",
+          "check": "Chèque",
+          "mobileMoney": "Mobile Money"
+        },
+        "statuses": {
+          "draft": "Brouillon",
+          "submitted": "Soumis",
+          "cancelled": "Annulé"
+        },
+        "actions": {
+          "select": "Sélectionner",
+          "enter": "Entrer"
+        },
+        "placeholders": {
+          "referenceNumber": "Numéro de chèque, ID de transaction, etc.",
+          "remarks": "Notes supplémentaires sur ce paiement"
+        },
+        "validation": {
+          "partyNameRequired": "Le nom de la tiers est requis",
+          "paymentDateRequired": "La date de paiement est requise",
+          "amountMin": "Le montant doit être supérieur à 0"
+        },
+        "errors": {
+          "saveFailed": "Échec de l'enregistrement du paiement :"
+        },
+        "buttons": {
+          "cancel": "Annuler",
+          "create": "Créer un Paiement",
+          "update": "Mettre à jour le Paiement"
+        }
+      }
     },
     "reports": {
       "title": "Rapports Financiers",
@@ -2378,66 +2509,6 @@
           "saveError": "Échec de l'action {{action}} de la facture"
         }
       }
-    },
-    "payments": {
-      "title": "Paiements",
-      "subtitle": "Gérer les transactions de paiement",
-      "form": {
-        "title": {
-          "new": "Nouveau Paiement",
-          "edit": "Modifier le Paiement"
-        },
-        "fields": {
-          "paymentType": "Type de Paiement",
-          "paymentDate": "Date de Paiement",
-          "customer": "Client",
-          "supplier": "Fournisseur",
-          "optional": "Optionnel",
-          "partyName": "Nom de la Tiers",
-          "name": "Nom",
-          "amount": "Montant",
-          "paymentMethod": "Méthode de Paiement",
-          "referenceNumber": "Numéro de Référence",
-          "remarks": "Remarques",
-          "status": "Statut"
-        },
-        "paymentTypes": {
-          "received": "Paiement Reçu",
-          "made": "Paiement Effectué"
-        },
-        "methods": {
-          "cash": "Espèces",
-          "bankTransfer": "Virement Bancaire",
-          "check": "Chèque",
-          "mobileMoney": "Mobile Money"
-        },
-        "statuses": {
-          "draft": "Brouillon",
-          "submitted": "Soumis",
-          "cancelled": "Annulé"
-        },
-        "actions": {
-          "select": "Sélectionner",
-          "enter": "Entrer"
-        },
-        "placeholders": {
-          "referenceNumber": "Numéro de chèque, ID de transaction, etc.",
-          "remarks": "Notes supplémentaires sur ce paiement"
-        },
-        "validation": {
-          "partyNameRequired": "Le nom de la tiers est requis",
-          "paymentDateRequired": "La date de paiement est requise",
-          "amountMin": "Le montant doit être supérieur à 0"
-        },
-        "errors": {
-          "saveFailed": "Échec de l'enregistrement du paiement :"
-        },
-        "buttons": {
-          "cancel": "Annuler",
-          "create": "Créer un Paiement",
-          "update": "Mettre à jour le Paiement"
-        }
-      }
     }
   },
   "billingModule": {
@@ -2595,71 +2666,6 @@
     "setPassword": {
       "passwordPlaceholder": "Entrez votre mot de passe",
       "confirmPlaceholder": "Confirmez votre mot de passe"
-    }
-  },
-  "common": {
-    "views": {
-      "map": "Vue carte",
-      "list": "Vue liste",
-      "grid": "Vue grille",
-      "cards": "Vue cartes",
-      "grouped": "Vue groupée",
-      "dashboard": "Vue tableau de bord"
-    },
-    "actions": {
-      "refresh": "Actualiser",
-      "download": "Télécharger",
-      "edit": "Modifier",
-      "delete": "Supprimer",
-      "manage": "Gérer",
-      "manageRoles": "Gérer les rôles",
-      "editFarm": "Modifier la ferme",
-      "deleteFarm": "Supprimer la ferme",
-      "editRole": "Modifier le rôle",
-      "removeRole": "Supprimer le rôle",
-      "createReceptionBatch": "Créer un lot de réception",
-      "viewDetails": "Voir les détails",
-      "payWage": "Payer le salaire",
-      "deactivate": "Désactiver",
-      "editToEnableAccess": "Modifier pour activer l'accès",
-      "downloadReport": "Télécharger le rapport",
-      "downloadInvoice": "Télécharger la facture",
-      "downloadMap": "Télécharger la carte",
-      "filtersAndSort": "Filtres et tri",
-      "goToMyLocation": "Aller à ma position",
-      "searchLocation": "Rechercher un lieu",
-      "exitFullscreen": "Quitter le plein écran (Échap)",
-      "addNewAccount": "Ajouter un nouveau compte",
-      "addNewTax": "Ajouter une nouvelle taxe",
-      "changeLanguage": "Changer de langue"
-    },
-    "placeholders": {
-      "searchLocation": "Rechercher un lieu au Maroc...",
-      "parcelName": "Nom de la parcelle",
-      "cropType": "Ex : Tomates",
-      "rootstock": "Ex : GF677",
-      "search": "Rechercher...",
-      "selectDate": "Sélectionner une date avec données satellite",
-      "searchArticles": "Rechercher des articles...",
-      "searchFiles": "Rechercher un fichier...",
-      "selectBucket": "Sélectionner un bucket",
-      "typeOrganizationName": "Tapez le nom de l'organisation",
-      "additionalNotes": "Notes supplémentaires..."
-    },
-    "form": {
-      "name": "Nom",
-      "description": "Description",
-      "area": "Surface",
-      "unit": "Unité",
-      "soilType": "Type de sol",
-      "irrigationType": "Type d'irrigation",
-      "variety": "Variété",
-      "plantingDate": "Date de plantation",
-      "plantingType": "Type de plantation"
-    },
-    "satellite": {
-      "refreshData": "Actualiser les données",
-      "showTemperature": "Afficher la température au moment du passage satellite (11h)"
     }
   },
   "infrastructure": {
@@ -4252,7 +4258,13 @@
     "panelTitle": "Données Sources",
     "sourceDataTitle": "Transparence des Données Sources",
     "dataPoints": "points de données",
-    "sources": "sources",
+    "sources": {
+      "satellite": "Données Satellites",
+      "weather": "Données Météo",
+      "soil": "Analyse de Sol",
+      "water": "Analyse d'Eau",
+      "plant": "Analyse Végétale"
+    },
     "viewDetails": "Voir les détails",
     "refreshData": "Actualiser les données",
     "refreshStale": "Actualiser les données obsolètes",
@@ -4294,13 +4306,6 @@
       "minimum": "Minimum",
       "recommended": "Recommandé",
       "optimal": "Optimal"
-    },
-    "sources": {
-      "satellite": "Données Satellites",
-      "weather": "Données Météo",
-      "soil": "Analyse de Sol",
-      "water": "Analyse d'Eau",
-      "plant": "Analyse Végétale"
     },
     "satellite": {
       "indices": "Indices",

@@ -6,6 +6,7 @@ import { authSupabase } from '@/lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
+import { useAuthStore } from '@/stores/authStore'
 import {
   trackOnboardingStart,
   trackTrialPlanView,
@@ -71,15 +72,16 @@ function SelectTrialPage() {
           
           // Get organization name from user metadata or use default
           const orgName = user.user_metadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
-          
+
           console.log('📞 Calling NestJS API to setup organization:', {
             userId: user.id,
             email: user.email,
             organizationName: orgName
           })
 
-          const { data: { session } } = await authSupabase.auth.getSession()
-          if (!session?.access_token) {
+          // Get access token from authStore (this is where loginViaApi stores it)
+          const accessToken = useAuthStore.getState().getAccessToken()
+          if (!accessToken) {
             console.error('❌ No access token available')
             setError('Authentication required. Please try logging in again.')
             setupAttempted.current = false
@@ -91,7 +93,7 @@ function SelectTrialPage() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({
               organizationName: orgName,
@@ -325,9 +327,9 @@ function SelectTrialPage() {
     trackTrialPlanSelect(selectedPlan, SUBSCRIPTION_PLANS[selectedPlan].priceAmount)
 
     try {
-      // Get the access token from the current session
-      const { data: { session } } = await authSupabase.auth.getSession()
-      if (!session?.access_token) {
+      // Get the access token from authStore (this is where loginViaApi stores it)
+      const accessToken = useAuthStore.getState().getAccessToken()
+      if (!accessToken) {
         throw new Error('Not authenticated')
       }
 
@@ -336,7 +338,7 @@ function SelectTrialPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
           'X-Organization-Id': orgToUse.id,
         },
         body: JSON.stringify({
@@ -375,15 +377,6 @@ function SelectTrialPage() {
       })
       console.log('✅ Organization saved to both localStorage and Zustand store')
 
-      // Refresh the user session to ensure JWT has latest claims
-      // This is important for organization access validation on subsequent API calls
-      const { error: refreshError } = await authSupabase.auth.refreshSession()
-      if (refreshError) {
-        console.warn('⚠️ Failed to refresh session, continuing anyway:', refreshError)
-      } else {
-        console.log('✅ Session refreshed successfully')
-      }
-
       // Invalidate and refetch subscription query to ensure it's loaded before navigation
       await queryClient.invalidateQueries({ queryKey: ['subscription', orgToUse.id] })
 
@@ -397,7 +390,6 @@ function SelectTrialPage() {
       // 1. Subscription is fully cached
       // 2. Database transaction is committed
       // 3. Organization membership is fully established
-      // 4. Session refresh propagates
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Use window.location.href to force a full page reload and ensure provider re-evaluates

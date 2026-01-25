@@ -177,4 +177,129 @@
   .animate-fade-in-up {
     opacity: 0;
   }
+
+  /* Notification animations */
+  @keyframes notification-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.8);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+  }
+
+  @keyframes bell-shake {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    25% {
+      transform: rotate(15deg);
+    }
+    75% {
+      transform: rotate(-15deg);
+    }
+  }
+
+  @keyframes bell-scale {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(0.9);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    }
+  }
+
+  @keyframes stagger-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes swipe-dismiss {
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Notification animation classes */
+  .notification-slide-in {
+    animation: notification-slide-in 0.3s ease-out;
+  }
+
+  .pulse-ring {
+    animation: pulse-ring 1s ease-out infinite;
+  }
+
+  .bell-shake {
+    animation: bell-shake 0.5s ease-in-out;
+  }
+
+  .bell-scale {
+    animation: bell-scale 0.2s ease-in-out;
+  }
+
+  .glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  .stagger-in {
+    animation: stagger-in 0.3s ease-out;
+  }
+
+  .swipe-dismiss {
+    animation: swipe-dismiss 0.3s ease-in forwards;
+  }
+
+  /* Glass morphism effect */
+  .glass-morphism {
+    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30;
+  }
+
+  /* Stagger delays for list items */
+  .stagger-delay-1 {
+    animation-delay: 0.05s;
+  }
+  .stagger-delay-2 {
+    animation-delay: 0.1s;
+  }
+  .stagger-delay-3 {
+    animation-delay: 0.15s;
+  }
+  .stagger-delay-4 {
+    animation-delay: 0.2s;
+  }
+  .stagger-delay-5 {
+    animation-delay: 0.25s;
+  }
 }

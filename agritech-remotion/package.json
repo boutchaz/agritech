@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "dev": "remotion studio",
-    "build": "remotion render PromotionalVideo out/promotional-video.mp4",
+    "build": "remotion render PromotionalVideo ../project/public/assets/agritech-promo.mp4",
     "preview": "remotion preview",
     "upgrade": "remotion upgrade"
   },

@@ -22,7 +22,7 @@
     "build:marketplace": "pnpm --filter marketplace-frontend build",
     "build:cms": "pnpm --filter cms build",
     "build:docs": "pnpm --filter agritech-docs build",
-    "build:video": "pnpm --filter agritech-remotion build && mkdir -p project/public/assets && cp agritech-remotion/out/promotional-video.mp4 project/public/assets/agritech-promo.mp4",
+    "build:video": "mkdir -p project/public/assets && pnpm --filter agritech-remotion build",
     "lint": "pnpm -r lint",
     "lint:fix": "pnpm -r lint:fix",
     "type-check": "pnpm -r type-check",
