@@ -477,6 +477,22 @@ export class OrdersService {
             this.logger.error(`Failed to send status update email: ${emailError.message}`);
         }
 
+        // Send in-app notification to buyer if they have a user account
+        try {
+            if (order.buyer_user_id) {
+                await this.notificationsService.notifyOrderStatusChange(
+                    order.buyer_user_id,
+                    order.buyer_organization_id,
+                    updated.id.substring(0, 8).toUpperCase(),
+                    updated.id,
+                    dto.status,
+                );
+                this.logger.log(`Order status notification sent to buyer ${order.buyer_user_id}`);
+            }
+        } catch (notifError) {
+            this.logger.warn(`Failed to send order status notification: ${notifError.message}`);
+        }
+
         return updated;
     }
 

@@ -9,6 +9,7 @@ import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TasksService {
@@ -19,6 +20,7 @@ export class TasksService {
     private readonly accountingAutomationService: AccountingAutomationService,
     private readonly receptionBatchesService: ReceptionBatchesService,
     private readonly adoptionService: AdoptionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -409,6 +411,40 @@ export class TasksService {
 
     if (error) {
       throw new Error(`Failed to assign task: ${error.message}`);
+    }
+
+    // Send notification to assigned worker if they have a linked user account
+    try {
+      const { data: worker } = await client
+        .from('workers')
+        .select('user_id, first_name, last_name')
+        .eq('id', assignTaskDto.worker_id)
+        .single();
+
+      if (worker?.user_id) {
+        // Get assigner name
+        const { data: assignerProfile } = await client
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', userId)
+          .single();
+
+        const assignerName = assignerProfile
+          ? `${assignerProfile.first_name || ''} ${assignerProfile.last_name || ''}`.trim() || 'Someone'
+          : 'Someone';
+
+        await this.notificationsService.notifyTaskAssignment(
+          worker.user_id,
+          organizationId,
+          task.title || 'Untitled task',
+          taskId,
+          assignerName,
+        );
+        this.logger.log(`Task assignment notification sent to user ${worker.user_id}`);
+      }
+    } catch (notifError) {
+      // Don't fail the assignment if notification fails
+      this.logger.warn(`Failed to send task assignment notification: ${notifError.message}`);
     }
 
     return {

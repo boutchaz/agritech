@@ -77,6 +77,7 @@ import { QualityControlModule } from './modules/quality-control/quality-control.
 import { AdoptionModule } from './modules/adoption/adoption.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { EmailModule } from './modules/email/email.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -171,6 +172,7 @@ import { EmailModule } from './modules/email/email.module';
     OrganizationAISettingsModule,
     ChatModule,
     EmailModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

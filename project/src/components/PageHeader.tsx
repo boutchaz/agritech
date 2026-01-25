@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import OrganizationSwitcher from './OrganizationSwitcher';
+import NotificationBell from './NotificationBell';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -74,6 +75,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({ breadcrumbs, actions }) => {
       </div>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
         {actions}
+        <NotificationBell />
         <div className="w-full sm:w-auto">
           <OrganizationSwitcher />
         </div>

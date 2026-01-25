@@ -1,5 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import { DatabaseService } from '../database/database.service';
+import { NotificationsGateway } from './notifications.gateway';
+import {
+  CreateNotificationDto,
+  NotificationResponseDto,
+  NotificationFiltersDto,
+  NotificationType,
+} from './dto/notification.dto';
 
 export interface EmailOptions {
   to: string;
@@ -78,9 +86,325 @@ export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
   private transporter: nodemailer.Transporter | null = null;
 
-  constructor() {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly gateway: NotificationsGateway,
+  ) {
     this.initializeTransporter();
   }
+
+  // ============================================
+  // IN-APP NOTIFICATION METHODS
+  // ============================================
+
+  /**
+   * Create a new notification and emit via WebSocket
+   */
+  async createNotification(dto: CreateNotificationDto): Promise<NotificationResponseDto> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('notifications')
+      .insert({
+        user_id: dto.userId,
+        organization_id: dto.organizationId,
+        type: dto.type,
+        title: dto.title,
+        message: dto.message || null,
+        data: dto.data || {},
+        is_read: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create notification: ${error.message}`);
+      throw new Error(`Failed to create notification: ${error.message}`);
+    }
+
+    // Emit notification via WebSocket
+    this.gateway.sendToUser(dto.userId, data);
+    this.logger.log(`Notification created and sent to user ${dto.userId}: ${dto.title}`);
+
+    return data;
+  }
+
+  /**
+   * Create notifications for multiple users
+   */
+  async createNotificationsForUsers(
+    userIds: string[],
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message?: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    const notifications = userIds.map((userId) => ({
+      user_id: userId,
+      organization_id: organizationId,
+      type,
+      title,
+      message: message || null,
+      data: data || {},
+      is_read: false,
+    }));
+
+    const client = this.databaseService.getAdminClient();
+
+    const { data: created, error } = await client
+      .from('notifications')
+      .insert(notifications)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to create bulk notifications: ${error.message}`);
+      throw new Error(`Failed to create bulk notifications: ${error.message}`);
+    }
+
+    // Emit to each user
+    for (const notification of created) {
+      this.gateway.sendToUser(notification.user_id, notification);
+    }
+
+    this.logger.log(`Created ${created.length} notifications for ${userIds.length} users`);
+  }
+
+  /**
+   * Get notifications for a user
+   */
+  async getNotifications(
+    userId: string,
+    organizationId: string,
+    filters: NotificationFiltersDto = {},
+  ): Promise<NotificationResponseDto[]> {
+    const client = this.databaseService.getAdminClient();
+
+    let query = client
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false });
+
+    if (filters.isRead !== undefined) {
+      query = query.eq('is_read', filters.isRead);
+    }
+
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    } else {
+      query = query.limit(50);
+    }
+
+    if (filters.offset) {
+      query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch notifications: ${error.message}`);
+      throw new Error(`Failed to fetch notifications: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Get unread notification count
+   */
+  async getUnreadCount(userId: string, organizationId: string): Promise<number> {
+    const client = this.databaseService.getAdminClient();
+
+    const { count, error } = await client
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_read', false);
+
+    if (error) {
+      this.logger.error(`Failed to get unread count: ${error.message}`);
+      return 0;
+    }
+
+    return count || 0;
+  }
+
+  /**
+   * Mark a notification as read
+   */
+  async markAsRead(notificationId: string, userId: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+
+    const { error } = await client
+      .from('notifications')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+      })
+      .eq('id', notificationId)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to mark notification as read: ${error.message}`);
+      throw new Error(`Failed to mark notification as read: ${error.message}`);
+    }
+
+    // Notify all user's connected clients about the read status
+    this.gateway.sendToUser(userId, {
+      type: 'notification:read',
+      notificationId,
+      readAt: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllAsRead(userId: string, organizationId: string): Promise<number> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('notifications')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_read', false)
+      .select();
+
+    if (error) {
+      this.logger.error(`Failed to mark all notifications as read: ${error.message}`);
+      throw new Error(`Failed to mark all notifications as read: ${error.message}`);
+    }
+
+    const count = data?.length || 0;
+
+    // Notify all user's connected clients
+    this.gateway.sendToUser(userId, {
+      type: 'notification:read-all',
+      count,
+      readAt: new Date().toISOString(),
+    });
+
+    return count;
+  }
+
+  /**
+   * Get WebSocket connection status for a user
+   */
+  getConnectionStatus(userId: string): { isConnected: boolean; connectedUsers: number } {
+    return {
+      isConnected: this.gateway.isUserConnected(userId),
+      connectedUsers: this.gateway.getConnectedUsersCount(),
+    };
+  }
+
+  // ============================================
+  // NOTIFICATION TRIGGER HELPERS
+  // ============================================
+
+  /**
+   * Notify user of task assignment
+   */
+  async notifyTaskAssignment(
+    assigneeUserId: string,
+    organizationId: string,
+    taskTitle: string,
+    taskId: string,
+    assignerName: string,
+  ): Promise<void> {
+    await this.createNotification({
+      userId: assigneeUserId,
+      organizationId,
+      type: NotificationType.TASK_ASSIGNED,
+      title: `New task assigned: ${taskTitle}`,
+      message: `${assignerName} assigned you a new task`,
+      data: { taskId, assignerName },
+    });
+  }
+
+  /**
+   * Notify user of order status change
+   */
+  async notifyOrderStatusChange(
+    userId: string,
+    organizationId: string,
+    orderNumber: string,
+    orderId: string,
+    newStatus: string,
+  ): Promise<void> {
+    const statusLabels: Record<string, string> = {
+      confirmed: 'confirmed',
+      shipped: 'shipped',
+      delivered: 'delivered',
+      cancelled: 'cancelled',
+    };
+
+    await this.createNotification({
+      userId,
+      organizationId,
+      type: NotificationType.ORDER_STATUS_CHANGED,
+      title: `Order #${orderNumber} ${statusLabels[newStatus] || newStatus}`,
+      message: `Your order status has been updated to ${statusLabels[newStatus] || newStatus}`,
+      data: { orderId, orderNumber, status: newStatus },
+    });
+  }
+
+  /**
+   * Notify seller of new quote request
+   */
+  async notifyQuoteReceived(
+    sellerUserId: string,
+    organizationId: string,
+    productTitle: string,
+    quoteRequestId: string,
+    buyerName: string,
+  ): Promise<void> {
+    await this.createNotification({
+      userId: sellerUserId,
+      organizationId,
+      type: NotificationType.QUOTE_RECEIVED,
+      title: `New quote request: ${productTitle}`,
+      message: `${buyerName} requested a quote for ${productTitle}`,
+      data: { quoteRequestId, productTitle, buyerName },
+    });
+  }
+
+  /**
+   * Notify buyer of quote response
+   */
+  async notifyQuoteResponded(
+    buyerUserId: string,
+    organizationId: string,
+    productTitle: string,
+    quoteRequestId: string,
+    sellerName: string,
+    quotedPrice: number,
+    currency: string,
+  ): Promise<void> {
+    await this.createNotification({
+      userId: buyerUserId,
+      organizationId,
+      type: NotificationType.QUOTE_RESPONDED,
+      title: `Quote received: ${productTitle}`,
+      message: `${sellerName} quoted ${quotedPrice} ${currency} for ${productTitle}`,
+      data: { quoteRequestId, productTitle, sellerName, quotedPrice, currency },
+    });
+  }
+
+  // ============================================
+  // EMAIL NOTIFICATION METHODS (EXISTING)
+  // ============================================
 
   private initializeTransporter() {
     // Check if email configuration is available

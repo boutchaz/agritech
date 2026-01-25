@@ -87,7 +87,44 @@ export class QuoteRequestsService {
       this.logger.error(`Failed to send quote request email: ${err.message}`);
     });
 
+    // Send in-app notification to seller organization users
+    this.sendSellerInAppNotification(data, dto.seller_organization_id).catch((err) => {
+      this.logger.warn(`Failed to send seller in-app notification: ${err.message}`);
+    });
+
     return data;
+  }
+
+  /**
+   * Send in-app notification to seller organization admins/managers
+   */
+  private async sendSellerInAppNotification(
+    quoteRequest: QuoteRequest,
+    sellerOrgId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // Get admin users from seller organization
+    const { data: orgUsers } = await supabase
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', sellerOrgId)
+      .eq('is_active', true)
+      .in('role', ['admin', 'manager', 'owner']);
+
+    if (!orgUsers || orgUsers.length === 0) return;
+
+    const userIds = orgUsers.map(u => u.user_id);
+    const buyerName = quoteRequest.buyer_contact_name || 'A customer';
+
+    await this.notificationsService.createNotificationsForUsers(
+      userIds,
+      sellerOrgId,
+      'quote_received' as any,
+      `New quote request: ${quoteRequest.product_title}`,
+      `${buyerName} requested a quote for ${quoteRequest.product_title}`,
+      { quoteRequestId: quoteRequest.id, productTitle: quoteRequest.product_title },
+    );
   }
 
   /**
@@ -350,9 +387,60 @@ export class QuoteRequestsService {
       this.sendBuyerNotification(data, existing).catch((err) => {
         this.logger.error(`Failed to send quote response email: ${err.message}`);
       });
+
+      // Send in-app notification to buyer organization users
+      this.sendBuyerInAppNotification(data, existing).catch((err) => {
+        this.logger.warn(`Failed to send buyer in-app notification: ${err.message}`);
+      });
     }
 
     return data;
+  }
+
+  /**
+   * Send in-app notification to buyer organization admins when quote is responded
+   */
+  private async sendBuyerInAppNotification(
+    updatedQuote: QuoteRequest,
+    originalQuote: QuoteRequest,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // Get seller organization name
+    const { data: sellerOrg } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', updatedQuote.seller_organization_id)
+      .single();
+
+    // Get admin users from buyer organization
+    const { data: orgUsers } = await supabase
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', updatedQuote.requester_organization_id)
+      .eq('is_active', true)
+      .in('role', ['admin', 'manager', 'owner']);
+
+    if (!orgUsers || orgUsers.length === 0) return;
+
+    const userIds = orgUsers.map(u => u.user_id);
+    const sellerName = sellerOrg?.name || 'A seller';
+
+    await this.notificationsService.createNotificationsForUsers(
+      userIds,
+      updatedQuote.requester_organization_id,
+      'quote_responded' as any,
+      `Quote received: ${updatedQuote.product_title}`,
+      updatedQuote.quoted_price
+        ? `${sellerName} quoted ${updatedQuote.quoted_price} ${updatedQuote.quoted_currency || 'MAD'}`
+        : `${sellerName} responded to your quote request`,
+      {
+        quoteRequestId: updatedQuote.id,
+        productTitle: updatedQuote.product_title,
+        quotedPrice: updatedQuote.quoted_price,
+        currency: updatedQuote.quoted_currency,
+      },
+    );
   }
 
   /**

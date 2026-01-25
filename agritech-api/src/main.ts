@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, ExceptionFilter, Catch, ArgumentsHost, HttpException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -72,6 +73,9 @@ async function bootstrap() {
 
   // Get config service
   const configService = app.get(ConfigService);
+
+  // Configure WebSocket adapter for Socket.IO
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Global request logger middleware - logs every incoming request
   let requestCounter = 0;
