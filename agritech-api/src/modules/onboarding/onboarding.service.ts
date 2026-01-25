@@ -328,6 +328,7 @@ export class OnboardingService {
     const organizationId = orgUsers[0].organization_id;
 
     // Create farm
+    // Note: farms table doesn't have farm_type column - hierarchy not yet supported
     const { data, error } = await client
       .from('farms')
       .insert({
@@ -336,7 +337,6 @@ export class OnboardingService {
         location: dto.location,
         size: dto.size,
         size_unit: dto.size_unit,
-        farm_type: dto.farm_type || 'main',
         description: dto.description || null,
         soil_type: dto.soil_type || null,
         climate_zone: dto.climate_zone || null,

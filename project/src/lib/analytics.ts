@@ -1510,3 +1510,269 @@ export const setAnalyticsUserProperties = (properties: AnalyticsUserProperties):
   // Set Clarity user properties
   setClarityUserProperties(userProperties);
 };
+
+/**
+ * ============================================
+ * ONBOARDING FUNNEL TRACKING
+ * ============================================
+ */
+
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+export type OnboardingStepName = 'profile' | 'organization' | 'farm' | 'modules' | 'preferences';
+
+/**
+ * Track onboarding step view
+ */
+export const trackOnboardingStepView = (step: OnboardingStep, stepName: OnboardingStepName): void => {
+  trackEvent({
+    action: 'onboarding_step_view',
+    category: 'Onboarding',
+    label: stepName,
+    value: step,
+    nonInteraction: true,
+  });
+  trackClarityEvent(`onboarding_view_${stepName}`);
+
+  // Push to GTM dataLayer for more detailed tracking
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_step_view',
+      onboarding: {
+        step_number: step,
+        step_name: stepName,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding step completion
+ */
+export const trackOnboardingStepComplete = (step: OnboardingStep, stepName: OnboardingStepName, timeSpentSeconds: number): void => {
+  trackEvent({
+    action: 'onboarding_step_complete',
+    category: 'Onboarding',
+    label: stepName,
+    value: Math.round(timeSpentSeconds),
+  });
+  trackClarityEvent(`onboarding_complete_${stepName}`);
+
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_step_complete',
+      onboarding: {
+        step_number: step,
+        step_name: stepName,
+        time_spent_seconds: Math.round(timeSpentSeconds),
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding form field interaction
+ */
+export const trackOnboardingFieldInteraction = (stepName: OnboardingStepName, fieldName: string, action: 'focus' | 'blur' | 'change'): void => {
+  trackEvent({
+    action: 'onboarding_field_interaction',
+    category: 'Onboarding',
+    label: `${stepName}_${fieldName}_${action}`,
+    nonInteraction: true,
+  });
+};
+
+/**
+ * Track onboarding validation error
+ */
+export const trackOnboardingValidationError = (stepName: OnboardingStepName, fieldName: string, errorMessage: string): void => {
+  trackEvent({
+    action: 'onboarding_validation_error',
+    category: 'Onboarding',
+    label: `${stepName}_${fieldName}`,
+  });
+  trackClarityEvent(`onboarding_error_${stepName}_${fieldName}`);
+
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_error',
+      onboarding: {
+        step_name: stepName,
+        field_name: fieldName,
+        error_message: errorMessage,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding API error
+ */
+export const trackOnboardingAPIError = (stepName: OnboardingStepName, action: string, errorMessage: string): void => {
+  trackEvent({
+    action: 'onboarding_api_error',
+    category: 'Onboarding',
+    label: `${stepName}_${action}`,
+  });
+  trackError(`onboarding_${stepName}_${action}: ${errorMessage}`);
+
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_api_error',
+      onboarding: {
+        step_name: stepName,
+        action: action,
+        error_message: errorMessage,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding skip (user choosing to skip optional steps)
+ */
+export const trackOnboardingSkip = (stepName: OnboardingStepName, reason?: string): void => {
+  trackEvent({
+    action: 'onboarding_skip',
+    category: 'Onboarding',
+    label: reason ? `${stepName}_${reason}` : stepName,
+  });
+  trackClarityEvent(`onboarding_skip_${stepName}`);
+};
+
+/**
+ * Track onboarding back navigation
+ */
+export const trackOnboardingBack = (fromStep: OnboardingStep, toStep: OnboardingStep): void => {
+  trackEvent({
+    action: 'onboarding_back',
+    category: 'Onboarding',
+    label: `step_${fromStep}_to_${toStep}`,
+  });
+};
+
+/**
+ * Track onboarding drop-off (user leaving incomplete)
+ */
+export const trackOnboardingDropOff = (currentStep: OnboardingStep, stepName: OnboardingStepName, timeSpentSeconds: number): void => {
+  trackEvent({
+    action: 'onboarding_drop_off',
+    category: 'Onboarding',
+    label: stepName,
+    value: Math.round(timeSpentSeconds),
+  });
+  trackClarityEvent(`onboarding_dropoff_${stepName}`);
+
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_drop_off',
+      onboarding: {
+        step_number: currentStep,
+        step_name: stepName,
+        time_spent_seconds: Math.round(timeSpentSeconds),
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding completion success
+ */
+export const trackOnboardingComplete = (totalTimeSeconds: number, hasDemoData: boolean): void => {
+  trackEvent({
+    action: 'onboarding_complete',
+    category: 'Onboarding',
+    label: hasDemoData ? 'with_demo_data' : 'without_demo_data',
+    value: Math.round(totalTimeSeconds),
+  });
+  trackClarityGoal('onboarding_complete', Math.round(totalTimeSeconds));
+
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({
+      event: 'onboarding_complete',
+      ecommerce: {
+        transaction_id: `onboarding_${Date.now()}`,
+        value: 0,
+        currency: 'USD',
+      },
+      onboarding: {
+        total_time_seconds: Math.round(totalTimeSeconds),
+        has_demo_data: hasDemoData,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+};
+
+/**
+ * Track onboarding resume (user returning to complete)
+ */
+export const trackOnboardingResume = (currentStep: OnboardingStep): void => {
+  trackEvent({
+    action: 'onboarding_resume',
+    category: 'Onboarding',
+    label: `step_${currentStep}`,
+  });
+  trackClarityEvent(`onboarding_resume_step_${currentStep}`);
+};
+
+/**
+ * Track module selection in onboarding
+ */
+export const trackOnboardingModuleToggle = (moduleId: string, enabled: boolean): void => {
+  trackEvent({
+    action: 'onboarding_module_toggle',
+    category: 'Onboarding',
+    label: `${moduleId}_${enabled ? 'enabled' : 'disabled'}`,
+  });
+  trackClarityEvent(`module_${enabled ? 'enable' : 'disable'}_${moduleId}`);
+};
+
+/**
+ * Track onboarding progress milestone (25%, 50%, 75%)
+ */
+export const trackOnboardingMilestone = (percentage: 25 | 50 | 75): void => {
+  trackEvent({
+    action: 'onboarding_milestone',
+    category: 'Onboarding',
+    label: `${percentage}_percent`,
+    value: percentage,
+  });
+  trackClarityEvent(`onboarding_${percentage}_percent`);
+};
+
+/**
+ * Track slug availability check
+ */
+export const trackOnboardingSlugCheck = (slug: string, available: boolean): void => {
+  trackEvent({
+    action: 'onboarding_slug_check',
+    category: 'Onboarding',
+    label: available ? 'available' : 'unavailable',
+    nonInteraction: true,
+  });
+};
+
+/**
+ * Track onboarding form autosave
+ */
+export const trackOnboardingAutosave = (stepName: OnboardingStepName, success: boolean): void => {
+  if (success) {
+    trackEvent({
+      action: 'onboarding_autosave',
+      category: 'Onboarding',
+      label: stepName,
+      nonInteraction: true,
+    });
+  } else {
+    trackEvent({
+      action: 'onboarding_autosave_failed',
+      category: 'Onboarding',
+      label: stepName,
+    });
+  }
+};
