@@ -5,7 +5,6 @@ import Sidebar from '../components/Sidebar'
 import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
-import NotificationBell from '../components/NotificationBell'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
@@ -110,10 +109,6 @@ function AuthenticatedLayout() {
           isDarkMode={isDarkMode}
           onThemeToggle={() => setIsDarkMode(!isDarkMode)}
         />
-        {/* Notification bell - fixed position */}
-        <div className="fixed top-4 z-50" style={{ [isRTL ? 'left' : 'right']: '1rem' }}>
-          <NotificationBell />
-        </div>
         {/* Main content with margin for fixed sidebar (desktop only) */}
         <div
           className="flex flex-col h-screen transition-all duration-300 ease-in-out"

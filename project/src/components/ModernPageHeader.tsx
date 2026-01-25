@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Search, X, ChevronRight } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
+import NotificationBell from './NotificationBell';
 import { useAuth } from '../hooks/useAuth';
 
 interface BreadcrumbItem {
@@ -99,10 +100,11 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
             })}
           </nav>
 
-          {/* Organization Switcher */}
+          {/* Organization Switcher & Notifications */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <FarmSwitcher currentFarmId={currentFarmId || ''} onFarmChange={handleFarmChange} />
             <OrganizationSwitcher />
+            <NotificationBell />
           </div>
         </div>
 
