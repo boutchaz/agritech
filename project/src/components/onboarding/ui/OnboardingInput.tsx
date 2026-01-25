@@ -16,25 +16,30 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
     const hasValue = props.value && String(props.value).length > 0;
 
     return (
-      <div className="relative group">
+      <div className="relative">
         {/* Input container with floating label */}
         <div
           className={`
-            relative rounded-xl border-2 transition-all duration-300
+            relative rounded-2xl border-2 bg-white transition-all duration-300 overflow-hidden
             ${isFocused 
-              ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' 
+              ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 ring-4 ring-emerald-500/5' 
               : error 
-                ? 'border-red-300' 
+                ? 'border-red-300 bg-red-50/30' 
                 : success 
-                  ? 'border-emerald-400' 
+                  ? 'border-emerald-400 bg-emerald-50/30' 
                   : 'border-gray-200 hover:border-gray-300'
             }
-            ${isFocused ? 'scale-[1.02]' : 'scale-100'}
           `}
         >
-          {/* Icon */}
+          {/* Icon - properly positioned */}
           {icon && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-emerald-500">
+            <div 
+              className={`
+                absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center
+                w-5 h-5 transition-colors duration-200 flex-shrink-0
+                ${isFocused ? 'text-emerald-500' : 'text-gray-400'}
+              `}
+            >
               {icon}
             </div>
           )}
@@ -52,35 +57,39 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
               props.onBlur?.(e);
             }}
             className={`
-              w-full bg-transparent px-4 pt-6 pb-2 text-gray-900 text-base
+              w-full bg-transparent text-gray-900 text-base font-medium
               outline-none transition-all duration-200
-              ${icon ? 'pl-12' : ''}
-              ${className}
+              ${icon ? 'pl-12 pr-12' : 'pl-4 pr-12'}
+              ${isFocused || hasValue ? 'pt-6 pb-2' : 'py-4'}
+              ${className || ''}
             `}
+            placeholder={isFocused || hasValue ? props.placeholder : ''}
           />
 
           {/* Floating label */}
           <label
             className={`
-              absolute left-4 transition-all duration-200 pointer-events-none
-              ${icon ? 'left-12' : ''}
+              absolute pointer-events-none transition-all duration-200 ease-out
+              ${icon ? 'left-12' : 'left-4'}
               ${isFocused || hasValue
-                ? 'top-2 text-xs font-medium'
-                : 'top-1/2 -translate-y-1/2 text-base'
+                ? 'top-2 text-xs font-semibold tracking-wide'
+                : 'top-1/2 -translate-y-1/2 text-base font-medium'
               }
               ${isFocused 
                 ? 'text-emerald-600' 
                 : error 
                   ? 'text-red-500' 
-                  : 'text-gray-500'
+                  : hasValue
+                    ? 'text-gray-500'
+                    : 'text-gray-400'
               }
             `}
           >
             {label}
           </label>
 
-          {/* Status indicators */}
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          {/* Status indicators - properly contained */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5">
             {isValidating && (
               <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
             )}
@@ -97,15 +106,15 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
 
         {/* Error message */}
         {error && (
-          <p className="mt-2 text-sm text-red-500 flex items-center gap-1 animate-slide-down">
-            <AlertCircle className="w-4 h-4" />
-            {error}
-          </p>
+          <div className="mt-2 flex items-start gap-2 animate-slide-down">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-600 font-medium">{error}</p>
+          </div>
         )}
 
         {/* Hint text */}
         {hint && !error && (
-          <p className="mt-2 text-sm text-gray-500">{hint}</p>
+          <p className="mt-2 text-sm text-gray-500 pl-1">{hint}</p>
         )}
 
         <style>{`
@@ -116,7 +125,7 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
           }
           
           @keyframes slide-down {
-            0% { transform: translateY(-10px); opacity: 0; }
+            0% { transform: translateY(-8px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
           }
           
