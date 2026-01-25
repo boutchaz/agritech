@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { authSupabase } from './auth-supabase';
+import { useAuthStore } from '../stores/authStore';
 
 // Get the base URL for WebSocket connection
 // Use VITE_SOCKET_URL if set, otherwise derive from VITE_API_URL
@@ -54,10 +54,10 @@ class SocketManager {
     this.setStatus('connecting');
 
     try {
-      // Get auth token
-      const { data: { session } } = await authSupabase.auth.getSession();
+      // Get auth token from auth store (NestJS auth)
+      const accessToken = useAuthStore.getState().getAccessToken();
 
-      if (!session?.access_token) {
+      if (!accessToken) {
         console.warn('[Socket] No access token available, skipping connection');
         this.setStatus('disconnected');
         return;
@@ -65,12 +65,12 @@ class SocketManager {
 
       const socketUrl = `${SOCKET_URL}/notifications`;
       console.log('[Socket] Connecting to:', socketUrl);
-      console.log('[Socket] With token:', session.access_token.substring(0, 20) + '...');
+      console.log('[Socket] With token:', accessToken.substring(0, 20) + '...');
       console.log('[Socket] Organization:', organizationId);
 
       this.socket = io(socketUrl, {
         query: {
-          token: session.access_token,
+          token: accessToken,
           organizationId,
         },
         transports: ['websocket', 'polling'],
