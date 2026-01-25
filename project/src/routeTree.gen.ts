@@ -20,9 +20,11 @@ import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_authenticated/pest-alerts/index'
+import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_authenticated/compliance/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
 import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
+import { Route as AuthenticatedComplianceCertificationsRouteImport } from './routes/_authenticated/compliance/certifications'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
@@ -53,6 +55,7 @@ import { Route as AuthenticatedworkforceTasksIndexRouteImport } from './routes/_
 import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes/_authenticated/(settings)/settings.index'
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
+import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
@@ -172,6 +175,12 @@ const AuthenticatedPestAlertsIndexRoute =
     path: '/pest-alerts/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedComplianceIndexRoute =
+  AuthenticatedComplianceIndexRouteImport.update({
+    id: '/compliance/',
+    path: '/compliance/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
   id: '/(public)/onboarding/',
   path: '/onboarding/',
@@ -186,6 +195,12 @@ const AuthenticatedPestAlertsReportIdRoute =
   AuthenticatedPestAlertsReportIdRouteImport.update({
     id: '/pest-alerts/$reportId',
     path: '/pest-alerts/$reportId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedComplianceCertificationsRoute =
+  AuthenticatedComplianceCertificationsRouteImport.update({
+    id: '/compliance/certifications',
+    path: '/compliance/certifications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkersRoute =
@@ -364,6 +379,12 @@ const AuthenticatedaccountingAccountingIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedComplianceCertificationsCertIdRoute =
+  AuthenticatedComplianceCertificationsCertIdRouteImport.update({
+    id: '/$certId',
+    path: '/$certId',
+    getParentRoute: () => AuthenticatedComplianceCertificationsRoute,
   } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
   AuthenticatedworkforceWorkforceEmployeesRouteImport.update({
@@ -780,9 +801,11 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
+  '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
@@ -835,6 +858,7 @@ export interface FileRoutesByFullPath {
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
@@ -884,9 +908,11 @@ export interface FileRoutesByTo {
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
+  '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
@@ -938,6 +964,7 @@ export interface FileRoutesByTo {
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
   '/settings': typeof AuthenticatedsettingsSettingsIndexRoute
@@ -993,9 +1020,11 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/_authenticated/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
+  '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
@@ -1048,6 +1077,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/_authenticated/(settings)/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
@@ -1103,9 +1133,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/workers'
+    | '/compliance/certifications'
     | '/pest-alerts/$reportId'
     | '/blog/'
     | '/onboarding/'
+    | '/compliance/'
     | '/pest-alerts/'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
@@ -1158,6 +1190,7 @@ export interface FileRouteTypes {
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/compliance/certifications/$certId'
     | '/accounting/'
     | '/stock/'
     | '/settings/'
@@ -1207,9 +1240,11 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/quality-control'
     | '/workers'
+    | '/compliance/certifications'
     | '/pest-alerts/$reportId'
     | '/blog'
     | '/onboarding'
+    | '/compliance'
     | '/pest-alerts'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
@@ -1261,6 +1296,7 @@ export interface FileRouteTypes {
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/compliance/certifications/$certId'
     | '/accounting'
     | '/stock'
     | '/settings'
@@ -1315,9 +1351,11 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
+    | '/_authenticated/compliance/certifications'
     | '/_authenticated/pest-alerts/$reportId'
     | '/(public)/blog/'
     | '/(public)/onboarding/'
+    | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
     | '/_authenticated/(accounting)/accounting/accounts'
     | '/_authenticated/(accounting)/accounting/aged-payables'
@@ -1370,6 +1408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
+    | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
     | '/_authenticated/(inventory)/stock/'
     | '/_authenticated/(settings)/settings/'
@@ -1485,6 +1524,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPestAlertsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/compliance/': {
+      id: '/_authenticated/compliance/'
+      path: '/compliance'
+      fullPath: '/compliance/'
+      preLoaderRoute: typeof AuthenticatedComplianceIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/(public)/onboarding/': {
       id: '/(public)/onboarding/'
       path: '/onboarding'
@@ -1504,6 +1550,13 @@ declare module '@tanstack/react-router' {
       path: '/pest-alerts/$reportId'
       fullPath: '/pest-alerts/$reportId'
       preLoaderRoute: typeof AuthenticatedPestAlertsReportIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/compliance/certifications': {
+      id: '/_authenticated/compliance/certifications'
+      path: '/compliance/certifications'
+      fullPath: '/compliance/certifications'
+      preLoaderRoute: typeof AuthenticatedComplianceCertificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workers': {
@@ -1715,6 +1768,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/accounting/'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingIndexRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/compliance/certifications/$certId': {
+      id: '/_authenticated/compliance/certifications/$certId'
+      path: '/$certId'
+      fullPath: '/compliance/certifications/$certId'
+      preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
+      parentRoute: typeof AuthenticatedComplianceCertificationsRoute
     }
     '/_authenticated/(workforce)/workforce/employees': {
       id: '/_authenticated/(workforce)/workforce/employees'
@@ -2433,6 +2493,21 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
     AuthenticatedworkforceWorkersRouteChildren,
   )
 
+interface AuthenticatedComplianceCertificationsRouteChildren {
+  AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
+}
+
+const AuthenticatedComplianceCertificationsRouteChildren: AuthenticatedComplianceCertificationsRouteChildren =
+  {
+    AuthenticatedComplianceCertificationsCertIdRoute:
+      AuthenticatedComplianceCertificationsCertIdRoute,
+  }
+
+const AuthenticatedComplianceCertificationsRouteWithChildren =
+  AuthenticatedComplianceCertificationsRoute._addFileChildren(
+    AuthenticatedComplianceCertificationsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
@@ -2457,7 +2532,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
   AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRouteWithChildren
+  AuthenticatedComplianceCertificationsRoute: typeof AuthenticatedComplianceCertificationsRouteWithChildren
   AuthenticatedPestAlertsReportIdRoute: typeof AuthenticatedPestAlertsReportIdRoute
+  AuthenticatedComplianceIndexRoute: typeof AuthenticatedComplianceIndexRoute
   AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
   AuthenticatedproductionProductionCropCyclesRoute: typeof AuthenticatedproductionProductionCropCyclesRoute
   AuthenticatedproductionProductionHarvestsRoute: typeof AuthenticatedproductionProductionHarvestsRoute
@@ -2509,7 +2586,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceTasksRouteWithChildren,
   AuthenticatedworkforceWorkersRoute:
     AuthenticatedworkforceWorkersRouteWithChildren,
+  AuthenticatedComplianceCertificationsRoute:
+    AuthenticatedComplianceCertificationsRouteWithChildren,
   AuthenticatedPestAlertsReportIdRoute: AuthenticatedPestAlertsReportIdRoute,
+  AuthenticatedComplianceIndexRoute: AuthenticatedComplianceIndexRoute,
   AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
   AuthenticatedproductionProductionCropCyclesRoute:
     AuthenticatedproductionProductionCropCyclesRoute,
