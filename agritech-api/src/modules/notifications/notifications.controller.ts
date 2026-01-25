@@ -5,7 +5,6 @@ import {
   Patch,
   Param,
   Query,
-  Body,
   Req,
   UseGuards,
   HttpCode,
@@ -117,7 +116,7 @@ export class NotificationsController {
     return this.notificationsService.createNotification({
       userId,
       organizationId,
-      type: NotificationType.SYSTEM,
+      type: NotificationType.GENERAL,
       title: 'Test Notification',
       message: `This is a test notification sent at ${new Date().toLocaleString()}`,
       data: { test: true, timestamp: Date.now() },
