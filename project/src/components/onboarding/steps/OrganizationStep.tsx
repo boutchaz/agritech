@@ -71,7 +71,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
   const [subStep, setSubStep] = useState(0);
   const [slugCheck, setSlugCheck] = useState<SlugCheckResult | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
-  const slugCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  const slugCheckTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-generate slug from name
   useEffect(() => {
@@ -216,7 +216,11 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
             {slugCheck && !slugCheck.available && slugCheck.suggestion && (
               <button
                 type="button"
-                onClick={() => onUpdate({ slug: slugCheck.suggestion! })}
+                onClick={() => {
+                  if (slugCheck.suggestion) {
+                    onUpdate({ slug: slugCheck.suggestion });
+                  }
+                }}
                 className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium underline underline-offset-2"
               >
                 Utiliser "{slugCheck.suggestion}" à la place

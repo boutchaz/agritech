@@ -33,8 +33,11 @@ function OnboardingPage() {
     // Refresh auth data to get updated onboarding_completed flag
     await refreshUserData();
 
-    // Navigate to dashboard after onboarding is complete
-    navigate({ to: '/' });
+    // Use window.location.href for a full page reload
+    // This ensures the AuthProvider re-evaluates needsOnboarding with fresh data
+    // Using navigate() can cause a race condition where the redirect effect
+    // triggers before the auth state is fully updated
+    window.location.href = '/';
   };
 
   // Show loading while checking auth
