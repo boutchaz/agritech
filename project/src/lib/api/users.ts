@@ -8,6 +8,7 @@ export interface UserProfile {
   last_name?: string;
   avatar_url?: string;
   phone?: string;
+  onboarding_completed?: boolean;
   timezone: string;
   language: string;
   created_at?: string;
