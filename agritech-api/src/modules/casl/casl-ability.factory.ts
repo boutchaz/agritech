@@ -72,6 +72,10 @@ export enum Subject {
     QUALITY_CONTROL = 'QualityControl',
     LAB_SERVICE = 'LabService',
 
+    // Compliance
+    CERTIFICATION = 'Certification',
+    COMPLIANCE_CHECK = 'ComplianceCheck',
+
     // Reporting & Analytics
     REPORT = 'Report',
     SATELLITE_ANALYSIS = 'SatelliteAnalysis',
@@ -216,6 +220,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Update, Subject.ORGANIZATION); // Can update org settings
             can(Action.Manage, Subject.ROLE); // Can manage roles
+            can(Action.Manage, Subject.CERTIFICATION);
+            can(Action.Manage, Subject.COMPLIANCE_CHECK);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -278,6 +284,8 @@ export class CaslAbilityFactory {
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY); // Cannot delete journal entries
             cannot(Action.Manage, Subject.ACCOUNT); // Cannot manage chart of accounts
+            can(Action.Manage, Subject.CERTIFICATION);
+            can(Action.Manage, Subject.COMPLIANCE_CHECK);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -408,6 +416,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.USER);
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Read, Subject.ROLE);
+            can(Action.Read, Subject.CERTIFICATION);
+            can(Action.Read, Subject.COMPLIANCE_CHECK);
 
             // Cannot modify anything
             cannot(Action.Create, Subject.ALL);
@@ -592,6 +602,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SETTINGS);
             can(Action.Update, Subject.SETTINGS);
             can(Action.Manage, Subject.ROLE);
+            can(Action.Manage, Subject.CERTIFICATION);
+            can(Action.Manage, Subject.COMPLIANCE_CHECK);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -664,6 +676,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SATELLITE_REPORT);
             can(Action.Read, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Read, Subject.DASHBOARD);
+            can(Action.Manage, Subject.CERTIFICATION);
+            can(Action.Manage, Subject.COMPLIANCE_CHECK);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -816,6 +830,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Read, Subject.ROLE);
             can(Action.Read, Subject.SETTINGS);
+            can(Action.Read, Subject.CERTIFICATION);
+            can(Action.Read, Subject.COMPLIANCE_CHECK);
 
             cannot(Action.Create, 'all');
             cannot(Action.Update, 'all');
