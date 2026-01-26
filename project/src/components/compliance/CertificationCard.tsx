@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Calendar, Award, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Award, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -105,7 +105,7 @@ export function CertificationCard({ certification }: CertificationCardProps) {
       </CardContent>
       <CardFooter className="pt-0">
         <Button asChild variant="outline" className="w-full">
-          <Link to="/_authenticated/compliance/certifications/$certId" params={{ certId: certification.id }}>
+          <Link to="/compliance/certifications/$certId" params={{ certId: certification.id }}>
             Voir détails
           </Link>
         </Button>

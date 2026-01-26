@@ -56,8 +56,9 @@ export function DatePicker({
 
     const dateStr = format(date, 'yyyy-MM-dd');
 
-    // Only allow selection of available dates
-    if (availableDatesSet.has(dateStr)) {
+    // If no availableDates restriction, allow any date
+    // Otherwise only allow selection of available dates
+    if (availableDates.length === 0 || availableDatesSet.has(dateStr)) {
       setSelectedDate(date);
       onChange(dateStr);
       setIsOpen(false);

@@ -36,15 +36,15 @@ function CertificationDetailPage() {
   const certificationChecks = checks?.filter(check => check.certification_id === certId) || [];
 
   if (isLoadingCert) {
-    return <div className="container mx-auto py-6">Chargement...</div>;
+    return <div className="container mx-auto px-4 py-6">Chargement...</div>;
   }
 
   if (!certification) {
     return (
-      <div className="container mx-auto py-6 text-center">
+      <div className="container mx-auto px-4 py-6 text-center">
         <h2 className="text-xl font-bold">Certification introuvable</h2>
         <Button asChild className="mt-4">
-          <Link to="/_authenticated/compliance/certifications">Retour à la liste</Link>
+          <Link to="/compliance/certifications">Retour à la liste</Link>
         </Button>
       </div>
     );
@@ -65,12 +65,12 @@ function CertificationDetailPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-8">
+    <div className="container mx-auto px-4 py-6 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link to="/_authenticated/compliance/certifications">
+            <Link to="/compliance/certifications">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>

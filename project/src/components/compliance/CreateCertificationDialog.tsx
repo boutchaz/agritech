@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +28,13 @@ import { useCreateCertification } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { CertificationType, CertificationStatus } from '@/lib/api/compliance';
 
+function generateCertificationNumber(type?: CertificationType): string {
+  const year = new Date().getFullYear();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const prefix = type ? type.substring(0, 3).toUpperCase() : 'CERT';
+  return `${prefix}-${year}-${random}`;
+}
+
 const formSchema = z.object({
   certification_type: z.nativeEnum(CertificationType),
   certification_number: z.string().min(1, "Le numéro de certification est requis"),
@@ -47,9 +54,27 @@ export function CreateCertificationDialog() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      certification_number: generateCertificationNumber(),
       status: CertificationStatus.ACTIVE,
     },
   });
+
+  const selectedType = form.watch('certification_type');
+
+  useEffect(() => {
+    if (selectedType && !form.getValues('certification_number')?.includes(selectedType.substring(0, 3).toUpperCase())) {
+      form.setValue('certification_number', generateCertificationNumber(selectedType));
+    }
+  }, [selectedType, form]);
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        certification_number: generateCertificationNumber(),
+        status: CertificationStatus.ACTIVE,
+      });
+    }
+  }, [open, form]);
 
   function onSubmit(values: FormValues) {
     if (!currentOrganization) return;
@@ -126,7 +151,18 @@ export function CreateCertificationDialog() {
                 error={form.formState.errors.certification_number?.message}
                 required
               >
-                <Input placeholder="ex: CERT-2024-001" {...field} />
+                <div className="flex gap-2">
+                  <Input placeholder="ex: CERT-2024-001" {...field} className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => form.setValue('certification_number', generateCertificationNumber(selectedType))}
+                    title="Générer un nouveau numéro"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </FormField>
             )}
           />
