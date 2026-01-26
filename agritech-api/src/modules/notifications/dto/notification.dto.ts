@@ -11,6 +11,8 @@ export enum NotificationType {
   HARVEST_COMPLETED = 'harvest_completed',
   LOW_INVENTORY = 'low_inventory',
   PAYMENT_PROCESSED = 'payment_processed',
+  AUDIT_REMINDER = 'audit_reminder',
+  CERTIFICATION_EXPIRY = 'certification_expiry',
   GENERAL = 'general',
 }
 

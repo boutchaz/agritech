@@ -125,6 +125,11 @@ export class ComplianceService {
     this.logger.log(
       `Certification created: ${data.id} for org ${organizationId}`,
     );
+
+    if (data.audit_schedule?.next_audit_date) {
+      await this.scheduleAuditReminders(data);
+    }
+
     return data;
   }
 
@@ -176,6 +181,11 @@ export class ComplianceService {
     }
 
     this.logger.log(`Certification updated: ${certificationId}`);
+
+    if (dto.audit_schedule?.next_audit_date) {
+      await this.scheduleAuditReminders(data);
+    }
+
     return data;
   }
 
@@ -569,6 +579,80 @@ export class ComplianceService {
       throw new InternalServerErrorException(
         'Failed to fetch dashboard statistics',
       );
+    }
+  }
+
+  // ============================================================================
+  // AUDIT REMINDER SCHEDULING
+  // ============================================================================
+
+  async scheduleAuditReminders(certification: {
+    id: string;
+    organization_id: string;
+    audit_schedule?: { next_audit_date?: string };
+  }) {
+    const supabase = this.databaseService.getAdminClient();
+    const auditDateStr = certification.audit_schedule?.next_audit_date;
+
+    if (!auditDateStr) {
+      return;
+    }
+
+    const auditDate = new Date(auditDateStr);
+    const now = new Date();
+
+    const { error: deleteError } = await supabase
+      .from('audit_reminders')
+      .delete()
+      .eq('certification_id', certification.id)
+      .is('sent_at', null);
+
+    if (deleteError) {
+      this.logger.error(`Failed to delete old reminders: ${deleteError.message}`);
+    }
+
+    const reminderConfigs = [
+      { type: '30_days', daysBefore: 30 },
+      { type: '14_days', daysBefore: 14 },
+      { type: '7_days', daysBefore: 7 },
+      { type: '1_day', daysBefore: 1 },
+    ];
+
+    const remindersToInsert: Array<{
+      certification_id: string;
+      organization_id: string;
+      reminder_type: string;
+      scheduled_for: string;
+    }> = [];
+
+    for (const config of reminderConfigs) {
+      const reminderDate = new Date(auditDate);
+      reminderDate.setDate(reminderDate.getDate() - config.daysBefore);
+
+      if (reminderDate > now) {
+        remindersToInsert.push({
+          certification_id: certification.id,
+          organization_id: certification.organization_id,
+          reminder_type: config.type,
+          scheduled_for: reminderDate.toISOString(),
+        });
+      }
+    }
+
+    if (remindersToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('audit_reminders')
+        .upsert(remindersToInsert, {
+          onConflict: 'certification_id,reminder_type',
+        });
+
+      if (insertError) {
+        this.logger.error(`Failed to schedule audit reminders: ${insertError.message}`);
+      } else {
+        this.logger.log(
+          `Scheduled ${remindersToInsert.length} audit reminders for certification ${certification.id}`,
+        );
+      }
     }
   }
 }

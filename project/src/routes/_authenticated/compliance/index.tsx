@@ -13,9 +13,11 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ComplianceChecksList } from '@/components/compliance/ComplianceChecksList';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
+import { ComplianceChecklistDialog } from '@/components/compliance/ComplianceChecklistDialog';
 
 import { useComplianceDashboard } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
+import { CertificationType } from '@/lib/api/compliance';
 
 export const Route = createFileRoute('/_authenticated/compliance/')({
   component: ComplianceDashboardPage,
@@ -157,9 +159,9 @@ function ComplianceDashboardPage() {
                 <span>Plan de gestion des déchets</span>
               </div>
             </div>
-            <Button className="w-full mt-4" variant="secondary">
-              Voir la checklist complète
-            </Button>
+            <div className="mt-4">
+              <ComplianceChecklistDialog defaultCertificationType={CertificationType.GLOBALGAP} />
+            </div>
           </CardContent>
         </Card>
 

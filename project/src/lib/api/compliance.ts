@@ -57,6 +57,9 @@ export interface DocumentDto {
   url: string;
   type: string;
   uploaded_at: string;
+  name?: string;
+  size?: number;
+  mime_type?: string;
 }
 
 export interface AuditScheduleDto {

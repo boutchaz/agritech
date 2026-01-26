@@ -17,7 +17,7 @@ import { useCertifications } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { CertificationType, CertificationStatus } from '@/lib/api/compliance';
 
-export const Route = createFileRoute('/_authenticated/compliance/certifications')({
+export const Route = createFileRoute('/_authenticated/compliance/certifications/')({
   component: CertificationsPage,
 });
 

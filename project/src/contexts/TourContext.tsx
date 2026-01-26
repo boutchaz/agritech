@@ -982,23 +982,40 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     }
 
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      const { currentTour, completedTours } = tourState;
+      // Use functional state update to get the latest state
+      setTourState(prev => {
+        const { currentTour, completedTours, dismissedTours } = prev;
 
-      if (currentTour && status === STATUS.FINISHED && !completedTours.includes(currentTour)) {
-        const newCompletedTours = [...completedTours, currentTour];
-        setTourState(prev => ({
+        // If tour was already dismissed (e.g., via "Don't show again"), just end the tour
+        if (!currentTour || dismissedTours.includes(currentTour)) {
+          endTour();
+          return prev;
+        }
+
+        // If tour was finished (not skipped) and not already completed, mark as completed
+        if (status === STATUS.FINISHED && !completedTours.includes(currentTour)) {
+          const newCompletedTours = [...completedTours, currentTour];
+          saveCompletedTours(newCompletedTours);
+          return {
+            ...prev,
+            completedTours: newCompletedTours,
+            currentTour: null,
+            isRunning: false,
+            stepIndex: 0,
+          };
+        }
+
+        // Otherwise just end the tour
+        endTour();
+        return {
           ...prev,
-          completedTours: newCompletedTours,
           currentTour: null,
           isRunning: false,
           stepIndex: 0,
-        }));
-        saveCompletedTours(newCompletedTours);
-      } else {
-        endTour();
-      }
+        };
+      });
     }
-  }, [tourState, endTour]);
+  }, [endTour]);
 
   const isTourCompleted = useCallback((tourId: TourId) => {
     return tourState.completedTours.includes(tourId);

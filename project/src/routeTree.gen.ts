@@ -24,7 +24,6 @@ import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_auth
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
 import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
-import { Route as AuthenticatedComplianceCertificationsRouteImport } from './routes/_authenticated/compliance/certifications'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
@@ -51,6 +50,7 @@ import { Route as AuthenticatedaccountingAccountingRouteImport } from './routes/
 import { Route as publicOnboardingSelectTrialRouteImport } from './routes/(public)/onboarding/select-trial'
 import { Route as publicBlogSlugRouteImport } from './routes/(public)/blog/$slug'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
+import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
 import { Route as AuthenticatedworkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/tasks/index'
 import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes/_authenticated/(settings)/settings.index'
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
@@ -195,12 +195,6 @@ const AuthenticatedPestAlertsReportIdRoute =
   AuthenticatedPestAlertsReportIdRouteImport.update({
     id: '/pest-alerts/$reportId',
     path: '/pest-alerts/$reportId',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedComplianceCertificationsRoute =
-  AuthenticatedComplianceCertificationsRouteImport.update({
-    id: '/compliance/certifications',
-    path: '/compliance/certifications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkersRoute =
@@ -356,6 +350,12 @@ const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedComplianceCertificationsIndexRoute =
+  AuthenticatedComplianceCertificationsIndexRouteImport.update({
+    id: '/compliance/certifications/',
+    path: '/compliance/certifications/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceTasksIndexRoute =
   AuthenticatedworkforceTasksIndexRouteImport.update({
     id: '/',
@@ -382,9 +382,9 @@ const AuthenticatedaccountingAccountingIndexRoute =
   } as any)
 const AuthenticatedComplianceCertificationsCertIdRoute =
   AuthenticatedComplianceCertificationsCertIdRouteImport.update({
-    id: '/$certId',
-    path: '/$certId',
-    getParentRoute: () => AuthenticatedComplianceCertificationsRoute,
+    id: '/compliance/certifications/$certId',
+    path: '/compliance/certifications/$certId',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
   AuthenticatedworkforceWorkforceEmployeesRouteImport.update({
@@ -801,7 +801,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
-  '/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
@@ -863,6 +862,7 @@ export interface FileRoutesByFullPath {
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
+  '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -908,7 +908,6 @@ export interface FileRoutesByTo {
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
-  '/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
@@ -969,6 +968,7 @@ export interface FileRoutesByTo {
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
   '/settings': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
+  '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1020,7 +1020,6 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
-  '/_authenticated/compliance/certifications': typeof AuthenticatedComplianceCertificationsRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
@@ -1082,6 +1081,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/_authenticated/(settings)/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
+  '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/_authenticated/(production)/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1133,7 +1133,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/workers'
-    | '/compliance/certifications'
     | '/pest-alerts/$reportId'
     | '/blog/'
     | '/onboarding/'
@@ -1195,6 +1194,7 @@ export interface FileRouteTypes {
     | '/stock/'
     | '/settings/'
     | '/tasks/'
+    | '/compliance/certifications/'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1240,7 +1240,6 @@ export interface FileRouteTypes {
     | '/parcels'
     | '/quality-control'
     | '/workers'
-    | '/compliance/certifications'
     | '/pest-alerts/$reportId'
     | '/blog'
     | '/onboarding'
@@ -1301,6 +1300,7 @@ export interface FileRouteTypes {
     | '/stock'
     | '/settings'
     | '/tasks'
+    | '/compliance/certifications'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1351,7 +1351,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
-    | '/_authenticated/compliance/certifications'
     | '/_authenticated/pest-alerts/$reportId'
     | '/(public)/blog/'
     | '/(public)/onboarding/'
@@ -1413,6 +1412,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/'
     | '/_authenticated/(settings)/settings/'
     | '/_authenticated/(workforce)/tasks/'
+    | '/_authenticated/compliance/certifications/'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
     | '/_authenticated/(production)/parcels/$parcelId/analyse'
@@ -1550,13 +1550,6 @@ declare module '@tanstack/react-router' {
       path: '/pest-alerts/$reportId'
       fullPath: '/pest-alerts/$reportId'
       preLoaderRoute: typeof AuthenticatedPestAlertsReportIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/compliance/certifications': {
-      id: '/_authenticated/compliance/certifications'
-      path: '/compliance/certifications'
-      fullPath: '/compliance/certifications'
-      preLoaderRoute: typeof AuthenticatedComplianceCertificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workers': {
@@ -1741,6 +1734,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/compliance/certifications/': {
+      id: '/_authenticated/compliance/certifications/'
+      path: '/compliance/certifications'
+      fullPath: '/compliance/certifications/'
+      preLoaderRoute: typeof AuthenticatedComplianceCertificationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/tasks/': {
       id: '/_authenticated/(workforce)/tasks/'
       path: '/'
@@ -1771,10 +1771,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/compliance/certifications/$certId': {
       id: '/_authenticated/compliance/certifications/$certId'
-      path: '/$certId'
+      path: '/compliance/certifications/$certId'
       fullPath: '/compliance/certifications/$certId'
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
-      parentRoute: typeof AuthenticatedComplianceCertificationsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/employees': {
       id: '/_authenticated/(workforce)/workforce/employees'
@@ -2493,21 +2493,6 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
     AuthenticatedworkforceWorkersRouteChildren,
   )
 
-interface AuthenticatedComplianceCertificationsRouteChildren {
-  AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
-}
-
-const AuthenticatedComplianceCertificationsRouteChildren: AuthenticatedComplianceCertificationsRouteChildren =
-  {
-    AuthenticatedComplianceCertificationsCertIdRoute:
-      AuthenticatedComplianceCertificationsCertIdRoute,
-  }
-
-const AuthenticatedComplianceCertificationsRouteWithChildren =
-  AuthenticatedComplianceCertificationsRoute._addFileChildren(
-    AuthenticatedComplianceCertificationsRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
@@ -2532,7 +2517,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
   AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRouteWithChildren
-  AuthenticatedComplianceCertificationsRoute: typeof AuthenticatedComplianceCertificationsRouteWithChildren
   AuthenticatedPestAlertsReportIdRoute: typeof AuthenticatedPestAlertsReportIdRoute
   AuthenticatedComplianceIndexRoute: typeof AuthenticatedComplianceIndexRoute
   AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
@@ -2545,6 +2529,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
+  AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
@@ -2586,8 +2572,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceTasksRouteWithChildren,
   AuthenticatedworkforceWorkersRoute:
     AuthenticatedworkforceWorkersRouteWithChildren,
-  AuthenticatedComplianceCertificationsRoute:
-    AuthenticatedComplianceCertificationsRouteWithChildren,
   AuthenticatedPestAlertsReportIdRoute: AuthenticatedPestAlertsReportIdRoute,
   AuthenticatedComplianceIndexRoute: AuthenticatedComplianceIndexRoute,
   AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
@@ -2609,6 +2593,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceDayLaborersRoute,
   AuthenticatedworkforceWorkforceEmployeesRoute:
     AuthenticatedworkforceWorkforceEmployeesRoute,
+  AuthenticatedComplianceCertificationsCertIdRoute:
+    AuthenticatedComplianceCertificationsCertIdRoute,
+  AuthenticatedComplianceCertificationsIndexRoute:
+    AuthenticatedComplianceCertificationsIndexRoute,
   AuthenticatedworkforceWorkforceTasksCalendarRoute:
     AuthenticatedworkforceWorkforceTasksCalendarRoute,
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute:
