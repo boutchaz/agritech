@@ -74,12 +74,12 @@ export default function LoginScreen() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      console.log('[Login] Attempting sign in...');
-      await signIn(email.trim(), password.trim());
-      console.log('[Login] Sign in successful, navigating...');
-      router.replace('/(tabs)');
+     setIsSubmitting(true);
+     try {
+       console.log('[Login] Attempting sign in...');
+       await signIn(email.trim().toLowerCase(), password.trim());
+       console.log('[Login] Sign in successful, navigating...');
+       router.replace('/(tabs)');
     } catch (error) {
       console.error('[Login] Sign in failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed';

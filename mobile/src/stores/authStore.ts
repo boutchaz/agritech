@@ -84,13 +84,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isAuthenticated: false,
   biometricEnabled: false,
 
-  signIn: async (email: string, password: string) => {
-    set({ isLoading: true });
-    try {
-      // Track login attempt
-      await trackLoginAttempt('email');
+   signIn: async (email: string, password: string) => {
+     set({ isLoading: true });
+     try {
+       // Track login attempt
+       await trackLoginAttempt('email');
 
-      const response = await authApi.login(email, password);
+       const response = await authApi.login(email.toLowerCase(), password);
 
       await api.setTokens(response.access_token, response.refresh_token);
 
