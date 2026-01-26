@@ -48,7 +48,7 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.toLowerCase(), password }),
   });
 
   if (!response.ok) {
