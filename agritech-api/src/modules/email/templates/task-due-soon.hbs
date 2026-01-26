@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Due Soon - AgriTech</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #16a34a; }
+    .content { background-color: #fff; padding: 20px; border-radius: 6px; }
+    .task-box { background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; }
+    .task-title { font-size: 18px; font-weight: bold; color: #15803d; margin: 0 0 10px 0; }
+    .task-description { color: #555; margin: 10px 0; font-size: 14px; }
+    .task-meta { color: #666; font-size: 13px; margin: 10px 0; }
+    .button { display: inline-block; padding: 12px 30px; background-color: #16a34a; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+    .button:hover { background-color: #15803d; }
+    .info-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; padding: 15px; margin: 20px 0; }
+    .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }
+    .divider { margin: 30px 0; border: none; border-top: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">AgriTech</div>
+    </div>
+    <div class="content">
+      <h2>⏰ Task Due Tomorrow</h2>
+      <p>Hi <strong>{{firstName}}</strong>,</p>
+      
+      <p>This is a friendly reminder that the following task is due <strong>tomorrow</strong>:</p>
+      
+      <div class="task-box">
+        <div class="task-title">{{taskTitle}}</div>
+        {{#if taskDescription}}
+        <div class="task-description">{{taskDescription}}</div>
+        {{/if}}
+        <div class="task-meta">
+          <strong>Due Date:</strong> {{dueDate}}
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <p>Please make sure to complete this task on time to avoid delays. Click the button below to view the task details and mark it as complete.</p>
+      </div>
+      
+      <p style="text-align: center;">
+        <a href="{{taskUrl}}" class="button">View Task Details</a>
+      </p>
+      
+      <hr class="divider">
+      
+      <p><em>You're receiving this reminder because you have task reminders enabled in your notification preferences.</em></p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2025 AgriTech. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

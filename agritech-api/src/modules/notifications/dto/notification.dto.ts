@@ -4,6 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export enum NotificationType {
   TASK_ASSIGNED = 'task_assigned',
   TASK_STATUS_CHANGED = 'task_status_changed',
+  TASK_REMINDER = 'task_reminder',
   ORDER_STATUS_CHANGED = 'order_status_changed',
   QUOTE_RECEIVED = 'quote_received',
   QUOTE_RESPONDED = 'quote_responded',

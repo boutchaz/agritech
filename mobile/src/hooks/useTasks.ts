@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi, filesApi, type Task } from '@/lib/api';
+import { scheduleTaskReminder, cancelTaskReminders } from '@/lib/notifications';
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -66,17 +67,53 @@ export function useUploadTaskPhoto() {
   });
 }
 
+export function useCreateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: Partial<Task>) => tasksApi.createTask(data),
+    onSuccess: (newTask) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.myTasks() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.statistics() });
+      scheduleTaskReminder(newTask);
+    },
+  });
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: Partial<Task> }) =>
+      tasksApi.updateTask(taskId, data),
+    onSuccess: (updatedTask, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.myTasks() });
+      queryClient.invalidateQueries({ queryKey: taskKeys.statistics() });
+      
+      cancelTaskReminders(taskId);
+      scheduleTaskReminder(updatedTask);
+    },
+  });
+}
+
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: Task['status'] }) =>
       tasksApi.updateTaskStatus(taskId, status),
-    onSuccess: (_, { taskId }) => {
+    onSuccess: (updatedTask, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.myTasks() });
       queryClient.invalidateQueries({ queryKey: taskKeys.statistics() });
+
+      if (updatedTask.status === 'completed' || updatedTask.status === 'cancelled') {
+        cancelTaskReminders(taskId);
+      }
     },
   });
 }
@@ -97,6 +134,7 @@ export function useCompleteTask() {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.myTasks() });
       queryClient.invalidateQueries({ queryKey: taskKeys.statistics() });
+      cancelTaskReminders(taskId);
     },
   });
 }

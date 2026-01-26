@@ -291,7 +291,9 @@
     "qualityControl": "Quality Control",
     "campaigns": "Campaigns",
     "cropCycles": "Crop Cycles",
-    "chat": "AI Assistant"
+    "chat": "AI Assistant",
+    "compliance": "Compliance",
+    "certifications": "Certifications"
   },
   "stock": {
     "title": "Stock Management",

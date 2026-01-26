@@ -80,6 +80,7 @@ import { EmailModule } from './modules/email/email.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PestAlertsModule } from './modules/pest-alerts/pest-alerts.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
+import { RemindersModule } from './modules/reminders/reminders.module';
 
 @Module({
   imports: [
@@ -89,11 +90,11 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // Rate limiting - 100 requests per minute per IP
+    // Rate limiting - 300 requests per minute per IP
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // 1 minute in milliseconds
-        limit: 100,
+        limit: 300,
       },
     ]),
 
@@ -177,6 +178,7 @@ import { ComplianceModule } from './modules/compliance/compliance.module';
     NotificationsModule,
     PestAlertsModule,
     ComplianceModule,
+    RemindersModule,
   ],
   controllers: [AppController],
   providers: [

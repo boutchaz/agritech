@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/constants/theme';
+import { registerForPushNotifications } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -66,6 +68,21 @@ export default function RootLayout() {
     prepare();
     
     return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    registerForPushNotifications();
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const taskId = response.notification.request.content.data.taskId;
+      if (taskId) {
+        router.push(`/task/${taskId}`);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   if (!appIsReady) {

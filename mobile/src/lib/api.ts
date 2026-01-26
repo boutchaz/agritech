@@ -366,6 +366,11 @@ export const tasksApi = {
     overdue: number;
   }>('/tasks/statistics'),
 
+  createTask: (data: Partial<Task>) => api.post<Task>('/tasks', data),
+
+  updateTask: (taskId: string, data: Partial<Task>) =>
+    api.patch<Task>(`/tasks/${taskId}`, data),
+
   updateTaskStatus: (taskId: string, status: Task['status']) =>
     api.patch<Task>(`/tasks/${taskId}`, { status }),
 

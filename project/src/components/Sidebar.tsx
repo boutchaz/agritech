@@ -26,6 +26,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Bot,
+  ShieldCheck,
 } from 'lucide-react';
 import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -101,6 +102,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showProduction, setShowProduction] = useState(() =>
     getInitialSectionState(['/campaigns', '/crop-cycles', '/harvests', '/reception-batches', '/quality-control'])
   );
+  const [showCompliance, setShowCompliance] = useState(() =>
+    getInitialSectionState(['/compliance'])
+  );
   const [showSalesPurchasing, setShowSalesPurchasing] = useState(() =>
     getInitialSectionState(['/accounting/quotes', '/accounting/sales-orders', '/accounting/purchase-orders'])
   );
@@ -123,6 +127,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Production section
     if (['/campaigns', '/crop-cycles', '/harvests', '/reception-batches', '/quality-control'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowProduction(true);
+    }
+    // Compliance section
+    if (currentPath.startsWith('/compliance')) {
+      setShowCompliance(true);
     }
     // Sales & Purchasing section
     if (['/accounting/quotes', '/accounting/sales-orders', '/accounting/purchase-orders'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
@@ -602,6 +610,59 @@ const Sidebar: React.FC<SidebarProps> = ({
                           onClick={(e) => handleNavigation('/quality-control', e)}
                         >
                           {renderText(t('nav.qualityControl'))}
+                        </Button>
+                      </ProtectedNavItem>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* ========== COMPLIANCE SECTION ========== */}
+            <Separator className="my-3" />
+            <div className="space-y-1" data-tour="nav-compliance">
+              {isCollapsed ? (
+                <div className="hidden lg:block">
+                  <CollapsedSectionPopover icon={ShieldCheck} title={t('nav.compliance')}>
+                    <ProtectedNavItem action="read" subject="Certification">
+                      <PopoverNavItem path="/compliance" label={t('nav.overview')} isActive={currentPath === '/compliance'} />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Certification">
+                      <PopoverNavItem path="/compliance/certifications" label={t('nav.certifications')} isActive={currentPath === '/compliance/certifications'} />
+                    </ProtectedNavItem>
+                  </CollapsedSectionPopover>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="ghost"
+                    className={getSectionHeaderClassName()}
+                    onClick={() => setShowCompliance(!showCompliance)}
+                  >
+                    <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                      {renderIcon(ShieldCheck)}
+                      {renderSectionTitle(t('nav.compliance'))}
+                    </div>
+                    {renderChevron(showCompliance)}
+                  </Button>
+                  {showCompliance && (
+                    <>
+                      <ProtectedNavItem action="read" subject="Certification">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/compliance')}
+                          onClick={(e) => handleNavigation('/compliance', e)}
+                        >
+                          {renderText(t('nav.overview'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Certification">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/compliance/certifications')}
+                          onClick={(e) => handleNavigation('/compliance/certifications', e)}
+                        >
+                          {renderText(t('nav.certifications'))}
                         </Button>
                       </ProtectedNavItem>
                     </>

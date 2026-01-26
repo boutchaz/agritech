@@ -25,6 +25,8 @@ export type Subject =
   | 'WorkUnit' | 'PieceWork'
   // Harvest & Reception subjects
   | 'Harvest' | 'ReceptionBatch' | 'QualityControl'
+  // Compliance subjects
+  | 'Certification' | 'ComplianceCheck'
   | 'all';
 
 // Define ability type
@@ -122,6 +124,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('manage', 'Campaign');
     can('manage', 'CropCycle');
     can('manage', 'BiologicalAsset');
+
+    // Compliance
+    can('manage', 'Certification');
+    can('manage', 'ComplianceCheck');
   }
 
   // Farm Manager - Manage assigned farms
@@ -178,6 +184,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'BiologicalAsset');
     can('create', 'BiologicalAsset');
     can('update', 'BiologicalAsset');
+
+    // Compliance
+    can('manage', 'Certification');
+    can('manage', 'ComplianceCheck');
   }
 
   // Farm Worker - Basic operations (no accounting/sales access)
@@ -277,6 +287,10 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Campaign');
     can('read', 'CropCycle');
     can('read', 'BiologicalAsset');
+
+    // Compliance
+    can('read', 'Certification');
+    can('read', 'ComplianceCheck');
   }
 
   // ============================================

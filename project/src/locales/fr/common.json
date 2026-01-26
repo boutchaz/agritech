@@ -291,7 +291,9 @@
     "qualityControl": "Contrôle Qualité",
     "campaigns": "Campagnes",
     "cropCycles": "Cycles de Culture",
-    "chat": "Assistant IA"
+    "chat": "Assistant IA",
+    "compliance": "Conformité",
+    "certifications": "Certifications"
   },
   "stock": {
     "title": "Gestion des Stocks",
