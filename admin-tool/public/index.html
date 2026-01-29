@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriTech Pricing Admin</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .env-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .toggle-btn {
+      padding: 8px 16px;
+      border: 2px solid #e5e7eb;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+    }
+
+    .plan-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .plan-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+    }
+
+    .plan-header.professional {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .plan-header.enterprise {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .plan-header h2 {
+      font-size: 20px;
+      margin-bottom: 4px;
+    }
+
+    .plan-header p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .plan-price {
+      font-size: 36px;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+
+    .plan-body {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .features-list {
+      margin-top: 16px;
+    }
+
+    .features-list label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .features-list textarea {
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .actions {
+      padding: 20px;
+      background: #f9fafb;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .sync-section {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-top: 24px;
+    }
+
+    .sync-section h2 {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+
+    .sync-info {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      background: #10b981;
+    }
+
+    .toast.error {
+      background: #ef4444;
+    }
+
+    .loading {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔧 AgriTech Pricing Admin</h1>
+      <p>Manage plan pricing and sync to Polar.sh</p>
+      <div class="env-toggle">
+        <button class="toggle-btn active" data-env="sandbox">Sandbox</button>
+        <button class="toggle-btn" data-env="production">Production</button>
+      </div>
+    </div>
+
+    <div class="plans-grid" id="plansGrid">
+      <!-- Plans will be rendered here -->
+    </div>
+
+    <div class="sync-section">
+      <h2>Sync to Polar.sh</h2>
+      <div class="sync-info">
+        <span id="lastUpdated">Last updated: Never</span>
+        <span id="lastSynced">Last synced: Never</span>
+      </div>
+      <button class="btn btn-primary" id="syncBtn">Sync to Polar.sh</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let config = null;
+    let currentEnv = 'sandbox';
+
+    // Fetch config
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        config = await response.json();
+        renderPlans();
+        updateSyncInfo();
+      } catch (error) {
+        showToast('Failed to load configuration', 'error');
+      }
+    }
+
+    // Render plans
+    function renderPlans() {
+      const grid = document.getElementById('plansGrid');
+      grid.innerHTML = '';
+
+      Object.entries(config.plans).forEach(([planId, plan]) => {
+        const card = document.createElement('div');
+        card.className = 'plan-card';
+
+        const headerClass = planId === 'professional' ? 'professional' :
+                          planId === 'enterprise' ? 'enterprise' : '';
+
+        card.innerHTML = `
+          <div class="plan-header ${headerClass}">
+            <h2>${plan.name}</h2>
+            <p>${plan.description}</p>
+            <div class="plan-price">${plan.price}</div>
+          </div>
+          <div class="plan-body">
+            <div class="form-group">
+              <label>Price Monthly ($)</label>
+              <input type="number" value="${plan.priceMonthly}" data-plan="${planId}" data-field="priceMonthly">
+            </div>
+            <div class="form-group">
+              <label>Price Display</label>
+              <input type="text" value="${plan.price}" data-plan="${planId}" data-field="price">
+            </div>
+            <div class="form-group">
+              <label>Polar Product ID</label>
+              <input type="text" value="${plan.polarProductId || ''}" placeholder="e.g. 3b03769f-9a47-47bc-8f07-bd1f3a580dee" data-plan="${planId}" data-field="polarProductId">
+            </div>
+            <div class="form-group">
+              <label>Polar Checkout URL</label>
+              <input type="text" value="${plan.polarCheckoutUrl || ''}" placeholder="https://sandbox-api.polar.sh/..." data-plan="${planId}" data-field="polarCheckoutUrl">
+            </div>
+            <div class="features-list">
+              <label>Features (one per line)</label>
+              <textarea data-plan="${planId}" data-field="features">${Array.isArray(plan.features) ? plan.features.join('\n') : ''}</textarea>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="savePlan('${planId}')">Save</button>
+            <button class="btn btn-secondary" onclick="resetPlan('${planId}')">Reset</button>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Save plan
+    async function savePlan(planId) {
+      const card = document.querySelector(`[data-plan="${planId}"]`).closest('.plan-card');
+      const inputs = card.querySelectorAll('[data-plan][data-field]');
+
+      const updatedPlan = { ...config.plans[planId] };
+
+      inputs.forEach(input => {
+        const field = input.dataset.field;
+        let value = input.value;
+
+        if (field === 'priceMonthly' || field === 'priceAmount') {
+          value = parseFloat(value) || 0;
+        } else if (field === 'features') {
+          value = value.split('\n').filter(f => f.trim());
+        }
+
+        updatedPlan[field] = value;
+      });
+
+      config.plans[planId] = updatedPlan;
+
+      try {
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config)
+        });
+
+        if (response.ok) {
+          showToast('Plan saved successfully', 'success');
+          config = await response.json();
+        } else {
+          showToast('Failed to save plan', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save plan', 'error');
+      }
+    }
+
+    // Reset plan
+    function resetPlan(planId) {
+      loadConfig();
+      showToast('Plan reset to last saved state', 'success');
+    }
+
+    // Update sync info
+    function updateSyncInfo() {
+      document.getElementById('lastUpdated').textContent =
+        `Last updated: ${config.lastUpdated ? new Date(config.lastUpdated).toLocaleString() : 'Never'}`;
+      document.getElementById('lastSynced').textContent =
+        `Last synced: ${config.lastSynced ? new Date(config.lastSynced).toLocaleString() : 'Never'}`;
+      document.getElementById('lastSynced').textContent +=
+        ` (${config.environment || 'sandbox'})`;
+    }
+
+    // Sync to Polar
+    document.getElementById('syncBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('syncBtn');
+      btn.classList.add('loading');
+      btn.textContent = 'Syncing...';
+
+      try {
+        const response = await fetch('/api/sync-polar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ environment: currentEnv })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showToast(result.message || 'Synced successfully', 'success');
+          config = result.config;
+          updateSyncInfo();
+        } else {
+          showToast('Failed to sync', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to sync', 'error');
+      } finally {
+        btn.classList.remove('loading');
+        btn.textContent = 'Sync to Polar.sh';
+      }
+    });
+
+    // Environment toggle
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentEnv = btn.dataset.env;
+      });
+    });
+
+    // Toast notification
+    function showToast(message, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Load on start
+    loadConfig();
+  </script>
+</body>
+</html>
