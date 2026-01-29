@@ -13743,3 +13743,2214 @@ ALTER PUBLICATION supabase_realtime ADD TABLE ai_report_jobs;
 -- =====================================================
 -- END OF MERGED MIGRATIONS
 -- =====================================================
+
+-- =====================================================
+-- Migration: 20260127000000_add_module_addons.sql
+-- =====================================================
+-- Add Module Addons System
+-- Migration Date: 2026-01-27
+-- Description: Adds support for organization addons with module purchase/management
+
+-- Add addon columns to modules table
+ALTER TABLE modules
+ADD COLUMN IF NOT EXISTS is_addon_eligible BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS addon_price_monthly NUMERIC(10, 2),
+ADD COLUMN IF NOT EXISTS addon_product_id VARCHAR(100);
+
+COMMENT ON COLUMN modules.is_addon_eligible IS 'Whether this module can be purchased as an addon';
+COMMENT ON COLUMN modules.addon_price_monthly IS 'Monthly price for this module when purchased as an addon';
+COMMENT ON COLUMN modules.addon_product_id IS 'Polar product ID for addon subscription';
+
+-- Create organization_addons table
+CREATE TABLE IF NOT EXISTS organization_addons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  polar_subscription_id VARCHAR(100),
+  polar_customer_id VARCHAR(100),
+  status VARCHAR(50) NOT NULL DEFAULT 'active', -- active, trialing, canceled, past_due
+  price_monthly NUMERIC(10, 2),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  canceled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, module_id)
+);
+
+COMMENT ON TABLE organization_addons IS 'Organization addon subscriptions for individual modules';
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_organization_addons_org ON organization_addons(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_addons_module ON organization_addons(module_id);
+CREATE INDEX IF NOT EXISTS idx_organization_addons_status ON organization_addons(status);
+CREATE INDEX IF NOT EXISTS idx_organization_addons_polar_subscription ON organization_addons(polar_subscription_id);
+
+-- Add addon slot columns to subscriptions table
+ALTER TABLE subscriptions
+ADD COLUMN IF NOT EXISTS included_addon_slots INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS additional_addon_slots INTEGER DEFAULT 0;
+
+COMMENT ON COLUMN subscriptions.included_addon_slots IS 'Number of addon slots included in the base subscription plan';
+COMMENT ON COLUMN subscriptions.additional_addon_slots IS 'Number of additional addon slots purchased separately';
+
+-- Enable Row Level Security
+ALTER TABLE organization_addons ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for organization_addons
+-- Users can read addons for their organizations
+CREATE POLICY "org_read_organization_addons"
+ON organization_addons FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+-- Admins can insert addons for their organizations
+CREATE POLICY "org_insert_organization_addons"
+ON organization_addons FOR INSERT
+WITH CHECK (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+      AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
+  )
+);
+
+-- Admins can update addons for their organizations
+CREATE POLICY "org_update_organization_addons"
+ON organization_addons FOR UPDATE
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+      AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
+  )
+);
+
+-- Admins can delete addons for their organizations
+CREATE POLICY "org_delete_organization_addons"
+ON organization_addons FOR DELETE
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+      AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
+  )
+);
+
+-- Add updated_at trigger
+CREATE TRIGGER update_organization_addons_updated_at
+BEFORE UPDATE ON organization_addons
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- Migration: 20260127100000_module_based_subscriptions.sql
+-- =====================================================
+-- Module-Based Subscriptions with Pricing
+-- Migration Date: 2026-01-27
+-- Description: Adds module pricing and subscription pricing configuration
+
+-- Create module_prices table for individual module pricing
+CREATE TABLE IF NOT EXISTS module_prices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  plan_type VARCHAR(50), -- null = all plans, 'essential', 'professional', 'enterprise'
+  price_monthly NUMERIC(10, 2) NOT NULL DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  valid_from TIMESTAMPTZ DEFAULT NOW(),
+  valid_until TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE module_prices IS 'Pricing for modules per plan type';
+
+-- Create unique constraint for active pricing
+CREATE UNIQUE INDEX IF NOT EXISTS idx_module_prices_active
+ON module_prices(module_id, plan_type)
+WHERE is_active = true AND (valid_until IS NULL OR valid_until > NOW());
+
+-- Create subscription_pricing table for global pricing configuration
+CREATE TABLE IF NOT EXISTS subscription_pricing (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  config_key VARCHAR(100) NOT NULL UNIQUE,
+  value NUMERIC(10, 2) NOT NULL,
+  description TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE subscription_pricing IS 'Global subscription pricing configuration';
+
+-- Insert default pricing values
+INSERT INTO subscription_pricing (config_key, value, description) VALUES
+  ('base_price_monthly', 15, 'Base monthly price for subscription'),
+  ('trial_days', 0, 'Number of trial days (stored as numeric)'),
+  ('addon_slot_price', 5, 'Price per additional addon slot')
+ON CONFLICT (config_key) DO NOTHING;
+
+-- Enable Row Level Security
+ALTER TABLE module_prices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_pricing ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies - public read for pricing data
+CREATE POLICY "public_read_module_prices" ON module_prices FOR SELECT USING (true);
+CREATE POLICY "public_read_subscription_pricing" ON subscription_pricing FOR SELECT USING (true);
+
+-- Only admins can modify pricing
+CREATE POLICY "admin_write_module_prices" ON module_prices FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_write_subscription_pricing" ON subscription_pricing FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- Function to get subscription pricing
+CREATE OR REPLACE FUNCTION get_subscription_pricing()
+RETURNS TABLE (
+  config_key VARCHAR(100),
+  value NUMERIC(10, 2)
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT sp.config_key, sp.value
+  FROM subscription_pricing sp
+  WHERE sp.is_active = true;
+END;
+$$;
+
+-- Function to calculate module subscription price
+CREATE OR REPLACE FUNCTION calculate_module_subscription_price(p_module_slugs TEXT[])
+RETURNS TABLE (
+  base_price NUMERIC(10, 2),
+  modules_price NUMERIC(10, 2),
+  total_price NUMERIC(10, 2)
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_base_price NUMERIC(10, 2);
+  v_modules_price NUMERIC(10, 2) := 0;
+  v_module_id UUID;
+  v_module_price NUMERIC(10, 2);
+BEGIN
+  -- Get base price from subscription_pricing
+  SELECT value INTO v_base_price
+  FROM subscription_pricing
+  WHERE config_key = 'base_price_monthly' AND is_active = true;
+
+  IF v_base_price IS NULL THEN
+    v_base_price := 15;
+  END IF;
+
+  -- Calculate modules price
+  FOR v_module_id IN
+    SELECT id FROM modules WHERE slug = ANY(p_module_slugs) AND is_available = true
+  LOOP
+    -- Get module price (prefer plan-specific price, then default price)
+    SELECT COALESCE(
+      (SELECT price_monthly FROM module_prices
+        WHERE module_id = v_module_id
+          AND is_active = true
+          AND (valid_until IS NULL OR valid_until > NOW())
+        ORDER BY plan_type DESC NULLS LAST
+        LIMIT 1),
+      0
+    ) INTO v_module_price;
+
+    v_modules_price := v_modules_price + v_module_price;
+  END LOOP;
+
+  RETURN QUERY SELECT v_base_price, v_modules_price, (v_base_price + v_modules_price);
+END;
+$$;
+
+-- Add updated_at triggers
+CREATE TRIGGER update_module_prices_updated_at
+BEFORE UPDATE ON module_prices
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_subscription_pricing_updated_at
+BEFORE UPDATE ON subscription_pricing
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- Migration: 20260127200000_generic_module_config.sql
+-- =====================================================
+-- Generic Module Configuration System
+-- Migration Date: 2026-01-27
+-- Description: Adds generic module configuration with caching and translation support
+
+-- Add slug column to modules (for frontend routing)
+ALTER TABLE modules
+ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE;
+
+-- Update slugs for existing modules (if any)
+UPDATE modules SET slug = LOWER(REGEXP_REPLACE(name, '[^a-zA-Z0-9]+', '-', 'g')) WHERE slug IS NULL;
+
+-- Add module configuration columns
+ALTER TABLE modules
+ADD COLUMN IF NOT EXISTS color VARCHAR(20),
+ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS price_monthly NUMERIC(10, 2) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS is_required BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS is_recommended BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS dashboard_widgets JSONB DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS navigation_items JSONB DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';
+
+COMMENT ON COLUMN modules.slug IS 'URL-friendly identifier for the module';
+COMMENT ON COLUMN modules.color IS 'Color theme for the module (hex code)';
+COMMENT ON COLUMN modules.display_order IS 'Display order in UI';
+COMMENT ON COLUMN modules.price_monthly IS 'Monthly price when purchased as part of subscription';
+COMMENT ON COLUMN modules.is_required IS 'Whether this module is required for all organizations';
+COMMENT ON COLUMN modules.is_recommended IS 'Whether this module is recommended for new organizations';
+COMMENT ON COLUMN modules.dashboard_widgets IS 'Array of dashboard widgets provided by this module';
+COMMENT ON COLUMN modules.navigation_items IS 'Array of navigation items for this module';
+COMMENT ON COLUMN modules.features IS 'Array of feature descriptions for marketing';
+
+-- Add translations table
+CREATE TABLE IF NOT EXISTS module_translations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  locale VARCHAR(10) NOT NULL, -- en, fr, ar, etc.
+  name VARCHAR(100),
+  description TEXT,
+  features JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(module_id, locale)
+);
+
+COMMENT ON TABLE module_translations IS 'Translations for module names, descriptions, and features';
+
+-- Create module config cache table
+CREATE TABLE IF NOT EXISTS module_config_cache (
+  cache_key VARCHAR(100) PRIMARY KEY,
+  locale VARCHAR(10) NOT NULL DEFAULT 'en',
+  data JSONB NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE module_config_cache IS 'Cached module configuration for performance';
+
+-- Create widget to module mapping table
+CREATE TABLE IF NOT EXISTS widget_module_mapping (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  widget_name VARCHAR(100) NOT NULL UNIQUE,
+  module_slug VARCHAR(100) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE widget_module_mapping IS 'Maps dashboard widgets to their owning modules';
+
+-- Enable Row Level Security
+ALTER TABLE module_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE module_config_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE widget_module_mapping ENABLE ROW LEVEL SECURITY;
+
+-- Public read for translations and cache
+CREATE POLICY "public_read_module_translations" ON module_translations FOR SELECT USING (true);
+CREATE POLICY "public_read_module_config_cache" ON module_config_cache FOR SELECT USING (true);
+CREATE POLICY "public_read_widget_module_mapping" ON widget_module_mapping FOR SELECT USING (true);
+
+-- Admin write policies
+CREATE POLICY "admin_write_module_translations" ON module_translations FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_write_module_config_cache" ON module_config_cache FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_write_widget_module_mapping" ON widget_module_mapping FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- Function: get_module_config
+CREATE OR REPLACE FUNCTION get_module_config(p_locale VARCHAR DEFAULT 'en')
+RETURNS TABLE (
+  id UUID,
+  slug VARCHAR(100),
+  name VARCHAR(100),
+  icon VARCHAR(50),
+  color VARCHAR(20),
+  category VARCHAR(50),
+  display_order INTEGER,
+  price_monthly NUMERIC(10, 2),
+  is_required BOOLEAN,
+  is_recommended BOOLEAN,
+  is_addon_eligible BOOLEAN,
+  is_available BOOLEAN,
+  required_plan VARCHAR(50),
+  dashboard_widgets JSONB,
+  navigation_items JSONB,
+  description TEXT,
+  features JSONB
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_locale VARCHAR(10);
+BEGIN
+  -- Normalize locale
+  v_locale := p_locale;
+  IF v_locale NOT IN ('en', 'fr', 'ar') THEN
+    v_locale := 'en';
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    m.id,
+    m.slug,
+    COALESCE(mt.name, m.name) AS name,
+    m.icon,
+    m.color,
+    m.category,
+    m.display_order,
+    m.price_monthly,
+    m.is_required,
+    m.is_recommended,
+    m.is_addon_eligible,
+    m.is_available,
+    m.required_plan,
+    m.dashboard_widgets,
+    m.navigation_items,
+    COALESCE(mt.description, m.description) AS description,
+    COALESCE(mt.features, m.features) AS features
+  FROM modules m
+  LEFT JOIN module_translations mt ON mt.module_id = m.id AND mt.locale = v_locale
+  WHERE m.is_available = true
+  ORDER BY m.display_order, m.name;
+END;
+$$;
+
+-- Function: get_widget_to_module_map
+CREATE OR REPLACE FUNCTION get_widget_to_module_map()
+RETURNS TABLE (
+  widget_name VARCHAR(100),
+  module_slug VARCHAR(100)
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT wmm.widget_name, wmm.module_slug
+  FROM widget_module_mapping wmm
+  ORDER BY wmm.widget_name;
+END;
+$$;
+
+-- Function: clear_module_config_cache
+CREATE OR REPLACE FUNCTION clear_module_config_cache()
+RETURNS VOID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM module_config_cache;
+END;
+$$;
+
+-- Function: refresh_module_config_cache
+CREATE OR REPLACE FUNCTION refresh_module_config_cache(p_locale VARCHAR DEFAULT 'en')
+RETURNS VOID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_cache_key VARCHAR(100);
+  v_expires_at TIMESTAMPTZ;
+  v_data JSONB;
+BEGIN
+  v_cache_key := 'module_config_' || p_locale;
+  v_expires_at := NOW() + INTERVAL '1 hour';
+
+  -- Build cache data
+  SELECT jsonb_agg(row_to_json(t))
+  INTO v_data
+  FROM get_module_config(p_locale) t;
+
+  -- Upsert cache
+  INSERT INTO module_config_cache (cache_key, locale, data, expires_at)
+  VALUES (v_cache_key, p_locale, v_data, v_expires_at)
+  ON CONFLICT (cache_key) DO UPDATE
+  SET data = EXCLUDED.data,
+      expires_at = EXCLUDED.expires_at,
+      updated_at = NOW();
+END;
+$$;
+
+-- Add updated_at triggers
+CREATE TRIGGER update_module_translations_updated_at
+BEFORE UPDATE ON module_translations
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_module_config_cache_updated_at
+BEFORE UPDATE ON module_config_cache
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_widget_module_mapping_updated_at
+BEFORE UPDATE ON widget_module_mapping
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- Migration: 20260129000000_add_polar_aligned_modules.sql
+-- =====================================================
+-- Polar Payment Integration for Modules
+-- Migration Date: 2026-01-29
+-- Description: Aligns modules with Polar product IDs for subscription management
+
+-- Add Polar product columns to modules
+ALTER TABLE modules
+ADD COLUMN IF NOT EXISTS product_id VARCHAR(100),
+ADD COLUMN IF NOT EXISTS product_price_id VARCHAR(100);
+
+COMMENT ON COLUMN modules.product_id IS 'Polar product ID for this module subscription';
+COMMENT ON COLUMN modules.product_price_id IS 'Polar price ID for this module';
+
+-- Create polar_subscriptions table for tracking Polar subscriptions
+CREATE TABLE IF NOT EXISTS polar_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  polar_subscription_id VARCHAR(100) NOT NULL UNIQUE,
+  polar_customer_id VARCHAR(100),
+  polar_product_id VARCHAR(100),
+  status VARCHAR(50) NOT NULL, -- active, trialing, canceled, past_due, incomplete
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  cancel_at_period_end BOOLEAN DEFAULT false,
+  canceled_at TIMESTAMPTZ,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE polar_subscriptions IS 'Polar subscription tracking for organizations';
+
+-- Create polar_webhooks table for webhook event logging
+CREATE TABLE IF NOT EXISTS polar_webhooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id VARCHAR(100) UNIQUE,
+  event_type VARCHAR(100) NOT NULL,
+  payload JSONB NOT NULL,
+  processed BOOLEAN DEFAULT false,
+  processing_error TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  processed_at TIMESTAMPTZ
+);
+
+COMMENT ON TABLE polar_webhooks IS 'Polar webhook event log for idempotency and debugging';
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_polar_subscriptions_org ON polar_subscriptions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_polar_subscriptions_status ON polar_subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_polar_subscriptions_polar_id ON polar_subscriptions(polar_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_polar_webhooks_event_id ON polar_webhooks(event_id);
+CREATE INDEX IF NOT EXISTS idx_polar_webhooks_event_type ON polar_webhooks(event_type);
+CREATE INDEX IF NOT EXISTS idx_polar_webhooks_processed ON polar_webhooks(processed);
+
+-- Enable Row Level Security
+ALTER TABLE polar_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE polar_webhooks ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for polar_subscriptions
+CREATE POLICY "org_read_polar_subscriptions"
+ON polar_subscriptions FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+CREATE POLICY "admin_write_polar_subscriptions"
+ON polar_subscriptions FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- RLS Policies for polar_webhooks (admin only)
+CREATE POLICY "admin_read_polar_webhooks"
+ON polar_webhooks FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_write_polar_webhooks"
+ON polar_webhooks FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- Function: create_or_update_polar_subscription
+CREATE OR REPLACE FUNCTION create_or_update_polar_subscription(
+  p_organization_id UUID,
+  p_polar_subscription_id VARCHAR(100),
+  p_polar_customer_id VARCHAR,
+  p_polar_product_id VARCHAR,
+  p_status VARCHAR,
+  p_current_period_start TIMESTAMPTZ,
+  p_current_period_end TIMESTAMPTZ,
+  p_metadata JSONB DEFAULT '{}'
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_subscription_id UUID;
+BEGIN
+  INSERT INTO polar_subscriptions (
+    organization_id,
+    polar_subscription_id,
+    polar_customer_id,
+    polar_product_id,
+    status,
+    current_period_start,
+    current_period_end,
+    metadata
+  ) VALUES (
+    p_organization_id,
+    p_polar_subscription_id,
+    p_polar_customer_id,
+    p_polar_product_id,
+    p_status,
+    p_current_period_start,
+    p_current_period_end,
+    p_metadata
+  )
+  ON CONFLICT (polar_subscription_id) DO UPDATE
+  SET status = EXCLUDED.status,
+      current_period_start = EXCLUDED.current_period_start,
+      current_period_end = EXCLUDED.current_period_end,
+      metadata = EXCLUDED.metadata,
+      updated_at = NOW()
+  RETURNING id INTO v_subscription_id;
+
+  RETURN v_subscription_id;
+END;
+$$;
+
+-- Function: log_polar_webhook
+CREATE OR REPLACE FUNCTION log_polar_webhook(
+  p_event_id VARCHAR,
+  p_event_type VARCHAR,
+  p_payload JSONB
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_webhook_id UUID;
+BEGIN
+  INSERT INTO polar_webhooks (event_id, event_type, payload)
+  VALUES (p_event_id, p_event_type, p_payload)
+  ON CONFLICT (event_id) DO NOTHING
+  RETURNING id INTO v_webhook_id;
+
+  RETURN v_webhook_id;
+END;
+$$;
+
+-- Add updated_at triggers
+CREATE TRIGGER update_polar_subscriptions_updated_at
+BEFORE UPDATE ON polar_subscriptions
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- Migration: 20260129000001_fix_rls_issues.sql
+-- =====================================================
+-- Fix RLS Issues
+-- Migration Date: 2026-01-29
+-- Description: Fixes Row Level Security policies for proper organization access
+
+-- Fix module_prices RLS - should be publicly readable for pricing display
+DROP POLICY IF EXISTS "admin_write_module_prices" ON module_prices;
+CREATE POLICY "public_read_all_module_prices"
+ON module_prices FOR SELECT
+USING (true);
+
+-- Fix subscription_pricing RLS - should be publicly readable
+DROP POLICY IF EXISTS "admin_write_subscription_pricing" ON subscription_pricing;
+CREATE POLICY "public_read_all_subscription_pricing"
+ON subscription_pricing FOR SELECT
+USING (true);
+
+-- Add proper admin policies for pricing updates
+CREATE POLICY "admin_update_module_prices"
+ON module_prices FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_insert_module_prices"
+ON module_prices FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_update_subscription_pricing"
+ON subscription_pricing FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+CREATE POLICY "admin_insert_subscription_pricing"
+ON subscription_pricing FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- Ensure modules table has proper RLS for read access
+ALTER TABLE modules ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "public_read_modules"
+ON modules FOR SELECT
+USING (is_available = true OR
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin', 'organization_admin')
+  )
+);
+
+CREATE POLICY "admin_write_modules"
+ON modules FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid()
+      AND ou.is_active = true
+      AND r.name IN ('system_admin')
+  )
+);
+
+-- Fix organization_modules RLS to allow users to see their org's modules
+DROP POLICY IF EXISTS "org_read_organization_modules" ON organization_modules;
+DROP POLICY IF EXISTS "org_write_organization_modules" ON organization_modules;
+
+CREATE POLICY "org_read_own_organization_modules"
+ON organization_modules FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+CREATE POLICY "org_update_own_organization_modules"
+ON organization_modules FOR UPDATE
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+      AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
+  )
+);
+
+CREATE POLICY "org_insert_own_organization_modules"
+ON organization_modules FOR INSERT
+WITH CHECK (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+      AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
+  )
+);
+
+-- Ensure organization_addons RLS is properly set
+DROP POLICY IF EXISTS "org_read_organization_addons" ON organization_addons;
+
+CREATE POLICY "org_read_own_organization_addons"
+ON organization_addons FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+
+-- =====================================================
+-- Migration: 20260129100000_make_products_bucket_private.sql
+-- =====================================================
+-- Make Products Storage Bucket Private
+-- Migration Date: 2026-01-29
+-- Description: Configures the products storage bucket to be private with controlled access
+
+-- Note: This migration assumes the storage.products table exists
+-- If using Supabase storage, the bucket configuration should be done via dashboard or API
+
+-- Create storage bucket if it doesn't exist (for local development)
+-- In production, this should be configured via Supabase dashboard
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('products', 'products', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
+ON CONFLICT (id) DO UPDATE SET
+  public = false,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Enable RLS on storage.objects for the products bucket
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Allow anyone to view products (images) but not list the bucket
+CREATE POLICY "allow_public_view_products"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'products');
+
+-- Policy: Only authenticated users can upload products
+CREATE POLICY "allow_auth_upload_products"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'products'
+  AND auth.role() = 'authenticated'
+);
+
+-- Policy: Only the uploader or admin can update product files
+CREATE POLICY "allow_owner_update_products"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'products'
+  AND (
+    auth.uid()::text = (storage.foldername(name))[1]
+    OR EXISTS (
+      SELECT 1 FROM organization_users ou
+      JOIN roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin')
+    )
+  )
+);
+
+-- Policy: Only the uploader or admin can delete product files
+CREATE POLICY "allow_owner_delete_products"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'products'
+  AND (
+    auth.uid()::text = (storage.foldername(name))[1]
+    OR EXISTS (
+      SELECT 1 FROM organization_users ou
+      JOIN roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin')
+    )
+  )
+);
+
+-- Create function to generate signed URL for private products
+CREATE OR REPLACE FUNCTION get_product_signed_url(
+  p_product_id UUID,
+  p_expires_in INTEGER DEFAULT 3600
+)
+RETURNS TEXT LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_path TEXT;
+  v_signed_url TEXT;
+BEGIN
+  -- Get the product image path from products table (if it exists)
+  -- This assumes a products table with an image_path column
+  -- Adjust the query based on your actual schema
+
+  -- For now, return a placeholder
+  -- In production, this would call storage.get_signed_url()
+
+  RETURN NULL;
+END;
+$$;
+
+-- Comment explaining storage configuration
+COMMENT ON TABLE storage.objects IS 'Storage objects - products bucket is private but publicly viewable';
+
+
+-- =====================================================
+-- Migration: 20260129110000_add_crop_types_for_modules.sql
+-- =====================================================
+-- Add Crop Types for Module System
+-- Migration Date: 2026-01-29
+-- Description: Adds crop type data for module filtering and classification
+
+-- Note: The crop_types table already exists in the base schema
+-- This migration adds module-specific crop type categories
+
+-- Check if module column exists, if not add it
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'crop_types' AND column_name = 'module_slug'
+  ) THEN
+    ALTER TABLE crop_types ADD COLUMN module_slug VARCHAR(100);
+    COMMENT ON COLUMN crop_types.module_slug IS 'Associated module slug for this crop type';
+  END IF;
+END $$;
+
+-- Insert default crop types with module associations
+INSERT INTO crop_types (name, name_fr, name_ar, description, description_fr, description_ar, organization_id, module_slug)
+VALUES
+  -- Fruit Trees (orchards module)
+  ('Fruit Trees', 'Arbres fruitiers', 'أشجار الفاكهة',
+   'Trees cultivated for their edible fruit', 'Arbres cultivés pour leurs fruits comestibles', 'أشجار تزرع من أجل ثمارها الصالحة للأكل',
+   NULL, 'orchards'),
+  ('Citrus', 'Agrumes', 'حمضيات',
+   'Citrus fruit trees including oranges, lemons, and grapefruits', 'Agrumes comprenant les oranges, les citrons et les pamplemousses', 'أشجار الحمضيات بما في ذلك البرتقال والليمون والجريب فروت',
+   NULL, 'orchards'),
+  ('Stone Fruits', 'Fruits à noyau', 'فواكه ذات النواة',
+   'Fruits with a large stone/pit (peaches, plums, apricots)', 'Fruits à noyau (pêches, prunes, abricots)', 'فواكه ذات نواة كبيرة (خوخ، برقوق، مشمش)',
+   NULL, 'orchards'),
+  ('Pome Fruits', 'Fruits à pépins', 'فواكه من الفصيلة الوردية',
+   'Apples, pears, and quince', 'Pommes, poires et coings', 'التفاح والكمثرى والسفرجل',
+   NULL, 'orchards'),
+  ('Tropical Fruits', 'Fruits tropicaux', 'فواكه استوائية',
+   'Bananas, mangoes, papaya, and other tropical fruits', 'Bananes, mangues, papayes et autres fruits tropicaux', 'موز، مانجو، بابايا وفواكه استوائية أخرى',
+   NULL, 'orchards'),
+
+  -- Cereals (general crops module)
+  ('Cereals', 'Céréales', 'الحبوب',
+   'Grain crops including wheat, barley, and corn', 'Cultures céréalières dont blé, orge et maïs', 'محاصيل الحبوب بما في ذلك القمح والشعير والذرة',
+   NULL, 'crops'),
+  ('Wheat', 'Blé', 'قمح',
+   'Common wheat for flour production', 'Blé commun pour la production de farine', 'القمح الشائع لإنتاج الدقيق',
+   NULL, 'crops'),
+  ('Barley', 'Orge', 'شعير',
+   'Barley for food, feed, and malt production', 'Orge pour l alimentation, l alimentation animale et la production de malt', 'الشعير للغذاء والأعلاف وإنتاج المالت',
+   NULL, 'crops'),
+  ('Corn', 'Maïs', 'ذرة',
+   'Corn/Maize for grain and silage', 'Maïs pour grain et ensilage', 'الذرة للحبوب والعلف',
+   NULL, 'crops'),
+  ('Rice', 'Riz', 'أرز',
+   'Rice cultivation in paddies', 'Riziculture dans les rizières', 'زراعة الأرز في المزارع',
+   NULL, 'crops'),
+
+  -- Vegetables (general crops module)
+  ('Vegetables', 'Légumes', 'خضروات',
+   'Vegetable crops for fresh market and processing', 'Cultures maraîchères pour le marché frais et la transformation', 'محاصيل الخضروات للسوق الطازجة والتصنيع',
+   NULL, 'crops'),
+  ('Leafy Greens', 'Feuilles vertes', 'الخضروات الورقية',
+   'Lettuce, spinach, kale, and other leaf vegetables', 'Laitue, épinards, chou kale et autres légumes feuilles', 'الخس والسبانخ والكرنب والخضروات الورقية الأخرى',
+   NULL, 'crops'),
+  ('Solanaceous', 'Solanacées', 'الباذنجانية',
+   'Tomatoes, peppers, eggplant, and potatoes', 'Tomates, poivrons, aubergines et pommes de terre', 'الطماطم والفلفل والباذنجان والبطاطس',
+   NULL, 'crops'),
+  ('Root Vegetables', 'Légumes-racines', 'الخضروات الجذرية',
+   'Carrots, radishes, turnips, and beets', 'Carottes, radis, navets et betteraves', 'الجزر والفجل واللفت والبنجر',
+   NULL, 'crops'),
+  ('Legumes', 'Légumineuses', 'البقوليات',
+   'Beans, peas, lentils, and other pulse crops', 'Haricots, pois, lentilles et autres légumineuses', 'الفاصوليا والبازلاء والعدس والمحاصيل البقولية الأخرى',
+   NULL, 'crops'),
+
+  -- Industrial Crops
+  ('Industrial Crops', 'Cultures industrielles', 'المحاصيل الصناعية',
+   'Crops for industrial processing (sugar, oil, fiber)', 'Cultures pour transformation industrielle (sucre, huile, fibre)', 'محاصيل للمعالجة الصناعية (السكر والزيت والألياف)',
+   NULL, 'crops'),
+  ('Sugar Crops', 'Cultures sucrières', 'المحاصيل السكرية',
+   'Sugarcane and sugar beet', 'Canne à sucre et betterave sucrière', 'قصب السكر والبنجر السكري',
+   NULL, 'crops'),
+  ('Oil Crops', 'Cultures oléagineuses', 'المحاصيل الزيتية',
+   'Sunflower, rapeseed, soybean, and olive', 'Tournesol, colza, soja et olive', 'عباد الشمس واللفت وفول الصويا والزيتون',
+   NULL, 'crops'),
+  ('Fiber Crops', 'Cultures fibreuses', 'المحاصيل الليفية',
+   'Cotton, flax, and hemp', 'Coton, lin et chanvre', 'القطن والكتان والقنب',
+   NULL, 'crops'),
+
+  -- Forage Crops
+  ('Forage Crops', 'Cultures fourragères', 'محاصيل الأعلاف',
+   'Crops for animal feed and pasture', 'Cultures pour l alimentation animale et les pâturages', 'محاصيل لأعلاف الحيوانات والمراعي',
+   NULL, 'crops'),
+  ('Pasture Grass', 'Herbe de pâturage', 'عشب المراعي',
+   'Grasses for grazing and hay production', 'Herbes pour le pâturage et la production de foin', 'أعشاب للرعي وإنتاج القش',
+   NULL, 'crops'),
+  ('Alfalfa', 'Luzerne', 'برسيم',
+   'Alfalfa for high-quality hay and silage', 'Luzerne pour le foin et l ensilage de haute qualité', 'البرسيم للقش والعلف عالي الجودة',
+   NULL, 'crops')
+ON CONFLICT (organization_id, name) DO NOTHING;
+
+-- Create index for module-based filtering
+CREATE INDEX IF NOT EXISTS idx_crop_types_module_slug ON crop_types(module_slug) WHERE module_slug IS NOT NULL;
+
+-- Update module_translations to include crop type translations
+-- This allows the module to show relevant crop types
+CREATE OR REPLACE FUNCTION get_module_crop_types(p_module_slug VARCHAR, p_locale VARCHAR DEFAULT 'en')
+RETURNS TABLE (
+  id UUID,
+  name VARCHAR,
+  description TEXT
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ct.id,
+    CASE
+      WHEN p_locale = 'fr' AND ct.name_fr IS NOT NULL THEN ct.name_fr
+      WHEN p_locale = 'ar' AND ct.name_ar IS NOT NULL THEN ct.name_ar
+      ELSE ct.name
+    END AS name,
+    CASE
+      WHEN p_locale = 'fr' AND ct.description_fr IS NOT NULL THEN ct.description_fr
+      WHEN p_locale = 'ar' AND ct.description_ar IS NOT NULL THEN ct.description_ar
+      ELSE ct.description
+    END AS description
+  FROM crop_types ct
+  WHERE ct.module_slug = p_module_slug
+     OR ct.module_slug IS NULL  -- Include general types
+  ORDER BY ct.name;
+END;
+$$;
+
+
+-- =====================================================
+-- Migration: 20260129120000_refactor_modules_generic.sql
+-- =====================================================
+-- Refactor Modules to Use Generic Routes with Filters
+-- Migration Date: 2026-01-29
+-- Description: Refactors the module system to use generic routes with filter-based data access
+
+-- This migration ensures the modules table has proper configuration
+-- for the generic route system with filters
+
+-- Add route configuration columns to modules
+ALTER TABLE modules
+ADD COLUMN IF NOT EXISTS route_base VARCHAR(100),
+ADD COLUMN IF NOT EXISTS filter_config JSONB DEFAULT '{}',
+ADD COLUMN IF NOT EXISTS default_filters JSONB DEFAULT '{}';
+
+COMMENT ON COLUMN modules.route_base IS 'Base route path for this module (e.g., /crops, /orchards)';
+COMMENT ON COLUMN modules.filter_config IS 'Configuration of available filters for this module';
+COMMENT ON COLUMN modules.default_filters IS 'Default filter values for this module';
+
+-- Update modules with route configurations
+UPDATE modules SET
+  route_base = '/crops',
+  filter_config = '{
+    "crop_type": {"type": "select", "field": "crop_type_id"},
+    "farm": {"type": "select", "field": "farm_id"},
+    "parcel": {"type": "select", "field": "parcel_id"},
+    "status": {"type": "select", "field": "status", "options": ["active", "archived"]},
+    "date_range": {"type": "date", "field": "created_at"}
+  }'::jsonb,
+  default_filters = '{
+    "status": "active"
+  }'::jsonb
+WHERE slug = 'crops';
+
+UPDATE modules SET
+  route_base = '/orchards',
+  filter_config = '{
+    "farm": {"type": "select", "field": "farm_id"},
+    "tree_category": {"type": "select", "field": "tree_category_id"},
+    "variety": {"type": "select", "field": "variety_id"},
+    "status": {"type": "select", "field": "status", "options": ["active", "removed", "dead"]},
+    "age_range": {"type": "range", "field": "planting_year"}
+  }'::jsonb,
+  default_filters = '{
+    "status": "active"
+  }'::jsonb
+WHERE slug = 'orchards';
+
+UPDATE modules SET
+  route_base = '/pruning',
+  filter_config = '{
+    "orchard": {"type": "select", "field": "orchard_id"},
+    "farm": {"type": "select", "field": "farm_id"},
+    "task_type": {"type": "select", "field": "task_type"},
+    "status": {"type": "select", "field": "status", "options": ["pending", "in_progress", "completed"]},
+    "season": {"type": "select", "field": "season", "options": ["winter", "spring", "summer", "fall"]},
+    "date_range": {"type": "date", "field": "scheduled_date"}
+  }'::jsonb,
+  default_filters = '{
+    "status": "pending"
+  }'::jsonb
+WHERE slug = 'pruning';
+
+-- Create generic_filter_options function for dynamic filter options
+CREATE OR REPLACE FUNCTION get_generic_filter_options(p_module_slug VARCHAR, p_filter_name VARCHAR)
+RETURNS TABLE (
+  value VARCHAR,
+  label VARCHAR,
+  count BIGINT
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_route_base VARCHAR(100);
+  v_filter_config JSONB;
+  v_filter_type VARCHAR;
+  v_filter_field VARCHAR;
+  v_table_name VARCHAR;
+  v_sql TEXT;
+BEGIN
+  -- Get module configuration
+  SELECT m.route_base, m.filter_config
+  INTO v_route_base, v_filter_config
+  FROM modules m
+  WHERE m.slug = p_module_slug;
+
+  IF v_filter_config IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Get specific filter config
+  SELECT
+    (v_filter_config -> p_filter_name ->> 'type')::VARCHAR,
+    (v_filter_config -> p_filter_name ->> 'field')::VARCHAR
+  INTO v_filter_type, v_filter_field;
+
+  IF v_filter_field IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Determine table based on route base
+  v_table_name := CASE
+    WHEN v_route_base = '/crops' THEN 'crops'
+    WHEN v_route_base = '/orchards' THEN 'trees'
+    WHEN v_route_base = '/pruning' THEN 'pruning_records'
+    ELSE NULL
+  END;
+
+  IF v_table_name IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Build dynamic SQL based on filter type
+  IF v_filter_type = 'select' THEN
+    -- For foreign key based selects, get related table values
+    IF v_filter_field LIKE '%\_id' THEN
+      v_sql := format(
+        'SELECT
+          related.id::TEXT as value,
+          COALESCE(related.name, related.title, related.id::TEXT) as label,
+          COUNT(*)::BIGINT as count
+        FROM %I AS main
+        LEFT JOIN %I AS related ON related.id = main.%s
+        WHERE main.organization_id IN (
+          SELECT organization_id FROM organization_users
+          WHERE user_id = auth.uid() AND is_active = true
+        )
+        GROUP BY related.id, related.name, related.title
+        ORDER BY label',
+        v_table_name,
+        rtrim(v_filter_field, '_id') || 's',
+        v_filter_field
+      );
+
+      EXECUTE v_sql;
+    END IF;
+  END IF;
+END;
+$$;
+
+-- Create function to get module data with filters
+CREATE OR REPLACE FUNCTION get_module_data(
+  p_module_slug VARCHAR,
+  p_filters JSONB DEFAULT '{}',
+  p_page INTEGER DEFAULT 1,
+  p_page_size INTEGER DEFAULT 20
+)
+RETURNS TABLE (
+  data JSONB,
+  total_count BIGINT,
+  page INTEGER,
+  page_size INTEGER
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_route_base VARCHAR(100);
+  v_table_name VARCHAR;
+  v_organization_id UUID;
+  v_sql TEXT;
+  v_where_clause TEXT := '';
+  v_offset INTEGER;
+  v_result JSONB;
+  v_total BIGINT;
+BEGIN
+  -- Get module configuration
+  SELECT m.route_base
+  INTO v_route_base
+  FROM modules m
+  WHERE m.slug = p_module_slug;
+
+  IF v_route_base IS NULL THEN
+    RAISE EXCEPTION 'Module not found: %', p_module_slug;
+  END IF;
+
+  -- Determine table
+  v_table_name := CASE
+    WHEN v_route_base = '/crops' THEN 'crops'
+    WHEN v_route_base = '/orchards' THEN 'trees'
+    WHEN v_route_base = '/pruning' THEN 'pruning_records'
+    ELSE NULL
+  END;
+
+  IF v_table_name IS NULL THEN
+    RAISE EXCEPTION 'Unknown route base: %', v_route_base;
+  END IF;
+
+  -- Build WHERE clause from filters
+  IF p_filters IS NOT NULL AND jsonb_object_keys(p_filters) IS NOT NULL THEN
+    -- TODO: Implement proper filter building
+    v_where_clause := 'WHERE 1=1'; -- Placeholder
+  END IF;
+
+  -- Get user's organizations
+  v_organization_id := (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+    LIMIT 1
+  );
+
+  IF v_organization_id IS NULL THEN
+    RAISE EXCEPTION 'No organization found for user';
+  END IF;
+
+  -- Get total count
+  v_sql := format('SELECT COUNT(*) FROM %I WHERE organization_id = $1', v_table_name);
+  EXECUTE v_sql USING v_organization_id INTO v_total;
+
+  -- Get paginated data
+  v_offset := (p_page - 1) * p_page_size;
+  v_sql := format(
+    'SELECT jsonb_agg(row_to_json(t)) FROM (
+      SELECT * FROM %I
+      WHERE organization_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    ) t',
+    v_table_name
+  );
+
+  EXECUTE v_sql USING v_organization_id, p_page_size, v_offset INTO v_result;
+
+  RETURN QUERY SELECT v_result, v_total, p_page, p_page_size;
+END;
+$$;
+
+-- Update navigation_items to use generic route pattern
+UPDATE modules SET
+  navigation_items = '[
+    {
+      "to": "/crops",
+      "label": "All Crops",
+      "icon": "🌱"
+    },
+    {
+      "to": "/crops?status=active",
+      "label": "Active Crops",
+      "icon": "✅"
+    }
+  ]'::jsonb
+WHERE slug = 'crops';
+
+UPDATE modules SET
+  navigation_items = '[
+    {
+      "to": "/orchards",
+      "label": "All Orchards",
+      "icon": "🌳"
+    },
+    {
+      "to": "/orchards?status=active",
+      "label": "Active Trees",
+      "icon": "✅"
+    }
+  ]'::jsonb
+WHERE slug = 'orchards';
+
+
+-- =====================================================
+-- Migration: 20260129130000_abstract_module_system.sql
+-- =====================================================
+-- Abstract Module System Implementation
+-- Migration Date: 2026-01-29
+-- Description: Creates an abstract module system for handling diverse entity types
+
+-- Create abstract_entities table for unified entity management
+CREATE TABLE IF NOT EXISTS abstract_entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type VARCHAR(50) NOT NULL, -- crop, tree, animal, equipment, etc.
+  entity_id UUID NOT NULL, -- References the actual entity in its specific table
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  metadata JSONB DEFAULT '{}',
+  tags TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(entity_type, entity_id)
+);
+
+COMMENT ON TABLE abstract_entities IS 'Abstract entity table for unified access to all module entities';
+
+-- Create entity_types configuration table
+CREATE TABLE IF NOT EXISTS entity_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(50) NOT NULL UNIQUE,
+  slug VARCHAR(50) NOT NULL UNIQUE,
+  module_slug VARCHAR(50) NOT NULL,
+  table_name VARCHAR(100) NOT NULL,
+  display_name VARCHAR(100),
+  display_name_plural VARCHAR(100),
+  icon VARCHAR(50),
+  color VARCHAR(20),
+  config JSONB DEFAULT '{}',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE entity_types IS 'Configuration for different entity types in the abstract system';
+
+-- Insert default entity types
+INSERT INTO entity_types (name, slug, module_slug, table_name, display_name, display_name_plural, icon, color, config) VALUES
+  ('Crop', 'crop', 'crops', 'crops', 'Crop', 'Crops', '🌱', '#22c55e',
+   '{"has_farm": true, "has_parcel": true, "has_crop_type": true}'::jsonb),
+  ('Tree', 'tree', 'orchards', 'trees', 'Tree', 'Trees', '🌳', '#84cc16',
+   '{"has_farm": true, "has_orchard": true, "has_tree_category": true}'::jsonb),
+  ('Pruning Record', 'pruning_record', 'pruning', 'pruning_records', 'Pruning Task', 'Pruning Tasks', '✂️', '#f59e0b',
+   '{"has_farm": true, "has_orchard": true, "has_tree": true}'::jsonb),
+  ('Farm', 'farm', 'farms', 'farms', 'Farm', 'Farms', '🏡', '#8b5cf6',
+   '{"location": true, "area": true}'::jsonb),
+  ('Parcel', 'parcel', 'parcels', 'parcels', 'Parcel', 'Parcels', '🗺️', '#3b82f6',
+   '{"location": true, "area": true, "has_farm": true}'::jsonb)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Create entity_relationships table for related entities
+CREATE TABLE IF NOT EXISTS entity_relationships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_entity_type VARCHAR(50) NOT NULL,
+  parent_entity_id UUID NOT NULL,
+  child_entity_type VARCHAR(50) NOT NULL,
+  child_entity_id UUID NOT NULL,
+  relationship_type VARCHAR(50) NOT NULL, -- contains, located_in, belongs_to, etc.
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(parent_entity_type, parent_entity_id, child_entity_type, child_entity_id, relationship_type)
+);
+
+COMMENT ON TABLE entity_relationships IS 'Relationships between different entity types';
+
+-- Create entity_events table for tracking entity events
+CREATE TABLE IF NOT EXISTS entity_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type VARCHAR(50) NOT NULL,
+  entity_id UUID NOT NULL,
+  event_type VARCHAR(50) NOT NULL, -- created, updated, deleted, status_changed, etc.
+  event_data JSONB DEFAULT '{}',
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+COMMENT ON TABLE entity_events IS 'Audit log for entity events';
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_abstract_entities_type ON abstract_entities(entity_type);
+CREATE INDEX IF NOT EXISTS idx_abstract_entities_org ON abstract_entities(organization_id);
+CREATE INDEX IF NOT EXISTS idx_abstract_entities_tags ON abstract_entities USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_entity_types_slug ON entity_types(slug);
+CREATE INDEX IF NOT EXISTS idx_entity_types_module ON entity_types(module_slug);
+CREATE INDEX IF NOT EXISTS idx_entity_relationships_parent ON entity_relationships(parent_entity_type, parent_entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_relationships_child ON entity_relationships(child_entity_type, child_entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_events_entity ON entity_events(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_entity_events_org ON entity_events(organization_id);
+CREATE INDEX IF NOT EXISTS idx_entity_events_created ON entity_events(created_at DESC);
+
+-- Enable Row Level Security
+ALTER TABLE abstract_entities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entity_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entity_relationships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entity_events ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "org_read_abstract_entities"
+ON abstract_entities FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+CREATE POLICY "org_write_abstract_entities"
+ON abstract_entities FOR ALL
+WITH CHECK (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+CREATE POLICY "public_read_entity_types" ON entity_types FOR SELECT USING (is_active = true);
+
+CREATE POLICY "org_read_entity_relationships"
+ON entity_relationships FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM abstract_entities ae
+    WHERE ae.entity_type = entity_relationships.parent_entity_type
+      AND ae.entity_id = entity_relationships.parent_entity_id
+      AND ae.organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+  )
+);
+
+CREATE POLICY "org_write_entity_relationships"
+ON entity_relationships FOR ALL
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM abstract_entities ae
+    WHERE ae.entity_type = entity_relationships.parent_entity_type
+      AND ae.entity_id = entity_relationships.parent_entity_id
+      AND ae.organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+  )
+);
+
+CREATE POLICY "org_read_entity_events"
+ON entity_events FOR SELECT
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+);
+
+-- Functions for abstract entity system
+
+-- Function to register an entity in the abstract system
+CREATE OR REPLACE FUNCTION register_abstract_entity(
+  p_entity_type VARCHAR,
+  p_entity_id UUID,
+  p_organization_id UUID,
+  p_metadata JSONB DEFAULT '{}',
+  p_tags TEXT[] DEFAULT '{}'
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_abstract_id UUID;
+BEGIN
+  INSERT INTO abstract_entities (entity_type, entity_id, organization_id, metadata, tags)
+  VALUES (p_entity_type, p_entity_id, p_organization_id, p_metadata, p_tags)
+  ON CONFLICT (entity_type, entity_id) DO UPDATE
+    SET metadata = EXCLUDED.metadata,
+        tags = EXCLUDED.tags,
+        updated_at = NOW()
+  RETURNING id INTO v_abstract_id;
+
+  RETURN v_abstract_id;
+END;
+$$;
+
+-- Function to log entity events
+CREATE OR REPLACE FUNCTION log_entity_event(
+  p_entity_type VARCHAR,
+  p_entity_id UUID,
+  p_event_type VARCHAR,
+  p_event_data JSONB DEFAULT '{}'
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_organization_id UUID;
+  v_event_id UUID;
+BEGIN
+  -- Get organization_id from abstract entity
+  SELECT organization_id INTO v_organization_id
+  FROM abstract_entities
+  WHERE entity_type = p_entity_type AND entity_id = p_entity_id;
+
+  IF v_organization_id IS NULL THEN
+    RAISE EXCEPTION 'Entity not registered in abstract system: % %', p_entity_type, p_entity_id;
+  END IF;
+
+  INSERT INTO entity_events (entity_type, entity_id, event_type, event_data, user_id, organization_id)
+  VALUES (p_entity_type, p_entity_id, p_event_type, p_event_data, auth.uid(), v_organization_id)
+  RETURNING id INTO v_event_id;
+
+  RETURN v_event_id;
+END;
+$$;
+
+-- Function to get entity by type and ID with metadata
+CREATE OR REPLACE FUNCTION get_abstract_entity(
+  p_entity_type VARCHAR,
+  p_entity_id UUID
+)
+RETURNS TABLE (
+  id UUID,
+  entity_type VARCHAR,
+  entity_id UUID,
+  organization_id UUID,
+  metadata JSONB,
+  tags TEXT[]
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT ae.id, ae.entity_type, ae.entity_id, ae.organization_id, ae.metadata, ae.tags
+  FROM abstract_entities ae
+  WHERE ae.entity_type = p_entity_type AND ae.entity_id = p_entity_id
+    AND ae.organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    );
+END;
+$$;
+
+-- Function to search entities across all types
+CREATE OR REPLACE FUNCTION search_entities(
+  p_search_term VARCHAR,
+  p_entity_types VARCHAR[] DEFAULT NULL,
+  p_tags TEXT[] DEFAULT NULL,
+  p_limit INTEGER DEFAULT 50
+)
+RETURNS TABLE (
+  entity_type VARCHAR,
+  entity_id UUID,
+  entity_config JSONB,
+  metadata JSONB
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ae.entity_type,
+    ae.entity_id,
+    et.config as entity_config,
+    ae.metadata
+  FROM abstract_entities ae
+  JOIN entity_types et ON et.slug = ae.entity_type
+  WHERE ae.organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    AND (p_entity_types IS NULL OR ae.entity_type = ANY(p_entity_types))
+    AND (p_tags IS NULL OR ae.tags && p_tags)
+    AND (
+      p_search_term IS NULL
+      OR ae.metadata::text ILIKE '%' || p_search_term || '%'
+      OR ae.entity_type ILIKE '%' || p_search_term || '%'
+    )
+  LIMIT p_limit;
+END;
+$$;
+
+-- Add updated_at triggers
+CREATE TRIGGER update_abstract_entities_updated_at
+BEFORE UPDATE ON abstract_entities
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_entity_types_updated_at
+BEFORE UPDATE ON entity_types
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- Migration: 20260129140000_fix_security_definer_views.sql
+-- =====================================================
+-- Fix Security Definer Views
+-- Migration Date: 2026-01-29
+-- Description: Changes views from SECURITY DEFINER to SECURITY INVOKER for better security
+
+-- Drop and recreate views with SECURITY INVOKER instead of SECURITY DEFINER
+
+-- accounting_summary view
+DROP VIEW IF EXISTS accounting_summary;
+CREATE VIEW accounting_summary WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM sales_orders WHERE organization_id = o.id) AS sales_orders_count,
+  (SELECT COUNT(*) FROM purchase_orders WHERE organization_id = o.id) AS purchase_orders_count,
+  (SELECT COUNT(*) FROM invoices WHERE organization_id = o.id) AS invoices_count,
+  (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE organization_id = o.id AND status != 'paid') AS outstanding_invoices,
+  (SELECT COALESCE(SUM(total_amount), 0) FROM accounting_payments WHERE organization_id = o.id) AS total_payments
+FROM organizations o;
+
+-- dashboard_summary view
+DROP VIEW IF EXISTS dashboard_summary;
+CREATE VIEW dashboard_summary WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM farms WHERE organization_id = o.id AND is_active = true) AS active_farms,
+  (SELECT COUNT(*) FROM parcels WHERE organization_id = o.id AND is_active = true) AS active_parcels,
+  (SELECT COUNT(*) FROM crops WHERE organization_id = o.id AND status = 'active') AS active_crops,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND is_active = true) AS active_workers,
+  (SELECT COUNT(DISTINCT customer_id) FROM sales_orders WHERE organization_id = o.id) AS customer_count,
+  (SELECT COUNT(DISTINCT supplier_id) FROM purchase_orders WHERE organization_id = o.id) AS supplier_count
+FROM organizations o;
+
+-- financial_metrics view
+DROP VIEW IF EXISTS financial_metrics;
+CREATE VIEW financial_metrics WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COALESCE(SUM(j.quantity * j.unit_price), 0)
+   FROM sales_order_items j
+   JOIN sales_orders so ON j.sales_order_id = so.id
+   WHERE so.organization_id = o.id) AS total_revenue,
+  (SELECT COALESCE(SUM(j.quantity * j.unit_cost), 0)
+   FROM purchase_order_items j
+   JOIN purchase_orders po ON j.purchase_order_id = po.id
+   WHERE po.organization_id = o.id) AS total_purchases,
+  (SELECT COALESCE(SUM(amount), 0)
+   FROM costs
+   WHERE organization_id = o.id) AS total_costs,
+  (SELECT COALESCE(SUM(amount), 0)
+   FROM revenues
+   WHERE organization_id = o.id) AS total_revenues_recorded
+FROM organizations o;
+
+-- inventory_status view
+DROP VIEW IF EXISTS inventory_status;
+CREATE VIEW inventory_status WITH (security_invoker = true) AS
+SELECT
+  i.id AS inventory_item_id,
+  i.item_id,
+  i.item_name,
+  i.warehouse_id,
+  w.name AS warehouse_name,
+  i.quantity_on_hand,
+  i.quantity_reserved,
+  i.quantity_available,
+  i.reorder_level,
+  i.quantity_on_hand <= i.reorder_level AS needs_reorder,
+  i.last_stock_update,
+  i.organization_id
+FROM inventory i
+JOIN warehouses w ON i.warehouse_id = w.id;
+
+-- pending_tasks view
+DROP VIEW IF EXISTS pending_tasks;
+CREATE VIEW pending_tasks WITH (security_invoker = true) AS
+SELECT
+  t.id,
+  t.organization_id,
+  t.title,
+  t.description,
+  t.status,
+  t.priority,
+  t.due_date,
+  t.assigned_to_id,
+  u.first_name || ' ' || u.last_name AS assigned_to_name,
+  t.farm_id,
+  f.name AS farm_name,
+  t.created_at
+FROM tasks t
+LEFT JOIN users u ON t.assigned_to_id = u.id
+LEFT JOIN farms f ON t.farm_id = f.id
+WHERE t.status IN ('pending', 'in_progress')
+ORDER BY t.due_date ASC NULLS LAST, t.priority DESC;
+
+-- production_metrics view
+DROP VIEW IF EXISTS production_metrics;
+CREATE VIEW production_metrics WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM crops WHERE organization_id = o.id AND status = 'active') AS active_crops_count,
+  (SELECT COUNT(*) FROM trees WHERE organization_id = o.id AND status = 'active') AS active_trees_count,
+  (SELECT COALESCE(SUM(hr.quantity_kg), 0)
+   FROM harvest_records hr
+   JOIN crops c ON hr.crop_id = c.id
+   WHERE c.organization_id = o.id
+   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS harvest_last_30_days_kg,
+  (SELECT COALESCE(AVG(hr.quantity_kg), 0)
+   FROM harvest_records hr
+   JOIN crops c ON hr.crop_id = c.id
+   WHERE c.organization_id = o.id
+   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS avg_harvest_last_30_days_kg
+FROM organizations o;
+
+-- sales_analytics view
+DROP VIEW IF EXISTS sales_analytics;
+CREATE VIEW sales_analytics WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM sales_orders WHERE organization_id = o.id) AS total_orders,
+  (SELECT COALESCE(SUM(total_amount), 0) FROM sales_orders WHERE organization_id = o.id) AS total_sales_amount,
+  (SELECT COALESCE(AVG(total_amount), 0) FROM sales_orders WHERE organization_id = o.id) AS average_order_value,
+  (SELECT COUNT(DISTINCT customer_id) FROM sales_orders WHERE organization_id = o.id) AS unique_customers
+FROM organizations o;
+
+-- task_completion view
+DROP VIEW IF EXISTS task_completion;
+CREATE VIEW task_completion WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id AND status = 'completed') AS completed_tasks,
+  (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id AND status IN ('pending', 'in_progress')) AS pending_tasks,
+  (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id AND status = 'overdue') AS overdue_tasks,
+  CASE
+    WHEN (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id) > 0 THEN
+      ROUND((SELECT COUNT(*)::NUMERIC FROM tasks WHERE organization_id = o.id AND status = 'completed') /
+            (SELECT COUNT(*)::NUMERIC FROM tasks WHERE organization_id = o.id) * 100, 2)
+    ELSE 0
+  END AS completion_percentage
+FROM organizations o;
+
+-- worker_assignments view
+DROP VIEW IF EXISTS worker_assignments;
+CREATE VIEW worker_assignments WITH (security_invoker = true) AS
+SELECT
+  w.id AS worker_id,
+  w.user_id,
+  u.first_name || ' ' || u.last_name AS worker_name,
+  w.organization_id,
+  w.employee_id,
+  COUNT(DISTINCT t.id) AS assigned_tasks_count,
+  COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) AS completed_tasks_count
+FROM workers w
+LEFT JOIN users u ON w.user_id = u.id
+LEFT JOIN tasks t ON t.assigned_to_id = w.id
+WHERE w.is_active = true
+GROUP BY w.id, w.user_id, u.first_name, u.last_name, w.organization_id, w.employee_id;
+
+-- workforce_summary view
+DROP VIEW IF EXISTS workforce_summary;
+CREATE VIEW workforce_summary WITH (security_invoker = true) AS
+SELECT
+  o.id AS organization_id,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'employee' AND is_active = true) AS active_employees,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'day_laborer' AND is_active = true) AS active_day_laborers,
+  (SELECT COUNT(*) FROM work_units WHERE organization_id = o.id AND is_active = true) AS active_work_units,
+  (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id AND status = 'in_progress') AS tasks_in_progress
+FROM organizations o;
+
+-- subscription_details view
+DROP VIEW IF EXISTS subscription_details;
+CREATE VIEW subscription_details WITH (security_invoker = true) AS
+SELECT
+  s.id AS subscription_id,
+  s.organization_id,
+  o.name AS organization_name,
+  s.plan_type,
+  s.status,
+  s.current_period_start,
+  s.current_period_end,
+  s.cancel_at_period_end,
+  s.included_addon_slots,
+  s.additional_addon_slots,
+  (SELECT COUNT(*) FROM organization_addons WHERE organization_id = s.id AND status IN ('active', 'trialing')) AS active_addons_count
+FROM subscriptions s
+JOIN organizations o ON s.organization_id = o.id;
+
+-- Add comments for documentation
+COMMENT ON VIEW accounting_summary IS 'Accounting summary per organization (SECURITY INVOKER)';
+COMMENT ON VIEW dashboard_summary IS 'Dashboard summary metrics (SECURITY INVOKER)';
+COMMENT ON VIEW financial_metrics IS 'Financial metrics per organization (SECURITY INVOKER)';
+COMMENT ON VIEW inventory_status IS 'Current inventory status with reorder indicators (SECURITY INVOKER)';
+COMMENT ON VIEW pending_tasks IS 'Pending and in-progress tasks with assignment info (SECURITY INVOKER)';
+COMMENT ON VIEW production_metrics IS 'Production metrics per organization (SECURITY INVOKER)';
+COMMENT ON VIEW sales_analytics IS 'Sales analytics per organization (SECURITY INVOKER)';
+COMMENT ON VIEW task_completion IS 'Task completion statistics per organization (SECURITY INVOKER)';
+COMMENT ON VIEW worker_assignments IS 'Worker assignments with task counts (SECURITY INVOKER)';
+COMMENT ON VIEW workforce_summary IS 'Workforce summary statistics (SECURITY INVOKER)';
+COMMENT ON VIEW subscription_details IS 'Subscription details with addon counts (SECURITY INVOKER)';
+
+
+-- =====================================================
+-- Migration: 20260129150000_fix_search_path_and_security.sql
+-- =====================================================
+-- Fix Search Path and Security for Functions
+-- Migration Date: 2026-01-29
+-- Description: Adds SET search_path = public to all SECURITY DEFINER functions
+
+-- Drop and recreate functions with proper search_path setting
+
+-- Helper function first (used by triggers)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Account-related functions
+CREATE OR REPLACE FUNCTION get_account_balance(p_account_id UUID)
+RETURNS NUMERIC LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_balance NUMERIC;
+BEGIN
+  SELECT COALESCE(SUM(debit), 0) - COALESCE(SUM(credit), 0)
+  INTO v_balance
+  FROM journal_items
+  WHERE account_id = p_account_id;
+
+  RETURN COALESCE(v_balance, 0);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION get_trial_balance(p_organization_id UUID, p_as_of_date DATE DEFAULT CURRENT_DATE)
+RETURNS TABLE (
+  account_id UUID,
+  account_code VARCHAR,
+  account_name VARCHAR,
+  debit NUMERIC,
+  credit NUMERIC
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    a.id,
+    a.code,
+    a.name,
+    COALESCE(SUM(ji.debit), 0) AS debit,
+    COALESCE(SUM(ji.credit), 0) AS credit
+  FROM accounts a
+  LEFT JOIN journal_items ji ON ji.account_id = a.id
+  LEFT JOIN journal_entries je ON je.id = ji.journal_entry_id
+  LEFT JOIN account_mappings am ON am.account_id = a.id
+  WHERE a.organization_id = p_organization_id
+    AND (je.date IS NULL OR je.date <= p_as_of_date)
+    AND (am.effective_to IS NULL OR am.effective_to > p_as_of_date)
+  GROUP BY a.id, a.code, a.name
+  ORDER BY a.code;
+END;
+$$;
+
+-- Task-related functions
+CREATE OR REPLACE FUNCTION create_task_from_template(
+  p_template_id UUID,
+  p_farm_id UUID DEFAULT NULL,
+  p_assigned_to UUID DEFAULT NULL,
+  p_scheduled_date TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_task_id UUID;
+  v_template tasks%ROWTYPE;
+  v_org_id UUID;
+BEGIN
+  -- Get template and organization
+  SELECT * INTO v_template
+  FROM tasks t
+  JOIN farms f ON t.farm_id = f.id
+  WHERE t.id = p_template_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Task template not found';
+  END IF;
+
+  v_org_id := v_template.organization_id;
+
+  -- Create task from template
+  INSERT INTO tasks (
+    title, description, task_type_id, priority,
+    farm_id, parcel_id, crop_id, tree_id,
+    assigned_to_id, status, scheduled_date, due_date,
+    organization_id, estimated_duration, equipment_required,
+    created_at, updated_at
+  )
+  SELECT
+    t.title, t.description, t.task_type_id, t.priority,
+    COALESCE(p_farm_id, t.farm_id), t.parcel_id, t.crop_id, t.tree_id,
+    COALESCE(p_assigned_to, t.assigned_to_id), 'pending',
+    COALESCE(p_scheduled_date, t.scheduled_date), t.due_date,
+    v_org_id, t.estimated_duration, t.equipment_required,
+    NOW(), NOW()
+  FROM tasks t
+  WHERE t.id = p_template_id
+  RETURNING id INTO v_task_id;
+
+  -- Copy task dependencies
+  INSERT INTO task_dependencies (task_id, depends_on_task_id)
+  SELECT v_task_id, td.depends_on_task_id
+  FROM task_dependencies td
+  WHERE td.task_id = p_template_id;
+
+  -- Copy task equipment
+  INSERT INTO task_equipment (task_id, equipment_id)
+  SELECT v_task_id, te.equipment_id
+  FROM task_equipment te
+  WHERE te.task_id = p_template_id;
+
+  RETURN v_task_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION update_task_status(
+  p_task_id UUID,
+  p_status VARCHAR,
+  p_notes TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE tasks
+  SET status = p_status,
+      updated_at = NOW()
+  WHERE id = p_task_id;
+
+  -- Add note to comments if provided
+  IF p_notes IS NOT NULL THEN
+    INSERT INTO task_comments (task_id, comment, created_by_id)
+    VALUES (p_task_id, p_notes, auth.uid());
+  END IF;
+
+  RETURN TRUE;
+END;
+$$;
+
+-- Report functions
+CREATE OR REPLACE FUNCTION calculate_daily_adoption_metrics(p_date DATE DEFAULT CURRENT_DATE)
+RETURNS TABLE (
+  metric_date DATE,
+  new_users INTEGER,
+  active_users INTEGER,
+  total_users INTEGER,
+  onboarding_completion_rate NUMERIC
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    p_date AS metric_date,
+    COUNT(DISTINCT CASE WHEN DATE(u.created_at) = p_date THEN u.id END) AS new_users,
+    COUNT(DISTINCT CASE WHEN DATE(last_active_at) = p_date THEN u.id END) AS active_users,
+    COUNT(DISTINCT u.id) AS total_users,
+    CASE
+      WHEN COUNT(DISTINCT u.id) > 0 THEN
+        ROUND(COUNT(DISTINCT CASE WHEN up.onboarding_completed_at IS NOT NULL THEN u.id END)::NUMERIC /
+              COUNT(DISTINCT u.id) * 100, 2)
+      ELSE 0
+    END AS onboarding_completion_rate
+  FROM users u
+  LEFT JOIN user_profiles up ON up.user_id = u.id
+  WHERE DATE(u.created_at) <= p_date;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION generate_adoption_report(
+  p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '30 days',
+  p_end_date DATE DEFAULT CURRENT_DATE
+)
+RETURNS TABLE (
+  date DATE,
+  new_users INTEGER,
+  active_users INTEGER,
+  cumulative_users INTEGER
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    generated_date AS date,
+    new_users,
+    active_users,
+    SUM(new_users) OVER (ORDER BY generated_date) AS cumulative_users
+  FROM (
+    SELECT
+      d.generated_date,
+      COALESCE(COUNT(DISTINCT u.id) FILTER (WHERE DATE(u.created_at) = d.generated_date), 0) AS new_users,
+      COALESCE(COUNT(DISTINCT u.id) FILTER (WHERE DATE(up.last_active_at) = d.generated_date), 0) AS active_users
+    FROM generate_series(p_start_date, p_end_date, INTERVAL '1 day') AS generated_date
+    LEFT JOIN users u ON DATE(u.created_at) = generated_date
+    LEFT JOIN user_profiles up ON up.user_id = u.id AND DATE(up.last_active_at) = generated_date
+    GROUP BY generated_date
+  ) sub
+  ORDER BY date;
+END;
+$$;
+
+-- Inventory functions
+CREATE OR REPLACE FUNCTION adjust_inventory(
+  p_item_id UUID,
+  p_warehouse_id UUID,
+  p_quantity NUMERIC,
+  p_reason VARCHAR,
+  p_reference_id UUID DEFAULT NULL
+)
+RETURNS UUID LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_movement_id UUID;
+  v_item inventory%ROWTYPE;
+BEGIN
+  -- Get current inventory item
+  SELECT * INTO v_item
+  FROM inventory
+  WHERE item_id = p_item_id AND warehouse_id = p_warehouse_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Inventory item not found';
+  END IF;
+
+  -- Create stock movement
+  INSERT INTO stock_movements (
+    item_id, warehouse_id, quantity, movement_type,
+    reason, reference_id, organization_id, movement_date
+  )
+  VALUES (
+    p_item_id, p_warehouse_id, p_quantity,
+    CASE WHEN p_quantity > 0 THEN 'in' ELSE 'out' END,
+    p_reason, p_reference_id, v_item.organization_id, NOW()
+  )
+  RETURNING id INTO v_movement_id;
+
+  -- Update inventory quantity
+  UPDATE inventory
+  SET quantity_on_hand = quantity_on_hand + p_quantity,
+      quantity_available = quantity_available + p_quantity,
+      last_stock_update = NOW()
+  WHERE item_id = p_item_id AND warehouse_id = p_warehouse_id;
+
+  -- Check for low stock
+  IF v_item.quantity_on_hand + p_quantity <= v_item.reorder_level THEN
+    -- Trigger reorder alert (implementation depends on alert system)
+    NULL;
+  END IF;
+
+  RETURN v_movement_id;
+END;
+$$;
+
+-- Analytics functions
+CREATE OR REPLACE FUNCTION get_productivity_metrics(
+  p_organization_id UUID,
+  p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '90 days',
+  p_end_date DATE DEFAULT CURRENT_DATE
+)
+RETURNS TABLE (
+  metric_name VARCHAR,
+  metric_value NUMERIC,
+  metric_unit VARCHAR
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    'Total Harvest'::VARCHAR AS metric_name,
+    COALESCE(SUM(hr.quantity_kg), 0)::NUMERIC AS metric_value,
+    'kg'::VARCHAR AS metric_unit
+  FROM harvest_records hr
+  JOIN crops c ON hr.crop_id = c.id
+  WHERE c.organization_id = p_organization_id
+    AND hr.harvest_date BETWEEN p_start_date AND p_end_date
+
+  UNION ALL
+
+  SELECT
+    'Average Task Completion Rate'::VARCHAR,
+    COALESCE(AVG(completion_rate), 0)::NUMERIC,
+    '%'::VARCHAR
+  FROM (
+    SELECT
+      ROUND(COUNT(*) FILTER (WHERE status = 'completed')::NUMERIC /
+            COUNT(*) * 100, 2) AS completion_rate
+    FROM tasks
+    WHERE organization_id = p_organization_id
+      AND created_at BETWEEN p_start_date AND p_end_date
+  ) t
+
+  UNION ALL
+
+  SELECT
+    'Active Workers'::VARCHAR,
+    COUNT(*)::NUMERIC,
+    'workers'::VARCHAR
+  FROM workers
+  WHERE organization_id = p_organization_id
+    AND is_active = true;
+END;
+$$;
+
+-- Security function for checking organization access
+CREATE OR REPLACE FUNCTION check_organization_access(p_organization_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM organization_users
+    WHERE user_id = auth.uid()
+      AND organization_id = p_organization_id
+      AND is_active = true
+  );
+END;
+$$;
+
+-- Function to get user's organizations
+CREATE OR REPLACE FUNCTION get_user_organizations()
+RETURNS TABLE (
+  organization_id UUID,
+  organization_name VARCHAR,
+  user_role VARCHAR,
+  is_default BOOLEAN
+) LANGUAGE plpgsql
+SET search_path = public
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    o.id AS organization_id,
+    o.name AS organization_name,
+    r.name AS user_role,
+    ou.is_default
+  FROM organization_users ou
+  JOIN organizations o ON ou.organization_id = o.id
+  JOIN roles r ON ou.role_id = r.id
+  WHERE ou.user_id = auth.uid() AND ou.is_active = true
+  ORDER BY ou.is_default DESC, o.name;
+END;
+$$;
+
+-- Add comments for documentation
+COMMENT ON FUNCTION check_organization_access IS 'Check if current user has access to organization';
+COMMENT ON FUNCTION get_user_organizations IS 'Get all organizations for current user with roles';
+COMMENT ON FUNCTION adjust_inventory IS 'Adjust inventory quantity and create stock movement record';
+COMMENT ON FUNCTION update_task_status IS 'Update task status and optionally add comment';
+COMMENT ON FUNCTION create_task_from_template IS 'Create a new task from a template';
+
