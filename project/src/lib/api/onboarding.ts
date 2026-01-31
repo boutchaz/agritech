@@ -41,6 +41,7 @@ export interface OnboardingModuleSelection {
   accounting: boolean;
   hr: boolean;
   analytics: boolean;
+  compliance: boolean;
   marketplace: boolean;
 }
 
@@ -85,6 +86,7 @@ export interface OnboardingState {
   moduleSelection: OnboardingModuleSelection;
   preferences: OnboardingPreferences;
   existingOrgId: string | null;
+  existingFarmId: string | null;
 }
 
 export interface SaveOnboardingStateInput {
@@ -95,6 +97,7 @@ export interface SaveOnboardingStateInput {
   moduleSelection?: Partial<OnboardingModuleSelection>;
   preferences?: Partial<OnboardingPreferences>;
   existingOrgId?: string | null;
+  existingFarmId?: string | null;
 }
 
 export interface CheckSlugAvailabilityResponse {
@@ -151,8 +154,8 @@ export const onboardingApi = {
   /**
    * Save farm data (Step 3)
    */
-  async saveFarm(data: OnboardingFarmData): Promise<{ id: string }> {
-    return apiClient.post<{ id: string }>(`${BASE_URL}/farm`, data);
+  async saveFarm(data: OnboardingFarmData, existingFarmId?: string): Promise<{ id: string }> {
+    return apiClient.post<{ id: string }>(`${BASE_URL}/farm`, { ...data, existingFarmId });
   },
 
   /**

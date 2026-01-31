@@ -84,6 +84,18 @@ function AuthenticatedLayout() {
 
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
+    // Check if user has never created a subscription - redirect to trial selection
+    if (!subscription) {
+      console.log('📋 No subscription found - redirecting to trial selection')
+      // Use window.location.href for full navigation to ensure clean state
+      window.location.href = '/onboarding/select-trial'
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+        </div>
+      )
+    }
+
     // Determine reason for blocking
     const reason = !subscription
       ? 'no_subscription'

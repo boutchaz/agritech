@@ -19,8 +19,10 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
 }) => {
   const { userRole, loading, currentOrganization, refreshUserData } = useAuth();
 
-  // Show loading state while checking role (only during initial load)
-  if (loading) {
+  // Show loading state while checking role
+  // Also show loading if we have an organization but role is still being fetched
+  const isWaitingForRole = currentOrganization && !userRole && !loading;
+  if (loading || isWaitingForRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -31,8 +33,11 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
     );
   }
 
-  // If no role after loading completes, show error with retry option
-  if (!userRole) {
+  // Use userRole if available, otherwise fall back to organization.role
+  const effectiveRole = userRole?.role_name || currentOrganization?.role;
+
+  // If no role after loading completes AND no organization role, show error
+  if (!effectiveRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
@@ -71,7 +76,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   }
 
   // Check if user has required role
-  const hasAccess = allowedRoles.includes(userRole.role_name);
+  const hasAccess = allowedRoles.includes(effectiveRole);
 
   if (!hasAccess) {
     // Show access denied message

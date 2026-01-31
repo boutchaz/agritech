@@ -12,6 +12,12 @@ import {
   PlanType,
 } from './dto/create-trial-subscription.dto';
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
+import {
+  PolarWebhookDto,
+  PolarWebhookEventType,
+  PolarSubscriptionData,
+} from './dto/webhook.dto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -129,10 +135,16 @@ export class SubscriptionsService {
           .from('subscriptions')
           .update({
             plan_id: plan_id,
+            plan_type: this.mapTrialPlanToPlanType(plan_type),
             status: 'trialing',
             current_period_start: new Date().toISOString(),
             current_period_end: trialEndDate.toISOString(),
             cancel_at_period_end: false,
+            // Add plan limits
+            max_farms: this.getPlanLimits(plan_type).farms,
+            max_parcels: this.getPlanLimits(plan_type).parcels,
+            max_users: this.getPlanLimits(plan_type).users,
+            max_satellite_reports: this.getPlanLimits(plan_type).satelliteReports,
           })
           .eq('id', existingSubscription.id)
           .select()
@@ -148,10 +160,16 @@ export class SubscriptionsService {
         .insert({
           organization_id: organization_id,
           plan_id: plan_id,
+          plan_type: this.mapTrialPlanToPlanType(plan_type),
           status: 'trialing',
           current_period_start: new Date().toISOString(),
           current_period_end: trialEndDate.toISOString(),
           cancel_at_period_end: false,
+          // Add plan limits
+          max_farms: this.getPlanLimits(plan_type).farms,
+          max_parcels: this.getPlanLimits(plan_type).parcels,
+          max_users: this.getPlanLimits(plan_type).users,
+          max_satellite_reports: this.getPlanLimits(plan_type).satelliteReports,
         })
         .select()
         .single();
@@ -446,5 +464,482 @@ export class SubscriptionsService {
       users_count: usersCount || 0,
       satellite_reports_count: 0, // TODO: Add if satellite reports table exists
     };
+  }
+
+  /**
+   * Handle Polar.sh webhook events
+   * Updates subscription status based on events from Polar.sh
+   */
+  async handlePolarWebhook(webhookDto: PolarWebhookDto) {
+    this.logger.log(
+      `Processing Polar webhook: ${webhookDto.type} (ID: ${webhookDto.id})`,
+    );
+
+    // Extract subscription data from webhook payload
+    const subscriptionData = this.extractSubscriptionData(webhookDto);
+    if (!subscriptionData) {
+      this.logger.warn(
+        `Webhook ${webhookDto.id} has no valid subscription data, skipping`,
+      );
+      return { success: true, processed: false };
+    }
+
+    // Find organization by Polar subscription metadata or organization_id
+    const organizationId = subscriptionData.organization_id;
+
+    if (!organizationId) {
+      this.logger.error(
+        `Webhook ${webhookDto.id} missing organization_id in metadata`,
+      );
+      throw new BadRequestException('Missing organization_id in subscription metadata');
+    }
+
+    // Check if webhook was already processed (idempotency)
+    const existingWebhook = await this.supabaseAdmin
+      .from('polar_webhooks')
+      .select('id, processed')
+      .eq('event_id', webhookDto.id)
+      .maybeSingle();
+
+    if (existingWebhook.data) {
+      this.logger.log(`Webhook ${webhookDto.id} already processed, skipping`);
+      return { success: true, processed: false, duplicate: true };
+    }
+
+    // Process the webhook based on event type
+    const result = await this.processSubscriptionEvent(
+      webhookDto.type,
+      organizationId,
+      subscriptionData,
+    );
+
+    // Log webhook as processed
+    await this.supabaseAdmin.from('polar_webhooks').insert({
+      event_id: webhookDto.id,
+      event_type: webhookDto.type,
+      payload: webhookDto as any,
+      processed: true,
+      processed_at: new Date().toISOString(),
+    });
+
+    this.logger.log(
+      `Webhook ${webhookDto.id} processed successfully: ${JSON.stringify(result)}`,
+    );
+
+    return { success: true, processed: true, result };
+  }
+
+  /**
+   * Extract subscription data from Polar webhook payload
+   */
+  private extractSubscriptionData(
+    webhookDto: PolarWebhookDto,
+  ): PolarSubscriptionData | null {
+    try {
+      // Polar webhooks have a specific structure: data.attributes contains the subscription info
+      const attributes = webhookDto.data?.data?.attributes || webhookDto.data?.attributes;
+
+      if (!attributes) {
+        this.logger.error('Webhook payload missing attributes');
+        return null;
+      }
+
+      // Extract organization_id from metadata (should be set during checkout creation)
+      const organizationId =
+        attributes.metadata?.organization_id || attributes.organization_id;
+
+      return {
+        id: attributes.id || webhookDto.data?.data?.id,
+        organization_id: organizationId,
+        status: attributes.status,
+        product_id: attributes.product_id || attributes.product?.id,
+        price_id: attributes.price_id || attributes.price?.id,
+        current_period_start: attributes.current_period_start,
+        current_period_end: attributes.current_period_end,
+        cancel_at_period_end: attributes.cancel_at_period_end ?? false,
+        created_at: attributes.created_at || webhookDto.created_at,
+        updated_at: attributes.updated_at,
+        user_id: attributes.user_id,
+        customer_id: attributes.customer_id,
+        amount: attributes.amount,
+        currency: attributes.currency,
+        recurring: attributes.recurring,
+        trial_end: attributes.trial_end,
+      };
+    } catch (error) {
+      this.logger.error('Error extracting subscription data from webhook', error);
+      return null;
+    }
+  }
+
+  /**
+   * Process subscription event based on type
+   * Updates both polar_subscriptions and subscriptions tables
+   */
+  private async processSubscriptionEvent(
+    eventType: PolarWebhookEventType,
+    organizationId: string,
+    subscriptionData: PolarSubscriptionData,
+  ) {
+    // First, update the polar_subscriptions table (Polar-specific data)
+    const polarUpdateData: any = {
+      organization_id: organizationId,
+      polar_subscription_id: subscriptionData.id,
+      polar_customer_id: subscriptionData.customer_id,
+      polar_product_id: subscriptionData.product_id,
+      status: subscriptionData.status,
+      current_period_start: subscriptionData.current_period_start,
+      current_period_end: subscriptionData.current_period_end,
+      cancel_at_period_end: subscriptionData.cancel_at_period_end,
+      metadata: {
+        price_id: subscriptionData.price_id,
+        user_id: subscriptionData.user_id,
+        amount: subscriptionData.amount,
+        currency: subscriptionData.currency,
+        recurring: subscriptionData.recurring,
+        trial_end: subscriptionData.trial_end,
+      },
+    };
+
+    // Handle cancellation timestamp
+    if (eventType === PolarWebhookEventType.SUBSCRIPTION_CANCELLED ||
+        eventType === PolarWebhookEventType.SUBSCRIPTION_REVOKED) {
+      polarUpdateData.canceled_at = new Date().toISOString();
+    }
+
+    // Upsert to polar_subscriptions table
+    const { data: polarSub, error: polarError } = await this.supabaseAdmin
+      .from('polar_subscriptions')
+      .upsert(polarUpdateData, {
+        onConflict: 'polar_subscription_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single();
+
+    if (polarError) {
+      this.logger.error('Error upserting polar_subscriptions', polarError);
+      throw new InternalServerErrorException('Failed to update Polar subscription');
+    }
+
+    // Also sync the main subscriptions table for backward compatibility
+    // Get current subscription from database
+    const { data: existingSubscription } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    let subscriptionUpdateData: any = {};
+    let shouldInsertSubscription = false;
+
+    switch (eventType) {
+      case PolarWebhookEventType.SUBSCRIPTION_CREATED:
+      case PolarWebhookEventType.SUBSCRIPTION_ACTIVE:
+        // New subscription or subscription activated after payment
+        subscriptionUpdateData = {
+          status: 'active',
+          current_period_start: subscriptionData.current_period_start,
+          current_period_end: subscriptionData.current_period_end,
+          cancel_at_period_end: subscriptionData.cancel_at_period_end,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Map Polar product to plan type
+        const planType = this.mapPolarProductToPlan(subscriptionData.product_id);
+        if (planType) {
+          subscriptionUpdateData.plan_type = planType;
+          // Add plan limits based on the mapped plan type
+          const limits = this.getPlanLimitsForType(planType);
+          subscriptionUpdateData.max_farms = limits.farms;
+          subscriptionUpdateData.max_parcels = limits.parcels;
+          subscriptionUpdateData.max_users = limits.users;
+          subscriptionUpdateData.max_satellite_reports = limits.satelliteReports;
+        }
+
+        if (!existingSubscription) {
+          shouldInsertSubscription = true;
+          subscriptionUpdateData.organization_id = organizationId;
+          subscriptionUpdateData.plan_id = subscriptionData.product_id;
+          subscriptionUpdateData.created_at = subscriptionData.created_at;
+        }
+        break;
+
+      case PolarWebhookEventType.SUBSCRIPTION_UPDATED:
+        // Subscription updated (plan change, renewal, etc.)
+        subscriptionUpdateData = {
+          status: subscriptionData.status,
+          current_period_start: subscriptionData.current_period_start,
+          current_period_end: subscriptionData.current_period_end,
+          cancel_at_period_end: subscriptionData.cancel_at_period_end,
+          updated_at: new Date().toISOString(),
+        };
+
+        // Update plan if changed
+        if (subscriptionData.product_id) {
+          const mappedPlanType = this.mapPolarProductToPlan(subscriptionData.product_id);
+          if (mappedPlanType) {
+            subscriptionUpdateData.plan_type = mappedPlanType;
+            subscriptionUpdateData.plan_id = subscriptionData.product_id;
+            // Update plan limits when plan changes
+            const limits = this.getPlanLimitsForType(mappedPlanType);
+            subscriptionUpdateData.max_farms = limits.farms;
+            subscriptionUpdateData.max_parcels = limits.parcels;
+            subscriptionUpdateData.max_users = limits.users;
+            subscriptionUpdateData.max_satellite_reports = limits.satelliteReports;
+          }
+        }
+        break;
+
+      case PolarWebhookEventType.SUBSCRIPTION_CANCELLED:
+        // Subscription cancelled (but may still be active until period end)
+        subscriptionUpdateData = {
+          cancel_at_period_end: true,
+          updated_at: new Date().toISOString(),
+        };
+
+        // If already past period end, mark as canceled
+        if (existingSubscription) {
+          const periodEnd = new Date(existingSubscription.current_period_end);
+          if (periodEnd < new Date()) {
+            subscriptionUpdateData.status = 'canceled';
+          }
+        }
+        break;
+
+      case PolarWebhookEventType.SUBSCRIPTION_REVOKED:
+        // Subscription revoked (immediate cancellation)
+        subscriptionUpdateData = {
+          status: 'canceled',
+          updated_at: new Date().toISOString(),
+        };
+        break;
+
+      case PolarWebhookEventType.SUBSCRIPTION_TRIING_ENDING:
+        // Trial is ending soon, notification only
+        this.logger.log(
+          `Trial ending for organization ${organizationId} at ${subscriptionData.trial_end}`,
+        );
+        return {
+          event: 'trial_ending',
+          organizationId,
+          trialEnd: subscriptionData.trial_end,
+          polarSubscription: polarSub,
+        };
+
+      default:
+        this.logger.warn(`Unknown webhook event type: ${eventType}`);
+        return { event: 'unknown', eventType };
+    }
+
+    // Apply the update or insert to subscriptions table
+    let mainSubscriptionResult;
+    if (shouldInsertSubscription) {
+      const { data, error } = await this.supabaseAdmin
+        .from('subscriptions')
+        .insert(subscriptionUpdateData)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error inserting subscription from webhook', error);
+        // Don't throw - we already logged to polar_subscriptions
+        mainSubscriptionResult = { error: error.message };
+      } else {
+        mainSubscriptionResult = data;
+      }
+    } else if (existingSubscription) {
+      const { data, error } = await this.supabaseAdmin
+        .from('subscriptions')
+        .update(subscriptionUpdateData)
+        .eq('id', existingSubscription.id)
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.error('Error updating subscription from webhook', error);
+        // Don't throw - we already logged to polar_subscriptions
+        mainSubscriptionResult = { error: error.message };
+      } else {
+        mainSubscriptionResult = data;
+      }
+    } else {
+      this.logger.warn(
+        `No existing subscription found for organization ${organizationId}`,
+      );
+      mainSubscriptionResult = { warning: 'not_found', organizationId };
+    }
+
+    return {
+      event: eventType,
+      organizationId,
+      polarSubscription: polarSub,
+      mainSubscription: mainSubscriptionResult,
+    };
+  }
+
+  /**
+   * Map Polar product ID to plan type
+   * Maps 'starter' to 'essential' to match frontend plan types
+   */
+  private mapPolarProductToPlan(productId: string): string | null {
+    // Extract plan type from product ID or use a mapping
+    // Product IDs from Polar are like: "starter", "professional", "enterprise"
+    const lowerProductId = productId?.toLowerCase() || '';
+
+    if (lowerProductId.includes('starter')) {
+      return 'essential'; // Map starter to essential for frontend compatibility
+    } else if (lowerProductId.includes('professional') || lowerProductId.includes('pro')) {
+      return 'professional';
+    } else if (lowerProductId.includes('enterprise')) {
+      return 'enterprise';
+    }
+
+    // Default to professional if unknown
+    return 'professional';
+  }
+
+  /**
+   * Map trial plan type to database plan_type
+   * Maps PlanType enum values to frontend-compatible plan types
+   */
+  private mapTrialPlanToPlanType(planType: PlanType): string {
+    // Map backend PlanType enum to frontend plan types
+    switch (planType) {
+      case PlanType.STARTER:
+        return 'essential'; // Map starter to essential for frontend compatibility
+      case PlanType.PROFESSIONAL:
+        return 'professional';
+      case PlanType.ENTERPRISE:
+        return 'enterprise';
+      default:
+        return 'professional'; // Default to professional
+    }
+  }
+
+  /**
+   * Get plan limits based on plan type
+   * These limits match the frontend SUBSCRIPTION_PLANS configuration
+   */
+  private getPlanLimits(planType: PlanType): {
+    farms: number;
+    parcels: number;
+    users: number;
+    satelliteReports: number;
+  } {
+    switch (planType) {
+      case PlanType.STARTER:
+        return {
+          farms: 2,
+          parcels: 25,
+          users: 5,
+          satelliteReports: 0,
+        };
+      case PlanType.PROFESSIONAL:
+        return {
+          farms: 10,
+          parcels: 200,
+          users: 25,
+          satelliteReports: 10,
+        };
+      case PlanType.ENTERPRISE:
+        return {
+          farms: 999999,
+          parcels: 999999,
+          users: 999999,
+          satelliteReports: 999999,
+        };
+      default:
+        return {
+          farms: 2,
+          parcels: 25,
+          users: 5,
+          satelliteReports: 0,
+        };
+    }
+  }
+
+  /**
+   * Get plan limits based on plan type string (from webhook or database)
+   * Handles both frontend ('essential', 'professional', 'enterprise') and legacy ('starter') types
+   */
+  private getPlanLimitsForType(planType: string): {
+    farms: number;
+    parcels: number;
+    users: number;
+    satelliteReports: number;
+  } {
+    // Normalize 'starter' to 'essential'
+    const normalized = planType === 'starter' ? 'essential' : planType;
+
+    switch (normalized) {
+      case 'essential':
+        return {
+          farms: 2,
+          parcels: 25,
+          users: 5,
+          satelliteReports: 0,
+        };
+      case 'professional':
+        return {
+          farms: 10,
+          parcels: 200,
+          users: 25,
+          satelliteReports: 10,
+        };
+      case 'enterprise':
+        return {
+          farms: 999999,
+          parcels: 999999,
+          users: 999999,
+          satelliteReports: 999999,
+        };
+      default:
+        // Default to essential limits
+        return {
+          farms: 2,
+          parcels: 25,
+          users: 5,
+          satelliteReports: 0,
+        };
+    }
+  }
+
+  /**
+   * Verify Polar webhook signature
+   * Polar uses HMAC-SHA256 for webhook signature verification
+   */
+  verifyWebhookSignature(
+    payload: string,
+    signature: string,
+    secret: string,
+  ): boolean {
+    try {
+      // Polar sends signature as "sha256=<hex_signature>"
+      const [algorithm, expectedSignature] = signature.split('=');
+
+      if (algorithm !== 'sha256') {
+        this.logger.error(`Unsupported signature algorithm: ${algorithm}`);
+        return false;
+      }
+
+      // Compute HMAC-SHA256 of payload
+      const hmac = createHmac('sha256', secret);
+      hmac.update(payload);
+      const computedSignature = hmac.digest('hex');
+
+      // Use timing-safe comparison to prevent timing attacks
+      const computedBuffer = Buffer.from(computedSignature, 'utf8');
+      const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+
+      if (computedBuffer.length !== expectedBuffer.length) {
+        return false;
+      }
+
+      return timingSafeEqual(computedBuffer, expectedBuffer);
+    } catch (error) {
+      this.logger.error('Error verifying webhook signature', error);
+      return false;
+    }
   }
 }

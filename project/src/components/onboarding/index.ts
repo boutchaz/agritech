@@ -1,18 +1,16 @@
-// Main components
-export { OnboardingWizard } from './OnboardingWizard';
+// Animated UI components (still used by new system)
 export { AnimatedBackground } from './AnimatedBackground';
-export { AnimatedProgress } from './AnimatedProgress';
-export { StepTransition } from './StepTransition';
 export { ConfettiEffect, MiniConfetti } from './ConfettiEffect';
 
-// UI components
+// UI components (still used by step components)
 export { OnboardingInput } from './ui/OnboardingInput';
 export { SelectionCard } from './ui/SelectionCard';
 export { ModuleCard } from './ui/ModuleCard';
 
-// Step components
+// Step components (used by new dedicated routes)
 export { WelcomeStep } from './steps/WelcomeStep';
 export { OrganizationStep } from './steps/OrganizationStep';
 export { FarmStep } from './steps/FarmStep';
 export { ModulesStep } from './steps/ModulesStep';
 export { CompletionStep } from './steps/CompletionStep';
+

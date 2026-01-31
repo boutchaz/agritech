@@ -89,6 +89,7 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     accounting: false,
     hr: false,
     analytics: false,
+    compliance: false,
     marketplace: false
   },
   preferences: {

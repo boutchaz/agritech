@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 import { getApiHeaders } from '../api-client';
+import { OrganizationRequiredError } from '../errors';
 
 const BASE_URL = '/api/v1';
 
@@ -51,7 +52,7 @@ export const chatApi = {
     organizationId?: string,
   ): Promise<ChatResponse> {
     if (!organizationId) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
     return apiClient.post(
       `${BASE_URL}/organizations/${organizationId}/chat`,
@@ -66,7 +67,7 @@ export const chatApi = {
     limit = 20,
   ): Promise<ChatHistoryResponse> {
     if (!organizationId) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
     return apiClient.get(
       `${BASE_URL}/organizations/${organizationId}/chat/history?limit=${limit}`,
@@ -77,7 +78,7 @@ export const chatApi = {
 
   async clearHistory(organizationId?: string): Promise<{ success: boolean }> {
     if (!organizationId) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
     return apiClient.delete(
       `${BASE_URL}/organizations/${organizationId}/chat/history`,
@@ -94,7 +95,7 @@ export const chatApi = {
     organizationId?: string,
   ): Promise<Blob> {
     if (!organizationId) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
 
     // Get auth headers

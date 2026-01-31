@@ -41,8 +41,6 @@ const COLORS = {
   teal: '#14b8a6',
 };
 
-const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
-
 export const HealthScoreRadarChart: React.FC<{ sections: AIReportSections }> = ({ sections }) => {
   const health = sections.healthAssessment;
   if (!health) return null;
@@ -258,7 +256,7 @@ export const AIReportCharts: React.FC<AIReportChartsProps> = ({
   sections,
   satelliteTimeSeries,
   yieldHistory,
-  weatherData,
+  weatherData: _weatherData,
 }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">

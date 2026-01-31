@@ -161,6 +161,12 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
   }, [userId, email]);
 
   // Persist state to backend
+  // Use a ref to access state without including it in dependencies
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   const persistState = useCallback(async () => {
     if (!userId || isSavingRef.current) {
       return;
@@ -171,7 +177,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
     isSavingRef.current = true;
 
     try {
-      await onboardingApi.saveState(state);
+      await onboardingApi.saveState(stateRef.current);
       console.log('[OnboardingProvider] State persisted to backend');
     } catch (err) {
       console.error('[OnboardingProvider] Failed to persist state:', err);
@@ -181,7 +187,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
       setIsSaving(false);
       isSavingRef.current = false;
     }
-  }, [state, userId]);
+  }, [userId]);
 
   // Update functions (local state only)
   const updateProfileData = useCallback((data: Partial<OnboardingState['profileData']>) => {

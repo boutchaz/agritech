@@ -1,51 +1,61 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
+import { ExecutionContext } from '@nestjs/common';
+import { CanActivate } from '@nestjs/common';
 import { AuthService } from '../auth.service';
 
+/**
+ * Supabase JWT Guard
+ *
+ * Bypasses passport-jwt which cannot handle RS256 without JWKS.
+ * Validates JWT directly with Supabase for security.
+ */
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private configService: ConfigService,
-    private authService: AuthService,
-  ) {
-    // Use Supabase JWT secret for validation
-    // This should be the same as SUPABASE_JWT_SECRET or the JWT secret from Supabase dashboard
-    const jwtSecret = configService.get<string>('SUPABASE_JWT_SECRET') ||
-                      configService.get<string>('JWT_SECRET');
+export class JwtStrategy implements CanActivate {
+  constructor(private authService: AuthService) {}
 
-    super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      secretOrKey: jwtSecret,
-      passReqToCallback: true,
-    });
-  }
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers?.authorization;
 
-  async validate(req: any, payload: any) {
-    // Extract the token from the request
-    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Missing authorization header');
+    }
 
-    console.log('[JwtStrategy] validate called with payload:', {
-      sub: payload?.sub,
-      email: payload?.email,
-      exp: payload?.exp,
-      iat: payload?.iat,
-    });
+    const token = authHeader.substring(7);
 
     try {
-      // Validate the token with Supabase to get full user info
+      // Decode JWT payload (without verification - we'll verify with Supabase)
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new UnauthorizedException('Invalid token format');
+      }
+
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64url').toString('utf-8')
+      );
+
+      // Attach payload to request
+      request.userPayload = payload;
+
+      // Validate with Supabase (real security check - verifies RS256 signature)
       const user = await this.authService.validateToken(token);
-      console.log('[JwtStrategy] Token validated successfully, user:', {
+
+      // Attach user to request with both id and userId for compatibility
+      request.user = {
+        ...user,
+        userId: user.id, // Add userId alias for backward compatibility
+      };
+
+      console.log('[JwtStrategy] Token validated successfully:', {
         id: user?.id,
+        userId: user?.id,
         email: user?.email,
       });
-      return user;
+
+      return true;
     } catch (error) {
-      console.warn('[JwtStrategy] Supabase validation failed:', error.message);
-      // Always require Supabase validation - no fallback
-      throw new UnauthorizedException('Invalid token');
+      console.error('[JwtStrategy] Auth failed:', error.message);
+      throw new UnauthorizedException('Invalid or expired token');
     }
   }
 }

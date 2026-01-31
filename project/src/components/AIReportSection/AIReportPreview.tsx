@@ -12,7 +12,6 @@ import {
   Clock,
   BarChart3,
   Database,
-  Eye,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AIReportSections } from '../../lib/api/ai-reports';
@@ -32,7 +31,7 @@ interface AIReportPreviewProps {
     precipitationTotal: number;
   };
   sourceDataMetadata?: SourceDataMetadata | null;
-  onRefreshSourceData?: (sources: string[]) => void;
+  onRefreshSourceData?: () => void;
   isRefreshingSourceData?: boolean;
 }
 
@@ -111,7 +110,6 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
   isRefreshingSourceData = false,
 }) => {
   const { t } = useTranslation();
-  const [showCharts, setShowCharts] = useState(true);
   const [showDataTransparencyModal, setShowDataTransparencyModal] = useState(false);
   const healthScore = sections.healthAssessment?.overallScore ?? 0;
   const healthColor =

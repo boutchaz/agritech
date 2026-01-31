@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD, Reflector } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -81,6 +81,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PestAlertsModule } from './modules/pest-alerts/pest-alerts.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
+import { ModuleConfigModule } from './modules/module-config/module-config.module';
 
 @Module({
   imports: [
@@ -179,15 +180,12 @@ import { RemindersModule } from './modules/reminders/reminders.module';
     PestAlertsModule,
     ComplianceModule,
     RemindersModule,
+    ModuleConfigModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Apply rate limiting globally
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    Reflector,
   ],
 })
 export class AppModule { }

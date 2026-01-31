@@ -1,5 +1,6 @@
 import { apiClient } from '../lib/api-client';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { OrganizationRequiredError, ErrorHandlers } from '../lib/errors';
 
 export interface Subscription {
   id: string;
@@ -34,7 +35,7 @@ function getCurrentOrganizationId(): string | null {
 
     return orgId;
   } catch (error) {
-    console.error('Error reading organization from store:', error);
+    ErrorHandlers.log(error, 'Error reading organization from store');
     return null;
   }
 }
@@ -48,24 +49,17 @@ class SubscriptionsService {
     // Get organization ID from parameter (from React context) or localStorage fallback
     const orgId = organizationId || getCurrentOrganizationId();
 
-    console.log('[SubscriptionsService] getSubscription called', {
-      providedOrgId: organizationId,
-      fallbackOrgId: getCurrentOrganizationId(),
-      resolvedOrgId: orgId,
-    });
-
     if (!orgId) {
-      throw new Error('Organization ID is required. Please select an organization first.');
+      throw new OrganizationRequiredError();
     }
 
     // Pass organization ID from React context to apiClient
     // This ensures the header is always included, even if localStorage is not set
     try {
-      console.log('[SubscriptionsService] Calling API with orgId:', orgId);
       // Pass organizationId as 3rd parameter to apiClient.get()
       return await apiClient.get<Subscription | null>('/api/v1/subscriptions', {}, orgId);
     } catch (error) {
-      console.error('[SubscriptionsService] Error fetching subscription:', error);
+      ErrorHandlers.log(error, '[SubscriptionsService] Error fetching subscription');
       // Handle 404 as null (no subscription found is expected)
       if (error instanceof Error && error.message.includes('404')) {
         return null;

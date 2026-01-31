@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, Loader, FileText, FileIcon, Eye } from 'lucide-react';
+import { Loader, FileText, FileIcon, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';

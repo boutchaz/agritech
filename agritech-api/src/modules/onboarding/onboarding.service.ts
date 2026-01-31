@@ -109,6 +109,7 @@ export class OnboardingService {
 
   /**
    * Get onboarding state for the current user
+   * Enriches the state with existing farm/org data if not already tracked
    */
   async getState(userId: string) {
     const client = this.databaseService.getAdminClient();
@@ -128,7 +129,41 @@ export class OnboardingService {
       return null;
     }
 
-    return data.onboarding_state;
+    let state = data.onboarding_state;
+
+    // If existingFarmId is not set but we have an organization, check for existing farms
+    if (!state.existingFarmId && state.existingOrgId) {
+      const { data: farms } = await client
+        .from('farms')
+        .select('id, name, location, size, size_unit, description, soil_type, climate_zone')
+        .eq('organization_id', state.existingOrgId)
+        .eq('is_active', true)
+        .limit(1)
+        .order('created_at', { ascending: true });
+
+      if (farms && farms.length > 0) {
+        const farm = farms[0];
+        this.logger.log(`Found existing farm ${farm.id} for user ${userId}, enriching state`);
+
+        // Enrich the state with existing farm data
+        state = {
+          ...state,
+          existingFarmId: farm.id,
+          farmData: {
+            name: farm.name || state.farmData?.name || '',
+            location: farm.location || state.farmData?.location || '',
+            size: farm.size || state.farmData?.size || 0,
+            size_unit: farm.size_unit || state.farmData?.size_unit || 'hectares',
+            farm_type: 'main',
+            description: farm.description || state.farmData?.description || '',
+            soil_type: farm.soil_type || state.farmData?.soil_type,
+            climate_zone: farm.climate_zone || state.farmData?.climate_zone,
+          },
+        };
+      }
+    }
+
+    return state;
   }
 
   /**
@@ -308,8 +343,9 @@ export class OnboardingService {
 
   /**
    * Save farm (Step 3)
+   * Creates a new farm if none exists, otherwise updates the first farm
    */
-  async saveFarm(userId: string, dto: SaveOnboardingFarmDto): Promise<{ id: string }> {
+  async saveFarm(userId: string, dto: SaveOnboardingFarmDto, existingFarmId?: string): Promise<{ id: string }> {
     const client = this.databaseService.getAdminClient();
 
     // Get user's organization
@@ -327,32 +363,75 @@ export class OnboardingService {
 
     const organizationId = orgUsers[0].organization_id;
 
-    // Create farm
-    // Note: farms table doesn't have farm_type column - hierarchy not yet supported
-    const { data, error } = await client
-      .from('farms')
-      .insert({
-        organization_id: organizationId,
-        name: dto.name,
-        location: dto.location,
-        size: dto.size,
-        size_unit: dto.size_unit,
-        description: dto.description || null,
-        soil_type: dto.soil_type || null,
-        climate_zone: dto.climate_zone || null,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select('id')
-      .single();
+    // Check if farm already exists for this organization (from onboarding state)
+    let farmId = existingFarmId;
+    if (!farmId) {
+      const { data: existingFarms } = await client
+        .from('farms')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .limit(1)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      this.logger.error(`Failed to create farm: ${error.message}`);
-      throw new InternalServerErrorException('Failed to create farm');
+      if (existingFarms && existingFarms.length > 0) {
+        farmId = existingFarms[0].id;
+        this.logger.log(`Found existing farm ${farmId}, updating instead of creating new one`);
+      }
     }
 
-    return { id: data.id };
+    if (farmId) {
+      // Update existing farm
+      const { data, error } = await client
+        .from('farms')
+        .update({
+          name: dto.name,
+          location: dto.location,
+          size: dto.size,
+          size_unit: dto.size_unit,
+          description: dto.description || null,
+          soil_type: dto.soil_type || null,
+          climate_zone: dto.climate_zone || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', farmId)
+        .select('id')
+        .single();
+
+      if (error) {
+        this.logger.error(`Failed to update farm: ${error.message}`);
+        throw new InternalServerErrorException('Failed to update farm');
+      }
+
+      return { id: data.id };
+    } else {
+      // Create new farm
+      // Note: farms table doesn't have farm_type column - hierarchy not yet supported
+      const { data, error } = await client
+        .from('farms')
+        .insert({
+          organization_id: organizationId,
+          name: dto.name,
+          location: dto.location,
+          size: dto.size,
+          size_unit: dto.size_unit,
+          description: dto.description || null,
+          soil_type: dto.soil_type || null,
+          climate_zone: dto.climate_zone || null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        this.logger.error(`Failed to create farm: ${error.message}`);
+        throw new InternalServerErrorException('Failed to create farm');
+      }
+
+      return { id: data.id };
+    }
   }
 
   /**

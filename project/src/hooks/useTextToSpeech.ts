@@ -123,7 +123,6 @@ export function useTextToSpeech(
       const bestVoice = selectBestVoice(language);
       if (bestVoice) {
         utterance.voice = bestVoice;
-        // console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`);
       }
 
       // Optimize for natural speech

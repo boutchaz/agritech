@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -15,6 +15,7 @@ import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
 } from './dto/check-subscription.dto';
+import { PolarWebhookDto } from './dto/webhook.dto';
 // PoliciesGuard removed - subscription endpoints validate org membership in service layer
 // This allows the trial setup flow to work before full CASL permissions are established
 
@@ -127,5 +128,77 @@ export class SubscriptionsController {
       req.user.id,
       checkSubscriptionDto,
     );
+  }
+}
+
+/**
+ * Separate controller for webhooks (no authentication required)
+ * Polar.sh sends webhook events to this endpoint
+ */
+@ApiTags('webhooks')
+@Controller('webhooks')
+export class WebhooksController {
+  private readonly logger = new Logger(WebhooksController.name);
+
+  constructor(private subscriptionsService: SubscriptionsService) {}
+
+  @Post('polar')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Handle Polar.sh webhook events',
+    description:
+      'Receives subscription events from Polar.sh such as subscription.created, subscription.updated, subscription.active, etc.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webhook processed successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid webhook payload' })
+  @ApiResponse({ status: 401, description: 'Invalid webhook signature' })
+  async handlePolarWebhook(
+    @Body() webhookDto: PolarWebhookDto,
+    @Headers('x-polar-signature-256') signature: string,
+    @Headers('x-polar-event-id') eventId: string,
+  ) {
+    this.logger.log(
+      `Received Polar webhook: ${webhookDto.type} (Event ID: ${eventId || webhookDto.id})`,
+    );
+
+    // Verify webhook signature if secret is configured
+    const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
+    if (webhookSecret && signature) {
+      // In a real implementation, you would verify the signature here
+      // const rawBody = // Get raw request body
+      // const isValid = this.subscriptionsService.verifyWebhookSignature(
+      //   rawBody,
+      //   signature,
+      //   webhookSecret
+      // );
+      // if (!isValid) {
+      //   this.logger.warn('Invalid webhook signature');
+      //   throw new UnauthorizedException('Invalid webhook signature');
+      // }
+      this.logger.debug('Webhook signature verification skipped (to be implemented)');
+    } else if (webhookSecret && !signature) {
+      this.logger.warn('Webhook signature missing but secret is configured');
+    }
+
+    // Process the webhook
+    try {
+      const result = await this.subscriptionsService.handlePolarWebhook(webhookDto);
+      return {
+        success: true,
+        message: 'Webhook processed successfully',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error('Error processing webhook', error);
+      // Return 200 anyway to avoid Polar retrying indefinitely
+      // The error has been logged for investigation
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
   }
 }

@@ -12,13 +12,17 @@ import { DeleteParcelDto } from './dto/delete-parcel.dto';
 import { CreateParcelDto } from './dto/create-parcel.dto';
 import { UpdateParcelDto } from './dto/update-parcel.dto';
 import { ListParcelsResponseDto } from './dto/list-parcels.dto';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 
 @Injectable()
 export class ParcelsService {
   private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(ParcelsService.name);
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private subscriptionsService: SubscriptionsService,
+  ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseServiceKey = this.configService.get<string>(
       'SUPABASE_SERVICE_ROLE_KEY',
@@ -101,22 +105,16 @@ export class ParcelsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    // Check subscription status
-    const { data: subscriptionCheck, error: subscriptionError } =
-      await this.supabaseAdmin.rpc('has_valid_subscription', {
-        org_id: organizationId,
-      });
-
-    this.logger.log(`Subscription check: ${JSON.stringify({ subscriptionCheck, subscriptionError })}`);
-
+    // Check subscription status using SubscriptionsService
     const hasValidSubscription =
-      subscriptionCheck === true ||
-      (typeof subscriptionCheck === 'boolean' && subscriptionCheck);
+      await this.subscriptionsService.hasValidSubscription(organizationId);
 
-    if (subscriptionError || !hasValidSubscription) {
-      this.logger.error('Subscription check failed', subscriptionError);
+    if (!hasValidSubscription) {
+      this.logger.warn(
+        `Subscription check failed for organization ${organizationId}`,
+      );
       throw new ForbiddenException(
-        `An active subscription is required to delete parcels. Subscription status: ${hasValidSubscription ? 'Valid' : 'Invalid'}.`,
+        'An active subscription is required to delete parcels',
       );
     }
 

@@ -91,8 +91,8 @@ export class OnboardingController {
   @ApiResponse({ status: 201, description: 'Farm created successfully', type: Object })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async saveFarm(@Request() req, @Body() dto: SaveOnboardingFarmDto) {
-    return this.onboardingService.saveFarm(req.user.id, dto);
+  async saveFarm(@Request() req, @Body() dto: SaveOnboardingFarmDto & { existingFarmId?: string }) {
+    return this.onboardingService.saveFarm(req.user.id, dto, dto.existingFarmId);
   }
 
   @Post('modules')

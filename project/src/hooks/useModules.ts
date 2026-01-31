@@ -9,7 +9,7 @@ export const useModules = () => {
     queryKey: ['modules', currentOrganization?.id],
     queryFn: async (): Promise<OrganizationModule[]> => {
       if (!currentOrganization?.id) return [];
-      return modulesApi.getAll(currentOrganization.id);
+      return modulesApi.getAll(undefined, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes

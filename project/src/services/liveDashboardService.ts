@@ -1,4 +1,5 @@
 import { apiClient } from '../lib/api-client';
+import { OrganizationRequiredError, ErrorHandlers } from '../lib/errors';
 
 // Types for live dashboard metrics
 export interface ConcurrentUser {
@@ -87,7 +88,7 @@ class LiveDashboardService {
    */
   async getLiveMetrics(organizationId: string): Promise<LiveDashboardMetrics> {
     if (!organizationId) {
-      throw new Error('Organization ID is required. Please select an organization first.');
+      throw new OrganizationRequiredError();
     }
 
     try {
@@ -98,7 +99,7 @@ class LiveDashboardService {
       );
       return response;
     } catch (error) {
-      console.error('Error fetching live metrics from API:', error);
+      ErrorHandlers.log(error, 'LiveDashboardService.getLiveMetrics');
       // Return empty state instead of mock data for production accuracy
       // Mock data is only used in development or when explicitly enabled
       if (import.meta.env.DEV) {
@@ -123,7 +124,7 @@ class LiveDashboardService {
    */
   async getLiveSummary(organizationId: string): Promise<LiveDashboardSummary> {
     if (!organizationId) {
-      throw new Error('Organization ID is required. Please select an organization first.');
+      throw new OrganizationRequiredError();
     }
 
     try {
@@ -134,7 +135,7 @@ class LiveDashboardService {
       );
       return response;
     } catch (error) {
-      console.error('Error fetching live summary from API:', error);
+      ErrorHandlers.log(error, 'LiveDashboardService.getLiveSummary');
       if (import.meta.env.DEV) {
         console.warn('Using mock summary data in development mode');
         return this.generateMockSummary(organizationId);
@@ -157,7 +158,7 @@ class LiveDashboardService {
    */
   async getActivityHeatmap(organizationId: string): Promise<ActivityHeatmapPoint[]> {
     if (!organizationId) {
-      throw new Error('Organization ID is required. Please select an organization first.');
+      throw new OrganizationRequiredError();
     }
 
     try {
@@ -168,7 +169,7 @@ class LiveDashboardService {
       );
       return response;
     } catch (error) {
-      console.error('Error fetching heatmap data from API:', error);
+      ErrorHandlers.log(error, 'LiveDashboardService.getActivityHeatmap');
       if (import.meta.env.DEV) {
         console.warn('Using mock heatmap data in development mode');
         return this.generateMockHeatmapData();

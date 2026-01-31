@@ -9,6 +9,49 @@ export const polar = new Polar({
 
 export type PlanType = 'essential' | 'professional' | 'enterprise';
 
+// Backend may return 'starter' which maps to 'essential'
+type BackendPlanType = PlanType | 'starter';
+
+/**
+ * Normalize backend plan type to frontend plan type
+ */
+export function normalizePlanType(planType: BackendPlanType | null | undefined): PlanType | null {
+  if (!planType) return null;
+  // Map 'starter' to 'essential' for backward compatibility
+  return planType === 'starter' ? 'essential' : planType as PlanType;
+}
+
+/**
+ * Plan hierarchy for determining feature/module access
+ * Higher number = higher tier plan
+ */
+export const PLAN_HIERARCHY: Record<PlanType, number> = {
+  essential: 1,
+  professional: 2,
+  enterprise: 3,
+} as const;
+
+/**
+ * Module category labels for display
+ * Matches database module categories
+ */
+export const CATEGORY_LABELS: Record<string, string> = {
+  core: 'Core',
+  operations: 'Operations',
+  finance: 'Finance',
+  analytics: 'Analytics',
+  compliance: 'Compliance',
+  marketplace: 'Marketplace',
+  // Legacy labels for backwards compatibility
+  production: 'Production',
+  hr: 'HR & Personnel',
+  inventory: 'Inventory',
+  sales: 'Sales',
+  purchasing: 'Purchasing',
+  accounting: 'Accounting & Finance',
+  general: 'General',
+} as const;
+
 export interface PlanDetails {
   id: PlanType;
   name: string;
@@ -30,9 +73,25 @@ export interface PlanDetails {
     apiAccess: boolean;
     prioritySupport: boolean;
   };
-  availableModules: string[]; // Module IDs that are available in this plan
+  availableModules: string[]; // Module slugs from database (farm_management, inventory, etc.)
   highlighted?: boolean;
 }
+
+/**
+ * Module slugs that match the database modules table
+ * These are the canonical module identifiers used throughout the system
+ */
+export const MODULE_SLUGS = {
+  FARM_MANAGEMENT: 'farm_management',
+  INVENTORY: 'inventory',
+  SALES: 'sales',
+  PROCUREMENT: 'procurement',
+  ACCOUNTING: 'accounting',
+  HR: 'hr',
+  ANALYTICS: 'analytics',
+  COMPLIANCE: 'compliance',
+  MARKETPLACE: 'marketplace',
+} as const;
 
 export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
   essential: {
@@ -42,12 +101,11 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
     priceAmount: 25,
     description: 'Perfect for small commercial farms digitizing their operations',
     features: [
-      '3 Agriculture Modules: Fruit Trees, Cereals, Vegetables',
+      'Core Farm Management Module',
       '2 Farms, 25 Parcels',
       '5 User Accounts',
       'Full Dashboard & Parcel Management',
       'Employee & Day Laborer Management',
-      'Stock Management',
       'Product Application Tracking',
       'Weather Forecast',
       'Unlimited Manual Analyses (Soil, Plant, Water)',
@@ -66,7 +124,10 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       apiAccess: false,
       prioritySupport: false,
     },
-    availableModules: ['fruit-trees', 'cereals', 'vegetables'],
+    availableModules: [
+      MODULE_SLUGS.FARM_MANAGEMENT,
+      MODULE_SLUGS.HR,
+    ],
   },
   professional: {
     id: 'professional',
@@ -75,7 +136,7 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
     priceAmount: 75,
     description: 'For data-driven farms leveraging analytics and precision agriculture',
     features: [
-      '5 Modules: Essential + Mushrooms, Livestock',
+      'All Essential Modules Plus: Inventory, Sales, Procurement',
       '10 Farms, 200 Parcels',
       '25 User Accounts',
       'Satellite Indices Analysis (10/month)',
@@ -98,7 +159,14 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       apiAccess: false,
       prioritySupport: false,
     },
-    availableModules: ['fruit-trees', 'cereals', 'vegetables', 'mushrooms', 'livestock'],
+    availableModules: [
+      MODULE_SLUGS.FARM_MANAGEMENT,
+      MODULE_SLUGS.INVENTORY,
+      MODULE_SLUGS.SALES,
+      MODULE_SLUGS.PROCUREMENT,
+      MODULE_SLUGS.HR,
+      MODULE_SLUGS.ANALYTICS,
+    ],
     highlighted: true,
   },
   enterprise: {
@@ -111,7 +179,9 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       'All Modules Unlocked',
       'Unlimited Farms, Parcels & Users',
       'Unlimited Satellite Reports',
-      'Full Financial Suite',
+      'Full Financial Suite (Accounting)',
+      'Compliance & Certifications Management',
+      'Online Marketplace Integration',
       'Predictive Analytics',
       'Yield & Disease Forecasting',
       'Equipment Management',
@@ -136,12 +206,17 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
   },
 };
 
-export function getPlanDetails(planType: PlanType): PlanDetails {
-  return SUBSCRIPTION_PLANS[planType];
+export function getPlanDetails(planType: BackendPlanType): PlanDetails {
+  const normalized = normalizePlanType(planType);
+  if (!normalized) {
+    // Return a default/empty plan if planType is invalid
+    return SUBSCRIPTION_PLANS.professional; // Default to professional
+  }
+  return SUBSCRIPTION_PLANS[normalized];
 }
 
 export function canAccessFeature(
-  subscription: { plan_type: PlanType | null } | null,
+  subscription: { plan_type: BackendPlanType | null } | null,
   feature: keyof PlanDetails['capabilities']
 ): boolean {
   if (!subscription || !subscription.plan_type) return false;
@@ -150,7 +225,7 @@ export function canAccessFeature(
 }
 
 export function hasReachedLimit(
-  subscription: { plan_type: PlanType | null } | null,
+  subscription: { plan_type: BackendPlanType | null } | null,
   usage: number,
   limitType: keyof PlanDetails['limits']
 ): boolean {
@@ -160,7 +235,7 @@ export function hasReachedLimit(
 }
 
 export function isModuleAvailable(
-  subscription: { plan_type: PlanType | null } | null,
+  subscription: { plan_type: BackendPlanType | null } | null,
   moduleId: string
 ): boolean {
   if (!subscription || !subscription.plan_type) return false;
@@ -171,6 +246,52 @@ export function isModuleAvailable(
 
   // Check if module is in the available modules list
   return plan.availableModules.includes(moduleId);
+}
+
+/**
+ * Check if a module is available for a given plan based on required_plan field.
+ * This is used for modules from the database API that have a required_plan property.
+ *
+ * @param module - Module object with optional required_plan property
+ * @param subscription - Current subscription with plan_type
+ * @returns true if module is available (no required_plan OR current plan meets requirement)
+ */
+export function isModuleAvailableForPlan(
+  module: { required_plan?: BackendPlanType | null },
+  subscription: { plan_type: BackendPlanType | null } | null
+): boolean {
+  // If no required_plan, module is available to everyone
+  if (!module.required_plan) return true;
+
+  // If no subscription, module is not available
+  if (!subscription || !subscription.plan_type) return false;
+
+  // Normalize plan types
+  const normalizedCurrent = normalizePlanType(subscription.plan_type);
+  const normalizedRequired = normalizePlanType(module.required_plan);
+
+  if (!normalizedCurrent || !normalizedRequired) return false;
+
+  // Enterprise plan has access to everything
+  if (normalizedCurrent === 'enterprise') return true;
+
+  // Check plan hierarchy
+  const requiredLevel = PLAN_HIERARCHY[normalizedRequired] || 0;
+  const currentLevel = PLAN_HIERARCHY[normalizedCurrent] || 0;
+
+  return currentLevel >= requiredLevel;
+}
+
+/**
+ * Check if a plan tier is higher than another
+ */
+export function isPlanHigherTier(currentPlan: BackendPlanType, requiredPlan: BackendPlanType): boolean {
+  const normalizedCurrent = normalizePlanType(currentPlan);
+  const normalizedRequired = normalizePlanType(requiredPlan);
+
+  if (!normalizedCurrent || !normalizedRequired) return false;
+
+  return PLAN_HIERARCHY[normalizedCurrent] >= PLAN_HIERARCHY[normalizedRequired];
 }
 
 export function getCheckoutUrl(planType: PlanType, organizationId?: string): string {

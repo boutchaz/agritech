@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { profitabilityApi, CostType, RevenueType } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCropCycles } from '../hooks/useAgriculturalAccounting';
+import { OrganizationRequiredError } from '../lib/errors';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Input } from './ui/Input';
@@ -88,7 +89,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
   } = useQuery({
     queryKey: ['profitability', parcelId, startDate, endDate, currentOrganization?.id],
     queryFn: async () => {
-      if (!currentOrganization) throw new Error('No organization');
+      if (!currentOrganization) throw new OrganizationRequiredError();
       return profitabilityApi.getParcelProfitability(
         parcelId,
         startDate,

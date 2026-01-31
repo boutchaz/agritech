@@ -16,6 +16,7 @@ interface FarmStepProps {
   farmData: FarmData;
   onUpdate: (data: Partial<FarmData>) => void;
   onNext: () => void;
+  isLoading?: boolean;
 }
 
 const SOIL_TYPES = [
@@ -46,6 +47,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
   farmData,
   onUpdate,
   onNext,
+  isLoading = false,
 }) => {
   const [subStep, setSubStep] = useState(0);
 
@@ -332,15 +334,24 @@ export const FarmStep: React.FC<FarmStepProps> = ({
 
       <button
         onClick={onNext}
-        disabled={!isValid}
+        disabled={!isValid || isLoading}
         className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
           shadow-lg shadow-emerald-500/30 hover:shadow-xl
           disabled:opacity-50 disabled:cursor-not-allowed
           transition-all duration-300 hover:scale-[1.02]
           flex items-center justify-center gap-2"
       >
-        Étape suivante
-        <ArrowRight className="w-5 h-5" />
+        {isLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <span>Enregistrement...</span>
+          </>
+        ) : (
+          <>
+            Étape suivante
+            <ArrowRight className="w-5 h-5" />
+          </>
+        )}
       </button>
 
       <style>{`

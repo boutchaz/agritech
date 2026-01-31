@@ -101,17 +101,32 @@ export const useAuthStore = create<AuthState>()(
 export const getAccessToken = () => useAuthStore.getState().getAccessToken();
 
 // Helper to wait for hydration (useful for init functions)
-export const waitForHydration = (): Promise<void> => {
+export const waitForHydration = (timeout: number = 2000): Promise<void> => {
   return new Promise((resolve) => {
     if (useAuthStore.getState()._hasHydrated) {
       resolve();
       return;
     }
+
+    let resolved = false;
     const unsubscribe = useAuthStore.subscribe((state) => {
       if (state._hasHydrated) {
+        resolved = true;
         unsubscribe();
         resolve();
       }
     });
+
+    // Add timeout to prevent hanging forever
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        unsubscribe();
+        // Force hydration to true even if persist hasn't finished
+        useAuthStore.getState().setHasHydrated(true);
+        console.warn('[waitForHydration] Timed out, forcing hydration');
+        resolve();
+      }
+    }, timeout);
   });
 };

@@ -1,5 +1,6 @@
 import { apiClient } from '../lib/api-client';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { OrganizationRequiredError, ErrorHandlers } from '../lib/errors';
 
 export interface Farm {
   id: string;
@@ -69,7 +70,7 @@ function getCurrentOrganizationId(): string | null {
 
     return null;
   } catch (error) {
-    console.error('Error reading organization:', error);
+    ErrorHandlers.log(error, 'Error reading organization');
     return null;
   }
 }
@@ -149,7 +150,7 @@ class FarmsService {
   }): Promise<Farm> {
     const organizationId = getCurrentOrganizationId();
     if (!organizationId) {
-      throw new Error('Organization ID is required. Please select an organization first.');
+      throw new OrganizationRequiredError();
     }
 
     // Pass organizationId explicitly in header

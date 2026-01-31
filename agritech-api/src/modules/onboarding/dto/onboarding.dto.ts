@@ -98,6 +98,11 @@ export class OnboardingStateDto {
   @IsString()
   @IsOptional()
   existingOrgId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Existing farm ID' })
+  @IsString()
+  @IsOptional()
+  existingFarmId?: string | null;
 }
 
 export class SaveOnboardingProfileDto {

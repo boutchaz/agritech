@@ -26,6 +26,7 @@ interface OrganizationStepProps {
   onUpdate: (data: Partial<OrganizationData>) => void;
   onCheckSlug: (slug: string) => Promise<SlugCheckResult>;
   onNext: () => void;
+  isLoading?: boolean;
 }
 
 const ACCOUNT_TYPES = [
@@ -67,11 +68,36 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
   onUpdate,
   onCheckSlug,
   onNext,
+  isLoading = false,
 }) => {
   const [subStep, setSubStep] = useState(0);
   const [slugCheck, setSlugCheck] = useState<SlugCheckResult | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const slugCheckTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoAdvanceAttempted = useRef(false);
+  // Use refs for callbacks to avoid them being in effect dependencies
+  const onNextRef = useRef(onNext);
+  const onUpdateRef = useRef(onUpdate);
+  const onCheckSlugRef = useRef(onCheckSlug);
+
+  // Keep the refs in sync
+  useEffect(() => {
+    onNextRef.current = onNext;
+    onUpdateRef.current = onUpdate;
+    onCheckSlugRef.current = onCheckSlug;
+  }, [onNext, onUpdate, onCheckSlug]);
+
+  // Auto-advance if organization data is already complete (from signup)
+  useEffect(() => {
+    if (existingOrgId && organizationData.name && organizationData.email && !autoAdvanceAttempted.current) {
+      autoAdvanceAttempted.current = true;
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        onNextRef.current();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [existingOrgId, organizationData.name, organizationData.email]);
 
   // Auto-generate slug from name
   useEffect(() => {
@@ -83,10 +109,10 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
       if (slug !== organizationData.slug) {
-        onUpdate({ slug });
+        onUpdateRef.current({ slug });
       }
     }
-  }, [organizationData.name, organizationData.slug, onUpdate]);
+  }, [organizationData.name, organizationData.slug]);
 
   // Debounced slug check
   useEffect(() => {
@@ -103,7 +129,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
     setIsCheckingSlug(true);
     slugCheckTimeout.current = setTimeout(async () => {
       try {
-        const result = await onCheckSlug(slug);
+        const result = await onCheckSlugRef.current(slug);
         setSlugCheck(result);
       } catch {
         setSlugCheck(null);
@@ -117,7 +143,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         clearTimeout(slugCheckTimeout.current);
       }
     };
-  }, [organizationData.slug, existingOrgId, onCheckSlug]);
+  }, [organizationData.slug, existingOrgId]);
 
   const isValid = organizationData.name.trim() && 
     organizationData.email.trim() && 
@@ -335,15 +361,24 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
 
       <button
         onClick={onNext}
-        disabled={!isValid}
+        disabled={!isValid || isLoading}
         className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
           shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg
           transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
           flex items-center justify-center gap-3"
       >
-        <span>Étape suivante</span>
-        <ArrowRight className="w-5 h-5" />
+        {isLoading ? (
+          <>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <span>Enregistrement...</span>
+          </>
+        ) : (
+          <>
+            <span>Étape suivante</span>
+            <ArrowRight className="w-5 h-5" />
+          </>
+        )}
       </button>
 
       <style>{`

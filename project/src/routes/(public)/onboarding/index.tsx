@@ -1,47 +1,53 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import { useAuth } from '@/hooks/useAuth';
-import { authSupabase } from '@/lib/auth-supabase';
+import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useEffect } from 'react';
 
 export const Route = createFileRoute('/(public)/onboarding/')({
-  component: OnboardingPage,
+  component: OnboardingRedirect,
 });
 
-function OnboardingPage() {
+/**
+ * Redirects /onboarding to the appropriate step based on Zustand store state.
+ * This ensures users resume from where they left off.
+ *
+ * Step mapping:
+ * - Step 1 → /onboarding/profile
+ * - Step 2 → /onboarding/organization
+ * - Step 3 → /onboarding/farm
+ * - Step 4 → /onboarding/modules
+ * - Step 5+ → /onboarding/complete
+ */
+function OnboardingRedirect() {
   const navigate = useNavigate();
-  const { user, loading, refreshUserData } = useAuth();
+  const { user, loading } = useAuth();
+  const currentStep = useOnboardingStore((state) => state.currentStep);
+  const isRestored = useOnboardingStore((state) => state.isRestored);
 
-  const handleOnboardingComplete = async () => {
-    // Mark onboarding as completed in user profile
-    try {
-      if (user?.id) {
-        const { error: updateError } = await authSupabase
-          .from('user_profiles')
-          .update({ onboarding_completed: true })
-          .eq('id', user.id);
-
-        if (updateError) {
-          console.warn('Failed to mark onboarding as completed:', updateError);
-        } else {
-          console.log('Onboarding marked as completed');
+  useEffect(() => {
+    // Only redirect once store is restored and user is available
+    if (!loading && isRestored && user) {
+      const routeForStep = (step: number) => {
+        switch (step) {
+          case 1:
+            return '/onboarding/profile';
+          case 2:
+            return '/onboarding/organization';
+          case 3:
+            return '/onboarding/farm';
+          case 4:
+            return '/onboarding/modules';
+          default:
+            return '/onboarding/complete';
         }
-      }
-    } catch (err) {
-      console.warn('Error updating onboarding status:', err);
+      };
+
+      navigate({ to: routeForStep(currentStep), replace: true });
     }
+  }, [loading, isRestored, user, currentStep, navigate]);
 
-    // Refresh auth data to get updated onboarding_completed flag
-    await refreshUserData();
-
-    // Use window.location.href for a full page reload
-    // This ensures the AuthProvider re-evaluates needsOnboarding with fresh data
-    // Using navigate() can cause a race condition where the redirect effect
-    // triggers before the auth state is fully updated
-    window.location.href = '/';
-  };
-
-  // Show loading while checking auth
-  if (loading) {
+  // Show loading while checking auth and loading state
+  if (loading || !isRestored) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100">
         <div className="text-center">
@@ -55,16 +61,9 @@ function OnboardingPage() {
     );
   }
 
-  // If no user, redirect to login
   if (!user) {
-    navigate({ to: '/login' });
-    return null;
+    return null; // Layout will redirect to login
   }
 
-  return (
-    <OnboardingWizard
-      user={user}
-      onComplete={handleOnboardingComplete}
-    />
-  );
+  return null; // Redirecting
 }

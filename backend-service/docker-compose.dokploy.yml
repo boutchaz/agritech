@@ -6,10 +6,23 @@ services:
     container_name: satellite-indices-service
     environment:
       - DEBUG=false
+
+      # Satellite Provider Configuration
+      - SATELLITE_PROVIDER=${SATELLITE_PROVIDER:-auto}
+      - SATELLITE_COMMERCIAL_MODE=${SATELLITE_COMMERCIAL_MODE:-false}
+
+      # Google Earth Engine (GEE) Configuration
       - GEE_SERVICE_ACCOUNT=${GEE_SERVICE_ACCOUNT}
       - GEE_PRIVATE_KEY=${GEE_PRIVATE_KEY}
       - GEE_PROJECT_ID=${GEE_PROJECT_ID:-sublime-seat-428722-n5}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI}
+
+      # Copernicus Data Space Ecosystem (CDSE) Configuration
+      - CDSE_CLIENT_ID=${CDSE_CLIENT_ID}
+      - CDSE_CLIENT_SECRET=${CDSE_CLIENT_SECRET}
+      - CDSE_OPENEO_URL=${CDSE_OPENEO_URL:-https://openeo.dataspace.copernicus.eu}
+
+      # Supabase Configuration
       - SUPABASE_URL=${SUPABASE_URL:-https://agritech-supabase-652186-5-75-154-125.traefik.me}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}

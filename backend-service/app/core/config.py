@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     GEE_PRIVATE_KEY: Union[str, dict, Any] = os.getenv("GEE_PRIVATE_KEY", "")
     GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "")
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+
+    # Satellite Provider Configuration
+    # Provider selection: "gee", "cdse", or "auto"
+    SATELLITE_PROVIDER: str = os.getenv("SATELLITE_PROVIDER", "auto")
+    # Commercial mode flag - forces CDSE provider for commercial use
+    SATELLITE_COMMERCIAL_MODE: bool = os.getenv("SATELLITE_COMMERCIAL_MODE", "false").lower() == "true"
+
+    # Copernicus Data Space Ecosystem (CDSE/openEO) Credentials
+    CDSE_CLIENT_ID: str = os.getenv("CDSE_CLIENT_ID", "")
+    CDSE_CLIENT_SECRET: str = os.getenv("CDSE_CLIENT_SECRET", "")
+    CDSE_OPENEO_URL: str = os.getenv("CDSE_OPENEO_URL", "https://openeo.dataspace.copernicus.eu")
     
     # Supabase integration
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")

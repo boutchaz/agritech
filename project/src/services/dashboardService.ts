@@ -1,5 +1,6 @@
 import { apiClient } from '../lib/api-client';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { OrganizationRequiredError, ErrorHandlers } from '../lib/errors';
 
 export interface DashboardSummary {
     parcels: {
@@ -43,7 +44,7 @@ function getCurrentOrganizationId(): string | null {
     const currentOrganization = useOrganizationStore.getState().currentOrganization;
     return currentOrganization?.id || null;
   } catch (error) {
-    console.error('[DashboardService] Error reading organization from store:', error);
+    ErrorHandlers.log(error, '[DashboardService] Error reading organization from store');
     return null;
   }
 }
@@ -53,7 +54,7 @@ class DashboardService {
         const organizationId = getCurrentOrganizationId();
 
         if (!organizationId) {
-            throw new Error('Organization ID is required. Please select an organization first.');
+            throw new OrganizationRequiredError();
         }
 
         const url = new URL('/api/v1/dashboard/summary', 'http://dummy');
@@ -75,7 +76,7 @@ class DashboardService {
         const organizationId = getCurrentOrganizationId();
 
         if (!organizationId) {
-            throw new Error('Organization ID is required. Please select an organization first.');
+            throw new OrganizationRequiredError();
         }
 
         const url = new URL(`/api/v1/dashboard/widgets/${widgetType}`, 'http://dummy');

@@ -1,16 +1,36 @@
 import React from 'react';
-import { 
-  MapPin, 
-  Package, 
-  ShoppingCart, 
-  BarChart3, 
-  Users, 
+import {
+  MapPin,
+  Package,
+  ShoppingCart,
+  BarChart3,
+  Users,
   Building,
   ArrowRight,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Truck,
+  Receipt,
+  ShieldCheck,
+  LucideIcon,
 } from 'lucide-react';
 import { ModuleCard } from '../ui/ModuleCard';
+import { useModuleConfig } from '@/hooks/useModuleConfig';
+import type { ModuleConfig } from '@/lib/api/module-config';
+
+// Icon mapping from database icon names to Lucide components
+const ICON_MAP: Record<string, LucideIcon> = {
+  MapPin,
+  Package,
+  ShoppingCart,
+  Truck,
+  Receipt,
+  Users,
+  Satellite: TrendingUp,
+  ShieldCheck,
+  Building,
+  BarChart3,
+};
 
 interface ModuleSelection {
   farm_management: boolean;
@@ -21,88 +41,43 @@ interface ModuleSelection {
   hr: boolean;
   analytics: boolean;
   marketplace: boolean;
+  compliance: boolean;
 }
 
 interface ModulesStepProps {
   moduleSelection: ModuleSelection;
   onUpdate: (data: Partial<ModuleSelection>) => void;
   onNext: () => void;
+  isLoading?: boolean;
 }
 
-const AVAILABLE_MODULES = [
-  {
-    id: 'farm_management',
-    name: 'Gestion de Ferme',
-    description: 'Parcelles, cultures, tâches et récoltes',
-    icon: MapPin,
-    color: 'emerald',
-    recommended: true,
-  },
-  {
-    id: 'inventory',
-    name: 'Stock & Inventaire',
-    description: 'Entrepôts, articles et mouvements',
-    icon: Package,
-    color: 'blue',
-    recommended: true,
-  },
-  {
-    id: 'sales',
-    name: 'Ventes',
-    description: 'Devis, commandes et factures',
-    icon: ShoppingCart,
-    color: 'purple',
-    recommended: false,
-  },
-  {
-    id: 'procurement',
-    name: 'Achats',
-    description: 'Fournisseurs et bons de commande',
-    icon: ShoppingCart,
-    color: 'orange',
-    recommended: false,
-  },
-  {
-    id: 'accounting',
-    name: 'Comptabilité',
-    description: 'Plan comptable et journaux',
-    icon: BarChart3,
-    color: 'indigo',
-    recommended: false,
-  },
-  {
-    id: 'hr',
-    name: 'Ressources Humaines',
-    description: 'Employés, présences et paie',
-    icon: Users,
-    color: 'pink',
-    recommended: true,
-  },
-  {
-    id: 'analytics',
-    name: 'Analyses Satellite',
-    description: 'NDVI, santé des cultures, prédictions',
-    icon: TrendingUp,
-    color: 'cyan',
-    recommended: false,
-  },
-  {
-    id: 'marketplace',
-    name: 'Marketplace',
-    description: 'Vendez vos produits en ligne',
-    icon: Building,
-    color: 'green',
-    recommended: false,
-  },
-];
+const getColorFromName = (colorName: string): string => {
+  // Map database color names to Tailwind color classes
+  const colorMap: Record<string, string> = {
+    emerald: 'emerald',
+    blue: 'blue',
+    purple: 'purple',
+    orange: 'orange',
+    indigo: 'indigo',
+    pink: 'pink',
+    cyan: 'cyan',
+    green: 'green',
+    violet: 'violet',
+  };
+  return colorMap[colorName] || 'gray';
+};
 
 export const ModulesStep: React.FC<ModulesStepProps> = ({
   moduleSelection,
   onUpdate,
   onNext,
+  isLoading: isSubmitting = false,
 }) => {
+  const { data: config, isLoading: isLoadingConfig, error } = useModuleConfig();
+  const modules = config?.modules || [];
+
   const selectedCount = Object.values(moduleSelection).filter(Boolean).length;
-  
+
   const toggleModule = (moduleId: string) => {
     onUpdate({ [moduleId]: !moduleSelection[moduleId as keyof ModuleSelection] });
   };
@@ -115,6 +90,24 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
     if (selectedCount <= 5) return 'Impressionnant ! Vous êtes prêt à tout gérer';
     return 'Configuration complète ! Vous êtes un pro';
   };
+
+  if (isSubmitting) {
+    return (
+      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 bg-red-50 border border-red-200 rounded-xl">
+        <p className="text-sm text-red-800">
+          Erreur lors du chargement des modules. Veuillez réessayer.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -138,34 +131,37 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-emerald-600">{selectedCount}</span>
-            <span className="text-sm text-gray-500">/ {AVAILABLE_MODULES.length}</span>
+            <span className="text-sm text-gray-500">/ {modules.length}</span>
           </div>
         </div>
-        
+
         {/* Progress bar */}
         <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div 
+          <div
             className="h-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-500 rounded-full"
-            style={{ width: `${(selectedCount / AVAILABLE_MODULES.length) * 100}%` }}
+            style={{ width: `${(selectedCount / modules.length) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Modules grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {AVAILABLE_MODULES.map((module) => (
-          <ModuleCard
-            key={module.id}
-            id={module.id}
-            name={module.name}
-            description={module.description}
-            icon={<module.icon className="w-5 h-5" />}
-            color={module.color}
-            selected={moduleSelection[module.id as keyof ModuleSelection]}
-            onToggle={() => toggleModule(module.id)}
-            recommended={module.recommended}
-          />
-        ))}
+        {modules.map((module) => {
+          const IconComponent = ICON_MAP[module.icon] || Package;
+          return (
+            <ModuleCard
+              key={module.slug}
+              id={module.slug}
+              name={module.name}
+              description={module.description}
+              icon={<IconComponent className="w-5 h-5" />}
+              color={getColorFromName(module.color)}
+              selected={moduleSelection[module.slug as keyof ModuleSelection] || false}
+              onToggle={() => toggleModule(module.slug)}
+              recommended={module.isRecommended}
+            />
+          );
+        })}
       </div>
 
       {/* Quick actions */}
@@ -174,8 +170,8 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           type="button"
           onClick={() => {
             const allSelected: Partial<ModuleSelection> = {};
-            AVAILABLE_MODULES.forEach(m => {
-              allSelected[m.id as keyof ModuleSelection] = true;
+            modules.forEach(m => {
+              allSelected[m.slug as keyof ModuleSelection] = true;
             });
             onUpdate(allSelected);
           }}
@@ -187,8 +183,8 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           type="button"
           onClick={() => {
             const recommended: Partial<ModuleSelection> = {};
-            AVAILABLE_MODULES.forEach(m => {
-              recommended[m.id as keyof ModuleSelection] = m.recommended;
+            modules.forEach(m => {
+              recommended[m.slug as keyof ModuleSelection] = m.isRecommended;
             });
             onUpdate(recommended);
           }}
@@ -207,15 +203,24 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
 
       <button
         onClick={onNext}
-        disabled={selectedCount === 0}
+        disabled={selectedCount === 0 || isSubmitting}
         className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
           shadow-lg shadow-emerald-500/30 hover:shadow-xl
           disabled:opacity-50 disabled:cursor-not-allowed
           transition-all duration-300 hover:scale-[1.02]
           flex items-center justify-center gap-2"
       >
-        Dernière étape
-        <ArrowRight className="w-5 h-5" />
+        {isSubmitting ? (
+          <>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <span>Enregistrement...</span>
+          </>
+        ) : (
+          <>
+            Dernière étape
+            <ArrowRight className="w-5 h-5" />
+          </>
+        )}
       </button>
 
       <style>{`

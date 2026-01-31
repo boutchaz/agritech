@@ -304,6 +304,55 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_org ON subscriptions(organization_id);
 
+-- Notifications (In-app real-time notifications for users)
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT,
+  data JSONB DEFAULT '{}',
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+CREATE INDEX IF NOT EXISTS idx_notifications_org ON notifications(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_org ON notifications(user_id, organization_id, created_at DESC);
+
+-- Enable Row Level Security
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies: Users can only see their own notifications
+CREATE POLICY IF NOT EXISTS "Users can view their own notifications"
+  ON notifications
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can update their own notifications"
+  ON notifications
+  FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Service role can insert notifications (for backend service)
+CREATE POLICY IF NOT EXISTS "Service role can insert notifications"
+  ON notifications
+  FOR INSERT
+  WITH CHECK (true);
+
+-- Service role can do everything
+CREATE POLICY IF NOT EXISTS "Service role has full access"
+  ON notifications
+  FOR ALL
+  USING (auth.role() = 'service_role');
+
+COMMENT ON TABLE notifications IS 'In-app real-time notifications for users';
+COMMENT ON COLUMN notifications.type IS 'Notification type: task_assigned, order_status_changed, quote_received, etc.';
+COMMENT ON COLUMN notifications.data IS 'Additional context data (task_id, order_id, etc.) as JSONB';
+
 -- Modules (Application modules that can be enabled/disabled per organization)
 CREATE TABLE IF NOT EXISTS modules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11333,8 +11382,8 @@ CREATE TABLE IF NOT EXISTS campaigns (
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-  updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
 -- Create indexes for better query performance
@@ -11435,7 +11484,7 @@ CREATE TABLE IF NOT EXISTS quality_inspections (
   crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
   type VARCHAR(50) NOT NULL CHECK (type IN ('pre_harvest', 'post_harvest', 'storage', 'transport', 'processing')),
   inspection_date DATE NOT NULL,
-  inspector_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  inspector_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   results JSONB NOT NULL DEFAULT '{}',
   status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'failed', 'cancelled')),
   overall_score INTEGER CHECK (overall_score >= 0 AND overall_score <= 100),
@@ -11443,8 +11492,8 @@ CREATE TABLE IF NOT EXISTS quality_inspections (
   attachments TEXT[] DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-  updated_by UUID REFERENCES users(id) ON DELETE SET NULL
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
 -- Create indexes for better query performance
@@ -13872,10 +13921,10 @@ CREATE TABLE IF NOT EXISTS module_prices (
 
 COMMENT ON TABLE module_prices IS 'Pricing for modules per plan type';
 
--- Create unique constraint for active pricing
+-- Create unique constraint for active pricing (only for entries without end date)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_module_prices_active
 ON module_prices(module_id, plan_type)
-WHERE is_active = true AND (valid_until IS NULL OR valid_until > NOW());
+WHERE is_active = true AND valid_until IS NULL;
 
 -- Create subscription_pricing table for global pricing configuration
 CREATE TABLE IF NOT EXISTS subscription_pricing (
@@ -14599,9 +14648,6 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
--- Enable RLS on storage.objects for the products bucket
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
 -- Policy: Allow anyone to view products (images) but not list the bucket
 CREATE POLICY "allow_public_view_products"
 ON storage.objects FOR SELECT
@@ -14672,9 +14718,6 @@ BEGIN
   RETURN NULL;
 END;
 $$;
-
--- Comment explaining storage configuration
-COMMENT ON TABLE storage.objects IS 'Storage objects - products bucket is private but publicly viewable';
 
 
 -- =====================================================
@@ -15394,8 +15437,8 @@ SELECT
   (SELECT COUNT(*) FROM sales_orders WHERE organization_id = o.id) AS sales_orders_count,
   (SELECT COUNT(*) FROM purchase_orders WHERE organization_id = o.id) AS purchase_orders_count,
   (SELECT COUNT(*) FROM invoices WHERE organization_id = o.id) AS invoices_count,
-  (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE organization_id = o.id AND status != 'paid') AS outstanding_invoices,
-  (SELECT COALESCE(SUM(total_amount), 0) FROM accounting_payments WHERE organization_id = o.id) AS total_payments
+  (SELECT COALESCE(SUM(grand_total), 0) FROM invoices WHERE organization_id = o.id AND status != 'paid') AS outstanding_invoices,
+  (SELECT COALESCE(SUM(amount), 0) FROM accounting_payments WHERE organization_id = o.id) AS total_payments
 FROM organizations o;
 
 -- dashboard_summary view
@@ -15420,7 +15463,7 @@ SELECT
    FROM sales_order_items j
    JOIN sales_orders so ON j.sales_order_id = so.id
    WHERE so.organization_id = o.id) AS total_revenue,
-  (SELECT COALESCE(SUM(j.quantity * j.unit_cost), 0)
+  (SELECT COALESCE(SUM(j.quantity * j.unit_price), 0)
    FROM purchase_order_items j
    JOIN purchase_orders po ON j.purchase_order_id = po.id
    WHERE po.organization_id = o.id) AS total_purchases,
@@ -15437,19 +15480,16 @@ DROP VIEW IF EXISTS inventory_status;
 CREATE VIEW inventory_status WITH (security_invoker = true) AS
 SELECT
   i.id AS inventory_item_id,
-  i.item_id,
-  i.item_name,
+  i.name AS item_name,
   i.warehouse_id,
   w.name AS warehouse_name,
-  i.quantity_on_hand,
-  i.quantity_reserved,
-  i.quantity_available,
-  i.reorder_level,
-  i.quantity_on_hand <= i.reorder_level AS needs_reorder,
-  i.last_stock_update,
+  i.quantity,
+  i.minimum_quantity AS reorder_level,
+  i.quantity <= i.minimum_quantity AS needs_reorder,
+  i.status,
   i.organization_id
 FROM inventory i
-JOIN warehouses w ON i.warehouse_id = w.id;
+LEFT JOIN warehouses w ON i.warehouse_id = w.id;
 
 -- pending_tasks view
 DROP VIEW IF EXISTS pending_tasks;
@@ -15462,13 +15502,13 @@ SELECT
   t.status,
   t.priority,
   t.due_date,
-  t.assigned_to_id,
-  u.first_name || ' ' || u.last_name AS assigned_to_name,
+  t.assigned_to,
+  w.first_name || ' ' || w.last_name AS assigned_to_name,
   t.farm_id,
   f.name AS farm_name,
   t.created_at
 FROM tasks t
-LEFT JOIN users u ON t.assigned_to_id = u.id
+LEFT JOIN workers w ON t.assigned_to = w.id
 LEFT JOIN farms f ON t.farm_id = f.id
 WHERE t.status IN ('pending', 'in_progress')
 ORDER BY t.due_date ASC NULLS LAST, t.priority DESC;
@@ -15479,17 +15519,15 @@ CREATE VIEW production_metrics WITH (security_invoker = true) AS
 SELECT
   o.id AS organization_id,
   (SELECT COUNT(*) FROM crops WHERE organization_id = o.id AND status = 'active') AS active_crops_count,
-  (SELECT COUNT(*) FROM trees WHERE organization_id = o.id AND status = 'active') AS active_trees_count,
-  (SELECT COALESCE(SUM(hr.quantity_kg), 0)
+  (SELECT COUNT(*) FROM trees WHERE organization_id = o.id) AS trees_count,
+  (SELECT COALESCE(SUM(hr.quantity), 0)
    FROM harvest_records hr
-   JOIN crops c ON hr.crop_id = c.id
-   WHERE c.organization_id = o.id
-   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS harvest_last_30_days_kg,
-  (SELECT COALESCE(AVG(hr.quantity_kg), 0)
+   WHERE hr.organization_id = o.id
+   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS harvest_last_30_days,
+  (SELECT COALESCE(AVG(hr.quantity), 0)
    FROM harvest_records hr
-   JOIN crops c ON hr.crop_id = c.id
-   WHERE c.organization_id = o.id
-   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS avg_harvest_last_30_days_kg
+   WHERE hr.organization_id = o.id
+   AND hr.harvest_date >= CURRENT_DATE - INTERVAL '30 days') AS avg_harvest_last_30_days
 FROM organizations o;
 
 -- sales_analytics view
@@ -15525,25 +15563,24 @@ CREATE VIEW worker_assignments WITH (security_invoker = true) AS
 SELECT
   w.id AS worker_id,
   w.user_id,
-  u.first_name || ' ' || u.last_name AS worker_name,
+  w.first_name || ' ' || w.last_name AS worker_name,
   w.organization_id,
-  w.employee_id,
+  w.worker_type,
   COUNT(DISTINCT t.id) AS assigned_tasks_count,
   COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) AS completed_tasks_count
 FROM workers w
-LEFT JOIN users u ON w.user_id = u.id
-LEFT JOIN tasks t ON t.assigned_to_id = w.id
+LEFT JOIN tasks t ON t.assigned_to = w.id
 WHERE w.is_active = true
-GROUP BY w.id, w.user_id, u.first_name, u.last_name, w.organization_id, w.employee_id;
+GROUP BY w.id, w.user_id, w.first_name, w.last_name, w.organization_id, w.worker_type;
 
 -- workforce_summary view
 DROP VIEW IF EXISTS workforce_summary;
 CREATE VIEW workforce_summary WITH (security_invoker = true) AS
 SELECT
   o.id AS organization_id,
-  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'employee' AND is_active = true) AS active_employees,
-  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'day_laborer' AND is_active = true) AS active_day_laborers,
-  (SELECT COUNT(*) FROM work_units WHERE organization_id = o.id AND is_active = true) AS active_work_units,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'fixed_salary' AND is_active = true) AS active_fixed_salary,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'daily_worker' AND is_active = true) AS active_daily_workers,
+  (SELECT COUNT(*) FROM workers WHERE organization_id = o.id AND worker_type = 'metayage' AND is_active = true) AS active_metayage,
   (SELECT COUNT(*) FROM tasks WHERE organization_id = o.id AND status = 'in_progress') AS tasks_in_progress
 FROM organizations o;
 
@@ -15612,37 +15649,6 @@ BEGIN
   WHERE account_id = p_account_id;
 
   RETURN COALESCE(v_balance, 0);
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION get_trial_balance(p_organization_id UUID, p_as_of_date DATE DEFAULT CURRENT_DATE)
-RETURNS TABLE (
-  account_id UUID,
-  account_code VARCHAR,
-  account_name VARCHAR,
-  debit NUMERIC,
-  credit NUMERIC
-) LANGUAGE plpgsql
-SET search_path = public
-SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    a.id,
-    a.code,
-    a.name,
-    COALESCE(SUM(ji.debit), 0) AS debit,
-    COALESCE(SUM(ji.credit), 0) AS credit
-  FROM accounts a
-  LEFT JOIN journal_items ji ON ji.account_id = a.id
-  LEFT JOIN journal_entries je ON je.id = ji.journal_entry_id
-  LEFT JOIN account_mappings am ON am.account_id = a.id
-  WHERE a.organization_id = p_organization_id
-    AND (je.date IS NULL OR je.date <= p_as_of_date)
-    AND (am.effective_to IS NULL OR am.effective_to > p_as_of_date)
-  GROUP BY a.id, a.code, a.name
-  ORDER BY a.code;
 END;
 $$;
 
@@ -15948,9 +15954,1313 @@ END;
 $$;
 
 -- Add comments for documentation
-COMMENT ON FUNCTION check_organization_access IS 'Check if current user has access to organization';
+COMMENT ON FUNCTION check_organization_access(UUID) IS 'Check if current user has access to organization';
 COMMENT ON FUNCTION get_user_organizations IS 'Get all organizations for current user with roles';
 COMMENT ON FUNCTION adjust_inventory IS 'Adjust inventory quantity and create stock movement record';
 COMMENT ON FUNCTION update_task_status IS 'Update task status and optionally add comment';
 COMMENT ON FUNCTION create_task_from_template IS 'Create a new task from a template';
+
+-- =====================================================
+-- SCHEMA IMPROVEMENTS - Addressing Review Issues
+-- =====================================================
+
+-- -----------------------------------------------------
+-- 1. POSTGIS NATIVE GEOMETRY COLUMNS (backwards compatible)
+-- -----------------------------------------------------
+-- Add native geometry columns alongside existing JSONB columns for spatial indexing
+
+-- Add native geometry columns to farms table
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS location_point GEOMETRY(Point, 4326);
+ALTER TABLE farms ADD COLUMN IF NOT EXISTS boundary_polygon GEOMETRY(Polygon, 4326);
+
+-- Add native geometry columns to parcels table  
+ALTER TABLE parcels ADD COLUMN IF NOT EXISTS centroid GEOMETRY(Point, 4326);
+ALTER TABLE parcels ADD COLUMN IF NOT EXISTS boundary_geom GEOMETRY(Polygon, 4326);
+
+-- Add native geometry columns to satellite_aois table
+ALTER TABLE satellite_aois ADD COLUMN IF NOT EXISTS geometry GEOMETRY(Polygon, 4326);
+
+-- Create spatial indexes
+CREATE INDEX IF NOT EXISTS idx_farms_location_point ON farms USING GIST (location_point);
+CREATE INDEX IF NOT EXISTS idx_farms_boundary_polygon ON farms USING GIST (boundary_polygon);
+CREATE INDEX IF NOT EXISTS idx_parcels_centroid ON parcels USING GIST (centroid);
+CREATE INDEX IF NOT EXISTS idx_parcels_boundary_geom ON parcels USING GIST (boundary_geom);
+CREATE INDEX IF NOT EXISTS idx_satellite_aois_geometry ON satellite_aois USING GIST (geometry);
+
+-- Function to sync JSONB coordinates to geometry columns
+CREATE OR REPLACE FUNCTION sync_farm_geometry()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.coordinates IS NOT NULL AND NEW.coordinates ? 'lat' AND NEW.coordinates ? 'lng' THEN
+    NEW.location_point := ST_SetSRID(
+      ST_MakePoint(
+        (NEW.coordinates->>'lng')::FLOAT,
+        (NEW.coordinates->>'lat')::FLOAT
+      ),
+      4326
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_farm_geometry ON farms;
+CREATE TRIGGER trg_sync_farm_geometry
+  BEFORE INSERT OR UPDATE ON farms
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_farm_geometry();
+
+-- Function to sync parcel boundary JSONB to geometry
+CREATE OR REPLACE FUNCTION sync_parcel_geometry()
+RETURNS TRIGGER AS $$
+DECLARE
+  coords JSONB;
+  ring TEXT;
+BEGIN
+  IF NEW.boundary IS NOT NULL AND jsonb_array_length(NEW.boundary) > 2 THEN
+    -- Build WKT polygon from JSONB array of {lat, lng} points
+    SELECT string_agg(
+      (coord->>'lng')::TEXT || ' ' || (coord->>'lat')::TEXT,
+      ','
+    ) INTO ring
+    FROM jsonb_array_elements(NEW.boundary) AS coord;
+    
+    -- Close the ring if needed
+    IF ring IS NOT NULL THEN
+      NEW.boundary_geom := ST_SetSRID(
+        ST_GeomFromText('POLYGON((' || ring || ',' || 
+          (NEW.boundary->0->>'lng')::TEXT || ' ' || (NEW.boundary->0->>'lat')::TEXT || '))'),
+        4326
+      );
+      NEW.centroid := ST_Centroid(NEW.boundary_geom);
+    END IF;
+  END IF;
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Silently ignore geometry conversion errors to not break inserts
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_parcel_geometry ON parcels;
+CREATE TRIGGER trg_sync_parcel_geometry
+  BEFORE INSERT OR UPDATE ON parcels
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_parcel_geometry();
+
+-- -----------------------------------------------------
+-- 2. MISSING is_active COLUMNS FOR SOFT DELETE CONSISTENCY
+-- -----------------------------------------------------
+-- Add is_active to tables missing soft delete support
+
+ALTER TABLE task_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE crop_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE cost_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE task_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE product_subcategories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE test_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE trees ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE plantation_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
+-- -----------------------------------------------------
+-- 3. MISSING BUSINESS KEY UNIQUE CONSTRAINTS
+-- -----------------------------------------------------
+-- Add unique constraints for business keys
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_categories_name_org 
+  ON task_categories(organization_id, name);
+  
+CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouses_name_org 
+  ON warehouses(organization_id, name);
+  
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cost_categories_name_org 
+  ON cost_categories(organization_id, name, type);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_number_org 
+  ON bank_accounts(organization_id, account_number) 
+  WHERE account_number IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_cin_org 
+  ON workers(organization_id, cin) 
+  WHERE cin IS NOT NULL;
+
+-- -----------------------------------------------------
+-- 4. FIFO/LIFO STOCK VALUATION CONSUMPTION FUNCTIONS
+-- -----------------------------------------------------
+-- Implements the TODO at line 5705 for stock valuation consumption logic
+
+-- FIFO Stock Valuation Consumption Function
+CREATE OR REPLACE FUNCTION consume_stock_fifo(
+  p_organization_id UUID,
+  p_item_id UUID,
+  p_warehouse_id UUID,
+  p_quantity NUMERIC,
+  p_stock_entry_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  valuation_id UUID,
+  quantity_consumed NUMERIC,
+  cost_per_unit NUMERIC,
+  total_cost NUMERIC
+) LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_remaining NUMERIC := p_quantity;
+  v_valuation RECORD;
+  v_consume_qty NUMERIC;
+BEGIN
+  -- Process FIFO: oldest first (by valuation_date)
+  FOR v_valuation IN
+    SELECT sv.id, sv.remaining_quantity, sv.cost_per_unit
+    FROM stock_valuation sv
+    WHERE sv.organization_id = p_organization_id
+      AND sv.item_id = p_item_id
+      AND sv.warehouse_id = p_warehouse_id
+      AND sv.remaining_quantity > 0
+    ORDER BY sv.valuation_date ASC, sv.created_at ASC
+  LOOP
+    EXIT WHEN v_remaining <= 0;
+    
+    -- Calculate quantity to consume from this layer
+    v_consume_qty := LEAST(v_valuation.remaining_quantity, v_remaining);
+    
+    -- Update the valuation layer
+    UPDATE stock_valuation
+    SET remaining_quantity = remaining_quantity - v_consume_qty
+    WHERE id = v_valuation.id;
+    
+    -- Return the consumption details
+    valuation_id := v_valuation.id;
+    quantity_consumed := v_consume_qty;
+    cost_per_unit := v_valuation.cost_per_unit;
+    total_cost := v_consume_qty * v_valuation.cost_per_unit;
+    RETURN NEXT;
+    
+    v_remaining := v_remaining - v_consume_qty;
+  END LOOP;
+  
+  -- Raise warning if we couldn't consume enough
+  IF v_remaining > 0 THEN
+    RAISE WARNING 'Insufficient stock: requested %, shortfall %', p_quantity, v_remaining;
+  END IF;
+  
+  RETURN;
+END;
+$$;
+
+-- LIFO Stock Valuation Consumption Function
+CREATE OR REPLACE FUNCTION consume_stock_lifo(
+  p_organization_id UUID,
+  p_item_id UUID,
+  p_warehouse_id UUID,
+  p_quantity NUMERIC,
+  p_stock_entry_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  valuation_id UUID,
+  quantity_consumed NUMERIC,
+  cost_per_unit NUMERIC,
+  total_cost NUMERIC
+) LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_remaining NUMERIC := p_quantity;
+  v_valuation RECORD;
+  v_consume_qty NUMERIC;
+BEGIN
+  -- Process LIFO: newest first (by valuation_date DESC)
+  FOR v_valuation IN
+    SELECT sv.id, sv.remaining_quantity, sv.cost_per_unit
+    FROM stock_valuation sv
+    WHERE sv.organization_id = p_organization_id
+      AND sv.item_id = p_item_id
+      AND sv.warehouse_id = p_warehouse_id
+      AND sv.remaining_quantity > 0
+    ORDER BY sv.valuation_date DESC, sv.created_at DESC
+  LOOP
+    EXIT WHEN v_remaining <= 0;
+    
+    v_consume_qty := LEAST(v_valuation.remaining_quantity, v_remaining);
+    
+    UPDATE stock_valuation
+    SET remaining_quantity = remaining_quantity - v_consume_qty
+    WHERE id = v_valuation.id;
+    
+    valuation_id := v_valuation.id;
+    quantity_consumed := v_consume_qty;
+    cost_per_unit := v_valuation.cost_per_unit;
+    total_cost := v_consume_qty * v_valuation.cost_per_unit;
+    RETURN NEXT;
+    
+    v_remaining := v_remaining - v_consume_qty;
+  END LOOP;
+  
+  IF v_remaining > 0 THEN
+    RAISE WARNING 'Insufficient stock: requested %, shortfall %', p_quantity, v_remaining;
+  END IF;
+  
+  RETURN;
+END;
+$$;
+
+-- Generic function that uses item's valuation_method
+CREATE OR REPLACE FUNCTION consume_stock_by_method(
+  p_organization_id UUID,
+  p_item_id UUID,
+  p_warehouse_id UUID,
+  p_quantity NUMERIC,
+  p_stock_entry_id UUID DEFAULT NULL
+)
+RETURNS TABLE (
+  valuation_id UUID,
+  quantity_consumed NUMERIC,
+  cost_per_unit NUMERIC,
+  total_cost NUMERIC
+) LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_method TEXT;
+BEGIN
+  -- Get valuation method from item
+  SELECT valuation_method INTO v_method
+  FROM items
+  WHERE id = p_item_id;
+  
+  v_method := COALESCE(v_method, 'Moving Average');
+  
+  IF v_method = 'FIFO' THEN
+    RETURN QUERY SELECT * FROM consume_stock_fifo(
+      p_organization_id, p_item_id, p_warehouse_id, p_quantity, p_stock_entry_id
+    );
+  ELSIF v_method = 'LIFO' THEN
+    RETURN QUERY SELECT * FROM consume_stock_lifo(
+      p_organization_id, p_item_id, p_warehouse_id, p_quantity, p_stock_entry_id
+    );
+  ELSE
+    -- Moving Average: consume from all layers proportionally
+    RETURN QUERY
+    WITH avg_cost AS (
+      SELECT 
+        AVG(sv.cost_per_unit) AS cost,
+        SUM(sv.remaining_quantity) AS total_remaining
+      FROM stock_valuation sv
+      WHERE sv.organization_id = p_organization_id
+        AND sv.item_id = p_item_id
+        AND sv.warehouse_id = p_warehouse_id
+        AND sv.remaining_quantity > 0
+    )
+    SELECT 
+      NULL::UUID AS valuation_id,
+      LEAST(p_quantity, ac.total_remaining) AS quantity_consumed,
+      ac.cost AS cost_per_unit,
+      LEAST(p_quantity, ac.total_remaining) * ac.cost AS total_cost
+    FROM avg_cost ac
+    WHERE ac.total_remaining > 0;
+  END IF;
+  
+  RETURN;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION consume_stock_fifo TO authenticated;
+GRANT EXECUTE ON FUNCTION consume_stock_lifo TO authenticated;
+GRANT EXECUTE ON FUNCTION consume_stock_by_method TO authenticated;
+
+-- -----------------------------------------------------
+-- 5. MISSING RLS POLICIES FOR TABLES WITH RLS ENABLED
+-- -----------------------------------------------------
+-- Add comprehensive RLS policies for tables that have RLS enabled but may be missing policies
+
+-- RLS Policies for task_assignments
+DROP POLICY IF EXISTS "org_read_task_assignments" ON task_assignments;
+CREATE POLICY "org_read_task_assignments" ON task_assignments
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_task_assignments" ON task_assignments;
+CREATE POLICY "org_write_task_assignments" ON task_assignments
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_task_assignments" ON task_assignments;
+CREATE POLICY "org_update_task_assignments" ON task_assignments
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_task_assignments" ON task_assignments;
+CREATE POLICY "org_delete_task_assignments" ON task_assignments
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS Policies for warehouses
+DROP POLICY IF EXISTS "org_read_warehouses" ON warehouses;
+CREATE POLICY "org_read_warehouses" ON warehouses
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_warehouses" ON warehouses;
+CREATE POLICY "org_write_warehouses" ON warehouses
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_warehouses" ON warehouses;
+CREATE POLICY "org_update_warehouses" ON warehouses
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_warehouses" ON warehouses;
+CREATE POLICY "org_delete_warehouses" ON warehouses
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for stock_movements
+DROP POLICY IF EXISTS "org_read_stock_movements" ON stock_movements;
+CREATE POLICY "org_read_stock_movements" ON stock_movements
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_stock_movements" ON stock_movements;
+CREATE POLICY "org_write_stock_movements" ON stock_movements
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for stock_valuation
+DROP POLICY IF EXISTS "org_read_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_read_stock_valuation" ON stock_valuation
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_stock_valuation" ON stock_valuation;
+CREATE POLICY "org_write_stock_valuation" ON stock_valuation
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for inventory_batches
+DROP POLICY IF EXISTS "org_read_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_read_inventory_batches" ON inventory_batches
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_inventory_batches" ON inventory_batches;
+CREATE POLICY "org_write_inventory_batches" ON inventory_batches
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for inventory_serial_numbers
+DROP POLICY IF EXISTS "org_read_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_read_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_inventory_serial_numbers" ON inventory_serial_numbers;
+CREATE POLICY "org_write_inventory_serial_numbers" ON inventory_serial_numbers
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for opening_stock_balances
+DROP POLICY IF EXISTS "org_read_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_read_opening_stock_balances" ON opening_stock_balances
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_opening_stock_balances" ON opening_stock_balances;
+CREATE POLICY "org_write_opening_stock_balances" ON opening_stock_balances
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for stock_closing_entries
+DROP POLICY IF EXISTS "org_read_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_read_stock_closing_entries" ON stock_closing_entries
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_stock_closing_entries" ON stock_closing_entries;
+CREATE POLICY "org_write_stock_closing_entries" ON stock_closing_entries
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for stock_account_mappings
+DROP POLICY IF EXISTS "org_read_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_read_stock_account_mappings" ON stock_account_mappings
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_stock_account_mappings" ON stock_account_mappings;
+CREATE POLICY "org_write_stock_account_mappings" ON stock_account_mappings
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for costs
+DROP POLICY IF EXISTS "org_read_costs" ON costs;
+CREATE POLICY "org_read_costs" ON costs
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_costs" ON costs;
+CREATE POLICY "org_write_costs" ON costs
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_costs" ON costs;
+CREATE POLICY "org_update_costs" ON costs
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_costs" ON costs;
+CREATE POLICY "org_delete_costs" ON costs
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for revenues
+DROP POLICY IF EXISTS "org_read_revenues" ON revenues;
+CREATE POLICY "org_read_revenues" ON revenues
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_revenues" ON revenues;
+CREATE POLICY "org_write_revenues" ON revenues
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_revenues" ON revenues;
+CREATE POLICY "org_update_revenues" ON revenues
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_revenues" ON revenues;
+CREATE POLICY "org_delete_revenues" ON revenues
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for profitability_snapshots
+DROP POLICY IF EXISTS "org_read_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_read_profitability_snapshots" ON profitability_snapshots
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_profitability_snapshots" ON profitability_snapshots;
+CREATE POLICY "org_write_profitability_snapshots" ON profitability_snapshots
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for structures
+DROP POLICY IF EXISTS "org_read_structures" ON structures;
+CREATE POLICY "org_read_structures" ON structures
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_structures" ON structures;
+CREATE POLICY "org_write_structures" ON structures
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_structures" ON structures;
+CREATE POLICY "org_update_structures" ON structures
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_structures" ON structures;
+CREATE POLICY "org_delete_structures" ON structures
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for payment_records
+DROP POLICY IF EXISTS "org_read_payment_records" ON payment_records;
+CREATE POLICY "org_read_payment_records" ON payment_records
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_payment_records" ON payment_records;
+CREATE POLICY "org_write_payment_records" ON payment_records
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_payment_records" ON payment_records;
+CREATE POLICY "org_update_payment_records" ON payment_records
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+-- RLS for payment_advances
+DROP POLICY IF EXISTS "org_read_payment_advances" ON payment_advances;
+CREATE POLICY "org_read_payment_advances" ON payment_advances
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_payment_advances" ON payment_advances;
+CREATE POLICY "org_write_payment_advances" ON payment_advances
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_payment_advances" ON payment_advances;
+CREATE POLICY "org_update_payment_advances" ON payment_advances
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+-- RLS for metayage_settlements
+DROP POLICY IF EXISTS "org_read_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
+CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- RLS for work_records
+DROP POLICY IF EXISTS "org_read_work_records" ON work_records;
+CREATE POLICY "org_read_work_records" ON work_records
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
+CREATE POLICY "org_write_work_records" ON work_records
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+-- -----------------------------------------------------
+-- 6. BUSINESS KEY UNIQUE CONSTRAINTS
+-- -----------------------------------------------------
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_parcels_name_org_farm 
+  ON parcels(organization_id, farm_id, name);
+
+-- -----------------------------------------------------
+-- 7. MISSING updated_at AUTO-UPDATE TRIGGERS
+-- -----------------------------------------------------
+-- Add triggers for all tables with updated_at columns to auto-update on modification
+-- Uses the existing update_updated_at_column() function defined at line 29
+
+-- Core Organization & User tables
+DROP TRIGGER IF EXISTS trg_organizations_updated_at ON organizations;
+CREATE TRIGGER trg_organizations_updated_at BEFORE UPDATE ON organizations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_organization_users_updated_at ON organization_users;
+CREATE TRIGGER trg_organization_users_updated_at BEFORE UPDATE ON organization_users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_user_profiles_updated_at ON user_profiles;
+CREATE TRIGGER trg_user_profiles_updated_at BEFORE UPDATE ON user_profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_subscriptions_updated_at ON subscriptions;
+CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON subscriptions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_modules_updated_at ON modules;
+CREATE TRIGGER trg_modules_updated_at BEFORE UPDATE ON modules
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_organization_modules_updated_at ON organization_modules;
+CREATE TRIGGER trg_organization_modules_updated_at BEFORE UPDATE ON organization_modules
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Farm & Parcel tables
+DROP TRIGGER IF EXISTS trg_farms_updated_at ON farms;
+CREATE TRIGGER trg_farms_updated_at BEFORE UPDATE ON farms
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_parcels_updated_at ON parcels;
+CREATE TRIGGER trg_parcels_updated_at BEFORE UPDATE ON parcels
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Customer & Supplier tables
+DROP TRIGGER IF EXISTS trg_customers_updated_at ON customers;
+CREATE TRIGGER trg_customers_updated_at BEFORE UPDATE ON customers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_suppliers_updated_at ON suppliers;
+CREATE TRIGGER trg_suppliers_updated_at BEFORE UPDATE ON suppliers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Accounting tables
+DROP TRIGGER IF EXISTS trg_currencies_updated_at ON currencies;
+CREATE TRIGGER trg_currencies_updated_at BEFORE UPDATE ON currencies
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_account_templates_updated_at ON account_templates;
+CREATE TRIGGER trg_account_templates_updated_at BEFORE UPDATE ON account_templates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_quotes_updated_at ON quotes;
+CREATE TRIGGER trg_quotes_updated_at BEFORE UPDATE ON quotes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_sales_orders_updated_at ON sales_orders;
+CREATE TRIGGER trg_sales_orders_updated_at BEFORE UPDATE ON sales_orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_purchase_orders_updated_at ON purchase_orders;
+CREATE TRIGGER trg_purchase_orders_updated_at BEFORE UPDATE ON purchase_orders
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_cost_centers_updated_at ON cost_centers;
+CREATE TRIGGER trg_cost_centers_updated_at BEFORE UPDATE ON cost_centers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_accounts_updated_at ON accounts;
+CREATE TRIGGER trg_accounts_updated_at BEFORE UPDATE ON accounts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_taxes_updated_at ON taxes;
+CREATE TRIGGER trg_taxes_updated_at BEFORE UPDATE ON taxes
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_bank_accounts_updated_at ON bank_accounts;
+CREATE TRIGGER trg_bank_accounts_updated_at BEFORE UPDATE ON bank_accounts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_journal_entries_updated_at ON journal_entries;
+CREATE TRIGGER trg_journal_entries_updated_at BEFORE UPDATE ON journal_entries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_invoices_updated_at ON invoices;
+CREATE TRIGGER trg_invoices_updated_at BEFORE UPDATE ON invoices
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_accounting_payments_updated_at ON accounting_payments;
+CREATE TRIGGER trg_accounting_payments_updated_at BEFORE UPDATE ON accounting_payments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Workforce & Task tables
+DROP TRIGGER IF EXISTS trg_workers_updated_at ON workers;
+CREATE TRIGGER trg_workers_updated_at BEFORE UPDATE ON workers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_work_units_updated_at ON work_units;
+CREATE TRIGGER trg_work_units_updated_at BEFORE UPDATE ON work_units
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_day_laborers_updated_at ON day_laborers;
+CREATE TRIGGER trg_day_laborers_updated_at BEFORE UPDATE ON day_laborers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_employees_updated_at ON employees;
+CREATE TRIGGER trg_employees_updated_at BEFORE UPDATE ON employees
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
+CREATE TRIGGER trg_tasks_updated_at BEFORE UPDATE ON tasks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_task_assignments_updated_at ON task_assignments;
+CREATE TRIGGER trg_task_assignments_updated_at BEFORE UPDATE ON task_assignments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_task_categories_updated_at ON task_categories;
+CREATE TRIGGER trg_task_categories_updated_at BEFORE UPDATE ON task_categories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_task_templates_updated_at ON task_templates;
+CREATE TRIGGER trg_task_templates_updated_at BEFORE UPDATE ON task_templates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_task_comments_updated_at ON task_comments;
+CREATE TRIGGER trg_task_comments_updated_at BEFORE UPDATE ON task_comments
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_task_time_logs_updated_at ON task_time_logs;
+CREATE TRIGGER trg_task_time_logs_updated_at BEFORE UPDATE ON task_time_logs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_work_records_updated_at ON work_records;
+CREATE TRIGGER trg_work_records_updated_at BEFORE UPDATE ON work_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_metayage_settlements_updated_at ON metayage_settlements;
+CREATE TRIGGER trg_metayage_settlements_updated_at BEFORE UPDATE ON metayage_settlements
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_payment_records_updated_at ON payment_records;
+CREATE TRIGGER trg_payment_records_updated_at BEFORE UPDATE ON payment_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_payment_advances_updated_at ON payment_advances;
+CREATE TRIGGER trg_payment_advances_updated_at BEFORE UPDATE ON payment_advances
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Warehouse & Inventory tables
+DROP TRIGGER IF EXISTS trg_warehouses_updated_at ON warehouses;
+CREATE TRIGGER trg_warehouses_updated_at BEFORE UPDATE ON warehouses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_harvest_records_updated_at ON harvest_records;
+CREATE TRIGGER trg_harvest_records_updated_at BEFORE UPDATE ON harvest_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_harvest_forecasts_updated_at ON harvest_forecasts;
+CREATE TRIGGER trg_harvest_forecasts_updated_at BEFORE UPDATE ON harvest_forecasts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_performance_alerts_updated_at ON performance_alerts;
+CREATE TRIGGER trg_performance_alerts_updated_at BEFORE UPDATE ON performance_alerts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_deliveries_updated_at ON deliveries;
+CREATE TRIGGER trg_deliveries_updated_at BEFORE UPDATE ON deliveries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_item_groups_updated_at ON item_groups;
+CREATE TRIGGER trg_item_groups_updated_at BEFORE UPDATE ON item_groups
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_items_updated_at ON items;
+CREATE TRIGGER trg_items_updated_at BEFORE UPDATE ON items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_inventory_items_updated_at ON inventory_items;
+CREATE TRIGGER trg_inventory_items_updated_at BEFORE UPDATE ON inventory_items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_inventory_batches_updated_at ON inventory_batches;
+CREATE TRIGGER trg_inventory_batches_updated_at BEFORE UPDATE ON inventory_batches
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_inventory_serial_numbers_updated_at ON inventory_serial_numbers;
+CREATE TRIGGER trg_inventory_serial_numbers_updated_at BEFORE UPDATE ON inventory_serial_numbers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_stock_entries_updated_at ON stock_entries;
+CREATE TRIGGER trg_stock_entries_updated_at BEFORE UPDATE ON stock_entries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_stock_movements_updated_at ON stock_movements;
+CREATE TRIGGER trg_stock_movements_updated_at BEFORE UPDATE ON stock_movements
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_stock_valuation_updated_at ON stock_valuation;
+CREATE TRIGGER trg_stock_valuation_updated_at BEFORE UPDATE ON stock_valuation
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_opening_stock_balances_updated_at ON opening_stock_balances;
+CREATE TRIGGER trg_opening_stock_balances_updated_at BEFORE UPDATE ON opening_stock_balances
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_stock_closing_entries_updated_at ON stock_closing_entries;
+CREATE TRIGGER trg_stock_closing_entries_updated_at BEFORE UPDATE ON stock_closing_entries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_reception_batches_updated_at ON reception_batches;
+CREATE TRIGGER trg_reception_batches_updated_at BEFORE UPDATE ON reception_batches
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Satellite & Analysis tables
+DROP TRIGGER IF EXISTS trg_satellite_aois_updated_at ON satellite_aois;
+CREATE TRIGGER trg_satellite_aois_updated_at BEFORE UPDATE ON satellite_aois
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_satellite_files_updated_at ON satellite_files;
+CREATE TRIGGER trg_satellite_files_updated_at BEFORE UPDATE ON satellite_files
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_satellite_indices_data_updated_at ON satellite_indices_data;
+CREATE TRIGGER trg_satellite_indices_data_updated_at BEFORE UPDATE ON satellite_indices_data
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_satellite_processing_jobs_updated_at ON satellite_processing_jobs;
+CREATE TRIGGER trg_satellite_processing_jobs_updated_at BEFORE UPDATE ON satellite_processing_jobs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_satellite_processing_tasks_updated_at ON satellite_processing_tasks;
+CREATE TRIGGER trg_satellite_processing_tasks_updated_at BEFORE UPDATE ON satellite_processing_tasks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_cloud_coverage_checks_updated_at ON cloud_coverage_checks;
+CREATE TRIGGER trg_cloud_coverage_checks_updated_at BEFORE UPDATE ON cloud_coverage_checks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_analyses_updated_at ON analyses;
+CREATE TRIGGER trg_analyses_updated_at BEFORE UPDATE ON analyses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_analysis_recommendations_updated_at ON analysis_recommendations;
+CREATE TRIGGER trg_analysis_recommendations_updated_at BEFORE UPDATE ON analysis_recommendations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_soil_analyses_updated_at ON soil_analyses;
+CREATE TRIGGER trg_soil_analyses_updated_at BEFORE UPDATE ON soil_analyses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_parcel_reports_updated_at ON parcel_reports;
+CREATE TRIGGER trg_parcel_reports_updated_at BEFORE UPDATE ON parcel_reports
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Crop & Plant tables
+DROP TRIGGER IF EXISTS trg_crop_types_updated_at ON crop_types;
+CREATE TRIGGER trg_crop_types_updated_at BEFORE UPDATE ON crop_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_categories_updated_at ON crop_categories;
+CREATE TRIGGER trg_crop_categories_updated_at BEFORE UPDATE ON crop_categories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_varieties_updated_at ON crop_varieties;
+CREATE TRIGGER trg_crop_varieties_updated_at BEFORE UPDATE ON crop_varieties
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crops_updated_at ON crops;
+CREATE TRIGGER trg_crops_updated_at BEFORE UPDATE ON crops
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_tree_categories_updated_at ON tree_categories;
+CREATE TRIGGER trg_tree_categories_updated_at BEFORE UPDATE ON tree_categories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_trees_updated_at ON trees;
+CREATE TRIGGER trg_trees_updated_at BEFORE UPDATE ON trees
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_plantation_types_updated_at ON plantation_types;
+CREATE TRIGGER trg_plantation_types_updated_at BEFORE UPDATE ON plantation_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_soil_types_updated_at ON soil_types;
+CREATE TRIGGER trg_soil_types_updated_at BEFORE UPDATE ON soil_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_irrigation_types_updated_at ON irrigation_types;
+CREATE TRIGGER trg_irrigation_types_updated_at BEFORE UPDATE ON irrigation_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_rootstocks_updated_at ON rootstocks;
+CREATE TRIGGER trg_rootstocks_updated_at BEFORE UPDATE ON rootstocks
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_plantation_systems_updated_at ON plantation_systems;
+CREATE TRIGGER trg_plantation_systems_updated_at BEFORE UPDATE ON plantation_systems
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Cost & Revenue tables
+DROP TRIGGER IF EXISTS trg_product_categories_updated_at ON product_categories;
+CREATE TRIGGER trg_product_categories_updated_at BEFORE UPDATE ON product_categories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_product_subcategories_updated_at ON product_subcategories;
+CREATE TRIGGER trg_product_subcategories_updated_at BEFORE UPDATE ON product_subcategories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_inventory_updated_at ON inventory;
+CREATE TRIGGER trg_inventory_updated_at BEFORE UPDATE ON inventory
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_cost_categories_updated_at ON cost_categories;
+CREATE TRIGGER trg_cost_categories_updated_at BEFORE UPDATE ON cost_categories
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_costs_updated_at ON costs;
+CREATE TRIGGER trg_costs_updated_at BEFORE UPDATE ON costs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_revenues_updated_at ON revenues;
+CREATE TRIGGER trg_revenues_updated_at BEFORE UPDATE ON revenues
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_profitability_snapshots_updated_at ON profitability_snapshots;
+CREATE TRIGGER trg_profitability_snapshots_updated_at BEFORE UPDATE ON profitability_snapshots
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_structures_updated_at ON structures;
+CREATE TRIGGER trg_structures_updated_at BEFORE UPDATE ON structures
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_utilities_updated_at ON utilities;
+CREATE TRIGGER trg_utilities_updated_at BEFORE UPDATE ON utilities
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_roles_updated_at ON roles;
+CREATE TRIGGER trg_roles_updated_at BEFORE UPDATE ON roles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Campaign & Biological Asset tables
+DROP TRIGGER IF EXISTS trg_fiscal_years_updated_at ON fiscal_years;
+CREATE TRIGGER trg_fiscal_years_updated_at BEFORE UPDATE ON fiscal_years
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_fiscal_periods_updated_at ON fiscal_periods;
+CREATE TRIGGER trg_fiscal_periods_updated_at BEFORE UPDATE ON fiscal_periods
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_agricultural_campaigns_updated_at ON agricultural_campaigns;
+CREATE TRIGGER trg_agricultural_campaigns_updated_at BEFORE UPDATE ON agricultural_campaigns
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_cycles_updated_at ON crop_cycles;
+CREATE TRIGGER trg_crop_cycles_updated_at BEFORE UPDATE ON crop_cycles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_biological_assets_updated_at ON biological_assets;
+CREATE TRIGGER trg_biological_assets_updated_at BEFORE UPDATE ON biological_assets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_biological_asset_valuations_updated_at ON biological_asset_valuations;
+CREATE TRIGGER trg_biological_asset_valuations_updated_at BEFORE UPDATE ON biological_asset_valuations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_campaigns_updated_at ON campaigns;
+CREATE TRIGGER trg_campaigns_updated_at BEFORE UPDATE ON campaigns
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_quality_inspections_updated_at ON quality_inspections;
+CREATE TRIGGER trg_quality_inspections_updated_at BEFORE UPDATE ON quality_inspections
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- AI & Chat tables
+DROP TRIGGER IF EXISTS trg_organization_ai_settings_updated_at ON organization_ai_settings;
+CREATE TRIGGER trg_organization_ai_settings_updated_at BEFORE UPDATE ON organization_ai_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_chat_conversations_updated_at ON chat_conversations;
+CREATE TRIGGER trg_chat_conversations_updated_at BEFORE UPDATE ON chat_conversations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Budget & Tax tables
+DROP TRIGGER IF EXISTS trg_cost_center_budgets_updated_at ON cost_center_budgets;
+CREATE TRIGGER trg_cost_center_budgets_updated_at BEFORE UPDATE ON cost_center_budgets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_tax_configurations_updated_at ON tax_configurations;
+CREATE TRIGGER trg_tax_configurations_updated_at BEFORE UPDATE ON tax_configurations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Marketplace tables
+DROP TRIGGER IF EXISTS trg_marketplace_quote_requests_updated_at ON marketplace_quote_requests;
+CREATE TRIGGER trg_marketplace_quote_requests_updated_at BEFORE UPDATE ON marketplace_quote_requests
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Subscription & Module tables
+DROP TRIGGER IF EXISTS trg_organization_addons_updated_at ON organization_addons;
+CREATE TRIGGER trg_organization_addons_updated_at BEFORE UPDATE ON organization_addons
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_polar_subscriptions_updated_at ON polar_subscriptions;
+CREATE TRIGGER trg_polar_subscriptions_updated_at BEFORE UPDATE ON polar_subscriptions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- -----------------------------------------------------
+-- 8. POSTGIS HELPER FUNCTIONS
+-- -----------------------------------------------------
+
+-- Calculate parcel area in hectares using native geometry
+CREATE OR REPLACE FUNCTION calculate_parcel_area_hectares(p_parcel_id UUID)
+RETURNS NUMERIC LANGUAGE plpgsql STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_area NUMERIC;
+BEGIN
+  SELECT ST_Area(boundary_geom::geography) / 10000.0 INTO v_area
+  FROM parcels
+  WHERE id = p_parcel_id AND boundary_geom IS NOT NULL;
+  
+  RETURN COALESCE(v_area, 0);
+END;
+$$;
+
+-- Calculate farm total area from all parcels
+CREATE OR REPLACE FUNCTION calculate_farm_total_area(p_farm_id UUID)
+RETURNS NUMERIC LANGUAGE plpgsql STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_total NUMERIC;
+BEGIN
+  SELECT COALESCE(SUM(ST_Area(boundary_geom::geography) / 10000.0), 0) INTO v_total
+  FROM parcels
+  WHERE farm_id = p_farm_id AND boundary_geom IS NOT NULL;
+  
+  RETURN v_total;
+END;
+$$;
+
+-- Find parcels within radius (km) of a point
+CREATE OR REPLACE FUNCTION find_parcels_within_radius(
+  p_organization_id UUID,
+  p_lat NUMERIC,
+  p_lng NUMERIC,
+  p_radius_km NUMERIC
+)
+RETURNS TABLE (
+  parcel_id UUID,
+  parcel_name VARCHAR,
+  farm_id UUID,
+  farm_name VARCHAR,
+  distance_km NUMERIC
+) LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p.id AS parcel_id,
+    p.name AS parcel_name,
+    p.farm_id,
+    f.name AS farm_name,
+    ST_Distance(
+      p.centroid::geography,
+      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
+    ) / 1000.0 AS distance_km
+  FROM parcels p
+  JOIN farms f ON p.farm_id = f.id
+  WHERE p.organization_id = p_organization_id
+    AND p.centroid IS NOT NULL
+    AND ST_DWithin(
+      p.centroid::geography,
+      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography,
+      p_radius_km * 1000
+    )
+  ORDER BY distance_km;
+END;
+$$;
+
+-- Find farms within radius of a point
+CREATE OR REPLACE FUNCTION find_farms_within_radius(
+  p_organization_id UUID,
+  p_lat NUMERIC,
+  p_lng NUMERIC,
+  p_radius_km NUMERIC
+)
+RETURNS TABLE (
+  farm_id UUID,
+  farm_name VARCHAR,
+  distance_km NUMERIC,
+  total_area_hectares NUMERIC
+) LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    f.id AS farm_id,
+    f.name AS farm_name,
+    ST_Distance(
+      f.location_point::geography,
+      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
+    ) / 1000.0 AS distance_km,
+    calculate_farm_total_area(f.id) AS total_area_hectares
+  FROM farms f
+  WHERE f.organization_id = p_organization_id
+    AND f.location_point IS NOT NULL
+    AND ST_DWithin(
+      f.location_point::geography,
+      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography,
+      p_radius_km * 1000
+    )
+  ORDER BY distance_km;
+END;
+$$;
+
+-- Check if a point is inside a parcel boundary
+CREATE OR REPLACE FUNCTION point_in_parcel(
+  p_parcel_id UUID,
+  p_lat NUMERIC,
+  p_lng NUMERIC
+)
+RETURNS BOOLEAN LANGUAGE plpgsql STABLE
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM parcels
+    WHERE id = p_parcel_id
+      AND boundary_geom IS NOT NULL
+      AND ST_Contains(
+        boundary_geom,
+        ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)
+      )
+  );
+END;
+$$;
+
+-- Find which parcel contains a given point
+CREATE OR REPLACE FUNCTION find_parcel_at_point(
+  p_organization_id UUID,
+  p_lat NUMERIC,
+  p_lng NUMERIC
+)
+RETURNS TABLE (
+  parcel_id UUID,
+  parcel_name VARCHAR,
+  farm_id UUID,
+  farm_name VARCHAR
+) LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    p.id AS parcel_id,
+    p.name AS parcel_name,
+    p.farm_id,
+    f.name AS farm_name
+  FROM parcels p
+  JOIN farms f ON p.farm_id = f.id
+  WHERE p.organization_id = p_organization_id
+    AND p.boundary_geom IS NOT NULL
+    AND ST_Contains(
+      p.boundary_geom,
+      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)
+    );
+END;
+$$;
+
+-- Get bounding box for a farm (all parcels combined)
+CREATE OR REPLACE FUNCTION get_farm_bounding_box(p_farm_id UUID)
+RETURNS TABLE (
+  min_lat NUMERIC,
+  min_lng NUMERIC,
+  max_lat NUMERIC,
+  max_lng NUMERIC
+) LANGUAGE plpgsql STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_envelope GEOMETRY;
+BEGIN
+  SELECT ST_Envelope(ST_Collect(boundary_geom)) INTO v_envelope
+  FROM parcels
+  WHERE farm_id = p_farm_id AND boundary_geom IS NOT NULL;
+  
+  IF v_envelope IS NOT NULL THEN
+    RETURN QUERY SELECT 
+      ST_YMin(v_envelope)::NUMERIC AS min_lat,
+      ST_XMin(v_envelope)::NUMERIC AS min_lng,
+      ST_YMax(v_envelope)::NUMERIC AS max_lat,
+      ST_XMax(v_envelope)::NUMERIC AS max_lng;
+  END IF;
+END;
+$$;
+
+-- Calculate distance between two parcels (centroid to centroid)
+CREATE OR REPLACE FUNCTION parcel_distance_km(p_parcel_id_1 UUID, p_parcel_id_2 UUID)
+RETURNS NUMERIC LANGUAGE plpgsql STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_distance NUMERIC;
+BEGIN
+  SELECT ST_Distance(p1.centroid::geography, p2.centroid::geography) / 1000.0 INTO v_distance
+  FROM parcels p1, parcels p2
+  WHERE p1.id = p_parcel_id_1 AND p2.id = p_parcel_id_2
+    AND p1.centroid IS NOT NULL AND p2.centroid IS NOT NULL;
+  
+  RETURN v_distance;
+END;
+$$;
+
+-- Get parcels that intersect with a given bounding box (for map viewport queries)
+CREATE OR REPLACE FUNCTION get_parcels_in_bbox(
+  p_organization_id UUID,
+  p_min_lat NUMERIC,
+  p_min_lng NUMERIC,
+  p_max_lat NUMERIC,
+  p_max_lng NUMERIC
+)
+RETURNS TABLE (
+  parcel_id UUID,
+  parcel_name VARCHAR,
+  farm_id UUID,
+  farm_name VARCHAR,
+  area_hectares NUMERIC,
+  boundary JSONB
+) LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_bbox GEOMETRY;
+BEGIN
+  v_bbox := ST_MakeEnvelope(p_min_lng, p_min_lat, p_max_lng, p_max_lat, 4326);
+  
+  RETURN QUERY
+  SELECT 
+    p.id AS parcel_id,
+    p.name AS parcel_name,
+    p.farm_id,
+    f.name AS farm_name,
+    ST_Area(p.boundary_geom::geography) / 10000.0 AS area_hectares,
+    p.boundary
+  FROM parcels p
+  JOIN farms f ON p.farm_id = f.id
+  WHERE p.organization_id = p_organization_id
+    AND p.boundary_geom IS NOT NULL
+    AND ST_Intersects(p.boundary_geom, v_bbox)
+  ORDER BY area_hectares DESC;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION calculate_parcel_area_hectares TO authenticated;
+GRANT EXECUTE ON FUNCTION calculate_farm_total_area TO authenticated;
+GRANT EXECUTE ON FUNCTION find_parcels_within_radius TO authenticated;
+GRANT EXECUTE ON FUNCTION find_farms_within_radius TO authenticated;
+GRANT EXECUTE ON FUNCTION point_in_parcel TO authenticated;
+GRANT EXECUTE ON FUNCTION find_parcel_at_point TO authenticated;
+GRANT EXECUTE ON FUNCTION get_farm_bounding_box TO authenticated;
+GRANT EXECUTE ON FUNCTION parcel_distance_km TO authenticated;
+GRANT EXECUTE ON FUNCTION get_parcels_in_bbox TO authenticated;
+
+-- -----------------------------------------------------
+-- 9. COMPOSITE INDEXES FOR COMMON QUERY PATTERNS
+-- -----------------------------------------------------
+
+-- Dashboard: Tasks by org + status + due date (task list filtering)
+CREATE INDEX IF NOT EXISTS idx_tasks_org_status_due 
+  ON tasks(organization_id, status, due_date) 
+  WHERE status NOT IN ('completed', 'cancelled');
+
+-- Dashboard: Tasks assigned to user with date range
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_date 
+  ON tasks(assigned_to, due_date DESC) 
+  WHERE assigned_to IS NOT NULL;
+
+-- Dashboard: Harvest records by org + date range (reports)
+CREATE INDEX IF NOT EXISTS idx_harvest_records_org_date 
+  ON harvest_records(organization_id, harvest_date DESC);
+
+-- Dashboard: Costs by org + date range + category (P&L reports)
+CREATE INDEX IF NOT EXISTS idx_costs_org_date_category 
+  ON costs(organization_id, date DESC, category_id);
+
+-- Dashboard: Revenues by org + date range (P&L reports)
+CREATE INDEX IF NOT EXISTS idx_revenues_org_date 
+  ON revenues(organization_id, date DESC);
+
+-- Inventory: Stock levels by org + warehouse + item
+CREATE INDEX IF NOT EXISTS idx_stock_valuation_org_warehouse_item 
+  ON stock_valuation(organization_id, warehouse_id, item_id) 
+  WHERE remaining_quantity > 0;
+
+-- Workforce: Worker schedules by org + date
+CREATE INDEX IF NOT EXISTS idx_work_records_org_date 
+  ON work_records(organization_id, work_date DESC);
+
+-- Workforce: Payment records by org + period
+CREATE INDEX IF NOT EXISTS idx_payment_records_org_period 
+  ON payment_records(organization_id, period_start, period_end);
+
+-- Accounting: Journal entries by org + status + date
+CREATE INDEX IF NOT EXISTS idx_journal_entries_org_status_date 
+  ON journal_entries(organization_id, status, entry_date DESC);
+
+-- Accounting: Invoices by org + party + status (AR/AP aging)
+CREATE INDEX IF NOT EXISTS idx_invoices_org_party_status 
+  ON invoices(organization_id, party_id, status);
+
+-- Accounting: Invoices by org + type + status
+CREATE INDEX IF NOT EXISTS idx_invoices_org_type_status 
+  ON invoices(organization_id, invoice_type, status);
+
+-- Sales: Orders by org + customer + date (customer history)
+CREATE INDEX IF NOT EXISTS idx_sales_orders_org_customer_date 
+  ON sales_orders(organization_id, customer_id, order_date DESC);
+
+-- Purchase: Orders by org + supplier + date (supplier history)
+CREATE INDEX IF NOT EXISTS idx_purchase_orders_org_supplier_date 
+  ON purchase_orders(organization_id, supplier_id, order_date DESC);
+
+-- Satellite: AOIs by parcel for quick lookup
+CREATE INDEX IF NOT EXISTS idx_satellite_aois_parcel 
+  ON satellite_aois(parcel_id) 
+  WHERE parcel_id IS NOT NULL;
+
+-- Satellite: Processing jobs by org + status (job queue)
+CREATE INDEX IF NOT EXISTS idx_satellite_jobs_org_status 
+  ON satellite_processing_jobs(organization_id, status, created_at DESC);
+
+-- Campaign: Crop cycles by org + campaign + parcel
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_org_campaign_parcel 
+  ON crop_cycles(organization_id, campaign_id, parcel_id);
+
+-- Campaign: Biological assets by org + asset type
+CREATE INDEX IF NOT EXISTS idx_biological_assets_org_type 
+  ON biological_assets(organization_id, asset_type);
+
+-- Quality: Inspections by org + date (quality dashboard)
+CREATE INDEX IF NOT EXISTS idx_quality_inspections_org_date 
+  ON quality_inspections(organization_id, inspection_date DESC);
+
+-- Chat: Conversations by org + user (chat history) - uses existing index
+-- Index idx_chat_conversations_org_user_created already exists
+
+-- Subscriptions: Active subscriptions lookup
+CREATE INDEX IF NOT EXISTS idx_subscriptions_org_active 
+  ON subscriptions(organization_id) 
+  WHERE status = 'active';
+
+-- Workers: Active workers by farm
+CREATE INDEX IF NOT EXISTS idx_workers_farm_active 
+  ON workers(farm_id, worker_type) 
+  WHERE is_active = true;
 

@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { CompletionStep } from '@/components/onboarding/steps/CompletionStep';
-import { useOnboardingContext } from '@/contexts/OnboardingContext';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
 import { authSupabase } from '@/lib/auth-supabase';
 import { onboardingApi } from '@/lib/api/onboarding';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export const Route = createFileRoute('/(public)/onboarding/complete')({
   component: CompleteStepComponent,
@@ -12,16 +12,22 @@ export const Route = createFileRoute('/(public)/onboarding/complete')({
 
 function CompleteStepComponent() {
   const { user } = useAuth();
-  const { state, updatePreferences } = useOnboardingContext();
+  const preferences = useOnboardingStore((state) => state.preferences);
+  const profileData = useOnboardingStore((state) => state.profileData);
+  const organizationData = useOnboardingStore((state) => state.organizationData);
+  const farmData = useOnboardingStore((state) => state.farmData);
+  const moduleSelection = useOnboardingStore((state) => state.moduleSelection);
+  const updatePreferences = useOnboardingStore((state) => state.updatePreferences);
+  const clearState = useOnboardingStore((state) => state.clearState);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleComplete = async () => {
+  const handleComplete = useCallback(async () => {
     setError(null);
     setIsLoading(true);
 
     try {
-      await onboardingApi.savePreferencesAndComplete(state.preferences);
+      await onboardingApi.savePreferencesAndComplete(preferences);
 
       if (user?.id) {
         await authSupabase
@@ -30,15 +36,18 @@ function CompleteStepComponent() {
           .eq('id', user.id);
       }
 
+      // Clear onboarding state after completion
+      await clearState();
+
       window.location.href = '/';
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
       setError(errorMessage);
       setIsLoading(false);
     }
-  };
+  }, [preferences, user?.id, clearState]);
 
-  const selectedModulesCount = Object.values(state.moduleSelection || {}).filter(Boolean).length;
+  const selectedModulesCount = Object.values(moduleSelection || {}).filter(Boolean).length;
 
   return (
     <>
@@ -48,10 +57,10 @@ function CompleteStepComponent() {
         </div>
       )}
       <CompletionStep
-        preferences={state.preferences}
-        profileName={`${state.profileData?.first_name || ''} ${state.profileData?.last_name || ''}`.trim()}
-        organizationName={state.organizationData?.name || ''}
-        farmName={state.farmData?.name || ''}
+        preferences={preferences}
+        profileName={`${profileData?.first_name || ''} ${profileData?.last_name || ''}`.trim()}
+        organizationName={organizationData?.name || ''}
+        farmName={farmData?.name || ''}
         selectedModulesCount={selectedModulesCount}
         onUpdate={updatePreferences}
         onComplete={handleComplete}

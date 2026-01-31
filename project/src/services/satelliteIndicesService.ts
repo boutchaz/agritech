@@ -1,4 +1,6 @@
 // Satellite Indices Service for calculating vegetation indices
+import { ErrorHandlers } from '../lib/errors';
+
 export interface VegetationIndex {
   NDVI: string;
   NDRE: string;
@@ -116,7 +118,7 @@ export class SatelliteIndicesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error calculating indices:', error);
+      ErrorHandlers.log(error, 'Error calculating indices');
       throw error;
     }
   }
@@ -147,7 +149,7 @@ export class SatelliteIndicesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting time series:', error);
+      ErrorHandlers.log(error, 'Error getting time series');
       throw error;
     }
   }
@@ -188,7 +190,7 @@ export class SatelliteIndicesService {
         format: options.format,
       };
     } catch (error) {
-      console.error('Error exporting index map:', error);
+      ErrorHandlers.log(error, 'Error exporting index map');
       throw error;
     }
   }
@@ -326,7 +328,7 @@ export class SatelliteIndicesService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error getting available indices:', error);
+      ErrorHandlers.log(error, 'Error getting available indices');
       // Return default indices if service is unavailable
       return ['NDVI', 'NDRE', 'NDMI', 'GCI', 'SAVI'];
     }
@@ -340,7 +342,6 @@ export class SatelliteIndicesService {
 
     if (Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90) {
       // Coordinates are in Web Mercator (EPSG:3857), need to convert to WGS84
-      console.log('Converting coordinates from Web Mercator to WGS84');
       geoCoordinates = boundary.map(coord => {
         const [x, y] = coord;
         // Convert from Web Mercator to WGS84
@@ -350,7 +351,6 @@ export class SatelliteIndicesService {
       });
     } else {
       // Coordinates are already in geographic (WGS84)
-      console.log('Coordinates are already in WGS84');
       geoCoordinates = boundary;
     }
 
@@ -362,8 +362,6 @@ export class SatelliteIndicesService {
         geoCoordinates.push([first[0], first[1]]);
       }
     }
-
-    console.log('Converted coordinates:', geoCoordinates);
 
     return {
       geometry: {

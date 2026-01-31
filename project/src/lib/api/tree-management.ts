@@ -1,7 +1,5 @@
 import { apiClient } from '../api-client';
 
-const BASE_URL = '/api/v1/organizations';
-
 export interface Tree {
   id: string;
   category_id: string;
@@ -61,128 +59,107 @@ export interface UpdatePlantationTypeDto {
   trees_per_ha?: number;
 }
 
-export const treeManagementApi = {
-  async getCategories(organizationId?: string): Promise<TreeCategoryWithTrees[]> {
-    return apiClient.get<TreeCategoryWithTrees[]>(
-      `${BASE_URL}/${organizationId}/tree-management/categories`,
+/**
+ * Tree categories API
+ */
+export const treeCategoriesApi = {
+  getAll: (organizationId: string) =>
+    apiClient.get<TreeCategoryWithTrees[]>(
+      `/api/v1/organizations/${organizationId}/tree-management/categories`,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async createCategory(
-    data: CreateTreeCategoryDto,
-    organizationId?: string,
-  ): Promise<TreeCategory> {
-    return apiClient.post<TreeCategory>(
-      `${BASE_URL}/${organizationId}/tree-management/categories`,
+  create: (data: CreateTreeCategoryDto, organizationId: string) =>
+    apiClient.post<TreeCategory>(
+      `/api/v1/organizations/${organizationId}/tree-management/categories`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async updateCategory(
-    categoryId: string,
-    data: UpdateTreeCategoryDto,
-    organizationId?: string,
-  ): Promise<TreeCategory> {
-    return apiClient.patch<TreeCategory>(
-      `${BASE_URL}/${organizationId}/tree-management/categories/${categoryId}`,
+  update: (categoryId: string, data: UpdateTreeCategoryDto, organizationId: string) =>
+    apiClient.patch<TreeCategory>(
+      `/api/v1/organizations/${organizationId}/tree-management/categories/${categoryId}`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async deleteCategory(
-    categoryId: string,
-    organizationId?: string,
-  ): Promise<void> {
-    return apiClient.delete<void>(
-      `${BASE_URL}/${organizationId}/tree-management/categories/${categoryId}`,
+  delete: (categoryId: string, organizationId: string) =>
+    apiClient.delete<void>(
+      `/api/v1/organizations/${organizationId}/tree-management/categories/${categoryId}`,
       {},
       organizationId,
-    );
-  },
+    ),
+};
 
-  async createTree(
-    data: CreateTreeDto,
-    organizationId?: string,
-  ): Promise<Tree> {
-    return apiClient.post<Tree>(
-      `${BASE_URL}/${organizationId}/tree-management/trees`,
+/**
+ * Trees API
+ */
+export const treesApi = {
+  getAll: (categoryId: string, organizationId: string) =>
+    apiClient.get<Tree[]>(
+      `/api/v1/organizations/${organizationId}/tree-management/categories/${categoryId}/trees`,
+      {},
+      organizationId,
+    ),
+
+  create: (data: CreateTreeDto, organizationId: string) =>
+    apiClient.post<Tree>(
+      `/api/v1/organizations/${organizationId}/tree-management/trees`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async updateTree(
-    treeId: string,
-    data: UpdateTreeDto,
-    organizationId?: string,
-  ): Promise<Tree> {
-    return apiClient.patch<Tree>(
-      `${BASE_URL}/${organizationId}/tree-management/trees/${treeId}`,
+  update: (treeId: string, data: UpdateTreeDto, organizationId: string) =>
+    apiClient.patch<Tree>(
+      `/api/v1/organizations/${organizationId}/tree-management/trees/${treeId}`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async deleteTree(
-    treeId: string,
-    organizationId?: string,
-  ): Promise<void> {
-    return apiClient.delete<void>(
-      `${BASE_URL}/${organizationId}/tree-management/trees/${treeId}`,
+  delete: (treeId: string, organizationId: string) =>
+    apiClient.delete<void>(
+      `/api/v1/organizations/${organizationId}/tree-management/trees/${treeId}`,
       {},
       organizationId,
-    );
-  },
+    ),
+};
 
-  async getPlantationTypes(organizationId?: string): Promise<PlantationType[]> {
-    return apiClient.get<PlantationType[]>(
-      `${BASE_URL}/${organizationId}/tree-management/plantation-types`,
+/**
+ * Plantation types API
+ */
+export const plantationTypesApi = {
+  getAll: (organizationId: string) =>
+    apiClient.get<PlantationType[]>(
+      `/api/v1/organizations/${organizationId}/tree-management/plantation-types`,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async createPlantationType(
-    data: CreatePlantationTypeDto,
-    organizationId?: string,
-  ): Promise<PlantationType> {
-    return apiClient.post<PlantationType>(
-      `${BASE_URL}/${organizationId}/tree-management/plantation-types`,
+  create: (data: CreatePlantationTypeDto, organizationId: string) =>
+    apiClient.post<PlantationType>(
+      `/api/v1/organizations/${organizationId}/tree-management/plantation-types`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async updatePlantationType(
-    typeId: string,
-    data: UpdatePlantationTypeDto,
-    organizationId?: string,
-  ): Promise<PlantationType> {
-    return apiClient.patch<PlantationType>(
-      `${BASE_URL}/${organizationId}/tree-management/plantation-types/${typeId}`,
+  update: (typeId: string, data: UpdatePlantationTypeDto, organizationId: string) =>
+    apiClient.patch<PlantationType>(
+      `/api/v1/organizations/${organizationId}/tree-management/plantation-types/${typeId}`,
       data,
       {},
       organizationId,
-    );
-  },
+    ),
 
-  async deletePlantationType(
-    typeId: string,
-    organizationId?: string,
-  ): Promise<void> {
-    return apiClient.delete<void>(
-      `${BASE_URL}/${organizationId}/tree-management/plantation-types/${typeId}`,
+  delete: (typeId: string, organizationId: string) =>
+    apiClient.delete<void>(
+      `/api/v1/organizations/${organizationId}/tree-management/plantation-types/${typeId}`,
       {},
       organizationId,
-    );
-  },
+    ),
 };

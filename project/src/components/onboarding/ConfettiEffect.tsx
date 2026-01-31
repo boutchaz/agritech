@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 
 interface Particle {
   id: number;
@@ -20,14 +20,29 @@ interface ConfettiEffectProps {
   onComplete?: () => void;
 }
 
+// Stable default colors array (defined outside component)
+const DEFAULT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'] as const;
+const MINI_COLORS = ['#10B981', '#34D399', '#6EE7B7'] as const;
+
 export const ConfettiEffect: React.FC<ConfettiEffectProps> = ({
   isActive,
   duration = 3000,
   particleCount = 100,
-  colors = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'],
+  colors,
   onComplete,
 }) => {
   const [particles, setParticles] = useState<Particle[]>([]);
+
+  // Use a ref to avoid recreating the effect when onComplete changes
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep the ref in sync with the prop
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  // Use useMemo to stabilize colors reference
+  const stableColors = useMemo(() => colors || DEFAULT_COLORS, [colors]);
 
   useEffect(() => {
     if (!isActive) {
@@ -41,7 +56,7 @@ export const ConfettiEffect: React.FC<ConfettiEffectProps> = ({
       id: i,
       x: 50 + (Math.random() - 0.5) * 20, // Start from center-ish
       y: 40,
-      color: colors[Math.floor(Math.random() * colors.length)],
+      color: stableColors[Math.floor(Math.random() * stableColors.length)],
       rotation: Math.random() * 360,
       scale: Math.random() * 0.5 + 0.5,
       velocityX: (Math.random() - 0.5) * 15,
@@ -54,11 +69,11 @@ export const ConfettiEffect: React.FC<ConfettiEffectProps> = ({
     // Clear after duration
     const timer = setTimeout(() => {
       setParticles([]);
-      onComplete?.();
+      onCompleteRef.current?.();
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [isActive, particleCount, colors, duration, onComplete]);
+  }, [isActive, particleCount, stableColors, duration]);
 
   if (particles.length === 0) return null;
 
@@ -130,7 +145,7 @@ export const MiniConfetti: React.FC<{ isActive: boolean }> = ({ isActive }) => {
       isActive={isActive}
       duration={1500}
       particleCount={30}
-      colors={['#10B981', '#34D399', '#6EE7B7']}
+      colors={MINI_COLORS}
     />
   );
 };

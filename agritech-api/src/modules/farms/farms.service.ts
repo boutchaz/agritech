@@ -897,16 +897,9 @@ export class FarmsService {
         }
 
         // Check subscription
-        const { data: subscriptionCheck, error: subscriptionError } =
-          await this.supabaseAdmin.rpc('has_valid_subscription', {
-            org_id: organizationId,
-          });
+        const hasValidSubscription = await this.subscriptionsService.hasValidSubscription(organizationId);
 
-        const hasValidSubscription =
-          subscriptionCheck === true ||
-          (typeof subscriptionCheck === 'boolean' && subscriptionCheck);
-
-        if (subscriptionError || !hasValidSubscription) {
+        if (!hasValidSubscription) {
           errors.push({
             id: farmId,
             name: existingFarm.name,

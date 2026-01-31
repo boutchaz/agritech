@@ -12,7 +12,7 @@ export interface OrganizationModule {
   id: string;
   name: string;
   icon: string;
-  category: 'agriculture' | 'elevage' | 'general';
+  category: 'core' | 'production' | 'operations' | 'hr' | 'inventory' | 'sales' | 'purchasing' | 'accounting' | 'analytics';
   description: string;
   required_plan: 'essential' | 'professional' | 'enterprise' | null;
   is_active: boolean;

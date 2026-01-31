@@ -7,6 +7,7 @@
 
 import { supabase } from './supabase';
 import { accountingApi } from './accounting-api';
+import { OrganizationRequiredError } from './errors';
 
 // =====================================================
 // TYPES
@@ -160,7 +161,7 @@ export async function syncSalesInvoiceToLedger(
 ): Promise<LedgerSyncResult> {
   try {
     if (!invoice.organization_id) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
 
     // Get required accounts
@@ -271,7 +272,7 @@ export async function syncPurchaseInvoiceToLedger(
 ): Promise<LedgerSyncResult> {
   try {
     if (!invoice.organization_id) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
 
     // Get required accounts
@@ -405,7 +406,7 @@ export async function syncCustomerPaymentToLedger(
 ): Promise<LedgerSyncResult> {
   try {
     if (!payment.organization_id) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
 
     // Get cash/bank account
@@ -480,7 +481,7 @@ export async function syncSupplierPaymentToLedger(
 ): Promise<LedgerSyncResult> {
   try {
     if (!payment.organization_id) {
-      throw new Error('Organization ID is required');
+      throw new OrganizationRequiredError();
     }
 
     // Get cash/bank account

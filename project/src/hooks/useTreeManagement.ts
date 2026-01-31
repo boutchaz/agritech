@@ -1,8 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './useAuth';
+import { OrganizationRequiredError } from '@/lib/errors';
 import {
-  treeManagementApi,
+  treeCategoriesApi,
+  treesApi,
+  plantationTypesApi,
   type TreeCategoryWithTrees,
   type TreeCategory,
   type Tree,
@@ -24,7 +27,7 @@ export function useTreeCategories(organizationId: string | null) {
     refetch,
   } = useQuery({
     queryKey: ['tree-categories', organizationId, locale],
-    queryFn: () => treeManagementApi.getCategories(organizationId!),
+    queryFn: () => treeCategoriesApi.getAll(organizationId!),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
     select: (data) => data.map((category: TreeCategoryWithTrees) => ({
@@ -35,7 +38,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const addCategoryMutation = useMutation({
     mutationFn: (categoryName: string) =>
-      treeManagementApi.createCategory({ category: categoryName }, organizationId!),
+      treeCategoriesApi.create({ category: categoryName }, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -43,7 +46,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const updateCategoryMutation = useMutation({
     mutationFn: ({ categoryId, categoryName }: { categoryId: string; categoryName: string }) =>
-      treeManagementApi.updateCategory(categoryId, { category: categoryName }, organizationId!),
+      treeCategoriesApi.update(categoryId, { category: categoryName }, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -51,7 +54,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const deleteCategoryMutation = useMutation({
     mutationFn: (categoryId: string) =>
-      treeManagementApi.deleteCategory(categoryId, organizationId!),
+      treeCategoriesApi.delete(categoryId, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -59,7 +62,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const addTreeMutation = useMutation({
     mutationFn: ({ categoryId, treeName }: { categoryId: string; treeName: string }) =>
-      treeManagementApi.createTree({ category_id: categoryId, name: treeName }, organizationId!),
+      treesApi.create({ category_id: categoryId, name: treeName }, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -67,7 +70,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const updateTreeMutation = useMutation({
     mutationFn: ({ treeId, treeName }: { treeId: string; treeName: string }) =>
-      treeManagementApi.updateTree(treeId, { name: treeName }, organizationId!),
+      treesApi.update(treeId, { name: treeName }, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -75,7 +78,7 @@ export function useTreeCategories(organizationId: string | null) {
 
   const deleteTreeMutation = useMutation({
     mutationFn: (treeId: string) =>
-      treeManagementApi.deleteTree(treeId, organizationId!),
+      treesApi.delete(treeId, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree-categories', organizationId] });
     },
@@ -84,7 +87,7 @@ export function useTreeCategories(organizationId: string | null) {
   const error = queryError?.message || null;
 
   const addCategory = async (categoryName: string) => {
-    if (!organizationId) throw new Error('Organization ID is required');
+    if (!organizationId) throw new OrganizationRequiredError();
     return addCategoryMutation.mutateAsync(categoryName);
   };
 
@@ -134,7 +137,7 @@ export function usePlantationTypes(organizationId: string | null) {
     refetch,
   } = useQuery({
     queryKey: ['plantation-types', organizationId, locale],
-    queryFn: () => treeManagementApi.getPlantationTypes(organizationId!),
+    queryFn: () => plantationTypesApi.getAll(organizationId!),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
     select: (data) => localizeItems(data, locale),
@@ -142,7 +145,7 @@ export function usePlantationTypes(organizationId: string | null) {
 
   const addPlantationTypeMutation = useMutation({
     mutationFn: ({ type, spacing, treesPerHa }: { type: string; spacing: string; treesPerHa: number }) =>
-      treeManagementApi.createPlantationType(
+      plantationTypesApi.create(
         { type, spacing, trees_per_ha: treesPerHa },
         organizationId!,
       ),
@@ -153,7 +156,7 @@ export function usePlantationTypes(organizationId: string | null) {
 
   const updatePlantationTypeMutation = useMutation({
     mutationFn: ({ id, type, spacing, treesPerHa }: { id: string; type: string; spacing: string; treesPerHa: number }) =>
-      treeManagementApi.updatePlantationType(
+      plantationTypesApi.update(
         id,
         { type, spacing, trees_per_ha: treesPerHa },
         organizationId!,
@@ -165,7 +168,7 @@ export function usePlantationTypes(organizationId: string | null) {
 
   const deletePlantationTypeMutation = useMutation({
     mutationFn: (id: string) =>
-      treeManagementApi.deletePlantationType(id, organizationId!),
+      plantationTypesApi.delete(id, organizationId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plantation-types', organizationId] });
     },
@@ -174,7 +177,7 @@ export function usePlantationTypes(organizationId: string | null) {
   const error = queryError?.message || null;
 
   const addPlantationType = async (type: string, spacing: string, treesPerHa: number) => {
-    if (!organizationId) throw new Error('Organization ID is required');
+    if (!organizationId) throw new OrganizationRequiredError();
     return addPlantationTypeMutation.mutateAsync({ type, spacing, treesPerHa });
   };
 

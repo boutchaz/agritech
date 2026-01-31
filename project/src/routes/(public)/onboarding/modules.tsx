@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ModulesStep } from '@/components/onboarding/steps/ModulesStep';
-import { useOnboardingContext } from '@/contexts/OnboardingContext';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi } from '@/lib/api/onboarding';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 export const Route = createFileRoute('/(public)/onboarding/modules')({
   component: ModulesStepComponent,
@@ -12,20 +12,39 @@ export const Route = createFileRoute('/(public)/onboarding/modules')({
 function ModulesStepComponent() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { state, updateModuleSelection, persistState } = useOnboardingContext();
+  const moduleSelection = useOnboardingStore((state) => state.moduleSelection);
+  const updateModuleSelection = useOnboardingStore((state) => state.updateModuleSelection);
+  const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
+  const persistState = useOnboardingStore((state) => state.persistState);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
+    // Prevent double submission
+    if (isSubmittingRef.current) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
     setError(null);
+
     try {
-      await onboardingApi.saveModules(state.moduleSelection);
-      await persistState();
+      await onboardingApi.saveModules(moduleSelection);
+
+      // Persist state with the new step
+      await persistState({ currentStep: 5 });
+      setCurrentStep(5);
+
       navigate({ to: '/onboarding/complete' });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
       setError(errorMessage);
+      setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
-  };
+  }, [navigate, setCurrentStep, persistState]);
 
   return (
     <>
@@ -35,9 +54,10 @@ function ModulesStepComponent() {
         </div>
       )}
       <ModulesStep
-        moduleSelection={state.moduleSelection}
+        moduleSelection={moduleSelection}
         onUpdate={updateModuleSelection}
         onNext={handleNext}
+        isLoading={isSubmitting}
       />
     </>
   );

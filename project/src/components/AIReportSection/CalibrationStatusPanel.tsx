@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Settings, Plus, Satellite } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Plus, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';

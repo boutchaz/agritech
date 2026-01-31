@@ -2,7 +2,7 @@ import React from 'react';
 import { Lock, Zap } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../hooks/useSubscription';
-import { getPlanDetails } from '../lib/polar';
+import { canAccessFeature } from '../lib/polar';
 
 interface FeatureGateProps {
   feature: 'analytics' | 'sensorIntegration' | 'aiRecommendations' | 'advancedReporting' | 'apiAccess' | 'prioritySupport';
@@ -14,12 +14,8 @@ const FeatureGate: React.FC<FeatureGateProps> = ({ feature, children, fallback }
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
 
-  if (!subscription) {
-    return fallback || <FeatureLockedMessage onUpgrade={() => navigate({ to: '/settings/subscription' })} />;
-  }
-
-  const plan = getPlanDetails(subscription.plan_type);
-  const hasAccess = plan.capabilities[feature];
+  // Use centralized canAccessFeature from lib/polar
+  const hasAccess = canAccessFeature(subscription, feature);
 
   if (!hasAccess) {
     return fallback || <FeatureLockedMessage onUpgrade={() => navigate({ to: '/settings/subscription' })} />;

@@ -1,7 +1,9 @@
 import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router';
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 import { useAuth } from '@/hooks/useAuth';
-import { OnboardingProvider } from '@/contexts/OnboardingContext';
+import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useEffect } from 'react';
+import { AnimatedBackground } from '@/components/onboarding/AnimatedBackground';
+import { Sprout } from 'lucide-react';
 
 export const Route = createFileRoute('/(public)/onboarding')({
   component: OnboardingLayout,
@@ -9,10 +11,19 @@ export const Route = createFileRoute('/(public)/onboarding')({
 
 function OnboardingLayout() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+  const initialize = useOnboardingStore((state) => state.initialize);
+  const isRestored = useOnboardingStore((state) => state.isRestored);
 
-  // Show loading while checking auth
-  if (loading) {
+  // Initialize store from backend API
+  useEffect(() => {
+    if (user?.id) {
+      initialize(user.id, user.email || '', profile);
+    }
+  }, [user?.id, user?.email, profile, initialize]);
+
+  // Show loading while checking auth or loading state
+  if (loading || !isRestored) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-green-100">
         <div className="text-center">
@@ -32,10 +43,20 @@ function OnboardingLayout() {
   }
 
   return (
-    <OnboardingWizard user={user}>
-      <OnboardingProvider userId={user.id} email={user.email || ''}>
+    <AnimatedBackground>
+      {/* Header with logo */}
+      <div className="fixed top-0 left-0 right-0 z-10 py-4 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+            <Sprout className="w-5 h-5 text-emerald-600" />
+            <span className="font-semibold text-gray-800">AgriTech</span>
+          </div>
+        </div>
+      </div>
+      {/* Outlet for child routes - centered in remaining viewport */}
+      <div className="flex items-center justify-center min-h-screen pt-16 px-4">
         <Outlet />
-      </OnboardingProvider>
-    </OnboardingWizard>
+      </div>
+    </AnimatedBackground>
   );
 }

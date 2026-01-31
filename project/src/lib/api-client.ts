@@ -1,5 +1,6 @@
 import { useOrganizationStore } from '../stores/organizationStore';
 import { useAuthStore } from '../stores/authStore';
+import { ErrorHandlers } from './errors';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -94,7 +95,7 @@ function getCurrentOrganizationId(): string | null {
     const currentOrganization = useOrganizationStore.getState().currentOrganization;
     return currentOrganization?.id || null;
   } catch (error) {
-    console.error('Error reading organization from store:', error);
+    ErrorHandlers.log(error, 'Error reading organization from store');
     return null;
   }
 }
@@ -108,7 +109,7 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
   const accessToken = useAuthStore.getState().getAccessToken();
 
   if (!accessToken) {
-    console.error('[API Client] No active session found');
+    ErrorHandlers.log(null, '[API Client] No active session found');
     // If the auth store thinks we're authenticated but there's no token, clear the invalid state
     if (useAuthStore.getState().isAuthenticated) {
       handleSessionExpired();
@@ -118,21 +119,12 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
 
   // Check if token is expired
   if (useAuthStore.getState().isTokenExpired()) {
-    console.error('[API Client] Token expired');
+    ErrorHandlers.log(null, '[API Client] Token expired');
     handleSessionExpired();
     throw new Error('Session expired. Please log in again.');
   }
 
   const orgId = organizationId || getCurrentOrganizationId();
-  const user = useAuthStore.getState().user;
-
-  console.log('[API Client] Building headers', {
-    providedOrgId: organizationId,
-    storeOrgId: getCurrentOrganizationId(),
-    resolvedOrgId: orgId,
-    hasToken: !!accessToken,
-    userId: user?.id,
-  });
 
   const analyticsHeaders = getAnalyticsHeaders();
 
@@ -146,9 +138,6 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
 
   if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
     headers['X-Organization-Id'] = orgId;
-    console.log('[API Client] Added X-Organization-Id header:', orgId);
-  } else {
-    console.warn('[API Client] No valid organization ID to add to headers', { orgId });
   }
 
   return headers;

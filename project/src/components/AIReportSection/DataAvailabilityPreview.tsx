@@ -14,7 +14,6 @@ import {
   Plus,
 } from 'lucide-react';
 import { useDataAvailability } from '../../hooks/useAIReports';
-import type { DataAvailabilityResponse } from '../../lib/api/ai-reports';
 
 interface DataAvailabilityPreviewProps {
   parcelId: string;

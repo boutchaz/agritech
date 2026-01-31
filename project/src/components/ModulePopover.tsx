@@ -18,7 +18,7 @@ import { useModules, useUpdateModule } from '../hooks/useModules';
 import { useAddonsOverview } from '../hooks/useAddons';
 import { useModuleBasedDashboard } from '../hooks/useModuleBasedDashboard';
 import { useSubscription } from '../hooks/useSubscription';
-import { getPlanDetails } from '../lib/polar';
+import { getPlanDetails, isModuleAvailableForPlan, CATEGORY_LABELS } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
 import type { OrganizationModule } from '../lib/api/modules';
 import {
@@ -29,20 +29,6 @@ import {
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '../lib/utils';
-
-const CATEGORY_LABELS: Record<string, string> = {
-  core: 'Core',
-  production: 'Production',
-  operations: 'Operations',
-  hr: 'HR & Personnel',
-  inventory: 'Inventory',
-  sales: 'Sales',
-  purchasing: 'Purchasing',
-  accounting: 'Accounting & Finance',
-  analytics: 'Analytics & Reports',
-  compliance: 'Compliance',
-  marketplace: 'Marketplace',
-};
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   core: Boxes,
@@ -85,22 +71,12 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
 
   const categories = Object.keys(modulesByCategory).sort();
 
-  const isModuleAvailableForPlan = (module: OrganizationModule): boolean => {
-    if (!module.required_plan) return true;
-    if (!subscription?.plan_type) return false;
-
-    const planHierarchy = { essential: 1, professional: 2, enterprise: 3 };
-    const requiredLevel = planHierarchy[module.required_plan] || 0;
-    const currentLevel = planHierarchy[subscription.plan_type] || 0;
-
-    return currentLevel >= requiredLevel;
-  };
-
   const handleModuleToggle = async (moduleId: string, currentActive: boolean) => {
     const module = modules.find(m => m.id === moduleId);
     if (!module) return;
 
-    if (!currentActive && !isModuleAvailableForPlan(module)) {
+    // Use centralized isModuleAvailableForPlan from lib/polar
+    if (!currentActive && !isModuleAvailableForPlan(module, subscription)) {
       // Navigate to subscription page
       navigate({ to: '/settings/subscription' });
       return;
@@ -216,7 +192,7 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
               </h4>
               <div className="space-y-1">
                 {modulesByCategory[category].map((module) => {
-                  const isAvailable = isModuleAvailableForPlan(module);
+                  const isAvailable = isModuleAvailableForPlan(module, subscription);
                   const isLocked = !isAvailable;
 
                   return (

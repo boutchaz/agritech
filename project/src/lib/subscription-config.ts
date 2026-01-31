@@ -322,44 +322,6 @@ export function isModuleIncludedInPlan(moduleSlug: string, planType: PlanType): 
 }
 
 /**
- * Check if a module is available for a given plan
- * (included in plan OR can be added as addon)
- */
-export function isModuleAvailableForPlan(
-  moduleSlug: string,
-  planType: PlanType | null,
-  allModules: ModuleSubscriptionConfig[]
-): boolean {
-  if (!planType) return true;
-
-  const plan = PLAN_BUNDLES[planType];
-
-  // Enterprise has everything
-  if (plan.includedModules[0] === '*') {
-    return true;
-  }
-
-  const module = allModules.find(m => m.slug === moduleSlug);
-
-  // If module has no required plan, it's available to everyone
-  if (!module?.requiredPlan) {
-    return true;
-  }
-
-  // Check plan hierarchy
-  const planHierarchy: Record<PlanType, number> = {
-    essential: 1,
-    professional: 2,
-    enterprise: 3,
-  };
-
-  const requiredLevel = planHierarchy[module.requiredPlan] || 0;
-  const currentLevel = planHierarchy[planType] || 0;
-
-  return currentLevel >= requiredLevel;
-}
-
-/**
  * Get available modules for a plan
  */
 export function getAvailableModulesForPlan(

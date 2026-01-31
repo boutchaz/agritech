@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { OrganizationRequiredError } from '@/lib/errors';
 import { toast } from 'sonner';
 import { demoDataApi, ExportData } from '@/lib/api/demo-data';
 import {
@@ -71,7 +72,7 @@ function DangerZonePage() {
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['demo-data-stats', organizationId],
     queryFn: () => {
-      if (!organizationId) throw new Error('No organization');
+      if (!organizationId) throw new OrganizationRequiredError();
       return demoDataApi.getStats(organizationId);
     },
     enabled: !!organizationId && isAdmin,
@@ -80,7 +81,7 @@ function DangerZonePage() {
   // Seed demo data mutation
   const seedMutation = useMutation({
     mutationFn: () => {
-      if (!organizationId) throw new Error('No organization');
+      if (!organizationId) throw new OrganizationRequiredError();
       return demoDataApi.seedDemoData(organizationId);
     },
     onSuccess: () => {
@@ -93,7 +94,7 @@ function DangerZonePage() {
   // Clear data mutation
   const clearMutation = useMutation({
     mutationFn: () => {
-      if (!organizationId) throw new Error('No organization');
+      if (!organizationId) throw new OrganizationRequiredError();
       return demoDataApi.clearData(organizationId);
     },
     onSuccess: () => {
@@ -107,7 +108,7 @@ function DangerZonePage() {
   // Export data mutation
   const exportMutation = useMutation({
     mutationFn: () => {
-      if (!organizationId) throw new Error('No organization');
+      if (!organizationId) throw new OrganizationRequiredError();
       return demoDataApi.exportData(organizationId);
     },
     onSuccess: (data) => {
@@ -127,7 +128,7 @@ function DangerZonePage() {
   // Import data mutation
   const importMutation = useMutation({
     mutationFn: (data: ExportData) => {
-      if (!organizationId) throw new Error('No organization');
+      if (!organizationId) throw new OrganizationRequiredError();
       return demoDataApi.importData(organizationId, data);
     },
     onSuccess: () => {
