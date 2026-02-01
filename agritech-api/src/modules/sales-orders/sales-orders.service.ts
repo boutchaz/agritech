@@ -85,6 +85,7 @@ export class SalesOrdersService {
         discount_percentage: item.discount_percentage || 0,
         tax_rate: item.tax_rate || 0,
         item_id: item.item_id,
+        variant_id: item.variant_id,
         account_id: item.account_id,
         // Calculate line totals
         amount: this.calculateLineAmount(item),
@@ -496,6 +497,8 @@ export class SalesOrdersService {
           tax_rate: item.tax_rate || 0,
           tax_amount: taxAmount,
           line_total: amount + taxAmount,
+          item_id: item.item_id || null,
+          variant_id: item.variant_id || null,
         };
       });
 
@@ -670,6 +673,7 @@ export class SalesOrdersService {
       // Prepare stock entry items
       const stockEntryItems = stockableItems.map((item: any) => ({
         item_id: item.item_id,
+        variant_id: item.variant_id,
         item_name: item.item_name,
         quantity: item.quantity,
         unit: item.unit_of_measure || 'unit',

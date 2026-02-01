@@ -82,6 +82,7 @@ export class PurchaseOrdersService {
         discount_percent: item.discount_percent || 0,
         tax_rate: item.tax_rate || 0,
         item_id: item.item_id,
+        variant_id: item.variant_id,
         account_id: item.account_id,
         // Calculate line totals
         amount: this.calculateLineAmount(item),
@@ -254,6 +255,7 @@ export class PurchaseOrdersService {
       .filter((item: any) => !!item.item_id)
       .map((item: any) => ({
         item_id: item.item_id,
+        variant_id: item.variant_id,
         item_name: item.item_name,
         quantity: item.quantity,
         unit: item.unit_of_measure || 'unit',
@@ -555,6 +557,8 @@ export class PurchaseOrdersService {
           line_total: amount + taxAmount,
           income_account_id: null,
           expense_account_id: item.account_id,
+          item_id: item.item_id || null,
+          variant_id: item.variant_id || null,
         };
       });
 

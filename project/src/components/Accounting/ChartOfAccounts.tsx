@@ -156,10 +156,10 @@ export const ChartOfAccounts: React.FC = () => {
       account_type: account.account_type as AccountType,
       account_subtype: account.account_subtype || '',
       parent_id: account.parent_id,
-      is_group: account.is_group,
-      is_active: account.is_active,
+      is_group: account.is_group ?? false,
+      is_active: account.is_active ?? true,
       currency_code: currentOrganization?.currency || account.currency_code || 'MAD',
-      allow_cost_center: account.allow_cost_center,
+      allow_cost_center: account.allow_cost_center ?? true,
       description: account.description || '',
     });
     setIsDialogOpen(true);
@@ -211,17 +211,16 @@ export const ChartOfAccounts: React.FC = () => {
 
     setIsSeeding(true);
     try {
-      // Determine country code (default to Morocco)
-      const countryCode: SupportedCountry = 'MAR'; // You can make this dynamic based on org settings
+      const countryCode: SupportedCountry = 'MAR';
+      const currency = (currentOrganization.currency || 'MAD') as 'MAD' | 'EUR' | 'USD' | 'GBP';
 
       const result = await seedChartOfAccounts(
         currentOrganization.id,
         countryCode,
-        (currentOrganization.currency_code as any) || 'MAD'
+        currency
       );
 
       if (result.success) {
-        // Invalidate accounts query to refetch the data
         await queryClient.invalidateQueries({ queryKey: ['accounts', currentOrganization.id] });
         toast.success(`Success! ${result.accountsCreated} accounts have been created for your organization.`);
       } else {

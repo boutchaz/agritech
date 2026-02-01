@@ -48,6 +48,11 @@ export class CreatePurchaseOrderItemDto {
   @IsOptional()
   item_id?: string;
 
+  @ApiPropertyOptional({ description: 'Product variant ID (e.g., 1L, 5L, 10kg)', format: 'uuid' })
+  @IsUUID()
+  @IsOptional()
+  variant_id?: string;
+
   @ApiPropertyOptional({ description: 'Account ID for expense', format: 'uuid' })
   @IsUUID()
   @IsOptional()

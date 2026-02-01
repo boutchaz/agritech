@@ -205,6 +205,8 @@ export class InvoicesService {
         tax_rate: item.tax_rate || 0,
         tax_amount: item.tax_amount,
         line_total: item.line_total,
+        item_id: item.item_id || null,
+        variant_id: item.variant_id || null,
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -315,6 +317,8 @@ export class InvoicesService {
         tax_rate: item.tax_rate || 0,
         tax_amount: item.tax_amount,
         line_total: item.line_total,
+        item_id: item.item_id || null,
+        variant_id: item.variant_id || null,
       }));
 
       const { error: insertError } = await supabaseClient
@@ -630,10 +634,11 @@ export class InvoicesService {
             // Prepare stock entry items
             const stockEntryItems = stockableItems.map((item: any) => ({
               item_id: item.item_id,
+              variant_id: item.variant_id,
               item_name: item.item_name,
               quantity: Number(item.quantity) || 0,
               unit: item.unit || 'unit',
-              ...(entryType === StockEntryType.MATERIAL_ISSUE 
+              ...(entryType === StockEntryType.MATERIAL_ISSUE
                 ? { source_warehouse_id: warehouseId }
                 : { target_warehouse_id: warehouseId }),
             }));

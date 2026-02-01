@@ -209,6 +209,7 @@ export class QuotesService {
           line_total: lineTotal,
           account_id: item.account_id || null,
           item_id: item.item_id || null,
+          variant_id: item.variant_id || null,
         };
       });
 
@@ -449,6 +450,8 @@ export class QuotesService {
         line_total: item.line_total,
         account_id: item.account_id,
         quote_item_id: item.id,
+        item_id: item.item_id,
+        variant_id: item.variant_id,
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -604,6 +607,7 @@ export class QuotesService {
             line_total: lineTotal,
             account_id: item.account_id || null,
             item_id: item.item_id || null,
+            variant_id: item.variant_id || null,
           };
         });
 

@@ -61,12 +61,11 @@ export function isCountrySupported(countryCode: string): countryCode is Supporte
  * @returns Result object with accounts created count and success status
  */
 export async function seedChartOfAccounts(
-  organizationId: string,
+  _organizationId: string,
   countryCode: SupportedCountry,
   _currency?: SupportedCurrency
 ): Promise<SeedResult> {
   try {
-    // Validate country support
     if (!isCountrySupported(countryCode)) {
       return {
         accountsCreated: 0,
@@ -80,21 +79,38 @@ export async function seedChartOfAccounts(
       accounts_created: number;
       success: boolean;
       message: string;
-    }>(`/api/v1/accounts/templates/${templateCode}/apply`, {
-      overwrite: false,
-    });
+    }>(
+      `/api/v1/accounts/templates/${templateCode}/apply`,
+      { overwrite: false },
+      { timeout: 120000 }
+    );
 
     return {
       accountsCreated: response.data.accounts_created,
       success: response.data.success,
       message: response.data.message,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in seedChartOfAccounts:', error);
+    
+    let message = 'Unknown error';
+    
+    if (error instanceof Error) {
+      message = error.message;
+      
+      if (message.includes('Network error') || message.includes('timeout')) {
+        message = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (message.includes('Unauthorized') || message.includes('401')) {
+        message = 'Session expired. Please refresh the page and try again.';
+      } else if (message.includes('permission') || message.includes('403')) {
+        message = 'You do not have permission to seed the chart of accounts. Please contact your administrator.';
+      }
+    }
+    
     return {
       accountsCreated: 0,
       success: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message,
     };
   }
 }
