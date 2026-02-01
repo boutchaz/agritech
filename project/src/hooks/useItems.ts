@@ -8,6 +8,9 @@ import type {
   UpdateItemInput,
   CreateItemGroupInput,
   UpdateItemGroupInput,
+  CreateProductVariantInput,
+  UpdateProductVariantInput,
+  ProductVariant,
   ItemFilters,
   ItemGroupFilters,
 } from '../types/items';
@@ -157,6 +160,27 @@ export function useItemSelection(filters?: {
 }
 
 // =====================================================
+// PRODUCT VARIANTS QUERIES
+// =====================================================
+
+export function useItemVariants(itemId: string | null) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['item-variants', itemId, currentOrganization?.id],
+    queryFn: async () => {
+      if (!itemId) throw new Error('Item ID is required');
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return itemsApi.getVariants(itemId, currentOrganization.id);
+    },
+    enabled: !!itemId && !!currentOrganization?.id,
+  });
+}
+
+// =====================================================
 // ITEM GROUPS MUTATIONS
 // =====================================================
 
@@ -179,6 +203,65 @@ export function useCreateItemGroup() {
       // Use partial match to invalidate all item-groups queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
+    },
+  });
+}
+
+// =====================================================
+// PRODUCT VARIANTS MUTATIONS
+// =====================================================
+
+export function useCreateItemVariant() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ itemId, input }: { itemId: string; input: CreateProductVariantInput }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return itemsApi.createVariant(itemId, input, currentOrganization.id);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['item-variants', variables.itemId] });
+    },
+  });
+}
+
+export function useUpdateItemVariant() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ variantId, input }: { variantId: string; input: UpdateProductVariantInput }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return itemsApi.updateVariant(variantId, input, currentOrganization.id);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['item-variants'] });
+      queryClient.invalidateQueries({ queryKey: ['item-variant', variables.variantId] });
+    },
+  });
+}
+
+export function useDeleteItemVariant() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (variantId: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return itemsApi.deleteVariant(variantId, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item-variants'] });
     },
   });
 }
@@ -378,4 +461,3 @@ export function useGetItemPrice(itemId: string | null, options?: {
     enabled: !!prices && !!itemId,
   });
 }
-

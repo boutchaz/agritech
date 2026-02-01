@@ -9,6 +9,9 @@ import type {
   UpdateItemInput,
   CreateItemGroupInput,
   UpdateItemGroupInput,
+  CreateProductVariantInput,
+  UpdateProductVariantInput,
+  ProductVariant,
   ItemFilters,
   ItemGroupFilters,
 } from '../../types/items';
@@ -157,6 +160,34 @@ export const itemsApi = {
 
     const url = `${BASE_URL}/stock-levels${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get<any>(url, {}, organizationId);
+  },
+
+  // =====================================================
+  // PRODUCT VARIANTS
+  // =====================================================
+
+  async getVariants(itemId: string, organizationId?: string): Promise<ProductVariant[]> {
+    return apiClient.get<ProductVariant[]>(`${BASE_URL}/${itemId}/variants`, {}, organizationId);
+  },
+
+  async createVariant(
+    itemId: string,
+    data: CreateProductVariantInput,
+    organizationId?: string,
+  ): Promise<ProductVariant> {
+    return apiClient.post<ProductVariant>(`${BASE_URL}/${itemId}/variants`, data, {}, organizationId);
+  },
+
+  async updateVariant(
+    variantId: string,
+    data: UpdateProductVariantInput,
+    organizationId?: string,
+  ): Promise<ProductVariant> {
+    return apiClient.patch<ProductVariant>(`${BASE_URL}/variants/${variantId}`, data, {}, organizationId);
+  },
+
+  async deleteVariant(variantId: string, organizationId?: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`${BASE_URL}/variants/${variantId}`, {}, organizationId);
   },
 
   // =====================================================

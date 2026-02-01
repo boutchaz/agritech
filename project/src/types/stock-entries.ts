@@ -70,6 +70,12 @@ export interface StockEntryItem {
   // Item Information
   item_id: string;
   item_name: string;
+  variant_id?: string | null;
+  variant?: {
+    id: string;
+    variant_name: string;
+    unit: string;
+  } | null;
 
   // Quantity Information
   quantity: number;
@@ -128,6 +134,7 @@ export interface StockMovement {
 
   // Item and Warehouse
   item_id: string;
+  variant_id?: string | null;
   warehouse_id: string;
 
   // Quantity
@@ -197,6 +204,7 @@ export interface CreateStockEntryInput {
 export interface CreateStockEntryItemInput {
   item_id: string;
   item_name: string;
+  variant_id?: string;
   quantity: number;
   unit: string;
   source_warehouse_id?: string;

@@ -49,6 +49,8 @@ import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entrie
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
 import { toast } from 'sonner';
 import { getLocalDate } from '@/utils/date';
+import { itemsApi } from '@/lib/api/items';
+import type { ProductVariant } from '@/types/items';
 
 // Zod schemas - Dynamic based on entry type
 const getStockEntrySchema = (entryType: StockEntryType) => {
@@ -56,6 +58,7 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
   const baseStockEntryItemSchema = {
     item_id: z.string().min(1, 'Item is required'),
     item_name: z.string().min(1, 'Item name is required'),
+    variant_id: z.string().optional().transform(val => val === '' ? undefined : val),
     quantity: z.number().min(0.001, 'Quantity must be positive'),
     unit: z.string().min(1, 'Unit is required'),
     batch_number: z.string().optional().transform(val => val === '' ? undefined : val),
@@ -146,6 +149,8 @@ export default function StockEntryForm({
   const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
     is_stock_item: true 
   });
+  const [variantOptionsByItemId, setVariantOptionsByItemId] = useState<Record<string, ProductVariant[]>>({});
+  const [variantLoadingByItemId, setVariantLoadingByItemId] = useState<Record<string, boolean>>({});
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
   const typeStyles = {
     green: {
@@ -208,6 +213,7 @@ export default function StockEntryForm({
           {
             item_id: '',
             item_name: '',
+            variant_id: '',
             quantity: 1,
             unit: '',
             system_quantity: defaultType === 'Stock Reconciliation' ? 0 : undefined,
@@ -225,10 +231,11 @@ export default function StockEntryForm({
     form.setValue('to_warehouse_id', '');
     // Reset items to clear validation errors from previous type
     form.setValue('items', [{
-      item_id: '',
-      item_name: '',
-      quantity: 1,
-      unit: '',
+            item_id: '',
+            item_name: '',
+            variant_id: '',
+            quantity: 1,
+            unit: '',
       system_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
       physical_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
     }]);
@@ -470,6 +477,7 @@ export default function StockEntryForm({
                   append({
                     item_id: '',
                     item_name: '',
+                    variant_id: '',
                     quantity: 1,
                     unit: '',
                     system_quantity: selectedType === 'Stock Reconciliation' ? 0 : undefined,
@@ -506,12 +514,25 @@ export default function StockEntryForm({
                       <Label>{t('stockEntries.form.item')} {t('stockEntries.form.required')}</Label>
                       <Select
                         value={form.watch(`items.${index}.item_id`) || ''}
-                        onValueChange={(itemId) => {
+                        onValueChange={async (itemId) => {
                           const selectedItem = items.find(item => item.id === itemId);
                           if (selectedItem) {
                             form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
                             form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
                             form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
+                            form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
+
+                            if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
+                              setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
+                              try {
+                                const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
+                                setVariantOptionsByItemId((prev) => ({ ...prev, [itemId]: variants }));
+                              } catch (error) {
+                                console.error('Failed to load variants', error);
+                              } finally {
+                                setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: false }));
+                              }
+                            }
                           }
                         }}
                       >
@@ -558,6 +579,49 @@ export default function StockEntryForm({
                         className="mt-1"
                       />
                     </div>
+
+                    {(() => {
+                      const itemId = form.watch(`items.${index}.item_id`);
+                      const variants = itemId ? variantOptionsByItemId[itemId] : undefined;
+                      const isLoadingVariants = itemId ? variantLoadingByItemId[itemId] : false;
+
+                      if (!itemId || !variants || variants.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <div>
+                          <Label>{t('stockEntries.form.variant', 'Variant')}</Label>
+                          <Select
+                            value={form.watch(`items.${index}.variant_id`) || ''}
+                            onValueChange={(variantId) => {
+                              const selectedVariant = variants.find((variant) => variant.id === variantId);
+                              form.setValue(`items.${index}.variant_id`, variantId, { shouldValidate: true });
+                              if (selectedVariant?.unit) {
+                                form.setValue(`items.${index}.unit`, selectedVariant.unit, { shouldValidate: true });
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder={t('stockEntries.form.selectVariant', 'Select variant')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {isLoadingVariants ? (
+                                <SelectItem value="_loading" disabled>
+                                  {t('stockEntries.form.loadingVariants', 'Loading variants...')}
+                                </SelectItem>
+                              ) : (
+                                variants.map((variant) => (
+                                  <SelectItem key={variant.id} value={variant.id}>
+                                    {variant.variant_name} {variant.variant_sku ? `(${variant.variant_sku})` : ''}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })()}
 
                     <div>
                       <Label>{t('stockEntries.form.unit')} {t('stockEntries.form.required')}</Label>

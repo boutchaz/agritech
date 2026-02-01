@@ -155,6 +155,7 @@ export interface Item {
   // Joined data
   item_group?: ItemGroup;
   variants?: ItemVariant[];
+  product_variants?: ProductVariant[];
   unit_conversions?: ItemUnitConversion[];
   supplier_details?: ItemSupplierDetail[];
   customer_details?: ItemCustomerDetail[];
@@ -201,6 +202,54 @@ export interface ItemVariant {
   
   // Joined data
   item?: Item;
+}
+
+// =====================================================
+// Product Variant (Stock Dimensions)
+// =====================================================
+
+export interface ProductVariant {
+  id: string;
+  organization_id: string;
+  item_id: string;
+  variant_name: string;
+  variant_sku?: string | null;
+  quantity?: number | null;
+  unit: string;
+  min_stock_level?: number | null;
+  standard_rate?: number | null;
+  last_purchase_rate?: number | null;
+  barcode?: string | null;
+  is_active: boolean;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateProductVariantInput {
+  organization_id: string;
+  item_id: string;
+  variant_name: string;
+  variant_sku?: string;
+  unit: string;
+  min_stock_level?: number;
+  standard_rate?: number;
+  last_purchase_rate?: number;
+  barcode?: string;
+  is_active?: boolean;
+  notes?: string;
+}
+
+export interface UpdateProductVariantInput {
+  variant_name?: string;
+  variant_sku?: string | null;
+  unit?: string;
+  min_stock_level?: number | null;
+  standard_rate?: number | null;
+  last_purchase_rate?: number | null;
+  barcode?: string | null;
+  is_active?: boolean;
+  notes?: string | null;
 }
 
 // =====================================================
@@ -513,4 +562,3 @@ export interface ItemSelectionOption {
     name: string;
   };
 }
-

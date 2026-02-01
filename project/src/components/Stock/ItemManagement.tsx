@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useItems, useItemGroups, useCreateItem, useUpdateItem, useDeleteItem, useCreateItemGroup } from '@/hooks/useItems';
+import {
+  useItems,
+  useItemGroups,
+  useCreateItem,
+  useUpdateItem,
+  useDeleteItem,
+  useCreateItemGroup,
+  useItemVariants,
+  useCreateItemVariant,
+  useUpdateItemVariant,
+  useDeleteItemVariant,
+} from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { Button } from '@/components/ui/button';
@@ -42,13 +53,13 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag, Layers } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, UpdateItemInput } from '@/types/items';
+import type { Item, CreateItemInput, UpdateItemInput, ProductVariant } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
@@ -57,6 +68,12 @@ import ProductImageUpload from './ProductImageUpload';
 
 interface ItemFormProps {
   item?: Item | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+interface ItemVariantsDialogProps {
+  item: Item | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -840,6 +857,327 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   );
 }
 
+function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
+  const { t } = useTranslation();
+  const { currentOrganization } = useAuth();
+  const { format: formatCurrency } = useCurrency();
+  const { data: variants = [], isLoading } = useItemVariants(item?.id || null);
+  const createVariant = useCreateItemVariant();
+  const updateVariant = useUpdateItemVariant();
+  const deleteVariant = useDeleteItemVariant();
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const [formData, setFormData] = useState({
+    variant_name: '',
+    variant_sku: '',
+    unit: '',
+    standard_rate: '',
+    min_stock_level: '',
+    is_active: true,
+    notes: '',
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setEditingVariant(null);
+      setFormData({
+        variant_name: '',
+        variant_sku: '',
+        unit: '',
+        standard_rate: '',
+        min_stock_level: '',
+        is_active: true,
+        notes: '',
+      });
+    }
+  }, [open]);
+
+  const handleEdit = (variant: ProductVariant) => {
+    setEditingVariant(variant);
+    setFormData({
+      variant_name: variant.variant_name || '',
+      variant_sku: variant.variant_sku || '',
+      unit: variant.unit || '',
+      standard_rate: variant.standard_rate ? String(variant.standard_rate) : '',
+      min_stock_level: variant.min_stock_level ? String(variant.min_stock_level) : '',
+      is_active: variant.is_active,
+      notes: variant.notes || '',
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!item || !currentOrganization) return;
+
+    if (!formData.variant_name.trim() || !formData.unit.trim()) {
+      toast.error(t('items.variants.requiredFields', 'Variant name and unit are required.'));
+      return;
+    }
+
+    const basePayload = {
+      variant_name: formData.variant_name.trim(),
+      variant_sku: formData.variant_sku.trim() || undefined,
+      unit: formData.unit.trim(),
+      standard_rate: formData.standard_rate ? Number(formData.standard_rate) : undefined,
+      min_stock_level: formData.min_stock_level ? Number(formData.min_stock_level) : undefined,
+      is_active: formData.is_active,
+      notes: formData.notes.trim() || undefined,
+    };
+
+    try {
+      if (editingVariant) {
+        await updateVariant.mutateAsync({
+          variantId: editingVariant.id,
+          input: basePayload,
+        });
+        toast.success(t('items.variants.updated', 'Variant updated'));
+      } else {
+        await createVariant.mutateAsync({
+          itemId: item.id,
+          input: {
+            ...basePayload,
+            organization_id: currentOrganization.id,
+            item_id: item.id,
+          },
+        });
+        toast.success(t('items.variants.created', 'Variant created'));
+      }
+
+      setEditingVariant(null);
+      setFormData({
+        variant_name: '',
+        variant_sku: '',
+        unit: '',
+        standard_rate: '',
+        min_stock_level: '',
+        is_active: true,
+        notes: '',
+      });
+    } catch (error: any) {
+      toast.error(`Failed to save variant: ${error.message}`);
+    }
+  };
+
+  const handleDelete = async (variant: ProductVariant) => {
+    if (!window.confirm(t('items.variants.deleteConfirm', 'Delete this variant?'))) {
+      return;
+    }
+
+    try {
+      await deleteVariant.mutateAsync(variant.id);
+      toast.success(t('items.variants.deleted', 'Variant deleted'));
+    } catch (error: any) {
+      toast.error(`Failed to delete variant: ${error.message}`);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {t('items.variants.title', 'Variants')} - {item?.item_name}
+          </DialogTitle>
+          <DialogDescription>
+            {t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="variant_name">{t('items.variants.name', 'Variant name')} *</Label>
+              <Input
+                id="variant_name"
+                value={formData.variant_name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, variant_name: e.target.value }))}
+                placeholder={t('items.variants.namePlaceholder', 'e.g., 1L, 5L')}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="variant_sku">{t('items.variants.sku', 'Variant SKU')}</Label>
+              <Input
+                id="variant_sku"
+                value={formData.variant_sku}
+                onChange={(e) => setFormData((prev) => ({ ...prev, variant_sku: e.target.value }))}
+                placeholder={t('items.variants.skuPlaceholder', 'Optional')}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="variant_unit">{t('items.variants.unit', 'Unit')} *</Label>
+              <Input
+                id="variant_unit"
+                value={formData.unit}
+                onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
+                placeholder="L, kg, unit"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="variant_rate">{t('items.variants.standardRate', 'Standard rate')}</Label>
+              <Input
+                id="variant_rate"
+                type="number"
+                value={formData.standard_rate}
+                onChange={(e) => setFormData((prev) => ({ ...prev, standard_rate: e.target.value }))}
+                placeholder="0"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="variant_min">{t('items.variants.minStock', 'Minimum stock')}</Label>
+              <Input
+                id="variant_min"
+                type="number"
+                value={formData.min_stock_level}
+                onChange={(e) => setFormData((prev) => ({ ...prev, min_stock_level: e.target.value }))}
+                placeholder="0"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(value) => setFormData((prev) => ({ ...prev, is_active: value }))}
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {t('items.variants.active', 'Active')}
+              </span>
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="variant_notes">{t('items.variants.notes', 'Notes')}</Label>
+              <Textarea
+                id="variant_notes"
+                value={formData.notes}
+                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                className="mt-1"
+                rows={2}
+              />
+            </div>
+            <div className="sm:col-span-2 flex items-center justify-end gap-2">
+              {editingVariant && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingVariant(null);
+                    setFormData({
+                      variant_name: '',
+                      variant_sku: '',
+                      unit: '',
+                      standard_rate: '',
+                      min_stock_level: '',
+                      is_active: true,
+                      notes: '',
+                    });
+                  }}
+                >
+                  {t('items.variants.cancelEdit', 'Cancel edit')}
+                </Button>
+              )}
+              <Button type="submit" disabled={createVariant.isPending || updateVariant.isPending}>
+                {editingVariant
+                  ? t('items.variants.save', 'Save variant')
+                  : t('items.variants.add', 'Add variant')}
+              </Button>
+            </div>
+          </form>
+
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              {t('items.variants.list', 'Existing variants')}
+            </h3>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              </div>
+            ) : variants.length === 0 ? (
+              <p className="text-sm text-gray-500">{t('items.variants.empty', 'No variants yet')}</p>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                        {t('items.variants.name', 'Variant name')}
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                        {t('items.variants.unit', 'Unit')}
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                        {t('items.variants.standardRate', 'Standard rate')}
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                        {t('items.variants.status', 'Status')}
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                        {t('items.variants.actions', 'Actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {variants.map((variant) => (
+                      <tr key={variant.id} className="text-sm">
+                        <td className="px-4 py-2">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {variant.variant_name}
+                            </span>
+                            {variant.variant_sku && (
+                              <span className="text-xs text-gray-500">{variant.variant_sku}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                          {variant.unit}
+                        </td>
+                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                          {variant.standard_rate ? formatCurrency(variant.standard_rate) : '-'}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              variant.is_active
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                            }`}
+                          >
+                            {variant.is_active ? t('items.active') : t('items.inactive')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(variant)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(variant)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ItemManagement() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
@@ -856,6 +1194,8 @@ export default function ItemManagement() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
+  const [showVariantsDialog, setShowVariantsDialog] = useState(false);
+  const [variantsItem, setVariantsItem] = useState<Item | null>(null);
 
   // Fetch stock levels for items with farm context
   const { data: stockLevels = {} } = useQuery({
@@ -947,6 +1287,11 @@ export default function ItemManagement() {
   const handleCreate = () => {
     setSelectedItem(null);
     setShowForm(true);
+  };
+
+  const handleVariants = (item: Item) => {
+    setVariantsItem(item);
+    setShowVariantsDialog(true);
   };
 
   const handleDelete = (item: Item) => {
@@ -1186,6 +1531,15 @@ export default function ItemManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handleVariants(item)}
+                            className="text-emerald-600 hover:text-emerald-700 p-1 sm:p-2"
+                            title={t('items.variants.title', 'Variants')}
+                          >
+                            <Layers className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setSelectedItemForDetails(item)}
                             className="text-blue-600 hover:text-blue-700 p-1 sm:p-2"
                             title={t('items.viewDetails', 'View Details')}
@@ -1221,6 +1575,16 @@ export default function ItemManagement() {
       )}
 
       <ItemForm item={selectedItem} open={showForm} onOpenChange={setShowForm} />
+      <ItemVariantsDialog
+        item={variantsItem}
+        open={showVariantsDialog}
+        onOpenChange={(open) => {
+          setShowVariantsDialog(open);
+          if (!open) {
+            setVariantsItem(null);
+          }
+        }}
+      />
 
       {/* Item Details Dialog */}
       {selectedItemForDetails && (
@@ -1282,4 +1646,3 @@ export default function ItemManagement() {
     </div>
   );
 }
-

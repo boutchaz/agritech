@@ -22,6 +22,7 @@ import { ItemsService } from './items.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
+import { CreateProductVariantDto, UpdateProductVariantDto } from './dto/product-variant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -204,6 +205,57 @@ export class ItemsController {
       farm_id: farmId,
       item_id: itemId,
     });
+  }
+
+  // =====================================================
+  // PRODUCT VARIANTS ENDPOINTS
+  // =====================================================
+
+  @Get(':id/variants')
+  @ApiOperation({ summary: 'Get product variants for an item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Product variants retrieved successfully' })
+  async getItemVariants(@Req() req: any, @Param('id') itemId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.findItemVariants(organizationId, itemId);
+  }
+
+  @Post(':id/variants')
+  @ApiOperation({ summary: 'Create a product variant for an item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 201, description: 'Product variant created successfully' })
+  async createItemVariant(
+    @Req() req: any,
+    @Param('id') itemId: string,
+    @Body() createVariantDto: CreateProductVariantDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    createVariantDto.organization_id = organizationId;
+    createVariantDto.item_id = itemId;
+    return this.itemsService.createItemVariant(createVariantDto);
+  }
+
+  @Patch('variants/:variantId')
+  @ApiOperation({ summary: 'Update a product variant' })
+  @ApiParam({ name: 'variantId', description: 'Variant ID' })
+  @ApiResponse({ status: 200, description: 'Product variant updated successfully' })
+  async updateItemVariant(
+    @Req() req: any,
+    @Param('variantId') variantId: string,
+    @Body() updateVariantDto: UpdateProductVariantDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.itemsService.updateItemVariant(variantId, organizationId, userId, updateVariantDto);
+  }
+
+  @Delete('variants/:variantId')
+  @ApiOperation({ summary: 'Delete a product variant' })
+  @ApiParam({ name: 'variantId', description: 'Variant ID' })
+  @ApiResponse({ status: 200, description: 'Product variant deleted successfully' })
+  async deleteItemVariant(@Req() req: any, @Param('variantId') variantId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.deleteItemVariant(variantId, organizationId);
   }
 
   @Get(':id')

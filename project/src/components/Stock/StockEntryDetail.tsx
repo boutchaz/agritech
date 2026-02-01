@@ -190,6 +190,11 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                                 {t('stockEntries.detail.code')}: {item.item.item_code}
                               </p>
                             )}
+                            {item.variant?.variant_name && (
+                              <p className="text-xs text-gray-500">
+                                {t('stockEntries.detail.variant', 'Variant')}: {item.variant.variant_name}
+                              </p>
+                            )}
                             {item.batch_number && (
                               <p className="text-xs text-gray-500">
                                 {t('stockEntries.detail.batch')}: {item.batch_number}

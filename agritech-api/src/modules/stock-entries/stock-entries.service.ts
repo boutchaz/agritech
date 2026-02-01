@@ -76,7 +76,8 @@ export class StockEntriesService {
         *,
         items:stock_entry_items(
           *,
-          item:items(id, item_code, item_name, default_unit)
+          item:items(id, item_code, item_name, default_unit),
+          variant:product_variants(id, variant_name, unit)
         ),
         from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
         to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
@@ -159,15 +160,16 @@ export class StockEntriesService {
         const item = dto.items[index];
         const itemResult = await client.query(
           `INSERT INTO stock_entry_items (
-            stock_entry_id, line_number, item_id, item_name, quantity, unit,
+            stock_entry_id, line_number, item_id, variant_id, item_name, quantity, unit,
             source_warehouse_id, target_warehouse_id, batch_number, serial_number,
             expiry_date, cost_per_unit, system_quantity, physical_quantity, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
           RETURNING *`,
           [
             stockEntry.id,
             index + 1,
             item.item_id,
+            item.variant_id || null,
             item.item_name || null,
             item.quantity,
             item.unit,
@@ -302,9 +304,10 @@ export class StockEntriesService {
              json_build_object(
                'id', sei.id,
                'stock_entry_id', sei.stock_entry_id,
-               'line_number', sei.line_number,
-               'item_id', sei.item_id,
-               'item_name', sei.item_name,
+              'line_number', sei.line_number,
+              'item_id', sei.item_id,
+              'variant_id', sei.variant_id,
+              'item_name', sei.item_name,
                'quantity', sei.quantity,
                'unit', sei.unit,
                'source_warehouse_id', sei.source_warehouse_id,
@@ -531,13 +534,14 @@ export class StockEntriesService {
     // Create stock movement (IN)
     await client.query(
       `INSERT INTO stock_movements (
-        organization_id, item_id, warehouse_id, movement_type, movement_date,
+        organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
         stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.to_warehouse_id,
         'IN',
         stockEntry.entry_date,
@@ -556,12 +560,13 @@ export class StockEntriesService {
     // Create stock valuation
     await client.query(
       `INSERT INTO stock_valuation (
-        organization_id, item_id, warehouse_id, quantity, cost_per_unit,
+        organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
         stock_entry_id, batch_number, serial_number, remaining_quantity
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.to_warehouse_id,
         item.quantity,
         costPerUnit,
@@ -593,6 +598,7 @@ export class StockEntriesService {
       client,
       stockEntry.organization_id,
       item.item_id,
+      item.variant_id || null,
       stockEntry.from_warehouse_id,
       item.quantity,
     );
@@ -603,6 +609,7 @@ export class StockEntriesService {
       client,
       stockEntry.organization_id,
       item.item_id,
+      item.variant_id || null,
       stockEntry.from_warehouse_id,
       item.quantity,
       valuationMethod,
@@ -613,13 +620,14 @@ export class StockEntriesService {
     // Create stock movement (OUT)
     await client.query(
       `INSERT INTO stock_movements (
-        organization_id, item_id, warehouse_id, movement_type, movement_date,
+        organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
         stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.from_warehouse_id,
         'OUT',
         stockEntry.entry_date,
@@ -663,6 +671,7 @@ export class StockEntriesService {
       client,
       stockEntry.organization_id,
       item.item_id,
+      item.variant_id || null,
       stockEntry.from_warehouse_id,
       item.quantity,
     );
@@ -673,6 +682,7 @@ export class StockEntriesService {
       client,
       stockEntry.organization_id,
       item.item_id,
+      item.variant_id || null,
       stockEntry.from_warehouse_id,
       item.quantity,
       valuationMethod,
@@ -683,13 +693,14 @@ export class StockEntriesService {
     // Create OUT movement from source
     await client.query(
       `INSERT INTO stock_movements (
-        organization_id, item_id, warehouse_id, movement_type, movement_date,
+        organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
         stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.from_warehouse_id,
         'TRANSFER',
         stockEntry.entry_date,
@@ -708,13 +719,14 @@ export class StockEntriesService {
     // Create IN movement to target
     await client.query(
       `INSERT INTO stock_movements (
-        organization_id, item_id, warehouse_id, movement_type, movement_date,
+        organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
         stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.to_warehouse_id,
         'TRANSFER',
         stockEntry.entry_date,
@@ -733,12 +745,13 @@ export class StockEntriesService {
     // Create valuation entry in target warehouse with consumed cost
     await client.query(
       `INSERT INTO stock_valuation (
-        organization_id, item_id, warehouse_id, quantity, cost_per_unit,
+        organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
         stock_entry_id, batch_number, serial_number, remaining_quantity
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         stockEntry.organization_id,
         item.item_id,
+        item.variant_id || null,
         stockEntry.to_warehouse_id,
         item.quantity,
         costPerUnit,
@@ -814,8 +827,9 @@ export class StockEntriesService {
             END as weighted_avg_cost
            FROM stock_valuation
            WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+           AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
            AND remaining_quantity > 0`,
-          [stockEntry.organization_id, item.item_id, warehouseId],
+          [stockEntry.organization_id, item.item_id, warehouseId, item.variant_id || null],
         );
         costPerUnit = parseFloat(avgResult.rows[0]?.weighted_avg_cost || '0');
       }
@@ -824,13 +838,14 @@ export class StockEntriesService {
       // Create IN movement for positive variance
       await client.query(
         `INSERT INTO stock_movements (
-          organization_id, item_id, warehouse_id, movement_type, movement_date,
+          organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
           quantity, unit, balance_quantity, cost_per_unit, total_cost,
           stock_entry_id, stock_entry_item_id, batch_number, serial_number
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           stockEntry.organization_id,
           item.item_id,
+          item.variant_id || null,
           warehouseId,
           'IN',
           stockEntry.entry_date,
@@ -849,12 +864,13 @@ export class StockEntriesService {
       // Create valuation entry for positive variance
       await client.query(
         `INSERT INTO stock_valuation (
-          organization_id, item_id, warehouse_id, quantity, cost_per_unit,
+          organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
           stock_entry_id, batch_number, serial_number, remaining_quantity
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           stockEntry.organization_id,
           item.item_id,
+          item.variant_id || null,
           warehouseId,
           absVariance,
           costPerUnit,
@@ -882,6 +898,7 @@ export class StockEntriesService {
           client,
           stockEntry.organization_id,
           item.item_id,
+          item.variant_id || null,
           warehouseId,
           absVariance,
           valuationMethod,
@@ -893,13 +910,14 @@ export class StockEntriesService {
         // Create OUT movement for negative variance
         await client.query(
           `INSERT INTO stock_movements (
-            organization_id, item_id, warehouse_id, movement_type, movement_date,
+            organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
             quantity, unit, balance_quantity, cost_per_unit, total_cost,
             stock_entry_id, stock_entry_item_id, batch_number, serial_number
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
           [
             stockEntry.organization_id,
             item.item_id,
+            item.variant_id || null,
             warehouseId,
             'OUT',
             stockEntry.entry_date,
@@ -1054,6 +1072,7 @@ export class StockEntriesService {
     client: PoolClient,
     organizationId: string,
     itemId: string,
+    variantId: string | null,
     warehouseId: string,
     requiredQuantity: number,
   ): Promise<void> {
@@ -1062,16 +1081,18 @@ export class StockEntriesService {
     await client.query(
       `SELECT id FROM stock_movements
        WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
        FOR UPDATE`,
-      [organizationId, itemId, warehouseId],
+      [organizationId, itemId, warehouseId, variantId],
     );
 
     // Then calculate the balance (rows are now locked within this transaction)
     const result = await client.query(
       `SELECT COALESCE(SUM(quantity), 0) as balance
        FROM stock_movements
-       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3`,
-      [organizationId, itemId, warehouseId],
+       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))`,
+      [organizationId, itemId, warehouseId, variantId],
     );
 
     const currentBalance = parseFloat(result.rows[0]?.balance || '0');
@@ -1156,6 +1177,7 @@ export class StockEntriesService {
           client,
           stockEntry.organization_id,
           item.item_id,
+          item.variant_id || null,
           sourceWarehouse,
           item.quantity,
         );
@@ -1176,9 +1198,10 @@ export class StockEntriesService {
           `SELECT AVG(cost_per_unit) as avg_cost
            FROM stock_valuation
            WHERE organization_id = $1 AND item_id = $2
+           AND (variant_id = $3 OR ($3 IS NULL AND variant_id IS NULL))
            AND created_at >= NOW() - INTERVAL '30 days'
            AND cost_per_unit > 0`,
-          [stockEntry.organization_id, item.item_id],
+          [stockEntry.organization_id, item.item_id, item.variant_id || null],
         );
 
         const avgCost = parseFloat(avgResult.rows[0]?.avg_cost || '0');
@@ -1206,6 +1229,7 @@ export class StockEntriesService {
     client: PoolClient,
     organizationId: string,
     itemId: string,
+    variantId: string | null,
     warehouseId: string,
     quantity: number,
     method: ValuationMethod = ValuationMethod.FIFO,
@@ -1220,10 +1244,11 @@ export class StockEntriesService {
       `SELECT id, remaining_quantity, cost_per_unit
        FROM stock_valuation
        WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
        AND remaining_quantity > 0
        ORDER BY ${orderBy}
        FOR UPDATE`,
-      [organizationId, itemId, warehouseId],
+      [organizationId, itemId, warehouseId, variantId],
     );
 
     let remainingQty = quantity;

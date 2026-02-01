@@ -111,8 +111,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showAccounting, setShowAccounting] = useState(() =>
     getInitialSectionState(['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities'])
   );
+  const [showStockManagement, setShowStockManagement] = useState(() =>
+    getInitialSectionState(['/stock', '/stock/items', '/stock/warehouses', '/stock/suppliers', '/accounting/customers'])
+  );
   const [showConfiguration, setShowConfiguration] = useState(() =>
-    getInitialSectionState(['/accounting/customers', '/stock/suppliers', '/stock/warehouses', '/stock/items', '/settings'])
+    getInitialSectionState(['/settings'])
   );
   const [showMarketplace, setShowMarketplace] = useState(() =>
     getInitialSectionState(['/marketplace/quote-requests'])
@@ -140,8 +143,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     if (['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowAccounting(true);
     }
+    // Stock Management section
+    if (['/stock', '/stock/items', '/stock/suppliers', '/stock/warehouses', '/accounting/customers'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+      setShowStockManagement(true);
+    }
     // Configuration section
-    if (['/accounting/customers', '/stock/suppliers', '/stock/warehouses', '/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
+    if (['/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowConfiguration(true);
     }
     // Marketplace section
@@ -434,19 +441,93 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </Button>
               </ProtectedNavItem>
 
-              {/* Stock */}
-              <ProtectedNavItem action="read" subject="Stock">
-                <Button
-                  variant="ghost"
-                  data-tour="nav-stock"
-                  className={getButtonClassName(currentPath === '/stock' || currentPath.startsWith('/stock/'))}
-                  onClick={(e) => handleNavigation('/stock', e)}
-                  title={isCollapsed ? t('nav.stock') : undefined}
-                >
-                  {renderIcon(Package)}
-                  {renderText(t('nav.stock'))}
-                </Button>
-              </ProtectedNavItem>
+              {/* Stock Management */}
+              <div className="space-y-1" data-tour="nav-stock">
+                {isCollapsed ? (
+                  <div className="hidden lg:block">
+                    <CollapsedSectionPopover icon={Package} title={t('nav.stock')}>
+                      <ProtectedNavItem action="read" subject="Stock">
+                        <PopoverNavItem path="/stock" label={t('nav.overview')} isActive={currentPath === '/stock'} />
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Item">
+                        <PopoverNavItem path="/stock/items" label={t('nav.items')} isActive={currentPath === '/stock/items' || currentPath.startsWith('/stock/items')} />
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Warehouse">
+                        <PopoverNavItem path="/stock/warehouses" label={t('nav.warehouses')} isActive={currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses')} />
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Supplier">
+                        <PopoverNavItem path="/stock/suppliers" label={t('nav.suppliers')} isActive={currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers')} />
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Customer">
+                        <PopoverNavItem path="/accounting/customers" label={t('nav.customers')} isActive={currentPath === '/accounting/customers'} />
+                      </ProtectedNavItem>
+                    </CollapsedSectionPopover>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className={getSectionHeaderClassName()}
+                      onClick={() => setShowStockManagement(!showStockManagement)}
+                    >
+                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
+                        {renderIcon(Package)}
+                        {renderSectionTitle(t('nav.stock'))}
+                      </div>
+                      {renderChevron(showStockManagement)}
+                    </Button>
+                    {showStockManagement && (
+                      <>
+                        <ProtectedNavItem action="read" subject="Stock">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/stock')}
+                            onClick={(e) => handleNavigation('/stock', e)}
+                          >
+                            {renderText(t('nav.overview'))}
+                          </Button>
+                        </ProtectedNavItem>
+                        <ProtectedNavItem action="read" subject="Item">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/stock/items' || currentPath.startsWith('/stock/items'))}
+                            onClick={(e) => handleNavigation('/stock/items', e)}
+                          >
+                            {renderText(t('nav.items'))}
+                          </Button>
+                        </ProtectedNavItem>
+                        <ProtectedNavItem action="read" subject="Warehouse">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
+                            onClick={(e) => handleNavigation('/stock/warehouses', e)}
+                          >
+                            {renderText(t('nav.warehouses'))}
+                          </Button>
+                        </ProtectedNavItem>
+                        <ProtectedNavItem action="read" subject="Supplier">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
+                            onClick={(e) => handleNavigation('/stock/suppliers', e)}
+                          >
+                            {renderText(t('nav.suppliers'))}
+                          </Button>
+                        </ProtectedNavItem>
+                        <ProtectedNavItem action="read" subject="Customer">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(currentPath === '/accounting/customers')}
+                            onClick={(e) => handleNavigation('/accounting/customers', e)}
+                          >
+                            {renderText(t('nav.customers'))}
+                          </Button>
+                        </ProtectedNavItem>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
 
               {/* Infrastructure */}
               <ProtectedNavItem action="read" subject="Infrastructure">
@@ -815,18 +896,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {isCollapsed ? (
                   <div className="hidden lg:block">
                     <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
-                      <ProtectedNavItem action="read" subject="Customer" fallback={<></>}>
-                        <PopoverNavItem path="/accounting/customers" label={t('nav.customers')} isActive={currentPath === '/accounting/customers'} />
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Supplier" fallback={<></>}>
-                        <PopoverNavItem path="/stock/suppliers" label={t('nav.suppliers')} isActive={currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers')} />
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Warehouse" fallback={<></>}>
-                        <PopoverNavItem path="/stock/warehouses" label={t('nav.warehouses')} isActive={currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses')} />
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Item" fallback={<></>}>
-                        <PopoverNavItem path="/stock/items" label={t('nav.items')} isActive={currentPath === '/stock/items' || currentPath.startsWith('/stock/items')} />
-                      </ProtectedNavItem>
                       <ProtectedNavItem action="manage" subject="User" fallback={<></>}>
                         <PopoverNavItem path="/settings/profile" label={t('nav.settings')} isActive={currentPath.startsWith('/settings')} />
                       </ProtectedNavItem>
@@ -847,42 +916,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </Button>
                     {showConfiguration && (
                       <>
-                        <ProtectedNavItem action="read" subject="Customer" fallback={<></>}>
-                          <Button
-                            variant="ghost"
-                            className={getSubItemClassName(currentPath === '/accounting/customers')}
-                            onClick={(e) => handleNavigation('/accounting/customers', e)}
-                          >
-                            {renderText(t('nav.customers'))}
-                          </Button>
-                        </ProtectedNavItem>
-                        <ProtectedNavItem action="read" subject="Supplier" fallback={<></>}>
-                          <Button
-                            variant="ghost"
-                            className={getSubItemClassName(currentPath === '/stock/suppliers' || currentPath.startsWith('/stock/suppliers'))}
-                            onClick={(e) => handleNavigation('/stock/suppliers', e)}
-                          >
-                            {renderText(t('nav.suppliers'))}
-                          </Button>
-                        </ProtectedNavItem>
-                        <ProtectedNavItem action="read" subject="Warehouse" fallback={<></>}>
-                          <Button
-                            variant="ghost"
-                            className={getSubItemClassName(currentPath === '/stock/warehouses' || currentPath.startsWith('/stock/warehouses'))}
-                            onClick={(e) => handleNavigation('/stock/warehouses', e)}
-                          >
-                            {renderText(t('nav.warehouses'))}
-                          </Button>
-                        </ProtectedNavItem>
-                        <ProtectedNavItem action="read" subject="Item" fallback={<></>}>
-                          <Button
-                            variant="ghost"
-                            className={getSubItemClassName(currentPath === '/stock/items' || currentPath.startsWith('/stock/items'))}
-                            onClick={(e) => handleNavigation('/stock/items', e)}
-                          >
-                            {renderText(t('nav.items'))}
-                          </Button>
-                        </ProtectedNavItem>
                         <ProtectedNavItem action="manage" subject="User" fallback={<></>}>
                           <Button
                             variant="ghost"

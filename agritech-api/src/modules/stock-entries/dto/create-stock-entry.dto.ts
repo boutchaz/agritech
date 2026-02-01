@@ -24,6 +24,10 @@ export class StockEntryItemDto {
   @IsUUID()
   item_id: string;
 
+  @IsUUID()
+  @IsOptional()
+  variant_id?: string;
+
   @IsString()
   @IsOptional()
   item_name?: string;

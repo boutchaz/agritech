@@ -211,6 +211,85 @@ export class ItemsService {
     return data;
   }
 
+  // =====================================================
+  // PRODUCT VARIANTS
+  // =====================================================
+
+  async findItemVariants(organizationId: string, itemId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('item_id', itemId)
+      .order('variant_name', { ascending: true });
+
+    if (error) {
+      this.logger.error(`Failed to fetch product variants: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch product variants: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async createItemVariant(dto: any): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .insert(dto)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to create product variant: ${error.message}`);
+      throw new BadRequestException(`Failed to create product variant: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async updateItemVariant(id: string, organizationId: string, userId: string, dto: any): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('product_variants')
+      .update(dto)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to update product variant: ${error.message}`);
+      throw new BadRequestException(`Failed to update product variant: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new NotFoundException('Product variant not found');
+    }
+
+    return data;
+  }
+
+  async deleteItemVariant(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { error } = await supabase
+      .from('product_variants')
+      .delete()
+      .eq('id', id)
+      .eq('organization_id', organizationId);
+
+    if (error) {
+      this.logger.error(`Failed to delete product variant: ${error.message}`);
+      throw new BadRequestException(`Failed to delete product variant: ${error.message}`);
+    }
+
+    return { message: 'Product variant deleted successfully' };
+  }
+
   async findOneItem(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
