@@ -382,6 +382,8 @@ export class AdoptionService {
 
   /**
    * Calculate and store daily adoption metrics
+   * Moved from SQL: calculate_daily_adoption_metrics()
+   * Now implemented directly in NestJS
    */
   async calculateDailyMetrics(date?: Date): Promise<void> {
     const client = this.databaseService.getAdminClient();
@@ -389,18 +391,60 @@ export class AdoptionService {
     const dateStr = targetDate.toISOString().split('T')[0];
 
     try {
-      const { error } = await client.rpc('calculate_daily_adoption_metrics', {
-        p_date: dateStr,
-      });
+      // Calculate metrics directly in NestJS
+      const { data: usersData } = await client
+        .from('users')
+        .select('id, created_at')
+        .lte('created_at', targetDate.toISOString());
 
-      if (error) {
-        this.logger.error(
-          `Failed to calculate daily metrics: ${error.message}`,
+      const { data: profilesData } = await client
+        .from('user_profiles')
+        .select('user_id, last_active_at, onboarding_completed_at')
+        .in(
+          'user_id',
+          usersData?.map((u: any) => u.id) || []
         );
-        throw new Error('Failed to calculate daily metrics');
+
+      // Count metrics
+      const newUsers = usersData?.filter((u: any) =>
+        u.created_at?.startsWith(dateStr)
+      ).length || 0;
+
+      const activeUsers = profilesData?.filter((p: any) =>
+        p.last_active_at?.startsWith(dateStr)
+      ).length || 0;
+
+      const totalUsers = usersData?.length || 0;
+      const onboardingCompleted = profilesData?.filter((p: any) =>
+        p.onboarding_completed_at !== null
+      ).length || 0;
+
+      const onboardingCompletionRate = totalUsers > 0
+        ? Math.round((onboardingCompleted / totalUsers) * 100)
+        : 0;
+
+      // Store the metrics
+      const { error: insertError } = await client
+        .from('adoption_metrics_daily')
+        .upsert(
+          {
+            date: dateStr,
+            new_users: newUsers,
+            active_users: activeUsers,
+            total_users: totalUsers,
+            onboarding_completion_rate: onboardingCompletionRate,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'date',
+          },
+        );
+
+      if (insertError) {
+        throw new Error(`Failed to store metrics: ${insertError.message}`);
       }
 
-      this.logger.log(`Calculated daily adoption metrics for ${dateStr}`);
+      this.logger.log(`Calculated daily adoption metrics for ${dateStr}: ${newUsers} new, ${activeUsers} active, ${totalUsers} total`);
     } catch (error) {
       this.logger.error(`Error calculating daily metrics: ${error.message}`);
       throw error;
@@ -435,5 +479,126 @@ export class AdoptionService {
     }
 
     return data || [];
+  }
+
+  /**
+   * Generate adoption report
+   * Moved from SQL: generate_adoption_report()
+   */
+  async generateAdoptionReport(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any[]> {
+    const client = this.databaseService.getAdminClient();
+    const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const end = endDate || new Date();
+
+    const results = [];
+
+    // Generate date series
+    const currentDate = new Date(start);
+    let cumulativeUsers = 0;
+
+    while (currentDate <= end) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+
+      // Count new users for this date
+      const { data: newUsersData } = await client
+        .from('users')
+        .select('id')
+        .eq('created_at', dateStr);
+
+      // Count active users for this date
+      const { data: activeUsersData } = await client
+        .from('user_profiles')
+        .select('user_id')
+        .eq('last_active_at', dateStr);
+
+      const newUsers = newUsersData?.length || 0;
+      const activeUsers = activeUsersData?.length || 0;
+      cumulativeUsers += newUsers;
+
+      results.push({
+        date: dateStr,
+        new_users: newUsers,
+        active_users: activeUsers,
+        cumulative_users: cumulativeUsers,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return results;
+  }
+
+  /**
+   * Get productivity metrics for an organization
+   * Moved from SQL: get_productivity_metrics()
+   */
+  async getProductivityMetrics(
+    organizationId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<any[]> {
+    const client = this.databaseService.getAdminClient();
+    const start = startDate || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const end = endDate || new Date();
+
+    const metrics = [];
+
+    // Get harvest data
+    const { data: harvests } = await client
+      .from('harvest_records')
+      .select('quantity_kg, harvest_date')
+      .eq('organization_id', organizationId)
+      .gte('harvest_date', start.toISOString())
+      .lte('harvest_date', end.toISOString());
+
+    const totalHarvest = harvests?.reduce((sum: number, h: any) =>
+      sum + (h.quantity_kg || 0), 0
+    ) || 0;
+
+    metrics.push({
+      metric_name: 'Total Harvest',
+      metric_value: totalHarvest,
+      metric_unit: 'kg',
+    });
+
+    // Get task completion data
+    const { data: tasks } = await client
+      .from('tasks')
+      .select('id, status, completed_at')
+      .eq('organization_id', organizationId)
+      .gte('updated_at', start.toISOString())
+      .lte('updated_at', end.toISOString());
+
+    const completedTasks = tasks?.filter((t: any) => t.status === 'completed').length || 0;
+    const totalTasks = tasks?.length || 0;
+
+    metrics.push({
+      metric_name: 'Task Completion Rate',
+      metric_value: totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0,
+      metric_unit: '%',
+    });
+
+    // Get worker productivity
+    const { data: workRecords } = await client
+      .from('work_records')
+      .select('hours_worked, total_payment')
+      .eq('organization_id', organizationId)
+      .gte('work_date', start.toISOString().split('T')[0])
+      .lte('work_date', end.toISOString().split('T')[0]);
+
+    const totalHours = workRecords?.reduce((sum: number, wr: any) =>
+      sum + (wr.hours_worked || 0), 0
+    ) || 0;
+
+    metrics.push({
+      metric_name: 'Total Hours Worked',
+      metric_value: totalHours,
+      metric_unit: 'hours',
+    });
+
+    return metrics;
   }
 }

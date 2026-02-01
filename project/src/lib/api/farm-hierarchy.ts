@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { apiClient } from '../api-client';
 
 export interface HierarchyFarm {
   farm_id: string;
@@ -24,37 +24,29 @@ export interface UserFarmRole {
 
 export const farmHierarchyApi = {
   async getOrganizationFarms(organizationId: string): Promise<HierarchyFarm[]> {
-    const { data, error } = await supabase.rpc('get_organization_farms', {
-      org_uuid: organizationId,
-    });
+    const response = await apiClient.get<any>('/api/v1/farms', {}, organizationId);
+    const farms = Array.isArray(response) ? response : response?.farms || [];
 
-    if (error) throw error;
-
-    return (data || []).map((farm: Record<string, unknown>) => ({
-      farm_id: farm.farm_id as string,
-      farm_name: farm.farm_name as string,
-      farm_location: farm.farm_location as string,
-      farm_size: (farm.farm_size as number) || 0,
+    return farms.map((farm: Record<string, unknown>) => ({
+      farm_id: farm.farm_id ? (farm.farm_id as string) : (farm.id as string),
+      farm_name: (farm.farm_name as string) || (farm.name as string) || '',
+      farm_location: (farm.farm_location as string) || (farm.location as string) || '',
+      farm_size: (farm.farm_size as number) || (farm.size as number) || 0,
       farm_type: (farm.farm_type as 'main' | 'sub') || 'main',
       parent_farm_id: (farm.parent_farm_id as string) || null,
       hierarchy_level: (farm.hierarchy_level as number) || 1,
       manager_name: (farm.manager_name as string) || 'No Manager',
       sub_farms_count: (farm.sub_farms_count as number) || 0,
-      is_active: true,
+      is_active: farm.is_active === undefined ? true : Boolean(farm.is_active),
     }));
   },
 
-  async getUserFarmRoles(userId: string): Promise<UserFarmRole[]> {
-    const { data, error } = await supabase.rpc('get_user_farm_roles', {
-      user_uuid: userId,
-    });
-
-    if (error && error.code === 'PGRST202') {
-      return [];
-    }
-
-    if (error) throw error;
-    return data || [];
+  async getUserFarmRoles(userId: string, organizationId: string): Promise<UserFarmRole[]> {
+    return apiClient.get<UserFarmRole[]>(
+      `/api/v1/farms/user-roles/${userId}`,
+      {},
+      organizationId,
+    );
   },
 
   async getBasicUserRoles(
@@ -62,39 +54,38 @@ export const farmHierarchyApi = {
     userId: string,
     farms: HierarchyFarm[]
   ): Promise<UserFarmRole[]> {
-    const { data: orgUser, error: orgError } = await supabase
-      .from('organization_users')
-      .select('role_id, role:roles!organization_users_role_id_fkey(name)')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .single();
+    try {
+      const orgUser = await apiClient.get<any>(
+        `/api/v1/organization-users/${userId}`,
+        {},
+        organizationId,
+      );
 
-    if (orgError) {
-      console.error('Error fetching organization role:', orgError);
+      const roleName = orgUser?.roles?.name || orgUser?.role?.name || orgUser?.role;
+      const isAdmin = roleName === 'admin' || roleName === 'organization_admin';
+      const isManager = roleName === 'manager' || roleName === 'farm_manager';
+      const isBasicUser = roleName === 'member' || roleName === 'viewer';
+
+      return farms.map(farm => ({
+        farm_id: farm.farm_id,
+        farm_name: farm.farm_name,
+        role: isAdmin ? 'main_manager' : isManager ? 'sub_manager' : 'supervisor',
+        permissions: {
+          manage_farms: isAdmin,
+          manage_sub_farms: !isBasicUser,
+          manage_users: isAdmin,
+          view_reports: true,
+          manage_crops: true,
+          manage_parcels: !isBasicUser,
+          manage_inventory: !isBasicUser,
+          manage_activities: true,
+        },
+        assigned_at: new Date().toISOString(),
+        is_active: true,
+      }));
+    } catch (error) {
+      console.error('Error fetching organization role:', error);
       return [];
     }
-
-    const roleName = (orgUser.role as { name?: string } | null)?.name;
-    const isAdmin = roleName === 'admin' || roleName === 'organization_admin';
-    const isManager = roleName === 'manager' || roleName === 'farm_manager';
-    const isBasicUser = roleName === 'member' || roleName === 'viewer';
-
-    return farms.map(farm => ({
-      farm_id: farm.farm_id,
-      farm_name: farm.farm_name,
-      role: isAdmin ? 'main_manager' : isManager ? 'sub_manager' : 'supervisor',
-      permissions: {
-        manage_farms: isAdmin,
-        manage_sub_farms: !isBasicUser,
-        manage_users: isAdmin,
-        view_reports: true,
-        manage_crops: true,
-        manage_parcels: !isBasicUser,
-        manage_inventory: !isBasicUser,
-        manage_activities: true,
-      },
-      assigned_at: new Date().toISOString(),
-      is_active: true,
-    }));
   },
 };

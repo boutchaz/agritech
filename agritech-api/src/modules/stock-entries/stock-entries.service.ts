@@ -1391,17 +1391,113 @@ export class StockEntriesService {
   }
 
   async postOpeningStockBalance(id: string, organizationId: string): Promise<any> {
-    const supabase = this.databaseService.getAdminClient();
+    return this.executeInPgTransaction(async (client) => {
+      const openingStockResult = await client.query(
+        `SELECT *
+         FROM opening_stock_balances
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [id, organizationId],
+      );
 
-    const { data, error } = await supabase.rpc('post_opening_stock_balance', {
-      p_opening_stock_id: id,
+      if (openingStockResult.rows.length === 0) {
+        throw new BadRequestException('Opening stock balance not found');
+      }
+
+      const openingStock = openingStockResult.rows[0];
+
+      if (openingStock.status !== 'Draft') {
+        throw new BadRequestException('Only draft opening stock balances can be posted');
+      }
+
+      const itemResult = await client.query(
+        `SELECT default_unit
+         FROM items
+         WHERE id = $1`,
+        [openingStock.item_id],
+      );
+
+      const unit = itemResult.rows[0]?.default_unit || 'unit';
+      const postedAt = new Date();
+      const postedBy = openingStock.posted_by || openingStock.created_by;
+      const serialNumber = Array.isArray(openingStock.serial_numbers)
+        ? openingStock.serial_numbers[0]
+        : null;
+
+      await client.query(
+        `UPDATE opening_stock_balances
+         SET status = $1,
+             posted_at = $2,
+             posted_by = $3
+         WHERE id = $4`,
+        ['Posted', postedAt, postedBy, id],
+      );
+
+      await client.query(
+        `INSERT INTO stock_movements (
+          organization_id,
+          movement_type,
+          movement_date,
+          item_id,
+          warehouse_id,
+          quantity,
+          unit,
+          balance_quantity,
+          cost_per_unit,
+          total_cost,
+          batch_number,
+          serial_number,
+          created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [
+          organizationId,
+          'IN',
+          openingStock.opening_date,
+          openingStock.item_id,
+          openingStock.warehouse_id,
+          openingStock.quantity,
+          unit,
+          openingStock.quantity,
+          openingStock.valuation_rate,
+          openingStock.quantity * openingStock.valuation_rate,
+          openingStock.batch_number,
+          serialNumber,
+          postedBy,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO stock_valuation (
+          organization_id,
+          item_id,
+          warehouse_id,
+          quantity,
+          cost_per_unit,
+          valuation_date,
+          batch_number,
+          serial_number,
+          remaining_quantity
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [
+          organizationId,
+          openingStock.item_id,
+          openingStock.warehouse_id,
+          openingStock.quantity,
+          openingStock.valuation_rate,
+          openingStock.opening_date,
+          openingStock.batch_number,
+          serialNumber,
+          openingStock.quantity,
+        ],
+      );
+
+      const journalResult = await client.query(
+        `SELECT journal_entry_id FROM opening_stock_balances WHERE id = $1`,
+        [id],
+      );
+
+      return { journal_entry_id: journalResult.rows[0]?.journal_entry_id ?? null };
     });
-
-    if (error) {
-      throw new BadRequestException(`Failed to post opening stock balance: ${error.message}`);
-    }
-
-    return { journal_entry_id: data };
   }
 
   async cancelOpeningStockBalance(id: string, organizationId: string): Promise<any> {

@@ -306,10 +306,10 @@ export class TasksService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    // Verify task belongs to organization
+    // Verify task belongs to organization and get current status
     const { data: existingTask } = await client
       .from('tasks')
-      .select('id')
+      .select('id, status, assigned_to, start_date, end_date, title, task_type, farm_id, organization_id, due_date, parcel_id')
       .eq('id', taskId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -318,13 +318,16 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
+    // Check if status is being changed to 'completed'
+    const statusChangedToCompleted = updateTaskDto.status === 'completed' && existingTask.status !== 'completed';
+
     const { data: task, error } = await client
       .from('tasks')
       .update(updateTaskDto)
       .eq('id', taskId)
       .select(`
         *,
-        worker:workers!assigned_to(first_name, last_name),
+        worker:workers!assigned_to(first_name, last_name, payment_type, hourly_rate, daily_rate),
         farm:farms!farm_id(name),
         parcel:parcels!parcel_id(name)
       `)
@@ -332,6 +335,16 @@ export class TasksService {
 
     if (error) {
       throw new Error(`Failed to update task: ${error.message}`);
+    }
+
+    // Auto-create work record when task is completed with assigned worker
+    if (statusChangedToCompleted && task.assigned_to && task.worker) {
+      try {
+        await this.createWorkRecordFromTask(task, existingTask);
+      } catch (workRecordError) {
+        // Log error but don't fail the task update
+        this.logger.error(`Failed to create work record for task ${taskId}: ${workRecordError}`);
+      }
     }
 
     return {
@@ -342,6 +355,63 @@ export class TasksService {
       farm_name: Array.isArray(task.farm) ? task.farm[0]?.name : task.farm?.name,
       parcel_name: Array.isArray(task.parcel) ? task.parcel[0]?.name : task.parcel?.name,
     };
+  }
+
+  /**
+   * Create a work record from a completed task
+   */
+  private async createWorkRecordFromTask(task: any, existingTask: any) {
+    const client = this.databaseService.getAdminClient();
+    const worker = task.worker;
+
+    // Calculate hours worked from task duration
+    const hoursWorked = task.start_date && task.end_date
+      ? (new Date(task.end_date).getTime() - new Date(task.start_date).getTime()) / (1000 * 60 * 60)
+      : 0;
+
+    // Calculate payment based on worker payment type
+    let totalPayment = 0;
+    if (worker.payment_type === 'hourly' && worker.hourly_rate && hoursWorked > 0) {
+      totalPayment = worker.hourly_rate * hoursWorked;
+    } else if (worker.payment_type === 'daily' && worker.daily_rate) {
+      totalPayment = worker.daily_rate;
+    }
+
+    // Determine work date
+    const workDate = task.due_date
+      ? new Date(task.due_date)
+      : task.end_date
+        ? new Date(task.end_date)
+        : new Date();
+
+    // Create work record
+    const { error: workRecordError } = await client
+      .from('work_records')
+      .insert({
+        farm_id: task.farm_id,
+        organization_id: task.organization_id,
+        worker_id: task.assigned_to,
+        worker_type: worker.payment_type,
+        work_date: workDate.toISOString().split('T')[0],
+        hours_worked: hoursWorked > 0 ? hoursWorked : null,
+        task_description: task.title || 'Task completed',
+        hourly_rate: worker.hourly_rate,
+        total_payment: totalPayment > 0 ? totalPayment : null,
+        payment_status: totalPayment > 0 ? 'pending' : 'not_applicable',
+        notes: JSON.stringify({
+          task_id: task.id,
+          task_title: task.title,
+          task_type: task.task_type,
+          parcel_id: task.parcel_id,
+          completed_at: new Date().toISOString(),
+        }),
+      });
+
+    if (workRecordError) {
+      throw new Error(`Failed to create work record: ${workRecordError.message}`);
+    }
+
+    this.logger.log(`Work record created for completed task ${task.id}, worker ${task.assigned_to}`);
   }
 
   /**

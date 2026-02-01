@@ -98,14 +98,14 @@ export class DashboardController {
     async getDashboardSettings(
         @Request() req,
     ) {
-        const userId = req.user?.sub || req.user?.userId;
+        const userId = req.user?.sub || req.user?.userId || req.user?.id;
         const orgId = req.headers['x-organization-id'] as string;
 
         if (!userId || !orgId) {
             throw new BadRequestException('User ID and Organization ID are required');
         }
 
-        return this.dashboardService.getDashboardSettings(req.user.id, orgId, userId);
+        return this.dashboardService.getDashboardSettings(userId, orgId, userId);
     }
 
     @Put('settings')
@@ -115,13 +115,13 @@ export class DashboardController {
         @Request() req,
         @Body() settings: any,
     ) {
-        const userId = req.user?.sub || req.user?.userId;
+        const userId = req.user?.sub || req.user?.userId || req.user?.id;
         const orgId = req.headers['x-organization-id'] as string;
 
         if (!userId || !orgId) {
             throw new BadRequestException('User ID and Organization ID are required');
         }
 
-        return this.dashboardService.upsertDashboardSettings(req.user.id, orgId, userId, settings);
+        return this.dashboardService.upsertDashboardSettings(userId, orgId, userId, settings);
     }
 }

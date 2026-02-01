@@ -151,11 +151,27 @@ export class PieceWorkService {
         throw new BadRequestException(`Failed to create piece work record: ${error.message}`);
       }
 
-      // Increment work unit usage count
-      await client
+      const { data: workUnit, error: workUnitError } = await client
         .from('work_units')
-        .update({ usage_count: client.rpc('increment', { row_id: dto.work_unit_id }) })
-        .eq('id', dto.work_unit_id);
+        .select('usage_count')
+        .eq('id', dto.work_unit_id)
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (workUnitError) {
+        this.logger.warn(`Failed to fetch work unit usage count: ${workUnitError.message}`);
+      } else if (workUnit) {
+        const nextCount = (workUnit.usage_count ?? 0) + 1;
+        const { error: updateError } = await client
+          .from('work_units')
+          .update({ usage_count: nextCount })
+          .eq('id', dto.work_unit_id)
+          .eq('organization_id', organizationId);
+
+        if (updateError) {
+          this.logger.warn(`Failed to increment work unit usage count: ${updateError.message}`);
+        }
+      }
 
       return data;
     } catch (error) {

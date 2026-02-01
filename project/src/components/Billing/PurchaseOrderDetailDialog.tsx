@@ -513,13 +513,14 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
       const warehouseId = warehouses[0].id;
       const today = new Date().toISOString().split('T')[0];
 
-      const { error } = await authSupabase.rpc('create_material_receipt_from_po', {
-        p_purchase_order_id: po.id,
-        p_warehouse_id: warehouseId,
-        p_receipt_date: today
-      });
-
-      if (error) throw error;
+      await purchaseOrdersApi.createMaterialReceipt(
+        po.id,
+        {
+          warehouse_id: warehouseId,
+          receipt_date: today,
+        },
+        currentOrganization.id,
+      );
 
       toast.success('Material Receipt created successfully. Navigate to Stock Entries to view.');
       queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });

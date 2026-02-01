@@ -62,8 +62,11 @@ function AuthenticatedLayout() {
     isValid: isSubscriptionValid(subscription),
   })
 
-  // Show loading while checking subscription
-  if (subscriptionLoading) {
+  // Show loading while checking subscription or if subscription is null but we're not done loading yet
+  // This prevents the race condition where subscription is null during initial load
+  const isSubscriptionPending = subscriptionLoading || (subscription === null && currentOrganization)
+
+  if (isSubscriptionPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -85,7 +88,8 @@ function AuthenticatedLayout() {
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
     // Check if user has never created a subscription - redirect to trial selection
-    if (!subscription) {
+    // Only redirect if we're certain there's no subscription (not just loading)
+    if (!subscription && !isSubscriptionPending) {
       console.log('📋 No subscription found - redirecting to trial selection')
       // Use window.location.href for full navigation to ensure clean state
       window.location.href = '/onboarding/select-trial'

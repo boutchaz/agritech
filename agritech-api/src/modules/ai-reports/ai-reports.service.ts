@@ -277,7 +277,7 @@ export class AIReportsService {
 
   async getAvailableProviders(organizationId?: string): Promise<AIProviderInfoDto[]> {
     // Check organization-specific settings if organizationId is provided
-    let orgSettings: Map<string, boolean> = new Map();
+    const orgSettings: Map<string, boolean> = new Map();
 
     if (organizationId) {
       try {

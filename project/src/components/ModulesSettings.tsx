@@ -3,7 +3,7 @@ import { Check, X, Boxes, Lock, ExternalLink, Loader2, AlertCircle } from 'lucid
 import TreeManagement from './TreeManagement';
 import { useSubscription } from '../hooks/useSubscription';
 import { useModules, useUpdateModule } from '../hooks/useModules';
-import { isModuleAvailable, getPlanDetails } from '../lib/polar';
+import { isModuleAvailableForPlan, getPlanDetails } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
 import type { OrganizationModule } from '../lib/api/modules';
 
@@ -55,7 +55,8 @@ const ModulesSettings: React.FC = () => {
     // If trying to activate a module
     if (!currentActive) {
       // Check if module is available in current plan
-      if (!isModuleAvailable(subscription, moduleId)) {
+      const moduleRecord = modules.find((item) => item.id === moduleId);
+      if (!moduleRecord || !isModuleAvailableForPlan(moduleRecord, subscription)) {
         // Show upgrade prompt
         if (confirm('Ce module n\'est pas disponible dans votre plan actuel. Voulez-vous voir les options de mise à niveau?')) {
           navigate({ to: '/settings/subscription' });
@@ -185,7 +186,7 @@ const ModuleCard: React.FC<{
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onClick: () => void;
 }> = ({ module, subscription, onToggle, onClick }) => {
-  const moduleAvailable = isModuleAvailable(subscription, module.id);
+  const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
 
   return (

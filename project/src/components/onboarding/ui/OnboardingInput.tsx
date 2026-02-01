@@ -48,6 +48,7 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
           <input
             ref={ref}
             {...props}
+            data-testid={`onboarding-input-${label.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
             onFocus={(e) => {
               setIsFocused(true);
               props.onFocus?.(e);

@@ -26,7 +26,7 @@ export function useUserFarmRoles(userId: string | null, farms: HierarchyFarm[] =
       if (!userId) return [];
       
       try {
-        const roles = await farmHierarchyApi.getUserFarmRoles(userId);
+        const roles = await farmHierarchyApi.getUserFarmRoles(userId, organizationId);
         if (roles.length > 0) {
           return roles;
         }

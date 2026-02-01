@@ -28,6 +28,7 @@ import {
   PurchaseOrderFiltersDto,
   UpdateStatusDto,
   ConvertToBillDto,
+  CreateMaterialReceiptDto,
 } from './dto';
 
 @ApiTags('purchase-orders')
@@ -174,6 +175,26 @@ export class PurchaseOrdersController {
       convertDto,
       req.user.organizationId,
       req.user.userId,
+    );
+  }
+
+  @Post(':id/material-receipt')
+  @ApiOperation({ summary: 'Create material receipt stock entry from purchase order' })
+  @ApiParam({ name: 'id', description: 'Purchase order UUID' })
+  @ApiResponse({ status: 201, description: 'Material receipt created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or business rule violation' })
+  @ApiResponse({ status: 404, description: 'Purchase order not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async createMaterialReceipt(
+    @Param('id') id: string,
+    @Body() dto: CreateMaterialReceiptDto,
+    @Request() req,
+  ) {
+    return this.purchaseOrdersService.createMaterialReceipt(
+      id,
+      req.user.organizationId,
+      req.user.userId,
+      dto,
     );
   }
 }

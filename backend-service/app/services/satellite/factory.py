@@ -28,8 +28,7 @@ def get_satellite_provider(
     Provider selection logic (in order of priority):
     1. Explicit provider_type parameter
     2. SATELLITE_PROVIDER environment variable
-    3. SATELLITE_COMMERCIAL_MODE=true → CDSE
-    4. Default: GEE (for development)
+    3. Default: GEE (Google Earth Engine)
 
     Args:
         provider_type: Explicit provider type ("gee", "cdse", or "auto")
@@ -106,18 +105,12 @@ def _determine_provider_type() -> str:
         Provider type string ("gee", "cdse", or "auto")
     """
     # Check explicit environment variable
-    env_provider = getattr(settings, 'SATELLITE_PROVIDER', 'auto').lower()
+    env_provider = getattr(settings, 'SATELLITE_PROVIDER', 'gee').lower()
     if env_provider in [ProviderType.GEE.value, ProviderType.CDSE.value]:
         return env_provider
 
-    # Check commercial mode flag
-    commercial_mode = getattr(settings, 'SATELLITE_COMMERCIAL_MODE', False)
-    if commercial_mode:
-        logger.info("Commercial mode enabled, selecting CDSE provider")
-        return ProviderType.CDSE.value
-
-    # Default to auto-selection
-    return ProviderType.AUTO.value
+    # Default to GEE
+    return ProviderType.GEE.value
 
 
 def _select_available_provider() -> ProviderType:
@@ -125,21 +118,12 @@ def _select_available_provider() -> ProviderType:
     Select the best available provider based on configuration.
 
     Priority order:
-    1. CDSE (if credentials available)
-    2. GEE (if credentials available)
-    3. GEE as default (for development)
+    1. GEE (default provider, always preferred)
+    2. CDSE (fallback if GEE unavailable)
 
     Returns:
         ProviderType enum value
     """
-    # Check if CDSE credentials are available
-    cdse_client_id = getattr(settings, 'CDSE_CLIENT_ID', None)
-    cdse_client_secret = getattr(settings, 'CDSE_CLIENT_SECRET', None)
-
-    if cdse_client_id and cdse_client_secret:
-        logger.info("CDSE credentials found, selecting CDSE provider")
-        return ProviderType.CDSE
-
     # Check if GEE credentials are available
     gee_service_account = getattr(settings, 'GEE_SERVICE_ACCOUNT', None)
     gee_private_key = getattr(settings, 'GEE_PRIVATE_KEY', None)
@@ -148,8 +132,8 @@ def _select_available_provider() -> ProviderType:
         logger.info("GEE credentials found, selecting GEE provider")
         return ProviderType.GEE
 
-    # Default to GEE for development (may use default auth)
-    logger.info("No provider credentials explicitly configured, using GEE with default auth")
+    # GEE is default even without explicit credentials (may use default auth)
+    logger.info("Using GEE as default provider")
     return ProviderType.GEE
 
 
@@ -232,12 +216,12 @@ def get_provider_info() -> Dict[str, Any]:
             "gee": {
                 "configured": gee_configured,
                 "available": True,  # GEE is always available with default auth
-                "description": "Google Earth Engine (Development/Fallback)",
+                "description": "Google Earth Engine (Default Provider)",
             },
             "cdse": {
                 "configured": cdse_configured,
                 "available": cdse_configured,
-                "description": "Copernicus Data Space Ecosystem (Commercial)",
+                "description": "Copernicus Data Space Ecosystem (Commercial/Alternative)",
             },
         },
         "cached_providers": list(_provider_cache.keys()),

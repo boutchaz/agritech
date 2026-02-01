@@ -4,3 +4,4 @@ export * from './update-purchase-order.dto';
 export * from './purchase-order-filters.dto';
 export * from './update-status.dto';
 export * from './convert-to-bill.dto';
+export * from './create-material-receipt.dto';

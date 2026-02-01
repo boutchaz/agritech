@@ -10,14 +10,15 @@ import {
   ExternalLink,
   Loader2,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
-import { SUBSCRIPTION_PLANS, type PlanType, getCheckoutUrl } from '../lib/polar';
-import SubscriptionPlans from './SubscriptionPlans';
+import { getCoreCheckoutUrl, normalizePlanType } from '../lib/polar';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
+import { useModuleConfig } from '@/hooks/useModuleConfig';
+import { addonsApi } from '@/lib/api/addons';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -26,6 +27,7 @@ const SubscriptionSettings: React.FC = () => {
   const { currentOrganization } = useAuth();
   const { t } = useTranslation();
   const [showPlans, setShowPlans] = React.useState(false);
+  const { data: moduleConfig } = useModuleConfig();
 
   // Query actual usage counts from NestJS API
   const { data: usage } = useQuery({
@@ -55,21 +57,29 @@ const SubscriptionSettings: React.FC = () => {
     staleTime: 30 * 1000, // 30 seconds
   });
 
-  const handleSelectPlan = (planType: PlanType) => {
-    if (planType === 'enterprise') {
-      // Open contact form or email
-      window.location.href = 'mailto:sales@agritech.com?subject=Enterprise Plan Inquiry';
-      return;
-    }
+  const purchaseAddon = useMutation({
+    mutationFn: async (moduleId: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error(t('subscription.errors.noOrganization'));
+      }
+      return addonsApi.purchase(currentOrganization.id, { module_id: moduleId });
+    },
+    onSuccess: (result) => {
+      window.location.href = result.checkout_url;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || t('subscription.errors.checkoutFailed'));
+    },
+  });
 
+  const handlePurchaseCore = () => {
     if (!currentOrganization?.id) {
       toast.error(t('subscription.errors.noOrganization'));
       return;
     }
 
     try {
-      // Get checkout URL with organization ID and redirect
-      const checkoutUrl = getCheckoutUrl(planType, currentOrganization.id);
+      const checkoutUrl = getCoreCheckoutUrl(currentOrganization.id);
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Failed to get checkout URL:', error);
@@ -85,21 +95,123 @@ const SubscriptionSettings: React.FC = () => {
     );
   }
 
-  if (showPlans) {
+  const normalizedPlanType = normalizePlanType(subscription?.plan_type ?? null);
+  const shouldShowPlans = showPlans || !normalizedPlanType;
+  const coreModules = moduleConfig?.modules.filter((module) => module.isRequired) || [];
+  const addonModules = moduleConfig?.modules.filter((module) => module.isAddonEligible) || [];
+
+  const addonsOverviewQuery = useQuery({
+    queryKey: ['addons-overview', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return null;
+      return addonsApi.getOverview(currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 60 * 1000,
+  });
+
+  const activeAddons = addonsOverviewQuery.data?.active_addons || [];
+
+  if (shouldShowPlans) {
     return (
       <div className="p-6">
-        <button
-          onClick={() => setShowPlans(false)}
-          className="mb-6 text-green-600 hover:text-green-700 font-medium"
-        >
-          ← {t('subscription.backToDetails')}
-        </button>
-        <SubscriptionPlans onSelectPlan={handleSelectPlan} />
+        {showPlans && (
+          <button
+            onClick={() => setShowPlans(false)}
+            className="mb-6 text-green-600 hover:text-green-700 font-medium"
+          >
+            ← {t('subscription.backToDetails')}
+          </button>
+        )}
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Core Plan</h3>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Base subscription for required modules.
+            </p>
+            <div className="mt-4 flex items-baseline space-x-2">
+              <span className="text-3xl font-bold text-green-600">
+                {moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
+            </div>
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Included modules:</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {coreModules.length === 0 && (
+                  <span className="text-sm text-gray-500">No core modules configured.</span>
+                )}
+                {coreModules.map((module) => (
+                  <span
+                    key={module.slug}
+                    className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700"
+                  >
+                    {module.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {!subscription && (
+              <button
+                onClick={handlePurchaseCore}
+                className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                {t('subscription.plans.getStarted')}
+              </button>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add-on Modules</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Purchase additional modules whenever you need more capabilities.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {addonModules.map((module) => {
+                const isActive = activeAddons.some((addon) => addon.module_id === module.id);
+                const price = module.priceMonthly || 0;
+                return (
+                  <div
+                    key={module.id}
+                    className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">{module.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{module.description}</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        ${price}/mo
+                      </span>
+                      {isActive ? (
+                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                          Active
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => purchaseAddon.mutate(module.id)}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        >
+                          Buy
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {addonModules.length === 0 && (
+                <p className="text-sm text-gray-500">No addon modules configured.</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const plan = subscription ? SUBSCRIPTION_PLANS[subscription.plan_type] : null;
+  const plan = normalizedPlanType ? { name: normalizedPlanType } : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -146,20 +258,24 @@ const SubscriptionSettings: React.FC = () => {
             {t('subscription.currentPlan')}
           </h3>
 
-          {plan && (
+          {(plan || moduleConfig) && (
             <div className="space-y-4">
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {plan.name}
+                  {plan?.name ? `${plan.name} Plan` : 'Core Plan'}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                  {plan.description}
+                  {moduleConfig?.pricing
+                    ? `Base subscription for ${coreModules.length} required modules.`
+                    : 'Base subscription for required modules.'}
                 </p>
               </div>
 
               <div className="flex items-baseline space-x-2">
-                <span className="text-3xl font-bold text-green-600">{plan.price}</span>
-                {plan.priceAmount > 0 && (
+                <span className="text-3xl font-bold text-green-600">
+                  {moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'}
+                </span>
+                {moduleConfig?.pricing && moduleConfig.pricing.basePriceMonthly > 0 && (
                   <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
                 )}
               </div>
@@ -226,15 +342,51 @@ const SubscriptionSettings: React.FC = () => {
           </div>
         </div>
 
+        {/* Addons */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Add-ons
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {addonModules.map((module) => {
+              const isActive = activeAddons.some((addon) => addon.module_id === module.id);
+              return (
+                <div
+                  key={module.id}
+                  className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{module.name}</p>
+                    <p className="text-xs text-gray-500">${module.priceMonthly || 0}/mo</p>
+                  </div>
+                  {isActive ? (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Active</span>
+                  ) : (
+                    <button
+                      onClick={() => purchaseAddon.mutate(module.id)}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      Buy
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {addonModules.length === 0 && (
+              <p className="text-sm text-gray-500">No addon modules configured.</p>
+            )}
+          </div>
+        </div>
+
         {/* Features */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t('subscription.features')}
           </h3>
 
-          {plan && (
+          {(moduleConfig || plan) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {plan.features.map((feature, index) => (
+              {(coreModules.length > 0 ? coreModules.map((module) => module.name) : []).map((feature, index) => (
                 <div key={index} className="flex items-start space-x-2">
                   <div className="mt-1 h-2 w-2 rounded-full bg-green-600 flex-shrink-0" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">

@@ -63,6 +63,82 @@ export class FarmsController {
     return this.farmsService.listFarms(req.user.id, organizationId);
   }
 
+  @Get('roles/available')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List available farm roles',
+    description: 'Get predefined farm role templates with permissions',
+  })
+  @ApiResponse({ status: 200, description: 'Farm roles retrieved successfully' })
+  async getAvailableRoles() {
+    return this.farmsService.getAvailableFarmRoles();
+  }
+
+  @Get('user-roles/:userId')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get farm roles assigned to a user',
+    description: 'List farm roles for a user within the current organization',
+  })
+  @ApiResponse({ status: 200, description: 'User farm roles retrieved successfully' })
+  async getUserFarmRoles(
+    @Request() req,
+    @Param('userId') userId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.getUserFarmRoles(organizationId, userId);
+  }
+
+  @Get(':farmId/roles')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List role assignments for a farm' })
+  @ApiResponse({ status: 200, description: 'Farm roles retrieved successfully' })
+  async getFarmRoles(
+    @Request() req,
+    @Param('farmId') farmId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.getFarmRoles(req.user.id, organizationId, farmId);
+  }
+
+  @Post(':farmId/roles')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Assign a role to a farm user' })
+  @ApiResponse({ status: 201, description: 'Farm role assigned successfully' })
+  async assignFarmRole(
+    @Request() req,
+    @Param('farmId') farmId: string,
+    @Body() body: { user_id: string; role: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.assignFarmRole(req.user.id, organizationId, farmId, body);
+  }
+
+  @Delete(':farmId/roles/:roleId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a farm role assignment' })
+  @ApiResponse({ status: 200, description: 'Farm role removed successfully' })
+  async removeFarmRole(
+    @Request() req,
+    @Param('farmId') farmId: string,
+    @Param('roleId') roleId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.removeFarmRole(req.user.id, organizationId, farmId, roleId);
+  }
+
+  @Get(':farmId/organization-users')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List organization users for a farm' })
+  @ApiResponse({ status: 200, description: 'Organization users retrieved successfully' })
+  async getOrganizationUsersForFarm(
+    @Request() req,
+    @Param('farmId') farmId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.getOrganizationUsersForFarm(req.user.id, organizationId, farmId);
+  }
+
   @Get(':id')
   @ApiBearerAuth()
   @UseGuards(PoliciesGuard)

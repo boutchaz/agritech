@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { apiClient } from '../api-client';
 
 export interface FarmRole {
   id: string;
@@ -41,113 +41,40 @@ export interface AssignFarmRoleInput {
 }
 
 export const farmRolesApi = {
-  async getRolesForFarm(farmId: string): Promise<FarmRole[]> {
-    const { data, error } = await supabase
-      .from('farm_management_roles')
-      .select('*')
-      .eq('farm_id', farmId)
-      .eq('is_active', true);
-
-    if (error) throw error;
-
-    const userIds = data?.map(r => r.user_id).filter(Boolean) || [];
-    if (userIds.length === 0) {
-      return [];
-    }
-
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, first_name, last_name, email')
-      .in('id', userIds);
-
-    return (data || []).map(role => ({
-      ...role,
-      user_profile: profiles?.find(p => p.id === role.user_id),
-    }));
+  async getRolesForFarm(farmId: string, organizationId?: string): Promise<FarmRole[]> {
+    return apiClient.get<FarmRole[]>(`/api/v1/farms/${farmId}/roles`, {}, organizationId);
   },
 
   async getAvailableRoles(): Promise<FarmPermission[]> {
-    const { data, error } = await supabase
-      .from('farm_permissions')
-      .select('*')
-      .order('role');
-
-    if (error) throw error;
-    return data || [];
+    return apiClient.get<FarmPermission[]>('/api/v1/farms/roles/available');
   },
 
-  async getOrganizationUsersForFarm(farmId: string): Promise<OrganizationUser[]> {
-    const { data: farmData } = await supabase
-      .from('farms')
-      .select('organization_id')
-      .eq('id', farmId)
-      .single();
-
-    if (!farmData) return [];
-
-    const { data, error } = await supabase
-      .from('organization_users')
-      .select('user_id, role_id')
-      .eq('organization_id', farmData.organization_id)
-      .eq('is_active', true);
-
-    if (error) throw error;
-
-    const userIds = data?.map(u => u.user_id).filter(Boolean) || [];
-    if (userIds.length === 0) {
-      return [];
-    }
-
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, first_name, last_name, email')
-      .in('id', userIds);
-
-    return (data || []).map(user => ({
-      ...user,
-      user_profile: profiles?.find(p => p.id === user.user_id),
-    }));
+  async getOrganizationUsersForFarm(farmId: string, organizationId?: string): Promise<OrganizationUser[]> {
+    return apiClient.get<OrganizationUser[]>(
+      `/api/v1/farms/${farmId}/organization-users`,
+      {},
+      organizationId,
+    );
   },
 
-  async assignRole(input: AssignFarmRoleInput): Promise<void> {
-    const { error } = await supabase.rpc('assign_farm_role', {
-      farm_id_param: input.farm_id,
-      user_id_param: input.user_id,
-      role_param: input.role,
-      permissions_param: input.permissions || {},
-    });
-
-    if (error && error.code === 'PGRST202') {
-      await this.assignRoleBasic(input);
-      return;
-    }
-
-    if (error) throw error;
-  },
-
-  async assignRoleBasic(input: AssignFarmRoleInput): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const { error: insertError } = await supabase
-      .from('farm_management_roles')
-      .insert({
-        farm_id: input.farm_id,
+  async assignRole(input: AssignFarmRoleInput, organizationId?: string): Promise<void> {
+    await apiClient.post(
+      `/api/v1/farms/${input.farm_id}/roles`,
+      {
         user_id: input.user_id,
         role: input.role,
         permissions: input.permissions || {},
-        assigned_by: user?.id,
-        is_active: true,
-      });
-
-    if (insertError) throw insertError;
+      },
+      {},
+      organizationId,
+    );
   },
 
-  async removeRole(roleId: string): Promise<void> {
-    const { error } = await supabase
-      .from('farm_management_roles')
-      .update({ is_active: false })
-      .eq('id', roleId);
-
-    if (error) throw error;
+  async removeRole(roleId: string, farmId: string, organizationId?: string): Promise<void> {
+    await apiClient.delete(
+      `/api/v1/farms/${farmId}/roles/${roleId}`,
+      {},
+      organizationId,
+    );
   },
 };

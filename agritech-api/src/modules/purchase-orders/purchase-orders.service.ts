@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import {
   CreatePurchaseOrderDto,
   UpdatePurchaseOrderDto,
@@ -18,6 +20,7 @@ export class PurchaseOrdersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly stockEntriesService: StockEntriesService,
   ) {}
 
   /**
@@ -225,6 +228,72 @@ export class PurchaseOrdersService {
       this.logger.error('Error in findOne purchase order:', error);
       throw error;
     }
+  }
+
+  async createMaterialReceipt(
+    purchaseOrderId: string,
+    organizationId: string,
+    userId: string,
+    input: { warehouse_id: string; receipt_date: string },
+  ) {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    const { data: purchaseOrder, error } = await supabaseClient
+      .from('purchase_orders')
+      .select('id, order_number, status, purchase_order_items (*)')
+      .eq('id', purchaseOrderId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error || !purchaseOrder) {
+      throw new NotFoundException(`Purchase order with ID ${purchaseOrderId} not found`);
+    }
+
+    const items = (purchaseOrder as any).purchase_order_items || [];
+    const stockItems = items
+      .filter((item: any) => !!item.item_id)
+      .map((item: any) => ({
+        item_id: item.item_id,
+        item_name: item.item_name,
+        quantity: item.quantity,
+        unit: item.unit_of_measure || 'unit',
+        target_warehouse_id: input.warehouse_id,
+        cost_per_unit: item.unit_price,
+      }));
+
+    if (stockItems.length === 0) {
+      throw new BadRequestException('Purchase order has no stockable items');
+    }
+
+    const stockEntry = await this.stockEntriesService.createStockEntry({
+      organization_id: organizationId,
+      entry_type: StockEntryType.MATERIAL_RECEIPT,
+      entry_date: new Date(input.receipt_date),
+      to_warehouse_id: input.warehouse_id,
+      reference_type: 'purchase_order',
+      reference_id: purchaseOrderId,
+      reference_number: purchaseOrder.order_number,
+      status: StockEntryStatus.DRAFT,
+      created_by: userId,
+      items: stockItems,
+    });
+
+    const { error: updateError } = await supabaseClient
+      .from('purchase_orders')
+      .update({
+        stock_entry_id: stockEntry.id,
+        stock_received: true,
+        stock_received_date: input.receipt_date,
+      })
+      .eq('id', purchaseOrderId)
+      .eq('organization_id', organizationId);
+
+    if (updateError) {
+      this.logger.error('Failed to update purchase order stock status', updateError);
+      throw new BadRequestException(`Failed to update purchase order: ${updateError.message}`);
+    }
+
+    return { stock_entry_id: stockEntry.id };
   }
 
   /**

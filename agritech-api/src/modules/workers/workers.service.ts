@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
@@ -447,7 +447,7 @@ export class WorkersService {
     const client = this.databaseService.getAdminClient();
     const { data: worker } = await client
       .from('workers')
-      .select('id')
+      .select('id, metayage_percentage, metayage_type, calculation_basis')
       .eq('id', workerId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -679,17 +679,19 @@ export class WorkersService {
       throw new NotFoundException('Worker not found');
     }
 
-    const { data, error } = await client.rpc('calculate_metayage_share', {
-      p_worker_id: workerId,
-      p_gross_revenue: grossRevenue,
-      p_total_charges: totalCharges,
-    });
+    const metayagePercentage = this.resolveMetayagePercentage(worker);
+    const calculationBasis = worker.calculation_basis || 'gross_revenue';
+    const baseAmount =
+      calculationBasis === 'net_revenue'
+        ? grossRevenue - totalCharges
+        : grossRevenue;
 
-    if (error) {
-      throw new Error(`Failed to calculate métayage share: ${error.message}`);
+    if (baseAmount < 0) {
+      throw new BadRequestException('Total charges exceed gross revenue');
     }
 
-    return { share: data };
+    const share = baseAmount * (metayagePercentage / 100);
+    return { share };
   }
 
   /**
@@ -733,6 +735,28 @@ export class WorkersService {
       daily_rate: worker.daily_rate || undefined,
       monthly_salary: worker.monthly_salary || undefined,
     };
+  }
+
+  private resolveMetayagePercentage(worker: {
+    metayage_percentage: number | null;
+    metayage_type: string | null;
+  }): number {
+    if (worker.metayage_percentage && worker.metayage_percentage > 0) {
+      return worker.metayage_percentage;
+    }
+
+    switch (worker.metayage_type) {
+      case 'khammass':
+        return 20;
+      case 'rebaa':
+        return 25;
+      case 'tholth':
+        return 33.33;
+      default:
+        break;
+    }
+
+    throw new BadRequestException('Metayage percentage is not configured');
   }
 
   /**
@@ -1057,5 +1081,55 @@ export class WorkersService {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  }
+
+  /**
+   * Backfill work record from an existing completed task
+   * Calls the database function create_work_record_from_existing_task via RPC
+   */
+  async backfillWorkRecordFromTask(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Verify task exists and belongs to organization
+    const client = this.databaseService.getAdminClient();
+    const { data: task } = await client
+      .from('tasks')
+      .select('id, status, assigned_to, organization_id')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!task) {
+      throw new NotFoundException('Task not found in this organization');
+    }
+
+    if (task.status !== 'completed') {
+      throw new BadRequestException('Task must be completed to create a work record');
+    }
+
+    if (!task.assigned_to) {
+      throw new BadRequestException('Task must have an assigned worker to create a work record');
+    }
+
+    // Call the database function via RPC
+    const { data, error } = await client.rpc('create_work_record_from_existing_task', {
+      p_task_id: taskId,
+    });
+
+    if (error) {
+      throw new Error(`Failed to create work record: ${error.message}`);
+    }
+
+    this.logger.log(`Work record backfilled for task ${taskId} via user ${userId}`);
+
+    return {
+      success: true,
+      workRecordId: data,
+      message: 'Work record created successfully',
+    };
   }
 }

@@ -706,39 +706,58 @@ describe('WorkersService', () => {
   });
 
   describe('Behavior - Métayage Operations', () => {
-    it('should calculate metayage share via RPC', async () => {
-      setupOrganizationAccess();
-
-      const grossRevenue = 100000;
-      const totalCharges = 30000;
-      const expectedShare = 35000;
-
-      mockClient.rpc.mockResolvedValue(
-        mockQueryResult(expectedShare)
+    it('should calculate metayage share using worker settings', async () => {
+      const accessQuery = setupOrganizationAccess();
+      const workerQuery = createMockQueryBuilder();
+      workerQuery.eq.mockReturnValue(workerQuery);
+      workerQuery.select.mockReturnValue(workerQuery);
+      workerQuery.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          id: TEST_IDS.worker,
+          metayage_percentage: 35,
+          metayage_type: 'custom',
+          calculation_basis: 'net_revenue',
+        })
       );
+
+      mockClient.from.mockImplementation((table) => {
+        if (table === 'organization_users') {
+          return accessQuery;
+        }
+        return workerQuery;
+      });
 
       const result = await service.calculateMetayageShare(
         TEST_IDS.user,
         TEST_IDS.organization,
         TEST_IDS.worker,
-        grossRevenue,
-        totalCharges
+        100000,
+        30000
       );
 
-      expect(result.share).toBe(expectedShare);
-      expect(mockClient.rpc).toHaveBeenCalledWith('calculate_metayage_share', {
-        p_worker_id: TEST_IDS.worker,
-        p_gross_revenue: grossRevenue,
-        p_total_charges: totalCharges,
-      });
+      expect(result.share).toBe(24500);
     });
 
-    it('should handle RPC error gracefully', async () => {
-      setupOrganizationAccess();
-
-      mockClient.rpc.mockResolvedValue(
-        mockQueryResult(null, { message: 'RPC failed' })
+    it('should error when metayage percentage is missing', async () => {
+      const accessQuery = setupOrganizationAccess();
+      const workerQuery = createMockQueryBuilder();
+      workerQuery.eq.mockReturnValue(workerQuery);
+      workerQuery.select.mockReturnValue(workerQuery);
+      workerQuery.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          id: TEST_IDS.worker,
+          metayage_percentage: null,
+          metayage_type: null,
+          calculation_basis: 'gross_revenue',
+        })
       );
+
+      mockClient.from.mockImplementation((table) => {
+        if (table === 'organization_users') {
+          return accessQuery;
+        }
+        return workerQuery;
+      });
 
       await expect(
         service.calculateMetayageShare(
@@ -748,7 +767,7 @@ describe('WorkersService', () => {
           100000,
           30000
         )
-      ).rejects.toThrow('Failed to calculate métayage share');
+      ).rejects.toThrow('Metayage percentage is not configured');
     });
 
     it('should create metayage settlement', async () => {
@@ -1113,38 +1132,27 @@ describe('WorkersService', () => {
     );
   });
 
-  // ============================================================
-  // RPC FALLBACK TESTS
-  // ============================================================
-
-  describe('RPC Integration', () => {
-    it('should call calculate_metayage_share RPC with correct parameters', async () => {
-      setupOrganizationAccess();
-
-      const grossRevenue = 100000;
-      const totalCharges = 30000;
-
-      mockClient.rpc.mockResolvedValue(mockQueryResult(35000));
-
-      await service.calculateMetayageShare(
-        TEST_IDS.user,
-        TEST_IDS.organization,
-        TEST_IDS.worker,
-        grossRevenue,
-        totalCharges
+  describe('Métayage Calculations', () => {
+    it('should default to khammass percentage when not specified', async () => {
+      const accessQuery = setupOrganizationAccess();
+      const workerQuery = createMockQueryBuilder();
+      workerQuery.eq.mockReturnValue(workerQuery);
+      workerQuery.select.mockReturnValue(workerQuery);
+      workerQuery.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          id: TEST_IDS.worker,
+          metayage_percentage: null,
+          metayage_type: 'khammass',
+          calculation_basis: 'gross_revenue',
+        })
       );
 
-      expect(mockClient.rpc).toHaveBeenCalledWith('calculate_metayage_share', {
-        p_worker_id: TEST_IDS.worker,
-        p_gross_revenue: grossRevenue,
-        p_total_charges: totalCharges,
+      mockClient.from.mockImplementation((table) => {
+        if (table === 'organization_users') {
+          return accessQuery;
+        }
+        return workerQuery;
       });
-    });
-
-    it('should handle RPC call returning null', async () => {
-      setupOrganizationAccess();
-
-      mockClient.rpc.mockResolvedValue(mockQueryResult(null));
 
       const result = await service.calculateMetayageShare(
         TEST_IDS.user,
@@ -1154,7 +1162,7 @@ describe('WorkersService', () => {
         30000
       );
 
-      expect(result.share).toBeNull();
+      expect(result.share).toBe(20000);
     });
   });
 });

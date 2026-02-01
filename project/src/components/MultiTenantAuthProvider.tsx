@@ -559,7 +559,8 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
   // Redirect to onboarding if user needs onboarding
   useEffect(() => {
-    if (!loading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
+    // Only check onboarding if all data is loaded
+    if (!loading && !orgsLoading && !profileLoading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
       // IMPORTANT: Validate session is actually valid before redirecting to onboarding
       // This prevents redirecting users with expired tokens to onboarding
       const isTokenValid = !useAuthStore.getState().isTokenExpired();
@@ -567,6 +568,7 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
       // Only redirect to onboarding if the session is truly valid
       if (isTokenValid && hasAccessToken) {
+        console.log('[AuthProvider] Redirecting to onboarding - user needs onboarding');
         window.location.href = '/onboarding';
       } else {
         // Session is invalid - clear auth and redirect to login
@@ -575,7 +577,7 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
         window.location.href = '/login';
       }
     }
-  }, [loading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
+  }, [loading, orgsLoading, profileLoading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
 
 
 

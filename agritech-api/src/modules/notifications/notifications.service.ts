@@ -402,6 +402,167 @@ export class NotificationsService {
     });
   }
 
+  /**
+   * Check and create low stock notifications for an organization
+   * Implements the notification creation logic in NestJS (not SQL)
+   */
+  async checkLowStockAndNotify(organizationId: string): Promise<{ created: number }> {
+    const client = this.databaseService.getAdminClient();
+
+    // Check if stock alerts are enabled for this organization
+    const { data: org } = await client
+      .from('organizations')
+      .select('show_stock_alerts, last_stock_check_at')
+      .eq('id', organizationId)
+      .single();
+
+    if (!org || !org.show_stock_alerts) {
+      this.logger.debug(`Stock alerts disabled for organization ${organizationId}`);
+      return { created: 0 };
+    }
+
+    // Rate limiting: only check once per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    if (org.last_stock_check_at && new Date(org.last_stock_check_at) > oneHourAgo) {
+      this.logger.debug(`Stock check skipped for ${organizationId} (checked within last hour)`);
+      return { created: 0 };
+    }
+
+    // Get admin/manager users to notify
+    const { data: orgUsers } = await client
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (!orgUsers || orgUsers.length === 0) {
+      this.logger.warn(`No active users found for organization ${organizationId}`);
+      return { created: 0 };
+    }
+
+    const userIds = orgUsers.map((u: any) => u.user_id);
+    let notificationCount = 0;
+
+    // Get low stock items using SQL query functions (read-only)
+    const { data: inventoryItems } = await client.rpc('check_low_stock_inventory', {
+      p_organization_id: organizationId,
+    });
+
+    const { data: variants } = await client.rpc('check_low_stock_variants', {
+      p_organization_id: organizationId,
+    });
+
+    // Create notifications for low stock inventory items
+    if (inventoryItems && Array.isArray(inventoryItems)) {
+      for (const item of inventoryItems) {
+        const message = `Stock faible pour "${item.item_name}": ${item.current_quantity} ${item.unit} restants (minimum: ${item.minimum_stock} ${item.unit}). Manque: ${item.shortage_quantity} ${item.unit}.`;
+
+        await this.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.LOW_INVENTORY,
+          `⚠️ Stock faible: ${item.item_name}`,
+          message,
+          {
+            item_id: item.item_id,
+            item_name: item.item_name,
+            current_quantity: item.current_quantity,
+            minimum_stock: item.minimum_stock,
+            unit: item.unit,
+            shortage_quantity: item.shortage_quantity,
+          },
+        );
+        notificationCount++;
+      }
+    }
+
+    // Create notifications for low stock variants
+    if (variants && Array.isArray(variants)) {
+      for (const variant of variants) {
+        const message = `Stock faible pour "${variant.item_name} - ${variant.variant_name}": ${variant.current_quantity} ${variant.unit} restants (minimum: ${variant.min_stock_level} ${variant.unit}). Manque: ${variant.shortage_quantity} ${variant.unit}.`;
+
+        await this.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.LOW_INVENTORY,
+          `⚠️ Stock faible: ${variant.item_name} (${variant.variant_name})`,
+          message,
+          {
+            variant_id: variant.variant_id,
+            item_id: variant.item_id,
+            item_name: variant.item_name,
+            variant_name: variant.variant_name,
+            current_quantity: variant.current_quantity,
+            min_stock_level: variant.min_stock_level,
+            unit: variant.unit,
+            shortage_quantity: variant.shortage_quantity,
+          },
+        );
+        notificationCount++;
+      }
+    }
+
+    // Update last stock check timestamp
+    await client
+      .from('organizations')
+      .update({ last_stock_check_at: new Date().toISOString() })
+      .eq('id', organizationId);
+
+    this.logger.log(`Low stock check completed for organization ${organizationId}. Notifications created: ${notificationCount}`);
+
+    return { created: notificationCount };
+  }
+
+  /**
+   * Get low stock items for an organization
+   * Returns both inventory_items and product_variants that are below minimum stock
+   */
+  async getLowStockItems(organizationId: string): Promise<{
+    inventoryItems: Array<{
+      item_id: string;
+      item_name: string;
+      current_quantity: number;
+      minimum_stock: number;
+      unit: string;
+      shortage_quantity: number;
+    }>;
+    variants: Array<{
+      variant_id: string;
+      variant_name: string;
+      item_id: string;
+      item_name: string;
+      current_quantity: number;
+      min_stock_level: number;
+      unit: string;
+      shortage_quantity: number;
+    }>;
+  }> {
+    const client = this.databaseService.getAdminClient();
+
+    // Get low stock inventory items
+    const { data: inventoryItems, error: itemsError } = await client.rpc('check_low_stock_inventory', {
+      p_organization_id: organizationId,
+    });
+
+    if (itemsError) {
+      this.logger.error(`Failed to get low stock inventory items: ${itemsError.message}`);
+    }
+
+    // Get low stock variants
+    const { data: variants, error: variantsError } = await client.rpc('check_low_stock_variants', {
+      p_organization_id: organizationId,
+    });
+
+    if (variantsError) {
+      this.logger.error(`Failed to get low stock variants: ${variantsError.message}`);
+    }
+
+    return {
+      inventoryItems: (inventoryItems || []) as any,
+      variants: (variants || []) as any,
+    };
+  }
+
   // ============================================
   // EMAIL NOTIFICATION METHODS (EXISTING)
   // ============================================

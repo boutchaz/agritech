@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { usersApi } from '@/lib/api/users';
+import { onboardingApi } from '@/lib/api/onboarding';
+import { farmsApi } from '@/lib/api/farms';
+import { farmRolesApi } from '@/lib/api/farm-roles';
 import { Building, Users, MapPin, Check } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -16,6 +19,10 @@ interface OrganizationData {
   slug: string;
   phone: string;
   email: string;
+  account_type: 'individual' | 'business' | 'farm';
+  country: string;
+  address?: string;
+  city?: string;
 }
 
 interface ProfileData {
@@ -23,6 +30,7 @@ interface ProfileData {
   last_name: string;
   phone: string;
   timezone: string;
+  language: string;
 }
 
 interface FarmData {
@@ -49,14 +57,19 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     first_name: '',
     last_name: '',
     phone: '',
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    language: 'fr',
   });
 
   const [organizationData, setOrganizationData] = useState<OrganizationData>({
     name: '',
     slug: '',
     phone: '',
-    email: user?.email || ''
+    email: user?.email || '',
+    account_type: 'business',
+    country: 'Morocco',
+    address: '',
+    city: '',
   });
 
   const [farmData, setFarmData] = useState<FarmData>({
@@ -78,83 +91,44 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
       const completed: number[] = [];
 
       try {
-        // Check for existing profile
-        const { data: profileData } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        const profile = await usersApi.getMe().catch(() => null);
 
-        if (profileData && profileData.first_name && profileData.last_name) {
+        if (profile && profile.first_name && profile.last_name) {
           profileExists = true;
           setHasExistingProfile(true);
           completed.push(1);
+        }
+
+        if (profile) {
           setProfileData({
-            first_name: profileData.first_name || '',
-            last_name: profileData.last_name || '',
-            phone: profileData.phone || '',
-            timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-          });
-        } else if (profileData) {
-          // Profile exists but is incomplete - populate form with existing data
-          setProfileData({
-            first_name: profileData.first_name || '',
-            last_name: profileData.last_name || '',
-            phone: profileData.phone || '',
-            timezone: profileData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+            first_name: profile.first_name || '',
+            last_name: profile.last_name || '',
+            phone: profile.phone || '',
+            timezone: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            language: profile.language || 'fr',
           });
         }
 
-        // Check for existing organization
-        const orgSelect =
-          'organization_id, organizations(id, name, slug, phone, email, onboarding_completed)';
+        const organizations = await usersApi.getMyOrganizations().catch(() => []);
+        const primaryOrg = organizations[0];
 
-        const { data: orgData, error: orgError } = await supabase
-          .from('organization_users')
-          .select(orgSelect)
-          .eq('user_id', user.id)
-          .single();
-
-        let resolvedOrgData = orgData;
-
-        if (orgError) {
-          if (orgError.code === '42703') {
-            console.warn('⚠️ organizations(*) selection missing columns, retrying without onboarding_completed');
-            const { data: fallbackOrgData, error: fallbackError } = await supabase
-              .from('organization_users')
-              .select('organization_id, organizations(id, name, slug, phone, email)')
-              .eq('user_id', user.id)
-              .single();
-
-            if (fallbackError) {
-              throw fallbackError;
-            }
-
-            resolvedOrgData = fallbackOrgData;
-          } else {
-            throw orgError;
-          }
-        }
-
-        if (resolvedOrgData?.organizations) {
-          const org = resolvedOrgData.organizations as any;
+        if (primaryOrg) {
           orgExists = true;
           setHasExistingOrg(true);
-          setExistingOrgId(resolvedOrgData.organization_id);
+          setExistingOrgId(primaryOrg.id);
           completed.push(2);
           setOrganizationData({
-            name: org.name || '',
-            slug: org.slug || '',
-            phone: org.phone || '',
-            email: org.email || user?.email || ''
+            name: primaryOrg.name || '',
+            slug: primaryOrg.slug || '',
+            phone: primaryOrg.phone || '',
+            email: primaryOrg.email || user?.email || '',
+            account_type: 'business',
+            country: primaryOrg.country || 'Morocco',
+            address: primaryOrg.address || '',
+            city: primaryOrg.city || '',
           });
 
-          // Check for existing farms in this organization
-          const { data: farmsData } = await supabase
-            .from('farms')
-            .select('id')
-            .eq('organization_id', resolvedOrgData.organization_id)
-            .limit(1);
+          const farmsData = await farmsApi.getAll({}, primaryOrg.id).catch(() => []);
 
           if (farmsData && farmsData.length > 0) {
             farmsExist = true;
@@ -164,29 +138,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
         }
 
         setCompletedSteps(completed);
-
-        // Auto-fix: If org thinks onboarding is complete but user actually needs it
-        // (e.g., incomplete profile), reset the onboarding flag automatically
-        if (resolvedOrgData?.organization_id && resolvedOrgData.organizations) {
-          const org = resolvedOrgData.organizations as any;
-          const needsToCompleteSteps = !profileExists || !orgExists || !farmsExist;
-
-          if (org?.onboarding_completed && needsToCompleteSteps) {
-            console.log('🔧 Auto-fixing: Resetting onboarding_completed flag due to incomplete data');
-            const { error: resetError } = await supabase
-              .from('organizations')
-              .update({ onboarding_completed: false })
-              .eq('id', resolvedOrgData.organization_id);
-
-            if (resetError) {
-              if (resetError.code === '42703') {
-                console.warn('⚠️ onboarding_completed column missing while resetting onboarding flag', resetError);
-              } else {
-                console.warn('⚠️ Unable to reset onboarding flag', resetError);
-              }
-            }
-          }
-        }
 
         // Determine which step to show
         if (profileExists && orgExists && farmsExist) {
@@ -287,116 +238,68 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
     try {
       let organizationId = existingOrgId;
 
-      // 1. Create or update user profile (always update to ensure required fields are present)
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          ...profileData,
-          updated_at: new Date().toISOString()
+      await onboardingApi.saveProfile({
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        phone: profileData.phone,
+        timezone: profileData.timezone,
+        language: profileData.language,
+      });
+
+      if (!organizationId) {
+        const { id: createdOrgId } = await onboardingApi.saveOrganization({
+          name: organizationData.name,
+          slug: organizationData.slug,
+          phone: organizationData.phone,
+          email: organizationData.email || user.email,
+          account_type: organizationData.account_type,
+          address: organizationData.address || undefined,
+          city: organizationData.city || undefined,
+          country: organizationData.country,
         });
 
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        throw new Error(`Erreur lors de la création du profil: ${profileError.message}`);
-      }
+        organizationId = createdOrgId;
 
-      // 2. Create organization and farm using atomic database function
-      if (!organizationId) {
-        // Use the database function to create everything atomically
-        // This bypasses RLS and avoids timing issues
-        const { data: result, error: functionError } = await supabase
-          .rpc('create_organization_with_farm', {
-            p_user_id: user.id,
-            p_user_email: user.email,
-            p_first_name: profileData.first_name,
-            p_last_name: profileData.last_name,
-            p_organization_name: organizationData.name,
-            p_organization_slug: organizationData.slug,
-            p_organization_phone: organizationData.phone || null,
-            p_organization_email: organizationData.email || user.email,
-            p_farm_name: farmData.name,
-            p_farm_location: farmData.location,
-            p_farm_size: farmData.size,
-            p_farm_size_unit: farmData.size_unit,
-            p_farm_description: farmData.description || null
-          });
+        const { id: createdFarmId } = await onboardingApi.saveFarm({
+          name: farmData.name,
+          location: farmData.location,
+          size: farmData.size,
+          size_unit: farmData.size_unit,
+          farm_type: farmData.farm_type,
+          description: farmData.description,
+        });
 
-        if (functionError) {
-          console.error('Onboarding function error:', functionError);
-          throw new Error(`Erreur lors de la création: ${functionError.message}`);
-        }
-
-        // Check if the function returned an error
-        if (result && !result.success) {
-          console.error('Onboarding function returned error:', result);
-          throw new Error(`Erreur: ${result.error || 'Unknown error'}`);
-        }
-
-        organizationId = result?.organization_id;
-        console.log('✅ Organization and farm created successfully:', result);
-      } else if (!hasExistingFarms) {
-        // Organization exists but no farms - create farm only
-        const { data: createdFarm, error: farmError } = await supabase
-          .from('farms')
-          .insert({
-            name: farmData.name,
-            description: farmData.description,
-            location: farmData.location,
-            size: farmData.size,
-            size_unit: farmData.size_unit,
-            organization_id: organizationId,
-            manager_name: profileData.first_name + ' ' + profileData.last_name,
-            manager_email: user.email
-          })
-          .select()
-          .single();
-
-        if (farmError) {
-          console.error('Farm creation error:', farmError);
-          throw new Error(`Erreur lors de la création de la ferme: ${farmError.message}`);
-        }
-
-        // Assign the user as main manager of the farm
-        const { error: roleError } = await supabase
-          .from('farm_management_roles')
-          .insert({
-            farm_id: createdFarm.id,
+        await farmRolesApi.assignRole(
+          {
+            farm_id: createdFarmId,
             user_id: user.id,
             role: 'main_manager',
-            assigned_by: user.id
-          });
+            permissions: {},
+          },
+          organizationId,
+        );
+      } else if (!hasExistingFarms) {
+        const { id: createdFarmId } = await onboardingApi.saveFarm({
+          name: farmData.name,
+          location: farmData.location,
+          size: farmData.size,
+          size_unit: farmData.size_unit,
+          farm_type: farmData.farm_type,
+          description: farmData.description,
+        });
 
-        if (roleError) {
+        try {
+          await farmRolesApi.assignRole(
+            {
+              farm_id: createdFarmId,
+              user_id: user.id,
+              role: 'main_manager',
+              permissions: {},
+            },
+            organizationId,
+          );
+        } catch (roleError) {
           console.error('Role assignment error:', roleError);
-          // Don't throw error here as farm creation succeeded
-        }
-
-        // Mark organization onboarding as completed
-        const { error: updateError } = await supabase
-          .from('organizations')
-          .update({ onboarding_completed: true })
-          .eq('id', organizationId);
-
-        if (updateError) {
-          if (updateError.code === '42703') {
-            console.warn('⚠️ onboarding_completed column missing when marking onboarding complete', updateError);
-          } else {
-            console.error('Error marking onboarding complete:', updateError);
-          }
-        }
-
-        // Also mark user profile onboarding as completed
-        const { error: userUpdateError } = await supabase
-          .from('user_profiles')
-          .update({ onboarding_completed: true })
-          .eq('user_id', user.id);
-
-        if (userUpdateError) {
-          console.warn('⚠️ Failed to mark user onboarding as completed:', userUpdateError);
-        } else {
-          console.log('✅ User onboarding marked as completed');
         }
       }
 

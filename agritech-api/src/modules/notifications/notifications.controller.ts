@@ -122,4 +122,40 @@ export class NotificationsController {
       data: { test: true, timestamp: Date.now() },
     });
   }
+
+  @Post('stock/check')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check low stock levels and create notifications' })
+  @ApiResponse({ status: 200, description: 'Low stock check completed' })
+  async checkLowStock(@Req() req: any): Promise<{ created: number }> {
+    const organizationId = req.headers['x-organization-id'];
+    return this.notificationsService.checkLowStockAndNotify(organizationId);
+  }
+
+  @Get('stock/low')
+  @ApiOperation({ summary: 'Get all low stock items for the organization' })
+  @ApiResponse({ status: 200, description: 'List of low stock items' })
+  async getLowStockItems(@Req() req: any): Promise<{
+    inventoryItems: Array<{
+      item_id: string;
+      item_name: string;
+      current_quantity: number;
+      minimum_stock: number;
+      unit: string;
+      shortage_quantity: number;
+    }>;
+    variants: Array<{
+      variant_id: string;
+      variant_name: string;
+      item_id: string;
+      item_name: string;
+      current_quantity: number;
+      min_stock_level: number;
+      unit: string;
+      shortage_quantity: number;
+    }>;
+  }> {
+    const organizationId = req.headers['x-organization-id'];
+    return this.notificationsService.getLowStockItems(organizationId);
+  }
 }

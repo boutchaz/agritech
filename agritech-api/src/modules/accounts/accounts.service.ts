@@ -469,7 +469,7 @@ export class AccountsService {
       this.logger.log(`Applied template ${countryCode} to organization ${organizationId}: ${accountsCreated} accounts created`);
 
       let accountMappingsCreated = 0;
-      let costCentersCreated = 0;
+      const costCentersCreated = 0;
 
       if (options.includeAccountMappings !== false) {
         try {

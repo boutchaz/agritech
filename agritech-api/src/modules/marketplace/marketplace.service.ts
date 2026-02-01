@@ -288,7 +288,7 @@ export class MarketplaceService {
             if (!orderError) ordersCount = count || 0;
         }
 
-        let revenue = 0;
+        const revenue = 0;
 
         return {
             listingsCount: (listingsCount || 0) + (salesItemsCount || 0),

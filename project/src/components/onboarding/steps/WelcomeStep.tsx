@@ -133,6 +133,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         <button
           onClick={() => setSubStep(1)}
           disabled={!profileData.first_name.trim() || !profileData.last_name.trim()}
+          data-testid="onboarding-continue-name"
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
             shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
             disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg
@@ -185,6 +186,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
 
         <button
           onClick={() => setSubStep(2)}
+          data-testid="onboarding-continue-language"
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
             shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
             transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
@@ -236,6 +238,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
       <button
         onClick={onNext}
         disabled={!isValid}
+        data-testid="onboarding-next-step-profile"
         className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
           shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg

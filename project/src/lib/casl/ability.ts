@@ -16,6 +16,8 @@ export type Subject =
   | 'SatelliteReport' | 'Sensor' | 'Analytics' | 'API'
   | 'Stock' | 'Infrastructure' | 'FarmHierarchy' | 'Task' | 'Report' | 'Settings'
   | 'Dashboard' | 'Chat'
+  // Stock management subjects
+  | 'Customer' | 'Supplier' | 'Warehouse' | 'Item'
   // Accounting subjects
   | 'Account' | 'JournalEntry' | 'Invoice' | 'Payment' | 'CostCenter'
   | 'Tax' | 'BankAccount' | 'Period' | 'AccountingReport' | 'AccountMapping'
@@ -95,6 +97,12 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Subscription');
     can('update', 'Subscription');
 
+    // Stock management - Full access for organization admins
+    can('manage', 'Customer');
+    can('manage', 'Supplier');
+    can('manage', 'Warehouse');
+    can('manage', 'Item');
+
     // Accounting - Full access for organization admins
     can('manage', 'Account');
     can('manage', 'JournalEntry');
@@ -154,6 +162,13 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'User');
     can('read', 'Settings');
     can('update', 'Settings'); // Allow updating their profile
+
+    // Stock management - Farm managers can read and manage stock entities
+    can('read', 'Customer');
+    can('read', 'Supplier');
+    can('read', 'Warehouse');
+    can('read', 'Item');
+    can('manage', 'Item');
 
     // Accounting - Farm managers can manage invoices, payments, and view reports
     can('read', 'Account');
@@ -261,6 +276,12 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     can('read', 'Task');
     can('read', 'Report');
     can('read', 'Settings');
+
+    // Stock management - Viewers can read
+    can('read', 'Customer');
+    can('read', 'Supplier');
+    can('read', 'Warehouse');
+    can('read', 'Item');
 
     // Accounting - Viewers can only read accounting data
     can('read', 'Account');

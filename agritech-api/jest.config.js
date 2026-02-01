@@ -1,24 +1,36 @@
 module.exports = {
     moduleFileExtensions: ['js', 'json', 'ts'],
-    rootDir: 'src',
-    // Match both .test.ts and .spec.ts files
-    // Use testMatch instead of testRegex for better compatibility
+    rootDir: '.',
+    roots: ['<rootDir>/src'],
     testMatch: [
         '**/__tests__/**/*.(test|spec).ts',
         '**/*.(test|spec).ts'
     ],
     transform: {
-        '^.+\\.(t|j)s$': 'ts-jest',
+        '^.+\\.(t|j)s$': ['@swc/jest', {
+            jsc: {
+                parser: {
+                    syntax: 'typescript',
+                    decorators: true,
+                },
+                transform: {
+                    decoratorMetadata: true,
+                },
+            },
+        }],
     },
-    collectCoverageFrom: ['**/*.(t|j)s'],
-    coverageDirectory: '../coverage',
+    collectCoverageFrom: ['src/**/*.(t|j)s', '!src/**/*.spec.ts'],
+    coverageDirectory: './coverage',
     testEnvironment: 'node',
-    // Ensure all tests run
     bail: false,
     maxWorkers: '50%',
-    // Increase timeout for complex tests
     testTimeout: 30000,
-    // Don't exit on open handles (helps with async tests)
     detectOpenHandles: false,
     forceExit: true,
+    moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/src/$1',
+        '^@common/(.*)$': '<rootDir>/src/common/$1',
+        '^@config/(.*)$': '<rootDir>/src/config/$1',
+        '^@modules/(.*)$': '<rootDir>/src/modules/$1',
+    },
 };

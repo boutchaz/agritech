@@ -87,7 +87,7 @@ export class ZaiProvider extends BaseAIProvider {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 180000, // 3 minutes timeout for AI reports
+          timeout: 300000, // 5 minutes timeout for AI reports
         },
       );
 

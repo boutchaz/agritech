@@ -87,6 +87,11 @@ export interface UpdateStatusInput {
   notes?: string;
 }
 
+export interface CreateMaterialReceiptInput {
+  warehouse_id: string;
+  receipt_date: string;
+}
+
 export const purchaseOrdersApi = {
   /**
    * Get all purchase orders with optional filters
@@ -193,5 +198,16 @@ export const purchaseOrdersApi = {
    */
   async convertToBill(id: string, params?: { invoice_date?: string; due_date?: string }, organizationId?: string) {
     return apiClient.post(`${BASE_URL}/${id}/convert-to-bill`, params || {}, {}, organizationId);
+  },
+
+  /**
+   * Create a material receipt stock entry from a purchase order
+   */
+  async createMaterialReceipt(
+    id: string,
+    input: CreateMaterialReceiptInput,
+    organizationId?: string,
+  ) {
+    return apiClient.post(`${BASE_URL}/${id}/material-receipt`, input, {}, organizationId);
   },
 };

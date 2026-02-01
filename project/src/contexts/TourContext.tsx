@@ -2,15 +2,14 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
 import {
   tourPreferencesApi,
   retryTourApiCall,
   TOUR_API_CONFIG,
-  type TourId as ApiTourId,
-  type TourPreferences
+  type TourId as ApiTourId
 } from '@/lib/api/tour-preferences';
 
 export type TourId = ApiTourId;
@@ -120,8 +119,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   onDismiss,
   currentTourId,
 }) => {
-  const [dontShowAgain, setDontShowAgain] = useState(false);
-
   // Detect mobile for responsive styling
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
@@ -194,7 +191,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
             <button
               {...skipProps}
               onClick={(e) => {
-                if (dontShowAgain && onDismiss && currentTourId) {
+                if (onDismiss && currentTourId) {
                   onDismiss(currentTourId);
                 }
                 skipProps.onClick(e);
@@ -246,28 +243,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
             )}
           </div>
         </div>
-        {/* Don't show again checkbox */}
-        {!isLastStep && (
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.8rem',
-            color: '#6b7280',
-            cursor: 'pointer',
-            userSelect: 'none',
-          }}>
-            <input
-              type="checkbox"
-              checked={dontShowAgain}
-              onChange={(e) => setDontShowAgain(e.target.checked)}
-              style={{
-                cursor: 'pointer',
-              }}
-            />
-            {t('tour.buttons.dontShowAgain', "Don't show this tour again")}
-          </label>
-        )}
       </div>
     </div>
   );
@@ -754,7 +729,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasFeature } = useExperienceLevel();
+  const isOnboardingRoute = location.pathname.startsWith('/onboarding');
   const abortControllerRef = useRef<AbortController | null>(null);
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
@@ -928,6 +905,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   };
 
   const startTour = useCallback((tourId: TourId) => {
+    if (isOnboardingRoute) {
+      return;
+    }
+
     const targetRoute = TOUR_ROUTES[tourId];
 
     // Tours that target sidebar nav items - expand sidebar if collapsed
@@ -959,7 +940,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         stepIndex: 0,
       }));
     }
-  }, [navigate]);
+  }, [isOnboardingRoute, navigate]);
 
   const endTour = useCallback(() => {
     setTourState(prev => ({
@@ -969,53 +950,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       stepIndex: 0,
     }));
   }, []);
-
-  const handleJoyrideCallback = useCallback((data: CallBackProps) => {
-    const { status, type, action, index } = data;
-
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
-      setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
-    }
-
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
-      setTourState(prev => ({ ...prev, stepIndex: index - 1 }));
-    }
-
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      // Use functional state update to get the latest state
-      setTourState(prev => {
-        const { currentTour, completedTours, dismissedTours } = prev;
-
-        // If tour was already dismissed (e.g., via "Don't show again"), just end the tour
-        if (!currentTour || dismissedTours.includes(currentTour)) {
-          endTour();
-          return prev;
-        }
-
-        // If tour was finished (not skipped) and not already completed, mark as completed
-        if (status === STATUS.FINISHED && !completedTours.includes(currentTour)) {
-          const newCompletedTours = [...completedTours, currentTour];
-          saveCompletedTours(newCompletedTours);
-          return {
-            ...prev,
-            completedTours: newCompletedTours,
-            currentTour: null,
-            isRunning: false,
-            stepIndex: 0,
-          };
-        }
-
-        // Otherwise just end the tour
-        endTour();
-        return {
-          ...prev,
-          currentTour: null,
-          isRunning: false,
-          stepIndex: 0,
-        };
-      });
-    }
-  }, [endTour]);
 
   const isTourCompleted = useCallback((tourId: TourId) => {
     return tourState.completedTours.includes(tourId);
@@ -1083,6 +1017,66 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       }
     }
   }, [tourState.dismissedTours, tourState.completedTours, endTour, user]);
+
+  const handleJoyrideCallback = useCallback((data: CallBackProps) => {
+    const { status, type, action, index } = data;
+
+    if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
+      setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
+    }
+
+    if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
+      setTourState(prev => ({ ...prev, stepIndex: index - 1 }));
+    }
+
+    if (status === STATUS.SKIPPED) {
+      const currentTour = tourState.currentTour;
+
+      if (!currentTour) {
+        endTour();
+        return;
+      }
+
+      if (!tourState.dismissedTours.includes(currentTour)) {
+        dismissTour(currentTour);
+        return;
+      }
+
+      endTour();
+      return;
+    }
+
+    if (status === STATUS.FINISHED) {
+      setTourState(prev => {
+        const { currentTour, completedTours } = prev;
+
+        if (!currentTour) {
+          endTour();
+          return prev;
+        }
+
+        if (!completedTours.includes(currentTour)) {
+          const newCompletedTours = [...completedTours, currentTour];
+          saveCompletedTours(newCompletedTours);
+          return {
+            ...prev,
+            completedTours: newCompletedTours,
+            currentTour: null,
+            isRunning: false,
+            stepIndex: 0,
+          };
+        }
+
+        endTour();
+        return {
+          ...prev,
+          currentTour: null,
+          isRunning: false,
+          stepIndex: 0,
+        };
+      });
+    }
+  }, [dismissTour, endTour, saveCompletedTours, tourState.currentTour, tourState.dismissedTours]);
 
   /**
    * Reset a specific tour - allows tour to show again
@@ -1194,6 +1188,12 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
 
   const currentSteps = tourState.currentTour ? tourDefinitions[tourState.currentTour] : [];
 
+  useEffect(() => {
+    if (isOnboardingRoute && tourState.isRunning) {
+      endTour();
+    }
+  }, [endTour, isOnboardingRoute, tourState.isRunning]);
+
   return (
     <TourContext.Provider
       value={{
@@ -1216,30 +1216,32 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       }}
     >
       {children}
-      <Joyride
-        steps={currentSteps}
-        run={tourState.isRunning}
-        stepIndex={tourState.stepIndex}
-        continuous
-        showSkipButton
-        scrollToFirstStep={false}
-        disableScrolling={true}
-        spotlightClicks
-        disableOverlayClose
-        callback={handleJoyrideCallback}
-        styles={tourStyles}
-        tooltipComponent={(props) => (
-          <CustomTooltip
-            {...props}
-            t={t}
-            onDismiss={dismissTour}
-            currentTourId={tourState.currentTour}
-          />
-        )}
-        floaterProps={{
-          hideArrow: false,
-        }}
-      />
+      {!isOnboardingRoute && (
+        <Joyride
+          steps={currentSteps}
+          run={tourState.isRunning}
+          stepIndex={tourState.stepIndex}
+          continuous
+          showSkipButton
+          scrollToFirstStep={false}
+          disableScrolling={true}
+          spotlightClicks
+          disableOverlayClose
+          callback={handleJoyrideCallback}
+          styles={tourStyles}
+          tooltipComponent={(props) => (
+            <CustomTooltip
+              {...props}
+              t={t}
+              onDismiss={dismissTour}
+              currentTourId={tourState.currentTour}
+            />
+          )}
+          floaterProps={{
+            hideArrow: false,
+          }}
+        />
+      )}
     </TourContext.Provider>
   );
 };
@@ -1255,6 +1257,8 @@ export const useTour = (): TourContextValue => {
 export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
   const { startTour, isTourCompleted, isRunning, dismissedTours, isLoading } = useTour();
   const { hasFeature } = useExperienceLevel();
+  const location = useLocation();
+  const isOnboardingRoute = location.pathname.startsWith('/onboarding');
 
   useEffect(() => {
     // Don't auto-start while still loading preferences from backend
@@ -1265,11 +1269,17 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
     // 2. Tour not dismissed
     // 3. Not already running
     // 4. User has enabledGuidedTours feature (basic level only)
-    if (!isTourCompleted(tourId) && !dismissedTours.includes(tourId) && !isRunning && hasFeature('enableGuidedTours')) {
+    if (
+      !isOnboardingRoute
+      && !isTourCompleted(tourId)
+      && !dismissedTours.includes(tourId)
+      && !isRunning
+      && hasFeature('enableGuidedTours')
+    ) {
       const timer = setTimeout(() => {
         startTour(tourId);
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature, isLoading]);
+  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature, isLoading, isOnboardingRoute]);
 };

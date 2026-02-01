@@ -14,10 +14,15 @@ import {
  */
 
 test.describe('Complete User Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage before each test
+  test.beforeEach(async ({ context, page }) => {
+    // Clear localStorage and cookies before each test using context
+    await context.clearCookies();
     await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
+    // Wait for page to be fully loaded before evaluating JS
+    await page.waitForLoadState('domcontentloaded');
+    await page.evaluate(() => localStorage.clear()).catch(() => {
+      // Ignore errors if localStorage is not accessible
+    });
   });
 
   test('should complete full user journey from registration to harvest', async ({ page }) => {

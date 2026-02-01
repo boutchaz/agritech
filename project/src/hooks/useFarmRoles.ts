@@ -50,7 +50,7 @@ export function useRemoveFarmRole() {
 
   return useMutation({
     mutationFn: ({ roleId, farmId }: { roleId: string; farmId: string }) => 
-      farmRolesApi.removeRole(roleId),
+      farmRolesApi.removeRole(roleId, farmId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['farm-roles', variables.farmId] });
       toast.success('Role removed successfully');

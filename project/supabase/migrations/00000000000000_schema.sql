@@ -326,25 +326,27 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_org ON notifications(user_id, 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Users can only see their own notifications
-CREATE POLICY IF NOT EXISTS "Users can view their own notifications"
+DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
+CREATE POLICY "Users can view their own notifications"
   ON notifications
   FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY IF NOT EXISTS "Users can update their own notifications"
+DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
+CREATE POLICY "Users can update their own notifications"
   ON notifications
   FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
--- Service role can insert notifications (for backend service)
-CREATE POLICY IF NOT EXISTS "Service role can insert notifications"
+DROP POLICY IF EXISTS "Service role can insert notifications" ON notifications;
+CREATE POLICY "Service role can insert notifications"
   ON notifications
   FOR INSERT
   WITH CHECK (true);
 
--- Service role can do everything
-CREATE POLICY IF NOT EXISTS "Service role has full access"
+DROP POLICY IF EXISTS "Service role has full access" ON notifications;
+CREATE POLICY "Service role has full access"
   ON notifications
   FOR ALL
   USING (auth.role() = 'service_role');
@@ -14649,11 +14651,13 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Policy: Allow anyone to view products (images) but not list the bucket
+DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects;
 CREATE POLICY "allow_public_view_products"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'products');
 
 -- Policy: Only authenticated users can upload products
+DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects;
 CREATE POLICY "allow_auth_upload_products"
 ON storage.objects FOR INSERT
 WITH CHECK (
@@ -14662,6 +14666,7 @@ WITH CHECK (
 );
 
 -- Policy: Only the uploader or admin can update product files
+DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects;
 CREATE POLICY "allow_owner_update_products"
 ON storage.objects FOR UPDATE
 USING (
@@ -14679,6 +14684,7 @@ USING (
 );
 
 -- Policy: Only the uploader or admin can delete product files
+DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects;
 CREATE POLICY "allow_owner_delete_products"
 ON storage.objects FOR DELETE
 USING (
@@ -17264,3 +17270,570 @@ CREATE INDEX IF NOT EXISTS idx_workers_farm_active
   ON workers(farm_id, worker_type) 
   WHERE is_active = true;
 
+
+
+-- ====================================================================
+-- PRODUCT VARIANTS SUPPORT
+-- Migration: 20260131000001_add_product_variants.sql
+-- ====================================================================
+-- Add product variants support for multi-dimension products (same product, different sizes)
+-- Migration: 20260131000001_add_product_variants.sql
+
+-- Create product_variants table
+CREATE TABLE IF NOT EXISTS product_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_name TEXT NOT NULL, -- e.g., "1L", "5L", "10kg", "25kg"
+  variant_sku TEXT, -- Unique SKU for the variant
+  quantity NUMERIC DEFAULT 0, -- Current stock quantity for this variant
+  unit TEXT NOT NULL, -- e.g., "L", "kg", "unit"
+  min_stock_level NUMERIC DEFAULT 0,
+  standard_rate NUMERIC, -- Sales price per unit
+  last_purchase_rate NUMERIC,
+  barcode TEXT,
+  is_active BOOLEAN DEFAULT true,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Ensure variant_name is unique per item
+  CONSTRAINT product_variants_unique_name UNIQUE (organization_id, item_id, variant_name)
+);
+
+-- Create indexes for product_variants
+CREATE INDEX IF NOT EXISTS idx_product_variants_org ON product_variants(organization_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_item ON product_variants(item_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(variant_sku) WHERE variant_sku IS NOT NULL;
+
+-- Add variant_id column to stock_entry_items
+ALTER TABLE stock_entry_items
+ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+
+-- Add variant_id column to stock_movements
+ALTER TABLE stock_movements
+ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+
+-- Add comments for documentation
+COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';
+COMMENT ON COLUMN product_variants.variant_name IS 'Variant designation (e.g., "1L", "5L", "10kg", "25kg")';
+COMMENT ON COLUMN product_variants.variant_sku IS 'Unique SKU code for this specific variant';
+COMMENT ON COLUMN product_variants.quantity IS 'Current stock quantity for this variant';
+COMMENT ON COLUMN product_variants.min_stock_level IS 'Minimum stock level before low stock alert';
+
+-- Create function to update variant timestamp
+CREATE OR REPLACE FUNCTION update_product_variants_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to auto-update updated_at
+CREATE TRIGGER product_variants_updated_at
+BEFORE UPDATE ON product_variants
+FOR EACH ROW
+EXECUTE FUNCTION update_product_variants_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
+
+
+-- ====================================================================
+-- LINK TASKS TO STOCK FOR AUTOMATIC UPDATES
+-- Migration: 20260131000002_link_tasks_to_stock.sql
+-- ====================================================================
+
+-- Task Stock Consumption table
+-- Tracks which items/variants are planned/required for a task
+CREATE TABLE IF NOT EXISTS task_stock_consumption (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  quantity_consumed NUMERIC NOT NULL DEFAULT 0,
+  unit TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT task_stock_consumption_unique UNIQUE (task_id, variant_id, item_id)
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_task_stock_consumption_task ON task_stock_consumption(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_stock_consumption_variant ON task_stock_consumption(variant_id);
+CREATE INDEX IF NOT EXISTS idx_task_stock_consumption_item ON task_stock_consumption(item_id);
+CREATE INDEX IF NOT EXISTS idx_task_stock_consumption_org ON task_stock_consumption(organization_id);
+
+-- Add comments for documentation
+COMMENT ON TABLE task_stock_consumption IS 'Links tasks to stock items for automatic inventory updates when tasks are completed';
+COMMENT ON COLUMN task_stock_consumption.variant_id IS 'Product variant (if item has variants like different sizes)';
+COMMENT ON COLUMN task_stock_consumption.item_id IS 'Base item reference';
+COMMENT ON COLUMN task_stock_consumption.quantity_consumed IS 'Quantity of this item/variant consumed when task is completed';
+
+-- Function to update stock when task is completed
+CREATE OR REPLACE FUNCTION update_stock_on_task_completion()
+RETURNS TRIGGER AS $$
+DECLARE
+  consumption_record RECORD;
+  v_consumed NUMERIC;
+  v_current_quantity NUMERIC;
+  v_variant_name TEXT;
+  v_item_name TEXT;
+BEGIN
+  -- Only proceed if status changed to 'completed'
+  IF OLD.status = 'completed' OR NEW.status != 'completed' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Update all stock consumption records for this task
+  FOR consumption_record IN
+    SELECT variant_id, item_id, quantity_consumed
+    FROM task_stock_consumption
+    WHERE task_id = NEW.id
+  LOOP
+    -- If variant_id is null (no variants), we could skip or handle at item level
+    IF consumption_record.variant_id IS NULL THEN
+      CONTINUE;
+    END IF;
+
+    -- Get current quantity
+    SELECT quantity, variant_name, item_name INTO v_current_quantity, v_variant_name, v_item_name
+    FROM product_variants
+    WHERE id = consumption_record.variant_id;
+
+    -- If variant doesn't exist, log and continue
+    IF NOT FOUND THEN
+      RAISE LOG 'Variant % not found, skipping stock update', consumption_record.variant_id;
+      CONTINUE;
+    END IF;
+
+    v_consumed := consumption_record.quantity_consumed;
+
+    -- Check if sufficient stock
+    IF v_current_quantity < v_consumed THEN
+      RAISE EXCEPTION 'Insufficient stock for variant % (item: %). Required: %, Available: %',
+        consumption_record.variant_id,
+        v_item_name,
+        v_consumed,
+        v_current_quantity
+      USING ERRCODE = 'P0001';
+    END IF;
+
+    -- Update variant quantity
+    UPDATE product_variants
+    SET quantity = quantity - v_consumed,
+        updated_at = NOW()
+    WHERE id = consumption_record.variant_id;
+
+    -- Log the stock update
+    RAISE LOG 'Stock updated for task %: variant % (item: %) deducted % units (remaining: %)',
+      NEW.id,
+      consumption_record.variant_id,
+      v_item_name,
+      v_consumed,
+      v_current_quantity - v_consumed;
+  END LOOP;
+
+  RETURN NEW;
+EXCEPTION
+  WHEN SQLSTATE 'P0001' THEN
+    RAISE EXCEPTION 'Cannot complete task: Insufficient stock. Please check stock levels and try again.';
+  WHEN OTHERS THEN
+    RAISE LOG 'Error updating stock for task %: %', NEW.id, SQLERRM;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to auto-update stock when task status changes to completed
+CREATE TRIGGER task_stock_update_trigger
+AFTER UPDATE ON tasks
+FOR EACH ROW
+EXECUTE FUNCTION update_stock_on_task_completion();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON task_stock_consumption TO authenticated;
+
+-- Helper function to add stock consumption to a task
+CREATE OR REPLACE FUNCTION add_task_stock_consumption(
+  p_task_id UUID,
+  p_variant_id UUID,
+  p_item_id UUID,
+  p_quantity NUMERIC,
+  p_unit TEXT,
+  p_notes TEXT
+)
+RETURNS UUID
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  v_org_id UUID;
+BEGIN
+  -- Get organization_id from task
+  SELECT organization_id INTO v_org_id
+  FROM tasks
+  WHERE id = p_task_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Task not found';
+  END IF;
+
+  -- Insert or update consumption record
+  INSERT INTO task_stock_consumption (
+    organization_id,
+    task_id,
+    variant_id,
+    item_id,
+    quantity_consumed,
+    unit,
+    notes
+  )
+  VALUES (
+    v_org_id,
+    p_task_id,
+    p_variant_id,
+    p_item_id,
+    p_quantity,
+    p_unit,
+    p_notes
+  )
+  ON CONFLICT (task_id, variant_id, item_id)
+  DO UPDATE SET
+    quantity_consumed = EXCLUDED.quantity_consumed + p_quantity,
+    updated_at = NOW();
+
+  RETURN (SELECT id FROM task_stock_consumption
+          WHERE task_id = p_task_id
+            AND variant_id = p_variant_id
+            AND item_id = p_item_id);
+END;
+$$;
+
+-- Grant execute permission on the helper function
+GRANT EXECUTE ON FUNCTION add_task_stock_consumption TO authenticated;
+
+
+-- ============================================================================
+-- LOW STOCK ALERTS (Migration: 20260131000003)
+-- ============================================================================
+
+-- Low Stock Warning Alerts
+-- Migration: 20260131000003_low_stock_alerts.sql
+
+-- Add show_stock_alerts preference to organizations if not exists
+-- This flag enables/disables stock alerts per organization
+ALTER TABLE organizations
+ADD COLUMN IF NOT EXISTS show_stock_alerts BOOLEAN DEFAULT true;
+
+-- Add last_stock_check_at to track when stock was last checked
+ALTER TABLE organizations
+ADD COLUMN IF NOT EXISTS last_stock_check_at TIMESTAMPTZ;
+
+-- ============================================================================
+-- KEEP IN SQL: Read-only query functions (can be called via RPC from NestJS)
+-- ============================================================================
+
+-- Function to check low stock for inventory_items
+CREATE OR REPLACE FUNCTION check_low_stock_inventory(p_organization_id UUID)
+RETURNS TABLE (
+  item_id UUID,
+  item_name TEXT,
+  current_quantity NUMERIC,
+  minimum_stock NUMERIC,
+  unit TEXT,
+  shortage_quantity NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ii.id,
+    ii.name,
+    ii.quantity,
+    ii.minimum_stock,
+    ii.unit,
+    ii.minimum_stock - ii.quantity as shortage_quantity
+  FROM inventory_items ii
+  WHERE ii.organization_id = p_organization_id
+    AND ii.minimum_stock IS NOT NULL
+    AND ii.quantity <= ii.minimum_stock
+    AND ii.quantity >= 0;  -- Only valid non-negative quantities
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to check low stock for product_variants
+CREATE OR REPLACE FUNCTION check_low_stock_variants(p_organization_id UUID)
+RETURNS TABLE (
+  variant_id UUID,
+  variant_name TEXT,
+  item_id UUID,
+  item_name TEXT,
+  current_quantity NUMERIC,
+  min_stock_level NUMERIC,
+  unit TEXT,
+  shortage_quantity NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    pv.id,
+    pv.variant_name,
+    pv.item_id,
+    i.name as item_name,
+    pv.quantity,
+    pv.min_stock_level,
+    pv.unit,
+    pv.min_stock_level - pv.quantity as shortage_quantity
+  FROM product_variants pv
+  JOIN items i ON i.id = pv.item_id
+  WHERE pv.organization_id = p_organization_id
+    AND pv.min_stock_level IS NOT NULL
+    AND pv.quantity <= pv.min_stock_level
+    AND pv.quantity >= 0  -- Only valid non-negative quantities
+    AND pv.is_active = true;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permissions on query functions
+GRANT EXECUTE ON FUNCTION check_low_stock_inventory TO authenticated;
+GRANT EXECUTE ON FUNCTION check_low_stock_variants TO authenticated;
+
+-- Add comments for documentation
+COMMENT ON FUNCTION check_low_stock_inventory IS 'Returns inventory items below their minimum stock level for an organization. Called by NestJS StockService.';
+COMMENT ON FUNCTION check_low_stock_variants IS 'Returns product variants below their minimum stock level for an organization. Called by NestJS StockService.';
+
+-- Note: The actual notification creation logic is in NestJS (stock.service.ts)
+-- NestJS calls these functions via RPC to get low stock items, then creates notifications
+-- This keeps operational workflows in application code where they belong
+
+-- ============================================================================
+-- WORK RECORDS (Migration: 20260131000004)
+-- ============================================================================
+
+-- Auto-create work records when tasks are completed
+-- Migration: 20260131000004_auto_create_work_records.sql
+
+-- Note: The actual work record creation logic is in NestJS (tasks.service.ts)
+-- This migration only adds the database function that can be called for backfilling
+
+-- Function to manually create work record from a task (for backfilling existing completed tasks)
+-- This is a SECURITY DEFINER function that can be called via RPC for admin purposes
+CREATE OR REPLACE FUNCTION create_work_record_from_existing_task(p_task_id UUID)
+RETURNS UUID AS $$
+DECLARE
+  v_work_record_id UUID;
+  v_worker_id UUID;
+  v_hours_worked NUMERIC;
+  v_hourly_rate NUMERIC;
+  v_total_payment NUMERIC;
+  v_payment_type TEXT;
+  v_task_type TEXT;
+  v_farm_id UUID;
+  v_org_id UUID;
+  v_work_date DATE;
+  v_task_title TEXT;
+  v_parcel_id UUID;
+BEGIN
+  -- Get task and worker information
+  SELECT
+    t.assigned_to,
+    EXTRACT(EPOCH FROM (t.end_date - t.start_date)) / 3600,
+    t.task_type,
+    t.farm_id,
+    t.organization_id,
+    COALESCE(t.due_date::date, t.end_date::date, t.created_at::date, CURRENT_DATE),
+    t.title,
+    t.parcel_id
+  INTO v_worker_id, v_hours_worked, v_task_type, v_farm_id, v_org_id, v_work_date, v_task_title, v_parcel_id
+  FROM tasks t
+  WHERE t.id = p_task_id AND t.status = 'completed';
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Task not found or not completed';
+  END IF;
+
+  IF v_worker_id IS NULL THEN
+    RAISE EXCEPTION 'Task has no assigned worker';
+  END IF;
+
+  -- Get worker payment information
+  SELECT
+    w.payment_type,
+    w.hourly_rate,
+    w.daily_rate
+  INTO v_payment_type, v_hourly_rate, v_total_payment
+  FROM workers w
+  WHERE w.id = v_worker_id;
+
+  -- Calculate payment
+  IF v_payment_type = 'hourly' AND v_hourly_rate IS NOT NULL AND v_hours_worked > 0 THEN
+    v_total_payment := v_hourly_rate * v_hours_worked;
+  END IF;
+
+  -- Create work record
+  INSERT INTO work_records (
+    farm_id,
+    organization_id,
+    worker_id,
+    worker_type,
+    work_date,
+    hours_worked,
+    task_description,
+    hourly_rate,
+    total_payment,
+    payment_status,
+    notes,
+    created_at,
+    updated_at
+  ) VALUES (
+    v_farm_id,
+    v_org_id,
+    v_worker_id,
+    v_payment_type,
+    v_work_date,
+    COALESCE(v_hours_worked, 0),
+    COALESCE(v_task_title, 'Task completed'),
+    v_hourly_rate,
+    COALESCE(v_total_payment, 0),
+    CASE
+      WHEN v_total_payment > 0 THEN 'pending'
+      ELSE 'not_applicable'
+    END,
+    jsonb_build_object(
+      'task_id', p_task_id,
+      'task_title', v_task_title,
+      'task_type', v_task_type,
+      'parcel_id', v_parcel_id,
+      'completed_at', NOW()
+    )::text,
+    NOW(),
+    NOW()
+  ) RETURNING id INTO v_work_record_id;
+
+  RETURN v_work_record_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant permission to execute the function
+GRANT EXECUTE ON FUNCTION create_work_record_from_existing_task TO authenticated;
+
+COMMENT ON FUNCTION create_work_record_from_existing_task(p_task_id UUID) IS 'Backfill function: Creates a work record from an existing completed task. The main auto-creation logic is in NestJS tasks.service.ts';
+
+-- Index for work records with task reference (for querying work records by task)
+CREATE INDEX IF NOT EXISTS idx_work_records_task_ref ON work_records USING GIN ((notes::jsonb) jsonb_path_ops) WHERE notes IS NOT NULL AND notes::jsonb ? 'task_id';
+
+-- ============================================================================
+-- SQL FUNCTIONS DEPRECATED (Moved to NestJS) (Migration: 20260131000005)
+-- ============================================================================
+
+-- Deprecate SQL functions moved to NestJS
+-- Migration: 20260131000005_deprecate_sql_functions_moved_to_nestjs.sql
+--
+-- This migration marks SQL functions as DEPRECATED that have been moved to NestJS.
+-- The functions are kept for backward compatibility but should not be used in new code.
+-- Corresponding NestJS implementations are now the canonical implementations.
+
+-- ============================================================================
+-- ORG SETUP/SEEDING FUNCTIONS - Moved to NestJS (OrgSetupService)
+-- ============================================================================
+
+COMMENT ON FUNCTION seed_default_work_units IS 'DEPRECATED: Use NestJS OrgSetupService.seedDefaultWorkUnits() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION seed_chart_of_accounts IS 'DEPRECATED: Use NestJS seeding service instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION seed_french_chart_of_accounts IS 'DEPRECATED: Use NestJS seeding service instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION create_default_fiscal_year IS 'DEPRECATED: Use NestJS OrgSetupService.createDefaultFiscalYear() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION create_morocco_campaign IS 'DEPRECATED: Use NestJS OrgSetupService.createMoroccoCampaign() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION initialize_org_account_mappings IS 'DEPRECATED: Use NestJS org initialization service instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION create_organization_with_farm IS 'DEPRECATED: Use NestJS OrgSetupService.initializeOrganization() instead. Kept for backward compatibility.';
+
+-- ============================================================================
+-- OPERATIONAL WORKFLOW FUNCTIONS - Moved to NestJS
+-- ============================================================================
+
+COMMENT ON FUNCTION create_task_from_template IS 'DEPRECATED: Use NestJS TaskTemplatesService.createFromTemplate() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION update_task_status IS 'DEPRECATED: Use NestJS TaskTemplatesService.updateStatus() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION auto_populate_cost_time_dimensions IS 'DEPRECATED: Implement in NestJS service layer. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION update_crop_cycle_financials IS 'DEPRECATED: Implement in NestJS service layer. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION create_work_record_from_existing_task IS 'DEPRECATED: Use NestJS WorkersService.backfillWorkRecordFromTask() instead. Kept for backward compatibility.';
+
+-- ============================================================================
+-- ANALYTICS/REPORTING FUNCTIONS - Moved to NestJS (AdoptionService)
+-- ============================================================================
+
+COMMENT ON FUNCTION calculate_daily_adoption_metrics IS 'DEPRECATED: Use NestJS AdoptionService.calculateDailyMetrics() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION generate_adoption_report IS 'DEPRECATED: Use NestJS AdoptionService.generateReport() instead. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION get_productivity_metrics IS 'DEPRECATED: Implement in NestJS analytics service. Kept for backward compatibility.';
+
+-- ============================================================================
+-- SUBSCRIPTION/PAYMENT FUNCTIONS - Should be in NestJS
+-- ============================================================================
+
+COMMENT ON FUNCTION get_subscription_pricing IS 'DEPRECATED: Implement in NestJS subscription service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION calculate_module_subscription_price IS 'DEPRECATED: Implement in NestJS subscription service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION create_or_update_polar_subscription IS 'DEPRECATED: Implement in NestJS Polar integration service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION log_polar_webhook IS 'DEPRECATED: Implement in NestJS webhook handler. Kept for backward compatibility.';
+
+-- ============================================================================
+-- ABSTRACT ENTITY REGISTRY FUNCTIONS - Should be in NestJS
+-- ============================================================================
+
+COMMENT ON FUNCTION register_abstract_entity IS 'DEPRECATED: Implement in NestJS entity service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION log_entity_event IS 'DEPRECATED: Implement in NestJS entity service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION get_abstract_entity IS 'DEPRECATED: Implement in NestJS entity service. Kept for backward compatibility.';
+
+COMMENT ON FUNCTION search_entities IS 'DEPRECATED: Implement in NestJS entity service. Kept for backward compatibility.';
+
+-- ============================================================================
+-- NOTIFICATION/ALERT FUNCTIONS - Orchestrators moved to NestJS
+-- Query functions kept in SQL (read-only)
+-- ============================================================================
+
+-- Note: check_low_stock_inventory and check_low_stock_variants are kept as read-only queries
+-- They are called by NestJS NotificationsService.checkLowStockAndNotify()
+-- 
+-- DEPRECATED FUNCTIONS (removed, now in NestJS):
+-- - create_low_stock_notifications -> NestJS NotificationsService.checkLowStockAndNotify()
+-- - trigger_low_stock_check -> NestJS service handles this
+
+-- ============================================================================
+-- END OF DEPRECATIONS
+-- ============================================================================
+
+-- ============================================================================
+-- ENSURE RLS IS ENABLED ON ALL TABLES
+-- ============================================================================
+ALTER TABLE IF EXISTS account_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS currencies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS organization_modules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_stock_consumption ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS cost_center_budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS account_translations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS tax_configurations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS soil_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS irrigation_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS rootstocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS plantation_systems ENABLE ROW LEVEL SECURITY;
+
+-- Log deprecation notice
+DO $$
+BEGIN
+  RAISE LOG 'SQL functions have been moved to NestJS. Check function comments for NestJS alternatives.';
+END;
+$$;

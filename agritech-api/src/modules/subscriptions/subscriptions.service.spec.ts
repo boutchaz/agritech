@@ -326,27 +326,33 @@ describe('SubscriptionsService', () => {
           qb.maybeSingle.mockResolvedValue(
             mockQueryResult({
               status: 'active',
+              plan_type: 'essential',
               current_period_end: new Date(Date.now() + 86400000).toISOString(),
             }),
+          );
+        } else if (table === 'modules') {
+          qb.or.mockReturnValue(qb);
+          qb.maybeSingle.mockResolvedValue(
+            mockQueryResult({
+              id: 'module-1',
+              required_plan: 'essential',
+              is_active: true,
+              is_available: true,
+              is_required: false,
+            }),
+          );
+        } else if (table === 'organization_modules') {
+          qb.eq.mockReturnValue(qb);
+          qb.maybeSingle.mockResolvedValue(
+            mockQueryResult({ is_active: true }),
           );
         }
         return qb;
       });
 
-      mockClient.rpc.mockImplementation((name: string) => {
-        if (name === 'has_feature_access') {
-          return Promise.resolve(mockQueryResult(true));
-        }
-        return Promise.resolve(mockQueryResult(true));
-      });
-
       const result = await service.checkSubscription(TEST_IDS.user, dto);
 
       expect(result.hasFeature).toBe(true);
-      expect(mockClient.rpc).toHaveBeenCalledWith('has_feature_access', {
-        org_id: TEST_IDS.organization,
-        feature_name: 'analytics',
-      });
     });
   });
 

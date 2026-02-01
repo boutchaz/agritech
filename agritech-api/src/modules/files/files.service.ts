@@ -338,21 +338,34 @@ export class FilesService {
   async trackFileAccess(fileId: string, organizationId: string) {
     const client = this.databaseService.getAdminClient();
 
-    const { error } = await client.rpc('increment', {
-      row_id: fileId,
-      x: 1,
-    }).eq('organization_id', organizationId);
+    const { data: fileRecord, error: fetchError } = await client
+      .from('file_registry')
+      .select('access_count')
+      .eq('id', fileId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
 
-    if (error) {
-      this.logger.warn(`Failed to track file access: ${error.message}`);
-      // Don't throw - this is non-critical
+    if (fetchError) {
+      this.logger.warn(`Failed to fetch file access count: ${fetchError.message}`);
+      return;
     }
 
-    // Update last_accessed_at
-    await client
+    if (!fileRecord) {
+      return;
+    }
+
+    const nextCount = (fileRecord.access_count ?? 0) + 1;
+    const { error: updateError } = await client
       .from('file_registry')
-      .update({ last_accessed_at: new Date().toISOString() })
+      .update({
+        access_count: nextCount,
+        last_accessed_at: new Date().toISOString(),
+      })
       .eq('id', fileId)
       .eq('organization_id', organizationId);
+
+    if (updateError) {
+      this.logger.warn(`Failed to track file access: ${updateError.message}`);
+    }
   }
 }

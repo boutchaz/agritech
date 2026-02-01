@@ -395,7 +395,7 @@ describe('InvoicesService', () => {
 
       mockClient.rpc.mockResolvedValue(mockQueryResult('JE-2024-00001'));
 
-      let tableCalls: string[] = [];
+      const tableCalls: string[] = [];
       mockClient.from.mockImplementation((table: string) => {
         tableCalls.push(table);
         const qb = createMockQueryBuilder();

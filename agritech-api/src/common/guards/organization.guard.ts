@@ -48,7 +48,7 @@ export class OrganizationGuard implements CanActivate {
 
     const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
     
-    let organizationId =
+    const organizationId =
       headerOrgId ||
       request.query?.organizationId ||
       request.body?.organizationId;

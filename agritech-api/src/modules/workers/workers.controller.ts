@@ -300,4 +300,25 @@ export class WorkersController {
       data.last_name,
     );
   }
+
+  // Work Record Backfill Endpoint
+
+  @Post('backfill-work-records')
+  @ApiOperation({ summary: 'Backfill work records for completed tasks (admin only)' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiResponse({ status: 200, description: 'Work records backfilled successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid task ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Task not found' })
+  async backfillWorkRecord(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Body() data: { taskId: string },
+  ) {
+    return this.workersService.backfillWorkRecordFromTask(
+      req.user.id,
+      organizationId,
+      data.taskId,
+    );
+  }
 }

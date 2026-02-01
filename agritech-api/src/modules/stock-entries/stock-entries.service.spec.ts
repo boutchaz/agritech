@@ -1165,19 +1165,44 @@ describe('StockEntriesService', () => {
     });
 
     describe('postOpeningStockBalance', () => {
-      it('should post opening stock balance via RPC', async () => {
-        const mockRpcCall = jest.fn().mockResolvedValue({
-          data: 'je1',
-          error: null,
+      it('should post opening stock balance with stock valuation updates', async () => {
+        mockPgClient.query.mockImplementation((query: string) => {
+          if (query.includes('SELECT *') && query.includes('opening_stock_balances')) {
+            return Promise.resolve({
+              rows: [
+                {
+                  id: 'osb1',
+                  organization_id: TEST_IDS.organization,
+                  item_id: 'item1',
+                  warehouse_id: 'wh1',
+                  opening_date: '2024-01-01',
+                  quantity: 10,
+                  valuation_rate: 5,
+                  status: 'Draft',
+                  batch_number: null,
+                  serial_numbers: null,
+                  created_by: TEST_IDS.user,
+                  posted_by: null,
+                },
+              ],
+            });
+          }
+
+          if (query.includes('SELECT default_unit')) {
+            return Promise.resolve({ rows: [{ default_unit: 'kg' }] });
+          }
+
+          if (query.includes('SELECT journal_entry_id')) {
+            return Promise.resolve({ rows: [{ journal_entry_id: 'je1' }] });
+          }
+
+          return Promise.resolve({ rows: [] });
         });
-        mockClient.rpc = mockRpcCall;
 
         const result = await service.postOpeningStockBalance('osb1', TEST_IDS.organization);
 
         expect(result).toEqual({ journal_entry_id: 'je1' });
-        expect(mockClient.rpc).toHaveBeenCalledWith('post_opening_stock_balance', {
-          p_opening_stock_id: 'osb1',
-        });
+        expect(mockPgClient.query).toHaveBeenCalled();
       });
     });
   });

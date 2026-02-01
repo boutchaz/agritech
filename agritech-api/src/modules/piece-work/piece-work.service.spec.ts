@@ -628,16 +628,27 @@ describe('PieceWorkService', () => {
           rate_per_unit: 5,
         };
 
-        const queryBuilder = createMockQueryBuilder();
-        queryBuilder.select.mockReturnValue(queryBuilder);
-        queryBuilder.insert.mockReturnValue(queryBuilder);
-        queryBuilder.single.mockResolvedValue(
+        const recordQuery = createMockQueryBuilder();
+        recordQuery.select.mockReturnValue(recordQuery);
+        recordQuery.insert.mockReturnValue(recordQuery);
+        recordQuery.single.mockResolvedValue(
           mockQueryResult({ id: 'piece-1' })
         );
-        mockClient.from.mockReturnValue(queryBuilder);
 
-        // Mock RPC call
-        mockClient.rpc.mockResolvedValue(mockQueryResult(null));
+        const workUnitQuery = createMockQueryBuilder();
+        workUnitQuery.select.mockReturnValue(workUnitQuery);
+        workUnitQuery.eq.mockReturnValue(workUnitQuery);
+        workUnitQuery.maybeSingle.mockResolvedValue(
+          mockQueryResult({ usage_count: 2 })
+        );
+        workUnitQuery.update.mockReturnValue(workUnitQuery);
+
+        mockClient.from.mockImplementation((table) => {
+          if (table === 'piece_work_records') {
+            return recordQuery;
+          }
+          return workUnitQuery;
+        });
 
         await service.create(
           createDto as any,
@@ -646,9 +657,7 @@ describe('PieceWorkService', () => {
           TEST_IDS.user
         );
 
-        expect(mockClient.rpc).toHaveBeenCalledWith('increment', {
-          row_id: 'unit-1',
-        });
+        expect(workUnitQuery.update).toHaveBeenCalledWith({ usage_count: 3 });
       });
     });
 

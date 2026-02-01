@@ -242,17 +242,11 @@ export class SubscriptionsService {
 
     // Check specific feature if requested
     if (feature && isValid) {
-      const { data: hasFeature, error: featureError } =
-        await this.supabaseAdmin.rpc('has_feature_access', {
-          org_id: organizationId,
-          feature_name: feature,
-        });
-
-      if (featureError) {
-        this.logger.warn('Error checking feature access', featureError);
-      } else {
-        response.hasFeature = hasFeature === true;
-      }
+      response.hasFeature = await this.checkFeatureAccess(
+        organizationId,
+        feature,
+        subscription?.plan_type || null,
+      );
     }
 
     // Get usage stats if valid subscription
@@ -903,6 +897,70 @@ export class SubscriptionsService {
           satelliteReports: 0,
         };
     }
+  }
+
+  private async checkFeatureAccess(
+    organizationId: string,
+    featureName: string,
+    planType: string | null,
+  ): Promise<boolean> {
+    const normalizedFeature = featureName.trim().toLowerCase();
+
+    const { data: module, error: moduleError } = await this.supabaseAdmin
+      .from('modules')
+      .select('id, required_plan, is_active, is_available, is_required, slug, name')
+      .or(`slug.eq.${normalizedFeature},name.eq.${normalizedFeature}`)
+      .maybeSingle();
+
+    if (moduleError) {
+      this.logger.warn('Error fetching module for feature access', moduleError);
+      return false;
+    }
+
+    if (!module || module.is_available === false || module.is_active === false) {
+      return false;
+    }
+
+    if (module.required_plan && !this.isPlanAtLeast(planType, module.required_plan)) {
+      return false;
+    }
+
+    if (module.is_required) {
+      return true;
+    }
+
+    const { data: orgModule, error: orgModuleError } = await this.supabaseAdmin
+      .from('organization_modules')
+      .select('is_active')
+      .eq('organization_id', organizationId)
+      .eq('module_id', module.id)
+      .maybeSingle();
+
+    if (orgModuleError) {
+      this.logger.warn('Error fetching organization module status', orgModuleError);
+      return false;
+    }
+
+    return orgModule?.is_active === true;
+  }
+
+  private isPlanAtLeast(planType: string | null, requiredPlan: string): boolean {
+    if (!planType) {
+      return false;
+    }
+
+    const normalizedPlan = planType === 'starter' ? 'essential' : planType;
+    const normalizedRequired =
+      requiredPlan === 'starter' ? 'essential' : requiredPlan;
+    const planOrder = ['essential', 'professional', 'enterprise'];
+    const planIndex = planOrder.indexOf(normalizedPlan);
+    const requiredIndex = planOrder.indexOf(normalizedRequired);
+
+    if (planIndex === -1 || requiredIndex === -1) {
+      return false;
+    }
+
+    return planIndex >= requiredIndex;
   }
 
   /**

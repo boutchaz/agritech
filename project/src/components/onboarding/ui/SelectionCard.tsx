@@ -83,11 +83,14 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
 
   const colors = colorClasses[color as keyof typeof colorClasses] || colorClasses.emerald;
 
+  const testIdFromTitle = title.replace(/[^\x00-\x7F]/g, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      data-testid={`selection-card-${testIdFromTitle}`}
       className={`
         relative w-full p-4 md:p-5 rounded-2xl border-2 text-left
         transition-all duration-200 ease-out

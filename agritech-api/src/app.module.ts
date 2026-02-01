@@ -82,6 +82,10 @@ import { PestAlertsModule } from './modules/pest-alerts/pest-alerts.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { ModuleConfigModule } from './modules/module-config/module-config.module';
+import { OrgSetupModule } from './modules/org-setup/org-setup.module';
+import { TaskTemplatesModule } from './modules/task-templates/task-templates.module';
+import { PolarModule } from './modules/polar/polar.module';
+import { EntitiesModule } from './modules/entities/entities.module';
 
 @Module({
   imports: [
@@ -181,6 +185,10 @@ import { ModuleConfigModule } from './modules/module-config/module-config.module
     ComplianceModule,
     RemindersModule,
     ModuleConfigModule,
+    OrgSetupModule,
+    TaskTemplatesModule,
+    PolarModule,
+    EntitiesModule,
   ],
   controllers: [AppController],
   providers: [

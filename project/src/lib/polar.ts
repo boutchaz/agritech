@@ -2,10 +2,15 @@ import { Polar } from '@polar-sh/sdk';
 import { SUBSCRIPTION_CONFIG } from '../config/subscription';
 
 // Initialize Polar SDK with sandbox support
-export const polar = new Polar({
-  accessToken: import.meta.env.VITE_POLAR_ACCESS_TOKEN,
-  server: import.meta.env.VITE_POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production',
-});
+const polarAccessToken = import.meta.env?.VITE_POLAR_ACCESS_TOKEN;
+const polarServer = import.meta.env?.VITE_POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production';
+
+export const polar = polarAccessToken
+  ? new Polar({
+      accessToken: polarAccessToken,
+      server: polarServer,
+    })
+  : null;
 
 export type PlanType = 'essential' | 'professional' | 'enterprise';
 
@@ -295,21 +300,54 @@ export function isPlanHigherTier(currentPlan: BackendPlanType, requiredPlan: Bac
 }
 
 export function getCheckoutUrl(planType: PlanType, organizationId?: string): string {
+  return getProductCheckoutUrl(getPlanProductId(planType), organizationId, planType);
+}
+
+function getEnvValue(key: string): string | undefined {
+  const env = import.meta.env as Record<string, string | undefined> | undefined;
+  return env?.[key];
+}
+
+function getPlanProductId(planType: PlanType): string | undefined {
+  const productIds: Record<PlanType, string | undefined> = {
+    essential: getEnvValue('VITE_POLAR_ESSENTIAL_PRODUCT_ID') || '3b03769f-9a47-47bc-8f07-bd1f3a580dee',
+    professional: getEnvValue('VITE_POLAR_PROFESSIONAL_PRODUCT_ID') || 'db925c1e-d64d-4d95-9907-dc90da5bcbe6',
+    enterprise: getEnvValue('VITE_POLAR_ENTERPRISE_PRODUCT_ID') || 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
+  };
+
+  return productIds[planType];
+}
+
+function slugToEnvKey(slug: string) {
+  return slug.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+}
+
+export function getCoreCheckoutUrl(organizationId?: string): string {
+  const productId = getEnvValue('VITE_POLAR_BASE_PRODUCT_ID');
+  return getProductCheckoutUrl(productId, organizationId, 'core');
+}
+
+export function getAddonCheckoutUrl(moduleSlug: string, organizationId?: string): string {
+  const key = `VITE_POLAR_ADDON_${slugToEnvKey(moduleSlug)}_PRODUCT_ID`;
+  const productId = getEnvValue(key);
+  return getProductCheckoutUrl(productId, organizationId, moduleSlug);
+}
+
+function getProductCheckoutUrl(
+  productId: string | undefined,
+  organizationId?: string,
+  planOrModule?: string,
+): string {
   // Use the configured checkout URL from environment
-  const checkoutUrl = import.meta.env.VITE_POLAR_CHECKOUT_URL;
+  const checkoutUrl = getEnvValue('VITE_POLAR_CHECKOUT_URL');
 
   if (!checkoutUrl) {
     throw new Error('VITE_POLAR_CHECKOUT_URL is not configured');
   }
 
-  // Get product ID mapping
-  const productIds: Record<PlanType, string> = {
-    essential: import.meta.env.VITE_POLAR_ESSENTIAL_PRODUCT_ID || '3b03769f-9a47-47bc-8f07-bd1f3a580dee',
-    professional: import.meta.env.VITE_POLAR_PROFESSIONAL_PRODUCT_ID || 'db925c1e-d64d-4d95-9907-dc90da5bcbe6',
-    enterprise: import.meta.env.VITE_POLAR_ENTERPRISE_PRODUCT_ID || 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
-  };
-
-  const productId = productIds[planType];
+  if (!productId) {
+    throw new Error('Polar product ID is not configured');
+  }
 
   // Construct checkout URL with parameters
   const url = new URL(checkoutUrl);
@@ -326,7 +364,9 @@ export function getCheckoutUrl(planType: PlanType, organizationId?: string): str
   // Add organization ID to metadata if provided
   if (organizationId) {
     url.searchParams.set('metadata[organization_id]', organizationId);
-    url.searchParams.set('metadata[plan_type]', planType);
+    if (planOrModule) {
+      url.searchParams.set('metadata[plan_type]', planOrModule);
+    }
   }
 
   return url.toString();

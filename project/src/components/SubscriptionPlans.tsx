@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, Zap, Building2, TrendingUp } from 'lucide-react';
-import { SUBSCRIPTION_PLANS, type PlanType } from '../lib/polar';
+import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType } from '../lib/polar';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +10,7 @@ interface SubscriptionPlansProps {
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) => {
   const { data: subscription } = useSubscription();
+  const normalizedPlanType = normalizePlanType(subscription?.plan_type ?? null);
   const { t } = useTranslation();
 
   const getPlanIcon = (planType: PlanType) => {
@@ -48,7 +49,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
         {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
           const color = getPlanColor(plan.id);
-          const isCurrentPlan = subscription?.plan_type === plan.id;
+          const isCurrentPlan = normalizedPlanType === plan.id;
           const isHighlighted = plan.highlighted;
 
           return (

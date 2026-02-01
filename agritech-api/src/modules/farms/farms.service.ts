@@ -18,6 +18,64 @@ import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 export class FarmsService {
   private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(FarmsService.name);
+  private readonly farmRoleDefinitions = [
+    {
+      role: 'main_manager',
+      description: 'Full access to manage the farm and team.',
+      permissions: {
+        manage_farms: true,
+        manage_sub_farms: true,
+        manage_users: true,
+        view_reports: true,
+        manage_crops: true,
+        manage_parcels: true,
+        manage_inventory: true,
+        manage_activities: true,
+      },
+    },
+    {
+      role: 'sub_manager',
+      description: 'Manage farm operations without user administration.',
+      permissions: {
+        manage_farms: false,
+        manage_sub_farms: true,
+        manage_users: false,
+        view_reports: true,
+        manage_crops: true,
+        manage_parcels: true,
+        manage_inventory: true,
+        manage_activities: true,
+      },
+    },
+    {
+      role: 'supervisor',
+      description: 'Supervise field work and monitor progress.',
+      permissions: {
+        manage_farms: false,
+        manage_sub_farms: false,
+        manage_users: false,
+        view_reports: true,
+        manage_crops: true,
+        manage_parcels: true,
+        manage_inventory: false,
+        manage_activities: true,
+      },
+    },
+    {
+      role: 'coordinator',
+      description: 'Coordinate day-to-day field activities.',
+      permissions: {
+        manage_farms: false,
+        manage_sub_farms: false,
+        manage_users: false,
+        view_reports: true,
+        manage_crops: true,
+        manage_parcels: false,
+        manage_inventory: false,
+        manage_activities: true,
+      },
+    },
+  ];
 
   constructor(
     private configService: ConfigService,
@@ -165,6 +223,243 @@ export class FarmsService {
     return tree;
   }
 
+  async getAvailableFarmRoles() {
+    return this.farmRoleDefinitions;
+  }
+
+  async getFarmRoles(userId: string, organizationId: string, farmId: string) {
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, organization_id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (farmError || !farm) {
+      throw new NotFoundException('Farm not found');
+    }
+
+    const { data: orgUser } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    const { data: roles, error } = await this.supabaseAdmin
+      .from('farm_management_roles')
+      .select('id, farm_id, user_id, role, is_active, created_at')
+      .eq('farm_id', farmId)
+      .eq('is_active', true);
+
+    if (error) {
+      this.logger.error(`Failed to fetch farm roles: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch farm roles: ${error.message}`);
+    }
+
+    const userIds = (roles || []).map((role) => role.user_id).filter(Boolean);
+    let profiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await this.supabaseAdmin
+        .from('user_profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        this.logger.warn(`Failed to fetch user profiles for farm roles: ${profilesError.message}`);
+      } else {
+        profiles = profilesData || [];
+      }
+    }
+
+    return (roles || []).map((role) => ({
+      ...role,
+      permissions: this.getRolePermissions(role.role),
+      assigned_at: role.created_at,
+      user_profile: profiles.find((profile) => profile.id === role.user_id),
+    }));
+  }
+
+  async getOrganizationUsersForFarm(userId: string, organizationId: string, farmId: string) {
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, organization_id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (farmError || !farm) {
+      throw new NotFoundException('Farm not found');
+    }
+
+    const { data: orgUser } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    const { data: orgUsers, error } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('user_id, role_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch organization users: ${error.message}`);
+    }
+
+    const userIds = (orgUsers || []).map((entry) => entry.user_id).filter(Boolean);
+    let profiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await this.supabaseAdmin
+        .from('user_profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        this.logger.warn(`Failed to fetch organization user profiles: ${profilesError.message}`);
+      } else {
+        profiles = profilesData || [];
+      }
+    }
+
+    return (orgUsers || []).map((entry) => ({
+      ...entry,
+      user_profile: profiles.find((profile) => profile.id === entry.user_id),
+    }));
+  }
+
+  async assignFarmRole(
+    userId: string,
+    organizationId: string,
+    farmId: string,
+    input: { user_id: string; role: string },
+  ) {
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (farmError || !farm) {
+      throw new NotFoundException('Farm not found');
+    }
+
+    const { data: orgUser } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    const { data, error } = await this.supabaseAdmin
+      .from('farm_management_roles')
+      .insert({
+        farm_id: farmId,
+        user_id: input.user_id,
+        role: input.role,
+        is_active: true,
+      })
+      .select('id, farm_id, user_id, role, is_active, created_at')
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to assign farm role: ${error.message}`);
+      throw new BadRequestException(`Failed to assign farm role: ${error.message}`);
+    }
+
+    return {
+      ...data,
+      permissions: this.getRolePermissions(data.role),
+      assigned_at: data.created_at,
+    };
+  }
+
+  async removeFarmRole(
+    userId: string,
+    organizationId: string,
+    farmId: string,
+    roleId: string,
+  ) {
+    const { data: farm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (farmError || !farm) {
+      throw new NotFoundException('Farm not found');
+    }
+
+    const { data: orgUser } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('user_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    const { error } = await this.supabaseAdmin
+      .from('farm_management_roles')
+      .update({ is_active: false })
+      .eq('id', roleId)
+      .eq('farm_id', farmId);
+
+    if (error) {
+      this.logger.error(`Failed to remove farm role: ${error.message}`);
+      throw new BadRequestException(`Failed to remove farm role: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
+  async getUserFarmRoles(organizationId: string, userId: string) {
+    const { data: roles, error } = await this.supabaseAdmin
+      .from('farm_management_roles')
+      .select('id, farm_id, role, is_active, created_at, farms!inner(name, organization_id)')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .eq('farms.organization_id', organizationId);
+
+    if (error) {
+      this.logger.error(`Failed to fetch user farm roles: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch user farm roles: ${error.message}`);
+    }
+
+    return (roles || []).map((role) => ({
+      farm_id: role.farm_id,
+      farm_name: (role as any).farms?.name || 'Unknown Farm',
+      role: role.role,
+      permissions: this.getRolePermissions(role.role),
+      assigned_at: role.created_at,
+      is_active: role.is_active,
+    }));
+  }
+
   async createFarm(userId: string, organizationId: string, dto: any) {
     this.logger.log(`Creating farm for user ${userId} in org ${organizationId}`);
 
@@ -250,6 +545,11 @@ export class FarmsService {
     );
 
     return newFarm;
+  }
+
+  private getRolePermissions(role: string | null) {
+    const definition = this.farmRoleDefinitions.find((item) => item.role === role);
+    return definition ? definition.permissions : {};
   }
 
   async getFarm(userId: string, organizationId: string, farmId: string) {
@@ -468,41 +768,11 @@ export class FarmsService {
 
     this.logger.log(`Deleting farm: ${farm_id}`);
 
-    // Use RPC function to bypass the subscription trigger
-    let { data: deletedFarms, error: deleteError } = await this.supabaseAdmin
-      .rpc('delete_farm_direct', { p_farm_id: farm_id });
-
-    // If RPC function doesn't exist, fallback to direct delete
-    if (
-      deleteError &&
-      (deleteError.code === '42883' || deleteError.code === 'PGRST202')
-    ) {
-      this.logger.log(
-        'RPC function not found, using direct delete (may be blocked by trigger)',
-      );
-
-      // Fallback to direct delete
-      const directDeleteResult = await this.supabaseAdmin
-        .from('farms')
-        .delete()
-        .eq('id', farm_id)
-        .select('id, name');
-
-      deletedFarms = directDeleteResult.data;
-      deleteError = directDeleteResult.error;
-
-      // If delete was blocked by trigger, provide helpful error message
-      if (
-        deleteError &&
-        (deleteError.message?.includes('subscription') ||
-          deleteError.code === 'P0001')
-      ) {
-        this.logger.error('Delete blocked by trigger', deleteError);
-        throw new InternalServerErrorException(
-          'Deletion was blocked by subscription verification. Please apply migration 20250203000011_create_delete_farm_function.sql to resolve this issue.',
-        );
-      }
-    }
+    const { data: deletedFarms, error: deleteError } = await this.supabaseAdmin
+      .from('farms')
+      .delete()
+      .eq('id', farm_id)
+      .select('id, name');
 
     if (deleteError) {
       this.logger.error('Delete error', deleteError);

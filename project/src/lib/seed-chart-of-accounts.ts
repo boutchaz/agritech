@@ -5,7 +5,6 @@
  * organization's country and currency.
  */
 
-import { supabase } from './supabase';
 import { apiClient } from './api-client-axios';
 
 export type SupportedCountry = 'MAR' | 'FRA' | 'USA' | 'GBR' | 'DEU';
@@ -29,14 +28,14 @@ const COUNTRY_CURRENCY_MAP: Record<SupportedCountry, SupportedCurrency> = {
 };
 
 /**
- * Country to seeding function mapping
+ * Country to chart template mapping (ISO 3166-1 alpha-2)
  */
-const SEED_FUNCTIONS: Record<SupportedCountry, string> = {
-  MAR: 'seed_moroccan_chart_of_accounts',
-  FRA: 'seed_french_chart_of_accounts',
-  USA: 'seed_us_chart_of_accounts',
-  GBR: 'seed_uk_chart_of_accounts',
-  DEU: 'seed_german_chart_of_accounts',
+const COUNTRY_TEMPLATE_MAP: Record<SupportedCountry, string> = {
+  MAR: 'MA',
+  FRA: 'FR',
+  USA: 'US',
+  GBR: 'GB',
+  DEU: 'DE',
 };
 
 /**
@@ -50,7 +49,7 @@ export function getDefaultCurrency(countryCode: SupportedCountry): SupportedCurr
  * Check if a country is supported for chart of accounts seeding
  */
 export function isCountrySupported(countryCode: string): countryCode is SupportedCountry {
-  return Object.keys(SEED_FUNCTIONS).includes(countryCode);
+  return Object.keys(COUNTRY_TEMPLATE_MAP).includes(countryCode);
 }
 
 /**
@@ -72,59 +71,23 @@ export async function seedChartOfAccounts(
       return {
         accountsCreated: 0,
         success: false,
-        message: `Country ${countryCode} is not supported yet. Supported countries: ${Object.keys(SEED_FUNCTIONS).join(', ')}`,
+        message: `Country ${countryCode} is not supported yet. Supported countries: ${Object.keys(COUNTRY_TEMPLATE_MAP).join(', ')}`,
       };
     }
 
-    // For Morocco, use the new NestJS API endpoint
-    if (countryCode === 'MAR') {
-      try {
-        const response = await apiClient.post<{
-          accounts_created: number;
-          success: boolean;
-          message: string;
-        }>('/api/v1/accounts/seed-moroccan-chart');
-
-        return {
-          accountsCreated: response.data.accounts_created,
-          success: response.data.success,
-          message: response.data.message,
-        };
-      } catch (error) {
-        console.error('Error seeding Moroccan chart of accounts:', error);
-        return {
-          accountsCreated: 0,
-          success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    }
-
-    // For other countries, fall back to Supabase RPC (legacy)
-    // Get the appropriate seeding function
-    const seedFunction = SEED_FUNCTIONS[countryCode];
-
-    // Call the database function
-    const { data, error } = await supabase.rpc(seedFunction, {
-      p_org_id: organizationId,
+    const templateCode = COUNTRY_TEMPLATE_MAP[countryCode];
+    const response = await apiClient.post<{
+      accounts_created: number;
+      success: boolean;
+      message: string;
+    }>(`/api/v1/accounts/templates/${templateCode}/apply`, {
+      overwrite: false,
     });
 
-    if (error) {
-      console.error(`Error seeding chart of accounts for ${countryCode}:`, error);
-      return {
-        accountsCreated: 0,
-        success: false,
-        message: error.message,
-      };
-    }
-
-    // The RPC returns a single row with our result
-    const result = Array.isArray(data) ? data[0] : data;
-
     return {
-      accountsCreated: result.accounts_created || 0,
-      success: result.success || false,
-      message: result.message || 'Chart of accounts seeded successfully',
+      accountsCreated: response.data.accounts_created,
+      success: response.data.success,
+      message: response.data.message,
     };
   } catch (error) {
     console.error('Error in seedChartOfAccounts:', error);

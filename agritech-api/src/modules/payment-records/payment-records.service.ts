@@ -514,6 +514,45 @@ export class PaymentRecordsService {
 
     const overlapStatuses = ['pending', 'approved', 'paid'];
     if (['daily_wage', 'monthly_salary', 'metayage_share'].includes(paymentData.payment_type)) {
+      // For fixed salary workers, also check for exact month/year match to prevent duplicates
+      if (worker.worker_type === 'fixed_salary' && paymentData.payment_type === 'monthly_salary') {
+        const startDate = new Date(paymentData.period_start);
+        const endDate = new Date(paymentData.period_end);
+
+        // Check if the period spans a single month
+        const isSingleMonthPeriod = startDate.getFullYear() === endDate.getFullYear() &&
+          startDate.getMonth() === endDate.getMonth();
+
+        if (isSingleMonthPeriod) {
+          const year = startDate.getFullYear();
+          const month = startDate.getMonth() + 1; // JavaScript months are 0-indexed
+
+          const { data: existingMonthlyPayment } = await client
+            .from('payment_records')
+            .select('id, period_start, period_end')
+            .eq('organization_id', organizationId)
+            .eq('worker_id', paymentData.worker_id)
+            .eq('payment_type', 'monthly_salary')
+            .in('status', overlapStatuses)
+            .filter('period_start', 'lte', paymentData.period_end)
+            .filter('period_end', 'gte', paymentData.period_start)
+            .maybeSingle();
+
+          if (existingMonthlyPayment) {
+            const existingStart = new Date(existingMonthlyPayment.period_start);
+            const existingYear = existingStart.getFullYear();
+            const existingMonth = existingStart.getMonth() + 1;
+
+            throw new BadRequestException(
+              `A monthly salary payment already exists for ${month}/${year}. ` +
+              `Existing payment ID: ${existingMonthlyPayment.id} (${existingMonth}/${existingYear}). ` +
+              `Please delete the existing payment first if you want to create a new one.`
+            );
+          }
+        }
+      }
+
+      // General overlap check for all payment types
       const { data: overlappingPayment } = await client
         .from('payment_records')
         .select('id')

@@ -890,7 +890,7 @@ describe('AccountsService', () => {
       it('should handle organization with existing accounts', async () => {
         setupCmsFailure();
 
-        let hasExistingAccounts = true;
+        const hasExistingAccounts = true;
         mockClientConnection.query.mockImplementation((query: string) => {
           if (query.includes('BEGIN')) return { rows: [] };
           if (query.includes('SELECT id FROM organizations')) {
