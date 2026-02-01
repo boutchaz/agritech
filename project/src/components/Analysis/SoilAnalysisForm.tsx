@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Save, X } from 'lucide-react';
+import { Save, X, ChevronDown } from 'lucide-react';
 import type { SoilAnalysisData } from '../../types/analysis';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
-import { Select } from '../ui/Select';
+import {
+  Select as RadixSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/radix-select';
 
 interface Parcel {
   id: string;
@@ -120,24 +126,28 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
             </FormField>
 
             <FormField label={t('farmHierarchy.parcel.soil.form.texture')} htmlFor="texture">
-              <Select
-                id="texture"
+              <RadixSelect
                 value={formData.texture || ''}
-                onChange={(e) => updateField('texture', e.target.value as 'sand' | 'loamy_sand' | 'sandy_loam' | 'loam' | 'silt_loam' | 'silt' | 'sandy_clay_loam' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay' | undefined)}
+                onValueChange={(value) => updateField('texture', value as 'sand' | 'loamy_sand' | 'sandy_loam' | 'loam' | 'silt_loam' | 'silt' | 'sandy_clay_loam' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay')}
               >
-                <option value="">{t('farmHierarchy.parcel.soil.form.selectTexture')}</option>
-                <option value="sand">{t('farmHierarchy.parcel.soil.form.textures.sand')}</option>
-                <option value="loamy_sand">{t('farmHierarchy.parcel.soil.form.textures.loamy_sand')}</option>
-                <option value="sandy_loam">{t('farmHierarchy.parcel.soil.form.textures.sandy_loam')}</option>
-                <option value="loam">{t('farmHierarchy.parcel.soil.form.textures.loam')}</option>
-                <option value="silt_loam">{t('farmHierarchy.parcel.soil.form.textures.silt_loam')}</option>
-                <option value="silt">{t('farmHierarchy.parcel.soil.form.textures.silt')}</option>
-                <option value="clay_loam">{t('farmHierarchy.parcel.soil.form.textures.clay_loam')}</option>
-                <option value="silty_clay_loam">{t('farmHierarchy.parcel.soil.form.textures.silty_clay_loam')}</option>
-                <option value="sandy_clay">{t('farmHierarchy.parcel.soil.form.textures.sandy_clay')}</option>
-                <option value="silty_clay">{t('farmHierarchy.parcel.soil.form.textures.silty_clay')}</option>
-                <option value="clay">{t('farmHierarchy.parcel.soil.form.textures.clay')}</option>
-              </Select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('farmHierarchy.parcel.soil.form.selectTexture')} />
+                  <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sand">{t('farmHierarchy.parcel.soil.form.textures.sand')}</SelectItem>
+                  <SelectItem value="loamy_sand">{t('farmHierarchy.parcel.soil.form.textures.loamy_sand')}</SelectItem>
+                  <SelectItem value="sandy_loam">{t('farmHierarchy.parcel.soil.form.textures.sandy_loam')}</SelectItem>
+                  <SelectItem value="loam">{t('farmHierarchy.parcel.soil.form.textures.loam')}</SelectItem>
+                  <SelectItem value="silt_loam">{t('farmHierarchy.parcel.soil.form.textures.silt_loam')}</SelectItem>
+                  <SelectItem value="silt">{t('farmHierarchy.parcel.soil.form.textures.silt')}</SelectItem>
+                  <SelectItem value="clay_loam">{t('farmHierarchy.parcel.soil.form.textures.clay_loam')}</SelectItem>
+                  <SelectItem value="silty_clay_loam">{t('farmHierarchy.parcel.soil.form.textures.silty_clay_loam')}</SelectItem>
+                  <SelectItem value="sandy_clay">{t('farmHierarchy.parcel.soil.form.textures.sandy_clay')}</SelectItem>
+                  <SelectItem value="silty_clay">{t('farmHierarchy.parcel.soil.form.textures.silty_clay')}</SelectItem>
+                  <SelectItem value="clay">{t('farmHierarchy.parcel.soil.form.textures.clay')}</SelectItem>
+                </SelectContent>
+              </RadixSelect>
             </FormField>
 
             <FormField label={t('farmHierarchy.parcel.soil.form.organicMatter')} htmlFor="organic_matter">

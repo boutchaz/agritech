@@ -80,6 +80,8 @@
       "addNewTax": "إضافة ضريبة جديدة",
       "changeLanguage": "تغيير اللغة"
     },
+    "actionsColumn": "إجراءات",
+    "statusColumn": "الحالة",
     "placeholders": {
       "searchLocation": "البحث عن مكان في المغرب...",
       "parcelName": "اسم القطعة",

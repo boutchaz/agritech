@@ -22,9 +22,10 @@ interface OrganizationContext {
 
 interface FarmContext {
   farms_count: number;
-  farms: Array<{ id: string; name: string; area: number; location?: string }>;
+  farms_recent: Array<{ id: string; name: string; area: number; location?: string }>;
+  farms_has_more: boolean;
   parcels_count: number;
-  parcels: Array<{
+  parcels_recent: Array<{
     id: string;
     name: string;
     area: string;
@@ -33,8 +34,10 @@ interface FarmContext {
     soil_type?: string;
     irrigation_type?: string;
   }>;
+  parcels_has_more: boolean;
+  crop_cycles_count: number;
   active_crop_cycles: number;
-  crop_cycles: Array<{
+  crop_cycles_recent: Array<{
     id: string;
     cycle_name: string;
     crop_type: string;
@@ -47,41 +50,52 @@ interface FarmContext {
     parcel_id?: string;
     farm_id: string;
   }>;
+  crop_cycles_has_more: boolean;
   structures_count: number;
+  structures_recent: Array<{ id: string; name: string; type: string }>;
+  structures_has_more: boolean;
 }
 
 interface WorkerContext {
+  workers_count: number;
   active_workers_count: number;
-  workers: Array<{ id: string; name: string; type: string; farm_id?: string }>;
+  workers_recent: Array<{ id: string; name: string; type: string; farm_id?: string }>;
+  workers_has_more: boolean;
   pending_tasks_count: number;
-  tasks: Array<{ id: string; title: string; status: string; type: string }>;
+  tasks_recent: Array<{ id: string; title: string; status: string; type: string }>;
+  tasks_has_more: boolean;
   recent_work_records_count: number;
+  work_records_recent: Array<{ id: string; work_date: string; amount_paid: number; status: string }>;
+  work_records_has_more: boolean;
 }
 
 interface AccountingContext {
   accounts_count: number;
-  accounts: Array<{ id: string; name: string; type: string; balance: number }>;
+  accounts_recent: Array<{ id: string; name: string; type: string; balance: number }>;
+  accounts_has_more: boolean;
   recent_invoices_count: number;
-  invoices: Array<{
+  invoices_recent: Array<{
     number: string;
     type: string;
     status: string;
     total: number;
     date: string;
   }>;
+  invoices_has_more: boolean;
   recent_payments_count: number;
-  payments: Array<{
+  payments_recent: Array<{
     date: string;
     amount: number;
     method: string;
     status: string;
   }>;
+  payments_has_more: boolean;
   current_fiscal_year: { name: string; start_date: string; end_date: string } | null;
 }
 
 interface InventoryContext {
   items_count: number;
-  items: Array<{
+  items_recent: Array<{
     id: string;
     name: string;
     code: string;
@@ -91,11 +105,13 @@ interface InventoryContext {
     is_low_stock: boolean;
     total_value?: number;
   }>;
+  items_has_more: boolean;
   warehouses_count: number;
-  warehouses: Array<{ id: string; name: string; location: string; farm_name?: string }>;
+  warehouses_recent: Array<{ id: string; name: string; location: string; farm_name?: string }>;
+  warehouses_has_more: boolean;
   recent_stock_movements_count: number;
   low_stock_count: number;
-  low_stock_items: Array<{
+  low_stock_items_recent: Array<{
     name: string;
     code: string;
     current_stock: number;
@@ -103,12 +119,13 @@ interface InventoryContext {
     unit: string;
     shortage: number;
   }>;
+  low_stock_items_has_more: boolean;
   total_inventory_value: number;
 }
 
 interface ProductionContext {
   recent_harvests_count: number;
-  harvests: Array<{
+  harvests_recent: Array<{
     date: string;
     crop: string;
     quantity: string;
@@ -117,29 +134,180 @@ interface ProductionContext {
     lot_number?: string;
     parcel_name?: string;
   }>;
+  harvests_has_more: boolean;
   recent_quality_checks_count: number;
   recent_deliveries_count: number;
 }
 
 interface SupplierCustomerContext {
   suppliers_count: number;
-  suppliers: Array<{ id: string; name: string; type: string }>;
+  suppliers_recent: Array<{ id: string; name: string; type: string }>;
+  suppliers_has_more: boolean;
   customers_count: number;
-  customers: Array<{ id: string; name: string; type: string }>;
+  customers_recent: Array<{ id: string; name: string; type: string }>;
+  customers_has_more: boolean;
   pending_sales_orders_count: number;
-  sales_orders: Array<{
+  sales_orders_recent: Array<{
     number: string;
     date: string;
     total: number;
     status: string;
   }>;
+  sales_orders_has_more: boolean;
   pending_purchase_orders_count: number;
-  purchase_orders: Array<{
+  purchase_orders_recent: Array<{
     number: string;
     date: string;
     total: number;
     status: string;
   }>;
+  purchase_orders_has_more: boolean;
+}
+
+interface CampaignsContext {
+  campaigns_count: number;
+  active_campaigns_count: number;
+  planned_campaigns_count: number;
+  campaigns_recent: Array<{
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    start_date: string;
+    end_date?: string;
+    priority: string;
+  }>;
+  campaigns_has_more: boolean;
+}
+
+interface ReceptionBatchesContext {
+  batches_count: number;
+  recent_batches: Array<{
+    id: string;
+    batch_code: string;
+    reception_date: string;
+    weight: number;
+    weight_unit: string;
+    status: string;
+    quality_grade?: string;
+    parcel_name?: string;
+    warehouse_name?: string;
+  }>;
+  batches_has_more: boolean;
+}
+
+interface ComplianceContext {
+  certifications_count: number;
+  active_certifications_count: number;
+  expiring_certifications_count: number;
+  non_compliant_checks_count: number;
+  checks_count: number;
+  certifications_recent: Array<{
+    id: string;
+    certification_type: string;
+    status: string;
+    expiry_date?: string;
+  }>;
+  certifications_has_more: boolean;
+  recent_checks: Array<{
+    id: string;
+    check_type: string;
+    check_date: string;
+    status: string;
+    score?: number;
+    certification_type?: string;
+  }>;
+  checks_has_more: boolean;
+}
+
+interface UtilitiesContext {
+  utilities_count: number;
+  pending_utilities_count: number;
+  utilities_recent: Array<{
+    id: string;
+    type: string;
+    provider?: string;
+    amount: number;
+    billing_date: string;
+    due_date?: string;
+    payment_status: string;
+    farm_name?: string;
+    parcel_name?: string;
+  }>;
+  utilities_has_more: boolean;
+}
+
+interface ReportsContext {
+  reports_count: number;
+  pending_reports_count: number;
+  failed_reports_count: number;
+  reports_recent: Array<{
+    id: string;
+    title: string;
+    template_id: string;
+    status: string;
+    generated_at: string;
+    parcel_name?: string;
+  }>;
+  reports_has_more: boolean;
+}
+
+interface MarketplaceContext {
+  listings_count: number;
+  active_listings_count: number;
+  orders_count: number;
+  pending_orders_count: number;
+  quote_requests_count: number;
+  listings_recent: Array<{
+    id: string;
+    title: string;
+    status: string;
+    price: number;
+    currency: string;
+    quantity_available: number;
+  }>;
+  listings_has_more: boolean;
+  orders_recent: Array<{
+    id: string;
+    status: string;
+    total_amount: number;
+    currency: string;
+    role: 'buyer' | 'seller';
+    created_at: string;
+  }>;
+  orders_has_more: boolean;
+  quote_requests_recent: Array<{
+    id: string;
+    product_title: string;
+    status: string;
+    role: 'requester' | 'seller';
+    created_at: string;
+  }>;
+  quote_requests_has_more: boolean;
+}
+
+interface OrchardContext {
+  orchard_assets_count: number;
+  tree_categories_count: number;
+  trees_count: number;
+  pruning_tasks_count: number;
+  orchard_assets_recent: Array<{
+    id: string;
+    name: string;
+    category: string;
+    status: string;
+    quantity?: number;
+    area_ha?: number;
+    farm_id?: string;
+  }>;
+  orchard_assets_has_more: boolean;
+  pruning_tasks_recent: Array<{
+    id: string;
+    title: string;
+    status: string;
+    due_date?: string;
+  }>;
+  pruning_tasks_has_more: boolean;
 }
 
 interface BuiltContext {
@@ -150,6 +318,13 @@ interface BuiltContext {
   inventory?: InventoryContext | null;
   production?: ProductionContext | null;
   suppliersCustomers?: SupplierCustomerContext | null;
+  campaigns?: CampaignsContext | null;
+  receptionBatches?: ReceptionBatchesContext | null;
+  compliance?: ComplianceContext | null;
+  utilities?: UtilitiesContext | null;
+  reports?: ReportsContext | null;
+  marketplace?: MarketplaceContext | null;
+  orchards?: OrchardContext | null;
   satelliteWeather?: SatelliteWeatherContext | null;
   soilAnalysis?: SoilAnalysisContext | null;
   productionIntelligence?: ProductionIntelligenceContext | null;
@@ -164,6 +339,13 @@ interface ContextNeeds {
   inventory: boolean;
   production: boolean;
   supplierCustomer: boolean;
+  campaigns: boolean;
+  reception: boolean;
+  compliance: boolean;
+  utilities: boolean;
+  reports: boolean;
+  marketplace: boolean;
+  orchards: boolean;
   satellite: boolean;
   weather: boolean;
   soil: boolean;
@@ -272,7 +454,7 @@ interface ProductionIntelligenceContext {
 }
 
 interface CachedContext {
-  data: BuiltContext;
+  data: unknown;
   timestamp: number;
 }
 
@@ -291,10 +473,29 @@ export class ChatService {
   private readonly logger = new Logger(ChatService.name);
   private readonly zaiProvider: ZaiProvider;
   private readonly zaiTTSProvider: ZaiTTSProvider;
-  private readonly contextCache = new Map<string, CachedContext>();
+  private readonly moduleCache = new Map<string, CachedContext>();
   private readonly responseCache = new Map<string, CachedResponse>();
-  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
   private readonly RESPONSE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+  private readonly SUMMARY_LIMIT = 3;
+  private readonly MODULE_CACHE_TTLS = {
+    organization: 30 * 60 * 1000,
+    farms: 30 * 60 * 1000,
+    workers: 10 * 60 * 1000,
+    accounting: 5 * 60 * 1000,
+    inventory: 5 * 60 * 1000,
+    production: 5 * 60 * 1000,
+    supplierCustomer: 10 * 60 * 1000,
+    campaigns: 30 * 60 * 1000,
+    receptionBatches: 5 * 60 * 1000,
+    compliance: 30 * 60 * 1000,
+    utilities: 10 * 60 * 1000,
+    reports: 10 * 60 * 1000,
+    marketplace: 5 * 60 * 1000,
+    orchards: 30 * 60 * 1000,
+    satelliteWeather: 60 * 60 * 1000,
+    soilAnalysis: 60 * 60 * 1000,
+    productionIntelligence: 5 * 60 * 1000,
+  };
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -304,6 +505,21 @@ export class ChatService {
   ) {
     this.zaiProvider = new ZaiProvider(configService);
     this.zaiTTSProvider = ttsProvider;
+  }
+
+  private async getCachedModule<T>(
+    cacheKey: string,
+    ttl: number,
+    fetcher: () => Promise<T>,
+  ): Promise<T> {
+    const cached = this.moduleCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.data as T;
+    }
+
+    const data = await fetcher();
+    this.moduleCache.set(cacheKey, { data, timestamp: Date.now() });
+    return data;
   }
 
   private async verifyOrganizationAccess(
@@ -484,21 +700,7 @@ export class ChatService {
      organizationId: string,
      query: string,
    ): Promise<BuiltContext> {
-     const cached = this.contextCache.get(organizationId);
-     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-       this.logger.log(`Cache HIT for org ${organizationId}`);
-       return cached.data;
-     }
-
-     this.logger.log(`Cache MISS for org ${organizationId}`);
-     const context = await this.buildOrganizationContextUncached(organizationId, query);
-
-     this.contextCache.set(organizationId, {
-       data: context,
-       timestamp: Date.now(),
-     });
-
-     return context;
+    return this.buildOrganizationContextUncached(organizationId, query);
    }
 
     private async buildOrganizationContextUncached(
@@ -531,59 +733,176 @@ export class ChatService {
        inventoryContext,
        productionContext,
        supplierCustomerContext,
+       campaignsContext,
+       receptionBatchesContext,
+       complianceContext,
+       utilitiesContext,
+       reportsContext,
+       marketplaceContext,
+       orchardsContext,
        satelliteWeatherContext,
        soilAnalysisContext,
        productionIntelligenceContext,
      ] = await Promise.all([
-       this.getOrganizationContext(client, organizationId),
+       this.getCachedModule(
+         `${organizationId}:organization`,
+         this.MODULE_CACHE_TTLS.organization,
+         () => this.getOrganizationContext(client, organizationId),
+       ),
        // Always load farm context - it's needed for basic queries
-       this.getFarmContext(client, organizationId).catch(err => {
+       this.getCachedModule(
+         `${organizationId}:farms`,
+         this.MODULE_CACHE_TTLS.farms,
+         () => this.getFarmContext(client, organizationId),
+       ).catch(err => {
          this.logger.error(`Failed to load farm context: ${err.message}`, err.stack);
          return null;
        }),
        // Always load worker context - it's needed for basic queries
-       this.getWorkerContext(client, organizationId).catch(err => {
+       this.getCachedModule(
+         `${organizationId}:workers`,
+         this.MODULE_CACHE_TTLS.workers,
+         () => this.getWorkerContext(client, organizationId),
+       ).catch(err => {
          this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
          return null;
        }),
        contextNeeds.accounting
-         ? this.getAccountingContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:accounting`,
+             this.MODULE_CACHE_TTLS.accounting,
+             () => this.getAccountingContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load accounting context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
        contextNeeds.inventory
-         ? this.getInventoryContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:inventory`,
+             this.MODULE_CACHE_TTLS.inventory,
+             () => this.getInventoryContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load inventory context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
        contextNeeds.production
-         ? this.getProductionContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:production`,
+             this.MODULE_CACHE_TTLS.production,
+             () => this.getProductionContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load production context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
        contextNeeds.supplierCustomer
-         ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:supplierCustomer`,
+             this.MODULE_CACHE_TTLS.supplierCustomer,
+             () => this.getSupplierCustomerContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
+       contextNeeds.campaigns
+         ? this.getCachedModule(
+             `${organizationId}:campaigns`,
+             this.MODULE_CACHE_TTLS.campaigns,
+             () => this.getCampaignsContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load campaigns context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.reception
+         ? this.getCachedModule(
+             `${organizationId}:receptionBatches`,
+             this.MODULE_CACHE_TTLS.receptionBatches,
+             () => this.getReceptionBatchesContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load reception batches context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.compliance
+         ? this.getCachedModule(
+             `${organizationId}:compliance`,
+             this.MODULE_CACHE_TTLS.compliance,
+             () => this.getComplianceContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load compliance context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.utilities
+         ? this.getCachedModule(
+             `${organizationId}:utilities`,
+             this.MODULE_CACHE_TTLS.utilities,
+             () => this.getUtilitiesContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load utilities context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.reports
+         ? this.getCachedModule(
+             `${organizationId}:reports`,
+             this.MODULE_CACHE_TTLS.reports,
+             () => this.getReportsContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load reports context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.marketplace
+         ? this.getCachedModule(
+             `${organizationId}:marketplace`,
+             this.MODULE_CACHE_TTLS.marketplace,
+             () => this.getMarketplaceContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load marketplace context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
+       contextNeeds.orchards
+         ? this.getCachedModule(
+             `${organizationId}:orchards`,
+             this.MODULE_CACHE_TTLS.orchards,
+             () => this.getOrchardContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load orchards context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
        (contextNeeds.satellite || contextNeeds.weather)
-         ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:satelliteWeather`,
+             this.MODULE_CACHE_TTLS.satelliteWeather,
+             () => this.getSatelliteWeatherContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load satellite/weather context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
        contextNeeds.soil
-         ? this.getSoilAnalysisContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:soilAnalysis`,
+             this.MODULE_CACHE_TTLS.soilAnalysis,
+             () => this.getSoilAnalysisContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load soil analysis context: ${err.message}`);
              return null;
            })
          : Promise.resolve(null),
        (contextNeeds.alerts || contextNeeds.forecast)
-         ? this.getProductionIntelligenceContext(client, organizationId).catch(err => {
+         ? this.getCachedModule(
+             `${organizationId}:productionIntelligence`,
+             this.MODULE_CACHE_TTLS.productionIntelligence,
+             () => this.getProductionIntelligenceContext(client, organizationId),
+           ).catch(err => {
              this.logger.warn(`Failed to load production intelligence context: ${err.message}`);
              return null;
            })
@@ -601,6 +920,13 @@ export class ChatService {
        inventory: inventoryContext,
        production: productionContext,
        suppliersCustomers: supplierCustomerContext,
+       campaigns: campaignsContext,
+       receptionBatches: receptionBatchesContext,
+       compliance: complianceContext,
+       utilities: utilitiesContext,
+       reports: reportsContext,
+       marketplace: marketplaceContext,
+       orchards: orchardsContext,
        satelliteWeather: satelliteWeatherContext,
        soilAnalysis: soilAnalysisContext,
        productionIntelligence: productionIntelligenceContext,
@@ -618,28 +944,39 @@ export class ChatService {
    private analyzeQueryContextSimple(query: string): ContextNeeds {
      const lowerQuery = query.toLowerCase();
      
-     const contextNeeds = {
-       farm: true, // Always load - most queries need this
-       worker: true, // Always load - most queries need this
-       accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|facture|paiement|dépense|revenu|coût|comptabilité|financier|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي/.test(lowerQuery),
-       inventory: /stock|inventory|warehouse|item|product|material|reception|supply|inventaire|entrepôt|article|produit|matériel|approvisionnement|مخزون|مستودع|منتج|مادة/.test(lowerQuery),
-       production: /harvest|yield|production|quality|delivery|crop cycle|récolte|rendement|contrôle qualité|livraison|cycle de culture|حصاد|محصول|إنتاج|مراقبة الجودة|تسليم/.test(lowerQuery),
-       supplierCustomer: /supplier|customer|vendor|client|order|quote|purchase|sale|fournisseur|client|commande|devis|achat|vente|مورد|عميل|طلب|عرض أسعار|شراء|بيع/.test(lowerQuery),
-       satellite: /satellite|ndvi|ndmi|ndre|gci|savi|vegetation|remote sensing|imagery|indice de végétation|télédétection|imagerie|قمر صناعي|مؤشر الغطاء النباتي|الاستشعار عن بعد/.test(lowerQuery),
-       weather: /weather|forecast|temperature|rain|precipitation|climate|frost|storm|humidity|wind|météo|prévision|température|pluie|climat|gel|tempête|humidité|vent|طقس|توقعات|درجة الحرارة|مطر|مناخ|صقيع|عاصفة|رطوبة|رياح/.test(lowerQuery),
-       soil: /soil|nutrient|fertilizer|ph|organic matter|texture|soil analysis|sol|nutriment|engrais|matière organique|analyse du sol|تربة|مغذيات|سماد|مادة عضوية|تحليل التربة/.test(lowerQuery),
-       alerts: /alert|warning|problem|issue|underperforming|critical|deviation|alerte|avertissement|problème|critique|déviation|تنبيه|تحذير|مشكلة|حرج|انحراف/.test(lowerQuery),
-       forecast: /forecast|prediction|expected|upcoming|yield forecast|benchmark|prévision|prédiction|attendu|à venir|référence|توقعات|تنبؤ|متوقع|قادم|معيار/.test(lowerQuery),
-     };
+    const contextNeeds = {
+      farm: true, // Always load - most queries need this
+      worker: true, // Always load - most queries need this
+      accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|facture|paiement|dépense|revenu|coût|comptabilité|financier|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي/.test(lowerQuery),
+      inventory: /stock|inventory|warehouse|item|product|material|reception|supply|inventaire|entrepôt|article|produit|matériel|approvisionnement|مخزون|مستودع|منتج|مادة/.test(lowerQuery),
+      production: /harvest|yield|production|quality|delivery|crop cycle|récolte|rendement|contrôle qualité|livraison|cycle de culture|حصاد|محصول|إنتاج|مراقبة الجودة|تسليم/.test(lowerQuery),
+      supplierCustomer: /supplier|customer|vendor|client|order|quote|purchase|sale|fournisseur|client|commande|devis|achat|vente|مورد|عميل|طلب|عرض أسعار|شراء|بيع/.test(lowerQuery),
+      campaigns: /campaign|campagne|campagnes|project|initiative|حملة/.test(lowerQuery),
+      reception: /reception|batch|lot|reception batch|lotissement|réception|دفعة|استلام/.test(lowerQuery),
+      compliance: /compliance|certification|audit|non[- ]compliant|conformité|certificat|audit|امتثال|شهادة/.test(lowerQuery),
+      utilities: /utility|utilities|bill|electric|water|fuel|gas|utility bill|facture|électricité|eau|gaz|فاتورة/.test(lowerQuery),
+      reports: /report|reports|analytics|dashboard report|rapport|statistique|تحليل|تقارير/.test(lowerQuery),
+      marketplace: /marketplace|listing|quote request|market|order marketplace|marché|annonce|demande de devis|سوق|عرض/.test(lowerQuery),
+      orchards: /orchard|orchards|tree|trees|fruit tree|pruning|taille|arbor|verger|أشجار|بستان/.test(lowerQuery),
+      satellite: /satellite|ndvi|ndmi|ndre|gci|savi|vegetation|remote sensing|imagery|indice de végétation|télédétection|imagerie|قمر صناعي|مؤشر الغطاء النباتي|الاستشعار عن بعد/.test(lowerQuery),
+      weather: /weather|forecast|temperature|rain|precipitation|climate|frost|storm|humidity|wind|météo|prévision|température|pluie|climat|gel|tempête|humidité|vent|طقس|توقعات|درجة الحرارة|مطر|مناخ|صقيع|عاصفة|رطوبة|رياح/.test(lowerQuery),
+      soil: /soil|nutrient|fertilizer|ph|organic matter|texture|soil analysis|sol|nutriment|engrais|matière organique|analyse du sol|تربة|مغذيات|سماد|مادة عضوية|تحليل التربة/.test(lowerQuery),
+      alerts: /alert|warning|problem|issue|underperforming|critical|deviation|alerte|avertissement|problème|critique|déviation|تنبيه|تحذير|مشكلة|حرج|انحراف/.test(lowerQuery),
+      forecast: /forecast|prediction|expected|upcoming|yield forecast|benchmark|prévision|prédiction|attendu|à venir|référence|توقعات|تنبؤ|متوقع|قادم|معيار/.test(lowerQuery),
+    };
 
      // Log routing decision for debugging
      this.logger.log(
-       `Context routing (keyword-based): farm=${contextNeeds.farm}, worker=${contextNeeds.worker}, ` +
-       `accounting=${contextNeeds.accounting}, inventory=${contextNeeds.inventory}, ` +
-       `production=${contextNeeds.production}, supplierCustomer=${contextNeeds.supplierCustomer}, ` +
-       `satellite=${contextNeeds.satellite}, weather=${contextNeeds.weather}, ` +
-       `soil=${contextNeeds.soil}, alerts=${contextNeeds.alerts}, forecast=${contextNeeds.forecast}`
-     );
+      `Context routing (keyword-based): farm=${contextNeeds.farm}, worker=${contextNeeds.worker}, ` +
+      `accounting=${contextNeeds.accounting}, inventory=${contextNeeds.inventory}, ` +
+      `production=${contextNeeds.production}, supplierCustomer=${contextNeeds.supplierCustomer}, ` +
+      `campaigns=${contextNeeds.campaigns}, reception=${contextNeeds.reception}, ` +
+      `compliance=${contextNeeds.compliance}, utilities=${contextNeeds.utilities}, ` +
+      `reports=${contextNeeds.reports}, marketplace=${contextNeeds.marketplace}, ` +
+      `orchards=${contextNeeds.orchards}, satellite=${contextNeeds.satellite}, ` +
+      `weather=${contextNeeds.weather}, soil=${contextNeeds.soil}, ` +
+      `alerts=${contextNeeds.alerts}, forecast=${contextNeeds.forecast}`
+    );
 
      return contextNeeds;
    }
@@ -846,31 +1183,36 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<FarmContext> {
     try {
-      // Get farms - include all farms, not just active ones
-      const { data: farms, error: farmsError } = await client
+      // Get farms summary
+      const { data: farms, error: farmsError, count: farmsCount } = await client
         .from('farms')
-        .select('id, name, location, size, size_unit, is_active, status')
-        .eq('organization_id', organizationId);
+        .select('id, name, location, size, size_unit, is_active, status, created_at', {
+          count: 'exact',
+        })
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
       
       if (farmsError) {
         this.logger.error(`Error fetching farms: ${farmsError.message}`);
       }
 
-       // Get parcels summary with soil and irrigation info - limit to 20 most recent
-       // Reduced from 50 to 20 to optimize prompt size and reduce AI processing time
-       const { data: parcels, error: parcelsError } = await client
+       // Get parcels summary with soil and irrigation info
+       const { data: parcels, error: parcelsError, count: parcelsCount } = await client
          .from('parcels')
-         .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type')
+         .select('id, name, area, area_unit, crop_type, farm_id, soil_type, irrigation_type, created_at', {
+           count: 'exact',
+         })
          .eq('organization_id', organizationId)
-         .limit(20);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (parcelsError) {
         this.logger.error(`Error fetching parcels: ${parcelsError.message}`);
       }
 
-       // Get crop cycles with detailed information - limit to 10 most recent
-       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
-       const { data: cropCycles, error: cropCyclesError } = await client
+       // Get crop cycles with detailed information
+       const { data: cropCycles, error: cropCyclesError, count: cropCyclesCount } = await client
          .from('crop_cycles')
          .select(`
            id,
@@ -884,40 +1226,56 @@ Determine which modules are relevant based on the query's intent and content. Re
            planted_area_ha,
            parcel_id,
            farm_id
-         `)
+         `, { count: 'exact' })
          .eq('organization_id', organizationId)
          .order('planting_date', { ascending: false })
-         .limit(10);
+         .limit(this.SUMMARY_LIMIT);
       
       if (cropCyclesError) {
         this.logger.error(`Error fetching crop cycles: ${cropCyclesError.message}`);
       }
 
-       // Get structures - limit to 10 most recent
-       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
-       const { data: structures, error: structuresError } = await client
+      const { count: activeCropCyclesCount, error: activeCropCyclesError } = await client
+        .from('crop_cycles')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .in('status', ['active', 'planned']);
+
+      if (activeCropCyclesError) {
+        this.logger.error(`Error counting active crop cycles: ${activeCropCyclesError.message}`);
+      }
+
+       // Get structures summary
+       const { data: structures, error: structuresError, count: structuresCount } = await client
          .from('structures')
-         .select('*')
+         .select('id, name, type, created_at', { count: 'exact' })
          .eq('organization_id', organizationId)
-         .limit(10);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (structuresError) {
         this.logger.error(`Error fetching structures: ${structuresError.message}`);
       }
 
-      this.logger.log(`Loaded farm context: ${farms?.length || 0} farms, ${parcels?.length || 0} parcels, ${cropCycles?.length || 0} crop cycles`);
+      const farmsTotal = farmsCount ?? farms?.length ?? 0;
+      const parcelsTotal = parcelsCount ?? parcels?.length ?? 0;
+      const cropCyclesTotal = cropCyclesCount ?? cropCycles?.length ?? 0;
+      const structuresTotal = structuresCount ?? structures?.length ?? 0;
+
+      this.logger.log(`Loaded farm context: ${farmsTotal} farms, ${parcelsTotal} parcels, ${cropCyclesTotal} crop cycles`);
 
       return {
-        farms_count: farms?.length || 0,
-        farms:
+        farms_count: farmsTotal,
+        farms_recent:
           farms?.map((f: any) => ({
             id: f.id,
             name: f.name,
             area: f.size || 0,
             location: f.location,
           })) || [],
-        parcels_count: parcels?.length || 0,
-        parcels:
+        farms_has_more: farmsTotal > (farms?.length || 0),
+        parcels_count: parcelsTotal,
+        parcels_recent:
           parcels?.map((p: any) => ({
             id: p.id,
             name: p.name,
@@ -927,8 +1285,10 @@ Determine which modules are relevant based on the query's intent and content. Re
             soil_type: p.soil_type,
             irrigation_type: p.irrigation_type,
           })) || [],
-        active_crop_cycles: cropCycles?.filter((cc: any) => cc.status === 'active' || cc.status === 'planned').length || 0,
-        crop_cycles:
+        parcels_has_more: parcelsTotal > (parcels?.length || 0),
+        crop_cycles_count: cropCyclesTotal,
+        active_crop_cycles: activeCropCyclesCount ?? cropCycles?.filter((cc: any) => cc.status === 'active' || cc.status === 'planned').length || 0,
+        crop_cycles_recent:
           cropCycles?.map((cc: any) => ({
             id: cc.id,
             cycle_name: cc.cycle_name,
@@ -942,19 +1302,33 @@ Determine which modules are relevant based on the query's intent and content. Re
             parcel_id: cc.parcel_id,
             farm_id: cc.farm_id,
           })) || [],
-        structures_count: structures?.length || 0,
+        crop_cycles_has_more: cropCyclesTotal > (cropCycles?.length || 0),
+        structures_count: structuresTotal,
+        structures_recent:
+          structures?.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+          })) || [],
+        structures_has_more: structuresTotal > (structures?.length || 0),
       };
     } catch (error) {
       this.logger.error(`Error in getFarmContext: ${error.message}`, error.stack);
       // Return empty context instead of failing
       return {
         farms_count: 0,
-        farms: [],
+        farms_recent: [],
+        farms_has_more: false,
         parcels_count: 0,
-        parcels: [],
+        parcels_recent: [],
+        parcels_has_more: false,
+        crop_cycles_count: 0,
         active_crop_cycles: 0,
-        crop_cycles: [],
+        crop_cycles_recent: [],
+        crop_cycles_has_more: false,
         structures_count: 0,
+        structures_recent: [],
+        structures_has_more: false,
       };
     }
   }
@@ -964,73 +1338,109 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<WorkerContext> {
     try {
-       // Get all workers, not just active ones - limit to 10 most recent
-       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
-       const { data: workers, error: workersError } = await client
+       // Get all workers, not just active ones (summary)
+       const { data: workers, error: workersError, count: workersCount } = await client
          .from('workers')
-         .select('id, first_name, last_name, worker_type, is_active, farm_id')
+         .select('id, first_name, last_name, worker_type, is_active, farm_id, created_at', {
+           count: 'exact',
+         })
          .eq('organization_id', organizationId)
-         .limit(10);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (workersError) {
         this.logger.error(`Error fetching workers: ${workersError.message}`);
       }
 
-       const { data: tasks, error: tasksError } = await client
+      const { count: activeWorkersCount, error: activeWorkersError } = await client
+        .from('workers')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      if (activeWorkersError) {
+        this.logger.error(`Error fetching active workers count: ${activeWorkersError.message}`);
+      }
+
+       const { data: tasks, error: tasksError, count: tasksCount } = await client
          .from('tasks')
-         .select('id, title, status, task_type, priority')
+         .select('id, title, status, task_type, priority, created_at', {
+           count: 'exact',
+         })
          .eq('organization_id', organizationId)
          .in('status', ['pending', 'assigned', 'in_progress'])
-         .limit(10); // Reduced from 50 to 10 to optimize prompt size
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (tasksError) {
         this.logger.error(`Error fetching tasks: ${tasksError.message}`);
       }
 
-       const { data: workRecords, error: workRecordsError } = await client
+       const { data: workRecords, error: workRecordsError, count: workRecordsCount } = await client
          .from('work_records')
-         .select('id, work_date, amount_paid, payment_status')
+         .select('id, work_date, amount_paid, payment_status', { count: 'exact' })
          .eq('organization_id', organizationId)
          .gte(
            'work_date',
            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
          )
-         .limit(10); // Reduced from 50 to 10 to optimize prompt size
+         .order('work_date', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (workRecordsError) {
         this.logger.error(`Error fetching work records: ${workRecordsError.message}`);
       }
 
-      this.logger.log(`Loaded worker context: ${workers?.length || 0} workers, ${tasks?.length || 0} tasks`);
+      const workersTotal = workersCount ?? workers?.length ?? 0;
+      const tasksTotal = tasksCount ?? tasks?.length ?? 0;
+      const workRecordsTotal = workRecordsCount ?? workRecords?.length ?? 0;
+
+      this.logger.log(`Loaded worker context: ${workersTotal} workers, ${tasksTotal} tasks`);
 
       return {
-        active_workers_count: workers?.filter((w: any) => w.is_active).length || 0,
-        workers:
+        workers_count: workersTotal,
+        active_workers_count: activeWorkersCount ?? workers?.filter((w: any) => w.is_active).length || 0,
+        workers_recent:
           workers?.map((w: any) => ({
             id: w.id,
             name: `${w.first_name} ${w.last_name}`,
             type: w.worker_type,
             farm_id: w.farm_id,
           })) || [],
-        pending_tasks_count: tasks?.length || 0,
-        tasks:
+        workers_has_more: workersTotal > (workers?.length || 0),
+        pending_tasks_count: tasksTotal,
+        tasks_recent:
           tasks?.map((t: any) => ({
             id: t.id,
             title: t.title,
             status: t.status,
             type: t.task_type,
           })) || [],
-        recent_work_records_count: workRecords?.length || 0,
+        tasks_has_more: tasksTotal > (tasks?.length || 0),
+        recent_work_records_count: workRecordsTotal,
+        work_records_recent:
+          workRecords?.map((record: any) => ({
+            id: record.id,
+            work_date: record.work_date,
+            amount_paid: record.amount_paid,
+            status: record.payment_status,
+          })) || [],
+        work_records_has_more: workRecordsTotal > (workRecords?.length || 0),
       };
     } catch (error) {
       this.logger.error(`Error in getWorkerContext: ${error.message}`, error.stack);
       // Return empty context instead of failing
       return {
+        workers_count: 0,
         active_workers_count: 0,
-        workers: [],
+        workers_recent: [],
+        workers_has_more: false,
         pending_tasks_count: 0,
-        tasks: [],
+        tasks_recent: [],
+        tasks_has_more: false,
         recent_work_records_count: 0,
+        work_records_recent: [],
+        work_records_has_more: false,
       };
     }
   }
@@ -1040,24 +1450,24 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<AccountingContext> {
     try {
-       // Get chart of accounts summary - limit to 10 most recent
-       // Reduced from 50 to 10 to optimize prompt size and reduce AI processing time
-       const { data: accounts, error: accountsError } = await client
+       // Get chart of accounts summary
+       const { data: accounts, error: accountsError, count: accountsCount } = await client
          .from('accounts')
-         .select('id, name, account_type')
+         .select('id, name, account_type, created_at', { count: 'exact' })
          .eq('organization_id', organizationId)
-         .limit(10);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (accountsError) {
         this.logger.error(`Error fetching accounts: ${accountsError.message}`);
       }
 
-       // Get recent invoices - limit to 10 most recent
-       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
-       const { data: invoices, error: invoicesError } = await client
+       // Get recent invoices
+       const { data: invoices, error: invoicesError, count: invoicesCount } = await client
          .from('invoices')
          .select(
            'id, invoice_number, invoice_type, status, grand_total, invoice_date',
+           { count: 'exact' },
          )
          .eq('organization_id', organizationId)
          .gte(
@@ -1065,24 +1475,23 @@ Determine which modules are relevant based on the query's intent and content. Re
            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
          )
          .order('invoice_date', { ascending: false })
-         .limit(10);
+         .limit(this.SUMMARY_LIMIT);
       
       if (invoicesError) {
         this.logger.error(`Error fetching invoices: ${invoicesError.message}`);
       }
 
-       // Get recent payments - limit to 10 most recent
-       // Reduced from 20 to 10 to optimize prompt size and reduce AI processing time
-       const { data: payments, error: paymentsError } = await client
+       // Get recent payments
+       const { data: payments, error: paymentsError, count: paymentsCount } = await client
          .from('accounting_payments')
-         .select('id, payment_date, amount, payment_method, status')
+         .select('id, payment_date, amount, payment_method, status', { count: 'exact' })
          .eq('organization_id', organizationId)
          .gte(
            'payment_date',
            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
          )
          .order('payment_date', { ascending: false })
-         .limit(10);
+         .limit(this.SUMMARY_LIMIT);
       
       if (paymentsError) {
         this.logger.error(`Error fetching payments: ${paymentsError.message}`);
@@ -1100,19 +1509,24 @@ Determine which modules are relevant based on the query's intent and content. Re
         this.logger.error(`Error fetching fiscal year: ${fiscalYearError.message}`);
       }
 
-      this.logger.log(`Loaded accounting context: ${accounts?.length || 0} accounts, ${invoices?.length || 0} invoices, ${payments?.length || 0} payments`);
+      const accountsTotal = accountsCount ?? accounts?.length ?? 0;
+      const invoicesTotal = invoicesCount ?? invoices?.length ?? 0;
+      const paymentsTotal = paymentsCount ?? payments?.length ?? 0;
+
+      this.logger.log(`Loaded accounting context: ${accountsTotal} accounts, ${invoicesTotal} invoices, ${paymentsTotal} payments`);
 
       return {
-        accounts_count: accounts?.length || 0,
-        accounts:
+        accounts_count: accountsTotal,
+        accounts_recent:
           accounts?.map((a: any) => ({
             id: a.id,
             name: a.name,
             type: a.account_type,
             balance: 0, // Balance is calculated, not stored
           })) || [],
-        recent_invoices_count: invoices?.length || 0,
-        invoices:
+        accounts_has_more: accountsTotal > (accounts?.length || 0),
+        recent_invoices_count: invoicesTotal,
+        invoices_recent:
           invoices?.map((i: any) => ({
             number: i.invoice_number,
             type: i.invoice_type,
@@ -1120,14 +1534,16 @@ Determine which modules are relevant based on the query's intent and content. Re
             total: i.grand_total,
             date: i.invoice_date,
           })) || [],
-        recent_payments_count: payments?.length || 0,
-        payments:
+        invoices_has_more: invoicesTotal > (invoices?.length || 0),
+        recent_payments_count: paymentsTotal,
+        payments_recent:
           payments?.map((p: any) => ({
             date: p.payment_date,
             amount: p.amount,
             method: p.payment_method,
             status: p.status,
           })) || [],
+        payments_has_more: paymentsTotal > (payments?.length || 0),
         current_fiscal_year: fiscalYear
           ? {
               name: fiscalYear.name,
@@ -1140,11 +1556,14 @@ Determine which modules are relevant based on the query's intent and content. Re
       this.logger.error(`Error in getAccountingContext: ${error.message}`, error.stack);
       return {
         accounts_count: 0,
-        accounts: [],
+        accounts_recent: [],
+        accounts_has_more: false,
         recent_invoices_count: 0,
-        invoices: [],
+        invoices_recent: [],
+        invoices_has_more: false,
         recent_payments_count: 0,
-        payments: [],
+        payments_recent: [],
+        payments_has_more: false,
         current_fiscal_year: null,
       };
     }
@@ -1289,32 +1708,40 @@ Determine which modules are relevant based on the query's intent and content. Re
         `total value: ${totalInventoryValue.toFixed(2)}`
       );
 
+      const warehousesList = warehouses || [];
+
       return {
         items_count: items.length,
-        items: items.slice(0, 20), // Limit to 20 items for prompt size
-        warehouses_count: warehouses?.length || 0,
-        warehouses:
-          warehouses?.map((w: any) => ({
+        items_recent: items.slice(0, this.SUMMARY_LIMIT),
+        items_has_more: items.length > this.SUMMARY_LIMIT,
+        warehouses_count: warehousesList.length,
+        warehouses_recent:
+          warehousesList.slice(0, this.SUMMARY_LIMIT).map((w: any) => ({
             id: w.id,
             name: w.name,
             location: w.location || 'N/A',
             farm_name: w.farm?.name,
-          })) || [],
+          })),
+        warehouses_has_more: warehousesList.length > this.SUMMARY_LIMIT,
         recent_stock_movements_count: stockEntries?.length || 0,
         low_stock_count: lowStockItems.length,
-        low_stock_items: lowStockItems.slice(0, 10), // Limit to 10 for prompt size
+        low_stock_items_recent: lowStockItems.slice(0, this.SUMMARY_LIMIT),
+        low_stock_items_has_more: lowStockItems.length > this.SUMMARY_LIMIT,
         total_inventory_value: totalInventoryValue,
       };
     } catch (error) {
       this.logger.error(`Error in getInventoryContext: ${error.message}`, error.stack);
       return {
         items_count: 0,
-        items: [],
+        items_recent: [],
+        items_has_more: false,
         warehouses_count: 0,
-        warehouses: [],
+        warehouses_recent: [],
+        warehouses_has_more: false,
         recent_stock_movements_count: 0,
         low_stock_count: 0,
-        low_stock_items: [],
+        low_stock_items_recent: [],
+        low_stock_items_has_more: false,
         total_inventory_value: 0,
       };
     }
@@ -1325,7 +1752,7 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<ProductionContext> {
     try {
-      const { data: harvests, error: harvestsError } = await client
+      const { data: harvests, error: harvestsError, count: harvestsCount } = await client
         .from('harvest_records')
         .select(`
           id,
@@ -1337,14 +1764,14 @@ Determine which modules are relevant based on the query's intent and content. Re
           lot_number,
           parcel:parcels(id, name, crop_type),
           crop_cycle:crop_cycles(id, cycle_name, crop_type, variety_name)
-        `)
+        `, { count: 'exact' })
         .eq('organization_id', organizationId)
         .gte(
           'harvest_date',
           new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
         )
         .order('harvest_date', { ascending: false })
-        .limit(15);
+        .limit(this.SUMMARY_LIMIT);
 
       if (harvestsError) {
         this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
@@ -1393,14 +1820,16 @@ Determine which modules are relevant based on the query's intent and content. Re
         this.logger.error(`Error fetching deliveries: ${deliveriesError.message}`);
       }
 
+      const harvestsTotal = harvestsCount ?? harvests?.length ?? 0;
+
       this.logger.log(
-        `Loaded production context: ${harvests?.length || 0} harvests, ` +
+        `Loaded production context: ${harvestsTotal} harvests, ` +
         `${qualityChecks?.length || 0} quality checks, ${deliveries?.length || 0} deliveries`
       );
 
       return {
-        recent_harvests_count: harvests?.length || 0,
-        harvests:
+        recent_harvests_count: harvestsTotal,
+        harvests_recent:
           harvests?.map((h: any) => {
             const cropName = h.crop_cycle?.crop_type || h.parcel?.crop_type || 'Unknown';
             const variety = h.crop_cycle?.variety_name;
@@ -1414,6 +1843,7 @@ Determine which modules are relevant based on the query's intent and content. Re
               parcel_name: h.parcel?.name,
             };
           }) || [],
+        harvests_has_more: harvestsTotal > (harvests?.length || 0),
         recent_quality_checks_count: qualityChecks?.length || 0,
         recent_deliveries_count: deliveries?.length || 0,
       };
@@ -1421,7 +1851,8 @@ Determine which modules are relevant based on the query's intent and content. Re
       this.logger.error(`Error in getProductionContext: ${error.message}`, error.stack);
       return {
         recent_harvests_count: 0,
-        harvests: [],
+        harvests_recent: [],
+        harvests_has_more: false,
         recent_quality_checks_count: 0,
         recent_deliveries_count: 0,
       };
@@ -1433,99 +1864,776 @@ Determine which modules are relevant based on the query's intent and content. Re
     organizationId: string,
   ): Promise<SupplierCustomerContext> {
     try {
-       // Get all suppliers, not just active ones - limit to 10 most recent
-       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
-       const { data: suppliers, error: suppliersError } = await client
+       // Get all suppliers, not just active ones (summary)
+       const { data: suppliers, error: suppliersError, count: suppliersCount } = await client
          .from('suppliers')
-         .select('id, name, supplier_type, is_active')
+         .select('id, name, supplier_type, is_active, created_at', { count: 'exact' })
          .eq('organization_id', organizationId)
-         .limit(10);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (suppliersError) {
         this.logger.error(`Error fetching suppliers: ${suppliersError.message}`);
       }
 
-       // Get all customers, not just active ones - limit to 10 most recent
-       // Reduced from 30 to 10 to optimize prompt size and reduce AI processing time
-       const { data: customers, error: customersError } = await client
+       // Get all customers, not just active ones (summary)
+       const { data: customers, error: customersError, count: customersCount } = await client
          .from('customers')
-         .select('id, name, customer_type, is_active')
+         .select('id, name, customer_type, is_active, created_at', { count: 'exact' })
          .eq('organization_id', organizationId)
-         .limit(10);
+         .order('created_at', { ascending: false })
+         .limit(this.SUMMARY_LIMIT);
       
       if (customersError) {
         this.logger.error(`Error fetching customers: ${customersError.message}`);
       }
 
-       const { data: salesOrders, error: salesOrdersError } = await client
+       const { data: salesOrders, error: salesOrdersError, count: salesOrdersCount } = await client
          .from('sales_orders')
-         .select('id, order_number, order_date, total_amount, status')
+         .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
          .eq('organization_id', organizationId)
          .in('status', ['draft', 'confirmed', 'partial'])
          .order('order_date', { ascending: false })
-         .limit(10); // Reduced from 20 to 10 to optimize prompt size
+         .limit(this.SUMMARY_LIMIT);
       
       if (salesOrdersError) {
         this.logger.error(`Error fetching sales orders: ${salesOrdersError.message}`);
       }
 
-       const { data: purchaseOrders, error: purchaseOrdersError } = await client
+       const { data: purchaseOrders, error: purchaseOrdersError, count: purchaseOrdersCount } = await client
          .from('purchase_orders')
-         .select('id, order_number, order_date, total_amount, status')
+         .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
          .eq('organization_id', organizationId)
          .in('status', ['draft', 'confirmed', 'partial'])
          .order('order_date', { ascending: false })
-         .limit(10); // Reduced from 20 to 10 to optimize prompt size
+         .limit(this.SUMMARY_LIMIT);
       
       if (purchaseOrdersError) {
         this.logger.error(`Error fetching purchase orders: ${purchaseOrdersError.message}`);
       }
 
-      this.logger.log(`Loaded supplier/customer context: ${suppliers?.length || 0} suppliers, ${customers?.length || 0} customers`);
+      const suppliersTotal = suppliersCount ?? suppliers?.length ?? 0;
+      const customersTotal = customersCount ?? customers?.length ?? 0;
+      const salesOrdersTotal = salesOrdersCount ?? salesOrders?.length ?? 0;
+      const purchaseOrdersTotal = purchaseOrdersCount ?? purchaseOrders?.length ?? 0;
+
+      this.logger.log(`Loaded supplier/customer context: ${suppliersTotal} suppliers, ${customersTotal} customers`);
 
       return {
-        suppliers_count: suppliers?.length || 0,
-        suppliers:
+        suppliers_count: suppliersTotal,
+        suppliers_recent:
           suppliers?.map((s: any) => ({
             id: s.id,
             name: s.name,
             type: s.supplier_type,
           })) || [],
-        customers_count: customers?.length || 0,
-        customers:
+        suppliers_has_more: suppliersTotal > (suppliers?.length || 0),
+        customers_count: customersTotal,
+        customers_recent:
           customers?.map((c: any) => ({
             id: c.id,
             name: c.name,
             type: c.customer_type,
           })) || [],
-        pending_sales_orders_count: salesOrders?.length || 0,
-        sales_orders:
+        customers_has_more: customersTotal > (customers?.length || 0),
+        pending_sales_orders_count: salesOrdersTotal,
+        sales_orders_recent:
           salesOrders?.map((o: any) => ({
             number: o.order_number,
             date: o.order_date,
             total: o.total_amount,
             status: o.status,
           })) || [],
-        pending_purchase_orders_count: purchaseOrders?.length || 0,
-        purchase_orders:
+        sales_orders_has_more: salesOrdersTotal > (salesOrders?.length || 0),
+        pending_purchase_orders_count: purchaseOrdersTotal,
+        purchase_orders_recent:
           purchaseOrders?.map((o: any) => ({
             number: o.order_number,
             date: o.order_date,
             total: o.total_amount,
             status: o.status,
           })) || [],
+        purchase_orders_has_more: purchaseOrdersTotal > (purchaseOrders?.length || 0),
       };
     } catch (error) {
       this.logger.error(`Error in getSupplierCustomerContext: ${error.message}`, error.stack);
       return {
         suppliers_count: 0,
-        suppliers: [],
+        suppliers_recent: [],
+        suppliers_has_more: false,
         customers_count: 0,
-        customers: [],
+        customers_recent: [],
+        customers_has_more: false,
         pending_sales_orders_count: 0,
-        sales_orders: [],
+        sales_orders_recent: [],
+        sales_orders_has_more: false,
         pending_purchase_orders_count: 0,
-        purchase_orders: [],
+        purchase_orders_recent: [],
+        purchase_orders_has_more: false,
+      };
+    }
+  }
+
+  private async getCampaignsContext(
+    client: any,
+    organizationId: string,
+  ): Promise<CampaignsContext> {
+    try {
+      const { count: campaignsCount, error: campaignsCountError } = await client
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (campaignsCountError) {
+        this.logger.error(`Error counting campaigns: ${campaignsCountError.message}`);
+      }
+
+      const { count: activeCampaignsCount, error: activeCampaignsError } = await client
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'active');
+
+      if (activeCampaignsError) {
+        this.logger.error(`Error counting active campaigns: ${activeCampaignsError.message}`);
+      }
+
+      const { count: plannedCampaignsCount, error: plannedCampaignsError } = await client
+        .from('campaigns')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'planned');
+
+      if (plannedCampaignsError) {
+        this.logger.error(`Error counting planned campaigns: ${plannedCampaignsError.message}`);
+      }
+
+      const { data: campaigns, error: campaignsError, count: campaignsTotalCount } = await client
+        .from('campaigns')
+        .select('id, name, type, status, start_date, end_date, priority', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .order('start_date', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (campaignsError) {
+        this.logger.error(`Error fetching campaigns: ${campaignsError.message}`);
+      }
+
+      return {
+        campaigns_count: campaignsCount || 0,
+        active_campaigns_count: activeCampaignsCount || 0,
+        planned_campaigns_count: plannedCampaignsCount || 0,
+        campaigns_recent:
+          campaigns?.map((campaign: any) => ({
+            id: campaign.id,
+            name: campaign.name,
+            type: campaign.type,
+            status: campaign.status,
+            start_date: campaign.start_date,
+            end_date: campaign.end_date,
+            priority: campaign.priority,
+          })) || [],
+        campaigns_has_more: (campaignsTotalCount ?? campaigns?.length ?? 0) > (campaigns?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getCampaignsContext: ${error.message}`, error.stack);
+      return {
+        campaigns_count: 0,
+        active_campaigns_count: 0,
+        planned_campaigns_count: 0,
+        campaigns_recent: [],
+        campaigns_has_more: false,
+      };
+    }
+  }
+
+  private async getReceptionBatchesContext(
+    client: any,
+    organizationId: string,
+  ): Promise<ReceptionBatchesContext> {
+    try {
+      const { count: batchesCount, error: batchesCountError } = await client
+        .from('reception_batches')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (batchesCountError) {
+        this.logger.error(`Error counting reception batches: ${batchesCountError.message}`);
+      }
+
+      const { data: batches, error: batchesError, count: batchesTotalCount } = await client
+        .from('reception_batches')
+        .select(
+          `
+          id,
+          batch_code,
+          reception_date,
+          weight,
+          weight_unit,
+          status,
+          quality_grade,
+          parcel:parcels(name),
+          warehouse:warehouses(name)
+        `,
+          { count: 'exact' },
+        )
+        .eq('organization_id', organizationId)
+        .order('reception_date', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (batchesError) {
+        this.logger.error(`Error fetching reception batches: ${batchesError.message}`);
+      }
+
+      return {
+        batches_count: batchesCount || 0,
+        recent_batches:
+          batches?.map((batch: any) => ({
+            id: batch.id,
+            batch_code: batch.batch_code,
+            reception_date: batch.reception_date,
+            weight: batch.weight,
+            weight_unit: batch.weight_unit,
+            status: batch.status,
+            quality_grade: batch.quality_grade,
+            parcel_name: batch.parcel?.name,
+            warehouse_name: batch.warehouse?.name,
+          })) || [],
+        batches_has_more: (batchesTotalCount ?? batches?.length ?? 0) > (batches?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getReceptionBatchesContext: ${error.message}`, error.stack);
+      return {
+        batches_count: 0,
+        recent_batches: [],
+        batches_has_more: false,
+      };
+    }
+  }
+
+  private async getComplianceContext(
+    client: any,
+    organizationId: string,
+  ): Promise<ComplianceContext> {
+    try {
+      const { count: certificationsCount, error: certificationsCountError } = await client
+        .from('certifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (certificationsCountError) {
+        this.logger.error(`Error counting certifications: ${certificationsCountError.message}`);
+      }
+
+      const { count: activeCertificationsCount, error: activeCertificationsError } = await client
+        .from('certifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'active');
+
+      if (activeCertificationsError) {
+        this.logger.error(`Error counting active certifications: ${activeCertificationsError.message}`);
+      }
+
+      const today = new Date();
+      const expiringCutoff = new Date();
+      expiringCutoff.setDate(today.getDate() + 90);
+
+      const { count: expiringCertificationsCount, error: expiringCertificationsError } = await client
+        .from('certifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'active')
+        .gte('expiry_date', today.toISOString().split('T')[0])
+        .lte('expiry_date', expiringCutoff.toISOString().split('T')[0]);
+
+      if (expiringCertificationsError) {
+        this.logger.error(`Error counting expiring certifications: ${expiringCertificationsError.message}`);
+      }
+
+      const { count: nonCompliantChecksCount, error: nonCompliantChecksError } = await client
+        .from('compliance_checks')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'non_compliant');
+
+      if (nonCompliantChecksError) {
+        this.logger.error(`Error counting non-compliant checks: ${nonCompliantChecksError.message}`);
+      }
+
+      const { data: certifications, error: certificationsError, count: certificationsTotalCount } = await client
+        .from('certifications')
+        .select('id, certification_type, status, expiry_date', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .order('expiry_date', { ascending: true })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (certificationsError) {
+        this.logger.error(`Error fetching certifications: ${certificationsError.message}`);
+      }
+
+      const { data: checks, error: checksError, count: checksTotalCount } = await client
+        .from('compliance_checks')
+        .select(
+          `
+          id,
+          check_type,
+          check_date,
+          status,
+          score,
+          certification:certifications(certification_type)
+        `,
+          { count: 'exact' },
+        )
+        .eq('organization_id', organizationId)
+        .order('check_date', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (checksError) {
+        this.logger.error(`Error fetching compliance checks: ${checksError.message}`);
+      }
+
+      return {
+        certifications_count: certificationsCount || 0,
+        active_certifications_count: activeCertificationsCount || 0,
+        expiring_certifications_count: expiringCertificationsCount || 0,
+        non_compliant_checks_count: nonCompliantChecksCount || 0,
+        checks_count: checksTotalCount || 0,
+        certifications_recent:
+          certifications?.map((cert: any) => ({
+            id: cert.id,
+            certification_type: cert.certification_type,
+            status: cert.status,
+            expiry_date: cert.expiry_date,
+          })) || [],
+        certifications_has_more: (certificationsTotalCount ?? certifications?.length ?? 0) > (certifications?.length || 0),
+        recent_checks:
+          checks?.map((check: any) => ({
+            id: check.id,
+            check_type: check.check_type,
+            check_date: check.check_date,
+            status: check.status,
+            score: check.score,
+            certification_type: check.certification?.certification_type,
+          })) || [],
+        checks_has_more: (checksTotalCount ?? checks?.length ?? 0) > (checks?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getComplianceContext: ${error.message}`, error.stack);
+      return {
+        certifications_count: 0,
+        active_certifications_count: 0,
+        expiring_certifications_count: 0,
+        non_compliant_checks_count: 0,
+        checks_count: 0,
+        certifications_recent: [],
+        certifications_has_more: false,
+        recent_checks: [],
+        checks_has_more: false,
+      };
+    }
+  }
+
+  private async getUtilitiesContext(
+    client: any,
+    organizationId: string,
+  ): Promise<UtilitiesContext> {
+    try {
+      const { count: utilitiesCount, error: utilitiesCountError } = await client
+        .from('utilities')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (utilitiesCountError) {
+        this.logger.error(`Error counting utilities: ${utilitiesCountError.message}`);
+      }
+
+      const { count: pendingUtilitiesCount, error: pendingUtilitiesError } = await client
+        .from('utilities')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('payment_status', 'pending');
+
+      if (pendingUtilitiesError) {
+        this.logger.error(`Error counting pending utilities: ${pendingUtilitiesError.message}`);
+      }
+
+      const { data: utilities, error: utilitiesError, count: utilitiesTotalCount } = await client
+        .from('utilities')
+        .select(
+          `
+          id,
+          type,
+          provider,
+          amount,
+          billing_date,
+          due_date,
+          payment_status,
+          farm:farms(name),
+          parcel:parcels(name)
+        `,
+          { count: 'exact' },
+        )
+        .eq('organization_id', organizationId)
+        .order('billing_date', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (utilitiesError) {
+        this.logger.error(`Error fetching utilities: ${utilitiesError.message}`);
+      }
+
+      return {
+        utilities_count: utilitiesCount || 0,
+        pending_utilities_count: pendingUtilitiesCount || 0,
+        utilities_recent:
+          utilities?.map((utility: any) => ({
+            id: utility.id,
+            type: utility.type,
+            provider: utility.provider,
+            amount: utility.amount,
+            billing_date: utility.billing_date,
+            due_date: utility.due_date,
+            payment_status: utility.payment_status,
+            farm_name: utility.farm?.name,
+            parcel_name: utility.parcel?.name,
+          })) || [],
+        utilities_has_more: (utilitiesTotalCount ?? utilities?.length ?? 0) > (utilities?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getUtilitiesContext: ${error.message}`, error.stack);
+      return {
+        utilities_count: 0,
+        pending_utilities_count: 0,
+        utilities_recent: [],
+        utilities_has_more: false,
+      };
+    }
+  }
+
+  private async getReportsContext(
+    client: any,
+    organizationId: string,
+  ): Promise<ReportsContext> {
+    try {
+      const { count: reportsCount, error: reportsCountError } = await client
+        .from('parcel_reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (reportsCountError) {
+        this.logger.error(`Error counting reports: ${reportsCountError.message}`);
+      }
+
+      const { count: pendingReportsCount, error: pendingReportsError } = await client
+        .from('parcel_reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'pending');
+
+      if (pendingReportsError) {
+        this.logger.error(`Error counting pending reports: ${pendingReportsError.message}`);
+      }
+
+      const { count: failedReportsCount, error: failedReportsError } = await client
+        .from('parcel_reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'failed');
+
+      if (failedReportsError) {
+        this.logger.error(`Error counting failed reports: ${failedReportsError.message}`);
+      }
+
+      const { data: reports, error: reportsError, count: reportsTotalCount } = await client
+        .from('parcel_reports')
+        .select('id, title, template_id, status, generated_at, parcel:parcels(name)', {
+          count: 'exact',
+        })
+        .eq('organization_id', organizationId)
+        .order('generated_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (reportsError) {
+        this.logger.error(`Error fetching reports: ${reportsError.message}`);
+      }
+
+      return {
+        reports_count: reportsCount || 0,
+        pending_reports_count: pendingReportsCount || 0,
+        failed_reports_count: failedReportsCount || 0,
+        reports_recent:
+          reports?.map((report: any) => ({
+            id: report.id,
+            title: report.title,
+            template_id: report.template_id,
+            status: report.status,
+            generated_at: report.generated_at,
+            parcel_name: report.parcel?.name,
+          })) || [],
+        reports_has_more: (reportsTotalCount ?? reports?.length ?? 0) > (reports?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getReportsContext: ${error.message}`, error.stack);
+      return {
+        reports_count: 0,
+        pending_reports_count: 0,
+        failed_reports_count: 0,
+        reports_recent: [],
+        reports_has_more: false,
+      };
+    }
+  }
+
+  private async getMarketplaceContext(
+    client: any,
+    organizationId: string,
+  ): Promise<MarketplaceContext> {
+    try {
+      const { count: listingsCount, error: listingsCountError } = await client
+        .from('marketplace_listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (listingsCountError) {
+        this.logger.error(`Error counting marketplace listings: ${listingsCountError.message}`);
+      }
+
+      const { count: activeListingsCount, error: activeListingsError } = await client
+        .from('marketplace_listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('status', 'active');
+
+      if (activeListingsError) {
+        this.logger.error(`Error counting active listings: ${activeListingsError.message}`);
+      }
+
+      const ordersFilter = `buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`;
+
+      const { count: ordersCount, error: ordersCountError } = await client
+        .from('marketplace_orders')
+        .select('*', { count: 'exact', head: true })
+        .or(ordersFilter);
+
+      if (ordersCountError) {
+        this.logger.error(`Error counting marketplace orders: ${ordersCountError.message}`);
+      }
+
+      const { count: pendingOrdersCount, error: pendingOrdersError } = await client
+        .from('marketplace_orders')
+        .select('*', { count: 'exact', head: true })
+        .or(ordersFilter)
+        .eq('status', 'pending');
+
+      if (pendingOrdersError) {
+        this.logger.error(`Error counting pending marketplace orders: ${pendingOrdersError.message}`);
+      }
+
+      const { count: quoteRequestsCount, error: quoteRequestsCountError } = await client
+        .from('marketplace_quote_requests')
+        .select('*', { count: 'exact', head: true })
+        .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+
+      if (quoteRequestsCountError) {
+        this.logger.error(`Error counting marketplace quote requests: ${quoteRequestsCountError.message}`);
+      }
+
+      const { data: listings, error: listingsError, count: listingsTotalCount } = await client
+        .from('marketplace_listings')
+        .select('id, title, status, price, currency, quantity_available', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (listingsError) {
+        this.logger.error(`Error fetching marketplace listings: ${listingsError.message}`);
+      }
+
+      const { data: orders, error: ordersError, count: ordersTotalCount } = await client
+        .from('marketplace_orders')
+        .select('id, status, total_amount, currency, buyer_organization_id, seller_organization_id, created_at', {
+          count: 'exact',
+        })
+        .or(ordersFilter)
+        .order('created_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (ordersError) {
+        this.logger.error(`Error fetching marketplace orders: ${ordersError.message}`);
+      }
+
+      const { data: quoteRequests, error: quoteRequestsError, count: quoteRequestsTotalCount } = await client
+        .from('marketplace_quote_requests')
+        .select('id, product_title, status, requester_organization_id, seller_organization_id, created_at', {
+          count: 'exact',
+        })
+        .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`)
+        .order('created_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (quoteRequestsError) {
+        this.logger.error(`Error fetching marketplace quote requests: ${quoteRequestsError.message}`);
+      }
+
+      return {
+        listings_count: listingsCount || 0,
+        active_listings_count: activeListingsCount || 0,
+        orders_count: ordersCount || 0,
+        pending_orders_count: pendingOrdersCount || 0,
+        quote_requests_count: quoteRequestsCount || 0,
+        listings_recent:
+          listings?.map((listing: any) => ({
+            id: listing.id,
+            title: listing.title,
+            status: listing.status,
+            price: listing.price,
+            currency: listing.currency,
+            quantity_available: listing.quantity_available,
+          })) || [],
+        listings_has_more: (listingsTotalCount ?? listings?.length ?? 0) > (listings?.length || 0),
+        orders_recent:
+          orders?.map((order: any) => ({
+            id: order.id,
+            status: order.status,
+            total_amount: order.total_amount,
+            currency: order.currency,
+            role: order.buyer_organization_id === organizationId ? 'buyer' : 'seller',
+            created_at: order.created_at,
+          })) || [],
+        orders_has_more: (ordersTotalCount ?? orders?.length ?? 0) > (orders?.length || 0),
+        quote_requests_recent:
+          quoteRequests?.map((request: any) => ({
+            id: request.id,
+            product_title: request.product_title,
+            status: request.status,
+            role: request.requester_organization_id === organizationId ? 'requester' : 'seller',
+            created_at: request.created_at,
+          })) || [],
+        quote_requests_has_more: (quoteRequestsTotalCount ?? quoteRequests?.length ?? 0) > (quoteRequests?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getMarketplaceContext: ${error.message}`, error.stack);
+      return {
+        listings_count: 0,
+        active_listings_count: 0,
+        orders_count: 0,
+        pending_orders_count: 0,
+        quote_requests_count: 0,
+        listings_recent: [],
+        listings_has_more: false,
+        orders_recent: [],
+        orders_has_more: false,
+        quote_requests_recent: [],
+        quote_requests_has_more: false,
+      };
+    }
+  }
+
+  private async getOrchardContext(
+    client: any,
+    organizationId: string,
+  ): Promise<OrchardContext> {
+    try {
+      const orchardAssetTypes = ['bearer_plant', 'consumable_plant'];
+
+      const { count: orchardAssetsCount, error: orchardAssetsCountError } = await client
+        .from('biological_assets')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .in('asset_type', orchardAssetTypes);
+
+      if (orchardAssetsCountError) {
+        this.logger.error(`Error counting orchard assets: ${orchardAssetsCountError.message}`);
+      }
+
+      const { count: treeCategoriesCount, error: treeCategoriesError } = await client
+        .from('tree_categories')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (treeCategoriesError) {
+        this.logger.error(`Error counting tree categories: ${treeCategoriesError.message}`);
+      }
+
+      const { count: treesCount, error: treesCountError } = await client
+        .from('trees')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if (treesCountError) {
+        this.logger.error(`Error counting trees: ${treesCountError.message}`);
+      }
+
+      const { count: pruningTasksCount, error: pruningTasksError } = await client
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .eq('task_type', 'pruning');
+
+      if (pruningTasksError) {
+        this.logger.error(`Error counting pruning tasks: ${pruningTasksError.message}`);
+      }
+
+      const { data: orchardAssets, error: orchardAssetsError, count: orchardAssetsTotalCount } = await client
+        .from('biological_assets')
+        .select('id, asset_name, asset_category, status, quantity, area_ha, farm_id', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .in('asset_type', orchardAssetTypes)
+        .order('created_at', { ascending: false })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (orchardAssetsError) {
+        this.logger.error(`Error fetching orchard assets: ${orchardAssetsError.message}`);
+      }
+
+      const { data: pruningTasks, error: pruningTasksListError, count: pruningTasksTotalCount } = await client
+        .from('tasks')
+        .select('id, title, status, due_date', { count: 'exact' })
+        .eq('organization_id', organizationId)
+        .eq('task_type', 'pruning')
+        .order('due_date', { ascending: true })
+        .limit(this.SUMMARY_LIMIT);
+
+      if (pruningTasksListError) {
+        this.logger.error(`Error fetching pruning tasks: ${pruningTasksListError.message}`);
+      }
+
+      return {
+        orchard_assets_count: orchardAssetsCount || 0,
+        tree_categories_count: treeCategoriesCount || 0,
+        trees_count: treesCount || 0,
+        pruning_tasks_count: pruningTasksCount || 0,
+        orchard_assets_recent:
+          orchardAssets?.map((asset: any) => ({
+            id: asset.id,
+            name: asset.asset_name,
+            category: asset.asset_category,
+            status: asset.status,
+            quantity: asset.quantity,
+            area_ha: asset.area_ha,
+            farm_id: asset.farm_id,
+          })) || [],
+        orchard_assets_has_more: (orchardAssetsTotalCount ?? orchardAssets?.length ?? 0) > (orchardAssets?.length || 0),
+        pruning_tasks_recent:
+          pruningTasks?.map((task: any) => ({
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            due_date: task.due_date,
+          })) || [],
+        pruning_tasks_has_more: (pruningTasksTotalCount ?? pruningTasks?.length ?? 0) > (pruningTasks?.length || 0),
+      };
+    } catch (error) {
+      this.logger.error(`Error in getOrchardContext: ${error.message}`, error.stack);
+      return {
+        orchard_assets_count: 0,
+        tree_categories_count: 0,
+        trees_count: 0,
+        pruning_tasks_count: 0,
+        orchard_assets_recent: [],
+        orchard_assets_has_more: false,
+        pruning_tasks_recent: [],
+        pruning_tasks_has_more: false,
       };
     }
   }
@@ -2041,18 +3149,22 @@ FARM DATA
 ====================================================
 ${context.farms && context.farms.farms_count > 0 ? `
 Farms: ${context.farms.farms_count}
-${context.farms.farms.map((f) => `- ${f.name} (${f.area} ha${f.location ? `, ${f.location}` : ''})`).join('\n')}
+${context.farms.farms_recent.map((f) => `- ${f.name} (${f.area} ha${f.location ? `, ${f.location}` : ''})`).join('\n')}
+${context.farms.farms_has_more ? `\n... and ${context.farms.farms_count - context.farms.farms_recent.length} more farms` : ''}
 
 Parcels: ${context.farms.parcels_count}
-${context.farms.parcels.slice(0, 10).map((p) => `- ${p.name}: ${p.crop}, ${p.area}${p.soil_type ? `, Soil: ${p.soil_type}` : ''}${p.irrigation_type ? `, Irrigation: ${p.irrigation_type}` : ''}`).join('\n')}
-${context.farms.parcels.length > 10 ? `\n... and ${context.farms.parcels.length - 10} more parcels` : ''}
+${context.farms.parcels_recent.map((p) => `- ${p.name}: ${p.crop}, ${p.area}${p.soil_type ? `, Soil: ${p.soil_type}` : ''}${p.irrigation_type ? `, Irrigation: ${p.irrigation_type}` : ''}`).join('\n')}
+${context.farms.parcels_has_more ? `\n... and ${context.farms.parcels_count - context.farms.parcels_recent.length} more parcels` : ''}
 
 Active Crop Cycles: ${context.farms.active_crop_cycles}
-${context.farms.crop_cycles && context.farms.crop_cycles.length > 0 ? `
+${context.farms.crop_cycles_recent && context.farms.crop_cycles_recent.length > 0 ? `
 Crop Cycle Details:
-${context.farms.crop_cycles.slice(0, 10).map((cc) => `- ${cc.cycle_name} (${cc.crop_type}${cc.variety_name ? `, ${cc.variety_name}` : ''}): Status ${cc.status}, Planted ${cc.planting_date || 'N/A'}, Expected harvest ${cc.expected_harvest_start || 'N/A'} - ${cc.expected_harvest_end || 'N/A'}, Area: ${cc.planted_area_ha || 'N/A'} ha`).join('\n')}
+${context.farms.crop_cycles_recent.map((cc) => `- ${cc.cycle_name} (${cc.crop_type}${cc.variety_name ? `, ${cc.variety_name}` : ''}): Status ${cc.status}, Planted ${cc.planting_date || 'N/A'}, Expected harvest ${cc.expected_harvest_start || 'N/A'} - ${cc.expected_harvest_end || 'N/A'}, Area: ${cc.planted_area_ha || 'N/A'} ha`).join('\n')}
+${context.farms.crop_cycles_has_more ? `\n... and ${context.farms.crop_cycles_count ? context.farms.crop_cycles_count - context.farms.crop_cycles_recent.length : ''} more crop cycles` : ''}
 ` : ''}
 Structures: ${context.farms.structures_count}
+${context.farms.structures_recent.length > 0 ? `\n${context.farms.structures_recent.map((s) => `- ${s.name} (${s.type})`).join('\n')}` : ''}
+${context.farms.structures_has_more ? `\n... and ${context.farms.structures_count - context.farms.structures_recent.length} more structures` : ''}
 ` : `⚠️ IMPORTANT: This organization has NO farm data registered yet (0 farms, 0 parcels).
 
 **CRITICAL: Be CONCISE and DIRECT.**
@@ -2062,6 +3174,123 @@ Structures: ${context.farms.structures_count}
 - Don't repeat the same information multiple times
 - One sentence about how to add data is enough (e.g., "You can add farms through the Farm Management module")
 - Answer the question first, then optionally offer help if relevant`}
+
+====================================================
+CAMPAIGNS
+====================================================
+${context.campaigns ? `
+Total Campaigns: ${context.campaigns.campaigns_count}
+Active Campaigns: ${context.campaigns.active_campaigns_count}
+Planned Campaigns: ${context.campaigns.planned_campaigns_count}
+${context.campaigns.campaigns_recent.length > 0 ? `
+Recent Campaigns:
+${context.campaigns.campaigns_recent.map((c) => `- ${c.name} (${c.type}, ${c.status}, ${c.priority}): ${c.start_date}${c.end_date ? ` → ${c.end_date}` : ''}`).join('\n')}
+${context.campaigns.campaigns_has_more ? `\n... and ${context.campaigns.campaigns_count - context.campaigns.campaigns_recent.length} more campaigns` : ''}
+` : 'No recent campaigns.'}
+` : 'No campaign data available.'}
+
+====================================================
+RECEPTION BATCHES
+====================================================
+${context.receptionBatches ? `
+Reception Batches: ${context.receptionBatches.batches_count}
+${context.receptionBatches.recent_batches.length > 0 ? `
+Recent Batches:
+${context.receptionBatches.recent_batches.map((b) => `- ${b.batch_code} (${b.reception_date}): ${b.weight} ${b.weight_unit}, ${b.status}${b.quality_grade ? `, Grade ${b.quality_grade}` : ''}${b.parcel_name ? `, Parcel ${b.parcel_name}` : ''}${b.warehouse_name ? `, Warehouse ${b.warehouse_name}` : ''}`).join('\n')}
+${context.receptionBatches.batches_has_more ? `\n... and ${context.receptionBatches.batches_count - context.receptionBatches.recent_batches.length} more batches` : ''}
+` : 'No recent reception batches.'}
+` : 'No reception batch data available.'}
+
+====================================================
+COMPLIANCE
+====================================================
+${context.compliance ? `
+Certifications: ${context.compliance.certifications_count}
+Active Certifications: ${context.compliance.active_certifications_count}
+Expiring Soon (90d): ${context.compliance.expiring_certifications_count}
+Non-compliant Checks: ${context.compliance.non_compliant_checks_count}
+${context.compliance.certifications_recent.length > 0 ? `
+Recent Certifications:
+${context.compliance.certifications_recent.map((c) => `- ${c.certification_type} (${c.status}${c.expiry_date ? `, expires ${c.expiry_date}` : ''})`).join('\n')}
+${context.compliance.certifications_has_more ? `\n... and ${context.compliance.certifications_count - context.compliance.certifications_recent.length} more certifications` : ''}
+` : 'No recent certifications.'}
+${context.compliance.recent_checks.length > 0 ? `
+Recent Compliance Checks:
+${context.compliance.recent_checks.map((c) => `- ${c.check_type} (${c.check_date}): ${c.status}${c.score !== undefined && c.score !== null ? `, score ${c.score}` : ''}${c.certification_type ? `, ${c.certification_type}` : ''}`).join('\n')}
+${context.compliance.checks_has_more ? `\n... and ${context.compliance.checks_count - context.compliance.recent_checks.length} more checks` : ''}
+` : 'No recent compliance checks.'}
+` : 'No compliance data available.'}
+
+====================================================
+UTILITIES & EXPENSES
+====================================================
+${context.utilities ? `
+Utility Bills: ${context.utilities.utilities_count}
+Pending Bills: ${context.utilities.pending_utilities_count}
+${context.utilities.utilities_recent.length > 0 ? `
+Recent Utilities:
+${context.utilities.utilities_recent.map((u) => `- ${u.type} (${u.billing_date}): ${u.amount}, ${u.payment_status}${u.provider ? `, ${u.provider}` : ''}${u.farm_name ? `, Farm ${u.farm_name}` : ''}${u.parcel_name ? `, Parcel ${u.parcel_name}` : ''}`).join('\n')}
+${context.utilities.utilities_has_more ? `\n... and ${context.utilities.utilities_count - context.utilities.utilities_recent.length} more utility bills` : ''}
+` : 'No recent utility bills.'}
+` : 'No utilities data available.'}
+
+====================================================
+REPORTS
+====================================================
+${context.reports ? `
+Reports: ${context.reports.reports_count}
+Pending Reports: ${context.reports.pending_reports_count}
+Failed Reports: ${context.reports.failed_reports_count}
+${context.reports.reports_recent.length > 0 ? `
+Recent Reports:
+${context.reports.reports_recent.map((r) => `- ${r.title} (${r.status}, ${r.generated_at})${r.parcel_name ? `, Parcel ${r.parcel_name}` : ''}`).join('\n')}
+${context.reports.reports_has_more ? `\n... and ${context.reports.reports_count - context.reports.reports_recent.length} more reports` : ''}
+` : 'No recent reports.'}
+` : 'No reports data available.'}
+
+====================================================
+MARKETPLACE
+====================================================
+${context.marketplace ? `
+Listings: ${context.marketplace.listings_count} (Active: ${context.marketplace.active_listings_count})
+Orders: ${context.marketplace.orders_count} (Pending: ${context.marketplace.pending_orders_count})
+Quote Requests: ${context.marketplace.quote_requests_count}
+${context.marketplace.listings_recent.length > 0 ? `
+Recent Listings:
+${context.marketplace.listings_recent.map((l) => `- ${l.title}: ${l.price} ${l.currency}, ${l.status}, Qty ${l.quantity_available}`).join('\n')}
+${context.marketplace.listings_has_more ? `\n... and ${context.marketplace.listings_count - context.marketplace.listings_recent.length} more listings` : ''}
+` : 'No recent listings.'}
+${context.marketplace.orders_recent.length > 0 ? `
+Recent Orders:
+${context.marketplace.orders_recent.map((o) => `- ${o.id}: ${o.total_amount} ${o.currency}, ${o.status}, ${o.role}`).join('\n')}
+${context.marketplace.orders_has_more ? `\n... and ${context.marketplace.orders_count - context.marketplace.orders_recent.length} more orders` : ''}
+` : 'No recent orders.'}
+${context.marketplace.quote_requests_recent.length > 0 ? `
+Recent Quote Requests:
+${context.marketplace.quote_requests_recent.map((q) => `- ${q.product_title}: ${q.status}, ${q.role}`).join('\n')}
+${context.marketplace.quote_requests_has_more ? `\n... and ${context.marketplace.quote_requests_count - context.marketplace.quote_requests_recent.length} more quote requests` : ''}
+` : 'No recent quote requests.'}
+` : 'No marketplace data available.'}
+
+====================================================
+FRUIT TREES & ORCHARDS
+====================================================
+${context.orchards ? `
+Orchard Assets: ${context.orchards.orchard_assets_count}
+Tree Categories: ${context.orchards.tree_categories_count}
+Trees: ${context.orchards.trees_count}
+Pruning Tasks: ${context.orchards.pruning_tasks_count}
+${context.orchards.orchard_assets_recent.length > 0 ? `
+Recent Orchard Assets:
+${context.orchards.orchard_assets_recent.map((a) => `- ${a.name} (${a.category}, ${a.status})${a.quantity ? `, Qty ${a.quantity}` : ''}${a.area_ha ? `, ${a.area_ha} ha` : ''}`).join('\n')}
+${context.orchards.orchard_assets_has_more ? `\n... and ${context.orchards.orchard_assets_count - context.orchards.orchard_assets_recent.length} more orchard assets` : ''}
+` : 'No orchard assets found.'}
+${context.orchards.pruning_tasks_recent.length > 0 ? `
+Pruning Tasks:
+${context.orchards.pruning_tasks_recent.map((t) => `- ${t.title} (${t.status}${t.due_date ? `, due ${t.due_date}` : ''})`).join('\n')}
+${context.orchards.pruning_tasks_has_more ? `\n... and ${context.orchards.pruning_tasks_count - context.orchards.pruning_tasks_recent.length} more pruning tasks` : ''}
+` : 'No pruning tasks found.'}
+` : 'No orchard data available.'}
 
 ====================================================
 SATELLITE & WEATHER DATA
@@ -2127,13 +3356,15 @@ WORKFORCE DATA
 ====================================================
 ${context.workers ? `
 Active Workers: ${context.workers.active_workers_count}
-${context.workers.workers.slice(0, 10).map((w) => `- ${w.name} (${w.type})`).join('\n')}
-${context.workers.workers.length > 10 ? `\n... and ${context.workers.workers.length - 10} more workers` : ''}
+${context.workers.workers_recent.map((w) => `- ${w.name} (${w.type})`).join('\n')}
+${context.workers.workers_has_more ? `\n... and ${context.workers.workers_count - context.workers.workers_recent.length} more workers` : ''}
 
 Pending Tasks: ${context.workers.pending_tasks_count}
-${context.workers.tasks.slice(0, 5).map((t) => `- ${t.title}: ${t.status}`).join('\n')}
+${context.workers.tasks_recent.map((t) => `- ${t.title}: ${t.status}`).join('\n')}
+${context.workers.tasks_has_more ? `\n... and ${context.workers.pending_tasks_count - context.workers.tasks_recent.length} more tasks` : ''}
 
 Recent Work Records (last 30 days): ${context.workers.recent_work_records_count}
+${context.workers.work_records_recent.length > 0 ? `\n${context.workers.work_records_recent.map((r) => `- ${r.work_date}: ${r.amount_paid} (${r.status})`).join('\n')}` : ''}
 ` : 'No workforce data available.'}
 
 ====================================================
@@ -2143,10 +3374,12 @@ ${context.accounting ? `
 Chart of Accounts: ${context.accounting.accounts_count} accounts
 
 Recent Invoices (last 90 days): ${context.accounting.recent_invoices_count}
-${context.accounting.invoices.slice(0, 5).map((i) => `- ${i.number} (${i.type}): ${i.status} - ${i.total} ${i.date}`).join('\n')}
+${context.accounting.invoices_recent.map((i) => `- ${i.number} (${i.type}): ${i.status} - ${i.total} ${i.date}`).join('\n')}
+${context.accounting.invoices_has_more ? `\n... and ${context.accounting.recent_invoices_count - context.accounting.invoices_recent.length} more invoices` : ''}
 
 Recent Payments (last 30 days): ${context.accounting.recent_payments_count}
-${context.accounting.payments.slice(0, 5).map((p) => `- ${p.date}: ${p.amount} (${p.method})`).join('\n')}
+${context.accounting.payments_recent.map((p) => `- ${p.date}: ${p.amount} (${p.method})`).join('\n')}
+${context.accounting.payments_has_more ? `\n... and ${context.accounting.recent_payments_count - context.accounting.payments_recent.length} more payments` : ''}
 
 Fiscal Year: ${context.accounting.current_fiscal_year?.name || 'Not set'}
 ` : 'No accounting data available.'}
@@ -2159,15 +3392,17 @@ Total Items with Stock: ${context.inventory.items_count}
 Total Inventory Value: ${context.inventory.total_inventory_value.toFixed(2)}
 
 ${context.inventory.low_stock_count > 0 ? `⚠️ LOW STOCK ALERT: ${context.inventory.low_stock_count} item(s) below minimum level!
-${context.inventory.low_stock_items.map((i) => `- ${i.name} (${i.code}): ${i.current_stock} ${i.unit} (MIN: ${i.minimum_level} ${i.unit}) - SHORTAGE: ${i.shortage.toFixed(2)} ${i.unit}`).join('\n')}
+${context.inventory.low_stock_items_recent.map((i) => `- ${i.name} (${i.code}): ${i.current_stock} ${i.unit} (MIN: ${i.minimum_level} ${i.unit}) - SHORTAGE: ${i.shortage.toFixed(2)} ${i.unit}`).join('\n')}
+${context.inventory.low_stock_items_has_more ? `\n... and ${context.inventory.low_stock_count - context.inventory.low_stock_items_recent.length} more low stock items` : ''}
 ` : 'All items are at or above minimum stock levels.'}
 
 Stock Levels by Item:
-${context.inventory.items.slice(0, 15).map((i) => `- ${i.name} (${i.code}): ${i.stock.toFixed(2)} ${i.unit}${i.minimum_stock_level ? ` (min: ${i.minimum_stock_level})` : ''}${i.is_low_stock ? ' ⚠️ LOW' : ''}${i.total_value ? ` - Value: ${i.total_value.toFixed(2)}` : ''}`).join('\n')}
-${context.inventory.items.length > 15 ? `\n... and ${context.inventory.items.length - 15} more items` : ''}
+${context.inventory.items_recent.map((i) => `- ${i.name} (${i.code}): ${i.stock.toFixed(2)} ${i.unit}${i.minimum_stock_level ? ` (min: ${i.minimum_stock_level})` : ''}${i.is_low_stock ? ' ⚠️ LOW' : ''}${i.total_value ? ` - Value: ${i.total_value.toFixed(2)}` : ''}`).join('\n')}
+${context.inventory.items_has_more ? `\n... and ${context.inventory.items_count - context.inventory.items_recent.length} more items` : ''}
 
 Warehouses: ${context.inventory.warehouses_count}
-${context.inventory.warehouses.map((w) => `- ${w.name}${w.farm_name ? ` (Farm: ${w.farm_name})` : ''} - ${w.location}`).join('\n')}
+${context.inventory.warehouses_recent.map((w) => `- ${w.name}${w.farm_name ? ` (Farm: ${w.farm_name})` : ''} - ${w.location}`).join('\n')}
+${context.inventory.warehouses_has_more ? `\n... and ${context.inventory.warehouses_count - context.inventory.warehouses_recent.length} more warehouses` : ''}
 
 Recent Stock Movements (last 30 days): ${context.inventory.recent_stock_movements_count}
 ` : 'No inventory data available.'}
@@ -2177,8 +3412,8 @@ PRODUCTION DATA
 ====================================================
 ${context.production ? `
 Recent Harvests (last 365 days): ${context.production.recent_harvests_count}
-${context.production.harvests.slice(0, 10).map((h) => `- ${h.date}: ${h.crop} - ${h.quantity} (Grade: ${h.quality}, Status: ${h.status})${h.parcel_name ? ` [${h.parcel_name}]` : ''}${h.lot_number ? ` Lot: ${h.lot_number}` : ''}`).join('\n')}
-${context.production.harvests.length > 10 ? `\n... and ${context.production.harvests.length - 10} more harvests` : ''}
+${context.production.harvests_recent.map((h) => `- ${h.date}: ${h.crop} - ${h.quantity} (Grade: ${h.quality}, Status: ${h.status})${h.parcel_name ? ` [${h.parcel_name}]` : ''}${h.lot_number ? ` Lot: ${h.lot_number}` : ''}`).join('\n')}
+${context.production.harvests_has_more ? `\n... and ${context.production.recent_harvests_count - context.production.harvests_recent.length} more harvests` : ''}
 
 Recent Quality Checks (last 90 days): ${context.production.recent_quality_checks_count}
 Recent Deliveries (last 90 days): ${context.production.recent_deliveries_count}
@@ -2189,18 +3424,20 @@ SUPPLIERS & CUSTOMERS DATA
 ====================================================
 ${context.suppliersCustomers ? `
 Suppliers: ${context.suppliersCustomers.suppliers_count}
-${context.suppliersCustomers.suppliers.slice(0, 10).map((s) => `- ${s.name} (${s.type})`).join('\n')}
-${context.suppliersCustomers.suppliers.length > 10 ? `\n... and ${context.suppliersCustomers.suppliers.length - 10} more` : ''}
+${context.suppliersCustomers.suppliers_recent.map((s) => `- ${s.name} (${s.type})`).join('\n')}
+${context.suppliersCustomers.suppliers_has_more ? `\n... and ${context.suppliersCustomers.suppliers_count - context.suppliersCustomers.suppliers_recent.length} more` : ''}
 
 Customers: ${context.suppliersCustomers.customers_count}
-${context.suppliersCustomers.customers.slice(0, 10).map((c) => `- ${c.name} (${c.type})`).join('\n')}
-${context.suppliersCustomers.customers.length > 10 ? `\n... and ${context.suppliersCustomers.customers.length - 10} more` : ''}
+${context.suppliersCustomers.customers_recent.map((c) => `- ${c.name} (${c.type})`).join('\n')}
+${context.suppliersCustomers.customers_has_more ? `\n... and ${context.suppliersCustomers.customers_count - context.suppliersCustomers.customers_recent.length} more` : ''}
 
 Pending Sales Orders: ${context.suppliersCustomers.pending_sales_orders_count}
-${context.suppliersCustomers.sales_orders.slice(0, 5).map((o) => `- ${o.number}: ${o.total} (${o.status})`).join('\n')}
+${context.suppliersCustomers.sales_orders_recent.map((o) => `- ${o.number}: ${o.total} (${o.status})`).join('\n')}
+${context.suppliersCustomers.sales_orders_has_more ? `\n... and ${context.suppliersCustomers.pending_sales_orders_count - context.suppliersCustomers.sales_orders_recent.length} more sales orders` : ''}
 
 Pending Purchase Orders: ${context.suppliersCustomers.pending_purchase_orders_count}
-${context.suppliersCustomers.purchase_orders.slice(0, 5).map((o) => `- ${o.number}: ${o.total} (${o.status})`).join('\n')}
+${context.suppliersCustomers.purchase_orders_recent.map((o) => `- ${o.number}: ${o.total} (${o.status})`).join('\n')}
+${context.suppliersCustomers.purchase_orders_has_more ? `\n... and ${context.suppliersCustomers.pending_purchase_orders_count - context.suppliersCustomers.purchase_orders_recent.length} more purchase orders` : ''}
 ` : 'No supplier/customer data available.'}
 
 ====================================================
@@ -2235,11 +3472,18 @@ When providing recommendations:
       organization: context.organization.name,
       farms_count: context.farms?.farms_count || 0,
       parcels_count: context.farms?.parcels_count || 0,
-      workers_count: context.workers?.active_workers_count || 0,
+      workers_count: context.workers?.workers_count || 0,
       pending_tasks: context.workers?.pending_tasks_count || 0,
       recent_invoices: context.accounting?.recent_invoices_count || 0,
       inventory_items: context.inventory?.items_count || 0,
       recent_harvests: context.production?.recent_harvests_count || 0,
+      campaigns: context.campaigns?.campaigns_count || 0,
+      reception_batches: context.receptionBatches?.batches_count || 0,
+      certifications: context.compliance?.certifications_count || 0,
+      utilities: context.utilities?.utilities_count || 0,
+      reports: context.reports?.reports_count || 0,
+      marketplace_listings: context.marketplace?.listings_count || 0,
+      orchards: context.orchards?.orchard_assets_count || 0,
     };
   }
 

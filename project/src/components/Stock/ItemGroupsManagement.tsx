@@ -189,8 +189,8 @@ export default function ItemGroupsManagement() {
                     <TableHead>{t('items.itemGroup.code')}</TableHead>
                     <TableHead>{t('items.itemGroup.name')}</TableHead>
                     <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
-                    <TableHead className="text-center">{t('common.status')}</TableHead>
-                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                    <TableHead className="text-center">{t('common.statusColumn')}</TableHead>
+                    <TableHead className="text-right">{t('common.actionsColumn')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

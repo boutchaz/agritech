@@ -20,10 +20,21 @@ export function useDocumentTemplates(documentType?: DocumentType) {
         throw new Error('No organization selected');
       }
 
-      return documentTemplatesApi.getAll(documentType, currentOrganization.id);
+      try {
+        return await documentTemplatesApi.getAll(documentType, currentOrganization.id);
+      } catch (error: unknown) {
+        const status = (error as { status?: number; response?: { status?: number } })?.status
+          || (error as { response?: { status?: number } })?.response?.status;
+        if (status === 404 || status === 403) {
+          console.warn('Document templates endpoint not accessible - returning empty data');
+          return [];
+        }
+        throw error; // Re-throw for other errors
+      }
     },
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -57,10 +68,21 @@ export function useDefaultDocumentTemplate(documentType: DocumentType) {
         throw new Error('No organization selected');
       }
 
-      return documentTemplatesApi.getDefault(documentType, currentOrganization.id);
+      try {
+        return await documentTemplatesApi.getDefault(documentType, currentOrganization.id);
+      } catch (error: unknown) {
+        const status = (error as { status?: number; response?: { status?: number } })?.status
+          || (error as { response?: { status?: number } })?.response?.status;
+        if (status === 404 || status === 403) {
+          console.warn('Default document template not accessible - returning null');
+          return null;
+        }
+        throw error; // Re-throw for other errors
+      }
     },
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 

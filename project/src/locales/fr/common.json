@@ -80,6 +80,8 @@
       "addNewTax": "Ajouter une nouvelle taxe",
       "changeLanguage": "Changer de langue"
     },
+    "actionsColumn": "Actions",
+    "statusColumn": "Statut",
     "placeholders": {
       "searchLocation": "Rechercher un lieu au Maroc...",
       "parcelName": "Nom de la parcelle",

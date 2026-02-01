@@ -18,7 +18,7 @@ export interface BaseAnalysis {
 export interface SoilAnalysisData {
   // Physical properties
   ph_level?: number;
-  texture?: 'sand' | 'loamy_sand' | 'sandy_loam' | 'loam' | 'silt_loam' | 'silt' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay';
+  texture?: 'sand' | 'loamy_sand' | 'sandy_loam' | 'sandy_clay_loam' | 'loam' | 'silt_loam' | 'silt' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay';
   moisture_percentage?: number;
   bulk_density?: number; // g/cm³
 

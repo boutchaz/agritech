@@ -3,7 +3,8 @@ import { usersApi } from '@/lib/api/users';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { farmsApi } from '@/lib/api/farms';
 import { farmRolesApi } from '@/lib/api/farm-roles';
-import { Building, Users, MapPin, Check } from 'lucide-react';
+import { demoDataApi } from '@/lib/api/demo-data';
+import { Building, Users, MapPin, Check, Database } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -45,6 +46,7 @@ interface FarmData {
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [seedingData, setSeedingData] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [existingOrgId, setExistingOrgId] = useState<string | null>(null);
@@ -260,6 +262,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
         organizationId = createdOrgId;
 
+        // Seed reference data (chart of accounts, units of measure, etc.)
+        setSeedingData(true);
+        try {
+          await demoDataApi.seedDemoData(organizationId);
+        } catch (seedError) {
+          console.error('Failed to seed reference data:', seedError);
+          // Continue with onboarding even if seeding fails
+        } finally {
+          setSeedingData(false);
+        }
+
         const { id: createdFarmId } = await onboardingApi.saveFarm({
           name: farmData.name,
           location: farmData.location,
@@ -279,6 +292,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           organizationId,
         );
       } else if (!hasExistingFarms) {
+        // Seed reference data for existing organization before creating farm
+        setSeedingData(true);
+        try {
+          await demoDataApi.seedDemoData(organizationId);
+        } catch (seedError) {
+          console.error('Failed to seed reference data:', seedError);
+          // Continue with onboarding even if seeding fails
+        } finally {
+          setSeedingData(false);
+        }
+
         const { id: createdFarmId } = await onboardingApi.saveFarm({
           name: farmData.name,
           location: farmData.location,
@@ -617,11 +641,20 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
               <button
                 type="button"
                 onClick={handleComplete}
-                disabled={loading}
-                className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || seedingData}
+                className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 data-testid="onboarding-complete-button"
               >
-                {loading ? 'Création...' : 'Terminer'}
+                {seedingData ? (
+                  <>
+                    <Database className="w-4 h-4 animate-pulse" />
+                    Préparation des données...
+                  </>
+                ) : loading ? (
+                  'Création...'
+                ) : (
+                  'Terminer'
+                )}
               </button>
             )}
           </div>

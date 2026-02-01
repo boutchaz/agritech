@@ -80,6 +80,8 @@
       "addNewTax": "Add new tax",
       "changeLanguage": "Change language"
     },
+    "actionsColumn": "Actions",
+    "statusColumn": "Status",
     "placeholders": {
       "searchLocation": "Search for a place in Morocco...",
       "parcelName": "Parcel name",

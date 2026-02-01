@@ -137,12 +137,8 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     id: 'configuration',
     label: 'nav.configuration',
     icon: Settings,
-    paths: ['/accounting/customers', '/stock/suppliers', '/stock/warehouses', '/stock/items', '/settings'],
+    paths: ['/settings'],
     items: [
-      { id: 'customers', path: '/accounting/customers', label: 'nav.customers', icon: Settings, section: 'configuration', apiPath: '/customers', permission: { action: 'read', subject: 'Customer' } },
-      { id: 'suppliers', path: '/stock/suppliers', label: 'nav.suppliers', icon: Settings, section: 'configuration', apiPath: '/suppliers', permission: { action: 'read', subject: 'Supplier' } },
-      { id: 'warehouses', path: '/stock/warehouses', label: 'nav.warehouses', icon: Settings, section: 'configuration', apiPath: '/warehouses', permission: { action: 'read', subject: 'Warehouse' } },
-      { id: 'items', path: '/stock/items', label: 'nav.items', icon: Settings, section: 'configuration', apiPath: '/items', permission: { action: 'read', subject: 'Item' } },
       { id: 'settings', path: '/settings/profile', label: 'nav.settings', icon: Settings, section: 'configuration', permission: { action: 'manage', subject: 'User' } },
     ],
   },
