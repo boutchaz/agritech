@@ -670,7 +670,7 @@ export class WorkersService {
     const client = this.databaseService.getAdminClient();
     const { data: worker } = await client
       .from('workers')
-      .select('id')
+      .select('id, metayage_percentage, metayage_type, calculation_basis')
       .eq('id', workerId)
       .eq('organization_id', organizationId)
       .maybeSingle();
