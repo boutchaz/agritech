@@ -34,9 +34,9 @@ const ParcelSoilAnalysis = () => {
   }, [search.type]);
 
   // Fetch real analyses data
-  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil');
-  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant');
-  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water');
+  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcel.organization_id);
+  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant', 'parcel', parcel.organization_id);
+  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water', 'parcel', parcel.organization_id);
 
   if (isLoading) {
     return (

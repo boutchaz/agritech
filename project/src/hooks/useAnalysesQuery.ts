@@ -168,14 +168,14 @@ export function useUpdateAnalysis() {
 }
 
 // Hook to delete an analysis
-export function useDeleteAnalysis() {
+export function useDeleteAnalysis(organizationId?: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
       // First get the analysis to know which queries to invalidate
-      const analysis = await analysesApi.getOne(id);
-      await analysesApi.delete(id);
+      const analysis = await analysesApi.getOne(id, organizationId);
+      await analysesApi.delete(id, organizationId);
       return analysis;
     },
     onSuccess: (analysis) => {

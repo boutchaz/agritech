@@ -51,7 +51,7 @@ export function useTask(organizationId: string | null, taskId: string | null) {
     queryKey: ['task', organizationId, taskId],
     queryFn: async () => {
       if (!organizationId || !taskId) return null;
-      return tasksApi.getById(taskId, organizationId);
+      return tasksApi.getById(organizationId, taskId);
     },
     enabled: !!organizationId && !!taskId,
   });
@@ -130,9 +130,12 @@ export function useCreateTask() {
       const { organization_id, ...taskData } = request;
       return tasksApi.create(taskData, organization_id);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organization_id] });
+    onSuccess: (_data, variables) => {
+      const orgId = variables.organization_id;
+      queryClient.invalidateQueries({ queryKey: ['tasks', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['task-statistics', orgId] });
+      // Also invalidate workers queries as tasks can affect worker data
+      queryClient.invalidateQueries({ queryKey: ['workers', orgId] });
     },
   });
 }
@@ -144,10 +147,12 @@ export function useUpdateTask() {
     mutationFn: async ({ taskId, organizationId, updates }: { taskId: string; organizationId: string; updates: UpdateTaskRequest }) => {
       return tasksApi.update(taskId, updates, organizationId);
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organization_id] });
+    onSuccess: (_data, variables) => {
+      const orgId = variables.organizationId;
+      queryClient.invalidateQueries({ queryKey: ['task', orgId, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['task-statistics', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
     },
   });
 }
@@ -160,9 +165,9 @@ export function useDeleteTask() {
       await tasksApi.delete(taskId, organizationId);
       return { taskId, organizationId };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.organizationId] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organizationId] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['task-statistics', variables.organizationId] });
     },
   });
 }
@@ -276,10 +281,10 @@ export function useCompleteTask() {
         notes,
       });
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', data.organization_id] });
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task', variables.organizationId, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['task-statistics', variables.organizationId] });
     },
   });
 }

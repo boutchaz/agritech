@@ -96,27 +96,27 @@ export const journalEntriesApi = {
     return apiClient.get<PaginatedResponse<JournalEntryWithItems>>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
   },
 
-  async getOne(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.get<JournalEntryWithItems>(`${BASE_URL}/${id}`);
+  async getOne(id: string, organizationId?: string): Promise<JournalEntryWithItems> {
+    return apiClient.get<JournalEntryWithItems>(`${BASE_URL}/${id}`, {}, organizationId);
   },
 
-  async create(data: CreateJournalEntryInput): Promise<JournalEntryWithItems> {
-    return apiClient.post<JournalEntryWithItems>(BASE_URL, data);
+  async create(data: CreateJournalEntryInput, organizationId?: string): Promise<JournalEntryWithItems> {
+    return apiClient.post<JournalEntryWithItems>(BASE_URL, data, {}, organizationId);
   },
 
-  async update(id: string, data: UpdateJournalEntryInput): Promise<JournalEntryWithItems> {
-    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}`, data);
+  async update(id: string, data: UpdateJournalEntryInput, organizationId?: string): Promise<JournalEntryWithItems> {
+    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}`, data, {}, organizationId);
   },
 
-  async post(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.post<JournalEntryWithItems>(`${BASE_URL}/${id}/post`, {});
+  async post(id: string, organizationId?: string): Promise<JournalEntryWithItems> {
+    return apiClient.post<JournalEntryWithItems>(`${BASE_URL}/${id}/post`, {}, {}, organizationId);
   },
 
-  async cancel(id: string): Promise<JournalEntryWithItems> {
-    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}/cancel`, {});
+  async cancel(id: string, organizationId?: string): Promise<JournalEntryWithItems> {
+    return apiClient.patch<JournalEntryWithItems>(`${BASE_URL}/${id}/cancel`, {}, {}, organizationId);
   },
 
-  async delete(id: string): Promise<void> {
-    await apiClient.delete(`${BASE_URL}/${id}`);
+  async delete(id: string, organizationId?: string): Promise<void> {
+    await apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
   },
 };

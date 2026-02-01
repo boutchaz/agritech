@@ -169,7 +169,7 @@ export function useJournalEntry(entryId: string | null) {
         throw new Error('Journal entry not specified');
       }
 
-      const data = await journalEntriesApi.getOne(entryId);
+      const data = await journalEntriesApi.getOne(entryId, currentOrganization.id);
 
       if (!data) {
         throw new Error('Journal entry not found');
@@ -211,7 +211,7 @@ export function useCreateJournalEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return journalEntriesApi.create(data);
+      return journalEntriesApi.create(data, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['journal_entries', currentOrganization?.id] });
@@ -231,7 +231,7 @@ export function useUpdateJournalEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return journalEntriesApi.update(id, data);
+      return journalEntriesApi.update(id, data, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['journal_entries', currentOrganization?.id] });
@@ -252,7 +252,7 @@ export function usePostJournalEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return journalEntriesApi.post(id);
+      return journalEntriesApi.post(id, currentOrganization.id);
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['journal_entries', currentOrganization?.id] });
@@ -273,7 +273,7 @@ export function useCancelJournalEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return journalEntriesApi.cancel(id);
+      return journalEntriesApi.cancel(id, currentOrganization.id);
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['journal_entries', currentOrganization?.id] });
@@ -294,7 +294,7 @@ export function useDeleteJournalEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return journalEntriesApi.delete(id);
+      return journalEntriesApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['journal_entries', currentOrganization?.id] });

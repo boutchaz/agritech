@@ -252,12 +252,12 @@ export const accountingApi = {
     return data as JournalEntryWithItems[];
   },
 
-  async getJournalEntry(entryId: string) {
-    const data = await journalEntriesApi.getOne(entryId);
+  async getJournalEntry(entryId: string, organizationId?: string) {
+    const data = await journalEntriesApi.getOne(entryId, organizationId);
     return data as JournalEntryWithItems;
   },
 
-  async createJournalEntry(entry: CreateJournalEntryInput, _organizationId: string, _userId: string) {
+  async createJournalEntry(entry: CreateJournalEntryInput, organizationId: string, _userId: string) {
     const apiData = {
       entry_date: entry.entry_date.toISOString().split('T')[0],
       entry_type: entry.entry_type,
@@ -276,11 +276,11 @@ export const accountingApi = {
       })),
     };
 
-    const data = await journalEntriesApi.create(apiData);
+    const data = await journalEntriesApi.create(apiData, organizationId);
     return data as JournalEntryWithItems;
   },
 
-  async updateJournalEntry(entryUpdate: UpdateJournalEntryInput) {
+  async updateJournalEntry(entryUpdate: UpdateJournalEntryInput, organizationId?: string) {
     const { id, items, ...updates } = entryUpdate;
 
     const apiData: any = { ...updates };
@@ -299,22 +299,22 @@ export const accountingApi = {
       }));
     }
 
-    const data = await journalEntriesApi.update(id, apiData);
+    const data = await journalEntriesApi.update(id, apiData, organizationId);
     return data as JournalEntryWithItems;
   },
 
-  async postJournalEntry(entryId: string, _userId: string) {
-    const data = await journalEntriesApi.post(entryId);
+  async postJournalEntry(entryId: string, organizationId?: string, _userId?: string) {
+    const data = await journalEntriesApi.post(entryId, organizationId);
     return data as JournalEntry;
   },
 
-  async cancelJournalEntry(entryId: string) {
-    const data = await journalEntriesApi.cancel(entryId);
+  async cancelJournalEntry(entryId: string, organizationId?: string) {
+    const data = await journalEntriesApi.cancel(entryId, organizationId);
     return data as JournalEntry;
   },
 
-  async deleteJournalEntry(entryId: string) {
-    await journalEntriesApi.delete(entryId);
+  async deleteJournalEntry(entryId: string, organizationId?: string) {
+    await journalEntriesApi.delete(entryId, organizationId);
   },
 
   // =====================================================

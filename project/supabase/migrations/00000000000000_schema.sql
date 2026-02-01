@@ -237,6 +237,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   state VARCHAR(100),
   postal_code VARCHAR(20),
   country VARCHAR(100),
+  country_code VARCHAR(2), -- ISO 3166-1 alpha-2 country code (MA, FR, US, GB, DE, etc.)
   phone VARCHAR(50),
   email VARCHAR(255),
   website VARCHAR(255),
@@ -246,16 +247,16 @@ CREATE TABLE IF NOT EXISTS organizations (
   logo_url TEXT,
   is_active BOOLEAN DEFAULT true,
   account_type VARCHAR(20) DEFAULT 'business' CHECK (account_type IN ('individual', 'business', 'farm')),
+  accounting_standard VARCHAR(50), -- Primary accounting standard (CGNC=Morocco, PCG=France, US_GAAP=USA, FRS102=UK, HGB=Germany)
+  accounting_settings JSONB DEFAULT '{}'::jsonb, -- Country-specific accounting configurations stored as JSONB
+  fiscal_year_start_month INTEGER DEFAULT 1, -- Month when fiscal year starts (1=January, 4=April for UK, etc.)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
-
--- Add account_type column for existing databases (safe migration)
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS account_type VARCHAR(20) DEFAULT 'business' CHECK (account_type IN ('individual', 'business', 'farm'));
-
-
+CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
+CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
 
 -- Organization Users
 CREATE TABLE IF NOT EXISTS organization_users (
@@ -286,10 +287,15 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   onboarding_completed_at TIMESTAMPTZ,
   onboarding_current_step VARCHAR(50) DEFAULT 'welcome',
   onboarding_state JSONB,
+  completed_tours TEXT[] DEFAULT '{}',
+  dismissed_tours TEXT[] DEFAULT '{}',
   password_set BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+COMMENT ON COLUMN user_profiles.completed_tours IS 'Array of completed tour IDs (welcome, dashboard, farm-management, parcels, tasks, workers, inventory, accounting, satellite, reports)';
+COMMENT ON COLUMN user_profiles.dismissed_tours IS 'Array of permanently dismissed tour IDs. Tours in this array will never auto-start even if not completed.';
 
 -- Subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -372,6 +378,12 @@ CREATE TABLE IF NOT EXISTS modules (
   description TEXT,
   required_plan VARCHAR(50), -- null = free, 'essential', 'professional', 'enterprise'
   is_available BOOLEAN DEFAULT true,
+  is_active BOOLEAN DEFAULT true,
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system',
+  published_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -439,9 +451,15 @@ CREATE TABLE IF NOT EXISTS farms (
   coordinates JSONB,
   status VARCHAR(50) DEFAULT 'active',
   is_active BOOLEAN DEFAULT true,
+  location_point GEOMETRY(Point, 4326),
+  boundary_polygon GEOMETRY(Polygon, 4326),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_farms_org ON farms(organization_id);
+CREATE INDEX IF NOT EXISTS idx_farms_location ON farms USING GIST(location_point) WHERE location_point IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_farms_boundary ON farms USING GIST(boundary_polygon) WHERE boundary_polygon IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_farms_org ON farms(organization_id);
 
@@ -476,12 +494,16 @@ CREATE TABLE IF NOT EXISTS parcels (
   expected_harvest_date DATE,
   notes TEXT,
   is_active BOOLEAN DEFAULT true,
+  centroid GEOMETRY(Point, 4326),
+  boundary_geom GEOMETRY(Polygon, 4326),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_parcels_farm ON parcels(farm_id);
 CREATE INDEX IF NOT EXISTS idx_parcels_organization ON parcels(organization_id);
+CREATE INDEX IF NOT EXISTS idx_parcels_centroid ON parcels USING GIST(centroid) WHERE centroid IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_parcels_boundary_geom ON parcels USING GIST(boundary_geom) WHERE boundary_geom IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_parcels_crop_type ON parcels(crop_type) WHERE crop_type IS NOT NULL;
 
 -- =====================================================
@@ -559,7 +581,10 @@ CREATE TABLE IF NOT EXISTS currencies (
   code VARCHAR(3) PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   symbol VARCHAR(10),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  is_active BOOLEAN DEFAULT true,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system'
 );
 
 -- Insert default currencies
@@ -623,6 +648,11 @@ CREATE TABLE IF NOT EXISTS account_templates (
   is_active BOOLEAN DEFAULT true,
   display_order INTEGER,
   metadata JSONB,  -- Flexible field for country-specific attributes
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system',
+  published_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(country_code, accounting_standard, account_code)
@@ -642,12 +672,36 @@ CREATE TABLE IF NOT EXISTS account_mappings (
   mapping_type VARCHAR(50) NOT NULL,  -- 'cost_type', 'revenue_type', 'cash', etc.
   mapping_key VARCHAR(100) NOT NULL,  -- 'labor', 'harvest', 'bank', etc.
   account_code VARCHAR(50) NOT NULL,
+  account_id UUID,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE, -- Organization-specific mappings override defaults
   description TEXT,
+  is_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  hierarchy_level INTEGER DEFAULT 2,
+  effective_date DATE,
+  expiry_date DATE,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  source_key VARCHAR(100),
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system',
+  published_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(country_code, accounting_standard, mapping_type, mapping_key)
 );
 
 CREATE INDEX IF NOT EXISTS idx_account_mappings_lookup ON account_mappings(country_code, accounting_standard, mapping_type, mapping_key);
+CREATE INDEX IF NOT EXISTS idx_account_mappings_org ON account_mappings(organization_id) WHERE organization_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_org_type ON account_mappings(organization_id, mapping_type);
+CREATE INDEX IF NOT EXISTS idx_account_mappings_account ON account_mappings(account_id) WHERE account_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_account_mappings_active ON account_mappings(organization_id, is_active) WHERE organization_id IS NOT NULL;
+
+-- Create a unique index for organization-level mappings
+CREATE UNIQUE INDEX IF NOT EXISTS idx_account_mappings_org_unique
+  ON account_mappings(organization_id, mapping_type, mapping_key)
+  WHERE organization_id IS NOT NULL;
 
 COMMENT ON TABLE account_mappings IS 'Maps generic business operations to country-specific account codes for automatic journal entry creation';
 
@@ -1141,6 +1195,15 @@ CREATE TABLE IF NOT EXISTS cost_centers (
   description TEXT,
   farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  parent_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL, -- For hierarchical cost centers
+  crop_cycle_id UUID,
+  annual_budget DECIMAL(15,2) DEFAULT 0,
+  budget_currency VARCHAR(3) DEFAULT 'MAD',
+  budget_fiscal_year INTEGER,
+  fiscal_year_id UUID,
+  default_expense_account_id UUID,
+  default_revenue_account_id UUID,
+  budget_variance_threshold DECIMAL(5,2) DEFAULT 10,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1148,6 +1211,8 @@ CREATE TABLE IF NOT EXISTS cost_centers (
 );
 
 CREATE INDEX IF NOT EXISTS idx_cost_centers_org ON cost_centers(organization_id);
+CREATE INDEX IF NOT EXISTS idx_cost_centers_parent ON cost_centers(parent_id);
+CREATE INDEX IF NOT EXISTS idx_cost_centers_crop_cycle ON cost_centers(crop_cycle_id);
 
 -- Accounts (Chart of Accounts)
 CREATE TABLE IF NOT EXISTS accounts (
@@ -1162,6 +1227,7 @@ CREATE TABLE IF NOT EXISTS accounts (
   currency_code VARCHAR(3) REFERENCES currencies(code),
   is_group BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true,
+  is_default_chart BOOLEAN DEFAULT false, -- Indicates if account is part of the default chart template for the country
   allow_cost_center BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -1234,6 +1300,42 @@ BEGIN
     AND column_name = 'name_en'
   ) THEN
     ALTER TABLE accounts DROP COLUMN name_en;
+  END IF;
+END $$;
+
+-- Add foreign key constraints for tables that reference accounts table
+DO $$
+BEGIN
+  -- account_mappings foreign key
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_account_mappings_account_id'
+    AND conrelid = 'account_mappings'::regclass
+  ) THEN
+    ALTER TABLE account_mappings
+    ADD CONSTRAINT fk_account_mappings_account_id
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+
+  -- cost_centers foreign keys to accounts
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_cost_centers_default_expense_account_id'
+    AND conrelid = 'cost_centers'::regclass
+  ) THEN
+    ALTER TABLE cost_centers
+    ADD CONSTRAINT fk_cost_centers_default_expense_account_id
+    FOREIGN KEY (default_expense_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_cost_centers_default_revenue_account_id'
+    AND conrelid = 'cost_centers'::regclass
+  ) THEN
+    ALTER TABLE cost_centers
+    ADD CONSTRAINT fk_cost_centers_default_revenue_account_id
+    FOREIGN KEY (default_revenue_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
   END IF;
 END $$;
 
@@ -1312,12 +1414,20 @@ CREATE TABLE IF NOT EXISTS journal_items (
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   reference_type VARCHAR(50),
   reference_id UUID,
+  crop_cycle_id UUID,
+  campaign_id UUID,
+  fiscal_year_id UUID,
+  fiscal_period_id UUID,
+  biological_asset_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_journal_items_entry ON journal_items(journal_entry_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_account ON journal_items(account_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_cost_center ON journal_items(cost_center_id);
+CREATE INDEX IF NOT EXISTS idx_journal_items_crop_cycle ON journal_items(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_journal_items_campaign ON journal_items(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_journal_items_fiscal_year ON journal_items(fiscal_year_id);
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS invoices (
@@ -2350,9 +2460,13 @@ CREATE TABLE IF NOT EXISTS work_units (
   allow_decimal BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true,
   usage_count INTEGER DEFAULT 0,
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system',
+  published_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
   UNIQUE(organization_id, code)
 );
 
@@ -2485,6 +2599,7 @@ CREATE TABLE IF NOT EXISTS task_assignments (
   hours_worked NUMERIC(10, 2),
   units_completed NUMERIC(10, 2),
   notes TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(task_id, worker_id)
@@ -2520,6 +2635,7 @@ CREATE TABLE IF NOT EXISTS task_templates (
   estimated_duration INTEGER,
   is_recurring BOOLEAN DEFAULT false,
   recurrence_pattern TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -2704,6 +2820,57 @@ CREATE INDEX IF NOT EXISTS idx_payment_records_farm ON payment_records(farm_id);
 CREATE INDEX IF NOT EXISTS idx_payment_records_worker ON payment_records(worker_id);
 CREATE INDEX IF NOT EXISTS idx_payment_records_status ON payment_records(status);
 
+-- Payment Summary View
+CREATE OR REPLACE VIEW payment_summary AS
+SELECT
+  pr.id,
+  pr.organization_id,
+  pr.farm_id,
+  pr.worker_id,
+  w.first_name,
+  w.last_name,
+  w.cin,
+  w.phone,
+  w.email,
+  w.worker_type,
+  w.position,
+  w.daily_rate,
+  w.monthly_salary,
+  w.metayage_type,
+  w.metayage_percentage AS worker_metayage_percentage,
+  pr.payment_type,
+  pr.period_start,
+  pr.period_end,
+  pr.base_amount,
+  pr.bonuses,
+  pr.deductions,
+  pr.overtime_amount,
+  pr.advance_deduction,
+  pr.net_amount,
+  pr.days_worked,
+  pr.hours_worked,
+  pr.tasks_completed,
+  pr.harvest_amount,
+  pr.gross_revenue,
+  pr.total_charges,
+  pr.metayage_percentage,
+  pr.status,
+  pr.payment_method,
+  pr.payment_date,
+  pr.payment_reference,
+  pr.calculated_by,
+  pr.calculated_at,
+  pr.approved_by,
+  pr.approved_at,
+  pr.paid_by,
+  pr.paid_at,
+  pr.notes,
+  pr.attachments,
+  pr.created_at,
+  pr.updated_at
+FROM payment_records pr
+INNER JOIN workers w ON w.id = pr.worker_id;
+
 -- Payment Advances
 CREATE TABLE IF NOT EXISTS payment_advances (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2825,6 +2992,8 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   notes TEXT,
   lot_number TEXT, -- Unique lot number for traceability (e.g., P1FM1-0012025)
   is_partial BOOLEAN DEFAULT false, -- Whether this is a partial harvest record
+  crop_cycle_id UUID,
+  campaign_id UUID,
   created_by UUID REFERENCES auth.users(id),
   reception_batch_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2843,6 +3012,8 @@ CREATE INDEX IF NOT EXISTS idx_harvest_records_warehouse ON harvest_records(ware
 CREATE INDEX IF NOT EXISTS idx_harvest_records_date ON harvest_records(harvest_date DESC);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_lot ON harvest_records(lot_number) WHERE lot_number IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_harvest_records_task ON harvest_records(harvest_task_id) WHERE harvest_task_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_harvest_records_crop_cycle ON harvest_records(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_harvest_records_campaign ON harvest_records(campaign_id);
 
 -- Harvest Forecasts (Production Intelligence)
 CREATE TABLE IF NOT EXISTS harvest_forecasts (
@@ -3718,6 +3889,7 @@ CREATE TABLE IF NOT EXISTS test_types (
   name TEXT NOT NULL,
   description TEXT,
   parameters JSONB,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3769,6 +3941,7 @@ CREATE TABLE IF NOT EXISTS crop_categories (
   type_id UUID NOT NULL REFERENCES crop_types(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3782,6 +3955,7 @@ CREATE TABLE IF NOT EXISTS crop_varieties (
   name TEXT NOT NULL,
   description TEXT,
   days_to_maturity INTEGER,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3805,6 +3979,7 @@ CREATE TABLE IF NOT EXISTS crops (
   yield_unit TEXT DEFAULT 'kg',
   status TEXT DEFAULT 'planned',
   notes TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3843,6 +4018,7 @@ CREATE TABLE IF NOT EXISTS tree_categories (
   category TEXT NOT NULL,
   category_ar TEXT,
   category_fr TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3855,6 +4031,7 @@ CREATE TABLE IF NOT EXISTS trees (
   category_id UUID NOT NULL REFERENCES tree_categories(id) ON DELETE CASCADE,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3869,6 +4046,7 @@ CREATE TABLE IF NOT EXISTS plantation_types (
   type TEXT NOT NULL,
   spacing TEXT NOT NULL,
   trees_per_ha INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -3885,6 +4063,7 @@ CREATE TABLE IF NOT EXISTS soil_types (
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3904,6 +4083,7 @@ CREATE TABLE IF NOT EXISTS irrigation_types (
   description_ar TEXT,
   description_fr TEXT,
   efficiency NUMERIC,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3922,6 +4102,7 @@ CREATE TABLE IF NOT EXISTS rootstocks (
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3940,6 +4121,7 @@ CREATE TABLE IF NOT EXISTS plantation_systems (
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
@@ -3975,6 +4157,7 @@ CREATE TABLE IF NOT EXISTS product_subcategories (
   category_id UUID NOT NULL REFERENCES product_categories(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -4056,6 +4239,10 @@ CREATE TABLE IF NOT EXISTS costs (
   description TEXT,
   reference_id UUID,
   reference_type TEXT,
+  crop_cycle_id UUID,
+  campaign_id UUID,
+  fiscal_year_id UUID,
+  fiscal_period_id UUID,
   notes TEXT,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -4068,6 +4255,9 @@ CREATE INDEX IF NOT EXISTS idx_costs_farm ON costs(farm_id);
 CREATE INDEX IF NOT EXISTS idx_costs_parcel ON costs(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_costs_category ON costs(category_id);
 CREATE INDEX IF NOT EXISTS idx_costs_date ON costs(date DESC);
+CREATE INDEX IF NOT EXISTS idx_costs_crop_cycle ON costs(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_costs_campaign ON costs(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_costs_fiscal_year ON costs(fiscal_year_id);
 
 -- Revenues
 CREATE TABLE IF NOT EXISTS revenues (
@@ -4084,6 +4274,11 @@ CREATE TABLE IF NOT EXISTS revenues (
   unit TEXT,
   price_per_unit NUMERIC,
   description TEXT,
+  crop_cycle_id UUID,
+  campaign_id UUID,
+  fiscal_year_id UUID,
+  fiscal_period_id UUID,
+  harvest_record_id UUID REFERENCES harvest_records(id) ON DELETE SET NULL,
   notes TEXT,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -4095,6 +4290,9 @@ CREATE INDEX IF NOT EXISTS idx_revenues_org ON revenues(organization_id);
 CREATE INDEX IF NOT EXISTS idx_revenues_farm ON revenues(farm_id);
 CREATE INDEX IF NOT EXISTS idx_revenues_parcel ON revenues(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_revenues_date ON revenues(date DESC);
+CREATE INDEX IF NOT EXISTS idx_revenues_crop_cycle ON revenues(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_revenues_campaign ON revenues(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_revenues_fiscal_year ON revenues(fiscal_year_id);
 
 -- Profitability Snapshots
 CREATE TABLE IF NOT EXISTS profitability_snapshots (
@@ -4190,6 +4388,11 @@ CREATE TABLE IF NOT EXISTS roles (
   description TEXT,
   level INTEGER NOT NULL,
   is_active BOOLEAN DEFAULT true,
+  template_version VARCHAR(20) DEFAULT '1.0.0',
+  source VARCHAR(50) DEFAULT 'system',
+  published_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (name IN ('internal_admin', 'system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
@@ -4452,6 +4655,13 @@ CREATE TABLE IF NOT EXISTS subscription_usage (
   parcels_count INTEGER DEFAULT 0,
   users_count INTEGER DEFAULT 0,
   satellite_reports_count INTEGER DEFAULT 0,
+  mrr NUMERIC(12,2),
+  arr NUMERIC(12,2),
+  modules_enabled TEXT[],
+  last_calculated_at TIMESTAMPTZ,
+  churn_risk_score INTEGER,
+  last_activity_at TIMESTAMPTZ,
+  storage_used_mb NUMERIC(12,2) DEFAULT 0,
   period_start TIMESTAMPTZ NOT NULL,
   period_end TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -9307,73 +9517,6 @@ COMMENT ON FUNCTION get_account_summary IS
 'Returns summary of account balances grouped by account type';
 
 -- ============================================================================
--- ADMIN APP: PROVENANCE COLUMNS
--- ============================================================================
--- Purpose: Track version, source, publication status, and authorship for admin management
-
--- Add provenance columns to account_templates
-ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-ALTER TABLE account_templates ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
-
--- Add provenance columns to account_mappings
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
-
--- Add provenance columns to modules
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
-ALTER TABLE modules ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-
--- Add provenance columns to currencies
-ALTER TABLE currencies ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-ALTER TABLE currencies ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-ALTER TABLE currencies ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-ALTER TABLE currencies ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE currencies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
--- Add provenance columns to roles (role_templates equivalent)
-ALTER TABLE roles ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-ALTER TABLE roles ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-ALTER TABLE roles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-ALTER TABLE roles ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-ALTER TABLE roles ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
-
--- Add provenance columns to work_units (if exists)
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'work_units') THEN
-    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS template_version VARCHAR(20) DEFAULT '1.0.0';
-    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'system';
-    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
-    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
-    ALTER TABLE work_units ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id);
-  END IF;
-END $$;
-
--- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_account_templates_source ON account_templates(source);
-CREATE INDEX IF NOT EXISTS idx_account_templates_published ON account_templates(published_at) WHERE published_at IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_account_mappings_source ON account_mappings(source);
-CREATE INDEX IF NOT EXISTS idx_currencies_source ON currencies(source);
-CREATE INDEX IF NOT EXISTS idx_roles_source ON roles(source);
-CREATE INDEX IF NOT EXISTS idx_modules_source ON modules(source);
-
-COMMENT ON COLUMN account_templates.template_version IS 'Semantic version of the template (e.g., 1.0.0)';
-COMMENT ON COLUMN account_templates.source IS 'Origin: system, import, manual';
-COMMENT ON COLUMN account_templates.published_at IS 'When template was published for use';
-COMMENT ON COLUMN account_templates.created_by IS 'User who created this template';
-COMMENT ON COLUMN account_templates.updated_by IS 'User who last updated this template';
-
--- ============================================================================
 -- ADMIN APP: ANALYTICS TABLES
 -- ============================================================================
 -- Purpose: Track organization usage, events, and admin job logs
@@ -9422,15 +9565,6 @@ CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_events_occurred ON events(occurred_at);
 
 COMMENT ON TABLE events IS 'Event tracking for user actions, funnels, and retention analysis';
-
--- Extend subscription_usage with additional metrics
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS mrr NUMERIC(12,2);
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS arr NUMERIC(12,2);
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS modules_enabled TEXT[];
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS last_calculated_at TIMESTAMPTZ;
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS churn_risk_score INTEGER;
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ;
-ALTER TABLE subscription_usage ADD COLUMN IF NOT EXISTS storage_used_mb NUMERIC(12,2) DEFAULT 0;
 
 -- Job log for imports/seeds/admin operations
 CREATE TABLE IF NOT EXISTS admin_job_logs (
@@ -9821,7 +9955,7 @@ SELECT
   COUNT(*),
   COUNT(*) FILTER (WHERE is_active = true),
   1,
-  MAX(created_at)
+  MAX(updated_at)
 FROM currencies
 UNION ALL
 SELECT
@@ -9979,57 +10113,6 @@ FROM (VALUES
 WHERE NOT EXISTS (
   SELECT 1 FROM product_categories WHERE name = v.name AND organization_id IS NULL
 );
--- Soil Types
-ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
-
--- Irrigation Types
-ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
-
--- Rootstocks
-ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS description_fr TEXT;
-
--- Plantation Systems
-ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS description_fr TEXT;
-
--- Tree Categories
-ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS category_ar TEXT;
-ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS category_fr TEXT;
--- Note: trees doesn't have description, just adding category translations
-
--- Crop Types
-ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS description_fr TEXT;
-
--- Product Categories
-ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_ar TEXT;
-ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS name_fr TEXT;
-ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_ar TEXT;
-ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS description_fr TEXT;
--- Add organization_id to crop_types
-ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
-ALTER TABLE crop_types DROP CONSTRAINT IF EXISTS crop_types_name_key;
-ALTER TABLE crop_types ADD CONSTRAINT crop_types_org_name_key UNIQUE (organization_id, name);
-CREATE INDEX IF NOT EXISTS idx_crop_types_org ON crop_types(organization_id);
-
--- Add organization_id to product_categories
-ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
-ALTER TABLE product_categories DROP CONSTRAINT IF EXISTS product_categories_name_key;
-ALTER TABLE product_categories ADD CONSTRAINT product_categories_org_name_key UNIQUE (organization_id, name);
-CREATE INDEX IF NOT EXISTS idx_product_categories_org ON product_categories(organization_id);
 
 -- Seed default Crop Types (Retry)
 INSERT INTO crop_types (name, description, organization_id)
@@ -10302,23 +10385,6 @@ CREATE POLICY "Users can manage own cart items" ON marketplace_cart_items
       AND c.user_id = auth.uid()
     )
   );
-
--- Additional columns for marketplace_orders (if not exists)
-ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  shipping_details JSONB DEFAULT '{}'::jsonb;
--- Structure: { name, phone, address, city, postal_code, notes }
-
-ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  payment_method TEXT DEFAULT 'cod'; -- cod = Cash on Delivery
-
-ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  buyer_name TEXT;
-
-ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  buyer_phone TEXT;
-
-ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  buyer_email TEXT;
 
 -- Trigger to update updated_at on cart
 DROP TRIGGER IF EXISTS trg_marketplace_carts_updated_at ON marketplace_carts;
@@ -11248,6 +11314,178 @@ CREATE INDEX IF NOT EXISTS idx_crop_cycles_status ON crop_cycles(organization_id
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_dates ON crop_cycles(planting_date, expected_harvest_end);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_crop_type ON crop_cycles(organization_id, crop_type);
 
+-- Add foreign key constraints for tables that reference time dimension tables
+-- These are added here because the referenced tables (fiscal_years, fiscal_periods, agricultural_campaigns, crop_cycles, biological_assets)
+-- are created after the tables that reference them
+
+DO $$
+BEGIN
+  -- cost_centers foreign keys
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_cost_centers_crop_cycle_id'
+    AND conrelid = 'cost_centers'::regclass
+  ) THEN
+    ALTER TABLE cost_centers
+    ADD CONSTRAINT fk_cost_centers_crop_cycle_id
+    FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_cost_centers_fiscal_year_id'
+    AND conrelid = 'cost_centers'::regclass
+  ) THEN
+    ALTER TABLE cost_centers
+    ADD CONSTRAINT fk_cost_centers_fiscal_year_id
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL;
+  END IF;
+
+  -- journal_items foreign keys
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_journal_items_crop_cycle_id'
+    AND conrelid = 'journal_items'::regclass
+  ) THEN
+    ALTER TABLE journal_items
+    ADD CONSTRAINT fk_journal_items_crop_cycle_id
+    FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_journal_items_campaign_id'
+    AND conrelid = 'journal_items'::regclass
+  ) THEN
+    ALTER TABLE journal_items
+    ADD CONSTRAINT fk_journal_items_campaign_id
+    FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_journal_items_fiscal_year_id'
+    AND conrelid = 'journal_items'::regclass
+  ) THEN
+    ALTER TABLE journal_items
+    ADD CONSTRAINT fk_journal_items_fiscal_year_id
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_journal_items_fiscal_period_id'
+    AND conrelid = 'journal_items'::regclass
+  ) THEN
+    ALTER TABLE journal_items
+    ADD CONSTRAINT fk_journal_items_fiscal_period_id
+    FOREIGN KEY (fiscal_period_id) REFERENCES fiscal_periods(id) ON DELETE SET NULL;
+  END IF;
+
+  -- harvest_records foreign keys
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_harvest_records_crop_cycle_id'
+    AND conrelid = 'harvest_records'::regclass
+  ) THEN
+    ALTER TABLE harvest_records
+    ADD CONSTRAINT fk_harvest_records_crop_cycle_id
+    FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_harvest_records_campaign_id'
+    AND conrelid = 'harvest_records'::regclass
+  ) THEN
+    ALTER TABLE harvest_records
+    ADD CONSTRAINT fk_harvest_records_campaign_id
+    FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
+  END IF;
+
+  -- costs foreign keys
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_costs_crop_cycle_id'
+    AND conrelid = 'costs'::regclass
+  ) THEN
+    ALTER TABLE costs
+    ADD CONSTRAINT fk_costs_crop_cycle_id
+    FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_costs_campaign_id'
+    AND conrelid = 'costs'::regclass
+  ) THEN
+    ALTER TABLE costs
+    ADD CONSTRAINT fk_costs_campaign_id
+    FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_costs_fiscal_year_id'
+    AND conrelid = 'costs'::regclass
+  ) THEN
+    ALTER TABLE costs
+    ADD CONSTRAINT fk_costs_fiscal_year_id
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_costs_fiscal_period_id'
+    AND conrelid = 'costs'::regclass
+  ) THEN
+    ALTER TABLE costs
+    ADD CONSTRAINT fk_costs_fiscal_period_id
+    FOREIGN KEY (fiscal_period_id) REFERENCES fiscal_periods(id) ON DELETE SET NULL;
+  END IF;
+
+  -- revenues foreign keys
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_revenues_crop_cycle_id'
+    AND conrelid = 'revenues'::regclass
+  ) THEN
+    ALTER TABLE revenues
+    ADD CONSTRAINT fk_revenues_crop_cycle_id
+    FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_revenues_campaign_id'
+    AND conrelid = 'revenues'::regclass
+  ) THEN
+    ALTER TABLE revenues
+    ADD CONSTRAINT fk_revenues_campaign_id
+    FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_revenues_fiscal_year_id'
+    AND conrelid = 'revenues'::regclass
+  ) THEN
+    ALTER TABLE revenues
+    ADD CONSTRAINT fk_revenues_fiscal_year_id
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_revenues_fiscal_period_id'
+    AND conrelid = 'revenues'::regclass
+  ) THEN
+    ALTER TABLE revenues
+    ADD CONSTRAINT fk_revenues_fiscal_period_id
+    FOREIGN KEY (fiscal_period_id) REFERENCES fiscal_periods(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 -- 5. BIOLOGICAL ASSETS TABLE (IAS 41 Compliance)
 CREATE TABLE IF NOT EXISTS biological_assets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11308,6 +11546,20 @@ CREATE INDEX IF NOT EXISTS idx_biological_assets_farm ON biological_assets(farm_
 CREATE INDEX IF NOT EXISTS idx_biological_assets_parcel ON biological_assets(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_biological_assets_type ON biological_assets(organization_id, asset_type);
 CREATE INDEX IF NOT EXISTS idx_biological_assets_status ON biological_assets(organization_id, status);
+
+-- Add foreign key constraint for journal_items -> biological_assets
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_journal_items_biological_asset_id'
+    AND conrelid = 'journal_items'::regclass
+  ) THEN
+    ALTER TABLE journal_items
+    ADD CONSTRAINT fk_journal_items_biological_asset_id
+    FOREIGN KEY (biological_asset_id) REFERENCES biological_assets(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- 6. BIOLOGICAL ASSET VALUATIONS TABLE
 CREATE TABLE IF NOT EXISTS biological_asset_valuations (
@@ -11599,53 +11851,6 @@ COMMENT ON COLUMN quality_inspections.type IS 'Type of quality inspection';
 COMMENT ON COLUMN quality_inspections.results IS 'JSONB object containing inspection results and measurements';
 COMMENT ON COLUMN quality_inspections.overall_score IS 'Overall quality score from 0 to 100';
 COMMENT ON COLUMN quality_inspections.attachments IS 'Array of attachment URLs (photos, documents, etc.)';
-
--- 9. ALTER EXISTING TABLES - Add Time Dimension FKs
-ALTER TABLE costs
-  ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES agricultural_campaigns(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_year_id UUID REFERENCES fiscal_years(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_period_id UUID REFERENCES fiscal_periods(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_costs_crop_cycle ON costs(crop_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_costs_campaign ON costs(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_costs_fiscal_year ON costs(fiscal_year_id);
-
-ALTER TABLE revenues
-  ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES agricultural_campaigns(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_year_id UUID REFERENCES fiscal_years(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_period_id UUID REFERENCES fiscal_periods(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS harvest_record_id UUID REFERENCES harvest_records(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_revenues_crop_cycle ON revenues(crop_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_revenues_campaign ON revenues(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_revenues_fiscal_year ON revenues(fiscal_year_id);
-
-ALTER TABLE journal_items
-  ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES agricultural_campaigns(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_year_id UUID REFERENCES fiscal_years(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fiscal_period_id UUID REFERENCES fiscal_periods(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS biological_asset_id UUID REFERENCES biological_assets(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_journal_items_crop_cycle ON journal_items(crop_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_journal_items_campaign ON journal_items(campaign_id);
-CREATE INDEX IF NOT EXISTS idx_journal_items_fiscal_year ON journal_items(fiscal_year_id);
-
-ALTER TABLE harvest_records
-  ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS campaign_id UUID REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_harvest_records_crop_cycle ON harvest_records(crop_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_harvest_records_campaign ON harvest_records(campaign_id);
-
-ALTER TABLE cost_centers
-  ADD COLUMN IF NOT EXISTS crop_cycle_id UUID REFERENCES crop_cycles(id) ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL;
-
-CREATE INDEX IF NOT EXISTS idx_cost_centers_crop_cycle ON cost_centers(crop_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_cost_centers_parent ON cost_centers(parent_id);
 
 -- 9. HELPER FUNCTIONS
 CREATE OR REPLACE FUNCTION get_fiscal_year_for_date(
@@ -12211,72 +12416,7 @@ COMMENT ON TABLE biological_assets IS 'Perennial biological assets (orchards, li
 COMMENT ON TABLE biological_asset_valuations IS 'Fair value tracking for biological assets per IAS 41';
 COMMENT ON TABLE crop_cycle_allocations IS 'Partial cost/revenue allocation to crop cycles for shared resources';
 
--- =====================================================
--- USER PROFILES COMPLETED TOURS (from 20251231_add_completed_tours.sql)
--- =====================================================
-
-ALTER TABLE user_profiles
-ADD COLUMN IF NOT EXISTS completed_tours text[] DEFAULT '{}';
-
-COMMENT ON COLUMN user_profiles.completed_tours IS 'Array of completed tour IDs (welcome, dashboard, farm-management, parcels, tasks, workers, inventory, accounting, satellite, reports)';
-
--- =====================================================
--- USER PROFILES DISMISSED TOURS (from 20250114000000_add_dismissed_tours.sql)
--- =====================================================
-
-ALTER TABLE user_profiles
-ADD COLUMN IF NOT EXISTS dismissed_tours text[] DEFAULT '{}';
-
-COMMENT ON COLUMN user_profiles.dismissed_tours IS 'Array of permanently dismissed tour IDs. Tours in this array will never auto-start even if not completed.';
-
--- =====================================================
--- ORGANIZATION ACCOUNT MAPPINGS (from 20251231_organization_account_mappings.sql)
--- =====================================================
-
--- Add new columns to account_mappings
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
-
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
-
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS source_key VARCHAR(100);
-
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
-
-ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
-
--- Create indexes for organization queries
-CREATE INDEX IF NOT EXISTS idx_account_mappings_org
-  ON account_mappings(organization_id);
-
-CREATE INDEX IF NOT EXISTS idx_account_mappings_org_type
-  ON account_mappings(organization_id, mapping_type);
-
-CREATE INDEX IF NOT EXISTS idx_account_mappings_org_lookup
-  ON account_mappings(organization_id, mapping_type, mapping_key)
-  WHERE organization_id IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_account_mappings_account
-  ON account_mappings(account_id)
-  WHERE account_id IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_account_mappings_active
-  ON account_mappings(organization_id, is_active)
-  WHERE organization_id IS NOT NULL;
-
--- Create a unique index for organization-level mappings
-CREATE UNIQUE INDEX IF NOT EXISTS idx_account_mappings_org_unique
-  ON account_mappings(organization_id, mapping_type, mapping_key)
-  WHERE organization_id IS NOT NULL;
-
--- Enable RLS and create policies
+-- Enable RLS and create policies for account_mappings
 ALTER TABLE account_mappings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "read_account_mappings" ON account_mappings;
@@ -12774,12 +12914,6 @@ BEGIN
   END IF;
 END $$;
 
--- Add accounting_settings JSONB column
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS accounting_settings JSONB DEFAULT '{}'::jsonb;
-
--- Add fiscal_year_start_month to organizations
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS fiscal_year_start_month INTEGER DEFAULT 1;
-
 -- Create accounting standards enum type
 DO $$ BEGIN
   CREATE TYPE accounting_standard_enum AS ENUM (
@@ -12795,52 +12929,9 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN null;
 END $$;
 
--- Add indexes
-CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
-CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
-
--- Comments
-COMMENT ON COLUMN organizations.country_code IS 'ISO 3166-1 alpha-2 country code (MA, FR, US, GB, DE, etc.)';
-COMMENT ON COLUMN organizations.accounting_standard IS 'Primary accounting standard (CGNC=Morocco, PCG=France, US_GAAP=USA, FRS102=UK, HGB=Germany)';
-COMMENT ON COLUMN organizations.accounting_settings IS 'Country-specific accounting configurations stored as JSONB';
-COMMENT ON COLUMN organizations.fiscal_year_start_month IS 'Month when fiscal year starts (1=January, 4=April for UK, etc.)';
-
--- =====================================================
--- 2025-01-10: Accounts Table Enhancement
--- =====================================================
-
--- Add is_default_chart column to accounts table
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS is_default_chart BOOLEAN DEFAULT false;
-
-COMMENT ON COLUMN accounts.is_default_chart IS 'Indicates if account is part of the default chart template for the country';
-
 -- =====================================================
 -- 2025-01-10: Cost Centers Enhancements
 -- =====================================================
-
--- Add budget tracking columns to cost_centers table
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS annual_budget DECIMAL(15,2) DEFAULT 0;
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_currency VARCHAR(3) DEFAULT 'MAD';
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_fiscal_year INTEGER;
-
--- Add default account assignments
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS default_expense_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS default_revenue_account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
-
--- Add performance tracking
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS budget_variance_threshold DECIMAL(5,2) DEFAULT 10;
-
--- Add parent_id for hierarchical cost centers
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'cost_centers'
-    AND column_name = 'parent_id'
-  ) THEN
-    ALTER TABLE cost_centers ADD COLUMN parent_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL;
-  END IF;
-END $$;
 
 -- Create cost_center_budgets table
 CREATE TABLE IF NOT EXISTS cost_center_budgets (
@@ -12882,30 +12973,6 @@ CREATE TRIGGER update_cost_center_budgets_updated_at
 COMMENT ON TABLE cost_center_budgets IS 'Budget vs actual tracking for cost centers by fiscal year and account';
 COMMENT ON COLUMN cost_centers.budget_currency IS 'Currency code for the budget (e.g., MAD, EUR, USD)';
 COMMENT ON COLUMN cost_centers.default_expense_account_id IS 'Default expense account for this cost center';
-
--- =====================================================
--- 2025-01-10: Account Mappings Enhancements
--- =====================================================
-
--- Add columns to account_mappings
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS country_code VARCHAR(2);
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS accounting_standard VARCHAR(50);
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT false;
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS hierarchy_level INTEGER DEFAULT 2;
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS effective_date DATE;
-ALTER TABLE account_mappings ADD COLUMN IF NOT EXISTS expiry_date DATE;
-
--- Add organization_id if not exists
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'account_mappings'
-    AND column_name = 'organization_id'
-  ) THEN
-    ALTER TABLE account_mappings ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE;
-  END IF;
-END $$;
 
 -- Drop and recreate indexes
 DROP INDEX IF EXISTS idx_account_mappings_lookup;
@@ -15986,27 +16053,9 @@ COMMENT ON FUNCTION create_task_from_template IS 'Create a new task from a templ
 -- =====================================================
 
 -- -----------------------------------------------------
--- 1. POSTGIS NATIVE GEOMETRY COLUMNS (backwards compatible)
+-- 1. POSTGIS NATIVE GEOMETRY COLUMNS
 -- -----------------------------------------------------
--- Add native geometry columns alongside existing JSONB columns for spatial indexing
-
--- Add native geometry columns to farms table
-ALTER TABLE farms ADD COLUMN IF NOT EXISTS location_point GEOMETRY(Point, 4326);
-ALTER TABLE farms ADD COLUMN IF NOT EXISTS boundary_polygon GEOMETRY(Polygon, 4326);
-
--- Add native geometry columns to parcels table  
-ALTER TABLE parcels ADD COLUMN IF NOT EXISTS centroid GEOMETRY(Point, 4326);
-ALTER TABLE parcels ADD COLUMN IF NOT EXISTS boundary_geom GEOMETRY(Polygon, 4326);
-
--- Add native geometry columns to satellite_aois table
-ALTER TABLE satellite_aois ADD COLUMN IF NOT EXISTS geometry GEOMETRY(Polygon, 4326);
-
--- Create spatial indexes
-CREATE INDEX IF NOT EXISTS idx_farms_location_point ON farms USING GIST (location_point);
-CREATE INDEX IF NOT EXISTS idx_farms_boundary_polygon ON farms USING GIST (boundary_polygon);
-CREATE INDEX IF NOT EXISTS idx_parcels_centroid ON parcels USING GIST (centroid);
-CREATE INDEX IF NOT EXISTS idx_parcels_boundary_geom ON parcels USING GIST (boundary_geom);
-CREATE INDEX IF NOT EXISTS idx_satellite_aois_geometry ON satellite_aois USING GIST (geometry);
+-- Note: Geometry columns are now directly in CREATE TABLE statements
 
 -- Function to sync JSONB coordinates to geometry columns
 CREATE OR REPLACE FUNCTION sync_farm_geometry()
@@ -16070,30 +16119,7 @@ CREATE TRIGGER trg_sync_parcel_geometry
   EXECUTE FUNCTION sync_parcel_geometry();
 
 -- -----------------------------------------------------
--- 2. MISSING is_active COLUMNS FOR SOFT DELETE CONSISTENCY
--- -----------------------------------------------------
--- Add is_active to tables missing soft delete support
-
-ALTER TABLE task_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE task_templates ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE crop_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE crops ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE cost_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE cost_centers ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE task_assignments ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE product_subcategories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE test_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE tree_categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE trees ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE plantation_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE soil_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE irrigation_types ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE rootstocks ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-
--- -----------------------------------------------------
--- 3. MISSING BUSINESS KEY UNIQUE CONSTRAINTS
+-- 2. MISSING BUSINESS KEY UNIQUE CONSTRAINTS
 -- -----------------------------------------------------
 -- Add unique constraints for business keys
 

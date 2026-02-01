@@ -30,6 +30,7 @@ interface Parcel {
   planting_year?: number | null;
   variety?: string | null;
   rootstock?: string | null;
+  organization_id?: string | null;
 }
 
 interface ParcelCardProps {
@@ -57,15 +58,21 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
   // Fetch all types of analyses for this parcel
   const { analyses: soilAnalyses, loading: soilLoading, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(
     parcel.id,
-    'soil'
+    'soil',
+    'parcel',
+    parcel.organization_id
   );
   const { analyses: plantAnalyses, loading: plantLoading } = useAnalyses(
     parcel.id,
-    'plant'
+    'plant',
+    'parcel',
+    parcel.organization_id
   );
   const { analyses: waterAnalyses, loading: waterLoading } = useAnalyses(
     parcel.id,
-    'water'
+    'water',
+    'parcel',
+    parcel.organization_id
   );
 
   const analysesLoading = soilLoading || plantLoading || waterLoading;

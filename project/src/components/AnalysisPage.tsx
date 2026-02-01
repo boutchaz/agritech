@@ -30,7 +30,7 @@ const AnalysisPage: React.FC = () => {
   // Ensure parcels is always an array, even if API returns unexpected response
   const parcels = Array.isArray(parcelsData) ? parcelsData : [];
   const addAnalysisMutation = useAddAnalysis();
-  const deleteAnalysisMutation = useDeleteAnalysis();
+  const deleteAnalysisMutation = useDeleteAnalysis(currentOrganization?.id);
 
   // Filter analyses by selected parcel if one is selected
   const filteredAnalyses = useMemo(() => {

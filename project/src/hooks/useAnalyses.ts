@@ -12,7 +12,12 @@ import type {
 
 type AnalysisData = SoilAnalysisData | PlantAnalysisData | WaterAnalysisData;
 
-export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisType, queryType: 'parcel' | 'farm' = 'parcel') {
+export function useAnalyses(
+  parcelIdOrFarmId: string,
+  analysisType?: AnalysisType,
+  queryType: 'parcel' | 'farm' = 'parcel',
+  organizationId?: string
+) {
   const queryClient = useQueryClient();
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +27,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
     if (parcelIdOrFarmId) {
       fetchAnalyses();
     }
-  }, [parcelIdOrFarmId, analysisType, queryType]);
+  }, [parcelIdOrFarmId, analysisType, queryType, organizationId]);
 
   const fetchAnalyses = async () => {
     try {
@@ -33,7 +38,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
         ? { farm_id: parcelIdOrFarmId, analysis_type: analysisType }
         : { parcel_id: parcelIdOrFarmId, analysis_type: analysisType };
 
-      const response = await analysesApi.getAll(filters);
+      const response = await analysesApi.getAll(filters, organizationId);
       setAnalyses(response.data || []);
     } catch (err) {
       console.error('Error fetching analyses:', err);
@@ -59,7 +64,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
         data,
         laboratory,
         notes
-      });
+      }, organizationId);
 
       setAnalyses(prev => [newAnalysis, ...prev]);
 
@@ -86,7 +91,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
     }
   ) => {
     try {
-      const updatedAnalysis = await analysesApi.update(id, updates);
+      const updatedAnalysis = await analysesApi.update(id, updates, organizationId);
 
       setAnalyses(prev =>
         prev.map(analysis =>
@@ -103,7 +108,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
 
   const deleteAnalysis = async (id: string) => {
     try {
-      await analysesApi.delete(id);
+      await analysesApi.delete(id, organizationId);
       setAnalyses(prev => prev.filter(analysis => analysis.id !== id));
     } catch (err) {
       console.error('Error deleting analysis:', err);
@@ -123,7 +128,7 @@ export function useAnalyses(parcelIdOrFarmId: string, analysisType?: AnalysisTyp
   };
 }
 
-export function useAnalysisRecommendations(analysisId: string | null) {
+export function useAnalysisRecommendations(analysisId: string | null, organizationId?: string) {
   const [recommendations, setRecommendations] = useState<AnalysisRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +140,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
       setRecommendations([]);
       setLoading(false);
     }
-  }, [analysisId]);
+  }, [analysisId, organizationId]);
 
   const fetchRecommendations = async () => {
     if (!analysisId) return;
@@ -144,7 +149,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
       setLoading(true);
       setError(null);
 
-      const data = await analysesApi.getRecommendations(analysisId);
+      const data = await analysesApi.getRecommendations(analysisId, organizationId);
       setRecommendations(data || []);
     } catch (err) {
       console.error('Error fetching recommendations:', err);
@@ -160,8 +165,8 @@ export function useAnalysisRecommendations(analysisId: string | null) {
     if (!analysisId) throw new Error('Analysis ID is required');
 
     try {
-      const { analysis_id, ...rest } = recommendation;
-      const newRecommendation = await analysesApi.createRecommendation(analysisId, rest);
+      const { analysis_id: _analysisId, ...rest } = recommendation;
+      const newRecommendation = await analysesApi.createRecommendation(analysisId, rest, organizationId);
 
       setRecommendations(prev => [...prev, newRecommendation]);
       return newRecommendation;
@@ -177,7 +182,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
     updates: Partial<Omit<AnalysisRecommendation, 'id' | 'analysis_id' | 'created_at'>>
   ) => {
     try {
-      const updatedRecommendation = await analysesApi.updateRecommendation(id, updates);
+      const updatedRecommendation = await analysesApi.updateRecommendation(id, updates, organizationId);
 
       setRecommendations(prev =>
         prev.map(rec => rec.id === id ? updatedRecommendation : rec)
@@ -192,7 +197,7 @@ export function useAnalysisRecommendations(analysisId: string | null) {
 
   const deleteRecommendation = async (id: string) => {
     try {
-      await analysesApi.deleteRecommendation(id);
+      await analysesApi.deleteRecommendation(id, organizationId);
       setRecommendations(prev => prev.filter(rec => rec.id !== id));
     } catch (err) {
       console.error('Error deleting recommendation:', err);
