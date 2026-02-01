@@ -49,6 +49,11 @@ class UpdateQuoteItemDto {
   @IsOptional()
   item_id?: string;
 
+  @ApiProperty({ description: 'Product variant ID (e.g., 1L, 5L, 10kg)', required: false })
+  @IsUUID()
+  @IsOptional()
+  variant_id?: string;
+
   @ApiProperty({ description: 'Account ID', required: false })
   @IsUUID()
   @IsOptional()
