@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   useItems,
   useItemGroups,
@@ -65,6 +68,21 @@ import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+
+// Zod schema for product variant form validation
+const productVariantSchema = z.object({
+  variant_name: z.string().min(1, 'Variant name is required'),
+  variant_sku: z.string().optional(),
+  unit_id: z.string().uuid('Invalid unit ID').optional(),
+  quantity: z.number().min(0, 'Quantity must be non-negative').optional(),
+  min_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
+  standard_rate: z.number().min(0, 'Standard rate must be non-negative').optional(),
+  barcode: z.string().optional(),
+  is_active: z.boolean().optional(),
+  notes: z.string().optional(),
+});
+
+type ProductVariantFormData = z.infer<typeof productVariantSchema>;
 
 interface ItemFormProps {
   item?: Item | null;
@@ -866,61 +884,89 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   const updateVariant = useUpdateItemVariant();
   const deleteVariant = useDeleteItemVariant();
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
-  const [formData, setFormData] = useState({
-    variant_name: '',
-    variant_sku: '',
-    unit: '',
-    standard_rate: '',
-    min_stock_level: '',
-    is_active: true,
-    notes: '',
+
+  // Fetch work units for unit selection
+  const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
+    queryKey: ['work-units', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return [];
+      const { supabase } = await import('../../lib/supabase');
+      const { data, error } = await supabase
+        .from('work_units')
+        .select('*')
+        .eq('organization_id', currentOrganization.id)
+        .eq('is_active', true)
+        .order('unit_category', { ascending: true })
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return data as WorkUnit[];
+    },
+    enabled: !!currentOrganization?.id,
   });
 
+  // Initialize form with react-hook-form and zod resolver
+  const form = useForm<ProductVariantFormData>({
+    resolver: zodResolver(productVariantSchema),
+    defaultValues: {
+      variant_name: '',
+      variant_sku: '',
+      unit_id: '',
+      quantity: 0,
+      min_stock_level: 0,
+      standard_rate: 0,
+      barcode: '',
+      is_active: true,
+      notes: '',
+    },
+  });
+
+  // Reset form when dialog opens/closes or when switching between create/edit mode
   useEffect(() => {
     if (!open) {
       setEditingVariant(null);
-      setFormData({
+      form.reset({
         variant_name: '',
         variant_sku: '',
-        unit: '',
-        standard_rate: '',
-        min_stock_level: '',
+        unit_id: '',
+        quantity: 0,
+        min_stock_level: 0,
+        standard_rate: 0,
+        barcode: '',
         is_active: true,
         notes: '',
       });
     }
-  }, [open]);
+  }, [open, form]);
 
   const handleEdit = (variant: ProductVariant) => {
     setEditingVariant(variant);
-    setFormData({
+    form.reset({
       variant_name: variant.variant_name || '',
       variant_sku: variant.variant_sku || '',
-      unit: variant.unit || '',
-      standard_rate: variant.standard_rate ? String(variant.standard_rate) : '',
-      min_stock_level: variant.min_stock_level ? String(variant.min_stock_level) : '',
-      is_active: variant.is_active,
+      unit_id: variant.unit_id || '',
+      quantity: variant.quantity || 0,
+      min_stock_level: variant.min_stock_level || 0,
+      standard_rate: variant.standard_rate || 0,
+      barcode: variant.barcode || '',
+      is_active: variant.is_active ?? true,
       notes: variant.notes || '',
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: ProductVariantFormData) => {
     if (!item || !currentOrganization) return;
 
-    if (!formData.variant_name.trim() || !formData.unit.trim()) {
-      toast.error(t('items.variants.requiredFields', 'Variant name and unit are required.'));
-      return;
-    }
-
+    // Transform empty strings to undefined
     const basePayload = {
-      variant_name: formData.variant_name.trim(),
-      variant_sku: formData.variant_sku.trim() || undefined,
-      unit: formData.unit.trim(),
-      standard_rate: formData.standard_rate ? Number(formData.standard_rate) : undefined,
-      min_stock_level: formData.min_stock_level ? Number(formData.min_stock_level) : undefined,
-      is_active: formData.is_active,
-      notes: formData.notes.trim() || undefined,
+      variant_name: data.variant_name.trim(),
+      variant_sku: data.variant_sku?.trim() || undefined,
+      unit_id: data.unit_id || undefined,
+      quantity: data.quantity ?? 0,
+      min_stock_level: data.min_stock_level ?? 0,
+      standard_rate: data.standard_rate ?? undefined,
+      barcode: data.barcode?.trim() || undefined,
+      is_active: data.is_active ?? true,
+      notes: data.notes?.trim() || undefined,
     };
 
     try {
@@ -943,12 +989,14 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
       }
 
       setEditingVariant(null);
-      setFormData({
+      form.reset({
         variant_name: '',
         variant_sku: '',
-        unit: '',
-        standard_rate: '',
-        min_stock_level: '',
+        unit_id: '',
+        quantity: 0,
+        min_stock_level: 0,
+        standard_rate: 0,
+        barcode: '',
         is_active: true,
         notes: '',
       });
@@ -970,6 +1018,21 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     }
   };
 
+  const cancelEdit = () => {
+    setEditingVariant(null);
+    form.reset({
+      variant_name: '',
+      variant_sku: '',
+      unit_id: '',
+      quantity: 0,
+      min_stock_level: 0,
+      standard_rate: 0,
+      barcode: '',
+      is_active: true,
+      notes: '',
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -983,63 +1046,120 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
         </DialogHeader>
 
         <div className="space-y-6">
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form id="variant-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="variant_name">{t('items.variants.name', 'Variant name')} *</Label>
               <Input
                 id="variant_name"
-                value={formData.variant_name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, variant_name: e.target.value }))}
+                {...form.register('variant_name')}
                 placeholder={t('items.variants.namePlaceholder', 'e.g., 1L, 5L')}
                 className="mt-1"
               />
+              {form.formState.errors.variant_name && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.variant_name.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="variant_sku">{t('items.variants.sku', 'Variant SKU')}</Label>
               <Input
                 id="variant_sku"
-                value={formData.variant_sku}
-                onChange={(e) => setFormData((prev) => ({ ...prev, variant_sku: e.target.value }))}
+                {...form.register('variant_sku')}
                 placeholder={t('items.variants.skuPlaceholder', 'Optional')}
                 className="mt-1"
               />
+              {form.formState.errors.variant_sku && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.variant_sku.message}</p>
+              )}
             </div>
             <div>
-              <Label htmlFor="variant_unit">{t('items.variants.unit', 'Unit')} *</Label>
-              <Input
-                id="variant_unit"
-                value={formData.unit}
-                onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
-                placeholder="L, kg, unit"
-                className="mt-1"
-              />
+              <Label htmlFor="variant_unit">{t('items.variants.unit', 'Unit')}</Label>
+              <Select
+                value={form.watch('unit_id') || ''}
+                onValueChange={(value) => form.setValue('unit_id', value)}
+              >
+                <SelectTrigger id="variant_unit" className="mt-1">
+                  <SelectValue placeholder={workUnitsLoading ? 'Loading units...' : 'Select unit'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {workUnitsLoading ? (
+                    <SelectItem value="_loading" disabled>
+                      Loading units...
+                    </SelectItem>
+                  ) : workUnits.length === 0 ? (
+                    <SelectItem value="_none" disabled>
+                      No units available
+                    </SelectItem>
+                  ) : (
+                    workUnits.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.code} - {unit.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.unit_id && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.unit_id.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="variant_rate">{t('items.variants.standardRate', 'Standard rate')}</Label>
               <Input
                 id="variant_rate"
                 type="number"
-                value={formData.standard_rate}
-                onChange={(e) => setFormData((prev) => ({ ...prev, standard_rate: e.target.value }))}
+                step="0.01"
+                {...form.register('standard_rate', { valueAsNumber: true })}
                 placeholder="0"
                 className="mt-1"
               />
+              {form.formState.errors.standard_rate && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.standard_rate.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="variant_quantity">{t('items.variants.quantity', 'Initial quantity')}</Label>
+              <Input
+                id="variant_quantity"
+                type="number"
+                step="0.001"
+                {...form.register('quantity', { valueAsNumber: true })}
+                placeholder="0"
+                className="mt-1"
+              />
+              {form.formState.errors.quantity && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.quantity.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="variant_min">{t('items.variants.minStock', 'Minimum stock')}</Label>
               <Input
                 id="variant_min"
                 type="number"
-                value={formData.min_stock_level}
-                onChange={(e) => setFormData((prev) => ({ ...prev, min_stock_level: e.target.value }))}
+                step="0.001"
+                {...form.register('min_stock_level', { valueAsNumber: true })}
                 placeholder="0"
                 className="mt-1"
               />
+              {form.formState.errors.min_stock_level && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.min_stock_level.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="variant_barcode">{t('items.variants.barcode', 'Barcode')}</Label>
+              <Input
+                id="variant_barcode"
+                {...form.register('barcode')}
+                placeholder="Optional"
+                className="mt-1"
+              />
+              {form.formState.errors.barcode && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.barcode.message}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 pt-6">
               <Switch
-                checked={formData.is_active}
-                onCheckedChange={(value) => setFormData((prev) => ({ ...prev, is_active: value }))}
+                checked={form.watch('is_active')}
+                onCheckedChange={(value) => form.setValue('is_active', value)}
               />
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {t('items.variants.active', 'Active')}
@@ -1049,37 +1169,39 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               <Label htmlFor="variant_notes">{t('items.variants.notes', 'Notes')}</Label>
               <Textarea
                 id="variant_notes"
-                value={formData.notes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                {...form.register('notes')}
                 className="mt-1"
                 rows={2}
               />
+              {form.formState.errors.notes && (
+                <p className="text-sm text-red-600 mt-1">{form.formState.errors.notes.message}</p>
+              )}
             </div>
             <div className="sm:col-span-2 flex items-center justify-end gap-2">
               {editingVariant && (
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setEditingVariant(null);
-                    setFormData({
-                      variant_name: '',
-                      variant_sku: '',
-                      unit: '',
-                      standard_rate: '',
-                      min_stock_level: '',
-                      is_active: true,
-                      notes: '',
-                    });
-                  }}
+                  onClick={cancelEdit}
                 >
                   {t('items.variants.cancelEdit', 'Cancel edit')}
                 </Button>
               )}
-              <Button type="submit" disabled={createVariant.isPending || updateVariant.isPending}>
-                {editingVariant
-                  ? t('items.variants.save', 'Save variant')
-                  : t('items.variants.add', 'Add variant')}
+              <Button
+                type="submit"
+                form="variant-form"
+                disabled={createVariant.isPending || updateVariant.isPending}
+              >
+                {(createVariant.isPending || updateVariant.isPending) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {t('items.variants.saving', 'Saving...')}
+                  </>
+                ) : editingVariant ? (
+                  t('items.variants.save', 'Save variant')
+                ) : (
+                  t('items.variants.add', 'Add variant')
+                )}
               </Button>
             </div>
           </form>
@@ -1106,6 +1228,9 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                         {t('items.variants.unit', 'Unit')}
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                        {t('items.variants.quantity', 'Quantity')}
+                      </th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.standardRate', 'Standard rate')}
                       </th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
@@ -1130,7 +1255,12 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                           </div>
                         </td>
                         <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                          {variant.unit}
+                          {variant.unit_id
+                            ? workUnits.find((wu) => wu.id === variant.unit_id)?.code || variant.unit_id
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                          {(variant.quantity ?? 0).toFixed(2)}
                         </td>
                         <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {variant.standard_rate ? formatCurrency(variant.standard_rate) : '-'}

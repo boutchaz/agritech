@@ -259,8 +259,8 @@ END $$;
 -- =====================================================
 -- Uncomment the line below ONLY if you want to delete all user accounts
 -- WARNING: This cannot be undone!
--- TRUNCATE auth.users CASCADE;
--- TRUNCATE auth.identities CASCADE;
+TRUNCATE auth.users CASCADE;
+TRUNCATE auth.identities CASCADE;
 
 -- Re-enable triggers
 SET session_replication_role = 'origin';

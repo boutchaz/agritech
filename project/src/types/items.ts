@@ -215,7 +215,7 @@ export interface ProductVariant {
   variant_name: string;
   variant_sku?: string | null;
   quantity?: number | null;
-  unit: string;
+  unit_id?: string | null; // Reference to work_units table
   min_stock_level?: number | null;
   standard_rate?: number | null;
   last_purchase_rate?: number | null;
@@ -231,7 +231,7 @@ export interface CreateProductVariantInput {
   item_id: string;
   variant_name: string;
   variant_sku?: string;
-  unit: string;
+  unit_id?: string; // Reference to work_units table
   min_stock_level?: number;
   standard_rate?: number;
   last_purchase_rate?: number;
@@ -243,7 +243,7 @@ export interface CreateProductVariantInput {
 export interface UpdateProductVariantInput {
   variant_name?: string;
   variant_sku?: string | null;
-  unit?: string;
+  unit_id?: string | null; // Reference to work_units table
   min_stock_level?: number | null;
   standard_rate?: number | null;
   last_purchase_rate?: number | null;

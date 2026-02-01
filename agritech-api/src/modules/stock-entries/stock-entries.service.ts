@@ -577,6 +577,22 @@ export class StockEntriesService {
       ],
     );
 
+    // Update variant quantity if variant_id is present
+    if (item.variant_id) {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [item.variant_id, item.item_id],
+      );
+    }
+
     this.logger.log(`Material receipt processed: ${item.quantity} ${item.unit} of item ${item.item_id}`);
   }
 
@@ -642,6 +658,22 @@ export class StockEntriesService {
         item.serial_number || null,
       ],
     );
+
+    // Update variant quantity if variant_id is present
+    if (item.variant_id) {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [item.variant_id, item.item_id],
+      );
+    }
 
     this.logger.log(
       `Material issue processed: ${item.quantity} ${item.unit} of item ${item.item_id}, ` +
@@ -761,6 +793,22 @@ export class StockEntriesService {
         item.quantity,
       ],
     );
+
+    // Update variant quantity if variant_id is present
+    if (item.variant_id) {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [item.variant_id, item.item_id],
+      );
+    }
 
     this.logger.log(
       `Stock transfer processed: ${item.quantity} ${item.unit} of item ${item.item_id}, ` +
@@ -963,6 +1011,22 @@ export class StockEntriesService {
     // Log the variance reason if provided in notes
     if (item.notes) {
       this.logger.log(`Variance reason: ${item.notes}`);
+    }
+
+    // Update variant quantity if variant_id is present
+    if (item.variant_id) {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [item.variant_id, item.item_id],
+      );
     }
   }
 
@@ -1642,5 +1706,34 @@ export class StockEntriesService {
     if (error) {
       throw new BadRequestException(`Failed to delete stock account mapping: ${error.message}`);
     }
+  }
+
+  /**
+   * Update variant quantity based on stock movements
+   * This is called after stock movements are created/updated to keep variant quantities in sync
+   */
+  async updateVariantQuantity(
+    organizationId: string,
+    itemId: string,
+    variantId: string,
+  ): Promise<void> {
+    if (!variantId) return;
+
+    await this.executeInPgTransaction(async (client) => {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [variantId, itemId],
+      );
+    });
+
+    this.logger.debug(`Updated variant quantity: variant=${variantId}, item=${itemId}`);
   }
 }

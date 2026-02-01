@@ -1,4 +1,3 @@
-Connecting to db 5432
 export type Json =
   | string
   | number
@@ -8,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -10906,6 +10910,137 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          organization_id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          organization_id: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          organization_id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       opening_stock_balances: {
         Row: {
           batch_number: string | null
@@ -11771,10 +11906,12 @@ export type Database = {
           fiscal_year_start_month: number | null
           id: string
           is_active: boolean | null
+          last_stock_check_at: string | null
           logo_url: string | null
           name: string
           phone: string | null
           postal_code: string | null
+          show_stock_alerts: boolean | null
           slug: string | null
           state: string | null
           tax_id: string | null
@@ -11797,10 +11934,12 @@ export type Database = {
           fiscal_year_start_month?: number | null
           id?: string
           is_active?: boolean | null
+          last_stock_check_at?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
           postal_code?: string | null
+          show_stock_alerts?: boolean | null
           slug?: string | null
           state?: string | null
           tax_id?: string | null
@@ -11823,10 +11962,12 @@ export type Database = {
           fiscal_year_start_month?: number | null
           id?: string
           is_active?: boolean | null
+          last_stock_check_at?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
           postal_code?: string | null
+          show_stock_alerts?: boolean | null
           slug?: string | null
           state?: string | null
           tax_id?: string | null
@@ -13589,6 +13730,159 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_categories"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          barcode: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          item_id: string
+          last_purchase_rate: number | null
+          min_stock_level: number | null
+          notes: string | null
+          organization_id: string
+          quantity: number | null
+          standard_rate: number | null
+          unit: string
+          updated_at: string | null
+          variant_name: string
+          variant_sku: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_id: string
+          last_purchase_rate?: number | null
+          min_stock_level?: number | null
+          notes?: string | null
+          organization_id: string
+          quantity?: number | null
+          standard_rate?: number | null
+          unit: string
+          updated_at?: string | null
+          variant_name: string
+          variant_sku?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_id?: string
+          last_purchase_rate?: number | null
+          min_stock_level?: number | null
+          notes?: string | null
+          organization_id?: string
+          quantity?: number | null
+          standard_rate?: number | null
+          unit?: string
+          updated_at?: string | null
+          variant_name?: string
+          variant_sku?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -17576,6 +17870,7 @@ export type Database = {
           total_cost: number | null
           unit: string
           variance: number | null
+          variant_id: string | null
         }
         Insert: {
           batch_number?: string | null
@@ -17597,6 +17892,7 @@ export type Database = {
           total_cost?: number | null
           unit: string
           variance?: number | null
+          variant_id?: string | null
         }
         Update: {
           batch_number?: string | null
@@ -17618,6 +17914,7 @@ export type Database = {
           total_cost?: number | null
           unit?: string
           variance?: number | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -17648,6 +17945,13 @@ export type Database = {
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "stock_entry_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stock_movements: {
@@ -17670,6 +17974,7 @@ export type Database = {
           stock_entry_item_id: string | null
           total_cost: number | null
           unit: string
+          variant_id: string | null
           warehouse_id: string
         }
         Insert: {
@@ -17691,6 +17996,7 @@ export type Database = {
           stock_entry_item_id?: string | null
           total_cost?: number | null
           unit: string
+          variant_id?: string | null
           warehouse_id: string
         }
         Update: {
@@ -17712,6 +18018,7 @@ export type Database = {
           stock_entry_item_id?: string | null
           total_cost?: number | null
           unit?: string
+          variant_id?: string | null
           warehouse_id?: string
         }
         Relationships: [
@@ -17839,6 +18146,13 @@ export type Database = {
             columns: ["stock_entry_item_id"]
             isOneToOne: false
             referencedRelation: "stock_entry_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
           {
@@ -18369,6 +18683,10 @@ export type Database = {
           current_period_start: string | null
           id: string
           included_addon_slots: number | null
+          max_farms: number | null
+          max_parcels: number | null
+          max_satellite_reports: number | null
+          max_users: number | null
           organization_id: string
           plan_id: string | null
           plan_type: string | null
@@ -18383,6 +18701,10 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           included_addon_slots?: number | null
+          max_farms?: number | null
+          max_parcels?: number | null
+          max_satellite_reports?: number | null
+          max_users?: number | null
           organization_id: string
           plan_id?: string | null
           plan_type?: string | null
@@ -18397,6 +18719,10 @@ export type Database = {
           current_period_start?: string | null
           id?: string
           included_addon_slots?: number | null
+          max_farms?: number | null
+          max_parcels?: number | null
+          max_satellite_reports?: number | null
+          max_users?: number | null
           organization_id?: string
           plan_id?: string | null
           plan_type?: string | null
@@ -19186,6 +19512,165 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_stock_consumption: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_id: string
+          notes: string | null
+          organization_id: string
+          quantity_consumed: number
+          task_id: string
+          unit: string
+          updated_at: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_id: string
+          notes?: string | null
+          organization_id: string
+          quantity_consumed?: number
+          task_id: string
+          unit: string
+          updated_at?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          notes?: string | null
+          organization_id?: string
+          quantity_consumed?: number
+          task_id?: string
+          unit?: string
+          updated_at?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_stock_consumption_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_stock_consumption_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -20245,7 +20730,7 @@ export type Database = {
           last_name: string | null
           onboarding_completed: boolean | null
           onboarding_completed_at: string | null
-          onboarding_current_step: number | null
+          onboarding_current_step: string | null
           onboarding_state: Json | null
           password_set: boolean | null
           phone: string | null
@@ -20265,7 +20750,7 @@ export type Database = {
           last_name?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
-          onboarding_current_step?: number | null
+          onboarding_current_step?: string | null
           onboarding_state?: Json | null
           password_set?: boolean | null
           phone?: string | null
@@ -20285,7 +20770,7 @@ export type Database = {
           last_name?: string | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
-          onboarding_current_step?: number | null
+          onboarding_current_step?: string | null
           onboarding_state?: Json | null
           password_set?: boolean | null
           phone?: string | null
@@ -23092,6 +23577,17 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      add_task_stock_consumption: {
+        Args: {
+          p_item_id: string
+          p_notes: string
+          p_quantity: number
+          p_task_id: string
+          p_unit: string
+          p_variant_id: string
+        }
+        Returns: string
+      }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -23174,6 +23670,30 @@ export type Database = {
           p_transaction_type?: string
         }
         Returns: number
+      }
+      check_low_stock_inventory: {
+        Args: { p_organization_id: string }
+        Returns: {
+          current_quantity: number
+          item_id: string
+          item_name: string
+          minimum_stock: number
+          shortage_quantity: number
+          unit: string
+        }[]
+      }
+      check_low_stock_variants: {
+        Args: { p_organization_id: string }
+        Returns: {
+          current_quantity: number
+          item_id: string
+          item_name: string
+          min_stock_level: number
+          shortage_quantity: number
+          unit: string
+          variant_id: string
+          variant_name: string
+        }[]
       }
       check_marketplace_stock_availability: {
         Args: { p_item_id?: string; p_listing_id?: string; p_quantity?: number }
@@ -23287,7 +23807,7 @@ export type Database = {
           last_name: string | null
           onboarding_completed: boolean | null
           onboarding_completed_at: string | null
-          onboarding_current_step: number | null
+          onboarding_current_step: string | null
           onboarding_state: Json | null
           password_set: boolean | null
           phone: string | null
@@ -23330,6 +23850,10 @@ export type Database = {
           p_scheduled_date?: string
           p_template_id: string
         }
+        Returns: string
+      }
+      create_work_record_from_existing_task: {
+        Args: { p_task_id: string }
         Returns: string
       }
       deduct_marketplace_listing_stock: {
@@ -24940,4 +25464,3 @@ export const Constants = {
     },
   },
 } as const
-

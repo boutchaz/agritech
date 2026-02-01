@@ -15,8 +15,13 @@ export class CreateProductVariantDto {
   @IsOptional()
   variant_sku?: string;
 
-  @IsString()
-  unit: string;
+  @IsUUID()
+  @IsOptional()
+  unit_id?: string; // Reference to work_units table
+
+  @IsNumber()
+  @IsOptional()
+  quantity?: number;
 
   @IsNumber()
   @IsOptional()

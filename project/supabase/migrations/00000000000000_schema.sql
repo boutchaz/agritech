@@ -283,6 +283,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   timezone VARCHAR(50) DEFAULT 'Africa/Casablanca',
   avatar_url TEXT,
   onboarding_completed BOOLEAN DEFAULT false,
+  onboarding_completed_at TIMESTAMPTZ,
+  onboarding_current_step VARCHAR(50) DEFAULT 'welcome',
+  onboarding_state JSONB,
   password_set BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -298,6 +301,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   current_period_start TIMESTAMPTZ,
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT false,
+  -- Subscription limits
+  max_farms INT DEFAULT 2,
+  max_parcels INT DEFAULT 25,
+  max_users INT DEFAULT 5,
+  max_satellite_reports INT DEFAULT 100,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -312,7 +320,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   type VARCHAR(50) NOT NULL,
   title VARCHAR(255) NOT NULL,
   message TEXT,
-  data JSONB DEFAULT '{}',
+  data JSONB DEFAULT '{}'::jsonb,
   is_read BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   read_at TIMESTAMPTZ
@@ -374,7 +382,7 @@ CREATE TABLE IF NOT EXISTS organization_modules (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
   is_active BOOLEAN DEFAULT false,
-  settings JSONB DEFAULT '{}',
+  settings JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, module_id)
@@ -2802,7 +2810,7 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   quality_notes TEXT,
   quality_score INTEGER,
   harvest_task_id UUID REFERENCES tasks(id),
-  workers JSONB DEFAULT '[]',
+  workers JSONB DEFAULT '[]'::jsonb,
   supervisor_id UUID REFERENCES workers(id),
   warehouse_id UUID REFERENCES warehouses(id) ON DELETE SET NULL,
   storage_location TEXT,
@@ -2811,8 +2819,8 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   intended_for TEXT,
   expected_price_per_unit NUMERIC,
   estimated_revenue NUMERIC GENERATED ALWAYS AS (quantity * expected_price_per_unit) STORED,
-  photos JSONB DEFAULT '[]',
-  documents JSONB DEFAULT '[]',
+  photos JSONB DEFAULT '[]'::jsonb,
+  documents JSONB DEFAULT '[]'::jsonb,
   status TEXT DEFAULT 'stored',
   notes TEXT,
   lot_number TEXT, -- Unique lot number for traceability (e.g., P1FM1-0012025)
@@ -2941,7 +2949,7 @@ CREATE TABLE IF NOT EXISTS deliveries (
   signature_image TEXT,
   signature_name TEXT,
   signature_date TIMESTAMPTZ,
-  photos JSONB DEFAULT '[]',
+  photos JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3429,8 +3437,8 @@ CREATE TABLE IF NOT EXISTS reception_batches (
   sales_order_id UUID REFERENCES sales_orders(id),
   stock_entry_id UUID REFERENCES stock_entries(id),
   status TEXT DEFAULT 'received',
-  photos JSONB DEFAULT '[]',
-  documents JSONB DEFAULT '[]',
+  photos JSONB DEFAULT '[]'::jsonb,
+  documents JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
   lot_code TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3534,7 +3542,7 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   image_source TEXT DEFAULT 'Sentinel-2',
   geotiff_url TEXT,
   geotiff_expires_at TIMESTAMPTZ,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'PRI', 'MSI', 'MCARI', 'TCARI'))
@@ -3657,7 +3665,7 @@ CREATE TABLE IF NOT EXISTS analyses (
   analysis_type analysis_type NOT NULL,
   analysis_date DATE NOT NULL,
   laboratory TEXT,
-  data JSONB DEFAULT '{}',
+  data JSONB DEFAULT '{}'::jsonb,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -3676,7 +3684,7 @@ CREATE TABLE IF NOT EXISTS analysis_recommendations (
   priority TEXT,
   title TEXT NOT NULL,
   description TEXT,
-  action_items JSONB DEFAULT '[]',
+  action_items JSONB DEFAULT '[]'::jsonb,
   estimated_cost NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -4122,21 +4130,24 @@ CREATE TABLE IF NOT EXISTS structures (
   farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   type TEXT NOT NULL,
-  location JSONB DEFAULT '{"lat": 0, "lng": 0}',
+  location JSONB DEFAULT '{"lat": 0, "lng": 0}'::jsonb,
+  geom GEOMETRY(POINT, 4326) GENERATED ALWAYS AS (ST_SetSRID(ST_MakePoint((location->>'lng')::NUMERIC, (location->>'lat')::NUMERIC), 4326)) STORED,
   installation_date DATE NOT NULL,
   condition TEXT DEFAULT 'good',
   usage TEXT,
-  structure_details JSONB DEFAULT '{}',
+  structure_details JSONB DEFAULT '{}'::jsonb,
   notes TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (type IN ('stable', 'technical_room', 'basin', 'well')),
-  CHECK (condition IN ('excellent', 'good', 'fair', 'poor', 'needs_repair'))
+  CHECK (condition IN ('excellent', 'good', 'fair', 'poor', 'needs_repair')),
+  CHECK (location ? 'lat' AND location ? 'lng')
 );
 
 CREATE INDEX IF NOT EXISTS idx_structures_org ON structures(organization_id);
 CREATE INDEX IF NOT EXISTS idx_structures_farm ON structures(farm_id);
+CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WHERE geom IS NOT NULL;
 
 -- Utilities
 CREATE TABLE IF NOT EXISTS utilities (
@@ -4215,7 +4226,7 @@ CREATE TABLE IF NOT EXISTS role_templates (
   description TEXT,
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   is_system_template BOOLEAN DEFAULT false,
-  permissions JSONB DEFAULT '{}',
+  permissions JSONB DEFAULT '{}'::jsonb,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -4423,9 +4434,10 @@ CREATE TABLE IF NOT EXISTS dashboard_settings (
   show_financial_data BOOLEAN DEFAULT true,
   show_stock_alerts BOOLEAN DEFAULT true,
   show_task_alerts BOOLEAN DEFAULT true,
-  layout JSONB DEFAULT '{"topRow": ["soil", "climate", "irrigation", "maintenance"], "bottomRow": ["alerts", "tasks"], "middleRow": ["production", "financial"]}',
+  layout JSONB DEFAULT '{"topRow": ["soil", "climate", "irrigation", "maintenance"], "bottomRow": ["alerts", "tasks"], "middleRow": ["production", "financial"]}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (layout ? 'topRow' AND layout ? 'bottomRow' AND layout ? 'middleRow')
 );
 
 CREATE INDEX IF NOT EXISTS idx_dashboard_settings_user ON dashboard_settings(user_id);
@@ -9396,7 +9408,7 @@ CREATE TABLE IF NOT EXISTS events (
   organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   event_type VARCHAR(100) NOT NULL,
-  event_data JSONB DEFAULT '{}',
+  event_data JSONB DEFAULT '{}'::jsonb,
   source VARCHAR(50) DEFAULT 'app',
   ip_address INET,
   user_agent TEXT,
@@ -10071,7 +10083,7 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
   product_category_id UUID REFERENCES product_categories(id),
   status TEXT DEFAULT 'draft', -- 'draft', 'active', 'sold_out', 'archived'
   is_public BOOLEAN DEFAULT false,
-  images JSONB DEFAULT '[]',
+  images JSONB DEFAULT '[]'::jsonb,
   location_lat NUMERIC,
   location_lng NUMERIC,
   location_address TEXT,
@@ -10096,7 +10108,7 @@ CREATE TABLE IF NOT EXISTS marketplace_orders (
   currency TEXT DEFAULT 'MAD',
   notes TEXT,
   shipping_address TEXT,
-  shipping_details JSONB DEFAULT '{}', -- { name, phone, email, address, city, postal_code }
+  shipping_details JSONB DEFAULT '{}'::jsonb, -- { name, phone, email, address, city, postal_code }
   payment_method TEXT DEFAULT 'cod', -- 'cod', 'cmi', 'paypal', etc.
   payment_status TEXT DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed', 'refunded'
   buyer_name TEXT,
@@ -10106,7 +10118,8 @@ CREATE TABLE IF NOT EXISTS marketplace_orders (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'disputed')),
-  CHECK (payment_status IN ('pending', 'processing', 'completed', 'failed', 'refunded'))
+  CHECK (payment_status IN ('pending', 'processing', 'completed', 'failed', 'refunded')),
+  CHECK (shipping_details ? 'name')
 );
 
 CREATE INDEX IF NOT EXISTS idx_marketplace_orders_buyer ON marketplace_orders(buyer_organization_id);
@@ -10292,7 +10305,7 @@ CREATE POLICY "Users can manage own cart items" ON marketplace_cart_items
 
 -- Additional columns for marketplace_orders (if not exists)
 ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
-  shipping_details JSONB DEFAULT '{}';
+  shipping_details JSONB DEFAULT '{}'::jsonb;
 -- Structure: { name, phone, address, city, postal_code, notes }
 
 ALTER TABLE marketplace_orders ADD COLUMN IF NOT EXISTS
@@ -11487,7 +11500,7 @@ CREATE TABLE IF NOT EXISTS quality_inspections (
   type VARCHAR(50) NOT NULL CHECK (type IN ('pre_harvest', 'post_harvest', 'storage', 'transport', 'processing')),
   inspection_date DATE NOT NULL,
   inspector_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  results JSONB NOT NULL DEFAULT '{}',
+  results JSONB NOT NULL DEFAULT '{}'::jsonb,
   status VARCHAR(50) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'failed', 'cancelled')),
   overall_score INTEGER CHECK (overall_score >= 0 AND overall_score <= 100),
   notes TEXT,
@@ -12234,7 +12247,7 @@ ALTER TABLE account_mappings
   ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 
 ALTER TABLE account_mappings
-  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+  ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
 
 ALTER TABLE account_mappings
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
@@ -12762,7 +12775,7 @@ BEGIN
 END $$;
 
 -- Add accounting_settings JSONB column
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS accounting_settings JSONB DEFAULT '{}';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS accounting_settings JSONB DEFAULT '{}'::jsonb;
 
 -- Add fiscal_year_start_month to organizations
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS fiscal_year_start_month INTEGER DEFAULT 1;
@@ -13022,7 +13035,7 @@ CREATE TABLE IF NOT EXISTS tax_configurations (
   expiry_date DATE,
   account_id UUID REFERENCES accounts(id),
   description TEXT,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (organization_id IS NULL OR country_code IS NULL)
@@ -14076,9 +14089,9 @@ ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0,
 ADD COLUMN IF NOT EXISTS price_monthly NUMERIC(10, 2) DEFAULT 0,
 ADD COLUMN IF NOT EXISTS is_required BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS is_recommended BOOLEAN DEFAULT false,
-ADD COLUMN IF NOT EXISTS dashboard_widgets JSONB DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS navigation_items JSONB DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]';
+ADD COLUMN IF NOT EXISTS dashboard_widgets JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS navigation_items JSONB DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS features JSONB DEFAULT '[]'::jsonb;
 
 COMMENT ON COLUMN modules.slug IS 'URL-friendly identifier for the module';
 COMMENT ON COLUMN modules.color IS 'Color theme for the module (hex code)';
@@ -14332,7 +14345,7 @@ CREATE TABLE IF NOT EXISTS polar_subscriptions (
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT false,
   canceled_at TIMESTAMPTZ,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -14421,7 +14434,7 @@ CREATE OR REPLACE FUNCTION create_or_update_polar_subscription(
   p_status VARCHAR,
   p_current_period_start TIMESTAMPTZ,
   p_current_period_end TIMESTAMPTZ,
-  p_metadata JSONB DEFAULT '{}'
+  p_metadata JSONB DEFAULT '{}'::jsonb
 )
 RETURNS UUID LANGUAGE plpgsql
 SET search_path = public
@@ -14877,8 +14890,8 @@ $$;
 -- Add route configuration columns to modules
 ALTER TABLE modules
 ADD COLUMN IF NOT EXISTS route_base VARCHAR(100),
-ADD COLUMN IF NOT EXISTS filter_config JSONB DEFAULT '{}',
-ADD COLUMN IF NOT EXISTS default_filters JSONB DEFAULT '{}';
+ADD COLUMN IF NOT EXISTS filter_config JSONB DEFAULT '{}'::jsonb,
+ADD COLUMN IF NOT EXISTS default_filters JSONB DEFAULT '{}'::jsonb;
 
 COMMENT ON COLUMN modules.route_base IS 'Base route path for this module (e.g., /crops, /orchards)';
 COMMENT ON COLUMN modules.filter_config IS 'Configuration of available filters for this module';
@@ -15009,7 +15022,7 @@ $$;
 -- Create function to get module data with filters
 CREATE OR REPLACE FUNCTION get_module_data(
   p_module_slug VARCHAR,
-  p_filters JSONB DEFAULT '{}',
+  p_filters JSONB DEFAULT '{}'::jsonb,
   p_page INTEGER DEFAULT 1,
   p_page_size INTEGER DEFAULT 20
 )
@@ -15138,7 +15151,7 @@ CREATE TABLE IF NOT EXISTS abstract_entities (
   entity_type VARCHAR(50) NOT NULL, -- crop, tree, animal, equipment, etc.
   entity_id UUID NOT NULL, -- References the actual entity in its specific table
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}'::jsonb,
   tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -15158,7 +15171,7 @@ CREATE TABLE IF NOT EXISTS entity_types (
   display_name_plural VARCHAR(100),
   icon VARCHAR(50),
   color VARCHAR(20),
-  config JSONB DEFAULT '{}',
+  config JSONB DEFAULT '{}'::jsonb,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -15188,7 +15201,7 @@ CREATE TABLE IF NOT EXISTS entity_relationships (
   child_entity_type VARCHAR(50) NOT NULL,
   child_entity_id UUID NOT NULL,
   relationship_type VARCHAR(50) NOT NULL, -- contains, located_in, belongs_to, etc.
-  metadata JSONB DEFAULT '{}',
+  metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(parent_entity_type, parent_entity_id, child_entity_type, child_entity_id, relationship_type)
 );
@@ -15201,7 +15214,7 @@ CREATE TABLE IF NOT EXISTS entity_events (
   entity_type VARCHAR(50) NOT NULL,
   entity_id UUID NOT NULL,
   event_type VARCHAR(50) NOT NULL, -- created, updated, deleted, status_changed, etc.
-  event_data JSONB DEFAULT '{}',
+  event_data JSONB DEFAULT '{}'::jsonb,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -15213,8 +15226,10 @@ COMMENT ON TABLE entity_events IS 'Audit log for entity events';
 CREATE INDEX IF NOT EXISTS idx_abstract_entities_type ON abstract_entities(entity_type);
 CREATE INDEX IF NOT EXISTS idx_abstract_entities_org ON abstract_entities(organization_id);
 CREATE INDEX IF NOT EXISTS idx_abstract_entities_tags ON abstract_entities USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_abstract_entities_metadata ON abstract_entities USING GIN(metadata);
 CREATE INDEX IF NOT EXISTS idx_entity_types_slug ON entity_types(slug);
 CREATE INDEX IF NOT EXISTS idx_entity_types_module ON entity_types(module_slug);
+CREATE INDEX IF NOT EXISTS idx_entity_types_config ON entity_types USING GIN(config);
 CREATE INDEX IF NOT EXISTS idx_entity_relationships_parent ON entity_relationships(parent_entity_type, parent_entity_id);
 CREATE INDEX IF NOT EXISTS idx_entity_relationships_child ON entity_relationships(child_entity_type, child_entity_id);
 CREATE INDEX IF NOT EXISTS idx_entity_events_entity ON entity_events(entity_type, entity_id);
@@ -15292,7 +15307,7 @@ CREATE OR REPLACE FUNCTION register_abstract_entity(
   p_entity_type VARCHAR,
   p_entity_id UUID,
   p_organization_id UUID,
-  p_metadata JSONB DEFAULT '{}',
+  p_metadata JSONB DEFAULT '{}'::jsonb,
   p_tags TEXT[] DEFAULT '{}'
 )
 RETURNS UUID LANGUAGE plpgsql
@@ -15319,7 +15334,7 @@ CREATE OR REPLACE FUNCTION log_entity_event(
   p_entity_type VARCHAR,
   p_entity_id UUID,
   p_event_type VARCHAR,
-  p_event_data JSONB DEFAULT '{}'
+  p_event_data JSONB DEFAULT '{}'::jsonb
 )
 RETURNS UUID LANGUAGE plpgsql
 SET search_path = public
@@ -17287,7 +17302,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   variant_name TEXT NOT NULL, -- e.g., "1L", "5L", "10kg", "25kg"
   variant_sku TEXT, -- Unique SKU for the variant
   quantity NUMERIC DEFAULT 0, -- Current stock quantity for this variant
-  unit TEXT NOT NULL, -- e.g., "L", "kg", "unit"
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL, -- Reference to work_units table
   min_stock_level NUMERIC DEFAULT 0,
   standard_rate NUMERIC, -- Sales price per unit
   last_purchase_rate NUMERIC,
@@ -17305,6 +17320,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
 CREATE INDEX IF NOT EXISTS idx_product_variants_org ON product_variants(organization_id);
 CREATE INDEX IF NOT EXISTS idx_product_variants_item ON product_variants(item_id);
 CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(variant_sku) WHERE variant_sku IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_product_variants_unit_id ON product_variants(unit_id);
 
 -- Add variant_id column to stock_entry_items
 ALTER TABLE stock_entry_items
@@ -17317,6 +17333,7 @@ ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELE
 -- Add comments for documentation
 COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';
 COMMENT ON COLUMN product_variants.variant_name IS 'Variant designation (e.g., "1L", "5L", "10kg", "25kg")';
+COMMENT ON COLUMN product_variants.unit_id IS 'Reference to work_units table for unit of measure';
 COMMENT ON COLUMN product_variants.variant_sku IS 'Unique SKU code for this specific variant';
 COMMENT ON COLUMN product_variants.quantity IS 'Current stock quantity for this variant';
 COMMENT ON COLUMN product_variants.min_stock_level IS 'Minimum stock level before low stock alert';
@@ -17337,6 +17354,59 @@ FOR EACH ROW
 EXECUTE FUNCTION update_product_variants_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
+
+
+-- ====================================================================
+-- UPDATE VARIANT QUANTITIES ON STOCK MOVEMENTS
+-- Migration: 20260201000001_update_variant_quantities.sql
+-- ====================================================================
+
+-- Create function to update variant quantity based on stock movements
+CREATE OR REPLACE FUNCTION update_variant_quantity_on_stock_movement()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Update the variant quantity by summing all stock movements for this variant
+  -- If variant_id is NULL, this is a base item and doesn't need update
+  IF NEW.variant_id IS NOT NULL THEN
+    UPDATE product_variants
+    SET quantity = (
+      SELECT COALESCE(SUM(quantity), 0)
+      FROM stock_movements
+      WHERE stock_movements.variant_id = NEW.variant_id
+        AND stock_movements.item_id = NEW.item_id
+    ),
+    updated_at = NOW()
+    WHERE product_variants.id = NEW.variant_id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to update variant quantity after stock movement INSERT
+DROP TRIGGER IF EXISTS trg_update_variant_quantity_after_insert ON stock_movements;
+CREATE TRIGGER trg_update_variant_quantity_after_insert
+AFTER INSERT ON stock_movements
+FOR EACH ROW
+EXECUTE FUNCTION update_variant_quantity_on_stock_movement();
+
+-- Create trigger to update variant quantity after stock movement UPDATE
+DROP TRIGGER IF EXISTS trg_update_variant_quantity_after_update ON stock_movements;
+CREATE TRIGGER trg_update_variant_quantity_after_update
+AFTER UPDATE ON stock_movements
+FOR EACH ROW
+WHEN (OLD.quantity IS DISTINCT FROM NEW.quantity OR OLD.variant_id IS DISTINCT FROM NEW.variant_id)
+EXECUTE FUNCTION update_variant_quantity_on_stock_movement();
+
+-- Create trigger to update variant quantity after stock movement DELETE
+DROP TRIGGER IF EXISTS trg_update_variant_quantity_after_delete ON stock_movements;
+CREATE TRIGGER trg_update_variant_quantity_after_delete
+AFTER DELETE ON stock_movements
+FOR EACH ROW
+EXECUTE FUNCTION update_variant_quantity_on_stock_movement();
+
+-- Comment
+COMMENT ON FUNCTION update_variant_quantity_on_stock_movement() IS 'Automatically update product_variants.quantity when stock movements change';
 
 
 -- ====================================================================
