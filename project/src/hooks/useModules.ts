@@ -9,6 +9,8 @@ export const useModules = () => {
     queryKey: ['modules', currentOrganization?.id],
     queryFn: async (): Promise<OrganizationModule[]> => {
       if (!currentOrganization?.id) return [];
+      console.log('[useModules] currentOrganization:', currentOrganization);
+      console.log('[useModules] currentOrganization.id:', currentOrganization.id, 'Type:', typeof currentOrganization.id);
       return modulesApi.getAll(undefined, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
@@ -31,6 +33,19 @@ export const useUpdateModule = () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
+
+      // Validate that organizationId is a string
+      if (typeof currentOrganization.id !== 'string') {
+        console.error('[useUpdateModule] ERROR: currentOrganization.id is not a string!', {
+          id: currentOrganization.id,
+          type: typeof currentOrganization.id,
+          currentOrganization
+        });
+        throw new Error(`Invalid organization ID: expected string, got ${typeof currentOrganization.id}`);
+      }
+
+      console.log('[useUpdateModule] currentOrganization:', currentOrganization);
+      console.log('[useUpdateModule] currentOrganization.id:', currentOrganization.id, 'Type:', typeof currentOrganization.id);
       return modulesApi.update(currentOrganization.id, moduleId, data);
     },
     onSuccess: () => {

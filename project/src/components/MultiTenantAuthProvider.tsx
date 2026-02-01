@@ -68,6 +68,22 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
+  // Validate organizations data
+  useEffect(() => {
+    if (organizations.length > 0) {
+      const invalidOrg = organizations.find(o => !o.id || typeof o.id !== 'string');
+      if (invalidOrg) {
+        console.error('[MultiTenantAuthProvider] ERROR: Organization has invalid ID!', {
+          organization: invalidOrg,
+          id: invalidOrg.id,
+          idType: typeof invalidOrg.id
+        });
+      } else {
+        console.log('[MultiTenantAuthProvider] All organizations have valid string IDs');
+      }
+    }
+  }, [organizations]);
+
   // Calculate loading state
   // IMPORTANT: Also wait for currentOrganization to be set when we have organizations
   const waitingForOrganization = organizations.length > 0 && !currentOrganization && !orgsLoading;
@@ -351,20 +367,42 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const storedOrg = useOrganizationStore.getState().currentOrganization;
       const savedOrgStr = localStorage.getItem('currentOrganization');
 
+      // Validate Zustand store data
+      if (storedOrg && (!storedOrg.id || typeof storedOrg.id !== 'string')) {
+        console.error('[MultiTenantAuthProvider] ERROR: Corrupted data in Zustand store, clearing...', storedOrg);
+        useOrganizationStore.getState().clearOrganization();
+      }
+
+      // Validate localStorage data
+      if (savedOrgStr) {
+        try {
+          const parsedOrg = JSON.parse(savedOrgStr);
+          if (!parsedOrg.id || typeof parsedOrg.id !== 'string') {
+            console.error('[MultiTenantAuthProvider] ERROR: Corrupted data in localStorage, clearing...', parsedOrg);
+            localStorage.removeItem('currentOrganization');
+          }
+        } catch (error) {
+          console.error('[MultiTenantAuthProvider] ERROR: Failed to parse localStorage data, clearing...', error);
+          localStorage.removeItem('currentOrganization');
+        }
+      }
+
       let orgToRestore = null;
 
-      // Try Zustand store first
-      if (storedOrg) {
-        const validOrg = organizations.find(o => o.id === storedOrg.id);
+      // Try Zustand store first (re-read after validation)
+      const validatedStoredOrg = useOrganizationStore.getState().currentOrganization;
+      if (validatedStoredOrg) {
+        const validOrg = organizations.find(o => o.id === validatedStoredOrg.id);
         if (validOrg) {
           orgToRestore = validOrg;
         }
       }
 
-      // Fallback to localStorage if Zustand store doesn't have it
-      if (!orgToRestore && savedOrgStr) {
+      // Fallback to localStorage if Zustand store doesn't have it (re-read after validation)
+      const validatedSavedOrgStr = localStorage.getItem('currentOrganization');
+      if (!orgToRestore && validatedSavedOrgStr) {
         try {
-          const org = JSON.parse(savedOrgStr);
+          const org = JSON.parse(validatedSavedOrgStr);
           const validOrg = organizations.find(o => o.id === org.id);
           if (validOrg) {
             orgToRestore = validOrg;
@@ -376,6 +414,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       // Use restored org or default to first organization
       const finalOrg = orgToRestore || organizations[0];
+      console.log('[MultiTenantAuthProvider] Setting currentOrganization:', finalOrg);
+      console.log('[MultiTenantAuthProvider] finalOrg.id:', finalOrg.id, 'Type:', typeof finalOrg.id);
       setCurrentOrganization(finalOrg);
 
       // IMPORTANT: Also save to localStorage so services can read it immediately

@@ -1255,7 +1255,7 @@ export const useTour = (): TourContextValue => {
 };
 
 export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
-  const { startTour, isTourCompleted, isRunning, dismissedTours, isLoading } = useTour();
+  const { startTour, completedTours, dismissedTours, isRunning, isLoading } = useTour();
   const { hasFeature } = useExperienceLevel();
   const location = useLocation();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
@@ -1269,10 +1269,13 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
     // 2. Tour not dismissed
     // 3. Not already running
     // 4. User has enabledGuidedTours feature (basic level only)
+    const isCompleted = completedTours.includes(tourId);
+    const isDismissed = dismissedTours.includes(tourId);
+
     if (
       !isOnboardingRoute
-      && !isTourCompleted(tourId)
-      && !dismissedTours.includes(tourId)
+      && !isCompleted
+      && !isDismissed
       && !isRunning
       && hasFeature('enableGuidedTours')
     ) {
@@ -1281,5 +1284,5 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [tourId, startTour, isTourCompleted, dismissedTours, isRunning, delay, hasFeature, isLoading, isOnboardingRoute]);
+  }, [tourId, startTour, completedTours, dismissedTours, isRunning, delay, hasFeature, isLoading, isOnboardingRoute]);
 };
