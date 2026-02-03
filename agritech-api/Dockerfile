@@ -1,34 +1,30 @@
 # Build stage
 FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
 # Copy only the API package files (not workspace files to avoid workspace context)
 COPY agritech-api/package.json ./
 
-# Install dependencies without frozen-lockfile since this is a single package build
-RUN pnpm install
+# Install all dependencies
+RUN npm ci
 
 # Copy source code
 COPY agritech-api/ ./
 
 # Build application
-RUN pnpm run build
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS production
-
-RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
 # Copy only the API package files
 COPY agritech-api/package.json ./
 
-# Install only production dependencies
-RUN pnpm install --prod
+# Install production dependencies (includes all transitive dependencies)
+RUN npm ci --only=production
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -51,7 +47,7 @@ EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:3001/api/v1/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start application
 CMD ["node", "dist/main"]
