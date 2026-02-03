@@ -18,10 +18,21 @@ const getAuthStorage = () => {
 };
 
 const authStorage = {
-  getItem: (name: string) => getAuthStorage()?.getItem(name) ?? null,
+  getItem: (name: string) => {
+    const storage = getAuthStorage();
+    const value = storage?.getItem(name) ?? null;
+    if (!value) return null;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  },
   setItem: (name: string, value: string) => {
     const storage = getAuthStorage();
-    storage?.setItem(name, value);
+    // Ensure value is properly stringified
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    storage?.setItem(name, stringValue);
   },
   removeItem: (name: string) => {
     if (typeof window === 'undefined') return;
