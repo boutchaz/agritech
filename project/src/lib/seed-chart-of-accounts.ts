@@ -5,7 +5,7 @@
  * organization's country and currency.
  */
 
-import { apiClient } from './api-client-axios';
+import { apiClient } from './api-client';
 
 export type SupportedCountry = 'MAR' | 'FRA' | 'USA' | 'GBR' | 'DEU';
 export type SupportedCurrency = 'MAD' | 'EUR' | 'USD' | 'GBP';
@@ -86,9 +86,9 @@ export async function seedChartOfAccounts(
     );
 
     return {
-      accountsCreated: response.data.accounts_created,
-      success: response.data.success,
-      message: response.data.message,
+      accountsCreated: response.accounts_created,
+      success: response.success,
+      message: response.message,
     };
   } catch (error: unknown) {
     console.error('Error in seedChartOfAccounts:', error);
@@ -121,7 +121,7 @@ export async function seedChartOfAccounts(
 export async function hasExistingAccounts(_organizationId: string): Promise<boolean> {
   try {
     const response = await apiClient.get('/api/v1/accounts');
-    return response.data.length > 0;
+    return Array.isArray(response) && response.length > 0;
   } catch (error) {
     console.error('Error checking for existing accounts:', error);
     return false;
