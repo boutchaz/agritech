@@ -1,8 +1,8 @@
 services:
   agritech-api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: agritech-api/Dockerfile
       target: production
     container_name: agritech-api
     expose:

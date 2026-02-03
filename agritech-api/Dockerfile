@@ -6,13 +6,13 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-lock.yaml agritech-api/package.json ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY . .
+COPY agritech-api/ ./
 
 # Build application
 RUN pnpm run build
@@ -25,7 +25,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-lock.yaml agritech-api/package.json ./
 
 # Install only production dependencies
 RUN pnpm install --prod --frozen-lockfile
