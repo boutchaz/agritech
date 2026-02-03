@@ -17,7 +17,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
       - DATABASE_URL=${DATABASE_URL}
-      - CORS_ORIGIN=${CORS_ORIGIN}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://agritech-dashboard.thebzlab.online,https://agritech.thebzlab.online,https://marketplace.thebzlab.online}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - RATE_LIMIT_TTL=${RATE_LIMIT_TTL:-60}
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-100}
@@ -43,9 +43,11 @@ services:
       # Note: Router rule removed to avoid conflict with Dokploy auto-generated routers
       # Dokploy creates: agritech-nestjs-041g0r-6-web and agritech-nestjs-041g0r-6-websecure
       - "traefik.http.services.agritech-api.loadbalancer.server.port=3001"
+      # Ensure Traefik passes through all headers from the application
+      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.X-Forwarded-Host=agritech-api.thebzlab.online"
       # WebSocket support - required for Socket.IO connections
-      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.Connection=upgrade"
-      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.Upgrade=websocket"
+      - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Connection=upgrade"
+      - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Upgrade=websocket"
     networks:
       - agritech-network
       - supabase-network
