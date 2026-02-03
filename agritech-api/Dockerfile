@@ -6,7 +6,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -25,7 +25,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install only production dependencies
 RUN pnpm install --prod --frozen-lockfile
