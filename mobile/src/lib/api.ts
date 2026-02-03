@@ -62,6 +62,7 @@ class ApiClient {
   private baseUrl: string;
   private accessToken: string | null = null;
   private organizationId: string | null = null;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor() {
     this.baseUrl = `${Config.API_URL}/api/v1`;
@@ -75,8 +76,12 @@ class ApiClient {
   async setTokens(accessToken: string, refreshToken?: string): Promise<void> {
     this.accessToken = accessToken;
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
-    if (refreshToken) {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    if (typeof refreshToken === 'string') {
+      if (refreshToken) {
+        await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+      } else {
+        await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+      }
     }
   }
 
@@ -86,6 +91,41 @@ class ApiClient {
     await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY);
     await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
     await SecureStore.deleteItemAsync(ORGANIZATION_ID_KEY);
+  }
+
+  private async refreshAccessToken(): Promise<boolean> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+        if (!refreshToken) return false;
+
+        const response = await fetch(`${this.baseUrl}/auth/refresh-token`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (!response.ok) {
+          return false;
+        }
+
+        const data = await response.json();
+        await this.setTokens(data.access_token, data.refresh_token);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   async setOrganizationId(orgId: string): Promise<void> {
@@ -99,7 +139,8 @@ class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryOnUnauthorized: boolean = true
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
 
@@ -134,6 +175,12 @@ class ApiClient {
       await trackError(error.message || 'Request failed', `${endpoint} (${response.status})`);
 
       if (response.status === 401) {
+        if (retryOnUnauthorized) {
+          const refreshed = await this.refreshAccessToken();
+          if (refreshed) {
+            return this.request<T>(endpoint, options, false);
+          }
+        }
         await this.clearTokens();
       }
 
@@ -228,6 +275,8 @@ export interface UserProfile {
   last_name: string | null;
   avatar_url: string | null;
   phone: string | null;
+  password_set?: boolean | null;
+  onboarding_completed?: boolean | null;
 }
 
 export interface Organization {
@@ -325,8 +374,8 @@ export interface UserAbilities {
 }
 
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post<LoginResponse>('/auth/login', { email, password }),
+  login: (email: string, password: string, rememberMe: boolean = true) =>
+    api.post<LoginResponse>('/auth/login', { email, password, rememberMe }),
 
   getProfile: () => api.get<UserProfile>('/auth/me'),
 

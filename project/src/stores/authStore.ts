@@ -1,6 +1,46 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+const AUTH_STORAGE_KEY = 'auth-storage';
+const AUTH_STORAGE_MODE_KEY = 'auth-storage-mode';
+
+type AuthStorageMode = 'persistent' | 'session';
+
+const getAuthStorageMode = (): AuthStorageMode => {
+  if (typeof window === 'undefined') return 'persistent';
+  const mode = window.localStorage.getItem(AUTH_STORAGE_MODE_KEY);
+  return mode === 'session' ? 'session' : 'persistent';
+};
+
+const getAuthStorage = () => {
+  if (typeof window === 'undefined') return undefined;
+  return getAuthStorageMode() === 'session' ? window.sessionStorage : window.localStorage;
+};
+
+const authStorage = {
+  getItem: (name: string) => getAuthStorage()?.getItem(name) ?? null,
+  setItem: (name: string, value: string) => {
+    const storage = getAuthStorage();
+    storage?.setItem(name, value);
+  },
+  removeItem: (name: string) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(name);
+    window.sessionStorage.removeItem(name);
+  },
+};
+
+const setAuthStorageMode = (rememberMe: boolean) => {
+  if (typeof window === 'undefined') return;
+  const mode: AuthStorageMode = rememberMe ? 'persistent' : 'session';
+  window.localStorage.setItem(AUTH_STORAGE_MODE_KEY, mode);
+  if (mode === 'persistent') {
+    window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  } else {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+};
+
 export interface AuthTokens {
   access_token: string;
   refresh_token: string;
@@ -23,6 +63,8 @@ interface AuthState {
   clearAuth: () => void;
   getAccessToken: () => string | null;
   isTokenExpired: () => boolean;
+  refreshAccessToken: () => Promise<boolean>;
+  setRememberMe: (rememberMe: boolean) => void;
   setHasHydrated: (state: boolean) => void;
 }
 
@@ -69,12 +111,48 @@ export const useAuthStore = create<AuthState>()(
         return Date.now() >= tokens.expires_at;
       },
 
+      refreshAccessToken: async () => {
+        const { tokens } = get();
+        if (!tokens?.refresh_token) return false;
+
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+        try {
+          const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken: tokens.refresh_token }),
+          });
+
+          if (!response.ok) {
+            return false;
+          }
+
+          const data: AuthTokens = await response.json();
+          get().setTokens({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            expires_in: data.expires_in,
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      setRememberMe: (rememberMe: boolean) => {
+        setAuthStorageMode(rememberMe);
+      },
+
       setHasHydrated: (state) => {
         set({ _hasHydrated: state });
       },
     }),
     {
-      name: 'auth-storage', // localStorage key
+      name: AUTH_STORAGE_KEY, // localStorage/sessionStorage key
+      storage: authStorage,
       onRehydrateStorage: () => (state) => {
         // IMPORTANT: Check if tokens are expired on hydration
         // This fixes the issue where users get stuck on onboarding with expired tokens

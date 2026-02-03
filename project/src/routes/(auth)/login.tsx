@@ -34,6 +34,7 @@ function LoginPage() {
   const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -66,7 +67,7 @@ function LoginPage() {
     trackLoginAttempt('email')
 
     try {
-      const response = await loginViaApi(email, password)
+      const response = await loginViaApi(email, password, rememberMe)
       if (response?.user) {
         trackLoginSuccess('email')
         // Small delay to ensure Zustand persists to localStorage before redirect
@@ -173,6 +174,16 @@ function LoginPage() {
               />
             </FormField>
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-200"
+            />
+            {t('auth.rememberMe', 'Remember me')}
+          </label>
 
           <div className="flex justify-end text-sm">
             <Link

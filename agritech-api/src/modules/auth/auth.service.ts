@@ -31,7 +31,7 @@ export class AuthService {
   /**
    * Login - Authenticate user with email and password
    */
-  async login(email: string, password: string) {
+  async login(email: string, password: string, rememberMe: boolean = true) {
     // IMPORTANT: Create a fresh Supabase client for each login attempt
     // Using the shared client causes issues because:
     // 1. It's a singleton with persistSession: false
@@ -64,7 +64,7 @@ export class AuthService {
       this.logger.log(`User ${email} logged in successfully`);
       return {
         access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+        refresh_token: rememberMe ? data.session.refresh_token : '',
         expires_in: data.session.expires_in,
         user: {
           id: data.user.id,

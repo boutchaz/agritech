@@ -42,13 +42,17 @@ interface SignupData {
   invitedWithRole?: string;
 }
 
-export async function loginViaApi(email: string, password: string): Promise<LoginResponse> {
+export async function loginViaApi(
+  email: string,
+  password: string,
+  rememberMe: boolean = true
+): Promise<LoginResponse> {
   const response = await fetch(`${API_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ email: email.toLowerCase(), password }),
+    body: JSON.stringify({ email: email.toLowerCase(), password, rememberMe }),
   });
 
   if (!response.ok) {
@@ -57,6 +61,8 @@ export async function loginViaApi(email: string, password: string): Promise<Logi
   }
 
   const data: LoginResponse = await response.json();
+
+  useAuthStore.getState().setRememberMe(rememberMe);
 
   useAuthStore.getState().setTokens({
     access_token: data.access_token,
@@ -111,4 +117,3 @@ export async function signInWithGoogle(): Promise<void> {
     throw new Error(error.message);
   }
 }
-

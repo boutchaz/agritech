@@ -105,6 +105,16 @@ function getCurrentOrganizationId(): string | null {
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
 export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
+  // Refresh access token if expired and refresh token exists
+  if (useAuthStore.getState().isTokenExpired()) {
+    const refreshed = await useAuthStore.getState().refreshAccessToken();
+    if (!refreshed) {
+      ErrorHandlers.log(null, '[API Client] Token expired and refresh failed');
+      handleSessionExpired();
+      throw new Error('Session expired. Please log in again.');
+    }
+  }
+
   // Get access token from auth store
   const accessToken = useAuthStore.getState().getAccessToken();
 
@@ -115,13 +125,6 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
       handleSessionExpired();
     }
     throw new Error('No active session. Please log in again.');
-  }
-
-  // Check if token is expired
-  if (useAuthStore.getState().isTokenExpired()) {
-    ErrorHandlers.log(null, '[API Client] Token expired');
-    handleSessionExpired();
-    throw new Error('Session expired. Please log in again.');
   }
 
   const orgId = organizationId || getCurrentOrganizationId();
@@ -153,7 +156,8 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
 export async function apiRequest<T>(
   url: string,
   options: RequestInit = {},
-  organizationId?: string | null
+  organizationId?: string | null,
+  retryOnUnauthorized: boolean = true
 ): Promise<T> {
   const headers = await getApiHeaders(organizationId);
   const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
@@ -174,6 +178,12 @@ export async function apiRequest<T>(
       if (response.status === 0 || response.status >= 500) {
         throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
       } else if (response.status === 401) {
+        if (retryOnUnauthorized) {
+          const refreshed = await useAuthStore.getState().refreshAccessToken();
+          if (refreshed) {
+            return apiRequest<T>(url, options, organizationId, false);
+          }
+        }
         // Clear auth state and redirect to login
         handleSessionExpired();
         throw new Error('Session expired. Please log in again.');
@@ -307,4 +317,3 @@ export class ApiClient {
 
 // Export a default instance
 export const apiClient = new ApiClient();
-
