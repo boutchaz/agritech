@@ -5,8 +5,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY pnpm-lock.yaml agritech-api/package.json ./
+# Copy workspace files for pnpm to understand the monorepo structure
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json agritech-api/package.json ./
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -24,8 +24,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY pnpm-lock.yaml agritech-api/package.json ./
+# Copy workspace files for pnpm to understand the monorepo structure
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json agritech-api/package.json ./
 
 # Install only production dependencies
 RUN pnpm install --prod --frozen-lockfile
