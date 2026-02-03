@@ -8826,13 +8826,41 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- Get mapped account code
+  -- Check org-specific mapping first
+  SELECT account_id, account_code
+  INTO v_account_id, v_account_code
+  FROM account_mappings
+  WHERE organization_id = p_org_id
+    AND mapping_type = p_mapping_type
+    AND (mapping_key = p_mapping_key OR source_key = p_mapping_key)
+    AND is_active = true
+  LIMIT 1;
+
+  IF v_account_id IS NOT NULL THEN
+    RETURN v_account_id;
+  END IF;
+
+  IF v_account_code IS NOT NULL THEN
+    SELECT id INTO v_account_id
+    FROM accounts
+    WHERE organization_id = p_org_id
+      AND code = v_account_code
+      AND is_active = true;
+
+    IF v_account_id IS NOT NULL THEN
+      RETURN v_account_id;
+    END IF;
+  END IF;
+
+  -- Get mapped account code from global templates
   SELECT account_code INTO v_account_code
   FROM account_mappings
-  WHERE country_code = v_country_code
+  WHERE organization_id IS NULL
+    AND country_code = v_country_code
     AND accounting_standard = v_accounting_standard
     AND mapping_type = p_mapping_type
-    AND mapping_key = p_mapping_key;
+    AND mapping_key = p_mapping_key
+    AND is_active = true;
 
   -- If no mapping found, return NULL
   IF v_account_code IS NULL THEN
@@ -12515,8 +12543,10 @@ BEGIN
   JOIN organizations o ON o.id = p_organization_id
   WHERE am.organization_id IS NULL
     AND am.country_code = o.country_code
+    AND am.accounting_standard = o.accounting_standard
     AND am.mapping_type = p_mapping_type
     AND am.mapping_key = p_mapping_key
+    AND am.is_active = TRUE
   LIMIT 1;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -12527,16 +12557,21 @@ CREATE OR REPLACE FUNCTION initialize_org_account_mappings(
 ) RETURNS INTEGER AS $$
 DECLARE
   v_country_code VARCHAR;
+  v_accounting_standard VARCHAR;
   v_count INTEGER := 0;
   v_mapping RECORD;
   v_account_id UUID;
 BEGIN
   IF p_country_code IS NULL THEN
-    SELECT country_code INTO v_country_code
+    SELECT country_code, accounting_standard
+    INTO v_country_code, v_accounting_standard
     FROM organizations
     WHERE id = p_organization_id;
   ELSE
     v_country_code := p_country_code;
+    SELECT accounting_standard INTO v_accounting_standard
+    FROM organizations
+    WHERE id = p_organization_id;
   END IF;
 
   IF EXISTS (
@@ -12555,6 +12590,7 @@ BEGIN
       AND at.account_code = am.account_code
     WHERE am.organization_id IS NULL
       AND am.country_code = v_country_code
+      AND am.accounting_standard = v_accounting_standard
   LOOP
     SELECT id INTO v_account_id
     FROM accounts
@@ -12564,6 +12600,8 @@ BEGIN
 
     INSERT INTO account_mappings (
       organization_id,
+      country_code,
+      accounting_standard,
       mapping_type,
       mapping_key,
       source_key,
@@ -12574,6 +12612,8 @@ BEGIN
       metadata
     ) VALUES (
       p_organization_id,
+      v_country_code,
+      v_accounting_standard,
       v_mapping.mapping_type,
       v_mapping.mapping_key,
       v_mapping.mapping_key,
@@ -12601,7 +12641,18 @@ CREATE OR REPLACE FUNCTION create_task_cost_mappings(
 DECLARE
   v_count INTEGER := 0;
   v_expense_account_id UUID;
+  v_country_code VARCHAR;
+  v_accounting_standard VARCHAR;
 BEGIN
+  SELECT country_code, accounting_standard
+  INTO v_country_code, v_accounting_standard
+  FROM organizations
+  WHERE id = p_organization_id;
+
+  IF v_country_code IS NULL OR v_accounting_standard IS NULL THEN
+    RETURN 0;
+  END IF;
+
   SELECT id INTO v_expense_account_id
   FROM accounts
   WHERE organization_id = p_organization_id
@@ -12615,19 +12666,19 @@ BEGIN
   END IF;
 
   INSERT INTO account_mappings (
-    organization_id, mapping_type, mapping_key, source_key, account_id, description, is_active
+    organization_id, country_code, accounting_standard, mapping_type, mapping_key, source_key, account_id, description, is_active
   ) VALUES
-    (p_organization_id, 'cost_type', 'planting', 'planting', v_expense_account_id, 'Planting costs', TRUE),
-    (p_organization_id, 'cost_type', 'harvesting', 'harvesting', v_expense_account_id, 'Harvesting costs', TRUE),
-    (p_organization_id, 'cost_type', 'irrigation', 'irrigation', v_expense_account_id, 'Irrigation costs', TRUE),
-    (p_organization_id, 'cost_type', 'fertilization', 'fertilization', v_expense_account_id, 'Fertilization costs', TRUE),
-    (p_organization_id, 'cost_type', 'pesticide', 'pesticide', v_expense_account_id, 'Pesticide application costs', TRUE),
-    (p_organization_id, 'cost_type', 'pruning', 'pruning', v_expense_account_id, 'Pruning costs', TRUE),
-    (p_organization_id, 'cost_type', 'maintenance', 'maintenance', v_expense_account_id, 'Maintenance costs', TRUE),
-    (p_organization_id, 'cost_type', 'transport', 'transport', v_expense_account_id, 'Transport costs', TRUE),
-    (p_organization_id, 'cost_type', 'labor', 'labor', v_expense_account_id, 'Labor costs', TRUE),
-    (p_organization_id, 'cost_type', 'materials', 'materials', v_expense_account_id, 'Materials costs', TRUE),
-    (p_organization_id, 'cost_type', 'other', 'other', v_expense_account_id, 'Other costs', TRUE)
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'planting', 'planting', v_expense_account_id, 'Planting costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'harvesting', 'harvesting', v_expense_account_id, 'Harvesting costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'irrigation', 'irrigation', v_expense_account_id, 'Irrigation costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'fertilization', 'fertilization', v_expense_account_id, 'Fertilization costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'pesticide', 'pesticide', v_expense_account_id, 'Pesticide application costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'pruning', 'pruning', v_expense_account_id, 'Pruning costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'maintenance', 'maintenance', v_expense_account_id, 'Maintenance costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'transport', 'transport', v_expense_account_id, 'Transport costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'labor', 'labor', v_expense_account_id, 'Labor costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'materials', 'materials', v_expense_account_id, 'Materials costs', TRUE),
+    (p_organization_id, v_country_code, v_accounting_standard, 'cost_type', 'other', 'other', v_expense_account_id, 'Other costs', TRUE)
   ON CONFLICT DO NOTHING;
 
   GET DIAGNOSTICS v_count = ROW_COUNT;
@@ -12643,7 +12694,18 @@ DECLARE
   v_count INTEGER := 0;
   v_revenue_account_id UUID;
   v_cash_account_id UUID;
+  v_country_code VARCHAR;
+  v_accounting_standard VARCHAR;
 BEGIN
+  SELECT country_code, accounting_standard
+  INTO v_country_code, v_accounting_standard
+  FROM organizations
+  WHERE id = p_organization_id;
+
+  IF v_country_code IS NULL OR v_accounting_standard IS NULL THEN
+    RETURN 0;
+  END IF;
+
   SELECT id INTO v_revenue_account_id
   FROM accounts
   WHERE organization_id = p_organization_id
@@ -12662,33 +12724,33 @@ BEGIN
 
   IF v_revenue_account_id IS NOT NULL THEN
     INSERT INTO account_mappings (
-      organization_id, mapping_type, mapping_key, source_key, account_id, description, is_active
+      organization_id, country_code, accounting_standard, mapping_type, mapping_key, source_key, account_id, description, is_active
     ) VALUES
-      (p_organization_id, 'revenue_type', 'product_sales', 'product_sales', v_revenue_account_id, 'Product sales revenue', TRUE),
-      (p_organization_id, 'revenue_type', 'service_income', 'service_income', v_revenue_account_id, 'Service income', TRUE),
-      (p_organization_id, 'revenue_type', 'other_income', 'other_income', v_revenue_account_id, 'Other income', TRUE)
+      (p_organization_id, v_country_code, v_accounting_standard, 'revenue_type', 'product_sales', 'product_sales', v_revenue_account_id, 'Product sales revenue', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'revenue_type', 'service_income', 'service_income', v_revenue_account_id, 'Service income', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'revenue_type', 'other_income', 'other_income', v_revenue_account_id, 'Other income', TRUE)
     ON CONFLICT DO NOTHING;
   END IF;
 
   IF v_revenue_account_id IS NOT NULL THEN
     INSERT INTO account_mappings (
-      organization_id, mapping_type, mapping_key, source_key, account_id, description, is_active
+      organization_id, country_code, accounting_standard, mapping_type, mapping_key, source_key, account_id, description, is_active
     ) VALUES
-      (p_organization_id, 'harvest_sale', 'market', 'market', v_revenue_account_id, 'Market sales', TRUE),
-      (p_organization_id, 'harvest_sale', 'export', 'export', v_revenue_account_id, 'Export sales', TRUE),
-      (p_organization_id, 'harvest_sale', 'wholesale', 'wholesale', v_revenue_account_id, 'Wholesale sales', TRUE),
-      (p_organization_id, 'harvest_sale', 'direct', 'direct', v_revenue_account_id, 'Direct sales', TRUE),
-      (p_organization_id, 'harvest_sale', 'processing', 'processing', v_revenue_account_id, 'Processing sales', TRUE)
+      (p_organization_id, v_country_code, v_accounting_standard, 'harvest_sale', 'market', 'market', v_revenue_account_id, 'Market sales', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'harvest_sale', 'export', 'export', v_revenue_account_id, 'Export sales', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'harvest_sale', 'wholesale', 'wholesale', v_revenue_account_id, 'Wholesale sales', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'harvest_sale', 'direct', 'direct', v_revenue_account_id, 'Direct sales', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'harvest_sale', 'processing', 'processing', v_revenue_account_id, 'Processing sales', TRUE)
     ON CONFLICT DO NOTHING;
   END IF;
 
   IF v_cash_account_id IS NOT NULL THEN
     INSERT INTO account_mappings (
-      organization_id, mapping_type, mapping_key, source_key, account_id, description, is_active
+      organization_id, country_code, accounting_standard, mapping_type, mapping_key, source_key, account_id, description, is_active
     ) VALUES
-      (p_organization_id, 'cash', 'bank', 'bank', v_cash_account_id, 'Bank account', TRUE),
-      (p_organization_id, 'cash', 'cash', 'cash', v_cash_account_id, 'Cash account', TRUE),
-      (p_organization_id, 'cash', 'petty_cash', 'petty_cash', v_cash_account_id, 'Petty cash', TRUE)
+      (p_organization_id, v_country_code, v_accounting_standard, 'cash', 'bank', 'bank', v_cash_account_id, 'Bank account', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'cash', 'cash', 'cash', v_cash_account_id, 'Cash account', TRUE),
+      (p_organization_id, v_country_code, v_accounting_standard, 'cash', 'petty_cash', 'petty_cash', v_cash_account_id, 'Petty cash', TRUE)
     ON CONFLICT DO NOTHING;
   END IF;
 

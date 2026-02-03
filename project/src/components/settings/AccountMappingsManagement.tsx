@@ -56,12 +56,13 @@ import {
   useUpdateAccountMapping,
   useDeleteAccountMapping,
   useInitializeAccountMappings,
+  useAccountMappingOptions,
   type AccountMapping,
 } from '@/hooks/useAccountMappings';
 import { useAccounts } from '@/hooks/useAccounts';
 
 // Mapping type options
-const MAPPING_TYPES = [
+const FALLBACK_MAPPING_TYPES = [
   { value: 'cost_type', label: 'Cost Type' },
   { value: 'revenue_type', label: 'Revenue Type' },
   { value: 'harvest_sale', label: 'Harvest Sale' },
@@ -69,7 +70,7 @@ const MAPPING_TYPES = [
 ];
 
 // Common mapping keys
-const MAPPING_KEYS: Record<string, { value: string; label: string }[]> = {
+const FALLBACK_MAPPING_KEYS: Record<string, { value: string; label: string }[]> = {
   cost_type: [
     { value: 'planting', label: 'Planting' },
     { value: 'harvesting', label: 'Harvesting' },
@@ -114,6 +115,12 @@ const accountMappingSchema = z.object({
 
 type AccountMappingFormData = z.infer<typeof accountMappingSchema>;
 
+const toLabel = (value: string) =>
+  value
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export function AccountMappingsManagement() {
   const { hasRole, currentOrganization } = useAuth();
   const { t } = useTranslation();
@@ -138,6 +145,7 @@ export function AccountMappingsManagement() {
   const updateMutation = useUpdateAccountMapping();
   const deleteMutation = useDeleteAccountMapping();
   const initializeMutation = useInitializeAccountMappings();
+  const { data: mappingOptions } = useAccountMappingOptions();
 
   // Form handling
   const form = useForm<AccountMappingFormData>({
@@ -152,9 +160,35 @@ export function AccountMappingsManagement() {
   });
 
   const selectedMappingType = form.watch('mapping_type');
+  const selectedMappingKey = form.watch('mapping_key');
+  const mappingTypeOptions = useMemo(() => {
+    if (mappingOptions?.types?.length) {
+      return mappingOptions.types.map((type) => ({
+        value: type,
+        label: toLabel(type),
+      }));
+    }
+    return FALLBACK_MAPPING_TYPES;
+  }, [mappingOptions?.types]);
+
   const availableKeys = useMemo(() => {
-    return MAPPING_KEYS[selectedMappingType] || [];
-  }, [selectedMappingType]);
+    const keysFromOptions = mappingOptions?.keys_by_type?.[selectedMappingType];
+    if (keysFromOptions?.length) {
+      const options = keysFromOptions.map((key) => ({
+        value: key,
+        label: toLabel(key),
+      }));
+      if (selectedMappingKey && !keysFromOptions.includes(selectedMappingKey)) {
+        options.push({ value: selectedMappingKey, label: toLabel(selectedMappingKey) });
+      }
+      return options;
+    }
+    const fallback = FALLBACK_MAPPING_KEYS[selectedMappingType] || [];
+    if (selectedMappingKey && !fallback.find((k) => k.value === selectedMappingKey)) {
+      return [...fallback, { value: selectedMappingKey, label: toLabel(selectedMappingKey) }];
+    }
+    return fallback;
+  }, [mappingOptions?.keys_by_type, selectedMappingKey, selectedMappingType]);
 
   const handleOpenDialog = (mapping?: AccountMapping) => {
     if (mapping) {
@@ -282,12 +316,16 @@ export function AccountMappingsManagement() {
 
   // Get label for mapping type
   const getMappingTypeLabel = (type: string) => {
-    return MAPPING_TYPES.find((t) => t.value === type)?.label || type;
+    return mappingTypeOptions.find((t) => t.value === type)?.label || type;
   };
 
   // Get label for mapping key
   const getMappingKeyLabel = (type: string, key: string) => {
-    return MAPPING_KEYS[type]?.find((k) => k.value === key)?.label || key;
+    const keys = mappingOptions?.keys_by_type?.[type];
+    if (keys?.length) {
+      return keys.includes(key) ? toLabel(key) : key;
+    }
+    return FALLBACK_MAPPING_KEYS[type]?.find((k) => k.value === key)?.label || key;
   };
 
   if (!isAdmin) {
@@ -352,7 +390,7 @@ export function AccountMappingsManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('accountMappings.allTypes', 'All Types')}</SelectItem>
-                {MAPPING_TYPES.map((type) => (
+                {mappingTypeOptions.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
                   </SelectItem>
@@ -512,15 +550,15 @@ export function AccountMappingsManagement() {
                 disabled={!!editingMapping}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('accountMappings.form.typePlaceholder', 'Select mapping type')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {MAPPING_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectValue placeholder={t('accountMappings.form.typePlaceholder', 'Select mapping type')} />
+              </SelectTrigger>
+              <SelectContent>
+                {mappingTypeOptions.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
               </Select>
               {form.formState.errors.mapping_type && (
                 <p className="text-sm text-destructive">{form.formState.errors.mapping_type.message}</p>

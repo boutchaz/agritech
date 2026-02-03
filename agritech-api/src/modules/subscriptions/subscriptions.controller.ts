@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException, Headers, HttpCode, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException, Headers, HttpCode, HttpStatus, Logger, UnauthorizedException, Req } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -11,6 +11,7 @@ import {
   CreateTrialSubscriptionDto,
   SubscriptionResponseDto,
 } from './dto/create-trial-subscription.dto';
+import { CheckoutDto, CheckoutResponseDto } from './dto/checkout.dto';
 import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
@@ -82,6 +83,33 @@ export class SubscriptionsController {
       throw new BadRequestException('Organization ID is required in X-Organization-Id header');
     }
     return this.subscriptionsService.getUsageCounts(req.user.id, organizationId);
+  }
+
+  @Post('checkout')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a Polar checkout URL for a subscription' })
+  @ApiResponse({
+    status: 201,
+    description: 'Checkout URL created successfully',
+    type: CheckoutResponseDto,
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - User not in organization' })
+  async createCheckout(
+    @Request() req,
+    @Body() checkoutDto: CheckoutDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new BadRequestException('Organization ID is required in X-Organization-Id header');
+    }
+
+    return this.subscriptionsService.createCheckoutUrl(
+      req.user.id,
+      organizationId,
+      checkoutDto.planType,
+    );
   }
 
   @Post('trial')
@@ -159,6 +187,7 @@ export class WebhooksController {
     @Body() webhookDto: PolarWebhookDto,
     @Headers('x-polar-signature-256') signature: string,
     @Headers('x-polar-event-id') eventId: string,
+    @Req() req: any,
   ) {
     this.logger.log(
       `Received Polar webhook: ${webhookDto.type} (Event ID: ${eventId || webhookDto.id})`,
@@ -166,21 +195,23 @@ export class WebhooksController {
 
     // Verify webhook signature if secret is configured
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
-    if (webhookSecret && signature) {
-      // In a real implementation, you would verify the signature here
-      // const rawBody = // Get raw request body
-      // const isValid = this.subscriptionsService.verifyWebhookSignature(
-      //   rawBody,
-      //   signature,
-      //   webhookSecret
-      // );
-      // if (!isValid) {
-      //   this.logger.warn('Invalid webhook signature');
-      //   throw new UnauthorizedException('Invalid webhook signature');
-      // }
-      this.logger.debug('Webhook signature verification skipped (to be implemented)');
-    } else if (webhookSecret && !signature) {
-      this.logger.warn('Webhook signature missing but secret is configured');
+    if (webhookSecret) {
+      if (!signature) {
+        this.logger.warn('Webhook signature missing but secret is configured');
+        throw new UnauthorizedException('Missing webhook signature');
+      }
+
+      const rawBody = req?.rawBody || JSON.stringify(webhookDto);
+      const isValid = this.subscriptionsService.verifyWebhookSignature(
+        rawBody,
+        signature,
+        webhookSecret,
+      );
+
+      if (!isValid) {
+        this.logger.warn('Invalid webhook signature');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
     }
 
     // Process the webhook

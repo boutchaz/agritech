@@ -9,8 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   CreateTrialSubscriptionDto,
-  PlanType,
+  PlanType as TrialPlanType,
 } from './dto/create-trial-subscription.dto';
+import { PlanType as CheckoutPlanType } from './dto/checkout.dto';
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
 import {
   PolarWebhookDto,
@@ -40,6 +41,58 @@ export class SubscriptionsService {
         persistSession: false,
       },
     });
+  }
+
+  async createCheckoutUrl(
+    userId: string,
+    organizationId: string,
+    planType: CheckoutPlanType,
+  ): Promise<{ checkoutUrl: string }> {
+    // Verify user belongs to the organization
+    const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id, role_id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (orgUserError || !orgUser) {
+      this.logger.error(
+        `User ${userId} does not have access to organization ${organizationId}`,
+      );
+      throw new ForbiddenException('Access denied to organization');
+    }
+
+    const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
+    if (!checkoutBaseUrl) {
+      throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
+    }
+
+    const productId = this.getCheckoutProductId(planType);
+    if (!productId) {
+      throw new BadRequestException('Polar product ID is not configured');
+    }
+
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const successUrl = frontendUrl ? `${frontendUrl}/checkout-success` : undefined;
+    const cancelUrl = frontendUrl ? `${frontendUrl}/settings/subscription` : undefined;
+
+    const checkoutUrl = new URL(checkoutBaseUrl);
+    checkoutUrl.searchParams.set('product_id', productId);
+
+    if (successUrl) {
+      checkoutUrl.searchParams.set('success_url', successUrl);
+    }
+    if (cancelUrl) {
+      checkoutUrl.searchParams.set('cancel_url', cancelUrl);
+    }
+
+    // Bind organization server-side to prevent tampering
+    checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
+    checkoutUrl.searchParams.set('metadata[plan_type]', planType);
+
+    return { checkoutUrl: checkoutUrl.toString() };
   }
 
   async createTrialSubscription(
@@ -115,12 +168,12 @@ export class SubscriptionsService {
 
     // Map plan_type to plan_id for Polar.sh integration
     const planIdMap = {
-      [PlanType.STARTER]: 'starter-trial',
-      [PlanType.PROFESSIONAL]: 'professional-trial',
-      [PlanType.ENTERPRISE]: 'enterprise-trial',
+      [TrialPlanType.STARTER]: 'starter-trial',
+      [TrialPlanType.PROFESSIONAL]: 'professional-trial',
+      [TrialPlanType.ENTERPRISE]: 'enterprise-trial',
     };
 
-    const plan_id = planIdMap[plan_type] || planIdMap[PlanType.PROFESSIONAL];
+    const plan_id = planIdMap[plan_type] || planIdMap[TrialPlanType.PROFESSIONAL];
 
     let subscription;
     let upsertError;
@@ -797,17 +850,32 @@ export class SubscriptionsService {
    * Map trial plan type to database plan_type
    * Maps PlanType enum values to frontend-compatible plan types
    */
-  private mapTrialPlanToPlanType(planType: PlanType): string {
+  private mapTrialPlanToPlanType(planType: TrialPlanType): string {
     // Map backend PlanType enum to frontend plan types
     switch (planType) {
-      case PlanType.STARTER:
+      case TrialPlanType.STARTER:
         return 'essential'; // Map starter to essential for frontend compatibility
-      case PlanType.PROFESSIONAL:
+      case TrialPlanType.PROFESSIONAL:
         return 'professional';
-      case PlanType.ENTERPRISE:
+      case TrialPlanType.ENTERPRISE:
         return 'enterprise';
       default:
         return 'professional'; // Default to professional
+    }
+  }
+
+  private getCheckoutProductId(planType: CheckoutPlanType): string | undefined {
+    switch (planType) {
+      case CheckoutPlanType.ESSENTIAL:
+        return this.configService.get<string>('POLAR_ESSENTIAL_PRODUCT_ID');
+      case CheckoutPlanType.PROFESSIONAL:
+        return this.configService.get<string>('POLAR_PROFESSIONAL_PRODUCT_ID');
+      case CheckoutPlanType.ENTERPRISE:
+        return this.configService.get<string>('POLAR_ENTERPRISE_PRODUCT_ID');
+      case CheckoutPlanType.CORE:
+        return this.configService.get<string>('POLAR_BASE_PRODUCT_ID');
+      default:
+        return undefined;
     }
   }
 
@@ -815,28 +883,28 @@ export class SubscriptionsService {
    * Get plan limits based on plan type
    * These limits match the frontend SUBSCRIPTION_PLANS configuration
    */
-  private getPlanLimits(planType: PlanType): {
+  private getPlanLimits(planType: TrialPlanType): {
     farms: number;
     parcels: number;
     users: number;
     satelliteReports: number;
   } {
     switch (planType) {
-      case PlanType.STARTER:
+      case TrialPlanType.STARTER:
         return {
           farms: 2,
           parcels: 25,
           users: 5,
           satelliteReports: 0,
         };
-      case PlanType.PROFESSIONAL:
+      case TrialPlanType.PROFESSIONAL:
         return {
           farms: 10,
           parcels: 200,
           users: 25,
           satelliteReports: 10,
         };
-      case PlanType.ENTERPRISE:
+      case TrialPlanType.ENTERPRISE:
         return {
           farms: 999999,
           parcels: 999999,
@@ -973,8 +1041,10 @@ export class SubscriptionsService {
     secret: string,
   ): boolean {
     try {
-      // Polar sends signature as "sha256=<hex_signature>"
-      const [algorithm, expectedSignature] = signature.split('=');
+      // Polar may send signature as "sha256=<hex_signature>" or raw hex
+      const parts = signature.split('=');
+      const algorithm = parts.length > 1 ? parts[0] : 'sha256';
+      const expectedSignature = parts.length > 1 ? parts[1] : signature;
 
       if (algorithm !== 'sha256') {
         this.logger.error(`Unsupported signature algorithm: ${algorithm}`);

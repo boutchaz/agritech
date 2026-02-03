@@ -15,6 +15,8 @@ export interface Subscription {
   updated_at: string;
 }
 
+export type CheckoutPlanType = 'core' | 'essential' | 'professional' | 'enterprise';
+
 /**
  * Get the current organization ID from Zustand store
  * This uses the same store as api-client.ts to ensure consistency
@@ -67,7 +69,21 @@ class SubscriptionsService {
       throw error;
     }
   }
+
+  async createCheckout(planType: CheckoutPlanType, organizationId?: string): Promise<{ checkoutUrl: string }> {
+    const orgId = organizationId || getCurrentOrganizationId();
+
+    if (!orgId) {
+      throw new OrganizationRequiredError();
+    }
+
+    return apiClient.post<{ checkoutUrl: string }>(
+      '/api/v1/subscriptions/checkout',
+      { planType },
+      {},
+      orgId,
+    );
+  }
 }
 
 export const subscriptionsService = new SubscriptionsService();
-

@@ -2,6 +2,7 @@ import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum PlanType {
+  CORE = 'core',
   ESSENTIAL = 'essential',
   PROFESSIONAL = 'professional',
   ENTERPRISE = 'enterprise',

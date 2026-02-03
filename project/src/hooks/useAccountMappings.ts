@@ -6,6 +6,7 @@ import {
   type AccountMappingFilters,
   type CreateAccountMappingInput,
   type UpdateAccountMappingInput,
+  type AccountMappingOptions,
 } from '../lib/api/account-mappings';
 
 /**
@@ -61,6 +62,24 @@ export function useAccountMappingTypes() {
 }
 
 /**
+ * Hook to fetch mapping types and keys
+ */
+export function useAccountMappingOptions() {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['account-mapping-options', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return accountMappingsApi.getMappingOptions(currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+  });
+}
+
+/**
  * Hook to create a new account mapping
  */
 export function useCreateAccountMapping() {
@@ -77,6 +96,7 @@ export function useCreateAccountMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-mappings', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['account-mapping-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['account-mapping-options', currentOrganization?.id] });
     },
   });
 }
@@ -97,6 +117,7 @@ export function useUpdateAccountMapping() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-mappings', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['account-mapping-options', currentOrganization?.id] });
     },
   });
 }
@@ -118,6 +139,7 @@ export function useDeleteAccountMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-mappings', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['account-mapping-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['account-mapping-options', currentOrganization?.id] });
     },
   });
 }
@@ -139,9 +161,10 @@ export function useInitializeAccountMappings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['account-mappings', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['account-mapping-types', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['account-mapping-options', currentOrganization?.id] });
     },
   });
 }
 
 // Re-export types for convenience
-export type { AccountMapping, AccountMappingFilters, CreateAccountMappingInput, UpdateAccountMappingInput };
+export type { AccountMapping, AccountMappingFilters, CreateAccountMappingInput, UpdateAccountMappingInput, AccountMappingOptions };

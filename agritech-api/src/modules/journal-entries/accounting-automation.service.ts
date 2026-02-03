@@ -281,21 +281,69 @@ export class AccountingAutomationService {
     mappingType: string,
     mappingKey: string,
   ): Promise<string | null> {
-    const { data, error } = await supabase
+    const { data: orgMapping, error: orgError } = await supabase
       .from('account_mappings')
-      .select('account_id')
+      .select('account_id, account_code')
       .eq('organization_id', organizationId)
+      .eq('mapping_type', mappingType)
+      .or(`mapping_key.eq.${mappingKey},source_key.eq.${mappingKey}`)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError) {
+      this.logger.error(`Failed to get org account mapping: ${orgError.message}`);
+      return null;
+    }
+
+    if (orgMapping?.account_id) {
+      return orgMapping.account_id;
+    }
+
+    const { data: orgContext, error: orgContextError } = await supabase
+      .from('organizations')
+      .select('country_code, accounting_standard')
+      .eq('id', organizationId)
+      .single();
+
+    if (orgContextError || !orgContext?.country_code || !orgContext?.accounting_standard) {
+      this.logger.error('Organization country_code or accounting_standard not set');
+      return null;
+    }
+
+    const { data: globalMapping, error: globalError } = await supabase
+      .from('account_mappings')
+      .select('account_code')
+      .is('organization_id', null)
+      .eq('country_code', String(orgContext.country_code).toUpperCase())
+      .eq('accounting_standard', String(orgContext.accounting_standard).toUpperCase())
       .eq('mapping_type', mappingType)
       .eq('mapping_key', mappingKey)
       .eq('is_active', true)
       .maybeSingle();
 
-    if (error) {
-      this.logger.error(`Failed to get account mapping: ${error.message}`);
+    if (globalError) {
+      this.logger.error(`Failed to get global account mapping: ${globalError.message}`);
       return null;
     }
 
-    return data?.account_id || null;
+    if (!globalMapping?.account_code) {
+      return null;
+    }
+
+    const { data: account, error: accountError } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('code', globalMapping.account_code)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (accountError) {
+      this.logger.error(`Failed to get account by code: ${accountError.message}`);
+      return null;
+    }
+
+    return account?.id || null;
   }
 
   /**

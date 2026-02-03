@@ -3,6 +3,7 @@ import { ValidationPipe, Logger, ExceptionFilter, Catch, ArgumentsHost, HttpExce
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { json } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -73,6 +74,13 @@ async function bootstrap() {
 
   // Get config service
   const configService = app.get(ConfigService);
+
+  // Capture raw body for webhook signature verification
+  app.use(json({
+    verify: (req, _res, buf) => {
+      (req as any).rawBody = buf.toString('utf8');
+    },
+  }));
 
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));

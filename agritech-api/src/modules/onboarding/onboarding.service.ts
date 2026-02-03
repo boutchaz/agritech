@@ -455,20 +455,36 @@ export class OnboardingService {
 
     const organizationId = orgUsers[0].organization_id;
 
-    // Get selected module names
-    const selectedModuleNames = Object.entries(dto.moduleSelection)
+    // Get selected module slugs
+    const selectedModuleSlugs = Object.entries(dto.moduleSelection)
       .filter(([_, enabled]) => enabled)
-      .map(([name, _]) => name);
+      .map(([slug, _]) => slug);
 
-    if (selectedModuleNames.length === 0) {
+    // Always include required modules
+    const { data: requiredModules, error: requiredModulesError } = await client
+      .from('modules')
+      .select('id, slug')
+      .eq('is_required', true)
+      .eq('is_active', true)
+      .eq('is_available', true);
+
+    if (requiredModulesError) {
+      this.logger.error(`Failed to fetch required modules: ${requiredModulesError.message}`);
+      throw new InternalServerErrorException('Failed to fetch required modules');
+    }
+
+    const requiredSlugs = (requiredModules || []).map((m) => m.slug).filter(Boolean);
+    const moduleSlugs = Array.from(new Set([...selectedModuleSlugs, ...requiredSlugs]));
+
+    if (moduleSlugs.length === 0) {
       return { success: true };
     }
 
-    // Fetch module IDs
+    // Fetch module IDs by slug
     const { data: modules, error: modulesError } = await client
       .from('modules')
       .select('id')
-      .in('name', selectedModuleNames);
+      .in('slug', moduleSlugs);
 
     if (modulesError) {
       this.logger.error(`Failed to fetch modules: ${modulesError.message}`);

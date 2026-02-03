@@ -58,6 +58,14 @@ export class AccountMappingsController {
     return this.accountMappingsService.getMappingTypes(organizationId);
   }
 
+  @Get('options')
+  @ApiOperation({ summary: 'Get available mapping types and keys' })
+  @ApiResponse({ status: 200, description: 'Mapping options retrieved successfully' })
+  async getMappingOptions(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.accountMappingsService.getMappingOptions(organizationId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a single account mapping by ID' })
   @ApiParam({ name: 'id', description: 'Account mapping ID' })

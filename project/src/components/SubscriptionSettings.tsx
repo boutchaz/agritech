@@ -14,11 +14,12 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
-import { getCoreCheckoutUrl, normalizePlanType } from '../lib/polar';
+import { normalizePlanType } from '../lib/polar';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
+import { subscriptionsService } from '@/services/subscriptionsService';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -72,14 +73,14 @@ const SubscriptionSettings: React.FC = () => {
     },
   });
 
-  const handlePurchaseCore = () => {
+  const handlePurchaseCore = async () => {
     if (!currentOrganization?.id) {
       toast.error(t('subscription.errors.noOrganization'));
       return;
     }
 
     try {
-      const checkoutUrl = getCoreCheckoutUrl(currentOrganization.id);
+      const { checkoutUrl } = await subscriptionsService.createCheckout('core', currentOrganization.id);
       window.location.href = checkoutUrl;
     } catch (error) {
       console.error('Failed to get checkout URL:', error);

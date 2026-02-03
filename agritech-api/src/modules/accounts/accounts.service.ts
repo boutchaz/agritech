@@ -473,17 +473,50 @@ export class AccountsService {
 
       if (options.includeAccountMappings !== false) {
         try {
-          const taskMappingsResult = await client.query(
-            'SELECT create_task_cost_mappings($1, $2) as count',
-            [organizationId, countryCode.toUpperCase().substring(0, 2)]
+          const mappingInsertResult = await client.query(
+            `INSERT INTO account_mappings (
+              organization_id,
+              country_code,
+              accounting_standard,
+              mapping_type,
+              mapping_key,
+              source_key,
+              account_id,
+              account_code,
+              description,
+              is_active,
+              metadata
+            )
+            SELECT
+              $1 AS organization_id,
+              am.country_code,
+              am.accounting_standard,
+              am.mapping_type,
+              am.mapping_key,
+              COALESCE(am.source_key, am.mapping_key) AS source_key,
+              a.id AS account_id,
+              am.account_code,
+              am.description,
+              TRUE AS is_active,
+              COALESCE(am.metadata, '{}'::jsonb) AS metadata
+            FROM account_mappings am
+            LEFT JOIN accounts a
+              ON a.organization_id = $1
+              AND a.code = am.account_code
+            WHERE am.organization_id IS NULL
+              AND am.country_code = $2
+              AND am.accounting_standard = $3
+            ON CONFLICT (organization_id, mapping_type, mapping_key)
+            DO NOTHING
+            RETURNING id`,
+            [
+              organizationId,
+              countryCode.toUpperCase().substring(0, 2),
+              String(template.accounting_standard || '').toUpperCase(),
+            ],
           );
-          const harvestMappingsResult = await client.query(
-            'SELECT create_harvest_sales_mappings($1, $2) as count',
-            [organizationId, countryCode.toUpperCase().substring(0, 2)]
-          );
-          accountMappingsCreated = 
-            (taskMappingsResult.rows[0]?.count || 0) + 
-            (harvestMappingsResult.rows[0]?.count || 0);
+
+          accountMappingsCreated = mappingInsertResult.rows.length;
           this.logger.log(`Created ${accountMappingsCreated} account mappings for organization ${organizationId}`);
         } catch (mappingError) {
           this.logger.warn(`Could not create account mappings: ${mappingError.message}`);

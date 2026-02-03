@@ -8,11 +8,38 @@ export interface AccountMappingFilters {
   search?: string;
 }
 
+export interface AccountMappingOptions {
+  types: string[];
+  keys_by_type: Record<string, string[]>;
+}
+
 @Injectable()
 export class AccountMappingsService {
   private readonly logger = new Logger(AccountMappingsService.name);
 
   constructor(private readonly databaseService: DatabaseService) {}
+
+  private async getOrganizationAccountingContext(organizationId: string) {
+    const supabaseClient = this.databaseService.getClient();
+    const { data, error } = await supabaseClient
+      .from('organizations')
+      .select('country_code, accounting_standard')
+      .eq('id', organizationId)
+      .single();
+
+    if (error || !data) {
+      throw new BadRequestException('Organization accounting context not found');
+    }
+
+    if (!data.country_code || !data.accounting_standard) {
+      throw new BadRequestException('Organization country_code or accounting_standard not set');
+    }
+
+    return {
+      countryCode: String(data.country_code).toUpperCase(),
+      accountingStandard: String(data.accounting_standard).toUpperCase(),
+    };
+  }
 
   /**
    * Get all account mappings for an organization
@@ -96,6 +123,62 @@ export class AccountMappingsService {
   }
 
   /**
+   * Get mapping types and keys for an organization (org + global templates)
+   */
+  async getMappingOptions(organizationId: string): Promise<AccountMappingOptions> {
+    const supabaseClient = this.databaseService.getClient();
+    const { countryCode, accountingStandard } = await this.getOrganizationAccountingContext(organizationId);
+
+    try {
+      const [{ data: orgMappings, error: orgError }, { data: globalMappings, error: globalError }] = await Promise.all([
+        supabaseClient
+          .from('account_mappings')
+          .select('mapping_type, mapping_key, source_key')
+          .eq('organization_id', organizationId),
+        supabaseClient
+          .from('account_mappings')
+          .select('mapping_type, mapping_key')
+          .is('organization_id', null)
+          .eq('country_code', countryCode)
+          .eq('accounting_standard', accountingStandard),
+      ]);
+
+      if (orgError) {
+        throw new BadRequestException(`Failed to fetch org mappings: ${orgError.message}`);
+      }
+      if (globalError) {
+        throw new BadRequestException(`Failed to fetch global mappings: ${globalError.message}`);
+      }
+
+      const keysByType: Record<string, Set<string>> = {};
+
+      for (const row of orgMappings || []) {
+        const type = row.mapping_type;
+        if (!keysByType[type]) keysByType[type] = new Set();
+        if (row.mapping_key) keysByType[type].add(row.mapping_key);
+        if (row.source_key) keysByType[type].add(row.source_key);
+      }
+
+      for (const row of globalMappings || []) {
+        const type = row.mapping_type;
+        if (!keysByType[type]) keysByType[type] = new Set();
+        if (row.mapping_key) keysByType[type].add(row.mapping_key);
+      }
+
+      const types = Object.keys(keysByType).sort();
+      const keys_by_type: Record<string, string[]> = {};
+      for (const type of types) {
+        keys_by_type[type] = Array.from(keysByType[type]).sort();
+      }
+
+      return { types, keys_by_type };
+    } catch (error) {
+      this.logger.error('Error in getMappingOptions:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get mapping types summary (for dropdown)
    */
   async getMappingTypes(organizationId: string) {
@@ -129,6 +212,11 @@ export class AccountMappingsService {
     const supabaseClient = this.databaseService.getClient();
 
     try {
+      if (!dto.organization_id) {
+        throw new BadRequestException('Organization ID is required');
+      }
+      const { countryCode, accountingStandard } = await this.getOrganizationAccountingContext(dto.organization_id);
+
       // Check for duplicate mapping
       const key = dto.source_key || dto.mapping_key;
       if (!key) {
@@ -152,7 +240,7 @@ export class AccountMappingsService {
       // Verify account exists
       const { data: account, error: accountError } = await supabaseClient
         .from('accounts')
-        .select('id')
+        .select('id, code')
         .eq('id', dto.account_id)
         .eq('organization_id', dto.organization_id)
         .single();
@@ -165,10 +253,13 @@ export class AccountMappingsService {
         .from('account_mappings')
         .insert({
           organization_id: dto.organization_id,
+          country_code: countryCode,
+          accounting_standard: accountingStandard,
           mapping_type: dto.mapping_type,
           mapping_key: dto.mapping_key || dto.source_key,
           source_key: dto.source_key || dto.mapping_key,
           account_id: dto.account_id,
+          account_code: account.code,
           is_active: dto.is_active ?? true,
           description: dto.description,
           metadata: dto.metadata || {},
@@ -225,11 +316,13 @@ export class AccountMappingsService {
         }
       }
 
+      const updateData: any = {};
+
       // Verify account exists if updating account_id
       if (dto.account_id) {
         const { data: account, error: accountError } = await supabaseClient
           .from('accounts')
-          .select('id')
+          .select('id, code')
           .eq('id', dto.account_id)
           .eq('organization_id', organizationId)
           .single();
@@ -237,9 +330,8 @@ export class AccountMappingsService {
         if (accountError || !account) {
           throw new BadRequestException(`Account with ID ${dto.account_id} not found`);
         }
+        updateData.account_code = account.code;
       }
-
-      const updateData: any = {};
 
       if (dto.mapping_type) updateData.mapping_type = dto.mapping_type;
       if (dto.mapping_key) updateData.mapping_key = dto.mapping_key;
@@ -312,6 +404,9 @@ export class AccountMappingsService {
     const supabaseClient = this.databaseService.getClient();
 
     try {
+      const { countryCode: orgCountry, accountingStandard } = await this.getOrganizationAccountingContext(organizationId);
+      const effectiveCountry = (countryCode || orgCountry).toUpperCase();
+
       // Check if mappings already exist
       const { data: existingMappings } = await supabaseClient
         .from('account_mappings')
@@ -323,39 +418,65 @@ export class AccountMappingsService {
         return { message: 'Mappings already initialized', count: 0 };
       }
 
-      // Call the database functions to create mappings
-      // These functions were created in the migrations
-      const { error: taskError } = await supabaseClient.rpc('create_task_cost_mappings', {
-        p_organization_id: organizationId,
-        p_country_code: countryCode,
-      });
-
-      if (taskError) {
-        this.logger.warn(`Could not create task cost mappings: ${taskError.message}`);
-      }
-
-      const { error: harvestError } = await supabaseClient.rpc('create_harvest_sales_mappings', {
-        p_organization_id: organizationId,
-        p_country_code: countryCode,
-      });
-
-      if (harvestError) {
-        this.logger.warn(`Could not create harvest sales mappings: ${harvestError.message}`);
-      }
-
-      // Count created mappings
-      const { data: newMappings, error: countError } = await supabaseClient
+      const { data: templates, error: templateError } = await supabaseClient
         .from('account_mappings')
-        .select('id')
+        .select('mapping_type, mapping_key, source_key, account_code, description, metadata')
+        .is('organization_id', null)
+        .eq('country_code', effectiveCountry)
+        .eq('accounting_standard', accountingStandard);
+
+      if (templateError) {
+        throw new BadRequestException(`Failed to load mapping templates: ${templateError.message}`);
+      }
+
+      const accountCodeToId = new Map<string, string>();
+      const { data: orgAccounts, error: accountsError } = await supabaseClient
+        .from('accounts')
+        .select('id, code')
         .eq('organization_id', organizationId);
 
-      if (countError) {
-        throw new BadRequestException(`Error counting new mappings: ${countError.message}`);
+      if (accountsError) {
+        throw new BadRequestException(`Failed to load accounts: ${accountsError.message}`);
+      }
+
+      for (const account of orgAccounts || []) {
+        accountCodeToId.set(account.code, account.id);
+      }
+
+      const rows = (templates || []).map((template) => {
+        const accountCode = template.account_code;
+        const accountId = accountCode ? accountCodeToId.get(accountCode) || null : null;
+        return {
+          organization_id: organizationId,
+          country_code: effectiveCountry,
+          accounting_standard: accountingStandard,
+          mapping_type: template.mapping_type,
+          mapping_key: template.mapping_key,
+          source_key: template.source_key || template.mapping_key,
+          account_id: accountId,
+          account_code: accountCode,
+          description: template.description,
+          is_active: true,
+          metadata: template.metadata || {},
+        };
+      });
+
+      if (rows.length > 0) {
+        const { error: insertError } = await supabaseClient
+          .from('account_mappings')
+          .upsert(rows, {
+            onConflict: 'organization_id,mapping_type,mapping_key',
+            ignoreDuplicates: true,
+          });
+
+        if (insertError) {
+          throw new BadRequestException(`Failed to initialize mappings: ${insertError.message}`);
+        }
       }
 
       return {
         message: 'Default mappings initialized successfully',
-        count: newMappings?.length || 0,
+        count: rows.length,
       };
     } catch (error) {
       this.logger.error('Error in initializeDefaultMappings:', error);

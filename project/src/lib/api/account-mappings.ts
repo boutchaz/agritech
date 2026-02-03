@@ -28,6 +28,11 @@ export interface AccountMappingFilters {
   search?: string;
 }
 
+export interface AccountMappingOptions {
+  types: string[];
+  keys_by_type: Record<string, string[]>;
+}
+
 export interface CreateAccountMappingInput {
   mapping_type: string;
   mapping_key?: string;
@@ -67,6 +72,10 @@ export const accountMappingsApi = {
 
   async getMappingTypes(organizationId?: string): Promise<string[]> {
     return apiClient.get<string[]>('/account-mappings/types', organizationId);
+  },
+
+  async getMappingOptions(organizationId?: string): Promise<AccountMappingOptions> {
+    return apiClient.get<AccountMappingOptions>('/account-mappings/options', organizationId);
   },
 
   async create(data: CreateAccountMappingInput, organizationId?: string): Promise<AccountMapping> {
