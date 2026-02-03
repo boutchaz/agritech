@@ -7,7 +7,7 @@ WORKDIR /app
 COPY agritech-api/package.json ./
 
 # Install all dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY agritech-api/ ./
@@ -24,7 +24,7 @@ WORKDIR /app
 COPY agritech-api/package.json ./
 
 # Install production dependencies (includes all transitive dependencies)
-RUN npm ci --only=production
+RUN npm install --production
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
