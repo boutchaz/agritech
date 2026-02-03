@@ -1,34 +1,34 @@
 # Build stage
 FROM node:20-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare npm@latest --activate
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN pnpm install
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
-RUN pnpm build
+# Build application
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS production
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare npm@latest --activate
 
 WORKDIR /app
 
 # Copy package files
-COPY package.json ./
+COPY package.json package-lock.json ./
 
 # Install only production dependencies
-RUN pnpm install --prod
+RUN npm ci --only=production
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -53,5 +53,5 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start the application
+# Start application
 CMD ["node", "dist/main"]
