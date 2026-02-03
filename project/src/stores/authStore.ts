@@ -77,8 +77,10 @@ export const useAuthStore = create<AuthState>()(
       _hasHydrated: false,
 
       setTokens: (tokens) => {
-        // Calculate expiration time
-        const expires_at = Date.now() + tokens.expires_in * 1000;
+        // Calculate expiration time when provided
+        const expires_at = tokens.expires_in
+          ? Date.now() + tokens.expires_in * 1000
+          : undefined;
         set({
           tokens: { ...tokens, expires_at },
           isAuthenticated: true,
@@ -97,7 +99,7 @@ export const useAuthStore = create<AuthState>()(
         const { tokens } = get();
         if (!tokens) return null;
 
-        // Check if token is expired
+        // Check if token is expired when we have an expiry
         if (tokens.expires_at && Date.now() >= tokens.expires_at) {
           return null;
         }
@@ -107,7 +109,7 @@ export const useAuthStore = create<AuthState>()(
 
       isTokenExpired: () => {
         const { tokens } = get();
-        if (!tokens?.expires_at) return true;
+        if (!tokens?.expires_at) return false;
         return Date.now() >= tokens.expires_at;
       },
 
@@ -159,7 +161,7 @@ export const useAuthStore = create<AuthState>()(
         if (state) {
           const isExpired = state.tokens?.expires_at
             ? Date.now() >= state.tokens.expires_at
-            : true;
+            : false;
 
           if (isExpired && state.isAuthenticated) {
             // Clear expired auth state
