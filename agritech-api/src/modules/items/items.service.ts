@@ -1024,17 +1024,6 @@ export class ItemsService {
     };
   }
 
-    // Parse the by_variant JSONB array
-    const result = data[0];
-    return {
-      item_id: result.item_id,
-      item_name: result.item_name,
-      base_unit: result.base_unit,
-      total_consumption: parseFloat(result.total_consumption || 0),
-      by_variant: result.by_variant || [],
-    };
-  }
-
   /**
    * Get all prices for a specific item
    */
