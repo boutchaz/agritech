@@ -541,4 +541,78 @@ export class ParcelsService {
     this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
     return updatedParcel;
   }
+
+  async getParcelApplications(
+    userId: string,
+    organizationId: string,
+    parcelId: string,
+  ) {
+    this.logger.log(`Getting applications for parcel ${parcelId} in org ${organizationId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error('User not authorized for organization', orgError);
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Verify parcel exists and belongs to organization
+    const { data: parcel, error: parcelError } = await this.supabaseAdmin
+      .from('parcels')
+      .select(`
+        id,
+        farms!inner (
+          id,
+          organization_id
+        )
+      `)
+      .eq('id', parcelId)
+      .eq('farms.organization_id', organizationId)
+      .maybeSingle();
+
+    if (parcelError || !parcel) {
+      this.logger.error('Parcel not found or access denied', parcelError);
+      throw new NotFoundException('Parcel not found or you do not have access to it');
+    }
+
+    // Get applications for this parcel
+    const { data: applications, error: appsError } = await this.supabaseAdmin
+      .from('product_applications')
+      .select(`
+        id,
+        product_id,
+        application_date,
+        quantity_used,
+        area_treated,
+        notes,
+        cost,
+        currency,
+        created_at,
+        inventory!inner (
+          name,
+          unit
+        )
+      `)
+      .eq('parcel_id', parcelId)
+      .order('application_date', { ascending: false });
+
+    if (appsError) {
+      this.logger.error('Error fetching parcel applications', appsError);
+      throw new InternalServerErrorException('Failed to fetch parcel applications');
+    }
+
+    return {
+      success: true,
+      parcel_id: parcelId,
+      applications: applications || [],
+      total: applications?.length || 0,
+    };
+  }
 }

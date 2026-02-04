@@ -10,7 +10,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
@@ -44,10 +44,14 @@ export class TasksController {
   @Get('my-tasks')
   @CanReadTasks()
   @ApiOperation({ summary: 'Get all tasks assigned to the current user across all organizations' })
+  @ApiQuery({ name: 'includeCompleted', required: false, description: 'Include completed tasks in results', type: Boolean })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getMyTasks(@Request() req) {
-    return this.tasksService.findMyTasks(req.user.id);
+  async getMyTasks(
+    @Request() req,
+    @Query('includeCompleted') includeCompleted?: string,
+  ) {
+    return this.tasksService.findMyTasks(req.user.id, includeCompleted === 'true');
   }
 
   @Get()

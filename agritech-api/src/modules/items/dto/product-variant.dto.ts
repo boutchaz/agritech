@@ -46,6 +46,10 @@ export class CreateProductVariantDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsNumber()
+  @IsOptional()
+  base_quantity?: number;
 }
 
 export class UpdateProductVariantDto extends PartialType(

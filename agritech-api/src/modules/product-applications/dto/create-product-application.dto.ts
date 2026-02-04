@@ -28,6 +28,11 @@ export class CreateProductApplicationDto {
   @IsOptional()
   parcel_id?: string;
 
+  @ApiPropertyOptional({ description: 'Optional: Task ID if this application was planned' })
+  @IsUUID()
+  @IsOptional()
+  task_id?: string;
+
   @ApiPropertyOptional({ description: 'Cost of application' })
   @IsNumber()
   @IsOptional()

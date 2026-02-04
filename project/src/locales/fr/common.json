@@ -2954,7 +2954,19 @@
       "variety": "Variété",
       "plantingYear": "Année de Plantation",
       "lastUpdate": "Dernière Mise à Jour",
-      "description": "Description"
+      "description": "Description",
+      "applicationsHistory": "Historique des Applications",
+      "totalApplications": "Total des applications",
+      "applicationDate": "Date",
+      "product": "Produit",
+      "quantityUsed": "Quantité Utilisée",
+      "areaTreated": "Surface Traité",
+      "cost": "Coût",
+      "notes": "Notes",
+      "task": "Tâche",
+      "planned": "Planifié",
+      "adhoc": "Ad-hoc",
+      "noApplications": "Aucune application enregistrée pour cette parcelle"
     },
     "profitability": {
       "loading": "Chargement de la rentabilité..."

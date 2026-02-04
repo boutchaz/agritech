@@ -20,6 +20,7 @@ import {
 import { CreateParcelDto } from './dto/create-parcel.dto';
 import { UpdateParcelDto } from './dto/update-parcel.dto';
 import { ListParcelsResponseDto } from './dto/list-parcels.dto';
+import { ListParcelApplicationsResponseDto } from './dto/list-parcel-applications.dto';
 
 @ApiTags('parcels')
 @Controller('parcels')
@@ -125,6 +126,38 @@ export class ParcelsController {
         fromDate: fromDate ? new Date(fromDate) : undefined,
         toDate: toDate ? new Date(toDate) : undefined,
       },
+    );
+  }
+
+  @Get(':id/applications')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get product applications for a parcel',
+    description: 'Get all product applications for a specific parcel',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Parcel ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Applications retrieved successfully',
+    type: ListParcelApplicationsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Parcel'))
+  async getParcelApplications(
+    @Request() req,
+    @Param('id') parcelId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.parcelsService.getParcelApplications(
+      req.user.id,
+      organizationId,
+      parcelId,
     );
   }
 

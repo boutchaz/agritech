@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
-  Req
+  Req,
+  ParseIntPipe,
+  DefaultValuePipe
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -275,6 +277,36 @@ export class ItemsController {
   async getItemFarmUsage(@Req() req: any, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
     return this.itemsService.getItemFarmUsage(organizationId, id);
+  }
+
+  @Get(':id/consumption')
+  @ApiOperation({ summary: 'Get item consumption in base unit across all variants' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiQuery({ name: 'warehouse_id', required: false, description: 'Filter by warehouse ID' })
+  @ApiQuery({ name: 'start_date', required: false, description: 'Filter by start date (ISO 8601)' })
+  @ApiQuery({ name: 'end_date', required: false, description: 'Filter by end date (ISO 8601)' })
+  @ApiResponse({ status: 200, description: 'Item consumption retrieved successfully' })
+  async getItemConsumption(
+    @Param('id') id: string,
+    @Query('warehouse_id') warehouseId?: string,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+    @Req() req?: any,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+
+    const filters: any = {};
+    if (warehouseId) {
+      filters.warehouse_id = warehouseId;
+    }
+    if (startDate) {
+      filters.start_date = new Date(startDate);
+    }
+    if (endDate) {
+      filters.end_date = new Date(endDate);
+    }
+
+    return this.itemsService.getItemConsumptionInBaseUnit(organizationId, id, filters);
   }
 
   @Post()

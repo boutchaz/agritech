@@ -922,6 +922,120 @@ export class ItemsService {
   // =====================================================
 
   /**
+   * Get total consumption in base unit for an item across all variants
+   * Logic is implemented in NestJS for easier maintenance
+   */
+  async getItemConsumptionInBaseUnit(
+    organizationId: string,
+    itemId: string,
+    filters?: {
+      warehouse_id?: string;
+      start_date?: Date;
+      end_date?: Date;
+    }
+  ): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // Get item with its default_unit
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('id, item_name, default_unit')
+      .eq('id', itemId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (itemError || !item) {
+      throw new NotFoundException('Item not found');
+    }
+
+    // Build the query for stock movements with variant aggregation
+    let query = supabase
+      .from('stock_movements')
+      .select(`
+        quantity,
+        base_quantity_at_movement,
+        variant:variant_id(
+          id,
+          variant_name,
+          base_quantity
+        )
+      `)
+      .eq('organization_id', organizationId)
+      .eq('item_id', itemId)
+      .eq('movement_type', 'OUT'); // OUT = consumption
+
+    // Apply filters
+    if (filters?.warehouse_id) {
+      query = query.eq('warehouse_id', filters.warehouse_id);
+    }
+    if (filters?.start_date) {
+      query = query.gte('movement_date', filters.start_date.toISOString());
+    }
+    if (filters?.end_date) {
+      query = query.lte('movement_date', filters.end_date.toISOString());
+    }
+
+    const { data: movements, error: movementsError } = await query;
+
+    if (movementsError) {
+      this.logger.error(`Failed to fetch stock movements: ${movementsError.message}`);
+      throw new BadRequestException(`Failed to fetch stock movements: ${movementsError.message}`);
+    }
+
+    // Aggregate consumption by variant (NestJS logic for easier maintenance)
+    let totalConsumption = 0;
+    const byVariant = new Map();
+
+    (movements || []).forEach((movement: any) => {
+      const variant = movement.variant;
+      const quantity = parseFloat(movement.quantity || 0);
+      // Use base_quantity_at_movement if available (for historical accuracy),
+      // otherwise fall back to variant.base_quantity
+      const baseQuantity = parseFloat(
+        movement.base_quantity_at_movement ||
+        variant?.base_quantity ||
+        1
+      );
+
+      const consumptionInBaseUnit = quantity * baseQuantity;
+      totalConsumption += consumptionInBaseUnit;
+
+      // Aggregate by variant
+      if (!byVariant.has(variant?.id)) {
+        byVariant.set(variant?.id || 'unknown', {
+          variant_id: variant?.id || null,
+          variant_name: variant?.variant_name || 'Unknown',
+          base_quantity: baseQuantity,
+          quantity_consumed: 0,
+          consumption_in_base_unit: 0,
+        });
+      }
+      const variantData = byVariant.get(variant?.id || 'unknown');
+      variantData.quantity_consumed += quantity;
+      variantData.consumption_in_base_unit += consumptionInBaseUnit;
+    });
+
+    return {
+      item_id: itemId,
+      item_name: item.item_name,
+      base_unit: item.default_unit,
+      total_consumption: totalConsumption,
+      by_variant: Array.from(byVariant.values()),
+    };
+  }
+
+    // Parse the by_variant JSONB array
+    const result = data[0];
+    return {
+      item_id: result.item_id,
+      item_name: result.item_name,
+      base_unit: result.base_unit,
+      total_consumption: parseFloat(result.total_consumption || 0),
+      by_variant: result.by_variant || [],
+    };
+  }
+
+  /**
    * Get all prices for a specific item
    */
   async getItemPrices(itemId: string, organizationId: string): Promise<any> {

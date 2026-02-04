@@ -2853,7 +2853,19 @@
       "variety": "الصنف",
       "plantingYear": "سنة الزراعة",
       "lastUpdate": "آخر تحديث",
-      "description": "الوصف"
+      "description": "الوصف",
+      "applicationsHistory": "سجل التطبيقات",
+      "totalApplications": "إجمالي التطبيقات",
+      "applicationDate": "التاريخ",
+      "product": "المنتج",
+      "quantityUsed": "الكمية المستخدمة",
+      "areaTreated": "المساحة المعالجة",
+      "cost": "التكلفة",
+      "task": "المهمة",
+      "planned": "مخطط",
+      "adhoc": "مباشر",
+      "notes": "ملاحظات",
+      "noApplications": "لا توجد تطبيقات مسجلة لهذه القطعة بعد"
     },
     "profitability": {
       "loading": "جاري تحميل الربحية..."

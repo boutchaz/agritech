@@ -2959,7 +2959,19 @@
       "variety": "Variety",
       "plantingYear": "Planting Year",
       "lastUpdate": "Last Update",
-      "description": "Description"
+      "description": "Description",
+      "applicationsHistory": "Applications History",
+      "totalApplications": "Total applications",
+      "applicationDate": "Date",
+      "product": "Product",
+      "quantityUsed": "Quantity Used",
+      "areaTreated": "Area Treated",
+      "cost": "Cost",
+      "task": "Task",
+      "planned": "Planned",
+      "adhoc": "Ad-hoc",
+      "notes": "Notes",
+      "noApplications": "No applications recorded for this parcel yet"
     },
     "profitability": {
       "loading": "Loading profitability..."

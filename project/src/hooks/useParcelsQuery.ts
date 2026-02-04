@@ -43,6 +43,8 @@ export const parcelsKeys = {
   byFarm: (farmId: string) => ['parcels', 'farm', farmId] as const,
   byOrganization: (organizationId: string) => ['parcels', 'organization', organizationId] as const,
   byFarms: (farmIds: string[]) => ['parcels', 'farms', farmIds.sort()] as const,
+  byId: (parcelId: string) => ['parcels', parcelId] as const,
+  applications: (parcelId: string) => ['parcels', parcelId, 'applications'] as const,
 };
 
 export const farmsKeys = {
@@ -185,6 +187,20 @@ export const useParcelById = (parcelId: string | null | undefined) => {
         created_at: parcel.created_at ?? null,
         updated_at: parcel.updated_at ?? null,
       };
+    },
+    enabled: !!parcelId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
+  });
+};
+
+// Fetch applications for a specific parcel
+export const useParcelApplications = (parcelId: string | null | undefined) => {
+  return useQuery({
+    queryKey: parcelsKeys.applications(parcelId || ''),
+    queryFn: async () => {
+      if (!parcelId) return null;
+      return parcelsService.getParcelApplications(parcelId);
     },
     enabled: !!parcelId,
     staleTime: 2 * 60 * 1000, // 2 minutes

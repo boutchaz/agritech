@@ -89,6 +89,30 @@ export interface PerformanceSummaryFilters {
   toDate?: Date;
 }
 
+export interface ParcelApplication {
+  id: string;
+  product_id: string;
+  application_date: string;
+  quantity_used: number;
+  area_treated: number;
+  notes?: string;
+  cost?: number;
+  currency?: string;
+  task_id?: string;
+  created_at: string;
+  inventory: {
+    name: string;
+    unit: string;
+  };
+}
+
+export interface ParcelApplicationsResponse {
+  success: boolean;
+  parcel_id: string;
+  applications: ParcelApplication[];
+  total: number;
+}
+
 const baseCrud = createCrudApi<Parcel, CreateParcelDto, ParcelFilters, UpdateParcelDto>(BASE_URL);
 
 export const parcelsApi = {
@@ -114,5 +138,12 @@ export const parcelsApi = {
 
     const url = `${BASE_URL}/performance${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get(url, {}, organizationId);
+  },
+
+  /**
+   * Get product applications for a specific parcel
+   */
+  async getParcelApplications(parcelId: string, organizationId?: string): Promise<ParcelApplicationsResponse> {
+    return apiClient.get(`${BASE_URL}/${parcelId}/applications`, {}, organizationId);
   },
 };

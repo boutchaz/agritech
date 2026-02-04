@@ -61,9 +61,9 @@ export function isCountrySupported(countryCode: string): countryCode is Supporte
  * @returns Result object with accounts created count and success status
  */
 export async function seedChartOfAccounts(
-  _organizationId: string,
+  organizationId: string,
   countryCode: SupportedCountry,
-  _currency?: SupportedCurrency
+  currency?: SupportedCurrency
 ): Promise<SeedResult> {
   try {
     if (!isCountrySupported(countryCode)) {
@@ -82,7 +82,8 @@ export async function seedChartOfAccounts(
     }>(
       `/api/v1/accounts/templates/${templateCode}/apply`,
       { overwrite: false },
-      { timeout: 120000 }
+      { timeout: 120000 },
+      organizationId
     );
 
     return {
@@ -118,9 +119,9 @@ export async function seedChartOfAccounts(
 /**
  * Check if an organization already has accounts
  */
-export async function hasExistingAccounts(_organizationId: string): Promise<boolean> {
+export async function hasExistingAccounts(organizationId: string): Promise<boolean> {
   try {
-    const response = await apiClient.get('/api/v1/accounts');
+    const response = await apiClient.get('/api/v1/accounts', {}, organizationId);
     return Array.isArray(response) && response.length > 0;
   } catch (error) {
     console.error('Error checking for existing accounts:', error);

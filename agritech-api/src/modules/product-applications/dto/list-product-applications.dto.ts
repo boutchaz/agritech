@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ProductApplicationDto {
   @ApiProperty()
@@ -18,6 +18,18 @@ export class ProductApplicationDto {
 
   @ApiProperty()
   notes: string;
+
+  @ApiPropertyOptional()
+  cost?: number;
+
+  @ApiPropertyOptional()
+  currency?: string;
+
+  @ApiPropertyOptional({ description: 'Optional: Task ID if this application was planned' })
+  task_id?: string;
+
+  @ApiPropertyOptional({ description: 'Parcel ID' })
+  parcel_id?: string;
 
   @ApiProperty()
   created_at: string;

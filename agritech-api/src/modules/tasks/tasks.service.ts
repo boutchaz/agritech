@@ -42,8 +42,9 @@ export class TasksService {
 
   /**
    * Get all tasks assigned to the current user across all organizations
+   * @param includeCompleted - If true, includes completed tasks in results
    */
-  async findMyTasks(userId: string) {
+  async findMyTasks(userId: string, includeCompleted: boolean = false) {
     const client = this.databaseService.getAdminClient();
 
     // First, get all organizations the user belongs to
@@ -63,6 +64,11 @@ export class TasksService {
 
     const organizationIds = orgUsers.map(ou => ou.organization_id);
 
+    // Build status filter based on includeCompleted parameter
+    const statuses = includeCompleted
+      ? ['pending', 'assigned', 'in_progress', 'completed']
+      : ['pending', 'assigned', 'in_progress'];
+
     // Get tasks where user is assigned (via assigned_user_id) or linked to a worker
     const { data: tasks, error } = await client
       .from('tasks')
@@ -75,7 +81,7 @@ export class TasksService {
       `)
       .in('organization_id', organizationIds)
       .or(`assigned_user_id.eq.${userId}`)
-      .in('status', ['pending', 'assigned', 'in_progress'])
+      .in('status', statuses)
       .order('scheduled_start', { ascending: true, nullsFirst: false });
 
     if (error) {

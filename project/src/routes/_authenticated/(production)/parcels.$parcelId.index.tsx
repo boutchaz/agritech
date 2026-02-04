@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useParcelById } from '@/hooks/useParcelsQuery'
+import { useParcelById, useParcelApplications } from '@/hooks/useParcelsQuery'
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '@/hooks/useLatestSatelliteIndices'
-import { Droplets, TrendingUp, Satellite, RefreshCw, AlertCircle } from 'lucide-react'
+import { Droplets, TrendingUp, Satellite, RefreshCw, AlertCircle, FlaskRound } from 'lucide-react'
 
 const ParcelOverview = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading: isLoadingParcel } = useParcelById(parcelId);
   const { data: indices, isLoading: isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
+  const { data: applicationsData, isLoading: isLoadingApplications } = useParcelApplications(parcelId);
 
   const isLoading = isLoadingParcel || isLoadingIndices;
 
@@ -210,6 +211,89 @@ const ParcelOverview = () => {
           <p className="text-gray-600 dark:text-gray-400">{parcel.description}</p>
         </div>
       )}
+
+      {/* Applications History */}
+      <div className="bg-white dark:bg-gray-700 rounded-lg p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <FlaskRound className="h-5 w-5 text-green-600" />
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{t('parcels.index.applicationsHistory')}</h4>
+          </div>
+          {applicationsData && (
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('parcels.index.totalApplications')}: {applicationsData.total || 0}
+            </span>
+          )}
+        </div>
+
+        {isLoadingApplications ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+          </div>
+        ) : applicationsData && applicationsData.applications && applicationsData.applications.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.applicationDate')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.product')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.quantityUsed')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.areaTreated')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.cost')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.task')}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('parcels.index.notes')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                {applicationsData.applications.map((app) => (
+                  <tr key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {new Date(app.application_date).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {app.inventory?.name || '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {app.quantity_used} {app.inventory?.unit || ''}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {app.area_treated} ha
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {app.cost ? `${app.cost} ${app.currency || ''}` : '-'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {app.task_id ? `✓ ${t('parcels.index.planned')}` : t('parcels.index.adhoc')}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
+                      {app.notes || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <FlaskRound className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">{t('parcels.index.noApplications')}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

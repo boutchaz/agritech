@@ -35,6 +35,30 @@ export interface ListParcelsResponse {
   parcels: Parcel[];
 }
 
+export interface ParcelApplication {
+  id: string;
+  product_id: string;
+  application_date: string;
+  quantity_used: number;
+  area_treated: number;
+  notes?: string;
+  cost?: number;
+  currency?: string;
+  task_id?: string;
+  created_at: string;
+  inventory: {
+    name: string;
+    unit: string;
+  };
+}
+
+export interface ParcelApplicationsResponse {
+  success: boolean;
+  parcel_id: string;
+  applications: ParcelApplication[];
+  total: number;
+}
+
 /**
  * Get the current organization ID from Zustand store
  * This matches the approach used in api-client.ts for consistency
@@ -148,6 +172,15 @@ class ParcelsService {
         method: 'DELETE',
         body: JSON.stringify({ parcel_id: parcelId }),
       },
+      organizationId
+    );
+  }
+
+  async getParcelApplications(parcelId: string): Promise<ParcelApplicationsResponse> {
+    const organizationId = getCurrentOrganizationId();
+    return apiClient.get<ParcelApplicationsResponse>(
+      `/api/v1/parcels/${parcelId}/applications`,
+      {},
       organizationId
     );
   }
