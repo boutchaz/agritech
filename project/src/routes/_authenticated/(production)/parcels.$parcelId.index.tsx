@@ -1,5 +1,5 @@
 import { ApplicationFormDialog } from '@/components/parcels/ApplicationFormDialog'
-import { useAbility } from '@/hooks/useAbility'
+import { useAbility } from '@/lib/casl/AbilityContext'
 import { calculateHealthStatus, calculateIrrigationIndex, useLatestSatelliteIndices } from '@/hooks/useLatestSatelliteIndices'
 import { useParcelApplications, useParcelById } from '@/hooks/useParcelsQuery'
 import { createFileRoute, Link } from '@tanstack/react-router'

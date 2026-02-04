@@ -5,20 +5,19 @@ import * as z from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { useAbility } from '@/hooks/useAbility';
 import { FlaskRound, Calendar, Droplets } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/radix-select';
 
 const schema = z.object({
   product_id: z.string().uuid(),
@@ -52,7 +51,6 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
 }) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const ability = useAbility();
   const queryClient = useQueryClient();
 
   const form = useForm<FormData>({
