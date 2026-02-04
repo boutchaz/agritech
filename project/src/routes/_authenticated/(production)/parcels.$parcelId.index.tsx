@@ -1,8 +1,11 @@
+import { ApplicationFormDialog } from '@/components/parcels/ApplicationFormDialog'
+import { useAbility } from '@/hooks/useAbility'
+import { calculateHealthStatus, calculateIrrigationIndex, useLatestSatelliteIndices } from '@/hooks/useLatestSatelliteIndices'
+import { useParcelApplications, useParcelById } from '@/hooks/useParcelsQuery'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { AlertCircle, Droplets, FlaskRound, RefreshCw, Satellite, TrendingUp } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParcelById, useParcelApplications } from '@/hooks/useParcelsQuery'
-import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '@/hooks/useLatestSatelliteIndices'
-import { Droplets, TrendingUp, Satellite, RefreshCw, AlertCircle, FlaskRound } from 'lucide-react'
 
 const ParcelOverview = () => {
   const { t } = useTranslation();
@@ -10,6 +13,8 @@ const ParcelOverview = () => {
   const { data: parcel, isLoading: isLoadingParcel } = useParcelById(parcelId);
   const { data: indices, isLoading: isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
   const { data: applicationsData, isLoading: isLoadingApplications } = useParcelApplications(parcelId);
+  const ability = useAbility();
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const isLoading = isLoadingParcel || isLoadingIndices;
 
@@ -219,11 +224,22 @@ const ParcelOverview = () => {
             <FlaskRound className="h-5 w-5 text-green-600" />
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{t('parcels.index.applicationsHistory')}</h4>
           </div>
-          {applicationsData && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {t('parcels.index.totalApplications')}: {applicationsData.total || 0}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {ability.can('create', 'ProductApplication') && (
+              <button
+                onClick={() => setShowApplicationForm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <FlaskRound className="h-5 w-5" />
+                {t('parcels.index.addApplication')}
+              </button>
+            )}
+            {applicationsData && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {t('parcels.index.totalApplications')}: {applicationsData.total || 0}
+              </span>
+            )}
+          </div>
         </div>
 
         {isLoadingApplications ? (
@@ -294,6 +310,19 @@ const ParcelOverview = () => {
           </div>
         )}
       </div>
+
+      {/* Application Form Dialog */}
+      {parcel && (
+        <ApplicationFormDialog
+          open={showApplicationForm}
+          onOpenChange={setShowApplicationForm}
+          parcelId={parcelId}
+          farmId={parcel.farm_id || ''}
+          onSuccess={() => {
+            // Refresh applications data will be handled by query invalidation
+          }}
+        />
+      )}
     </div>
   );
 };
