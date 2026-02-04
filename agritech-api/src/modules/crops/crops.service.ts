@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
-import { CropFiltersDto, CreateCropDto } from './dto';
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { DatabaseService } from "../database/database.service";
+import { CropFiltersDto, CreateCropDto } from "./dto";
 
 @Injectable()
 export class CropsService {
@@ -9,10 +9,10 @@ export class CropsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string, filters: CropFiltersDto = {}) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     let query = client
-      .from('crops')
+      .from("crops")
       .select(
         `
         *,
@@ -20,30 +20,30 @@ export class CropsService {
         parcels(id, parcel_name),
         crop_varieties(id, name)
       `,
-        { count: 'exact' },
+        { count: "exact" },
       )
-      .eq('farms.organization_id', organizationId);
+      .eq("farms.organization_id", organizationId);
 
     // Apply filters
     if (filters.farm_id) {
-      query = query.eq('farm_id', filters.farm_id);
+      query = query.eq("farm_id", filters.farm_id);
     }
     if (filters.parcel_id) {
-      query = query.eq('parcel_id', filters.parcel_id);
+      query = query.eq("parcel_id", filters.parcel_id);
     }
     if (filters.variety_id) {
-      query = query.eq('variety_id', filters.variety_id);
+      query = query.eq("variety_id", filters.variety_id);
     }
     if (filters.status) {
-      query = query.eq('status', filters.status);
+      query = query.eq("status", filters.status);
     }
     if (filters.search) {
-      query = query.ilike('name', `%${filters.search}%`);
+      query = query.ilike("name", `%${filters.search}%`);
     }
 
     // Apply sorting
-    const sortBy = filters.sortBy || 'name';
-    const sortDir = filters.sortDir === 'desc' ? false : true;
+    const sortBy = filters.sortBy || "name";
+    const sortDir = filters.sortDir === "desc" ? false : true;
     query = query.order(sortBy, { ascending: sortDir });
 
     // Apply pagination if specified
@@ -88,10 +88,10 @@ export class CropsService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
-      .from('crops')
+      .from("crops")
       .select(
         `
         *,
@@ -100,13 +100,13 @@ export class CropsService {
         crop_varieties(id, name)
       `,
       )
-      .eq('id', id)
-      .eq('farms.organization_id', organizationId)
+      .eq("id", id)
+      .eq("farms.organization_id", organizationId)
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        throw new NotFoundException('Crop not found');
+      if (error.code === "PGRST116") {
+        throw new NotFoundException("Crop not found");
       }
       this.logger.error(`Failed to fetch crop: ${error.message}`);
       throw error;
@@ -124,22 +124,24 @@ export class CropsService {
   }
 
   async create(organizationId: string, createDto: CreateCropDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Verify farm belongs to organization
     const { data: farm, error: farmError } = await client
-      .from('farms')
-      .select('id')
-      .eq('id', createDto.farm_id)
-      .eq('organization_id', organizationId)
+      .from("farms")
+      .select("id")
+      .eq("id", createDto.farm_id)
+      .eq("organization_id", organizationId)
       .single();
 
     if (farmError || !farm) {
-      throw new NotFoundException('Farm not found or does not belong to organization');
+      throw new NotFoundException(
+        "Farm not found or does not belong to organization",
+      );
     }
 
     const { data, error } = await client
-      .from('crops')
+      .from("crops")
       .insert(createDto)
       .select(
         `
@@ -167,8 +169,12 @@ export class CropsService {
     };
   }
 
-  async update(id: string, organizationId: string, updateDto: Partial<CreateCropDto>) {
-    const client = this.databaseService.getClient();
+  async update(
+    id: string,
+    organizationId: string,
+    updateDto: Partial<CreateCropDto>,
+  ) {
+    const client = this.databaseService.getAdminClient();
 
     // Verify crop exists and belongs to organization
     await this.findOne(id, organizationId);
@@ -176,24 +182,26 @@ export class CropsService {
     // If farm_id is being updated, verify it belongs to organization
     if (updateDto.farm_id) {
       const { data: farm, error: farmError } = await client
-        .from('farms')
-        .select('id')
-        .eq('id', updateDto.farm_id)
-        .eq('organization_id', organizationId)
+        .from("farms")
+        .select("id")
+        .eq("id", updateDto.farm_id)
+        .eq("organization_id", organizationId)
         .single();
 
       if (farmError || !farm) {
-        throw new NotFoundException('Farm not found or does not belong to organization');
+        throw new NotFoundException(
+          "Farm not found or does not belong to organization",
+        );
       }
     }
 
     const { data, error } = await client
-      .from('crops')
+      .from("crops")
       .update({
         ...updateDto,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id)
+      .eq("id", id)
       .select(
         `
         *,
@@ -221,12 +229,12 @@ export class CropsService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Verify crop exists and belongs to organization
     await this.findOne(id, organizationId);
 
-    const { error } = await client.from('crops').delete().eq('id', id);
+    const { error } = await client.from("crops").delete().eq("id", id);
 
     if (error) {
       this.logger.error(`Failed to delete crop: ${error.message}`);

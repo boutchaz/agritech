@@ -748,14 +748,15 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       />
 
       {/* Edit Farm Manager Modal */}
-      {selectedFarmForEditManager && (
-        <EditFarmManagerModal
-          farmId={selectedFarmForEditManager.id}
-          farmName={selectedFarmForEditManager.name}
-          currentManagerName={selectedFarmForEditManager.manager_name}
-          onClose={() => setSelectedFarmForEditManager(null)}
-        />
-      )}
+      <EditFarmManagerModal
+        open={!!selectedFarmForEditManager}
+        onOpenChange={(open) => !open && setSelectedFarmForEditManager(null)}
+        farmId={selectedFarmForEditManager?.id || ''}
+        farmName={selectedFarmForEditManager?.name || ''}
+        currentManagerName={selectedFarmForEditManager?.manager_name}
+        currentManagerEmail={selectedFarmForEditManager?.manager_email}
+        currentManagerPhone={selectedFarmForEditManager?.manager_phone}
+      />
 
       {/* Delete Farm Confirmation Dialog */}
       <AlertDialog open={!!farmToDelete} onOpenChange={(open) => {

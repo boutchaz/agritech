@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, IsDateString, IsUUID } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsDateString, IsUUID, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateProductApplicationDto {
   @ApiProperty({ description: 'Product ID from inventory' })
@@ -46,4 +47,10 @@ export class CreateProductApplicationDto {
   @IsString()
   @IsOptional()
   currency?: string;
+
+  @ApiPropertyOptional({ description: 'Array of image URLs' })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  images?: string[];
 }

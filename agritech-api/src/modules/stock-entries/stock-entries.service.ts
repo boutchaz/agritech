@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { SequencesService } from '../sequences/sequences.service';
 import { CreateStockEntryDto, StockEntryType, StockEntryStatus, ValuationMethod } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
 import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
@@ -12,7 +13,10 @@ import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dt
 export class StockEntriesService {
   private readonly logger = new Logger(StockEntriesService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly sequencesService: SequencesService,
+  ) {}
 
   /**
    * Get all stock entries with optional filters
@@ -106,22 +110,14 @@ export class StockEntriesService {
     // Validation
     this.validateStockEntry(dto);
 
-    // Use PostgreSQL transaction for atomicity (including entry number generation)
+    // Generate entry number if not provided
+    let entryNumber = dto.entry_number;
+    if (!entryNumber) {
+      entryNumber = await this.sequencesService.generateStockEntryNumber(dto.organization_id);
+    }
+
+    // Use PostgreSQL transaction for atomicity
     return this.executeInPgTransaction(async (client) => {
-      // Generate entry number inside transaction if not provided
-      let entryNumber = dto.entry_number;
-      if (!entryNumber) {
-        const numberResult = await client.query(
-          `SELECT generate_stock_entry_number($1) as entry_number`,
-          [dto.organization_id]
-        );
-
-        if (!numberResult.rows[0]?.entry_number) {
-          throw new BadRequestException('Failed to generate entry number');
-        }
-
-        entryNumber = numberResult.rows[0].entry_number;
-      }
       // 1. Create stock entry
       const entryResult = await client.query(
         `INSERT INTO stock_entries (
@@ -160,16 +156,15 @@ export class StockEntriesService {
         const item = dto.items[index];
         const itemResult = await client.query(
           `INSERT INTO stock_entry_items (
-            stock_entry_id, line_number, item_id, variant_id, item_name, quantity, unit,
+            stock_entry_id, line_number, item_id, item_name, quantity, unit,
             source_warehouse_id, target_warehouse_id, batch_number, serial_number,
             expiry_date, cost_per_unit, system_quantity, physical_quantity, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
           RETURNING *`,
           [
             stockEntry.id,
             index + 1,
             item.item_id,
-            item.variant_id || null,
             item.item_name || null,
             item.quantity,
             item.unit,
@@ -875,9 +870,8 @@ export class StockEntriesService {
             END as weighted_avg_cost
            FROM stock_valuation
            WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
-           AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
            AND remaining_quantity > 0`,
-          [stockEntry.organization_id, item.item_id, warehouseId, item.variant_id || null],
+          [stockEntry.organization_id, item.item_id, warehouseId],
         );
         costPerUnit = parseFloat(avgResult.rows[0]?.weighted_avg_cost || '0');
       }
@@ -1262,10 +1256,9 @@ export class StockEntriesService {
           `SELECT AVG(cost_per_unit) as avg_cost
            FROM stock_valuation
            WHERE organization_id = $1 AND item_id = $2
-           AND (variant_id = $3 OR ($3 IS NULL AND variant_id IS NULL))
            AND created_at >= NOW() - INTERVAL '30 days'
            AND cost_per_unit > 0`,
-          [stockEntry.organization_id, item.item_id, item.variant_id || null],
+          [stockEntry.organization_id, item.item_id],
         );
 
         const avgCost = parseFloat(avgResult.rows[0]?.avg_cost || '0');
@@ -1308,11 +1301,10 @@ export class StockEntriesService {
       `SELECT id, remaining_quantity, cost_per_unit
        FROM stock_valuation
        WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
-       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
        AND remaining_quantity > 0
        ORDER BY ${orderBy}
        FOR UPDATE`,
-      [organizationId, itemId, warehouseId, variantId],
+      [organizationId, itemId, warehouseId],
     );
 
     let remainingQty = quantity;

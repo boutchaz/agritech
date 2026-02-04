@@ -195,6 +195,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.HARVEST);
             can(Action.Manage, Subject.CROP_CYCLE);
             can(Action.Manage, Subject.PRODUCT_APPLICATION);
+            can(Action.Manage, Subject.STOCK);
             can(Action.Manage, Subject.STOCK_ENTRY);
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
@@ -242,6 +243,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);
             can(Action.Manage, Subject.WATER_ANALYSIS);
+            can(Action.Manage, Subject.STOCK);
             can(Action.Manage, Subject.STOCK_ENTRY);
             can(Action.Manage, Subject.DELIVERY);
             can(Action.Manage, Subject.RECEPTION_BATCH);
@@ -318,6 +320,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.PLANT_ANALYSIS);
             can(Action.Read, Subject.WATER_ANALYSIS);
 
+            can(Action.Read, Subject.STOCK);
             can(Action.Read, Subject.STOCK_ENTRY);
             can(Action.Create, Subject.STOCK_ENTRY);
             can(Action.Update, Subject.STOCK_ENTRY);
@@ -394,6 +397,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.HARVEST);
             can(Action.Read, Subject.CROP_CYCLE);
             can(Action.Read, Subject.PRODUCT_APPLICATION);
+            can(Action.Read, Subject.STOCK);
             can(Action.Read, Subject.STOCK_ENTRY);
             can(Action.Read, Subject.PRODUCT);
             can(Action.Read, Subject.BIOLOGICAL_ASSET);

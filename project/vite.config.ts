@@ -9,6 +9,16 @@ export default defineConfig({
     tanstackRouter(),
     react(),
   ],
+  // API proxy configuration
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   esbuild: {
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },

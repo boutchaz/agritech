@@ -22,53 +22,71 @@ export class ModuleConfigService {
   }
 
   async getModuleConfig(locale: string = 'en'): Promise<ModuleConfigResponseDto> {
-    // Normalize locale (default to 'en' if not supported)
     const supportedLocales = ['en', 'fr', 'ar'];
     const normalizedLocale = supportedLocales.includes(locale) ? locale : 'en';
 
-    // Call the database function to get module config with translations
-    const { data: modules, error } = await this.supabase.rpc('get_module_config', {
-      p_locale: normalizedLocale,
-    });
+    const { data: modules, error } = await this.supabase
+      .from('modules')
+      .select(`
+        id,
+        slug,
+        icon,
+        color,
+        category,
+        display_order,
+        price_monthly,
+        is_required,
+        is_recommended,
+        is_addon_eligible,
+        is_available,
+        required_plan,
+        dashboard_widgets,
+        navigation_items,
+        module_translations(name, description, features, locale)
+      `)
+      .order('display_order');
 
     if (error) {
       this.logger.error(`Error fetching module config: ${error.message}`);
       throw new Error(`Failed to fetch module config: ${error.message}`);
     }
 
-    // Map database results to DTOs
-    const moduleDtos: ModuleConfigDto[] = (modules || []).map((m: any) => ({
-      id: m.id,
-      slug: m.slug,
-      icon: m.icon,
-      color: m.color,
-      category: m.category,
-      displayOrder: m.display_order,
-      priceMonthly: m.price_monthly ? Number(m.price_monthly) : 0,
-      isRequired: m.is_required || false,
-      isRecommended: m.is_recommended || false,
-      isAddonEligible: m.is_addon_eligible || false,
-      isAvailable: m.is_available !== false,
-      requiredPlan: m.required_plan || null,
-      dashboardWidgets: m.dashboard_widgets || [],
-      navigationItems: m.navigation_items || [],
-      name: m.name,
-      description: m.description,
-      features: m.features || [],
-    }));
+    const moduleDtos: ModuleConfigDto[] = (modules || []).map((m: Record<string, unknown>) => {
+      const translations = m.module_translations as Array<{ name: string; description: string; features: string[]; locale: string }> || [];
+      const translation = translations.find(t => t.locale === normalizedLocale) || translations.find(t => t.locale === 'en') || translations[0];
+      return {
+        id: m.id as string,
+        slug: m.slug as string,
+        icon: m.icon as string,
+        color: m.color as string,
+        category: m.category as string,
+        displayOrder: m.display_order as number,
+        priceMonthly: m.price_monthly ? Number(m.price_monthly) : 0,
+        isRequired: (m.is_required as boolean) || false,
+        isRecommended: (m.is_recommended as boolean) || false,
+        isAddonEligible: (m.is_addon_eligible as boolean) || false,
+        isAvailable: m.is_available !== false,
+        requiredPlan: (m.required_plan as string) || null,
+        dashboardWidgets: (m.dashboard_widgets as string[]) || [],
+        navigationItems: (m.navigation_items as string[]) || [],
+        name: translation?.name || (m.slug as string),
+        description: translation?.description || '',
+        features: translation?.features || [],
+      };
+    });
 
-    // Get subscription pricing from database
-    const { data: pricingData, error: pricingError } = await this.supabase.rpc('get_subscription_pricing');
+    const { data: pricingData, error: pricingError } = await this.supabase
+      .from('subscription_pricing_config')
+      .select('config_key, value');
 
     if (pricingError) {
       this.logger.warn(`Error fetching pricing config: ${pricingError.message}, using defaults`);
     }
 
-    // Build pricing object from database or use defaults
-    const pricingMap = (pricingData || []).reduce((acc: any, item: any) => {
+    const pricingMap = (pricingData || []).reduce((acc: Record<string, number>, item: { config_key: string; value: string }) => {
       acc[item.config_key] = Number(item.value);
       return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     const pricing: SubscriptionPricingDto = {
       basePriceMonthly: pricingMap.base_price_monthly || 15,
@@ -76,13 +94,16 @@ export class ModuleConfigService {
       addonSlotPrice: pricingMap.addon_slot_price || 5,
     };
 
-    // Build widget to module map
-    const { data: widgetData, error: widgetError } = await this.supabase.rpc('get_widget_to_module_map');
+    const { data: widgetData, error: widgetError } = await this.supabase
+      .from('widgets')
+      .select('name, module_slug');
 
     const widgetToModuleMap: Record<string, string> = {};
     if (!widgetError && widgetData) {
       for (const item of widgetData) {
-        widgetToModuleMap[item.widget_name] = item.module_slug;
+        if (item.name && item.module_slug) {
+          widgetToModuleMap[item.name] = item.module_slug;
+        }
       }
     }
 
@@ -94,14 +115,7 @@ export class ModuleConfigService {
   }
 
   async calculatePrice(moduleSlugs: string[]): Promise<CalculatePriceResponseDto> {
-    // Call the database function to calculate price
-    const { data, error } = await this.supabase.rpc('calculate_module_subscription_price', {
-      p_module_slugs: moduleSlugs,
-    });
-
-    if (error) {
-      this.logger.error(`Error calculating price: ${error.message}`);
-      // Fallback to simple calculation
+    try {
       const config = await this.getModuleConfig();
       let modulesPrice = 0;
       const breakdown: { slug: string; name: string; price: number }[] = [];
@@ -124,44 +138,13 @@ export class ModuleConfigService {
         totalPrice: config.pricing.basePriceMonthly + modulesPrice,
         breakdown,
       };
+    } catch (error) {
+      this.logger.error(`Error calculating price: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-
-    const result = data?.[0];
-    if (!result) {
-      throw new Error('No price calculation result returned');
-    }
-
-    // Get module details for breakdown
-    const config = await this.getModuleConfig();
-    const breakdown: { slug: string; name: string; price: number }[] = [];
-
-    for (const slug of moduleSlugs) {
-      const module = config.modules.find(m => m.slug === slug);
-      if (module && !module.isRequired && module.priceMonthly > 0) {
-        breakdown.push({
-          slug,
-          name: module.name,
-          price: module.priceMonthly,
-        });
-      }
-    }
-
-    return {
-      basePrice: Number(result.base_price),
-      modulesPrice: Number(result.modules_price),
-      totalPrice: Number(result.total_price),
-      breakdown,
-    };
   }
 
   async clearCache(): Promise<void> {
-    // Call the database function to clear cache
-    const { error } = await this.supabase.rpc('clear_module_config_cache');
-
-    if (error) {
-      this.logger.warn(`Error clearing cache: ${error.message}`);
-    } else {
-      this.logger.log('Module config cache cleared');
-    }
+    this.logger.log('Module config cache clear requested (no-op - caching handled at app level)');
   }
 }

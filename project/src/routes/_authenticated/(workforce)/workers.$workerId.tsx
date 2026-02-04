@@ -27,6 +27,7 @@ import { useWorker, useWorkerStats, useWorkRecords, useMetayageSettlements } fro
 import { useWorkerPayments, useProcessPayment } from '@/hooks/usePayments';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ function WorkerDetailPage() {
   const queryClient = useQueryClient();
   const { workerId } = Route.useParams();
   const { currentOrganization } = useAuth();
+  const getAccessToken = useAuthStore((state) => state.getAccessToken);
   const { format: formatCurrency } = useCurrency();
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(null);
   const [showEditForm, setShowEditForm] = useState(false);
@@ -82,9 +84,48 @@ function WorkerDetailPage() {
 
   const processPaymentMutation = useProcessPayment();
 
+  const handleApprovePayment = async (paymentId: string) => {
+    if (!currentOrganization) return;
+
+    setProcessingPaymentId(paymentId);
+    try {
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token');
+      }
+
+      const response = await fetch(
+        `/api/v1/organizations/${currentOrganization.id}/payment-records/${paymentId}/approve`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-organization-id': currentOrganization.id,
+          },
+          body: JSON.stringify({}),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to approve payment' }));
+        throw new Error(errorData.message || 'Failed to approve payment');
+      }
+
+      toast.success(t('workers.payments.approveSuccess') || 'Payment approved');
+      queryClient.invalidateQueries({ queryKey: ['worker-payments', workerId] });
+      queryClient.invalidateQueries({ queryKey: ['worker-stats', currentOrganization.id, workerId] });
+    } catch (error: any) {
+      console.error('Failed to approve payment:', error);
+      toast.error(error.message || t('workers.payments.approveError') || 'Failed to approve payment');
+    } finally {
+      setProcessingPaymentId(null);
+    }
+  };
+
   const handleProcessPayment = async (paymentId: string) => {
     if (!currentOrganization) return;
-    
+
     setProcessingPaymentId(paymentId);
     try {
       await processPaymentMutation.mutateAsync({
@@ -484,6 +525,24 @@ function WorkerDetailPage() {
                               : '-'}
                           </td>
                           <td className="py-3 px-4 text-right">
+                            {payment.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApprovePayment(payment.id)}
+                                disabled={processingPaymentId === payment.id}
+                                className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              >
+                                {processingPaymentId === payment.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Check className="h-4 w-4 mr-1" />
+                                    {t('workers.payments.approve')}
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             {payment.status === 'approved' && (
                               <Button
                                 size="sm"

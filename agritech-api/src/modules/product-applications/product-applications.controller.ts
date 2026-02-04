@@ -69,7 +69,7 @@ export class ProductApplicationsController {
   })
   @ApiResponse({ status: 200, description: 'Available products retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Inventory'))
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Stock'))
   async getAvailableProducts(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
