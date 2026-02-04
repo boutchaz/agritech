@@ -388,8 +388,8 @@ export class ProductionIntelligenceService {
   }
 
   /**
-   * Replaces Supabase RPC: get_parcel_performance_summary
-   * Tries native RPC first, falls back to manual aggregation if RPC unavailable
+   * Gets parcel performance summary using direct queries
+   * Aggregates harvest records and costs by parcel
    */
   async getParcelPerformance(
     userId: string,
@@ -399,21 +399,6 @@ export class ProductionIntelligenceService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-
-    try {
-      const { data, error } = await client.rpc('get_parcel_performance_summary', {
-        p_organization_id: organizationId,
-        p_farm_id: filters?.farm_id || null,
-        p_parcel_id: filters?.parcel_id || null,
-        p_from_date: filters?.from_date || null,
-        p_to_date: filters?.to_date || null,
-      });
-
-      if (!error && data) {
-        return data;
-      }
-    } catch {
-    }
 
     return this.calculateParcelPerformanceManually(client, organizationId, filters);
   }

@@ -512,9 +512,11 @@ export class QuoteRequestsService {
   async getSellerStats(organizationId: string) {
     const supabase = this.databaseService.getAdminClient();
 
-    const { data, error } = await supabase.rpc('get_seller_quote_stats', {
-      seller_org_id: organizationId,
-    });
+    // Fetch all quote requests for the seller
+    const { data, error } = await supabase
+      .from('marketplace_quote_requests')
+      .select('status')
+      .eq('seller_organization_id', organizationId);
 
     if (error) {
       this.logger.error(`Failed to fetch seller stats: ${error.message}`);
@@ -526,11 +528,15 @@ export class QuoteRequestsService {
       };
     }
 
-    return data[0] || {
-      total_requests: 0,
-      pending_requests: 0,
-      responded_requests: 0,
-      accepted_requests: 0,
+    // Count quotes by status
+    const quotes = data || [];
+    const stats = {
+      total_requests: quotes.length,
+      pending_requests: quotes.filter(q => q.status === 'pending').length,
+      responded_requests: quotes.filter(q => q.status === 'responded' || q.status === 'quoted').length,
+      accepted_requests: quotes.filter(q => q.status === 'accepted').length,
     };
+
+    return stats;
   }
 }

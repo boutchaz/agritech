@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -242,13 +237,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "account_mappings_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "account_mappings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -338,6 +326,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "fk_account_mappings_account_id"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2777,6 +2772,7 @@ export type Database = {
           default_revenue_account_id: string | null
           description: string | null
           farm_id: string | null
+          fiscal_year_id: string | null
           id: string
           is_active: boolean | null
           name: string
@@ -2797,6 +2793,7 @@ export type Database = {
           default_revenue_account_id?: string | null
           description?: string | null
           farm_id?: string | null
+          fiscal_year_id?: string | null
           id?: string
           is_active?: boolean | null
           name: string
@@ -2817,6 +2814,7 @@ export type Database = {
           default_revenue_account_id?: string | null
           description?: string | null
           farm_id?: string | null
+          fiscal_year_id?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
@@ -2826,41 +2824,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "cost_centers_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycle_pnl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "v_active_crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_default_expense_account_id_fkey"
-            columns: ["default_expense_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cost_centers_default_revenue_account_id_fkey"
-            columns: ["default_revenue_account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "cost_centers_farm_id_fkey"
             columns: ["farm_id"]
@@ -2973,6 +2936,55 @@ export type Database = {
             referencedRelation: "cost_centers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_cost_centers_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycle_pnl"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_default_expense_account_id"
+            columns: ["default_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_default_revenue_account_id"
+            columns: ["default_revenue_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_campaign_reconciliation"
+            referencedColumns: ["fiscal_year_id"]
+          },
+          {
+            foreignKeyName: "fk_cost_centers_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_years"
+            referencedColumns: ["id"]
+          },
         ]
       }
       costs: {
@@ -3044,27 +3056,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "costs_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "agricultural_campaigns"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_campaign_reconciliation"
-            referencedColumns: ["campaign_id"]
-          },
-          {
             foreignKeyName: "costs_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -3072,52 +3063,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "costs_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycle_pnl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "v_active_crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "costs_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_fiscal_period_id_fkey"
-            columns: ["fiscal_period_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_periods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "costs_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_campaign_reconciliation"
-            referencedColumns: ["fiscal_year_id"]
-          },
-          {
-            foreignKeyName: "costs_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_years"
             referencedColumns: ["id"]
           },
           {
@@ -3216,6 +3165,69 @@ export type Database = {
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_campaign_id"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "agricultural_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_campaign_id"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_campaign_id"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_campaign_reconciliation"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "fk_costs_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycle_pnl"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_fiscal_period_id"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_costs_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_campaign_reconciliation"
+            referencedColumns: ["fiscal_year_id"]
+          },
+          {
+            foreignKeyName: "fk_costs_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_years"
             referencedColumns: ["id"]
           },
         ]
@@ -4072,10 +4084,8 @@ export type Database = {
       currencies: {
         Row: {
           code: string
-          created_at: string | null
           is_active: boolean | null
           name: string
-          published_at: string | null
           source: string | null
           symbol: string | null
           template_version: string | null
@@ -4083,10 +4093,8 @@ export type Database = {
         }
         Insert: {
           code: string
-          created_at?: string | null
           is_active?: boolean | null
           name: string
-          published_at?: string | null
           source?: string | null
           symbol?: string | null
           template_version?: string | null
@@ -4094,10 +4102,8 @@ export type Database = {
         }
         Update: {
           code?: string
-          created_at?: string | null
           is_active?: boolean | null
           name?: string
-          published_at?: string | null
           source?: string | null
           symbol?: string | null
           template_version?: string | null
@@ -4420,156 +4426,6 @@ export type Database = {
           },
           {
             foreignKeyName: "dashboard_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      day_laborers: {
-        Row: {
-          availability: string | null
-          created_at: string | null
-          daily_rate: number | null
-          farm_id: string
-          first_name: string
-          id: string
-          is_active: boolean | null
-          last_name: string
-          notes: string | null
-          organization_id: string | null
-          phone: string | null
-          rating: number | null
-          specialties: string[] | null
-          updated_at: string | null
-        }
-        Insert: {
-          availability?: string | null
-          created_at?: string | null
-          daily_rate?: number | null
-          farm_id: string
-          first_name: string
-          id?: string
-          is_active?: boolean | null
-          last_name: string
-          notes?: string | null
-          organization_id?: string | null
-          phone?: string | null
-          rating?: number | null
-          specialties?: string[] | null
-          updated_at?: string | null
-        }
-        Update: {
-          availability?: string | null
-          created_at?: string | null
-          daily_rate?: number | null
-          farm_id?: string
-          first_name?: string
-          id?: string
-          is_active?: boolean | null
-          last_name?: string
-          notes?: string | null
-          organization_id?: string | null
-          phone?: string | null
-          rating?: number | null
-          specialties?: string[] | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "day_laborers_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "accounting_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_churn_risk"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_org_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_top_orgs_by_activity"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "dashboard_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "financial_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "production_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "sales_analytics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "task_completion"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_organization_financial_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "day_laborers_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "workforce_summary"
@@ -5196,162 +5052,6 @@ export type Database = {
           },
           {
             foreignKeyName: "document_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-        ]
-      }
-      employees: {
-        Row: {
-          created_at: string | null
-          department: string | null
-          email: string | null
-          employee_id: string | null
-          farm_id: string
-          first_name: string
-          hire_date: string | null
-          id: string
-          last_name: string
-          notes: string | null
-          organization_id: string | null
-          phone: string | null
-          position: string | null
-          salary: number | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          department?: string | null
-          email?: string | null
-          employee_id?: string | null
-          farm_id: string
-          first_name: string
-          hire_date?: string | null
-          id?: string
-          last_name: string
-          notes?: string | null
-          organization_id?: string | null
-          phone?: string | null
-          position?: string | null
-          salary?: number | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          department?: string | null
-          email?: string | null
-          employee_id?: string | null
-          farm_id?: string
-          first_name?: string
-          hire_date?: string | null
-          id?: string
-          last_name?: string
-          notes?: string | null
-          organization_id?: string | null
-          phone?: string | null
-          position?: string | null
-          salary?: number | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employees_farm_id_fkey"
-            columns: ["farm_id"]
-            isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "accounting_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_churn_risk"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_org_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_top_orgs_by_activity"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "dashboard_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "financial_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "production_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "sales_analytics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "task_completion"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_organization_financial_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "employees_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "workforce_summary"
@@ -6835,42 +6535,42 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "harvest_records_campaign_id_fkey"
+            foreignKeyName: "fk_harvest_records_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "agricultural_campaigns"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "harvest_records_campaign_id_fkey"
+            foreignKeyName: "fk_harvest_records_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "harvest_records_campaign_id_fkey"
+            foreignKeyName: "fk_harvest_records_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "fiscal_campaign_reconciliation"
             referencedColumns: ["campaign_id"]
           },
           {
-            foreignKeyName: "harvest_records_crop_cycle_id_fkey"
+            foreignKeyName: "fk_harvest_records_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "crop_cycle_pnl"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "harvest_records_crop_cycle_id_fkey"
+            foreignKeyName: "fk_harvest_records_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "crop_cycles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "harvest_records_crop_cycle_id_fkey"
+            foreignKeyName: "fk_harvest_records_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "v_active_crop_cycles"
@@ -8962,39 +8662,81 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "journal_items_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_biological_asset_id_fkey"
+            foreignKeyName: "fk_journal_items_biological_asset_id"
             columns: ["biological_asset_id"]
             isOneToOne: false
             referencedRelation: "biological_assets"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "journal_items_campaign_id_fkey"
+            foreignKeyName: "fk_journal_items_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "agricultural_campaigns"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "journal_items_campaign_id_fkey"
+            foreignKeyName: "fk_journal_items_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "journal_items_campaign_id_fkey"
+            foreignKeyName: "fk_journal_items_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "fiscal_campaign_reconciliation"
             referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycle_pnl"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_crop_cycle_id"
+            columns: ["crop_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_fiscal_period_id"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_campaign_reconciliation"
+            referencedColumns: ["fiscal_year_id"]
+          },
+          {
+            foreignKeyName: "fk_journal_items_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_items_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "journal_items_cost_center_id_fkey"
@@ -9004,52 +8746,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "journal_items_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycle_pnl"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_crop_cycle_id_fkey"
-            columns: ["crop_cycle_id"]
-            isOneToOne: false
-            referencedRelation: "v_active_crop_cycles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "journal_items_farm_id_fkey"
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_fiscal_period_id_fkey"
-            columns: ["fiscal_period_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_periods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_items_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_campaign_reconciliation"
-            referencedColumns: ["fiscal_year_id"]
-          },
-          {
-            foreignKeyName: "journal_items_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_years"
             referencedColumns: ["id"]
           },
           {
@@ -11906,12 +11606,10 @@ export type Database = {
           fiscal_year_start_month: number | null
           id: string
           is_active: boolean | null
-          last_stock_check_at: string | null
           logo_url: string | null
           name: string
           phone: string | null
           postal_code: string | null
-          show_stock_alerts: boolean | null
           slug: string | null
           state: string | null
           tax_id: string | null
@@ -11934,12 +11632,10 @@ export type Database = {
           fiscal_year_start_month?: number | null
           id?: string
           is_active?: boolean | null
-          last_stock_check_at?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
           postal_code?: string | null
-          show_stock_alerts?: boolean | null
           slug?: string | null
           state?: string | null
           tax_id?: string | null
@@ -11962,12 +11658,10 @@ export type Database = {
           fiscal_year_start_month?: number | null
           id?: string
           is_active?: boolean | null
-          last_stock_check_at?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
           postal_code?: string | null
-          show_stock_alerts?: boolean | null
           slug?: string | null
           state?: string | null
           tax_id?: string | null
@@ -12590,6 +12284,13 @@ export type Database = {
             referencedRelation: "payment_records"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_bonuses_payment_record_id_fkey"
+            columns: ["payment_record_id"]
+            isOneToOne: false
+            referencedRelation: "payment_summary"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payment_deductions: {
@@ -12626,6 +12327,13 @@ export type Database = {
             columns: ["payment_record_id"]
             isOneToOne: false
             referencedRelation: "payment_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_deductions_payment_record_id_fkey"
+            columns: ["payment_record_id"]
+            isOneToOne: false
+            referencedRelation: "payment_summary"
             referencedColumns: ["id"]
           },
         ]
@@ -13564,6 +13272,184 @@ export type Database = {
         }
         Relationships: []
       }
+      product_applications: {
+        Row: {
+          application_date: string
+          area_treated: number
+          cost: number | null
+          created_at: string | null
+          currency: string | null
+          farm_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          parcel_id: string | null
+          product_id: string
+          quantity_used: number
+          task_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          application_date?: string
+          area_treated: number
+          cost?: number | null
+          created_at?: string | null
+          currency?: string | null
+          farm_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          parcel_id?: string | null
+          product_id: string
+          quantity_used: number
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          application_date?: string
+          area_treated?: number
+          cost?: number | null
+          created_at?: string | null
+          currency?: string | null
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          parcel_id?: string | null
+          product_id?: string
+          quantity_used?: number
+          task_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_applications_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           created_at: string | null
@@ -13736,6 +13622,7 @@ export type Database = {
       product_variants: {
         Row: {
           barcode: string | null
+          base_quantity: number | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -13746,13 +13633,14 @@ export type Database = {
           organization_id: string
           quantity: number | null
           standard_rate: number | null
-          unit: string
+          unit_id: string | null
           updated_at: string | null
           variant_name: string
           variant_sku: string | null
         }
         Insert: {
           barcode?: string | null
+          base_quantity?: number | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -13763,13 +13651,14 @@ export type Database = {
           organization_id: string
           quantity?: number | null
           standard_rate?: number | null
-          unit: string
+          unit_id?: string | null
           updated_at?: string | null
           variant_name: string
           variant_sku?: string | null
         }
         Update: {
           barcode?: string | null
+          base_quantity?: number | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -13780,7 +13669,7 @@ export type Database = {
           organization_id?: string
           quantity?: number | null
           standard_rate?: number | null
-          unit?: string
+          unit_id?: string | null
           updated_at?: string | null
           variant_name?: string
           variant_sku?: string | null
@@ -13883,6 +13772,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_variants_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "work_units"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -15182,45 +15078,66 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "revenues_campaign_id_fkey"
+            foreignKeyName: "fk_revenues_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "agricultural_campaigns"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "revenues_campaign_id_fkey"
+            foreignKeyName: "fk_revenues_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaign_summary"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "revenues_campaign_id_fkey"
+            foreignKeyName: "fk_revenues_campaign_id"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "fiscal_campaign_reconciliation"
             referencedColumns: ["campaign_id"]
           },
           {
-            foreignKeyName: "revenues_crop_cycle_id_fkey"
+            foreignKeyName: "fk_revenues_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "crop_cycle_pnl"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "revenues_crop_cycle_id_fkey"
+            foreignKeyName: "fk_revenues_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "crop_cycles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "revenues_crop_cycle_id_fkey"
+            foreignKeyName: "fk_revenues_crop_cycle_id"
             columns: ["crop_cycle_id"]
             isOneToOne: false
             referencedRelation: "v_active_crop_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_revenues_fiscal_period_id"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_revenues_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_campaign_reconciliation"
+            referencedColumns: ["fiscal_year_id"]
+          },
+          {
+            foreignKeyName: "fk_revenues_fiscal_year_id"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_years"
             referencedColumns: ["id"]
           },
           {
@@ -15228,27 +15145,6 @@ export type Database = {
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "revenues_fiscal_period_id_fkey"
-            columns: ["fiscal_period_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_periods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "revenues_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_campaign_reconciliation"
-            referencedColumns: ["fiscal_year_id"]
-          },
-          {
-            foreignKeyName: "revenues_fiscal_year_id_fkey"
-            columns: ["fiscal_year_id"]
-            isOneToOne: false
-            referencedRelation: "fiscal_years"
             referencedColumns: ["id"]
           },
           {
@@ -16172,7 +16068,6 @@ export type Database = {
           created_at: string | null
           description: string | null
           farm_id: string | null
-          geometry: unknown
           geometry_json: Json | null
           id: string
           is_active: boolean | null
@@ -16186,7 +16081,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           farm_id?: string | null
-          geometry?: unknown
           geometry_json?: Json | null
           id?: string
           is_active?: boolean | null
@@ -16200,7 +16094,6 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           farm_id?: string | null
-          geometry?: unknown
           geometry_json?: Json | null
           id?: string
           is_active?: boolean | null
@@ -17957,6 +17850,7 @@ export type Database = {
       stock_movements: {
         Row: {
           balance_quantity: number
+          base_quantity_at_movement: number | null
           batch_number: string | null
           cost_per_unit: number | null
           created_at: string | null
@@ -17979,6 +17873,7 @@ export type Database = {
         }
         Insert: {
           balance_quantity: number
+          base_quantity_at_movement?: number | null
           batch_number?: string | null
           cost_per_unit?: number | null
           created_at?: string | null
@@ -18001,6 +17896,7 @@ export type Database = {
         }
         Update: {
           balance_quantity?: number
+          base_quantity_at_movement?: number | null
           batch_number?: string | null
           cost_per_unit?: number | null
           created_at?: string | null
@@ -18330,6 +18226,7 @@ export type Database = {
           condition: string | null
           created_at: string | null
           farm_id: string | null
+          geom: unknown
           id: string
           installation_date: string
           is_active: boolean | null
@@ -18346,6 +18243,7 @@ export type Database = {
           condition?: string | null
           created_at?: string | null
           farm_id?: string | null
+          geom?: unknown
           id?: string
           installation_date: string
           is_active?: boolean | null
@@ -18362,6 +18260,7 @@ export type Database = {
           condition?: string | null
           created_at?: string | null
           farm_id?: string | null
+          geom?: unknown
           id?: string
           installation_date?: string
           is_active?: boolean | null
@@ -19512,165 +19411,6 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_stock_consumption: {
-        Row: {
-          created_at: string | null
-          id: string
-          item_id: string
-          notes: string | null
-          organization_id: string
-          quantity_consumed: number
-          task_id: string
-          unit: string
-          updated_at: string | null
-          variant_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          item_id: string
-          notes?: string | null
-          organization_id: string
-          quantity_consumed?: number
-          task_id: string
-          unit: string
-          updated_at?: string | null
-          variant_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          item_id?: string
-          notes?: string | null
-          organization_id?: string
-          quantity_consumed?: number
-          task_id?: string
-          unit?: string
-          updated_at?: string | null
-          variant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_stock_consumption_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "accounting_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_churn_risk"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_org_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "admin_top_orgs_by_activity"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "dashboard_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "financial_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "production_metrics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "sales_analytics"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "task_completion"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_organization_financial_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "pending_tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_task_id_fkey"
-            columns: ["task_id"]
-            isOneToOne: false
-            referencedRelation: "tasks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_stock_consumption_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -22773,6 +22513,183 @@ export type Database = {
           },
         ]
       }
+      payment_summary: {
+        Row: {
+          advance_deduction: number | null
+          approved_at: string | null
+          approved_by: string | null
+          attachments: Json | null
+          base_amount: number | null
+          bonuses: number | null
+          calculated_at: string | null
+          calculated_by: string | null
+          cin: string | null
+          created_at: string | null
+          daily_rate: number | null
+          days_worked: number | null
+          deductions: number | null
+          email: string | null
+          farm_id: string | null
+          first_name: string | null
+          gross_revenue: number | null
+          harvest_amount: number | null
+          hours_worked: number | null
+          id: string | null
+          last_name: string | null
+          metayage_percentage: number | null
+          metayage_type: Database["public"]["Enums"]["metayage_type"] | null
+          monthly_salary: number | null
+          net_amount: number | null
+          notes: string | null
+          organization_id: string | null
+          overtime_amount: number | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_date: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_type: string | null
+          period_end: string | null
+          period_start: string | null
+          phone: string | null
+          position: string | null
+          status: string | null
+          tasks_completed: number | null
+          total_charges: number | null
+          updated_at: string | null
+          worker_id: string | null
+          worker_metayage_percentage: number | null
+          worker_type: Database["public"]["Enums"]["worker_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_records_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pending_tasks: {
         Row: {
           assigned_to: string | null
@@ -23345,6 +23262,156 @@ export type Database = {
         }
         Relationships: []
       }
+      v_parcel_applications: {
+        Row: {
+          application_date: string | null
+          area_treated: number | null
+          cost: number | null
+          created_at: string | null
+          currency: string | null
+          farm_id: string | null
+          farm_name: string | null
+          id: string | null
+          notes: string | null
+          organization_id: string | null
+          parcel_id: string | null
+          parcel_name: string | null
+          product_id: string | null
+          product_name: string | null
+          product_unit: string | null
+          quantity_used: number | null
+          task_id: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_applications_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "product_applications_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_applications_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_production_summary: {
         Row: {
           active_parcels_count: number | null
@@ -23577,17 +23644,6 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
-      add_task_stock_consumption: {
-        Args: {
-          p_item_id: string
-          p_notes: string
-          p_quantity: number
-          p_task_id: string
-          p_unit: string
-          p_variant_id: string
-        }
-        Returns: string
-      }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -23626,251 +23682,12 @@ export type Database = {
             }
             Returns: string
           }
-      adjust_inventory: {
-        Args: {
-          p_item_id: string
-          p_quantity: number
-          p_reason: string
-          p_reference_id?: string
-          p_warehouse_id: string
-        }
-        Returns: string
-      }
-      calculate_daily_adoption_metrics: {
-        Args: { p_date?: string }
-        Returns: {
-          active_users: number
-          metric_date: string
-          new_users: number
-          onboarding_completion_rate: number
-          total_users: number
-        }[]
-      }
-      calculate_farm_total_area: {
-        Args: { p_farm_id: string }
-        Returns: number
-      }
-      calculate_module_subscription_price: {
-        Args: { p_module_slugs: string[] }
-        Returns: {
-          base_price: number
-          modules_price: number
-          total_price: number
-        }[]
-      }
-      calculate_parcel_area_hectares: {
-        Args: { p_parcel_id: string }
-        Returns: number
-      }
-      calculate_tax_amount: {
-        Args: {
-          p_amount: number
-          p_organization_id: string
-          p_tax_type?: string
-          p_transaction_type?: string
-        }
-        Returns: number
-      }
-      check_low_stock_inventory: {
-        Args: { p_organization_id: string }
-        Returns: {
-          current_quantity: number
-          item_id: string
-          item_name: string
-          minimum_stock: number
-          shortage_quantity: number
-          unit: string
-        }[]
-      }
-      check_low_stock_variants: {
-        Args: { p_organization_id: string }
-        Returns: {
-          current_quantity: number
-          item_id: string
-          item_name: string
-          min_stock_level: number
-          shortage_quantity: number
-          unit: string
-          variant_id: string
-          variant_name: string
-        }[]
-      }
-      check_marketplace_stock_availability: {
-        Args: { p_item_id?: string; p_listing_id?: string; p_quantity?: number }
-        Returns: boolean
-      }
       check_organization_access:
         | { Args: { p_organization_id: string }; Returns: boolean }
         | {
             Args: { p_organization_id: string; p_user_id: string }
             Returns: boolean
           }
-      clear_module_config_cache: { Args: never; Returns: undefined }
-      consume_stock_by_method: {
-        Args: {
-          p_item_id: string
-          p_organization_id: string
-          p_quantity: number
-          p_stock_entry_id?: string
-          p_warehouse_id: string
-        }
-        Returns: {
-          cost_per_unit: number
-          quantity_consumed: number
-          total_cost: number
-          valuation_id: string
-        }[]
-      }
-      consume_stock_fifo: {
-        Args: {
-          p_item_id: string
-          p_organization_id: string
-          p_quantity: number
-          p_stock_entry_id?: string
-          p_warehouse_id: string
-        }
-        Returns: {
-          cost_per_unit: number
-          quantity_consumed: number
-          total_cost: number
-          valuation_id: string
-        }[]
-      }
-      consume_stock_lifo: {
-        Args: {
-          p_item_id: string
-          p_organization_id: string
-          p_quantity: number
-          p_stock_entry_id?: string
-          p_warehouse_id: string
-        }
-        Returns: {
-          cost_per_unit: number
-          quantity_consumed: number
-          total_cost: number
-          valuation_id: string
-        }[]
-      }
-      create_default_fiscal_year: {
-        Args: { p_organization_id: string; p_user_id: string }
-        Returns: string
-      }
-      create_harvest_sales_mappings: {
-        Args: { p_country_code?: string; p_organization_id: string }
-        Returns: number
-      }
-      create_morocco_campaign: {
-        Args: {
-          p_organization_id: string
-          p_start_year?: number
-          p_user_id: string
-        }
-        Returns: string
-      }
-      create_or_update_polar_subscription: {
-        Args: {
-          p_current_period_end: string
-          p_current_period_start: string
-          p_metadata?: Json
-          p_organization_id: string
-          p_polar_customer_id: string
-          p_polar_product_id: string
-          p_polar_subscription_id: string
-          p_status: string
-        }
-        Returns: string
-      }
-      create_or_update_user_profile: {
-        Args: {
-          p_avatar_url?: string
-          p_email: string
-          p_first_name?: string
-          p_full_name?: string
-          p_language?: string
-          p_last_name?: string
-          p_onboarding_completed?: boolean
-          p_password_set?: boolean
-          p_phone?: string
-          p_timezone?: string
-          p_user_id: string
-        }
-        Returns: {
-          avatar_url: string | null
-          completed_tours: string[] | null
-          created_at: string | null
-          dismissed_tours: string[] | null
-          email: string | null
-          first_name: string | null
-          full_name: string | null
-          id: string
-          language: string | null
-          last_name: string | null
-          onboarding_completed: boolean | null
-          onboarding_completed_at: string | null
-          onboarding_current_step: string | null
-          onboarding_state: Json | null
-          password_set: boolean | null
-          phone: string | null
-          timezone: string | null
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "user_profiles"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      create_organization_with_farm: {
-        Args: {
-          p_farm_description?: string
-          p_farm_location?: string
-          p_farm_name?: string
-          p_farm_size?: number
-          p_farm_size_unit?: string
-          p_first_name: string
-          p_last_name: string
-          p_organization_email?: string
-          p_organization_name: string
-          p_organization_phone?: string
-          p_organization_slug: string
-          p_user_email: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
-      create_task_cost_mappings: {
-        Args: { p_country_code?: string; p_organization_id: string }
-        Returns: number
-      }
-      create_task_from_template: {
-        Args: {
-          p_assigned_to?: string
-          p_farm_id?: string
-          p_scheduled_date?: string
-          p_template_id: string
-        }
-        Returns: string
-      }
-      create_work_record_from_existing_task: {
-        Args: { p_task_id: string }
-        Returns: string
-      }
-      deduct_marketplace_listing_stock: {
-        Args: { p_listing_id: string; p_quantity: number }
-        Returns: boolean
-      }
-      detect_orphaned_files: {
-        Args: { p_organization_id: string }
-        Returns: {
-          bucket_name: string
-          entity_id: string
-          entity_type: string
-          file_id: string
-          file_path: string
-          reason: string
-        }[]
-      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -23904,88 +23721,6 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
-      find_farms_within_radius: {
-        Args: {
-          p_lat: number
-          p_lng: number
-          p_organization_id: string
-          p_radius_km: number
-        }
-        Returns: {
-          distance_km: number
-          farm_id: string
-          farm_name: string
-          total_area_hectares: number
-        }[]
-      }
-      find_parcel_at_point: {
-        Args: { p_lat: number; p_lng: number; p_organization_id: string }
-        Returns: {
-          farm_id: string
-          farm_name: string
-          parcel_id: string
-          parcel_name: string
-        }[]
-      }
-      find_parcels_within_radius: {
-        Args: {
-          p_lat: number
-          p_lng: number
-          p_organization_id: string
-          p_radius_km: number
-        }
-        Returns: {
-          distance_km: number
-          farm_id: string
-          farm_name: string
-          parcel_id: string
-          parcel_name: string
-        }[]
-      }
-      generate_adoption_report: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: {
-          active_users: number
-          cumulative_users: number
-          date: string
-          new_users: number
-        }[]
-      }
-      generate_invoice_number: {
-        Args: {
-          p_invoice_type: Database["public"]["Enums"]["invoice_type"]
-          p_organization_id: string
-        }
-        Returns: string
-      }
-      generate_item_code: {
-        Args: {
-          p_item_group_id: string
-          p_organization_id: string
-          p_prefix: string
-        }
-        Returns: string
-      }
-      generate_journal_entry_number: {
-        Args: { p_organization_id: string }
-        Returns: string
-      }
-      generate_purchase_order_number: {
-        Args: { p_organization_id: string }
-        Returns: string
-      }
-      generate_quote_number: {
-        Args: { p_organization_id: string }
-        Returns: string
-      }
-      generate_sales_order_number: {
-        Args: { p_organization_id: string }
-        Returns: string
-      }
-      generate_stock_entry_number: {
-        Args: { p_organization_id: string }
-        Returns: string
-      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -24084,365 +23819,17 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
-      get_abstract_entity: {
-        Args: { p_entity_id: string; p_entity_type: string }
-        Returns: {
-          entity_id: string
-          entity_type: string
-          id: string
-          metadata: Json
-          organization_id: string
-          tags: string[]
-        }[]
-      }
-      get_account_balance:
-        | { Args: { p_account_id: string }; Returns: number }
-        | {
-            Args: {
-              p_account_id: string
-              p_as_of_date?: string
-              p_organization_id: string
-            }
-            Returns: {
-              account_code: string
-              account_id: string
-              account_name: string
-              account_type: string
-              balance: number
-              normal_balance: string
-              total_credit: number
-              total_debit: number
-            }[]
-          }
-      get_account_id_by_code: {
-        Args: { p_code: string; p_org_id: string }
-        Returns: string
-      }
-      get_account_id_by_mapping: {
-        Args: {
-          p_mapping_key: string
-          p_mapping_type: string
-          p_org_id: string
-        }
-        Returns: string
-      }
-      get_account_mapping: {
-        Args: {
-          p_mapping_key: string
-          p_mapping_type: string
-          p_organization_id: string
-        }
-        Returns: {
-          account_code: string
-          account_id: string
-          description: string
-          id: string
-          is_org_specific: boolean
-        }[]
-      }
-      get_account_name_translation: {
-        Args: { p_account_id: string; p_language_code?: string }
-        Returns: {
-          account_id: string
-          description: string
-          is_translation: boolean
-          language_code: string
-          name: string
-        }[]
-      }
-      get_account_summary: {
-        Args: { p_as_of_date?: string; p_organization_id: string }
-        Returns: {
-          account_type: string
-          net_balance: number
-          total_accounts: number
-          total_credit: number
-          total_debit: number
-        }[]
-      }
-      get_balance_sheet: {
-        Args: { p_as_of_date?: string; p_organization_id: string }
-        Returns: {
-          account_code: string
-          account_id: string
-          account_name: string
-          account_subtype: string
-          account_type: string
-          balance: number
-          display_balance: number
-          section: string
-        }[]
-      }
-      get_campaign_for_date: {
-        Args: { p_date: string; p_organization_id: string }
-        Returns: string
-      }
-      get_farm_bounding_box: {
-        Args: { p_farm_id: string }
-        Returns: {
-          max_lat: number
-          max_lng: number
-          min_lat: number
-          min_lng: number
-        }[]
-      }
-      get_farm_hierarchy_tree: {
-        Args: { org_uuid: string; root_farm_id?: string }
-        Returns: {
-          farm_id: string
-          farm_name: string
-          farm_size: number
-          farm_type: string
-          hierarchy_level: number
-          is_active: boolean
-          manager_name: string
-          parcel_count: number
-          parent_farm_id: string
-          subparcel_count: number
-        }[]
-      }
-      get_fiscal_year_for_date: {
-        Args: { p_date: string; p_organization_id: string }
-        Returns: string
-      }
-      get_general_ledger: {
-        Args: {
-          p_account_id: string
-          p_end_date?: string
-          p_organization_id: string
-          p_start_date: string
-        }
-        Returns: {
-          credit: number
-          debit: number
-          description: string
-          entry_date: string
-          entry_number: string
-          journal_entry_id: string
-          reference_number: string
-          reference_type: string
-          running_balance: number
-        }[]
-      }
-      get_generic_filter_options: {
-        Args: { p_filter_name: string; p_module_slug: string }
-        Returns: {
-          count: number
-          label: string
-          value: string
-        }[]
-      }
-      get_module_config: {
-        Args: { p_locale?: string }
-        Returns: {
-          category: string
-          color: string
-          dashboard_widgets: Json
-          description: string
-          display_order: number
-          features: Json
-          icon: string
-          id: string
-          is_addon_eligible: boolean
-          is_available: boolean
-          is_recommended: boolean
-          is_required: boolean
-          name: string
-          navigation_items: Json
-          price_monthly: number
-          required_plan: string
-          slug: string
-        }[]
-      }
-      get_module_crop_types: {
-        Args: { p_locale?: string; p_module_slug: string }
-        Returns: {
-          description: string
-          id: string
-          name: string
-        }[]
-      }
-      get_module_data: {
-        Args: {
-          p_filters?: Json
-          p_module_slug: string
-          p_page?: number
-          p_page_size?: number
-        }
-        Returns: {
-          data: Json
-          page: number
-          page_size: number
-          total_count: number
-        }[]
-      }
-      get_parcel_performance_summary: {
-        Args: {
-          p_farm_id?: string
-          p_from_date?: string
-          p_organization_id: string
-          p_parcel_id?: string
-          p_to_date?: string
-        }
-        Returns: {
-          avg_profit_margin: number
-          avg_target_yield: number
-          avg_variance_percent: number
-          avg_yield_per_hectare: number
-          crop_type: string
-          farm_name: string
-          last_harvest_date: string
-          parcel_id: string
-          parcel_name: string
-          performance_rating: string
-          total_cost: number
-          total_harvests: number
-          total_profit: number
-          total_revenue: number
-        }[]
-      }
-      get_parcels_in_bbox: {
-        Args: {
-          p_max_lat: number
-          p_max_lng: number
-          p_min_lat: number
-          p_min_lng: number
-          p_organization_id: string
-        }
-        Returns: {
-          area_hectares: number
-          boundary: Json
-          farm_id: string
-          farm_name: string
-          parcel_id: string
-          parcel_name: string
-        }[]
-      }
-      get_product_signed_url: {
-        Args: { p_expires_in?: number; p_product_id: string }
-        Returns: string
-      }
-      get_productivity_metrics: {
-        Args: {
-          p_end_date?: string
-          p_organization_id: string
-          p_start_date?: string
-        }
-        Returns: {
-          metric_name: string
-          metric_unit: string
-          metric_value: number
-        }[]
-      }
-      get_profit_loss: {
-        Args: {
-          p_end_date?: string
-          p_organization_id: string
-          p_start_date: string
-        }
-        Returns: {
-          account_code: string
-          account_id: string
-          account_name: string
-          account_subtype: string
-          account_type: string
-          balance: number
-          display_amount: number
-          section: string
-          total_credit: number
-          total_debit: number
-        }[]
-      }
-      get_seller_quote_stats: {
-        Args: { seller_org_id: string }
-        Returns: {
-          accepted_requests: number
-          pending_requests: number
-          responded_requests: number
-          total_requests: number
-        }[]
-      }
-      get_subscription_pricing: {
-        Args: never
-        Returns: {
-          config_key: string
-          value: number
-        }[]
-      }
-      get_trial_balance: {
-        Args: { p_as_of_date?: string; p_organization_id: string }
-        Returns: {
-          account_code: string
-          account_id: string
-          account_name: string
-          account_subtype: string
-          account_type: string
-          balance: number
-          credit_balance: number
-          debit_balance: number
-          is_group: boolean
-          parent_id: string
-          total_credit: number
-          total_debit: number
-        }[]
-      }
       get_user_org_role: {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: string
       }
-      get_user_organizations: {
-        Args: never
-        Returns: {
-          is_default: boolean
-          organization_id: string
-          organization_name: string
-          user_role: string
-        }[]
-      }
-      get_widget_to_module_map: {
-        Args: never
-        Returns: {
-          module_slug: string
-          widget_name: string
-        }[]
-      }
       gettransactionid: { Args: never; Returns: unknown }
-      has_valid_subscription: { Args: { org_id: string }; Returns: boolean }
-      initialize_org_account_mappings: {
-        Args: { p_country_code?: string; p_organization_id: string }
-        Returns: number
-      }
       is_internal_admin: { Args: never; Returns: boolean }
       is_organization_member: {
         Args: { p_organization_id: string }
         Returns: boolean
       }
-      log_entity_event: {
-        Args: {
-          p_entity_id: string
-          p_entity_type: string
-          p_event_data?: Json
-          p_event_type: string
-        }
-        Returns: string
-      }
-      log_polar_webhook: {
-        Args: { p_event_id: string; p_event_type: string; p_payload: Json }
-        Returns: string
-      }
       longtransactionsenabled: { Args: never; Returns: boolean }
-      mark_orphaned_files: {
-        Args: { p_organization_id: string }
-        Returns: number
-      }
-      parcel_distance_km: {
-        Args: { p_parcel_id_1: string; p_parcel_id_2: string }
-        Returns: number
-      }
-      point_in_parcel: {
-        Args: { p_lat: number; p_lng: number; p_parcel_id: string }
-        Returns: boolean
-      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
@@ -24483,71 +23870,6 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
-      refresh_admin_org_summary: { Args: never; Returns: undefined }
-      refresh_module_config_cache: {
-        Args: { p_locale?: string }
-        Returns: undefined
-      }
-      register_abstract_entity: {
-        Args: {
-          p_entity_id: string
-          p_entity_type: string
-          p_metadata?: Json
-          p_organization_id: string
-          p_tags?: string[]
-        }
-        Returns: string
-      }
-      restore_marketplace_listing_stock: {
-        Args: { p_listing_id: string; p_quantity: number }
-        Returns: boolean
-      }
-      search_entities: {
-        Args: {
-          p_entity_types?: string[]
-          p_limit?: number
-          p_search_term: string
-          p_tags?: string[]
-        }
-        Returns: {
-          entity_config: Json
-          entity_id: string
-          entity_type: string
-          metadata: Json
-        }[]
-      }
-      seed_chart_of_accounts: {
-        Args: {
-          p_accounting_standard?: string
-          p_country_code?: string
-          p_org_id: string
-        }
-        Returns: {
-          accounts_created: number
-          message: string
-          success: boolean
-        }[]
-      }
-      seed_default_work_units: {
-        Args: { p_organization_id: string }
-        Returns: number
-      }
-      seed_french_chart_of_accounts: {
-        Args: { p_org_id: string }
-        Returns: {
-          accounts_created: number
-          message: string
-          success: boolean
-        }[]
-      }
-      seed_moroccan_chart_of_accounts: {
-        Args: { p_org_id: string }
-        Returns: {
-          accounts_created: number
-          message: string
-          success: boolean
-        }[]
-      }
       soft_delete: {
         Args: { record_id: string; table_name: string }
         Returns: boolean
@@ -25134,10 +24456,6 @@ export type Database = {
         Returns: unknown
       }
       unlockrows: { Args: { "": string }; Returns: number }
-      update_task_status: {
-        Args: { p_notes?: string; p_status: string; p_task_id: string }
-        Returns: boolean
-      }
       updategeometrysrid: {
         Args: {
           catalogn_name: string
@@ -25147,29 +24465,6 @@ export type Database = {
           table_name: string
         }
         Returns: string
-      }
-      upsert_account_translation: {
-        Args: {
-          p_account_id: string
-          p_description?: string
-          p_language_code: string
-          p_name: string
-        }
-        Returns: {
-          account_id: string
-          created_at: string | null
-          description: string | null
-          id: string
-          language_code: string
-          name: string
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "account_translations"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
     }
     Enums: {
@@ -25464,3 +24759,4 @@ export const Constants = {
     },
   },
 } as const
+

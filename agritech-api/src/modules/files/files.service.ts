@@ -266,41 +266,82 @@ export class FilesService {
     return data;
   }
 
-  /**
-   * Detect orphaned files
-   */
-  async detectOrphanedFiles(organizationId: string) {
-    const client = this.databaseService.getAdminClient();
+   /**
+    * Detect orphaned files
+    */
+   async detectOrphanedFiles(organizationId: string) {
+     const client = this.databaseService.getAdminClient();
 
-    const { data, error } = await client.rpc('detect_orphaned_files', {
-      p_organization_id: organizationId,
-    });
+     const { data: filesWithEntities, error: fetchError } = await client
+       .from('file_registry')
+       .select('*')
+       .eq('organization_id', organizationId)
+       .is('deleted_at', null)
+       .not('entity_id', 'is', null);
 
-    if (error) {
-      this.logger.error(`Failed to detect orphaned files: ${error.message}`);
-      throw new Error(`Failed to detect orphaned files: ${error.message}`);
-    }
+     if (fetchError) {
+       this.logger.error(`Failed to fetch files: ${fetchError.message}`);
+       throw new Error(`Failed to fetch files: ${fetchError.message}`);
+     }
 
-    return data;
-  }
+     if (!filesWithEntities || filesWithEntities.length === 0) {
+       return [];
+     }
 
-  /**
-   * Mark orphaned files for deletion
-   */
-  async markOrphanedFiles(organizationId: string) {
-    const client = this.databaseService.getAdminClient();
+     const orphanedFiles = [];
 
-    const { data, error } = await client.rpc('mark_orphaned_files', {
-      p_organization_id: organizationId,
-    });
+     for (const file of filesWithEntities) {
+       let entityExists = false;
 
-    if (error) {
-      this.logger.error(`Failed to mark orphaned files: ${error.message}`);
-      throw new Error(`Failed to mark orphaned files: ${error.message}`);
-    }
+       if (file.entity_type && file.entity_id) {
+         const { data: entity, error: entityError } = await client
+           .from(file.entity_type)
+           .select('id')
+           .eq('id', file.entity_id)
+           .maybeSingle();
 
-    return { marked_count: data };
-  }
+         if (!entityError && entity) {
+           entityExists = true;
+         }
+       }
+
+       if (!entityExists) {
+         orphanedFiles.push(file);
+       }
+     }
+
+     return orphanedFiles;
+   }
+
+   /**
+    * Mark orphaned files for deletion
+    */
+   async markOrphanedFiles(organizationId: string) {
+     const orphanedFiles = await this.detectOrphanedFiles(organizationId);
+
+     if (orphanedFiles.length === 0) {
+       return { marked_count: 0 };
+     }
+
+     const client = this.databaseService.getAdminClient();
+     const orphanedFileIds = orphanedFiles.map((file) => file.id);
+
+     const { error } = await client
+       .from('file_registry')
+       .update({
+         is_orphan: true,
+         marked_for_deletion: true,
+       })
+       .in('id', orphanedFileIds)
+       .eq('organization_id', organizationId);
+
+     if (error) {
+       this.logger.error(`Failed to mark orphaned files: ${error.message}`);
+       throw new Error(`Failed to mark orphaned files: ${error.message}`);
+     }
+
+     return { marked_count: orphanedFiles.length };
+   }
 
   /**
    * Bulk delete orphaned files

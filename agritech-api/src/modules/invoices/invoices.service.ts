@@ -691,15 +691,7 @@ export class InvoicesService {
     supabaseClient: any,
     organizationId: string,
   ): Promise<string> {
-    const { data, error} = await supabaseClient
-      .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
-
-    if (error) {
-      this.logger.error(`Failed to generate journal entry number: ${error.message}`);
-      throw new BadRequestException(`Failed to generate journal entry number: ${error.message}`);
-    }
-
-    return data;
+    return await this.sequencesService.generateJournalEntryNumber(organizationId);
   }
 
   /**

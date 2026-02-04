@@ -235,21 +235,25 @@ export class PestAlertsService {
       throw new NotFoundException('Pest report not found');
     }
 
-    // Use the helper function to update status
-    const { data: updateResult, error: updateError } = await supabase.rpc(
-      'update_pest_report_status',
-      {
-        p_report_id: reportId,
-        p_status: dto.status,
-        p_verified_by: dto.status === 'verified' ? userId : null,
-        p_treatment_applied: dto.treatment_applied || null,
-      },
-    );
+     const updatePayload: Record<string, unknown> = {
+       status: dto.status,
+       treatment_applied: dto.treatment_applied || null,
+     };
 
-    if (updateError) {
-      this.logger.error(`Failed to update pest report: ${updateError.message}`);
-      throw new InternalServerErrorException('Failed to update pest report');
-    }
+     if (dto.status === 'verified') {
+       updatePayload.verified_by = userId;
+       updatePayload.verified_at = new Date().toISOString();
+     }
+
+     const { error: updateError } = await supabase
+       .from('pest_disease_reports')
+       .update(updatePayload)
+       .eq('id', reportId);
+
+     if (updateError) {
+       this.logger.error(`Failed to update pest report: ${updateError.message}`);
+       throw new InternalServerErrorException('Failed to update pest report');
+     }
 
     // Fetch updated report
     const { data, error } = await supabase
@@ -347,18 +351,27 @@ export class PestAlertsService {
       .eq('id', report.pest_disease_id)
       .single();
 
-    // Use the helper function to create alert
-    const { data: alertId, error: alertError } = await supabase.rpc(
-      'create_alert_from_pest_report',
-      {
-        p_report_id: reportId,
-      },
-    );
+     const { data: alertData, error: alertError } = await supabase
+       .from('performance_alerts')
+       .insert({
+         organization_id: organizationId,
+         parcel_id: report.parcel_id,
+         alert_type: 'pest_disease',
+         severity: report.severity,
+         title: `${pestDisease?.name || 'Pest/Disease'} Alert`,
+         description: report.notes || `Pest/disease detected on parcel`,
+         source_report_id: reportId,
+         status: 'active',
+       })
+       .select('id')
+       .single();
 
-    if (alertError) {
-      this.logger.error(`Failed to escalate to alert: ${alertError.message}`);
-      throw new InternalServerErrorException('Failed to escalate to alert');
-    }
+     if (alertError) {
+       this.logger.error(`Failed to escalate to alert: ${alertError.message}`);
+       throw new InternalServerErrorException('Failed to escalate to alert');
+     }
+
+     const alertId = alertData.id;
 
     // Send notification to organization admins
     try {

@@ -241,13 +241,8 @@ export class PaymentsService {
                 }
             }
 
-            // Generate journal entry number
-            const { data: entryNumber, error: entryNumError } = await supabaseClient
-                .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
-
-            if (entryNumError) {
-                throw new BadRequestException(`Failed to generate journal entry number: ${entryNumError.message}`);
-            }
+             // Generate journal entry number
+             const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
 
             // Create journal entry header
             const { data: journalEntry, error: journalError } = await supabaseClient

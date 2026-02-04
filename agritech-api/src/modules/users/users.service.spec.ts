@@ -106,20 +106,27 @@ describe('UsersService', () => {
   // ============================================================
 
   describe('createProfile (Parameterized)', () => {
+    const setupUpsertMock = (data: any, error: any = null) => {
+      const queryBuilder = createMockQueryBuilder();
+      queryBuilder.upsert.mockReturnValue(queryBuilder);
+      queryBuilder.select.mockReturnValue(queryBuilder);
+      queryBuilder.single.mockResolvedValue(mockQueryResult(data, error));
+      mockClient.from.mockReturnValue(queryBuilder);
+      return queryBuilder;
+    };
+
     it.each(VALID_USER_DATA)(
       'should create user profile with valid data: $email',
       async (userData) => {
-        mockClient.rpc.mockResolvedValue(
-          mockQueryResult({
-            id: userData.userId,
-            email: userData.email,
-            first_name: userData.firstName,
-            last_name: userData.lastName,
-            full_name: userData.fullName,
-            language: 'fr',
-            timezone: 'Africa/Casablanca',
-          })
-        );
+        setupUpsertMock({
+          id: userData.userId,
+          email: userData.email,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          full_name: userData.fullName,
+          language: 'fr',
+          timezone: 'Africa/Casablanca',
+        });
 
         const dto: CreateUserProfileDto = {
           userId: userData.userId,
@@ -133,26 +140,18 @@ describe('UsersService', () => {
 
         expect(result).toBeDefined();
         expect(result.email).toBe(userData.email);
-        expect(mockClient.rpc).toHaveBeenCalledWith(
-          'create_or_update_user_profile',
-          expect.objectContaining({
-            p_user_id: userData.userId,
-            p_email: userData.email,
-          })
-        );
+        expect(mockClient.from).toHaveBeenCalledWith('user_profiles');
       }
     );
 
     it.each(VALID_LANGUAGES)(
       'should create profile with language: %s',
       async (language) => {
-        mockClient.rpc.mockResolvedValue(
-          mockQueryResult({
-            id: TEST_IDS.user,
-            email: 'user@test.com',
-            language,
-          })
-        );
+        setupUpsertMock({
+          id: TEST_IDS.user,
+          email: 'user@test.com',
+          language,
+        });
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,
@@ -163,25 +162,18 @@ describe('UsersService', () => {
         const result = await service.createProfile(dto);
 
         expect(result).toBeDefined();
-        expect(mockClient.rpc).toHaveBeenCalledWith(
-          'create_or_update_user_profile',
-          expect.objectContaining({
-            p_language: language,
-          })
-        );
+        expect(mockClient.from).toHaveBeenCalledWith('user_profiles');
       }
     );
 
     it.each(VALID_TIMEZONES)(
       'should create profile with timezone: %s',
       async (timezone) => {
-        mockClient.rpc.mockResolvedValue(
-          mockQueryResult({
-            id: TEST_IDS.user,
-            email: 'user@test.com',
-            timezone,
-          })
-        );
+        setupUpsertMock({
+          id: TEST_IDS.user,
+          email: 'user@test.com',
+          timezone,
+        });
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,
@@ -192,12 +184,7 @@ describe('UsersService', () => {
         const result = await service.createProfile(dto);
 
         expect(result).toBeDefined();
-        expect(mockClient.rpc).toHaveBeenCalledWith(
-          'create_or_update_user_profile',
-          expect.objectContaining({
-            p_timezone: timezone,
-          })
-        );
+        expect(mockClient.from).toHaveBeenCalledWith('user_profiles');
       }
     );
 
@@ -209,14 +196,12 @@ describe('UsersService', () => {
     ])(
       'should handle onboarding and password flags: %o',
       async (flags) => {
-        mockClient.rpc.mockResolvedValue(
-          mockQueryResult({
-            id: TEST_IDS.user,
-            email: 'user@test.com',
-            onboarding_completed: flags.onboardingCompleted,
-            password_set: flags.passwordSet,
-          })
-        );
+        setupUpsertMock({
+          id: TEST_IDS.user,
+          email: 'user@test.com',
+          onboarding_completed: flags.onboardingCompleted,
+          password_set: flags.passwordSet,
+        });
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,
@@ -236,13 +221,20 @@ describe('UsersService', () => {
   // ============================================================
 
   describe('Input Validation', () => {
+    const setupUpsertMock = (data: any, error: any = null) => {
+      const queryBuilder = createMockQueryBuilder();
+      queryBuilder.upsert.mockReturnValue(queryBuilder);
+      queryBuilder.select.mockReturnValue(queryBuilder);
+      queryBuilder.single.mockResolvedValue(mockQueryResult(data, error));
+      mockClient.from.mockReturnValue(queryBuilder);
+      return queryBuilder;
+    };
+
     describe('createProfile', () => {
       it.each([null, undefined, ''])(
         'should handle invalid user ID: %s',
         async (userId) => {
-          mockClient.rpc.mockResolvedValue(
-            mockQueryResult(null, { message: 'Invalid user ID' })
-          );
+          setupUpsertMock(null, { message: 'Invalid user ID' });
 
           const dto: CreateUserProfileDto = {
             userId: userId as any,
@@ -258,9 +250,7 @@ describe('UsersService', () => {
       it.each(INVALID_EMAILS)(
         'should handle invalid email: %s',
         async (email) => {
-          mockClient.rpc.mockResolvedValue(
-            mockQueryResult(null, { message: 'Invalid email' })
-          );
+          setupUpsertMock(null, { message: 'Invalid email' });
 
           const dto: CreateUserProfileDto = {
             userId: TEST_IDS.user,
@@ -272,16 +262,14 @@ describe('UsersService', () => {
       );
 
       it('should use default values when optional fields are not provided', async () => {
-        mockClient.rpc.mockResolvedValue(
-          mockQueryResult({
-            id: TEST_IDS.user,
-            email: 'user@test.com',
-            language: 'fr',
-            timezone: 'Africa/Casablanca',
-            onboarding_completed: false,
-            password_set: true,
-          })
-        );
+        const queryBuilder = setupUpsertMock({
+          id: TEST_IDS.user,
+          email: 'user@test.com',
+          language: 'fr',
+          timezone: 'Africa/Casablanca',
+          onboarding_completed: false,
+          password_set: true,
+        });
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,
@@ -291,14 +279,15 @@ describe('UsersService', () => {
         const result = await service.createProfile(dto);
 
         expect(result).toBeDefined();
-        expect(mockClient.rpc).toHaveBeenCalledWith(
-          'create_or_update_user_profile',
+        expect(mockClient.from).toHaveBeenCalledWith('user_profiles');
+        expect(queryBuilder.upsert).toHaveBeenCalledWith(
           expect.objectContaining({
-            p_language: 'fr',
-            p_timezone: 'Africa/Casablanca',
-            p_onboarding_completed: false,
-            p_password_set: true,
-          })
+            language: 'fr',
+            timezone: 'Africa/Casablanca',
+            onboarding_completed: false,
+            password_set: true,
+          }),
+          expect.any(Object)
         );
       });
     });
@@ -352,15 +341,22 @@ describe('UsersService', () => {
   // ============================================================
 
   describe('Behavior - Profile Management', () => {
-    it('should call RPC function for profile creation', async () => {
-      mockClient.rpc.mockResolvedValue(
-        mockQueryResult({
-          id: TEST_IDS.user,
-          email: 'user@test.com',
-          first_name: 'Test',
-          last_name: 'User',
-        })
-      );
+    const setupUpsertMock = (data: any, error: any = null) => {
+      const queryBuilder = createMockQueryBuilder();
+      queryBuilder.upsert.mockReturnValue(queryBuilder);
+      queryBuilder.select.mockReturnValue(queryBuilder);
+      queryBuilder.single.mockResolvedValue(mockQueryResult(data, error));
+      mockClient.from.mockReturnValue(queryBuilder);
+      return queryBuilder;
+    };
+
+    it('should use upsert for profile creation', async () => {
+      const queryBuilder = setupUpsertMock({
+        id: TEST_IDS.user,
+        email: 'user@test.com',
+        first_name: 'Test',
+        last_name: 'User',
+      });
 
       const dto: CreateUserProfileDto = {
         userId: TEST_IDS.user,
@@ -371,14 +367,41 @@ describe('UsersService', () => {
 
       await service.createProfile(dto);
 
-      expect(mockClient.rpc).toHaveBeenCalledWith(
-        'create_or_update_user_profile',
+      expect(mockClient.from).toHaveBeenCalledWith('user_profiles');
+      expect(queryBuilder.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          p_user_id: TEST_IDS.user,
-          p_email: 'user@test.com',
-          p_first_name: 'Test',
-          p_last_name: 'User',
-        })
+          id: TEST_IDS.user,
+          email: 'user@test.com',
+          first_name: 'Test',
+          last_name: 'User',
+        }),
+        { onConflict: 'id' }
+      );
+    });
+
+    it('should handle database error gracefully', async () => {
+      setupUpsertMock(null, { message: 'Database error' });
+
+      const dto: CreateUserProfileDto = {
+        userId: TEST_IDS.user,
+        email: 'user@test.com',
+      };
+
+      await expect(service.createProfile(dto)).rejects.toThrow(
+        InternalServerErrorException
+      );
+    });
+
+    it('should throw InternalServerErrorException when upsert returns null data', async () => {
+      setupUpsertMock(null);
+
+      const dto: CreateUserProfileDto = {
+        userId: TEST_IDS.user,
+        email: 'user@test.com',
+      };
+
+      await expect(service.createProfile(dto)).rejects.toThrow(
+        InternalServerErrorException
       );
     });
 
@@ -788,26 +811,30 @@ describe('UsersService', () => {
 
   describe('Edge Cases', () => {
     describe('Profile Creation Edge Cases', () => {
-      it('should handle profile with null optional fields', async () => {
-        mockClient.rpc.mockResolvedValue(
+      it('should handle profile with undefined optional fields', async () => {
+        const queryBuilder = createMockQueryBuilder();
+        queryBuilder.upsert.mockReturnValue(queryBuilder);
+        queryBuilder.select.mockReturnValue(queryBuilder);
+        queryBuilder.single.mockResolvedValue(
           mockQueryResult({
             id: TEST_IDS.user,
             email: 'user@test.com',
             first_name: null,
             last_name: null,
-            full_name: null,
+            full_name: 'user',
             phone: null,
             avatar_url: null,
           })
         );
+        mockClient.from.mockReturnValue(queryBuilder);
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,
           email: 'user@test.com',
-          firstName: null,
-          lastName: null,
-          fullName: null,
-          phone: null,
+          firstName: undefined,
+          lastName: undefined,
+          fullName: undefined,
+          phone: undefined,
         };
 
         const result = await service.createProfile(dto);
@@ -815,10 +842,12 @@ describe('UsersService', () => {
         expect(result).toBeDefined();
       });
 
-      it('should handle RPC function exception', async () => {
-        mockClient.rpc.mockImplementation(() => {
-          throw new Error('RPC function not found');
-        });
+      it('should handle database exception', async () => {
+        const queryBuilder = createMockQueryBuilder();
+        queryBuilder.upsert.mockReturnValue(queryBuilder);
+        queryBuilder.select.mockReturnValue(queryBuilder);
+        queryBuilder.single.mockRejectedValue(new Error('Database connection failed'));
+        mockClient.from.mockReturnValue(queryBuilder);
 
         const dto: CreateUserProfileDto = {
           userId: TEST_IDS.user,

@@ -1,13 +1,17 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
+import { SequencesService } from '../sequences/sequences.service';
 import { CreateJournalEntryDto, JournalEntryType, JournalEntryStatus } from './dto/create-journal-entry.dto';
 
 @Injectable()
 export class AccountingAutomationService {
   private readonly logger = new Logger(AccountingAutomationService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly sequencesService: SequencesService,
+  ) {}
 
   /**
    * Create journal entry from a cost record
@@ -354,16 +358,12 @@ export class AccountingAutomationService {
     supabase: SupabaseClient,
     organizationId: string,
   ): Promise<string> {
-    // Call the existing database function
-    const { data, error } = await supabase
-      .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
-
-    if (error) {
-      this.logger.error(`Failed to generate journal entry number: ${error.message}`);
-      throw new BadRequestException(`Failed to generate journal entry number: ${error.message}`);
+    try {
+      return await this.sequencesService.generateJournalEntryNumber(organizationId);
+    } catch (error) {
+      this.logger.error(`Failed to generate journal entry number: ${error instanceof Error ? error.message : String(error)}`);
+      throw new BadRequestException(`Failed to generate journal entry number`);
     }
-
-    return data;
   }
 
   /**

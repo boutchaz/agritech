@@ -302,24 +302,46 @@ export class SubscriptionsService {
       );
     }
 
-    // Get usage stats if valid subscription
-    if (isValid && subscription) {
-      try {
-        // Check if can create more resources
-        const { data: canCreateFarm } = await this.supabaseAdmin.rpc(
-          'can_create_farm',
-          { org_id: organizationId },
-        );
+     // Get usage stats if valid subscription
+     if (isValid && subscription) {
+       try {
+         // Check if can create more resources
+         // can_create_farm: Check if org can create more farms
+         let canCreateFarm = true;
+         const maxFarms = subscription.max_farms;
+         if (maxFarms !== null && maxFarms !== undefined) {
+           const { count: farmCount } = await this.supabaseAdmin
+             .from('farms')
+             .select('*', { count: 'exact', head: true })
+             .eq('organization_id', organizationId);
+           canCreateFarm = (farmCount || 0) < maxFarms;
+         }
 
-        const { data: canCreateParcel } = await this.supabaseAdmin.rpc(
-          'can_create_parcel',
-          { org_id: organizationId },
-        );
+         // can_create_parcel: Check if org can create more parcels
+         let canCreateParcel = true;
+         const maxParcels = subscription.max_parcels;
+         if (maxParcels !== null && maxParcels !== undefined) {
+           const { count: parcelCount } = await this.supabaseAdmin
+             .from('parcels')
+             .select('parcels.id, farms!inner(organization_id)', {
+               count: 'exact',
+               head: true,
+             })
+             .eq('farms.organization_id', organizationId);
+           canCreateParcel = (parcelCount || 0) < maxParcels;
+         }
 
-        const { data: canAddUser } = await this.supabaseAdmin.rpc(
-          'can_add_user',
-          { org_id: organizationId },
-        );
+         // can_add_user: Check if org can add more users
+         let canAddUser = true;
+         const maxUsers = subscription.max_users;
+         if (maxUsers !== null && maxUsers !== undefined) {
+           const { count: userCount } = await this.supabaseAdmin
+             .from('organization_users')
+             .select('*', { count: 'exact', head: true })
+             .eq('organization_id', organizationId)
+             .eq('is_active', true);
+           canAddUser = (userCount || 0) < maxUsers;
+         }
 
         // Get current counts
         const { count: farmsCount } = await this.supabaseAdmin

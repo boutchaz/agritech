@@ -443,14 +443,44 @@ export class NotificationsService {
     const userIds = orgUsers.map((u: any) => u.user_id);
     let notificationCount = 0;
 
-    // Get low stock items using SQL query functions (read-only)
-    const { data: inventoryItems } = await client.rpc('check_low_stock_inventory', {
-      p_organization_id: organizationId,
-    });
+    // Get low stock inventory items where quantity <= reorder_level
+    const { data: rawInventoryItems } = await client
+      .from('inventory_items')
+      .select('id, name, quantity, reorder_level, unit_of_measure')
+      .eq('organization_id', organizationId);
 
-    const { data: variants } = await client.rpc('check_low_stock_variants', {
-      p_organization_id: organizationId,
-    });
+    const inventoryItems = rawInventoryItems
+      ?.filter(item => item.quantity <= item.reorder_level)
+      .map(item => ({
+        item_id: item.id,
+        item_name: item.name,
+        current_quantity: item.quantity,
+        minimum_stock: item.reorder_level,
+        unit: item.unit_of_measure,
+        shortage_quantity: Math.max(0, item.reorder_level - item.quantity),
+      })) || [];
+
+    // Get low stock product variants where stock <= min_stock
+    const { data: rawVariants } = await client
+      .from('product_variants')
+      .select('id, name, product_id, stock, min_stock, unit_of_measure, products(name)')
+      .eq('organization_id', organizationId);
+
+    const variants = rawVariants
+      ?.filter(variant => variant.stock <= variant.min_stock)
+      .map(variant => {
+        const productData = Array.isArray(variant.products) ? variant.products[0] : variant.products;
+        return {
+          variant_id: variant.id,
+          variant_name: variant.name,
+          item_id: variant.product_id,
+          item_name: (productData as unknown as { name: string })?.name || 'Unknown Product',
+          current_quantity: variant.stock,
+          min_stock_level: variant.min_stock,
+          unit: variant.unit_of_measure,
+          shortage_quantity: Math.max(0, variant.min_stock - variant.stock),
+        };
+      }) || [];
 
     // Create notifications for low stock inventory items
     if (inventoryItems && Array.isArray(inventoryItems)) {
@@ -517,51 +547,80 @@ export class NotificationsService {
    * Get low stock items for an organization
    * Returns both inventory_items and product_variants that are below minimum stock
    */
-  async getLowStockItems(organizationId: string): Promise<{
-    inventoryItems: Array<{
-      item_id: string;
-      item_name: string;
-      current_quantity: number;
-      minimum_stock: number;
-      unit: string;
-      shortage_quantity: number;
-    }>;
-    variants: Array<{
-      variant_id: string;
-      variant_name: string;
-      item_id: string;
-      item_name: string;
-      current_quantity: number;
-      min_stock_level: number;
-      unit: string;
-      shortage_quantity: number;
-    }>;
-  }> {
-    const client = this.databaseService.getAdminClient();
+   async getLowStockItems(organizationId: string): Promise<{
+     inventoryItems: Array<{
+       item_id: string;
+       item_name: string;
+       current_quantity: number;
+       minimum_stock: number;
+       unit: string;
+       shortage_quantity: number;
+     }>;
+     variants: Array<{
+       variant_id: string;
+       variant_name: string;
+       item_id: string;
+       item_name: string;
+       current_quantity: number;
+       min_stock_level: number;
+       unit: string;
+       shortage_quantity: number;
+     }>;
+   }> {
+     const client = this.databaseService.getAdminClient();
 
-    // Get low stock inventory items
-    const { data: inventoryItems, error: itemsError } = await client.rpc('check_low_stock_inventory', {
-      p_organization_id: organizationId,
-    });
+     // Get low stock inventory items where quantity <= reorder_level
+     const { data: rawInventoryItems, error: itemsError } = await client
+       .from('inventory_items')
+       .select('id, name, quantity, reorder_level, unit_of_measure')
+       .eq('organization_id', organizationId);
 
-    if (itemsError) {
-      this.logger.error(`Failed to get low stock inventory items: ${itemsError.message}`);
-    }
+     if (itemsError) {
+       this.logger.error(`Failed to get low stock inventory items: ${itemsError.message}`);
+     }
 
-    // Get low stock variants
-    const { data: variants, error: variantsError } = await client.rpc('check_low_stock_variants', {
-      p_organization_id: organizationId,
-    });
+     const inventoryItems = rawInventoryItems
+       ?.filter(item => item.quantity <= item.reorder_level)
+       .map(item => ({
+         item_id: item.id,
+         item_name: item.name,
+         current_quantity: item.quantity,
+         minimum_stock: item.reorder_level,
+         unit: item.unit_of_measure,
+         shortage_quantity: Math.max(0, item.reorder_level - item.quantity),
+       })) || [];
 
-    if (variantsError) {
-      this.logger.error(`Failed to get low stock variants: ${variantsError.message}`);
-    }
+     // Get low stock product variants where stock <= min_stock
+     const { data: rawVariants, error: variantsError } = await client
+       .from('product_variants')
+       .select('id, name, product_id, stock, min_stock, unit_of_measure, products(name)')
+       .eq('organization_id', organizationId);
 
-    return {
-      inventoryItems: (inventoryItems || []) as any,
-      variants: (variants || []) as any,
-    };
-  }
+     if (variantsError) {
+       this.logger.error(`Failed to get low stock variants: ${variantsError.message}`);
+     }
+
+     const variants = rawVariants
+       ?.filter(variant => variant.stock <= variant.min_stock)
+       .map(variant => {
+         const productData = Array.isArray(variant.products) ? variant.products[0] : variant.products;
+         return {
+           variant_id: variant.id,
+           variant_name: variant.name,
+           item_id: variant.product_id,
+           item_name: (productData as unknown as { name: string })?.name || 'Unknown Product',
+           current_quantity: variant.stock,
+           min_stock_level: variant.min_stock,
+           unit: variant.unit_of_measure,
+           shortage_quantity: Math.max(0, variant.min_stock - variant.stock),
+         };
+       }) || [];
+
+     return {
+       inventoryItems,
+       variants,
+     };
+   }
 
   // ============================================
   // EMAIL NOTIFICATION METHODS (EXISTING)

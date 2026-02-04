@@ -797,9 +797,8 @@ export class SalesOrdersService {
         return;
       }
 
-      // Generate journal entry number
-      const { data: entryNumber } = await supabaseClient
-        .rpc('generate_journal_entry_number', { p_organization_id: organizationId });
+       // Generate journal entry number
+       const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
 
       // Create journal entry
       const { data: journalEntry, error: journalError } = await supabaseClient

@@ -263,6 +263,7 @@ CREATE TABLE IF NOT EXISTS organization_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role_id UUID, -- FK to roles table added later (roles table defined after this)
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -1621,9 +1622,6 @@ ALTER TABLE IF EXISTS invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS accounting_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_allocations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS item_groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS work_units ENABLE ROW LEVEL SECURITY;
 
 -- Organization Users Policies
 -- Note: Users can only see/modify their own rows to avoid infinite recursion
@@ -2042,6 +2040,7 @@ CREATE TABLE IF NOT EXISTS workers (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   user_id UUID REFERENCES auth.users(id),
+  deleted_at TIMESTAMPTZ,
   CHECK (metayage_percentage IS NULL OR (metayage_percentage > 0 AND metayage_percentage <= 50))
 );
 
@@ -2127,6 +2126,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ,
   CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   CHECK (status IN ('pending', 'assigned', 'in_progress', 'paused', 'completed', 'cancelled', 'overdue')),
   CHECK (task_type IN ('planting', 'harvesting', 'irrigation', 'fertilization', 'maintenance', 'general', 'pest_control', 'pruning', 'soil_preparation')),
@@ -2276,119 +2276,6 @@ CREATE TABLE IF NOT EXISTS task_equipment (
 
 CREATE INDEX IF NOT EXISTS idx_task_equipment_task ON task_equipment(task_id);
 
--- =====================================================
--- PRODUCT APPLICATIONS (Historical tracking)
--- Migration: 20260204004522_create_product_applications.sql
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS product_applications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
-  product_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  application_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  quantity_used NUMERIC NOT NULL CHECK (quantity_used > 0),
-  area_treated NUMERIC NOT NULL CHECK (area_treated > 0),
-  cost NUMERIC CHECK (cost >= 0),
-  currency TEXT DEFAULT 'MAD',
-  notes TEXT,
-  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT product_applications_area_positive CHECK (area_treated > 0)
-);
-
-CREATE INDEX IF NOT EXISTS idx_product_applications_org ON product_applications(organization_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_farm ON product_applications(farm_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_parcel ON product_applications(parcel_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_product ON product_applications(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_date ON product_applications(application_date DESC);
-CREATE INDEX IF NOT EXISTS idx_product_applications_task ON product_applications(task_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_org_parcel_date
-  ON product_applications(organization_id, parcel_id, application_date DESC);
-
-CREATE TRIGGER update_product_applications_updated_at
-  BEFORE UPDATE ON product_applications
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-ALTER TABLE product_applications ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY product_applications_select_org
-  ON product_applications FOR SELECT
-  USING (
-    organization_id IN (
-      SELECT organization_id
-      FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-CREATE POLICY product_applications_insert_org
-  ON product_applications FOR INSERT
-  WITH CHECK (
-    organization_id IN (
-      SELECT organization_id
-      FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-CREATE POLICY product_applications_update_org
-  ON product_applications FOR UPDATE
-  USING (
-    organization_id IN (
-      SELECT organization_id
-      FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-CREATE POLICY product_applications_delete_org
-  ON product_applications FOR DELETE
-  USING (
-    organization_id IN (
-      SELECT organization_id
-      FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-COMMENT ON TABLE product_applications IS 'Historical record of product applications on parcels (fertilizers, pesticides, etc.)';
-COMMENT ON COLUMN product_applications.parcel_id IS 'Optional: links to specific parcel. NULL if application was for entire farm';
-COMMENT ON COLUMN product_applications.task_id IS 'Optional: links to task if application was planned. Enables "planned vs actual" reporting';
-COMMENT ON COLUMN product_applications.area_treated IS 'Area in hectares that was treated with this product';
-COMMENT ON COLUMN product_applications.quantity_used IS 'Quantity of product applied (in item unit)';
-COMMENT ON COLUMN product_applications.cost IS 'Optional: cost of application. Can be entered manually or calculated from item cost';
-
-CREATE OR REPLACE VIEW v_parcel_applications AS
-SELECT
-  pa.id,
-  pa.organization_id,
-  pa.farm_id,
-  pa.parcel_id,
-  pa.product_id,
-  pa.application_date,
-  pa.quantity_used,
-  pa.area_treated,
-  pa.cost,
-  pa.currency,
-  pa.notes,
-  pa.task_id,
-  pa.created_at,
-  pa.updated_at,
-  i.item_name AS product_name,
-  i.default_unit AS product_unit,
-  f.name AS farm_name,
-  p.name AS parcel_name
-FROM product_applications pa
-JOIN items i ON i.id = pa.product_id
-JOIN farms f ON f.id = pa.farm_id
-LEFT JOIN parcels p ON p.id = pa.parcel_id;
-
-COMMENT ON VIEW v_parcel_applications IS 'Denormalized view of product applications with related names for easy querying';
-
 -- Work Records
 CREATE TABLE IF NOT EXISTS work_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2493,7 +2380,7 @@ CREATE INDEX IF NOT EXISTS idx_payment_records_worker ON payment_records(worker_
 CREATE INDEX IF NOT EXISTS idx_payment_records_status ON payment_records(status);
 
 -- Payment Summary View
-CREATE OR REPLACE VIEW payment_summary AS
+CREATE OR REPLACE VIEW payment_summary WITH (security_invoker = true) AS
 SELECT
   pr.id,
   pr.organization_id,
@@ -2670,6 +2557,7 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   reception_batch_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ,
   CHECK (unit IN ('kg', 'tons', 'units', 'boxes', 'crates', 'liters')),
   CHECK (quality_grade IN ('A', 'B', 'C', 'Extra', 'First', 'Second', 'Third')),
   CHECK (quality_score >= 1 AND quality_score <= 10),
@@ -2939,7 +2827,119 @@ CREATE INDEX IF NOT EXISTS idx_items_org ON items(organization_id);
 CREATE INDEX IF NOT EXISTS idx_items_group ON items(item_group_id);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL;
 
+-- =====================================================
+-- PRODUCT APPLICATIONS (Historical tracking)
+-- Migration: 20260204004522_create_product_applications.sql
+-- Moved here because it references items(id)
+-- =====================================================
 
+CREATE TABLE IF NOT EXISTS product_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  product_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  application_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  quantity_used NUMERIC NOT NULL CHECK (quantity_used > 0),
+  area_treated NUMERIC NOT NULL CHECK (area_treated > 0),
+  cost NUMERIC CHECK (cost >= 0),
+  currency TEXT DEFAULT 'MAD',
+  notes TEXT,
+  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT product_applications_area_positive CHECK (area_treated > 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_applications_org ON product_applications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_product_applications_farm ON product_applications(farm_id);
+CREATE INDEX IF NOT EXISTS idx_product_applications_parcel ON product_applications(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_product_applications_product ON product_applications(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_applications_date ON product_applications(application_date DESC);
+CREATE INDEX IF NOT EXISTS idx_product_applications_task ON product_applications(task_id);
+CREATE INDEX IF NOT EXISTS idx_product_applications_org_parcel_date
+  ON product_applications(organization_id, parcel_id, application_date DESC);
+
+CREATE TRIGGER update_product_applications_updated_at
+  BEFORE UPDATE ON product_applications
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE product_applications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY product_applications_select_org
+  ON product_applications FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY product_applications_insert_org
+  ON product_applications FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY product_applications_update_org
+  ON product_applications FOR UPDATE
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+CREATE POLICY product_applications_delete_org
+  ON product_applications FOR DELETE
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+COMMENT ON TABLE product_applications IS 'Historical record of product applications on parcels (fertilizers, pesticides, etc.)';
+COMMENT ON COLUMN product_applications.parcel_id IS 'Optional: links to specific parcel. NULL if application was for entire farm';
+COMMENT ON COLUMN product_applications.task_id IS 'Optional: links to task if application was planned. Enables "planned vs actual" reporting';
+COMMENT ON COLUMN product_applications.area_treated IS 'Area in hectares that was treated with this product';
+COMMENT ON COLUMN product_applications.quantity_used IS 'Quantity of product applied (in item unit)';
+COMMENT ON COLUMN product_applications.cost IS 'Optional: cost of application. Can be entered manually or calculated from item cost';
+
+CREATE OR REPLACE VIEW v_parcel_applications WITH (security_invoker = true) AS
+SELECT
+  pa.id,
+  pa.organization_id,
+  pa.farm_id,
+  pa.parcel_id,
+  pa.product_id,
+  pa.application_date,
+  pa.quantity_used,
+  pa.area_treated,
+  pa.cost,
+  pa.currency,
+  pa.notes,
+  pa.task_id,
+  pa.created_at,
+  pa.updated_at,
+  i.item_name AS product_name,
+  i.default_unit AS product_unit,
+  f.name AS farm_name,
+  p.name AS parcel_name
+FROM product_applications pa
+JOIN items i ON i.id = pa.product_id
+JOIN farms f ON f.id = pa.farm_id
+LEFT JOIN parcels p ON p.id = pa.parcel_id;
+
+COMMENT ON VIEW v_parcel_applications IS 'Denormalized view of product applications with related names for easy querying';
 
 -- Inventory Items
 CREATE TABLE IF NOT EXISTS inventory_items (
@@ -3096,9 +3096,10 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   stock_entry_item_id UUID REFERENCES stock_entry_items(id),
   batch_number TEXT,
   serial_number TEXT,
-  marketplace_listing_id UUID, -- For marketplace traceability (FK added later)
-  marketplace_order_item_id UUID, -- For order traceability (FK added later)
-  base_quantity_at_movement NUMERIC, -- Snapshot of variant.base_quantity at movement time
+  marketplace_listing_id UUID,
+  marketplace_order_item_id UUID,
+  base_quantity_at_movement NUMERIC,
+  variant_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
@@ -3204,32 +3205,6 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_org ON stock_valuation(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_item ON stock_valuation(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_warehouse ON stock_valuation(warehouse_id);
-
--- Product Applications (historical record of product applications on parcels)
-CREATE TABLE IF NOT EXISTS product_applications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
-  product_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  application_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  quantity_used NUMERIC NOT NULL CHECK (quantity_used > 0),
-  area_treated NUMERIC NOT NULL CHECK (area_treated > 0),
-  cost NUMERIC CHECK (cost >= 0),
-  currency TEXT DEFAULT 'MAD',
-  notes TEXT,
-  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_product_applications_org ON product_applications(organization_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_farm ON product_applications(farm_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_parcel ON product_applications(parcel_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_product ON product_applications(product_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_date ON product_applications(application_date DESC);
-CREATE INDEX IF NOT EXISTS idx_product_applications_task ON product_applications(task_id);
-CREATE INDEX IF NOT EXISTS idx_product_applications_org_parcel_date ON product_applications(organization_id, parcel_id, application_date DESC);
 
 -- Opening Stock Balances
 CREATE TABLE IF NOT EXISTS opening_stock_balances (
@@ -3667,6 +3642,7 @@ CREATE TABLE IF NOT EXISTS crop_types (
   description TEXT,
   description_ar TEXT,
   description_fr TEXT,
+  module_slug VARCHAR(100), -- Associated module slug for this crop type
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, name)
@@ -4217,30 +4193,11 @@ CREATE TABLE IF NOT EXISTS farm_management_roles (
 CREATE INDEX IF NOT EXISTS idx_farm_management_roles_farm ON farm_management_roles(farm_id);
 CREATE INDEX IF NOT EXISTS idx_farm_management_roles_user ON farm_management_roles(user_id);
 
--- Add role_id column and foreign key constraint from organization_users to roles
--- This is added here after roles table is created to avoid dependency issues
-DO $$
-BEGIN
-  -- Add the role_id column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'organization_users'
-    AND column_name = 'role_id'
-  ) THEN
-    ALTER TABLE organization_users ADD COLUMN role_id UUID;
-  END IF;
-
-  -- Add the foreign key constraint if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'organization_users_role_id_fkey'
-  ) THEN
-    ALTER TABLE organization_users
-    ADD CONSTRAINT organization_users_role_id_fkey
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
-  END IF;
-END $$;
+-- Add foreign key constraint from organization_users.role_id to roles
+-- (role_id column is defined in the table, FK added here after roles table is created)
+ALTER TABLE organization_users
+  ADD CONSTRAINT organization_users_role_id_fkey
+  FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL;
 
 -- Add index for the role_id column
 CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
@@ -4415,6 +4372,7 @@ CREATE INDEX IF NOT EXISTS idx_subscription_usage_org ON subscription_usage(orga
 -- =====================================================
 
 -- Work Units Policies
+ALTER TABLE work_units ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_work_units" ON work_units;
 CREATE POLICY "org_read_work_units" ON work_units
   FOR SELECT USING (
@@ -4578,6 +4536,7 @@ CREATE POLICY "org_delete_deliveries" ON deliveries
   );
 
 -- Item Groups Policies
+ALTER TABLE item_groups ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_item_groups" ON item_groups;
 CREATE POLICY "org_read_item_groups" ON item_groups
   FOR SELECT USING (
@@ -4603,6 +4562,7 @@ CREATE POLICY "org_delete_item_groups" ON item_groups
   );
 
 -- Items Policies
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_items" ON items;
 CREATE POLICY "org_read_items" ON items
   FOR SELECT USING (
@@ -5350,38 +5310,6 @@ BEGIN
     WHERE ou.role = r.name
     AND ou.role_id IS NULL;
   END IF;
-END $$;
-
--- Add first_name and last_name columns to user_profiles if they don't exist
-DO $$
-BEGIN
-  -- Add first_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'first_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN first_name VARCHAR(255);
-  END IF;
-
-  -- Add last_name column if it doesn't exist
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public'
-    AND table_name = 'user_profiles'
-    AND column_name = 'last_name'
-  ) THEN
-    ALTER TABLE user_profiles ADD COLUMN last_name VARCHAR(255);
-  END IF;
-
-  -- Populate first_name and last_name from full_name if they are empty
-  UPDATE user_profiles
-  SET
-    first_name = COALESCE(first_name, SPLIT_PART(full_name, ' ', 1)),
-    last_name = COALESCE(last_name, NULLIF(SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1), ''))
-  WHERE full_name IS NOT NULL
-  AND (first_name IS NULL OR last_name IS NULL);
 END $$;
 
 -- Migrate from role VARCHAR to role_id UUID (remove redundant role column)
@@ -7509,7 +7437,7 @@ END $$;
 -- Assignable Users View
 -- Combines users, profiles, roles, and workers for task assignment
 DROP VIEW IF EXISTS assignable_users;
-CREATE OR REPLACE VIEW assignable_users AS
+CREATE OR REPLACE VIEW assignable_users WITH (security_invoker = true) AS
 SELECT
   ou.user_id,
   ou.organization_id,
@@ -7868,7 +7796,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_org_summary_created ON admin_org_summary(cr
 CREATE INDEX IF NOT EXISTS idx_admin_org_summary_plan ON admin_org_summary(plan_type);
 
 -- View for daily organization growth
-CREATE OR REPLACE VIEW admin_org_growth AS
+CREATE OR REPLACE VIEW admin_org_growth WITH (security_invoker = true) AS
 SELECT
   date_trunc('day', created_at)::date as date,
   COUNT(*) as new_orgs,
@@ -7878,7 +7806,7 @@ GROUP BY date_trunc('day', created_at)
 ORDER BY date DESC;
 
 -- View for subscription breakdown
-CREATE OR REPLACE VIEW admin_subscription_breakdown AS
+CREATE OR REPLACE VIEW admin_subscription_breakdown WITH (security_invoker = true) AS
 SELECT
   plan_type,
   status,
@@ -7890,7 +7818,7 @@ GROUP BY plan_type, status
 ORDER BY plan_type, status;
 
 -- View for event type distribution
-CREATE OR REPLACE VIEW admin_event_distribution AS
+CREATE OR REPLACE VIEW admin_event_distribution WITH (security_invoker = true) AS
 SELECT
   event_type,
   DATE(occurred_at) as date,
@@ -7901,7 +7829,7 @@ GROUP BY event_type, DATE(occurred_at)
 ORDER BY date DESC, count DESC;
 
 -- View for top organizations by activity
-CREATE OR REPLACE VIEW admin_top_orgs_by_activity AS
+CREATE OR REPLACE VIEW admin_top_orgs_by_activity WITH (security_invoker = true) AS
 SELECT
   o.id,
   o.name,
@@ -7914,7 +7842,7 @@ ORDER BY event_count DESC
 LIMIT 100;
 
 -- View for churn risk organizations
-CREATE OR REPLACE VIEW admin_churn_risk AS
+CREATE OR REPLACE VIEW admin_churn_risk WITH (security_invoker = true) AS
 SELECT
   o.id,
   o.name,
@@ -7934,7 +7862,7 @@ WHERE
 ORDER BY su.churn_risk_score DESC NULLS LAST;
 
 -- Aggregated reference data stats view
-CREATE OR REPLACE VIEW admin_reference_data_stats AS
+CREATE OR REPLACE VIEW admin_reference_data_stats WITH (security_invoker = true) AS
 SELECT
   'account_templates' as table_name,
   COUNT(*) as total_count,
@@ -7976,7 +7904,7 @@ SELECT
 FROM roles;
 
 -- View for recent admin job logs
-CREATE OR REPLACE VIEW admin_recent_jobs AS
+CREATE OR REPLACE VIEW admin_recent_jobs WITH (security_invoker = true) AS
 SELECT
   id,
   job_type,
@@ -8260,7 +8188,7 @@ CREATE INDEX IF NOT EXISTS idx_marketplace_reviews_reviewee ON marketplace_revie
 
 -- Create auth_users_view for RLS policies
 -- This view provides the organization_id for the current authenticated user
-CREATE OR REPLACE VIEW auth_users_view AS
+CREATE OR REPLACE VIEW auth_users_view WITH (security_invoker = true) AS
 SELECT
   ou.user_id as id,
   ou.organization_id
@@ -8721,7 +8649,7 @@ COMMENT ON TABLE file_registry IS 'Tracks all uploaded files across storage buck
 -- Aggregate file storage usage by bucket and organization
 -- =====================================================
 
-CREATE OR REPLACE VIEW file_storage_stats AS
+CREATE OR REPLACE VIEW file_storage_stats WITH (security_invoker = true) AS
 SELECT
   organization_id,
   bucket_name,
@@ -9069,6 +8997,7 @@ CREATE TABLE IF NOT EXISTS crop_cycles (
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by UUID REFERENCES auth.users(id),
+  deleted_at TIMESTAMPTZ,
 
   UNIQUE(organization_id, cycle_code),
   CHECK (status IN ('planned', 'land_prep', 'growing', 'harvesting', 'completed', 'cancelled')),
@@ -9625,7 +9554,7 @@ COMMENT ON COLUMN quality_inspections.attachments IS 'Array of attachment URLs (
 
 
 -- 10. REPORTING VIEWS
-CREATE OR REPLACE VIEW crop_cycle_pnl AS
+CREATE OR REPLACE VIEW crop_cycle_pnl WITH (security_invoker = true) AS
 SELECT
   cc.id,
   cc.organization_id,
@@ -9662,7 +9591,7 @@ LEFT JOIN fiscal_years fy ON cc.fiscal_year_id = fy.id
 LEFT JOIN farms f ON cc.farm_id = f.id
 LEFT JOIN parcels p ON cc.parcel_id = p.id;
 
-CREATE OR REPLACE VIEW campaign_summary AS
+CREATE OR REPLACE VIEW campaign_summary WITH (security_invoker = true) AS
 SELECT
   ac.id,
   ac.organization_id,
@@ -9684,7 +9613,7 @@ FROM agricultural_campaigns ac
 LEFT JOIN crop_cycles cc ON cc.campaign_id = ac.id
 GROUP BY ac.id, ac.organization_id, ac.name, ac.code, ac.status, ac.start_date, ac.end_date;
 
-CREATE OR REPLACE VIEW fiscal_campaign_reconciliation AS
+CREATE OR REPLACE VIEW fiscal_campaign_reconciliation WITH (security_invoker = true) AS
 SELECT
   fy.id AS fiscal_year_id,
   fy.name AS fiscal_year_name,
@@ -10245,30 +10174,6 @@ GRANT SELECT, INSERT, DELETE ON public.chat_conversations TO service_role;
 -- 2025-01-10: Organizations Multi-Country Accounting Support
 -- =====================================================
 
--- Add country_code column (ISO 3166-1 alpha-2)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'organizations'
-    AND column_name = 'country_code'
-  ) THEN
-    ALTER TABLE organizations ADD COLUMN country_code VARCHAR(2);
-  END IF;
-END $$;
-
--- Add accounting_standard column
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'organizations'
-    AND column_name = 'accounting_standard'
-  ) THEN
-    ALTER TABLE organizations ADD COLUMN accounting_standard VARCHAR(50);
-  END IF;
-END $$;
-
 -- Create accounting standards enum type
 DO $$ BEGIN
   CREATE TYPE accounting_standard_enum AS ENUM (
@@ -10809,19 +10714,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Add deleted_at column to critical tables for soft delete support
-DO $$
-BEGIN
-  ALTER TABLE workers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-
-  ALTER TABLE tasks ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-
-  ALTER TABLE crop_cycles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-
-  ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
-END $$;
-
--- Indexes for soft delete queries
+-- Indexes for soft delete queries (deleted_at columns are defined in table definitions)
 CREATE INDEX IF NOT EXISTS idx_workers_deleted ON workers(deleted_at) WHERE deleted_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_tasks_deleted ON tasks(deleted_at) WHERE deleted_at IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_deleted ON crop_cycles(deleted_at) WHERE deleted_at IS NOT NULL;
@@ -10987,7 +10880,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- =====================================================
 
 -- Active workers view (excludes deleted/inactive)
-CREATE OR REPLACE VIEW v_active_workers AS
+CREATE OR REPLACE VIEW v_active_workers WITH (security_invoker = true) AS
 SELECT
   w.id,
   w.organization_id,
@@ -11010,7 +10903,7 @@ GROUP BY w.id, w.organization_id, w.first_name, w.last_name, w.worker_type, w.da
 COMMENT ON VIEW v_active_workers IS 'Active workers with their assigned tasks count';
 
 -- Active crop cycles view
-CREATE OR REPLACE VIEW v_active_crop_cycles AS
+CREATE OR REPLACE VIEW v_active_crop_cycles WITH (security_invoker = true) AS
 SELECT
   cc.id,
   cc.organization_id,
@@ -11040,7 +10933,7 @@ ORDER BY cc.planting_date DESC;
 COMMENT ON VIEW v_active_crop_cycles IS 'Active and planned crop cycles with progress tracking';
 
 -- Financial summary by organization
-CREATE OR REPLACE VIEW v_organization_financial_summary AS
+CREATE OR REPLACE VIEW v_organization_financial_summary WITH (security_invoker = true) AS
 SELECT
   o.id AS organization_id,
   o.name AS organization_name,
@@ -11061,7 +10954,7 @@ GROUP BY o.id, o.name, o.currency_code;
 COMMENT ON VIEW v_organization_financial_summary IS 'Financial summary metrics per organization';
 
 -- Production summary view
-CREATE OR REPLACE VIEW v_production_summary AS
+CREATE OR REPLACE VIEW v_production_summary WITH (security_invoker = true) AS
 SELECT
   o.id AS organization_id,
   o.name AS organization_name,
@@ -11811,21 +11704,7 @@ USING (
 -- Add Crop Types for Module System
 -- Migration Date: 2026-01-29
 -- Description: Adds crop type data for module filtering and classification
-
--- Note: The crop_types table already exists in the base schema
--- This migration adds module-specific crop type categories
-
--- Check if module column exists, if not add it
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'crop_types' AND column_name = 'module_slug'
-  ) THEN
-    ALTER TABLE crop_types ADD COLUMN module_slug VARCHAR(100);
-    COMMENT ON COLUMN crop_types.module_slug IS 'Associated module slug for this crop type';
-  END IF;
-END $$;
+-- (module_slug column is defined in the crop_types table)
 
 -- Insert default crop types with module associations
 INSERT INTO crop_types (name, name_fr, name_ar, description, description_fr, description_ar, organization_id, module_slug)
@@ -13283,9 +13162,17 @@ CREATE INDEX IF NOT EXISTS idx_product_variants_unit_id ON product_variants(unit
 ALTER TABLE stock_entry_items
 ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
 
--- Add variant_id column to stock_movements
-ALTER TABLE stock_movements
-ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+-- Add FK constraint for stock_movements.variant_id (column was added earlier without FK)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'stock_movements_variant_id_fkey'
+  ) THEN
+    ALTER TABLE stock_movements
+    ADD CONSTRAINT stock_movements_variant_id_fkey
+    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Add comments for documentation
 COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';

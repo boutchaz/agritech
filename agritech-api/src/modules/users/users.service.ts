@@ -21,32 +21,38 @@ export class UsersService {
     constructor(private databaseService: DatabaseService) { }
 
     /**
-     * Create or update user profile
-     * Uses SECURITY DEFINER RPC function to bypass RLS policies
-     * Function: create_or_update_user_profile (defined in schema migration)
+     * Create or update user profile using direct table operations
+     * Admin client (service_role) bypasses RLS automatically
      */
     async createProfile(dto: CreateUserProfileDto) {
         const client = this.databaseService.getAdminClient();
 
         try {
-            // Call the SECURITY DEFINER function via RPC which bypasses RLS
-            // Function handles full_name calculation if not provided
-            const { data, error } = await client.rpc('create_or_update_user_profile', {
-                p_user_id: dto.userId,
-                p_email: dto.email,
-                p_full_name: dto.fullName || null,
-                p_first_name: dto.firstName || null,
-                p_last_name: dto.lastName || null,
-                p_phone: dto.phone || null,
-                p_language: dto.language || 'fr',
-                p_timezone: dto.timezone || 'Africa/Casablanca',
-                p_onboarding_completed: dto.onboardingCompleted ?? false,
-                p_password_set: dto.passwordSet ?? true,
-                p_avatar_url: null,
-            });
+            const fullName = dto.fullName || this.calculateFullName(dto.firstName, dto.lastName, dto.email);
+
+            const profileData = {
+                id: dto.userId,
+                email: dto.email,
+                full_name: fullName,
+                first_name: dto.firstName || null,
+                last_name: dto.lastName || null,
+                phone: dto.phone || null,
+                language: dto.language || 'fr',
+                timezone: dto.timezone || 'Africa/Casablanca',
+                onboarding_completed: dto.onboardingCompleted ?? false,
+                password_set: dto.passwordSet ?? true,
+                avatar_url: null,
+                updated_at: new Date().toISOString(),
+            };
+
+            const { data, error } = await client
+                .from('user_profiles')
+                .upsert(profileData, { onConflict: 'id' })
+                .select()
+                .single();
 
             if (error) {
-                this.logger.error(`Failed to create user profile via RPC: ${error.message}`, error);
+                this.logger.error(`Failed to create user profile: ${error.message}`, error);
                 throw new InternalServerErrorException(`Failed to create user profile: ${error.message}`);
             }
 
@@ -56,7 +62,6 @@ export class UsersService {
 
             return data;
         } catch (error) {
-            // If error is already an InternalServerErrorException, re-throw it
             if (error instanceof InternalServerErrorException) {
                 throw error;
             }
@@ -64,6 +69,22 @@ export class UsersService {
             this.logger.error(`Failed to create user profile: ${error.message}`, error.stack);
             throw new InternalServerErrorException(`Failed to create user profile: ${error.message}`);
         }
+    }
+
+    private calculateFullName(firstName?: string, lastName?: string, email?: string): string {
+        if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+        }
+        if (firstName) {
+            return firstName;
+        }
+        if (lastName) {
+            return lastName;
+        }
+        if (email) {
+            return email.split('@')[0];
+        }
+        return 'User';
     }
 
     async findOne(id: string) {

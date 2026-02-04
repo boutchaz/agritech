@@ -1084,9 +1084,9 @@ export class WorkersService {
   }
 
   /**
-   * Backfill work record from an existing completed task
-   * Calls the database function create_work_record_from_existing_task via RPC
-   */
+    * Backfill work record from an existing completed task
+    * Directly creates a work record from task details
+    */
   async backfillWorkRecordFromTask(
     userId: string,
     organizationId: string,
@@ -1094,11 +1094,12 @@ export class WorkersService {
   ) {
     await this.verifyOrganizationAccess(userId, organizationId);
 
-    // Verify task exists and belongs to organization
     const client = this.databaseService.getAdminClient();
+
+    // Fetch task details
     const { data: task } = await client
       .from('tasks')
-      .select('id, status, assigned_to, organization_id')
+      .select('id, status, assigned_to, organization_id, title, task_type, farm_id, parcel_id, start_date, end_date, due_date, created_at')
       .eq('id', taskId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -1115,10 +1116,60 @@ export class WorkersService {
       throw new BadRequestException('Task must have an assigned worker to create a work record');
     }
 
-    // Call the database function via RPC
-    const { data, error } = await client.rpc('create_work_record_from_existing_task', {
-      p_task_id: taskId,
-    });
+    // Fetch worker payment information
+    const { data: worker } = await client
+      .from('workers')
+      .select('id, payment_type, hourly_rate, daily_rate')
+      .eq('id', task.assigned_to)
+      .maybeSingle();
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    // Calculate hours worked
+    let hoursWorked = 0;
+    if (task.start_date && task.end_date) {
+      const startTime = new Date(task.start_date).getTime();
+      const endTime = new Date(task.end_date).getTime();
+      hoursWorked = (endTime - startTime) / (1000 * 60 * 60);
+    }
+
+    // Calculate total payment
+    let totalPayment = 0;
+    if (worker.payment_type === 'hourly' && worker.hourly_rate && hoursWorked > 0) {
+      totalPayment = worker.hourly_rate * hoursWorked;
+    }
+
+    // Determine work date
+    const workDate = task.due_date || task.end_date || task.created_at || new Date().toISOString().split('T')[0];
+    const workDateStr = typeof workDate === 'string' ? workDate.split('T')[0] : new Date(workDate).toISOString().split('T')[0];
+
+    // Create work record
+    const { data: workRecord, error } = await client
+      .from('work_records')
+      .insert({
+        farm_id: task.farm_id,
+        organization_id: organizationId,
+        worker_id: task.assigned_to,
+        worker_type: worker.payment_type,
+        work_date: workDateStr,
+        hours_worked: hoursWorked || 0,
+        task_description: task.title || 'Task completed',
+        hourly_rate: worker.hourly_rate,
+        total_payment: totalPayment || 0,
+        payment_status: totalPayment > 0 ? 'pending' : 'not_applicable',
+        notes: JSON.stringify({
+          task_id: taskId,
+          task_title: task.title,
+          task_type: task.task_type,
+          parcel_id: task.parcel_id,
+          completed_at: new Date().toISOString(),
+        }),
+        created_by: userId,
+      })
+      .select('id')
+      .single();
 
     if (error) {
       throw new Error(`Failed to create work record: ${error.message}`);
@@ -1128,7 +1179,7 @@ export class WorkersService {
 
     return {
       success: true,
-      workRecordId: data,
+      workRecordId: workRecord.id,
       message: 'Work record created successfully',
     };
   }

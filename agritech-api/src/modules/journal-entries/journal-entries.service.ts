@@ -208,15 +208,8 @@ export class JournalEntriesService {
         );
       }
 
-      // Generate entry number
-      const { data: entryNumber, error: numberError } = await supabaseClient.rpc(
-        'generate_journal_entry_number',
-        { p_organization_id: organizationId }
-      );
-
-      if (numberError) {
-        throw new BadRequestException(`Failed to generate entry number: ${numberError.message}`);
-      }
+       // Generate entry number
+       const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
 
       // Create journal entry
       // Note: entry_type and description columns don't exist in the database schema
