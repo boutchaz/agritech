@@ -14,6 +14,7 @@ import FarmListItem from './FarmListItem';
 import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
+import EditFarmManagerModal from './EditFarmManagerModal';
 import { Building2, X, Trash2 } from 'lucide-react';
 import {
   AlertDialog,
@@ -88,6 +89,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     structures: number;
   } | null>(null);
   const [loadingRelatedData, setLoadingRelatedData] = useState(false);
+  const [selectedFarmForEditManager, setSelectedFarmForEditManager] = useState<{
+    id: string;
+    name: string;
+    manager_name?: string;
+    manager_email?: string;
+    manager_phone?: string;
+  } | null>(null);
 
   // Debug: Log organization ID on mount and when it changes
   if (!organizationId) {
@@ -507,6 +515,11 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
           }}
           onSelect={() => setSelectedFarmForDetails(farm.farm_id)}
           onManage={() => onManageFarm?.(farm.farm_id)}
+          onEditManager={() => setSelectedFarmForEditManager({
+            id: farm.farm_id,
+            name: farm.farm_name,
+            manager_name: farm.manager_name,
+          })}
           onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
           onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
         />
@@ -539,6 +552,11 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         onSelect={() => setSelectedFarmForDetails(farm.farm_id)}
         onToggleSelection={() => toggleFarmSelection(farm.farm_id)}
         onManage={() => onManageFarm?.(farm.farm_id)}
+        onEditManager={() => setSelectedFarmForEditManager({
+          id: farm.farm_id,
+          name: farm.farm_name,
+          manager_name: farm.manager_name,
+        })}
         onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
         onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
       />
@@ -728,6 +746,16 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         organizationId={organizationId}
         onSuccess={handleImportSuccess}
       />
+
+      {/* Edit Farm Manager Modal */}
+      {selectedFarmForEditManager && (
+        <EditFarmManagerModal
+          farmId={selectedFarmForEditManager.id}
+          farmName={selectedFarmForEditManager.name}
+          currentManagerName={selectedFarmForEditManager.manager_name}
+          onClose={() => setSelectedFarmForEditManager(null)}
+        />
+      )}
 
       {/* Delete Farm Confirmation Dialog */}
       <AlertDialog open={!!farmToDelete} onOpenChange={(open) => {

@@ -301,14 +301,13 @@ export class ReportsService {
 
   private async getStockInventory(supabase: any, organizationId: string) {
     const { data, error } = await supabase
-      .from('inventory')
+      .from('inventory_items')
       .select(`
         name,
         quantity,
         unit,
-        price_per_unit,
-        last_purchase_date,
-        product_categories!inner(name)
+        cost_per_unit,
+        category
       `)
       .eq('organization_id', organizationId);
 
@@ -317,71 +316,53 @@ export class ReportsService {
     }
 
     return {
-      columns: ['Produit', 'Catégorie', 'Quantité', 'Valeur', 'Dernier achat'],
+      columns: ['Produit', 'Catégorie', 'Quantité', 'Valeur'],
       data: (data || []).map((item) => ({
         Produit: item.name,
-        Catégorie: item.product_categories.name,
+        Catégorie: item.category || '-',
         Quantité: `${item.quantity} ${item.unit}`,
-        Valeur: item.quantity * item.price_per_unit,
-        'Dernier achat': item.last_purchase_date ? new Date(item.last_purchase_date).toLocaleDateString() : '-',
+        Valeur: item.quantity * (item.cost_per_unit || 0),
       })),
     };
   }
 
   private async getStockMovements(supabase: any, organizationId: string, filters: ReportFiltersDto) {
-    const purchasesQuery = supabase
-      .from('purchases')
-      .select(`
-        purchase_date,
-        quantity,
-        total_price,
-        inventory!inner(name, unit, organization_id)
-      `)
-      .eq('inventory.organization_id', organizationId);
+    // Note: purchases table doesn't exist - skipping stock entries
+    // Only showing product_applications (stock out movements)
 
     const applicationsQuery = supabase
       .from('product_applications')
       .select(`
         application_date,
         quantity_used,
-        inventory!inner(name, unit, price_per_unit, organization_id)
+        cost,
+        items!inner (
+          item_name,
+          default_unit
+        )
       `)
-      .eq('inventory.organization_id', organizationId);
+      .eq('organization_id', organizationId);
 
     if (filters.start_date) {
-      purchasesQuery.gte('purchase_date', filters.start_date);
       applicationsQuery.gte('application_date', filters.start_date);
     }
     if (filters.end_date) {
-      purchasesQuery.lte('purchase_date', filters.end_date);
       applicationsQuery.lte('application_date', filters.end_date);
     }
 
-    const [purchases, applications] = await Promise.all([
-      purchasesQuery,
-      applicationsQuery,
-    ]);
+    const { data: applications, error } = await applicationsQuery;
 
-    if (purchases.error || applications.error) {
+    if (error) {
       throw new InternalServerErrorException('Failed to fetch stock movements data');
     }
 
-    const movements = [
-      ...(purchases.data || []).map((p) => ({
-        Date: new Date(p.purchase_date).toLocaleDateString(),
-        Produit: p.inventory.name,
-        Type: 'Entrée',
-        Quantité: `${p.quantity} ${p.inventory.unit}`,
-        Valeur: p.total_price,
-      })),
-      ...(applications.data || []).map((a) => ({
-        Date: new Date(a.application_date).toLocaleDateString(),
-        Produit: a.inventory.name,
-        Type: 'Sortie',
-        Quantité: `${a.quantity_used} ${a.inventory.unit}`,
-        Valeur: a.quantity_used * a.inventory.price_per_unit,
-      })),
-    ];
+    const movements = (applications || []).map((a: any) => ({
+      Date: new Date(a.application_date).toLocaleDateString(),
+      Produit: a.items.item_name,
+      Type: 'Sortie',
+      Quantité: `${a.quantity_used} ${a.items.default_unit}`,
+      Valeur: a.cost || 0,
+    }));
 
     return {
       columns: ['Date', 'Produit', 'Type', 'Quantité', 'Valeur'],
@@ -474,11 +455,13 @@ export class ReportsService {
         application_date,
         quantity_used,
         notes,
-        inventory!inner(name, unit, category_id, organization_id),
+        items!inner (
+          item_name,
+          default_unit
+        ),
         parcels!inner(name)
       `)
-      .eq('inventory.organization_id', organizationId)
-      .eq('inventory.category_id', 'fertilizer')
+      .eq('organization_id', organizationId)
       .order('application_date', { ascending: false });
 
     if (filters.start_date) {
@@ -499,11 +482,11 @@ export class ReportsService {
 
     return {
       columns: ['Date', 'Parcelle', 'Produit', 'Quantité', 'Notes'],
-      data: (data || []).map((app) => ({
+      data: (data || []).map((app: any) => ({
         Date: new Date(app.application_date).toLocaleDateString(),
         Parcelle: app.parcels.name,
-        Produit: app.inventory.name,
-        Quantité: `${app.quantity_used} ${app.inventory.unit}`,
+        Produit: app.items.item_name,
+        Quantité: `${app.quantity_used} ${app.items.default_unit}`,
         Notes: app.notes || '',
       })),
     };

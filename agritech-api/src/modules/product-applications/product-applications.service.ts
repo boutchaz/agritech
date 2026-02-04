@@ -19,9 +19,9 @@ export class ProductApplicationsService {
         .from('product_applications')
         .select(`
           *,
-          inventory:product_id (
-            name,
-            unit
+          items!inner (
+            item_name,
+            default_unit
           )
         `)
         .eq('organization_id', organizationId)
@@ -32,10 +32,22 @@ export class ProductApplicationsService {
         throw new InternalServerErrorException('Failed to fetch product applications');
       }
 
+      // Transform the response to match the expected DTO structure
+      // items (item_name, default_unit) -> inventory (name, unit)
+      const transformedApplications = (data || []).map((app: any) => ({
+        ...app,
+        inventory: {
+          name: app.items.item_name,
+          unit: app.items.default_unit,
+        },
+        // Remove the items property as it's transformed to inventory
+        items: undefined,
+      }));
+
       return {
         success: true,
-        applications: data || [],
-        total: data?.length || 0,
+        applications: transformedApplications,
+        total: transformedApplications.length,
       };
     } catch (error) {
       this.logger.error('Error in listProductApplications:', error);
@@ -82,14 +94,14 @@ export class ProductApplicationsService {
   }
 
   /**
-   * Get products from inventory that are available (quantity > 0)
+   * Get products from inventory_items that are available (quantity > 0)
    */
   async getAvailableProducts(userId: string, organizationId: string) {
     try {
       const supabase = this.databaseService.getAdminClient();
 
       const { data, error } = await supabase
-        .from('inventory')
+        .from('inventory_items')
         .select('id, name, quantity, unit')
         .eq('organization_id', organizationId)
         .gt('quantity', 0)

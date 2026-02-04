@@ -162,6 +162,32 @@ class FarmsService {
     );
   }
 
+  async updateFarm(farmId: string, data: {
+    name?: string;
+    location?: string;
+    size?: number;
+    size_unit?: string;
+    description?: string;
+    manager_name?: string;
+    manager_email?: string;
+    manager_phone?: string;
+    is_active?: boolean;
+    status?: string;
+  }): Promise<Farm> {
+    const organizationId = getCurrentOrganizationId();
+    if (!organizationId) {
+      throw new OrganizationRequiredError();
+    }
+
+    // Pass organizationId explicitly in header
+    return apiClient.patch<Farm>(
+      `/api/v1/farms/${farmId}`,
+      data,
+      {},
+      organizationId
+    );
+  }
+
   async deleteFarm(farmId: string): Promise<{ success: boolean; deleted_farm?: { id: string; name: string } }> {
     // Use apiRequest directly since DELETE with body is needed
     const { apiRequest } = await import('../lib/api-client');

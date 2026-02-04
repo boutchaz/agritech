@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Save, X } from 'lucide-react';
 import type { WaterAnalysisData } from '../../types/analysis';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
@@ -16,40 +20,71 @@ interface WaterAnalysisFormProps {
   selectedParcel?: Parcel | null;
 }
 
-const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
-  const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split('T')[0]);
-  const [laboratory, setLaboratory] = useState('');
-  const [notes, setNotes] = useState('');
+const waterAnalysisSchema = z.object({
+  analysisDate: z.string().min(1, 'Analysis date is required'),
+  water_source: z.enum(['well', 'river', 'irrigation', 'rainwater', 'municipal', 'other']),
+  ph_level: z.number().min(0).max(14).optional().or(z.literal('')),
+  temperature_celsius: z.number().optional().or(z.literal('')),
+  ec_ds_per_m: z.number().min(0).optional().or(z.literal('')),
+  tds_ppm: z.number().min(0).optional().or(z.literal('')),
+  calcium_ppm: z.number().min(0).optional().or(z.literal('')),
+  magnesium_ppm: z.number().min(0).optional().or(z.literal('')),
+  sodium_ppm: z.number().min(0).optional().or(z.literal('')),
+  potassium_ppm: z.number().min(0).optional().or(z.literal('')),
+  chloride_ppm: z.number().min(0).optional().or(z.literal('')),
+  sulfate_ppm: z.number().min(0).optional().or(z.literal('')),
+  nitrate_ppm: z.number().min(0).optional().or(z.literal('')),
+  sar: z.number().min(0).optional().or(z.literal('')),
+  hardness_ppm: z.number().min(0).optional().or(z.literal('')),
+  irrigation_suitability: z.enum(['excellent', 'good', 'fair', 'poor', 'unsuitable']).optional().or(z.literal('')),
+  laboratory: z.string().optional(),
+  notes: z.string().optional(),
+});
 
-  const [formData, setFormData] = useState<WaterAnalysisData>({
-    water_source: 'well',
-    ph_level: undefined,
-    temperature_celsius: undefined,
-    ec_ds_per_m: undefined,
-    tds_ppm: undefined,
-    calcium_ppm: undefined,
-    magnesium_ppm: undefined,
-    sodium_ppm: undefined,
-    potassium_ppm: undefined,
-    chloride_ppm: undefined,
-    sulfate_ppm: undefined,
-    nitrate_ppm: undefined,
-    sar: undefined,
-    hardness_ppm: undefined,
-    irrigation_suitability: undefined
+type WaterAnalysisFormData = z.infer<typeof waterAnalysisSchema>;
+
+const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+  const { handleFormError } = useFormErrors<WaterAnalysisFormData>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<WaterAnalysisFormData>({
+    resolver: zodResolver(waterAnalysisSchema),
+    defaultValues: {
+      analysisDate: new Date().toISOString().split('T')[0],
+      water_source: 'well',
+      ph_level: '',
+      temperature_celsius: '',
+      ec_ds_per_m: '',
+      tds_ppm: '',
+      calcium_ppm: '',
+      magnesium_ppm: '',
+      sodium_ppm: '',
+      potassium_ppm: '',
+      chloride_ppm: '',
+      sulfate_ppm: '',
+      nitrate_ppm: '',
+      sar: '',
+      hardness_ppm: '',
+      irrigation_suitability: '',
+      laboratory: '',
+      notes: '',
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanData = Object.fromEntries(
-      Object.entries(formData).filter(([_, v]) => v !== undefined && v !== '')
-    ) as WaterAnalysisData;
+  const onSubmit = async (formData: WaterAnalysisFormData) => {
+    try {
+      const { analysisDate, laboratory, notes, ...waterData } = formData;
+      const cleanWaterData = Object.fromEntries(
+        Object.entries(waterData).filter(([_, v]) => v !== undefined && v !== '')
+      ) as unknown as WaterAnalysisData;
 
-    onSave(cleanData, analysisDate, laboratory || undefined, notes || undefined);
-  };
-
-  const updateField = <K extends keyof WaterAnalysisData>(field: K, value: WaterAnalysisData[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+      onSave(cleanWaterData, analysisDate, laboratory || undefined, notes || undefined);
+    } catch (error: unknown) {
+      handleFormError(error, setError);
+    }
   };
 
   return (
@@ -64,7 +99,7 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {selectedParcel && (
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
@@ -82,20 +117,26 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
             <Input
               id="analysisDate"
               type="date"
-              value={analysisDate}
-              onChange={(e) => setAnalysisDate(e.target.value)}
+              {...register('analysisDate')}
+              invalid={!!errors.analysisDate}
               required
             />
+            {errors.analysisDate && (
+              <p className="text-red-600 text-sm mt-1">{errors.analysisDate.message}</p>
+            )}
           </FormField>
 
           <FormField label="Laboratoire (optionnel)" htmlFor="laboratory">
             <Input
               id="laboratory"
               type="text"
-              value={laboratory}
-              onChange={(e) => setLaboratory(e.target.value)}
+              {...register('laboratory')}
+              invalid={!!errors.laboratory}
               placeholder="Nom du laboratoire"
             />
+            {errors.laboratory && (
+              <p className="text-red-600 text-sm mt-1">{errors.laboratory.message}</p>
+            )}
           </FormField>
         </div>
 
@@ -105,8 +146,8 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
           <FormField label="Source" htmlFor="water_source" required>
             <Select
               id="water_source"
-              value={formData.water_source}
-              onChange={(e) => updateField('water_source', e.target.value as 'well' | 'river' | 'irrigation' | 'rainwater' | 'municipal' | 'other')}
+              {...register('water_source')}
+              invalid={!!errors.water_source}
               required
             >
               <option value="well">Puits</option>
@@ -116,6 +157,9 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
               <option value="municipal">Réseau municipal</option>
               <option value="other">Autre</option>
             </Select>
+            {errors.water_source && (
+              <p className="text-red-600 text-sm mt-1">{errors.water_source.message}</p>
+            )}
           </FormField>
         </div>
 
@@ -130,9 +174,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.1"
                 min="0"
                 max="14"
-                value={formData.ph_level || ''}
-                onChange={(e) => updateField('ph_level', parseFloat(e.target.value))}
+                {...register('ph_level', { valueAsNumber: true })}
+                invalid={!!errors.ph_level}
               />
+              {errors.ph_level && (
+                <p className="text-red-600 text-sm mt-1">{errors.ph_level.message}</p>
+              )}
             </FormField>
 
             <FormField label="Température (°C)" htmlFor="temperature">
@@ -140,9 +187,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 id="temperature"
                 type="number"
                 step="0.1"
-                value={formData.temperature_celsius || ''}
-                onChange={(e) => updateField('temperature_celsius', parseFloat(e.target.value))}
+                {...register('temperature_celsius', { valueAsNumber: true })}
+                invalid={!!errors.temperature_celsius}
               />
+              {errors.temperature_celsius && (
+                <p className="text-red-600 text-sm mt-1">{errors.temperature_celsius.message}</p>
+              )}
             </FormField>
 
             <FormField label="Conductivité (dS/m)" htmlFor="ec">
@@ -151,9 +201,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.ec_ds_per_m || ''}
-                onChange={(e) => updateField('ec_ds_per_m', parseFloat(e.target.value))}
+                {...register('ec_ds_per_m', { valueAsNumber: true })}
+                invalid={!!errors.ec_ds_per_m}
               />
+              {errors.ec_ds_per_m && (
+                <p className="text-red-600 text-sm mt-1">{errors.ec_ds_per_m.message}</p>
+              )}
             </FormField>
 
             <FormField label="TDS (ppm)" htmlFor="tds">
@@ -162,9 +215,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="1"
                 min="0"
-                value={formData.tds_ppm || ''}
-                onChange={(e) => updateField('tds_ppm', parseFloat(e.target.value))}
+                {...register('tds_ppm', { valueAsNumber: true })}
+                invalid={!!errors.tds_ppm}
               />
+              {errors.tds_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.tds_ppm.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -179,9 +235,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.calcium_ppm || ''}
-                onChange={(e) => updateField('calcium_ppm', parseFloat(e.target.value))}
+                {...register('calcium_ppm', { valueAsNumber: true })}
+                invalid={!!errors.calcium_ppm}
               />
+              {errors.calcium_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.calcium_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Magnésium (Mg²⁺)" htmlFor="magnesium">
@@ -190,9 +249,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.magnesium_ppm || ''}
-                onChange={(e) => updateField('magnesium_ppm', parseFloat(e.target.value))}
+                {...register('magnesium_ppm', { valueAsNumber: true })}
+                invalid={!!errors.magnesium_ppm}
               />
+              {errors.magnesium_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.magnesium_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Sodium (Na⁺)" htmlFor="sodium">
@@ -201,9 +263,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.sodium_ppm || ''}
-                onChange={(e) => updateField('sodium_ppm', parseFloat(e.target.value))}
+                {...register('sodium_ppm', { valueAsNumber: true })}
+                invalid={!!errors.sodium_ppm}
               />
+              {errors.sodium_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.sodium_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Potassium (K⁺)" htmlFor="potassium">
@@ -212,9 +277,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.potassium_ppm || ''}
-                onChange={(e) => updateField('potassium_ppm', parseFloat(e.target.value))}
+                {...register('potassium_ppm', { valueAsNumber: true })}
+                invalid={!!errors.potassium_ppm}
               />
+              {errors.potassium_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.potassium_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Chlorure (Cl⁻)" htmlFor="chloride">
@@ -223,9 +291,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.chloride_ppm || ''}
-                onChange={(e) => updateField('chloride_ppm', parseFloat(e.target.value))}
+                {...register('chloride_ppm', { valueAsNumber: true })}
+                invalid={!!errors.chloride_ppm}
               />
+              {errors.chloride_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.chloride_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Sulfate (SO₄²⁻)" htmlFor="sulfate">
@@ -234,9 +305,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.sulfate_ppm || ''}
-                onChange={(e) => updateField('sulfate_ppm', parseFloat(e.target.value))}
+                {...register('sulfate_ppm', { valueAsNumber: true })}
+                invalid={!!errors.sulfate_ppm}
               />
+              {errors.sulfate_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.sulfate_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Nitrate (NO₃⁻)" htmlFor="nitrate">
@@ -245,9 +319,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.nitrate_ppm || ''}
-                onChange={(e) => updateField('nitrate_ppm', parseFloat(e.target.value))}
+                {...register('nitrate_ppm', { valueAsNumber: true })}
+                invalid={!!errors.nitrate_ppm}
               />
+              {errors.nitrate_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.nitrate_ppm.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -262,9 +339,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.sar || ''}
-                onChange={(e) => updateField('sar', parseFloat(e.target.value))}
+                {...register('sar', { valueAsNumber: true })}
+                invalid={!!errors.sar}
               />
+              {errors.sar && (
+                <p className="text-red-600 text-sm mt-1">{errors.sar.message}</p>
+              )}
             </FormField>
 
             <FormField label="Dureté (ppm CaCO₃)" htmlFor="hardness">
@@ -273,16 +353,19 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="1"
                 min="0"
-                value={formData.hardness_ppm || ''}
-                onChange={(e) => updateField('hardness_ppm', parseFloat(e.target.value))}
+                {...register('hardness_ppm', { valueAsNumber: true })}
+                invalid={!!errors.hardness_ppm}
               />
+              {errors.hardness_ppm && (
+                <p className="text-red-600 text-sm mt-1">{errors.hardness_ppm.message}</p>
+              )}
             </FormField>
 
             <FormField label="Convenance irrigation" htmlFor="suitability">
               <Select
                 id="suitability"
-                value={formData.irrigation_suitability || ''}
-                onChange={(e) => updateField('irrigation_suitability', e.target.value as 'excellent' | 'good' | 'marginal' | 'poor' | 'unsuitable' | undefined)}
+                {...register('irrigation_suitability')}
+                invalid={!!errors.irrigation_suitability}
               >
                 <option value="">Sélectionner...</option>
                 <option value="excellent">Excellente</option>
@@ -291,6 +374,9 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
                 <option value="poor">Médiocre</option>
                 <option value="unsuitable">Inadéquate</option>
               </Select>
+              {errors.irrigation_suitability && (
+                <p className="text-red-600 text-sm mt-1">{errors.irrigation_suitability.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -299,12 +385,16 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
         <FormField label="Notes (optionnel)" htmlFor="notes">
           <textarea
             id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            {...register('notes')}
+            className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+              errors.notes ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
+            }`}
             rows={4}
             placeholder="Observations supplémentaires..."
           />
+          {errors.notes && (
+            <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
+          )}
         </FormField>
 
         {/* Actions */}

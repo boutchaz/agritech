@@ -7,7 +7,8 @@ import {
   MoreVertical,
   ChevronRight,
   Leaf,
-  Trash2
+  Trash2,
+  Edit
 } from 'lucide-react';
 
 interface FarmCardProps {
@@ -25,11 +26,12 @@ interface FarmCardProps {
   };
   onSelect?: () => void;
   onManage?: () => void;
+  onEditManager?: () => void;
   onViewParcels?: () => void;
   onDelete?: () => void;
 }
 
-const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewParcels, onDelete }) => {
+const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -61,6 +63,18 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onViewPar
               <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                 <Users className="w-3.5 h-3.5" />
                 {farm.manager_name || t('farmHierarchy.farm.noManager')}
+                {onEditManager && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditManager();
+                    }}
+                    className="ml-1 p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                    title={t('farmHierarchy.farm.editManager')}
+                  >
+                    <Edit className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                  </button>
+                )}
               </p>
             </div>
           </div>

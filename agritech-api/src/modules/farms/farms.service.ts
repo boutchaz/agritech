@@ -547,6 +547,82 @@ export class FarmsService {
     return newFarm;
   }
 
+  async updateFarm(userId: string, organizationId: string, farmId: string, dto: any) {
+    this.logger.log(`Updating farm ${farmId} for user ${userId} in org ${organizationId}`);
+
+    // Verify user access
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from('organization_users')
+      .select('role_id, roles!inner(name)')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+
+    // Check permissions (admin/manager)
+    const userRole = (orgUser as any).roles?.name;
+    const allowedRoles = ['system_admin', 'organization_admin', 'farm_manager'];
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      throw new ForbiddenException('Insufficient permissions to update farms');
+    }
+
+    // Verify farm exists and belongs to organization
+    const { data: existingFarm, error: farmError } = await this.supabaseAdmin
+      .from('farms')
+      .select('id, organization_id')
+      .eq('id', farmId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (farmError || !existingFarm) {
+      throw new NotFoundException('Farm not found');
+    }
+
+    // Prepare update data (only include provided fields)
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.location !== undefined) updateData.location = dto.location;
+    if (dto.size !== undefined) updateData.size = dto.size;
+    if (dto.size_unit !== undefined) updateData.size_unit = dto.size_unit;
+    if (dto.description !== undefined) updateData.description = dto.description;
+    if (dto.manager_name !== undefined) updateData.manager_name = dto.manager_name;
+    if (dto.manager_email !== undefined) updateData.manager_email = dto.manager_email;
+    if (dto.manager_phone !== undefined) updateData.manager_phone = dto.manager_phone;
+    if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
+    if (dto.status !== undefined) updateData.status = dto.status;
+    if (dto.address !== undefined) updateData.address = dto.address;
+    if (dto.city !== undefined) updateData.city = dto.city;
+    if (dto.state !== undefined) updateData.state = dto.state;
+    if (dto.postal_code !== undefined) updateData.postal_code = dto.postal_code;
+    if (dto.country !== undefined) updateData.country = dto.country;
+    if (dto.soil_type !== undefined) updateData.soil_type = dto.soil_type;
+    if (dto.climate_zone !== undefined) updateData.climate_zone = dto.climate_zone;
+    if (dto.irrigation_type !== undefined) updateData.irrigation_type = dto.irrigation_type;
+    if (dto.established_date !== undefined) updateData.established_date = dto.established_date;
+    if (dto.certification_status !== undefined) updateData.certification_status = dto.certification_status;
+    if (dto.coordinates !== undefined) updateData.coordinates = dto.coordinates;
+
+    // Update farm
+    const { data: updatedFarm, error: updateError } = await this.supabaseAdmin
+      .from('farms')
+      .update(updateData)
+      .eq('id', farmId)
+      .select()
+      .single();
+
+    if (updateError) {
+      this.logger.error('Error updating farm', updateError);
+      throw new InternalServerErrorException(`Failed to update farm: ${updateError.message}`);
+    }
+
+    this.logger.log(`Farm updated successfully: ${farmId}`);
+    return updatedFarm;
+  }
+
   private getRolePermissions(role: string | null) {
     const definition = this.farmRoleDefinitions.find((item) => item.role === role);
     return definition ? definition.permissions : {};

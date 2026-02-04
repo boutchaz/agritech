@@ -882,7 +882,7 @@ export class DashboardService {
         ] = await Promise.all([
             this.supabaseAdmin.from('tasks').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('harvest_records').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
-            this.supabaseAdmin.from('inventory').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
+            this.supabaseAdmin.from('inventory_items').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('workers').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),
             this.supabaseAdmin.from('parcels').select('*', { count: 'exact', head: true }),
             this.supabaseAdmin.from('farms').select('*', { count: 'exact', head: true }).eq('organization_id', organizationId),

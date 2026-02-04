@@ -595,9 +595,9 @@ export class ParcelsService {
         cost,
         currency,
         created_at,
-        inventory!inner (
-          name,
-          unit
+        items!inner (
+          item_name,
+          default_unit
         )
       `)
       .eq('parcel_id', parcelId)
@@ -608,11 +608,23 @@ export class ParcelsService {
       throw new InternalServerErrorException('Failed to fetch parcel applications');
     }
 
+    // Transform the response to match the expected DTO structure
+    // items (item_name, default_unit) -> inventory (name, unit)
+    const transformedApplications = (applications || []).map((app: any) => ({
+      ...app,
+      inventory: {
+        name: app.items.item_name,
+        unit: app.items.default_unit,
+      },
+      // Remove the items property as it's transformed to inventory
+      items: undefined,
+    }));
+
     return {
       success: true,
       parcel_id: parcelId,
-      applications: applications || [],
-      total: applications?.length || 0,
+      applications: transformedApplications,
+      total: transformedApplications.length,
     };
   }
 }

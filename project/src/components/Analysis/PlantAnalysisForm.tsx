@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Save, X } from 'lucide-react';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import type { PlantAnalysisData } from '../../types/analysis';
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
@@ -16,35 +20,74 @@ interface PlantAnalysisFormProps {
   selectedParcel?: Parcel | null;
 }
 
-const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
-  const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split('T')[0]);
-  const [laboratory, setLaboratory] = useState('');
-  const [notes, setNotes] = useState('');
+const plantAnalysisSchema = z.object({
+  analysisDate: z.string().min(1, 'Analysis date is required'),
+  plant_part: z.enum(['leaf', 'stem', 'root', 'fruit', 'whole_plant']),
+  growth_stage: z.string().optional(),
+  nitrogen_percentage: z.string().optional(),
+  phosphorus_percentage: z.string().optional(),
+  potassium_percentage: z.string().optional(),
+  calcium_percentage: z.string().optional(),
+  magnesium_percentage: z.string().optional(),
+  sulfur_percentage: z.string().optional(),
+  dry_matter_percentage: z.string().optional(),
+  chlorophyll_content: z.string().optional(),
+  laboratory: z.string().optional(),
+  notes: z.string().optional(),
+});
 
-  const [formData, setFormData] = useState<PlantAnalysisData>({
-    plant_part: 'leaf',
-    growth_stage: undefined,
-    nitrogen_percentage: undefined,
-    phosphorus_percentage: undefined,
-    potassium_percentage: undefined,
-    calcium_percentage: undefined,
-    magnesium_percentage: undefined,
-    sulfur_percentage: undefined,
-    dry_matter_percentage: undefined,
-    chlorophyll_content: undefined
+type PlantAnalysisFormData = z.infer<typeof plantAnalysisSchema>;
+
+const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+  const { handleFormError } = useFormErrors<PlantAnalysisFormData>();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<PlantAnalysisFormData>({
+    resolver: zodResolver(plantAnalysisSchema),
+    defaultValues: {
+      analysisDate: new Date().toISOString().split('T')[0],
+      plant_part: 'leaf',
+      growth_stage: '',
+      nitrogen_percentage: '',
+      phosphorus_percentage: '',
+      potassium_percentage: '',
+      calcium_percentage: '',
+      magnesium_percentage: '',
+      sulfur_percentage: '',
+      dry_matter_percentage: '',
+      chlorophyll_content: '',
+      laboratory: '',
+      notes: '',
+    },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanData = Object.fromEntries(
-      Object.entries(formData).filter(([_, v]) => v !== undefined && v !== '')
-    ) as PlantAnalysisData;
+  const onSubmit = async (formData: PlantAnalysisFormData) => {
+    try {
+      const parseNumber = (val: string | undefined) => val && val !== '' ? Number(val) : undefined;
 
-    onSave(cleanData, analysisDate, laboratory || undefined, notes || undefined);
-  };
+      const cleanData: PlantAnalysisData = {
+        plant_part: formData.plant_part,
+        growth_stage: formData.growth_stage?.trim() || undefined,
+        nitrogen_percentage: parseNumber(formData.nitrogen_percentage),
+        phosphorus_percentage: parseNumber(formData.phosphorus_percentage),
+        potassium_percentage: parseNumber(formData.potassium_percentage),
+        calcium_percentage: parseNumber(formData.calcium_percentage),
+        magnesium_percentage: parseNumber(formData.magnesium_percentage),
+        sulfur_percentage: parseNumber(formData.sulfur_percentage),
+        dry_matter_percentage: parseNumber(formData.dry_matter_percentage),
+        chlorophyll_content: parseNumber(formData.chlorophyll_content),
+      };
 
-  const updateField = <K extends keyof PlantAnalysisData>(field: K, value: PlantAnalysisData[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+      onSave(cleanData, formData.analysisDate, formData.laboratory?.trim() || undefined, formData.notes?.trim() || undefined);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: 'Failed to save plant analysis',
+      });
+    }
   };
 
   return (
@@ -59,7 +102,7 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {selectedParcel && (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
             <h4 className="font-medium text-green-900 dark:text-green-100 mb-2">
@@ -77,20 +120,25 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
             <Input
               id="analysisDate"
               type="date"
-              value={analysisDate}
-              onChange={(e) => setAnalysisDate(e.target.value)}
-              required
+              {...register('analysisDate')}
+              invalid={!!errors.analysisDate}
             />
+            {errors.analysisDate && (
+              <p className="text-red-600 text-sm mt-1">{errors.analysisDate.message}</p>
+            )}
           </FormField>
 
           <FormField label="Laboratoire (optionnel)" htmlFor="laboratory">
             <Input
               id="laboratory"
               type="text"
-              value={laboratory}
-              onChange={(e) => setLaboratory(e.target.value)}
+              {...register('laboratory')}
+              invalid={!!errors.laboratory}
               placeholder="Nom du laboratoire"
             />
+            {errors.laboratory && (
+              <p className="text-red-600 text-sm mt-1">{errors.laboratory.message}</p>
+            )}
           </FormField>
         </div>
 
@@ -101,9 +149,8 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
             <FormField label="Partie de la plante" htmlFor="plant_part" required>
               <Select
                 id="plant_part"
-                value={formData.plant_part}
-                onChange={(e) => updateField('plant_part', e.target.value as 'leaf' | 'stem' | 'root' | 'fruit' | 'whole_plant')}
-                required
+                {...register('plant_part')}
+                invalid={!!errors.plant_part}
               >
                 <option value="leaf">Feuille</option>
                 <option value="stem">Tige</option>
@@ -111,16 +158,22 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 <option value="fruit">Fruit</option>
                 <option value="whole_plant">Plante entière</option>
               </Select>
+              {errors.plant_part && (
+                <p className="text-red-600 text-sm mt-1">{errors.plant_part.message}</p>
+              )}
             </FormField>
 
             <FormField label="Stade de croissance" htmlFor="growth_stage">
               <Input
                 id="growth_stage"
                 type="text"
-                value={formData.growth_stage || ''}
-                onChange={(e) => updateField('growth_stage', e.target.value)}
+                {...register('growth_stage')}
+                invalid={!!errors.growth_stage}
                 placeholder="Ex: Floraison, Fructification..."
               />
+              {errors.growth_stage && (
+                <p className="text-red-600 text-sm mt-1">{errors.growth_stage.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -136,9 +189,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.nitrogen_percentage || ''}
-                onChange={(e) => updateField('nitrogen_percentage', parseFloat(e.target.value))}
+                {...register('nitrogen_percentage')}
+                invalid={!!errors.nitrogen_percentage}
               />
+              {errors.nitrogen_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.nitrogen_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Phosphore (P)" htmlFor="phosphorus">
@@ -148,9 +204,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.phosphorus_percentage || ''}
-                onChange={(e) => updateField('phosphorus_percentage', parseFloat(e.target.value))}
+                {...register('phosphorus_percentage')}
+                invalid={!!errors.phosphorus_percentage}
               />
+              {errors.phosphorus_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.phosphorus_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Potassium (K)" htmlFor="potassium">
@@ -160,9 +219,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.potassium_percentage || ''}
-                onChange={(e) => updateField('potassium_percentage', parseFloat(e.target.value))}
+                {...register('potassium_percentage')}
+                invalid={!!errors.potassium_percentage}
               />
+              {errors.potassium_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.potassium_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Calcium (Ca)" htmlFor="calcium">
@@ -172,9 +234,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.calcium_percentage || ''}
-                onChange={(e) => updateField('calcium_percentage', parseFloat(e.target.value))}
+                {...register('calcium_percentage')}
+                invalid={!!errors.calcium_percentage}
               />
+              {errors.calcium_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.calcium_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Magnésium (Mg)" htmlFor="magnesium">
@@ -184,9 +249,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.magnesium_percentage || ''}
-                onChange={(e) => updateField('magnesium_percentage', parseFloat(e.target.value))}
+                {...register('magnesium_percentage')}
+                invalid={!!errors.magnesium_percentage}
               />
+              {errors.magnesium_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.magnesium_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Soufre (S)" htmlFor="sulfur">
@@ -196,9 +264,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.01"
                 min="0"
                 max="100"
-                value={formData.sulfur_percentage || ''}
-                onChange={(e) => updateField('sulfur_percentage', parseFloat(e.target.value))}
+                {...register('sulfur_percentage')}
+                invalid={!!errors.sulfur_percentage}
               />
+              {errors.sulfur_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.sulfur_percentage.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -214,9 +285,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 step="0.1"
                 min="0"
                 max="100"
-                value={formData.dry_matter_percentage || ''}
-                onChange={(e) => updateField('dry_matter_percentage', parseFloat(e.target.value))}
+                {...register('dry_matter_percentage')}
+                invalid={!!errors.dry_matter_percentage}
               />
+              {errors.dry_matter_percentage && (
+                <p className="text-red-600 text-sm mt-1">{errors.dry_matter_percentage.message}</p>
+              )}
             </FormField>
 
             <FormField label="Chlorophylle (SPAD)" htmlFor="chlorophyll">
@@ -225,9 +299,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
                 type="number"
                 step="0.1"
                 min="0"
-                value={formData.chlorophyll_content || ''}
-                onChange={(e) => updateField('chlorophyll_content', parseFloat(e.target.value))}
+                {...register('chlorophyll_content')}
+                invalid={!!errors.chlorophyll_content}
               />
+              {errors.chlorophyll_content && (
+                <p className="text-red-600 text-sm mt-1">{errors.chlorophyll_content.message}</p>
+              )}
             </FormField>
           </div>
         </div>
@@ -236,12 +313,16 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
         <FormField label="Notes (optionnel)" htmlFor="notes">
           <textarea
             id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            {...register('notes')}
+            className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+              errors.notes ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
+            }`}
             rows={4}
             placeholder="Observations supplémentaires..."
           />
+          {errors.notes && (
+            <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
+          )}
         </FormField>
 
         {/* Actions */}
@@ -249,16 +330,18 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            disabled={isSubmitting}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
           >
             Annuler
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
           >
             <Save className="h-4 w-4" />
-            <span>Enregistrer</span>
+            <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
           </button>
         </div>
       </form>

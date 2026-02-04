@@ -14,9 +14,61 @@ export class OrdersService {
         private readonly notificationsService: NotificationsService
     ) {}
 
-    /**
-     * Create an order from the user's cart
-     */
+    private async deductMarketplaceListingStock(
+        supabase: any,
+        listingId: string,
+        quantity: number
+    ): Promise<void> {
+        const { data: listing, error: fetchError } = await supabase
+            .from('marketplace_listings')
+            .select('quantity_available')
+            .eq('id', listingId)
+            .single();
+
+        if (fetchError || !listing) {
+            throw new Error(`Listing not found: ${listingId}`);
+        }
+
+        if (listing.quantity_available < quantity) {
+            throw new Error('Insufficient stock available');
+        }
+
+        const { error: updateError } = await supabase
+            .from('marketplace_listings')
+            .update({ quantity_available: listing.quantity_available - quantity })
+            .eq('id', listingId);
+
+        if (updateError) {
+            throw new Error(`Failed to deduct stock: ${updateError.message}`);
+        }
+    }
+
+    private async restoreMarketplaceListingStock(
+        supabase: any,
+        listingId: string,
+        quantity: number
+    ): Promise<void> {
+        const { data: listing, error: fetchError } = await supabase
+            .from('marketplace_listings')
+            .select('quantity_available')
+            .eq('id', listingId)
+            .single();
+
+        if (fetchError || !listing) {
+            this.logger.error(`Failed to find listing for stock restore: ${listingId}`);
+            return;
+        }
+
+        const { error: updateError } = await supabase
+            .from('marketplace_listings')
+            .update({ quantity_available: listing.quantity_available + quantity })
+            .eq('id', listingId);
+
+        if (updateError) {
+            this.logger.error(`Failed to restore stock: ${updateError.message}`);
+        }
+    }
+
     async createOrder(token: string, dto: CreateOrderDto) {
         const supabase = this.databaseService.getClientWithAuth(token);
 
@@ -121,18 +173,12 @@ export class OrdersService {
 
                 try {
                     if (orderItem.product_type === 'listing' && orderItem.listing_id) {
-                        // Deduct from marketplace_listings.quantity_available
-                        const { error: stockError } = await supabase.rpc('deduct_marketplace_listing_stock', {
-                            p_listing_id: orderItem.listing_id,
-                            p_quantity: orderItem.quantity,
-                        });
+                        await this.deductMarketplaceListingStock(
+                            supabase,
+                            orderItem.listing_id,
+                            orderItem.quantity
+                        );
 
-                        if (stockError) {
-                            this.logger.error(`Failed to deduct listing stock: ${stockError.message}`);
-                            throw new Error(`Insufficient stock for ${orderItem.title}`);
-                        }
-
-                        // Mark as deducted
                         await supabase
                             .from('marketplace_order_items')
                             .update({ stock_deducted: true })
@@ -563,21 +609,16 @@ export class OrdersService {
                 try {
                     if (orderItem.stock_deducted) {
                         if (orderItem.product_type === 'listing' && orderItem.listing_id) {
-                            // Restore marketplace listing stock
-                            const { error: restoreError } = await supabase.rpc('restore_marketplace_listing_stock', {
-                                p_listing_id: orderItem.listing_id,
-                                p_quantity: orderItem.quantity,
-                            });
+                            await this.restoreMarketplaceListingStock(
+                                supabase,
+                                orderItem.listing_id,
+                                orderItem.quantity
+                            );
 
-                            if (restoreError) {
-                                this.logger.error(`Failed to restore listing stock: ${restoreError.message}`);
-                            } else {
-                                // Mark as not deducted
-                                await supabase
-                                    .from('marketplace_order_items')
-                                    .update({ stock_deducted: false })
-                                    .eq('id', orderItem.id);
-                            }
+                            await supabase
+                                .from('marketplace_order_items')
+                                .update({ stock_deducted: false })
+                                .eq('id', orderItem.id);
 
                         } else if (orderItem.product_type === 'item' && orderItem.item_id && orderItem.stock_movement_id) {
                             // For inventory items, create a reverse stock movement (IN)

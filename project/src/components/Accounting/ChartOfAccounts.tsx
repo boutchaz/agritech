@@ -1,5 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter, Database as DatabaseIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,23 +38,26 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useAuth } from '@/hooks/useAuth';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import type { Database } from '@/types/database.types';
 
 type Account = Database['public']['Tables']['accounts']['Row'];
 type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
 
-interface AccountFormData {
-  code: string;
-  name: string;
-  account_type: AccountType;
-  account_subtype?: string;
-  parent_id?: string | null;
-  is_group: boolean;
-  is_active: boolean;
-  currency_code: string;
-  allow_cost_center: boolean;
-  description?: string;
-}
+const accountFormSchema = z.object({
+  code: z.string().min(1, 'Code is required'),
+  name: z.string().min(1, 'Name is required'),
+  account_type: z.enum(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']),
+  account_subtype: z.string().optional(),
+  parent_id: z.string().nullable().optional(),
+  is_group: z.boolean(),
+  is_active: z.boolean(),
+  currency_code: z.string(),
+  allow_cost_center: z.boolean(),
+  description: z.string().optional(),
+});
+
+type AccountFormData = z.infer<typeof accountFormSchema>;
 
 const getInitialFormData = (orgCurrency: string = 'MAD'): AccountFormData => ({
   code: '',
@@ -87,6 +93,7 @@ export const ChartOfAccounts: React.FC = () => {
   const { currentOrganization, user } = useAuth();
   const { data: accounts = [], isLoading, createAccount, updateAccount, deleteAccount } = useAccounts();
   const queryClient = useQueryClient();
+  const { handleFormError } = useFormErrors<AccountFormData>();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<AccountType | 'all'>('all');
@@ -97,9 +104,36 @@ export const ChartOfAccounts: React.FC = () => {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [formData, setFormData] = useState<AccountFormData>(
-    getInitialFormData(currentOrganization?.currency || 'MAD')
-  );
+
+  const {
+    register,
+    handleSubmit: handleFormSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<AccountFormData>({
+    resolver: zodResolver(accountFormSchema),
+    defaultValues: getInitialFormData(currentOrganization?.currency || 'MAD'),
+  });
+
+  useEffect(() => {
+    if (editingAccount) {
+      reset({
+        code: editingAccount.code,
+        name: editingAccount.name,
+        account_type: editingAccount.account_type as AccountType,
+        account_subtype: editingAccount.account_subtype || '',
+        parent_id: editingAccount.parent_id,
+        is_group: editingAccount.is_group ?? false,
+        is_active: editingAccount.is_active ?? true,
+        currency_code: currentOrganization?.currency || editingAccount.currency_code || 'MAD',
+        allow_cost_center: editingAccount.allow_cost_center ?? true,
+        description: editingAccount.description || '',
+      });
+    } else {
+      reset(getInitialFormData(currentOrganization?.currency || 'MAD'));
+    }
+  }, [editingAccount, reset, currentOrganization]);
 
   // Build account hierarchy
   const accountHierarchy = useMemo(() => {
@@ -144,24 +178,11 @@ export const ChartOfAccounts: React.FC = () => {
 
   const handleCreateAccount = () => {
     setEditingAccount(null);
-    setFormData(getInitialFormData(currentOrganization?.currency || 'MAD'));
     setIsDialogOpen(true);
   };
 
   const handleEditAccount = (account: Account) => {
     setEditingAccount(account);
-    setFormData({
-      code: account.code,
-      name: account.name,
-      account_type: account.account_type as AccountType,
-      account_subtype: account.account_subtype || '',
-      parent_id: account.parent_id,
-      is_group: account.is_group ?? false,
-      is_active: account.is_active ?? true,
-      currency_code: currentOrganization?.currency || account.currency_code || 'MAD',
-      allow_cost_center: account.allow_cost_center ?? true,
-      description: account.description || '',
-    });
     setIsDialogOpen(true);
   };
 
@@ -170,8 +191,7 @@ export const ChartOfAccounts: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (formData: AccountFormData) => {
     if (!currentOrganization || !user) return;
 
     try {
@@ -180,14 +200,17 @@ export const ChartOfAccounts: React.FC = () => {
           id: editingAccount.id,
           ...formData,
         });
+        toast.success(t('accountingModule.accounts.updated'));
       } else {
         await createAccount.mutateAsync(formData);
+        toast.success(t('accountingModule.accounts.created'));
       }
       setIsDialogOpen(false);
-      setFormData(getInitialFormData(currentOrganization?.currency || 'MAD'));
       setEditingAccount(null);
-    } catch (error) {
-      console.error('Failed to save account:', error);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: t(`accountingModule.accounts.${editingAccount ? 'updateFailed' : 'createFailed'}`),
+      });
     }
   };
 
@@ -583,176 +606,181 @@ export const ChartOfAccounts: React.FC = () => {
                 : t('accountingModule.accounts.form.createDescription')}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="code">{t('accountingModule.accounts.form.code')}</Label>
-                <Input
-                  id="code"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder={t('accountingModule.accounts.form.codePlaceholder')}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="name">{t('accountingModule.accounts.form.name')}</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder={t('accountingModule.accounts.form.namePlaceholder')}
-                  required
-                />
-              </div>
-            </div>
+           <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4 pt-2">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div>
+                 <Label htmlFor="code">{t('accountingModule.accounts.form.code')}</Label>
+                 <Input
+                   id="code"
+                   {...register('code')}
+                   invalid={!!errors.code}
+                   placeholder={t('accountingModule.accounts.form.codePlaceholder')}
+                 />
+                 {errors.code && (
+                   <p className="text-red-600 text-sm mt-1">{errors.code.message}</p>
+                 )}
+               </div>
+               <div>
+                 <Label htmlFor="name">{t('accountingModule.accounts.form.name')}</Label>
+                 <Input
+                   id="name"
+                   {...register('name')}
+                   invalid={!!errors.name}
+                   placeholder={t('accountingModule.accounts.form.namePlaceholder')}
+                 />
+                 {errors.name && (
+                   <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+                 )}
+               </div>
+             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="account_type">{t('accountingModule.accounts.form.type')}</Label>
-                <Select
-                  value={formData.account_type}
-                  onValueChange={(val) => setFormData({ ...formData, account_type: val as AccountType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Asset">{t('accountingModule.accounts.accountTypes.Asset')}</SelectItem>
-                    <SelectItem value="Liability">{t('accountingModule.accounts.accountTypes.Liability')}</SelectItem>
-                    <SelectItem value="Equity">{t('accountingModule.accounts.accountTypes.Equity')}</SelectItem>
-                    <SelectItem value="Revenue">{t('accountingModule.accounts.accountTypes.Revenue')}</SelectItem>
-                    <SelectItem value="Expense">{t('accountingModule.accounts.accountTypes.Expense')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="account_subtype">{t('accountingModule.accounts.form.subtype')}</Label>
-                <Input
-                  id="account_subtype"
-                  value={formData.account_subtype}
-                  onChange={(e) => setFormData({ ...formData, account_subtype: e.target.value })}
-                  placeholder={t('accountingModule.accounts.form.subtypePlaceholder')}
-                />
-              </div>
-            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div>
+                 <Label htmlFor="account_type">{t('accountingModule.accounts.form.type')}</Label>
+                 <Select
+                   {...register('account_type')}
+                   defaultValue="Asset"
+                 >
+                   <SelectTrigger>
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="Asset">{t('accountingModule.accounts.accountTypes.Asset')}</SelectItem>
+                     <SelectItem value="Liability">{t('accountingModule.accounts.accountTypes.Liability')}</SelectItem>
+                     <SelectItem value="Equity">{t('accountingModule.accounts.accountTypes.Equity')}</SelectItem>
+                     <SelectItem value="Revenue">{t('accountingModule.accounts.accountTypes.Revenue')}</SelectItem>
+                     <SelectItem value="Expense">{t('accountingModule.accounts.accountTypes.Expense')}</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 {errors.account_type && (
+                   <p className="text-red-600 text-sm mt-1">{errors.account_type.message}</p>
+                 )}
+               </div>
+               <div>
+                 <Label htmlFor="account_subtype">{t('accountingModule.accounts.form.subtype')}</Label>
+                 <Input
+                   id="account_subtype"
+                   {...register('account_subtype')}
+                   invalid={!!errors.account_subtype}
+                   placeholder={t('accountingModule.accounts.form.subtypePlaceholder')}
+                 />
+                 {errors.account_subtype && (
+                   <p className="text-red-600 text-sm mt-1">{errors.account_subtype.message}</p>
+                 )}
+               </div>
+             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="parent_id">{t('accountingModule.accounts.form.parent')}</Label>
-                <Select
-                  value={formData.parent_id || 'none'}
-                  onValueChange={(val) =>
-                    setFormData({ ...formData, parent_id: val === 'none' ? null : val })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('accountingModule.accounts.parentAccount')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('accountingModule.accounts.parentAccount')}</SelectItem>
-                    {accounts
-                      .filter((acc) => acc.is_group && acc.id !== editingAccount?.id)
-                      .map((acc) => (
-                        <SelectItem key={acc.id} value={acc.id}>
-                          {acc.code} - {acc.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="currency_code">{t('accountingModule.accounts.form.currency')}</Label>
-                <Select
-                  value={formData.currency_code}
-                  onValueChange={(val) => setFormData({ ...formData, currency_code: val })}
-                  disabled={true}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MAD">MAD - Moroccan Dirham</SelectItem>
-                    <SelectItem value="USD">USD - US Dollar</SelectItem>
-                    <SelectItem value="EUR">EUR - Euro</SelectItem>
-                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t('accountingModule.accounts.form.currencyHelp')}
-                </p>
-              </div>
-            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div>
+                 <Label htmlFor="parent_id">{t('accountingModule.accounts.form.parent')}</Label>
+                 <Select
+                   {...register('parent_id')}
+                   defaultValue="none"
+                 >
+                   <SelectTrigger>
+                     <SelectValue placeholder={t('accountingModule.accounts.parentAccount')} />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="none">{t('accountingModule.accounts.parentAccount')}</SelectItem>
+                     {accounts
+                       .filter((acc) => acc.is_group && acc.id !== editingAccount?.id)
+                       .map((acc) => (
+                         <SelectItem key={acc.id} value={acc.id}>
+                           {acc.code} - {acc.name}
+                         </SelectItem>
+                       ))}
+                   </SelectContent>
+                 </Select>
+                 {errors.parent_id && (
+                   <p className="text-red-600 text-sm mt-1">{errors.parent_id.message}</p>
+                 )}
+               </div>
+               <div>
+                 <Label htmlFor="currency_code">{t('accountingModule.accounts.form.currency')}</Label>
+                 <Select
+                   {...register('currency_code')}
+                   disabled={true}
+                 >
+                   <SelectTrigger>
+                     <SelectValue />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="MAD">MAD - Moroccan Dirham</SelectItem>
+                     <SelectItem value="USD">USD - US Dollar</SelectItem>
+                     <SelectItem value="EUR">EUR - Euro</SelectItem>
+                     <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <p className="text-xs text-gray-500 mt-1">
+                   {t('accountingModule.accounts.form.currencyHelp')}
+                 </p>
+               </div>
+             </div>
 
-            <div>
-              <Label htmlFor="description">{t('accountingModule.accounts.form.description')}</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder={t('accountingModule.accounts.descriptionPlaceholder')}
-              />
-            </div>
+             <div>
+               <Label htmlFor="description">{t('accountingModule.accounts.form.description')}</Label>
+               <Input
+                 id="description"
+                 {...register('description')}
+                 invalid={!!errors.description}
+                 placeholder={t('accountingModule.accounts.descriptionPlaceholder')}
+               />
+               {errors.description && (
+                 <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+               )}
+             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="is_group"
-                  checked={formData.is_group}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_group: checked as boolean })
-                  }
-                  className="mt-0.5"
-                />
-                <Label htmlFor="is_group" className="cursor-pointer text-sm leading-relaxed">
-                  {t('accountingModule.accounts.form.isGroup')}
-                </Label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, is_active: checked as boolean })
-                  }
-                  className="mt-0.5"
-                />
-                <Label htmlFor="is_active" className="cursor-pointer text-sm leading-relaxed">
-                  {t('accountingModule.accounts.form.isActive')}
-                </Label>
-              </div>
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  id="allow_cost_center"
-                  checked={formData.allow_cost_center}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, allow_cost_center: checked as boolean })
-                  }
-                  className="mt-0.5"
-                />
-                <Label htmlFor="allow_cost_center" className="cursor-pointer text-sm leading-relaxed">
-                  {t('accountingModule.accounts.form.allowCostCenter')}
-                </Label>
-              </div>
-            </div>
+             <div className="grid grid-cols-1 gap-3">
+               <div className="flex items-start gap-2">
+                 <Checkbox
+                   id="is_group"
+                   {...register('is_group')}
+                   className="mt-0.5"
+                 />
+                 <Label htmlFor="is_group" className="cursor-pointer text-sm leading-relaxed">
+                   {t('accountingModule.accounts.form.isGroup')}
+                 </Label>
+               </div>
+               <div className="flex items-start gap-2">
+                 <Checkbox
+                   id="is_active"
+                   {...register('is_active')}
+                   className="mt-0.5"
+                 />
+                 <Label htmlFor="is_active" className="cursor-pointer text-sm leading-relaxed">
+                   {t('accountingModule.accounts.form.isActive')}
+                 </Label>
+               </div>
+               <div className="flex items-start gap-2">
+                 <Checkbox
+                   id="allow_cost_center"
+                   {...register('allow_cost_center')}
+                   className="mt-0.5"
+                 />
+                 <Label htmlFor="allow_cost_center" className="cursor-pointer text-sm leading-relaxed">
+                   {t('accountingModule.accounts.form.allowCostCenter')}
+                 </Label>
+               </div>
+             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDialogOpen(false)}
-                className="w-full sm:w-auto order-2 sm:order-1"
-              >
-                {t('accountingModule.accounts.form.cancel')}
-              </Button>
-              <Button
-                type="submit"
-                disabled={createAccount.isPending || updateAccount.isPending}
-                className="w-full sm:w-auto order-1 sm:order-2"
-              >
-                {editingAccount ? t('accountingModule.accounts.form.update') : t('accountingModule.accounts.form.create')}
-              </Button>
-            </DialogFooter>
+             <DialogFooter className="flex-col sm:flex-row gap-2">
+               <Button
+                 type="button"
+                 variant="outline"
+                 onClick={() => setIsDialogOpen(false)}
+                 disabled={isSubmitting}
+                 className="w-full sm:w-auto order-2 sm:order-1"
+               >
+                 {t('accountingModule.accounts.form.cancel')}
+               </Button>
+               <Button
+                 type="submit"
+                 disabled={isSubmitting}
+                 className="w-full sm:w-auto order-1 sm:order-2"
+               >
+                 {editingAccount ? t('accountingModule.accounts.form.update') : t('accountingModule.accounts.form.create')}
+               </Button>
+             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

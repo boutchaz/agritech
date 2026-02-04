@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, MapPin, User, Trash2, Eye, Map } from 'lucide-react';
+import { Building2, MapPin, User, Trash2, Eye, Map, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface FarmListItemProps {
@@ -18,6 +18,7 @@ interface FarmListItemProps {
   onSelect?: () => void;
   onToggleSelection?: () => void;
   onManage?: () => void;
+  onEditManager?: () => void;
   onViewParcels?: () => void;
   onDelete?: () => void;
 }
@@ -28,6 +29,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
   onSelect,
   onToggleSelection,
   onManage: _onManage,
+  onEditManager,
   onViewParcels,
   onDelete,
 }) => {
@@ -90,8 +92,20 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-gray-400" />
             <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-              {farm.manager_name}
+              {farm.manager_name || t('farmHierarchy.farm.noManager')}
             </span>
+            {onEditManager && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditManager();
+                }}
+                className="p-0.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                title={t('farmHierarchy.farm.editManager')}
+              >
+                <Edit className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+              </button>
+            )}
           </div>
 
           {/* Size */}

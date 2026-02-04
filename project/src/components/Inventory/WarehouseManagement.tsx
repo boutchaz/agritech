@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useWarehouses, type Warehouse } from '@/hooks/useWarehouses';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
 import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { FormField } from '@/components/ui/FormField';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,24 +36,25 @@ import {
 } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Loader2, AlertCircle, Warehouse as WarehouseIcon } from 'lucide-react';
 
-interface WarehouseFormData {
-  organization_id: string;
-  farm_id: string | null;
-  name: string;
-  description: string;
-  location: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  capacity: number | undefined;
-  capacity_unit: string;
-  temperature_controlled: boolean;
-  humidity_controlled: boolean;
-  security_level: string;
-  manager_name: string;
-  manager_phone: string;
-  is_active: boolean;
-}
+const warehouseSchema = z.object({
+  farm_id: z.string().optional().nullable(),
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  postal_code: z.string().optional(),
+  capacity: z.number().positive().optional(),
+  capacity_unit: z.string().optional(),
+  temperature_controlled: z.boolean().optional(),
+  humidity_controlled: z.boolean().optional(),
+  security_level: z.string().optional(),
+  manager_name: z.string().optional(),
+  manager_phone: z.string().optional(),
+  is_active: z.boolean().optional(),
+});
+
+type WarehouseFormData = z.infer<typeof warehouseSchema>;
 
 interface WarehouseFormProps {
   warehouse: Warehouse | null;
@@ -62,32 +67,40 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
+  const { handleFormError } = useFormErrors<WarehouseFormData>();
 
-  const [formData, setFormData] = useState<WarehouseFormData>({
-    organization_id: currentOrganization?.id || '',
-    farm_id: null,
-    name: '',
-    description: '',
-    location: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    capacity: undefined,
-    capacity_unit: 'm3',
-    temperature_controlled: false,
-    humidity_controlled: false,
-    security_level: 'standard',
-    manager_name: '',
-    manager_phone: '',
-    is_active: true,
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<WarehouseFormData>({
+    resolver: zodResolver(warehouseSchema),
+    defaultValues: {
+      farm_id: null,
+      name: '',
+      description: '',
+      location: '',
+      address: '',
+      city: '',
+      postal_code: '',
+      capacity: undefined,
+      capacity_unit: 'm3',
+      temperature_controlled: false,
+      humidity_controlled: false,
+      security_level: 'standard',
+      manager_name: '',
+      manager_phone: '',
+      is_active: true,
+    },
   });
 
   useEffect(() => {
     if (warehouse) {
-      setFormData({
-        organization_id: warehouse.organization_id,
-        farm_id: warehouse.farm_id,
-        name: warehouse.name,
+      reset({
+        farm_id: warehouse.farm_id || null,
+        name: warehouse.name || '',
         description: warehouse.description || '',
         location: warehouse.location || '',
         address: warehouse.address || '',
@@ -103,8 +116,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         is_active: warehouse.is_active ?? true,
       });
     } else {
-      setFormData({
-        organization_id: currentOrganization?.id || '',
+      reset({
         farm_id: null,
         name: '',
         description: '',
@@ -122,68 +134,62 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         is_active: true,
       });
     }
-  }, [warehouse, currentOrganization?.id]);
+  }, [warehouse, reset]);
 
-  const createMutation = useMutation({
-    mutationFn: async (data: WarehouseFormData) => {
-      const createInput: CreateWarehouseInput = {
-        name: data.name,
-        description: data.description || undefined,
-        location: data.location || undefined,
-        address: data.address || undefined,
-        city: data.city || undefined,
-        postal_code: data.postal_code || undefined,
-        capacity: data.capacity,
-        capacity_unit: data.capacity_unit || undefined,
-        temperature_controlled: data.temperature_controlled,
-        humidity_controlled: data.humidity_controlled,
-        security_level: data.security_level || undefined,
-        manager_name: data.manager_name || undefined,
-        manager_phone: data.manager_phone || undefined,
-        farm_id: data.farm_id || undefined,
-        is_active: data.is_active,
+  const onSubmit = async (formData: WarehouseFormData) => {
+    if (!currentOrganization) {
+      toast.error(t('warehouses.noOrganization'));
+      return;
+    }
+
+    try {
+      const cleanedData = {
+        ...formData,
+        description: formData.description?.trim() || undefined,
+        location: formData.location?.trim() || undefined,
+        address: formData.address?.trim() || undefined,
+        city: formData.city?.trim() || undefined,
+        postal_code: formData.postal_code?.trim() || undefined,
+        capacity_unit: formData.capacity_unit?.trim() || undefined,
+        security_level: formData.security_level?.trim() || undefined,
+        manager_name: formData.manager_name?.trim() || undefined,
+        manager_phone: formData.manager_phone?.trim() || undefined,
+        farm_id: formData.farm_id || undefined,
       };
-      return warehousesApi.create(createInput, currentOrganization?.id);
-    },
-    onSuccess: () => {
+
+      if (warehouse) {
+        await warehousesApi.update(warehouse.id, cleanedData, currentOrganization.id);
+        toast.success(t('warehouses.warehouseUpdated'));
+      } else {
+        const createInput: CreateWarehouseInput = {
+          name: cleanedData.name,
+          description: cleanedData.description,
+          location: cleanedData.location,
+          address: cleanedData.address,
+          city: cleanedData.city,
+          postal_code: cleanedData.postal_code,
+          capacity: cleanedData.capacity,
+          capacity_unit: cleanedData.capacity_unit,
+          temperature_controlled: cleanedData.temperature_controlled ?? false,
+          humidity_controlled: cleanedData.humidity_controlled ?? false,
+          security_level: cleanedData.security_level,
+          manager_name: cleanedData.manager_name,
+          manager_phone: cleanedData.manager_phone,
+          farm_id: cleanedData.farm_id,
+          is_active: cleanedData.is_active ?? true,
+        };
+        await warehousesApi.create(createInput, currentOrganization.id);
+        toast.success(t('warehouses.warehouseCreated'));
+      }
+
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
-      toast.success(t('warehouses.warehouseCreated'));
       onOpenChange(false);
-    },
-    onError: (error: Error) => {
-      toast.error(`${t('warehouses.createError')}: ${error.message}`);
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<WarehouseFormData> }) => {
-      return warehousesApi.update(id, data, currentOrganization?.id);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['warehouses'] });
-      toast.success(t('warehouses.warehouseUpdated'));
-      onOpenChange(false);
-    },
-    onError: (error: Error) => {
-      toast.error(`${t('warehouses.updateError')}: ${error.message}`);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (warehouse) {
-      updateMutation.mutate({ id: warehouse.id, data: formData });
-    } else {
-      createMutation.mutate(formData);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: t(`warehouses.${warehouse ? 'update' : 'create'}Error`),
+      });
     }
   };
-
-  const updateField = <K extends keyof WarehouseFormData>(field: K, value: WarehouseFormData[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,25 +198,31 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
           <DialogTitle>
             {warehouse ? t('warehouses.editWarehouse') : t('warehouses.createWarehouse')}
           </DialogTitle>
+          <DialogDescription>
+            {warehouse ? t('warehouses.editDescription') : t('warehouses.createDescription')}
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <FormField label={t('warehouses.form.name')} htmlFor="name" required>
+            <div className="col-span-2">
+              <Label htmlFor="name">{t('warehouses.form.name')} *</Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => updateField('name', e.target.value)}
+                {...register('name')}
+                invalid={!!errors.name}
                 placeholder={t('warehouses.form.namePlaceholder')}
-                required
               />
-            </FormField>
+              {errors.name && (
+                <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+              )}
+            </div>
 
-            <FormField label={t('warehouses.form.farm')} htmlFor="farm_id">
+            <div>
+              <Label htmlFor="farm_id">{t('warehouses.form.farm')}</Label>
               <Select
                 id="farm_id"
-                value={formData.farm_id || ''}
-                onChange={(e) => updateField('farm_id', e.target.value || null)}
+                {...register('farm_id')}
               >
                 <option value="">{t('warehouses.form.noFarm')}</option>
                 {farms.map((farm) => (
@@ -219,125 +231,162 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
                   </option>
                 ))}
               </Select>
-            </FormField>
-          </div>
+              {errors.farm_id && (
+                <p className="text-red-600 text-sm mt-1">{errors.farm_id.message}</p>
+              )}
+            </div>
 
-          <FormField label={t('warehouses.form.description')} htmlFor="description">
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => updateField('description', e.target.value)}
-              placeholder={t('warehouses.form.descriptionPlaceholder')}
-              rows={3}
-            />
-          </FormField>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label={t('warehouses.form.location')} htmlFor="location">
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => updateField('location', e.target.value)}
-                placeholder={t('warehouses.form.locationPlaceholder')}
-              />
-            </FormField>
-
-            <FormField label={t('warehouses.form.address')} htmlFor="address">
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => updateField('address', e.target.value)}
-                placeholder={t('warehouses.form.addressPlaceholder')}
-              />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <FormField label={t('warehouses.form.city')} htmlFor="city">
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => updateField('city', e.target.value)}
-                placeholder={t('warehouses.form.cityPlaceholder')}
-              />
-            </FormField>
-
-            <FormField label={t('warehouses.form.postalCode')} htmlFor="postal_code">
-              <Input
-                id="postal_code"
-                value={formData.postal_code}
-                onChange={(e) => updateField('postal_code', e.target.value)}
-                placeholder={t('warehouses.form.postalCodePlaceholder')}
-              />
-            </FormField>
-
-            <FormField label={t('warehouses.form.securityLevel')} htmlFor="security_level">
+            <div>
+              <Label htmlFor="security_level">{t('warehouses.form.securityLevel')}</Label>
               <Select
                 id="security_level"
-                value={formData.security_level}
-                onChange={(e) => updateField('security_level', e.target.value)}
+                {...register('security_level')}
               >
                 <option value="basic">{t('warehouses.form.securityLevels.basic')}</option>
                 <option value="standard">{t('warehouses.form.securityLevels.standard')}</option>
                 <option value="high">{t('warehouses.form.securityLevels.high')}</option>
                 <option value="maximum">{t('warehouses.form.securityLevels.maximum')}</option>
               </Select>
-            </FormField>
+              {errors.security_level && (
+                <p className="text-red-600 text-sm mt-1">{errors.security_level.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="description">{t('warehouses.form.description')}</Label>
+            <Textarea
+              id="description"
+              {...register('description')}
+              placeholder={t('warehouses.form.descriptionPlaceholder')}
+              rows={3}
+            />
+            {errors.description && (
+              <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField label={t('warehouses.form.capacity')} htmlFor="capacity">
+            <div>
+              <Label htmlFor="location">{t('warehouses.form.location')}</Label>
               <Input
-                id="capacity"
-                type="number"
-                value={formData.capacity || ''}
-                onChange={(e) => updateField('capacity', e.target.value ? Number(e.target.value) : undefined)}
-                placeholder={t('warehouses.form.capacityPlaceholder')}
-                step="0.01"
+                id="location"
+                {...register('location')}
+                invalid={!!errors.location}
+                placeholder={t('warehouses.form.locationPlaceholder')}
               />
-            </FormField>
+              {errors.location && (
+                <p className="text-red-600 text-sm mt-1">{errors.location.message}</p>
+              )}
+            </div>
 
-            <FormField label={t('warehouses.form.capacityUnit')} htmlFor="capacity_unit">
+            <div>
+              <Label htmlFor="address">{t('warehouses.form.address')}</Label>
+              <Input
+                id="address"
+                {...register('address')}
+                invalid={!!errors.address}
+                placeholder={t('warehouses.form.addressPlaceholder')}
+              />
+              {errors.address && (
+                <p className="text-red-600 text-sm mt-1">{errors.address.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="city">{t('warehouses.form.city')}</Label>
+              <Input
+                id="city"
+                {...register('city')}
+                invalid={!!errors.city}
+                placeholder={t('warehouses.form.cityPlaceholder')}
+              />
+              {errors.city && (
+                <p className="text-red-600 text-sm mt-1">{errors.city.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="postal_code">{t('warehouses.form.postalCode')}</Label>
+              <Input
+                id="postal_code"
+                {...register('postal_code')}
+                invalid={!!errors.postal_code}
+                placeholder={t('warehouses.form.postalCodePlaceholder')}
+              />
+              {errors.postal_code && (
+                <p className="text-red-600 text-sm mt-1">{errors.postal_code.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="capacity_unit">{t('warehouses.form.capacityUnit')}</Label>
               <Select
                 id="capacity_unit"
-                value={formData.capacity_unit}
-                onChange={(e) => updateField('capacity_unit', e.target.value)}
+                {...register('capacity_unit')}
               >
                 <option value="m3">{t('warehouses.form.units.m3')}</option>
                 <option value="kg">{t('warehouses.form.units.kg')}</option>
                 <option value="ton">{t('warehouses.form.units.ton')}</option>
                 <option value="pallets">{t('warehouses.form.units.pallets')}</option>
               </Select>
-            </FormField>
+              {errors.capacity_unit && (
+                <p className="text-red-600 text-sm mt-1">{errors.capacity_unit.message}</p>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <FormField label={t('warehouses.form.managerName')} htmlFor="manager_name">
+            <div>
+              <Label htmlFor="capacity">{t('warehouses.form.capacity')}</Label>
+              <Input
+                id="capacity"
+                type="number"
+                {...register('capacity', { valueAsNumber: true })}
+                invalid={!!errors.capacity}
+                placeholder={t('warehouses.form.capacityPlaceholder')}
+                step="0.01"
+              />
+              {errors.capacity && (
+                <p className="text-red-600 text-sm mt-1">{errors.capacity.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="manager_name">{t('warehouses.form.managerName')}</Label>
               <Input
                 id="manager_name"
-                value={formData.manager_name}
-                onChange={(e) => updateField('manager_name', e.target.value)}
+                {...register('manager_name')}
+                invalid={!!errors.manager_name}
                 placeholder={t('warehouses.form.managerNamePlaceholder')}
               />
-            </FormField>
+              {errors.manager_name && (
+                <p className="text-red-600 text-sm mt-1">{errors.manager_name.message}</p>
+              )}
+            </div>
+          </div>
 
-            <FormField label={t('warehouses.form.managerPhone')} htmlFor="manager_phone">
-              <Input
-                id="manager_phone"
-                type="tel"
-                value={formData.manager_phone}
-                onChange={(e) => updateField('manager_phone', e.target.value)}
-                placeholder={t('warehouses.form.managerPhonePlaceholder')}
-              />
-            </FormField>
+          <div>
+            <Label htmlFor="manager_phone">{t('warehouses.form.managerPhone')}</Label>
+            <Input
+              id="manager_phone"
+              type="tel"
+              {...register('manager_phone')}
+              invalid={!!errors.manager_phone}
+              placeholder={t('warehouses.form.managerPhonePlaceholder')}
+            />
+            {errors.manager_phone && (
+              <p className="text-red-600 text-sm mt-1">{errors.manager_phone.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.temperature_controlled}
-                onChange={(e) => updateField('temperature_controlled', e.target.checked)}
+                {...register('temperature_controlled')}
                 className="rounded"
               />
               <span>{t('warehouses.form.temperatureControlled')}</span>
@@ -346,8 +395,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.humidity_controlled}
-                onChange={(e) => updateField('humidity_controlled', e.target.checked)}
+                {...register('humidity_controlled')}
                 className="rounded"
               />
               <span>{t('warehouses.form.humidityControlled')}</span>
@@ -356,20 +404,24 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.is_active}
-                onChange={(e) => updateField('is_active', e.target.checked)}
+                {...register('is_active')}
                 className="rounded"
               />
               <span>{t('warehouses.form.isActive')}</span>
             </label>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               {t('app.cancel')}
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   {warehouse ? t('warehouses.updating') : t('warehouses.creating')}
@@ -378,7 +430,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
                 warehouse ? t('warehouses.update') : t('warehouses.create')
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

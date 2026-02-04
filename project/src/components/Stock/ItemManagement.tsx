@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -62,12 +63,34 @@ import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, UpdateItemInput, ProductVariant } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+
+// Zod schema for item form validation
+const itemFormSchema = z.object({
+  item_code: z.string().min(1, 'Item code is required'),
+  item_name: z.string().min(1, 'Item name is required'),
+  description: z.string().optional(),
+  item_group_id: z.string().min(1, 'Item group is required'),
+  default_unit: z.string().min(1, 'Default unit is required'),
+  stock_uom: z.string().optional(),
+  standard_rate: z.number().min(0, 'Standard rate must be non-negative').optional(),
+  minimum_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
+  is_active: z.boolean().optional(),
+  is_sales_item: z.boolean().optional(),
+  is_purchase_item: z.boolean().optional(),
+  is_stock_item: z.boolean().optional(),
+  images: z.array(z.any()).optional(),
+  website_description: z.string().optional(),
+  marketplace_category_slug: z.string().optional(),
+  show_in_website: z.boolean().optional(),
+});
+
+type ItemFormData = z.infer<typeof itemFormSchema>;
 
 // Zod schema for product variant form validation
 const productVariantSchema = z.object({
@@ -209,7 +232,38 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups({ is_active: true });
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
+  const { handleFormError } = useFormErrors<ItemFormData>();
   const [showGroupForm, setShowGroupForm] = useState(false);
+
+  const {
+    register,
+    handleSubmit: handleFormSubmit,
+    reset,
+    setError,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<ItemFormData>({
+    resolver: zodResolver(itemFormSchema),
+    defaultValues: {
+      item_code: '',
+      item_name: '',
+      description: '',
+      item_group_id: '',
+      default_unit: '',
+      stock_uom: '',
+      standard_rate: undefined,
+      minimum_stock_level: undefined,
+      is_active: true,
+      is_sales_item: true,
+      is_purchase_item: true,
+      is_stock_item: true,
+      images: [],
+      website_description: '',
+      marketplace_category_slug: '',
+      show_in_website: false,
+    },
+  });
 
   // Fetch work units - Note: This is reference data, keeping direct Supabase call for now
   // TODO: Migrate to NestJS API when work_units endpoint is available
@@ -285,35 +339,11 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     enabled: !!item?.id && !!currentOrganization?.id && !!item?.is_stock_item,
   });
 
-  const [formData, setFormData] = useState<CreateItemInput | UpdateItemInput>({
-    organization_id: currentOrganization?.id || '',
-    item_code: item?.item_code || '',
-    item_name: item?.item_name || '',
-    description: item?.description || '',
-    item_group_id: item?.item_group_id || itemGroups[0]?.id || '',
-    default_unit: item?.default_unit || '',
-    stock_uom: item?.stock_uom || item?.default_unit || '',
-    is_active: item?.is_active ?? true,
-    is_sales_item: item?.is_sales_item ?? true,
-    is_purchase_item: item?.is_purchase_item ?? true,
-    is_stock_item: item?.is_stock_item ?? true,
-    minimum_stock_level: item?.minimum_stock_level || undefined,
-    // Marketplace fields
-    images: item?.images || [],
-    website_description: item?.website_description || '',
-    marketplace_category_slug: item?.marketplace_category_slug || '',
-    show_in_website: item?.show_in_website ?? false,
-  });
-
-  // Get first item group ID in a stable way to avoid infinite loops
   const firstItemGroupId = itemGroups[0]?.id;
 
-  // Update formData when item changes (for edit mode) or reset for create mode
   useEffect(() => {
     if (item) {
-      // Edit mode: populate with existing item data
-      setFormData({
-        organization_id: currentOrganization?.id || '',
+      reset({
         item_code: item.item_code || '',
         item_name: item.item_name || '',
         description: item.description || '',
@@ -326,16 +356,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: item.is_sales_item ?? true,
         is_purchase_item: item.is_purchase_item ?? true,
         is_stock_item: item.is_stock_item ?? true,
-        // Marketplace fields
         images: item.images || [],
         website_description: item.website_description || '',
         marketplace_category_slug: item.marketplace_category_slug || '',
         show_in_website: item.show_in_website ?? false,
       });
     } else {
-      // Create mode: reset to defaults
-      setFormData({
-        organization_id: currentOrganization?.id || '',
+      reset({
         item_code: '',
         item_name: '',
         description: '',
@@ -348,66 +375,48 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         is_sales_item: true,
         is_purchase_item: true,
         is_stock_item: true,
-        // Marketplace fields
         images: [],
         website_description: '',
         marketplace_category_slug: '',
         show_in_website: false,
       });
     }
-  }, [item, currentOrganization?.id, firstItemGroupId]);
+  }, [item, firstItemGroupId, reset]);
 
-  // Update formData when itemGroups change (for create mode)
-  // Note: Removed formData.item_group_id from dependencies to prevent infinite loop
   useEffect(() => {
-    if (!item && itemGroups.length > 0 && !formData.item_group_id) {
-      setFormData((prev) => ({ ...prev, item_group_id: itemGroups[0].id }));
+    if (!item && itemGroups.length > 0 && !watch('item_group_id')) {
+      setValue('item_group_id', itemGroups[0].id);
     }
-  }, [itemGroups, item]);
+  }, [itemGroups, item, watch, setValue]);
 
   const handleGroupCreated = async () => {
-    // Wait a brief moment for the cache to be invalidated, then refetch
     await new Promise((resolve) => setTimeout(resolve, 100));
     const { data: updatedGroups } = await refetchGroups();
     if (updatedGroups && updatedGroups.length > 0) {
-      // Select the most recently created group (last in array based on created_at or sort order)
       const latestGroup = updatedGroups[updatedGroups.length - 1];
-      setFormData((prev) => ({ ...prev, item_group_id: latestGroup.id }));
+      setValue('item_group_id', latestGroup.id);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (formData: ItemFormData) => {
     if (!currentOrganization) {
       toast.error(t('items.noOrganization'));
       return;
     }
 
-    if (!formData.item_group_id) {
-      toast.error(t('items.selectItemGroupError'));
-      return;
-    }
-
-    if (!formData.default_unit) {
-      toast.error(t('items.selectUnitError'));
-      return;
-    }
-
     try {
-      // Transform formData to match backend DTO
-      // Remove fields that backend doesn't accept
-      const { organization_id: _organization_id, ...apiPayload } = formData;
-
       if (item) {
-        await updateItem.mutateAsync({ itemId: item.id, input: apiPayload });
+        await updateItem.mutateAsync({ itemId: item.id, input: formData });
         toast.success(t('items.itemUpdated'));
       } else {
-        await createItem.mutateAsync(apiPayload as CreateItemInput);
+        await createItem.mutateAsync(formData as CreateItemInput);
         toast.success(t('items.itemCreated'));
       }
       onOpenChange(false);
-    } catch (error: any) {
-      toast.error(`Failed to ${item ? 'update' : 'create'} item: ${error.message}`);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: t(`items.${item ? 'update' : 'create'}Failed`),
+      });
     }
   };
 
@@ -421,18 +430,21 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="item_code">{t('items.itemCode')} *</Label>
               <Input
                 id="item_code"
-                value={(formData as CreateItemInput).item_code || ''}
-                onChange={(e) => setFormData({ ...formData, item_code: e.target.value } as CreateItemInput)}
+                {...register('item_code')}
+                invalid={!!errors.item_code}
                 placeholder={t('items.itemCodePlaceholder')}
-                disabled={!!item} // Don't allow editing code after creation
+                disabled={!!item}
                 className="mt-1"
               />
+              {errors.item_code && (
+                <p className="text-red-600 text-sm mt-1">{errors.item_code.message}</p>
+              )}
               {!item && (
                 <p className="text-xs text-gray-500 mt-1">
                   {t('items.itemCodeHint')}
@@ -444,12 +456,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               <Label htmlFor="item_name">{t('items.itemName')} *</Label>
               <Input
                 id="item_name"
-                value={formData.item_name}
-                onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                {...register('item_name')}
+                invalid={!!errors.item_name}
                 placeholder={t('items.itemNamePlaceholder')}
                 className="mt-1"
-                required
               />
+              {errors.item_name && (
+                <p className="text-red-600 text-sm mt-1">{errors.item_name.message}</p>
+              )}
             </div>
           </div>
 
@@ -484,8 +498,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
               </div>
             ) : (
               <Select
-                value={formData.item_group_id || ''}
-                onValueChange={(value) => setFormData({ ...formData, item_group_id: value })}
+                value={watch('item_group_id') || ''}
+                onValueChange={(value) => setValue('item_group_id', value)}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder={t('items.selectItemGroup')} />
@@ -499,8 +513,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </SelectContent>
               </Select>
             )}
-            {!formData.item_group_id && itemGroups.length > 0 && (
-              <p className="text-xs text-red-600 mt-1">{t('items.itemGroupRequired')}</p>
+            {errors.item_group_id && (
+              <p className="text-red-600 text-sm mt-1">{errors.item_group_id.message}</p>
             )}
           </div>
 
@@ -508,11 +522,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             <Label htmlFor="description">{t('items.description')}</Label>
             <Input
               id="description"
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              {...register('description')}
+              invalid={!!errors.description}
               placeholder={t('items.descriptionPlaceholder')}
               className="mt-1"
             />
+            {errors.description && (
+              <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -553,14 +570,11 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </div>
               ) : (
                 <Select
-                  value={formData.default_unit || ''}
+                  value={watch('default_unit') || ''}
                   onValueChange={(value) => {
                     const selectedUnit = workUnits.find((u) => u.code === value);
-                    setFormData({
-                      ...formData,
-                      default_unit: selectedUnit?.code || value,
-                      stock_uom: selectedUnit?.code || value,
-                    });
+                    setValue('default_unit', selectedUnit?.code || value);
+                    setValue('stock_uom', selectedUnit?.code || value);
                   }}
                 >
                   <SelectTrigger className="mt-1">
@@ -582,8 +596,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   </SelectContent>
                 </Select>
               )}
-              {!formData.default_unit && workUnits.length > 0 && (
-                <p className="text-xs text-red-600 mt-1">{t('items.unitRequired')}</p>
+              {errors.default_unit && (
+                <p className="text-red-600 text-sm mt-1">{errors.default_unit.message}</p>
               )}
             </div>
 
@@ -593,11 +607,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 id="standard_rate"
                 type="number"
                 step="0.01"
-                value={formData.standard_rate || ''}
-                onChange={(e) => setFormData({ ...formData, standard_rate: parseFloat(e.target.value) || undefined })}
+                {...register('standard_rate', { valueAsNumber: true })}
+                invalid={!!errors.standard_rate}
                 placeholder="0.00"
                 className="mt-1"
               />
+              {errors.standard_rate && (
+                <p className="text-red-600 text-sm mt-1">{errors.standard_rate.message}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="minimum_stock_level">{t('items.minimumStockLevel', 'Minimum Stock Level')}</Label>
@@ -606,11 +623,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 type="number"
                 step="0.01"
                 min="0"
-                value={formData.minimum_stock_level || ''}
-                onChange={(e) => setFormData({ ...formData, minimum_stock_level: parseFloat(e.target.value) || undefined })}
+                {...register('minimum_stock_level', { valueAsNumber: true })}
+                invalid={!!errors.minimum_stock_level}
                 placeholder="0.00"
                 className="mt-1"
               />
+              {errors.minimum_stock_level && (
+                <p className="text-red-600 text-sm mt-1">{errors.minimum_stock_level.message}</p>
+              )}
               <p className="text-xs text-gray-500 mt-1">
                 {t('items.minimumStockLevelHint', 'Alert when stock falls below this level')}
               </p>
@@ -621,39 +641,34 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.is_active ?? true}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                {...register('is_active')}
               />
               <span className="text-sm">{t('items.active')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.is_sales_item ?? true}
-                onChange={(e) => setFormData({ ...formData, is_sales_item: e.target.checked })}
+                {...register('is_sales_item')}
               />
               <span className="text-sm">{t('items.salesItem')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.is_purchase_item ?? true}
-                onChange={(e) => setFormData({ ...formData, is_purchase_item: e.target.checked })}
+                {...register('is_purchase_item')}
               />
               <span className="text-sm">{t('items.purchaseItem')}</span>
             </label>
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={formData.is_stock_item ?? true}
-                onChange={(e) => setFormData({ ...formData, is_stock_item: e.target.checked })}
+                {...register('is_stock_item')}
               />
               <span className="text-sm">{t('items.stockItem')}</span>
             </label>
           </div>
 
-          {/* Marketplace Section - Show when is_sales_item is checked */}
-          {formData.is_sales_item && (
+          {watch('is_sales_item') && (
             <Card className="border-emerald-200 bg-emerald-50/30 dark:bg-emerald-900/10 dark:border-emerald-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2 text-base">
@@ -665,14 +680,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Marketplace Category */}
                 <div>
                   <Label htmlFor="marketplace_category" className="text-sm font-medium">
                     {t('items.marketplace.category', 'Category')} <span className="text-red-500">*</span>
                   </Label>
                   <Select
-                    value={formData.marketplace_category_slug || ''}
-                    onValueChange={(value) => setFormData({ ...formData, marketplace_category_slug: value })}
+                    value={watch('marketplace_category_slug') || ''}
+                    onValueChange={(value) => setValue('marketplace_category_slug', value)}
                     disabled={categoriesLoading}
                   >
                     <SelectTrigger className="mt-1">
@@ -698,7 +712,6 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   </p>
                 </div>
 
-                {/* Product Images */}
                 <div>
                   <Label className="text-sm font-medium">
                     {t('items.marketplace.images', 'Product Images')}
@@ -706,22 +719,20 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   <ProductImageUpload
                     itemId={item?.id}
                     organizationId={currentOrganization?.id || ''}
-                    images={formData.images || []}
-                    onImagesChange={(images) => setFormData({ ...formData, images })}
+                    images={watch('images') || []}
+                    onImagesChange={(images) => setValue('images', images)}
                     maxImages={5}
                     disabled={!currentOrganization?.id}
                   />
                 </div>
 
-                {/* Website Description */}
                 <div>
                   <Label htmlFor="website_description">
                     {t('items.marketplace.websiteDescription', 'Marketplace Description')}
                   </Label>
                   <Textarea
                     id="website_description"
-                    value={formData.website_description || ''}
-                    onChange={(e) => setFormData({ ...formData, website_description: e.target.value })}
+                    {...register('website_description')}
                     placeholder={t('items.marketplace.descriptionPlaceholder', 'Detailed description for marketplace buyers...')}
                     rows={3}
                     className="mt-1"
@@ -731,20 +742,18 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   </p>
                 </div>
 
-                {/* Price Display */}
                 <div className="flex items-center gap-2 p-3 bg-white dark:bg-gray-800 rounded-md border">
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     {t('items.marketplace.price', 'Marketplace Price')}:
                   </span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(formData.standard_rate || 0)}
+                    {formatCurrency(watch('standard_rate') || 0)}
                   </span>
                   <span className="text-sm text-gray-500">
-                    / {formData.default_unit || t('items.unit.notSet', 'unit')}
+                    / {watch('default_unit') || t('items.unit.notSet', 'unit')}
                   </span>
                 </div>
 
-                {/* Publish Toggle */}
                 <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md border">
                   <div className="space-y-0.5">
                     <Label htmlFor="show_in_website" className="text-sm font-medium cursor-pointer">
@@ -756,25 +765,24 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   </div>
                   <Switch
                     id="show_in_website"
-                    checked={formData.show_in_website || false}
-                    onCheckedChange={(checked) => setFormData({ ...formData, show_in_website: checked })}
+                    checked={watch('show_in_website') || false}
+                    onCheckedChange={(checked) => setValue('show_in_website', checked)}
                   />
                 </div>
 
-                {/* Validation Warning */}
-                {formData.show_in_website && (!formData.marketplace_category_slug || !formData.images?.length || !formData.standard_rate) && (
+                {watch('show_in_website') && (!watch('marketplace_category_slug') || !watch('images')?.length || !watch('standard_rate')) && (
                   <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
                     <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     <div className="text-sm text-amber-700 dark:text-amber-300">
                       <p className="font-medium">{t('items.marketplace.validationWarning', 'Missing required fields:')}</p>
                       <ul className="list-disc list-inside mt-1 text-xs">
-                        {!formData.marketplace_category_slug && (
+                        {!watch('marketplace_category_slug') && (
                           <li>{t('items.marketplace.missingCategory', 'Marketplace category is required')}</li>
                         )}
-                        {!formData.images?.length && (
+                        {!watch('images')?.length && (
                           <li>{t('items.marketplace.missingImages', 'At least one product image is required')}</li>
                         )}
-                        {!formData.standard_rate && (
+                        {!watch('standard_rate') && (
                           <li>{t('items.marketplace.missingPrice', 'Product price must be set')}</li>
                         )}
                       </ul>
@@ -785,8 +793,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             </Card>
           )}
 
-          {/* Current Stock Level Display (only when editing) */}
-          {item && item.is_stock_item && (
+           {item && item.is_stock_item && (
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
               <div className="flex items-center gap-2 mb-3">
                 <Package className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -844,26 +851,26 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createItem.isPending || updateItem.isPending}
-            >
-              {t('app.cancel')}
-            </Button>
-            <Button type="submit" disabled={createItem.isPending || updateItem.isPending}>
-              {createItem.isPending || updateItem.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {item ? t('items.updating') : t('items.creating')}
-                </>
-              ) : (
-                item ? t('items.editItem') : t('items.createItem')
-              )}
-            </Button>
-          </div>
+           <div className="flex items-center justify-end gap-2 pt-4 border-t">
+             <Button
+               type="button"
+               variant="outline"
+               onClick={() => onOpenChange(false)}
+               disabled={isSubmitting || createItem.isPending || updateItem.isPending}
+             >
+               {t('app.cancel')}
+             </Button>
+             <Button type="submit" disabled={isSubmitting || createItem.isPending || updateItem.isPending}>
+               {isSubmitting || createItem.isPending || updateItem.isPending ? (
+                 <>
+                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                   {item ? t('items.updating') : t('items.creating')}
+                 </>
+               ) : (
+                 item ? t('items.editItem') : t('items.createItem')
+               )}
+             </Button>
+           </div>
         </form>
         <ItemGroupForm
           open={showGroupForm}

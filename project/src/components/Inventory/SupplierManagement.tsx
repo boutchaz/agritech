@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '@/hooks/useSuppliers';
 import { useAuth } from '@/hooks/useAuth';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -26,20 +30,22 @@ import { Plus, Trash2, Pencil, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Supplier } from '@/hooks/useSuppliers';
 
-interface SupplierFormData {
-  name: string;
-  contact_person: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  postal_code: string;
-  country: string;
-  website: string;
-  tax_id: string;
-  payment_terms: string;
-  notes: string;
-}
+const supplierSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  contact_person: z.string().optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  postal_code: z.string().optional(),
+  country: z.string().optional(),
+  website: z.string().url('Invalid URL format').optional().or(z.literal('')),
+  tax_id: z.string().optional(),
+  payment_terms: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+type SupplierFormData = z.infer<typeof supplierSchema>;
 
 export default function SupplierManagement() {
   const { t } = useTranslation();
@@ -48,30 +54,22 @@ export default function SupplierManagement() {
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
   const deleteSupplier = useDeleteSupplier();
+  const { handleFormError } = useFormErrors<SupplierFormData>();
   const [showForm, setShowForm] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const [formData, setFormData] = useState<SupplierFormData>({
-    name: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    postal_code: '',
-    country: '',
-    website: '',
-    tax_id: '',
-    payment_terms: '',
-    notes: '',
-  });
-
-  const resetForm = () => {
-    setFormData({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: {
       name: '',
       contact_person: '',
       email: '',
@@ -84,31 +82,50 @@ export default function SupplierManagement() {
       tax_id: '',
       payment_terms: '',
       notes: '',
-    });
-  };
+    },
+  });
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      reset({
+        name: selectedSupplier.name || '',
+        contact_person: selectedSupplier.contact_person || '',
+        email: selectedSupplier.email || '',
+        phone: selectedSupplier.phone || '',
+        address: selectedSupplier.address || '',
+        city: selectedSupplier.city || '',
+        postal_code: selectedSupplier.postal_code || '',
+        country: selectedSupplier.country || '',
+        website: selectedSupplier.website || '',
+        tax_id: selectedSupplier.tax_id || '',
+        payment_terms: selectedSupplier.payment_terms || '',
+        notes: selectedSupplier.notes || '',
+      });
+    } else {
+      reset({
+        name: '',
+        contact_person: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        postal_code: '',
+        country: '',
+        website: '',
+        tax_id: '',
+        payment_terms: '',
+        notes: '',
+      });
+    }
+  }, [selectedSupplier, reset]);
 
   const handleCreate = () => {
-    resetForm();
     setSelectedSupplier(null);
     setShowForm(true);
   };
 
   const handleEdit = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
-    setFormData({
-      name: supplier.name || '',
-      contact_person: supplier.contact_person || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      city: supplier.city || '',
-      postal_code: supplier.postal_code || '',
-      country: supplier.country || '',
-      website: supplier.website || '',
-      tax_id: supplier.tax_id || '',
-      payment_terms: supplier.payment_terms || '',
-      notes: supplier.notes || '',
-    });
     setShowForm(true);
   };
 
@@ -126,51 +143,55 @@ export default function SupplierManagement() {
       toast.success(t('suppliers.deleted'));
       setShowDeleteDialog(false);
       setSupplierToDelete(null);
-    } catch (error: any) {
-      toast.error(t('suppliers.deleteFailed', { error: error.message }));
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t('suppliers.deleteFailed', { error: errorMessage }));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit = async (formData: SupplierFormData) => {
     if (!currentOrganization) {
       toast.error(t('suppliers.noOrganization'));
       return;
     }
 
-    if (!formData.name.trim()) {
-      toast.error(t('suppliers.nameRequired'));
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
+      const cleanedData = {
+        ...formData,
+        contact_person: formData.contact_person?.trim() || undefined,
+        email: formData.email?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
+        address: formData.address?.trim() || undefined,
+        city: formData.city?.trim() || undefined,
+        postal_code: formData.postal_code?.trim() || undefined,
+        country: formData.country?.trim() || undefined,
+        website: formData.website?.trim() || undefined,
+        tax_id: formData.tax_id?.trim() || undefined,
+        payment_terms: formData.payment_terms?.trim() || undefined,
+        notes: formData.notes?.trim() || undefined,
+      };
+
       if (selectedSupplier) {
-        // Update existing supplier
         await updateSupplier.mutateAsync({
           id: selectedSupplier.id,
-          ...formData,
+          ...cleanedData,
         });
         toast.success(t('suppliers.updated'));
       } else {
-        // Create new supplier
         await createSupplier.mutateAsync({
-          ...formData,
+          ...cleanedData,
           is_active: true,
         });
         toast.success(t('suppliers.created'));
       }
 
       setShowForm(false);
-      resetForm();
-    } catch (error: any) {
-      const action = selectedSupplier ? 'update' : 'create';
-      toast.error(t(`suppliers.${action}Failed`, { error: error.message }));
-    } finally {
-      setIsSubmitting(false);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: t(`suppliers.${selectedSupplier ? 'update' : 'create'}Failed`),
+      });
     }
   };
 
@@ -299,27 +320,32 @@ export default function SupplierManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label htmlFor="name">{t('suppliers.name')} *</Label>
                 <Input
                   id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  {...register('name')}
+                  invalid={!!errors.name}
                   placeholder={t('suppliers.namePlaceholder')}
-                  required
                 />
+                {errors.name && (
+                  <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="contact_person">{t('suppliers.contactPerson')}</Label>
                 <Input
                   id="contact_person"
-                  value={formData.contact_person}
-                  onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                  {...register('contact_person')}
+                  invalid={!!errors.contact_person}
                   placeholder={t('suppliers.contactPersonPlaceholder')}
                 />
+                {errors.contact_person && (
+                  <p className="text-red-600 text-sm mt-1">{errors.contact_person.message}</p>
+                )}
               </div>
 
               <div>
@@ -327,70 +353,91 @@ export default function SupplierManagement() {
                 <Input
                   id="email"
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  {...register('email')}
+                  invalid={!!errors.email}
                   placeholder={t('suppliers.emailPlaceholder')}
                 />
+                {errors.email && (
+                  <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="phone">{t('suppliers.phone')}</Label>
                 <Input
                   id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  {...register('phone')}
+                  invalid={!!errors.phone}
                   placeholder={t('suppliers.phonePlaceholder')}
                 />
+                {errors.phone && (
+                  <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="tax_id">{t('suppliers.taxId')}</Label>
                 <Input
                   id="tax_id"
-                  value={formData.tax_id}
-                  onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                  {...register('tax_id')}
+                  invalid={!!errors.tax_id}
                   placeholder={t('suppliers.taxIdPlaceholder')}
                 />
+                {errors.tax_id && (
+                  <p className="text-red-600 text-sm mt-1">{errors.tax_id.message}</p>
+                )}
               </div>
 
               <div className="col-span-2">
                 <Label htmlFor="address">{t('suppliers.address')}</Label>
                 <Input
                   id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  {...register('address')}
+                  invalid={!!errors.address}
                   placeholder={t('suppliers.addressPlaceholder')}
                 />
+                {errors.address && (
+                  <p className="text-red-600 text-sm mt-1">{errors.address.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="city">{t('suppliers.city')}</Label>
                 <Input
                   id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  {...register('city')}
+                  invalid={!!errors.city}
                   placeholder={t('suppliers.cityPlaceholder')}
                 />
+                {errors.city && (
+                  <p className="text-red-600 text-sm mt-1">{errors.city.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="postal_code">{t('suppliers.postalCode')}</Label>
                 <Input
                   id="postal_code"
-                  value={formData.postal_code}
-                  onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                  {...register('postal_code')}
+                  invalid={!!errors.postal_code}
                   placeholder={t('suppliers.postalCodePlaceholder')}
                 />
+                {errors.postal_code && (
+                  <p className="text-red-600 text-sm mt-1">{errors.postal_code.message}</p>
+                )}
               </div>
 
               <div>
                 <Label htmlFor="country">{t('suppliers.country')}</Label>
                 <Input
                   id="country"
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  {...register('country')}
+                  invalid={!!errors.country}
                   placeholder={t('suppliers.countryPlaceholder')}
                 />
+                {errors.country && (
+                  <p className="text-red-600 text-sm mt-1">{errors.country.message}</p>
+                )}
               </div>
 
               <div>
@@ -398,32 +445,42 @@ export default function SupplierManagement() {
                 <Input
                   id="website"
                   type="url"
-                  value={formData.website}
-                  onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                  {...register('website')}
+                  invalid={!!errors.website}
                   placeholder={t('suppliers.websitePlaceholder')}
                 />
+                {errors.website && (
+                  <p className="text-red-600 text-sm mt-1">{errors.website.message}</p>
+                )}
               </div>
 
               <div className="col-span-2">
                 <Label htmlFor="payment_terms">{t('suppliers.paymentTerms')}</Label>
                 <Input
                   id="payment_terms"
-                  value={formData.payment_terms}
-                  onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })}
+                  {...register('payment_terms')}
+                  invalid={!!errors.payment_terms}
                   placeholder={t('suppliers.paymentTermsPlaceholder')}
                 />
+                {errors.payment_terms && (
+                  <p className="text-red-600 text-sm mt-1">{errors.payment_terms.message}</p>
+                )}
               </div>
 
               <div className="col-span-2">
                 <Label htmlFor="notes">{t('suppliers.notes')}</Label>
                 <textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  {...register('notes')}
+                  className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    errors.notes ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   rows={3}
                   placeholder={t('suppliers.notesPlaceholder')}
                 />
+                {errors.notes && (
+                  <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
+                )}
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Post, Body, UseGuards, Request, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Patch, Body, UseGuards, Request, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -204,6 +204,18 @@ export class FarmsController {
   async create(@Request() req, @Body() createFarmDto: any) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.farmsService.createFarm(req.user.id, organizationId, createFarmDto);
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(PoliciesGuard)
+  @ApiOperation({ summary: 'Update a farm' })
+  @ApiResponse({ status: 200, description: 'Farm updated successfully' })
+  @ApiResponse({ status: 404, description: 'Farm not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'Farm'))
+  async update(@Request() req, @Param('id') farmId: string, @Body() updateFarmDto: any) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.farmsService.updateFarm(req.user.id, organizationId, farmId, updateFarmDto);
   }
 
   @Delete()

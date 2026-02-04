@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   useItemGroups,
   useCreateItemGroup,
   useUpdateItemGroup,
   useDeleteItemGroup,
 } from '@/hooks/useItems';
+import { useAuth } from '@/hooks/useAuth';
+import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -37,16 +41,17 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, Loader2, FolderOpen, Package } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { ItemGroup } from '@/types/items';
 
-interface ItemGroupFormData {
-  name: string;
-  code: string;
-  description: string;
-  is_active: boolean;
-}
+const itemGroupSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  code: z.string().optional(),
+  description: z.string().optional(),
+  is_active: z.boolean(),
+});
+
+type ItemGroupFormData = z.infer<typeof itemGroupSchema>;
 
 export default function ItemGroupsManagement() {
   const { t } = useTranslation();
@@ -55,78 +60,89 @@ export default function ItemGroupsManagement() {
   const createItemGroup = useCreateItemGroup();
   const updateItemGroup = useUpdateItemGroup();
   const deleteItemGroup = useDeleteItemGroup();
+  const { handleFormError } = useFormErrors<ItemGroupFormData>();
 
   const [showDialog, setShowDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ItemGroup | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
 
-  const [formData, setFormData] = useState<ItemGroupFormData>({
-    name: '',
-    code: '',
-    description: '',
-    is_active: true,
-  });
-
-  const resetForm = () => {
-    setFormData({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ItemGroupFormData>({
+    resolver: zodResolver(itemGroupSchema),
+    defaultValues: {
       name: '',
       code: '',
       description: '',
       is_active: true,
-    });
-    setEditingGroup(null);
-  };
+    },
+  });
+
+  useEffect(() => {
+    if (editingGroup) {
+      reset({
+        name: editingGroup.name || '',
+        code: editingGroup.code || '',
+        description: editingGroup.description || '',
+        is_active: editingGroup.is_active ?? true,
+      });
+    } else {
+      reset({
+        name: '',
+        code: '',
+        description: '',
+        is_active: true,
+      });
+    }
+  }, [editingGroup, reset]);
 
   const handleOpenCreate = () => {
-    resetForm();
+    setEditingGroup(null);
     setShowDialog(true);
   };
 
   const handleOpenEdit = (group: ItemGroup) => {
     setEditingGroup(group);
-    setFormData({
-      name: group.name,
-      code: group.code || '',
-      description: group.description || '',
-      is_active: group.is_active ?? true,
-    });
     setShowDialog(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!currentOrganization || !formData.name.trim()) {
-      toast.error(t('items.itemGroup.nameRequired'));
+  const onSubmit = async (formData: ItemGroupFormData) => {
+    if (!currentOrganization) {
+      toast.error(t('items.itemGroup.noOrganization'));
       return;
     }
 
     try {
+      const cleanedData = {
+        name: formData.name.trim(),
+        code: formData.code?.trim() || undefined,
+        description: formData.description?.trim() || undefined,
+        is_active: formData.is_active,
+      };
+
       if (editingGroup) {
         await updateItemGroup.mutateAsync({
           groupId: editingGroup.id,
-          input: {
-            name: formData.name.trim(),
-            code: formData.code.trim() || undefined,
-            description: formData.description.trim() || undefined,
-            is_active: formData.is_active,
-          },
+          input: cleanedData,
         });
         toast.success(t('items.itemGroup.updated'));
       } else {
         await createItemGroup.mutateAsync({
           organization_id: currentOrganization.id,
-          name: formData.name.trim(),
-          code: formData.code.trim() || undefined,
-          description: formData.description.trim() || undefined,
-          is_active: formData.is_active,
+          ...cleanedData,
         });
         toast.success(t('items.itemGroup.created'));
       }
+
       setShowDialog(false);
-      resetForm();
-    } catch (error: any) {
-      toast.error(`Failed to ${editingGroup ? 'update' : 'create'} item group: ${error.message}`);
+    } catch (error: unknown) {
+      handleFormError(error, setError, {
+        toastMessage: t(`items.itemGroup.${editingGroup ? 'update' : 'create'}Failed`),
+      });
     }
   };
 
@@ -137,10 +153,11 @@ export default function ItemGroupsManagement() {
       await deleteItemGroup.mutateAsync(deleteConfirmGroup.id);
       toast.success(t('items.itemGroup.deleted'));
       setDeleteConfirmGroup(null);
-    } catch (error: any) {
-      toast.error(`Failed to delete item group: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(t('items.itemGroup.deleteFailed', { error: errorMessage }));
     }
-  };
+  }
 
   if (isLoading) {
     return (
@@ -239,117 +256,126 @@ export default function ItemGroupsManagement() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingGroup ? t('items.itemGroup.edit') : t('items.itemGroup.createNew')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingGroup
-                ? t('items.itemGroup.editDescription')
-                : t('items.itemGroup.description')}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">{t('items.itemGroup.name')} *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t('items.itemGroup.namePlaceholder')}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="code">{t('items.itemGroup.code')}</Label>
-              <Input
-                id="code"
-                value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                placeholder={t('items.itemGroup.codePlaceholder')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">{t('items.itemGroup.groupDescription')}</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder={t('items.itemGroup.descriptionPlaceholder')}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is_active"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                className="rounded border-gray-300"
-              />
-              <Label htmlFor="is_active" className="font-normal">
-                {t('common.active')}
-              </Label>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button
-                type="submit"
-                disabled={createItemGroup.isPending || updateItemGroup.isPending}
-              >
-                {createItemGroup.isPending || updateItemGroup.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {editingGroup ? t('common.saving') : t('common.creating')}
-                  </>
-                ) : editingGroup ? (
-                  t('common.save')
-                ) : (
-                  t('common.create')
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+       {/* Create/Edit Dialog */}
+       <Dialog open={showDialog} onOpenChange={setShowDialog}>
+         <DialogContent>
+           <DialogHeader>
+             <DialogTitle>
+               {editingGroup ? t('items.itemGroup.edit') : t('items.itemGroup.createNew')}
+             </DialogTitle>
+             <DialogDescription>
+               {editingGroup
+                 ? t('items.itemGroup.editDescription')
+                 : t('items.itemGroup.description')}
+             </DialogDescription>
+           </DialogHeader>
+           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+             <div>
+               <Label htmlFor="name">{t('items.itemGroup.name')} *</Label>
+               <Input
+                 id="name"
+                 {...register('name')}
+                 invalid={!!errors.name}
+                 placeholder={t('items.itemGroup.namePlaceholder')}
+               />
+               {errors.name && (
+                 <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+               )}
+             </div>
+             <div>
+               <Label htmlFor="code">{t('items.itemGroup.code')}</Label>
+               <Input
+                 id="code"
+                 {...register('code')}
+                 invalid={!!errors.code}
+                 placeholder={t('items.itemGroup.codePlaceholder')}
+               />
+               {errors.code && (
+                 <p className="text-red-600 text-sm mt-1">{errors.code.message}</p>
+               )}
+             </div>
+             <div>
+               <Label htmlFor="description">{t('items.itemGroup.groupDescription')}</Label>
+               <Input
+                 id="description"
+                 {...register('description')}
+                 invalid={!!errors.description}
+                 placeholder={t('items.itemGroup.descriptionPlaceholder')}
+               />
+               {errors.description && (
+                 <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+               )}
+             </div>
+             <div className="flex items-center space-x-2">
+               <input
+                 type="checkbox"
+                 id="is_active"
+                 {...register('is_active')}
+                 className="rounded border-gray-300"
+               />
+               <Label htmlFor="is_active" className="font-normal">
+                 {t('common.active')}
+               </Label>
+             </div>
+             <div className="flex justify-end space-x-3 pt-4">
+               <Button
+                 type="button"
+                 variant="outline"
+                 onClick={() => setShowDialog(false)}
+                 disabled={isSubmitting}
+               >
+                 {t('common.cancel')}
+               </Button>
+               <Button type="submit" disabled={isSubmitting}>
+                 {isSubmitting ? (
+                   <>
+                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                     {editingGroup ? t('common.saving') : t('common.creating')}
+                   </>
+                 ) : editingGroup ? (
+                   t('common.save')
+                 ) : (
+                   t('common.create')
+                 )}
+               </Button>
+             </div>
+           </form>
+         </DialogContent>
+       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog
-        open={!!deleteConfirmGroup}
-        onOpenChange={(open) => !open && setDeleteConfirmGroup(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('items.itemGroup.deleteTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('items.itemGroup.deleteConfirmation', {
-                name: deleteConfirmGroup?.name,
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteItemGroup.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteItemGroup.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {t('common.deleting')}
-                </>
-              ) : (
-                t('common.delete')
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+       {/* Delete Confirmation Dialog */}
+       <AlertDialog
+         open={!!deleteConfirmGroup}
+         onOpenChange={(open) => !open && setDeleteConfirmGroup(null)}
+       >
+         <AlertDialogContent>
+           <AlertDialogHeader>
+             <AlertDialogTitle>{t('items.itemGroup.deleteTitle')}</AlertDialogTitle>
+             <AlertDialogDescription>
+               {t('items.itemGroup.deleteConfirmation', {
+                 name: deleteConfirmGroup?.name,
+               })}
+             </AlertDialogDescription>
+           </AlertDialogHeader>
+           <AlertDialogFooter>
+             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+             <AlertDialogAction
+               onClick={handleDelete}
+               disabled={deleteItemGroup.isPending}
+               className="bg-red-600 hover:bg-red-700 text-white"
+             >
+               {deleteItemGroup.isPending ? (
+                 <>
+                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                   {t('common.deleting')}
+                 </>
+               ) : (
+                 t('common.delete')
+               )}
+             </AlertDialogAction>
+           </AlertDialogFooter>
+         </AlertDialogContent>
+       </AlertDialog>
     </div>
   );
 }

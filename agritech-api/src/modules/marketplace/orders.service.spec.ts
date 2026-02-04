@@ -166,19 +166,28 @@ describe('OrdersService - Stock Deduction', () => {
                         }),
                     };
                 }
+                if (table === 'marketplace_listings') {
+                    return {
+                        select: jest.fn().mockReturnValue({
+                            eq: jest.fn().mockReturnValue({
+                                single: jest.fn().mockResolvedValue({
+                                    data: { quantity_available: 100 },
+                                    error: null
+                                }),
+                            }),
+                        }),
+                        update: jest.fn().mockReturnValue({
+                            eq: jest.fn().mockResolvedValue({ error: null }),
+                        }),
+                    };
+                }
                 return { select: mockSelect, insert: mockInsert, update: mockUpdate, delete: mockDelete };
             });
-
-            // Mock RPC call for stock deduction
-            mockSupabaseClient.rpc.mockResolvedValue({ error: null });
 
             const result = await ordersService.createOrder(mockToken, mockOrderDto as any);
 
             expect(result).toBeDefined();
-            expect(mockSupabaseClient.rpc).toHaveBeenCalledWith('deduct_marketplace_listing_stock', {
-                p_listing_id: 'listing-1',
-                p_quantity: 5,
-            });
+            expect(mockSupabaseClient.from).toHaveBeenCalledWith('marketplace_listings');
         });
 
         it('should scope rollback deletes to buyer organization', async () => {

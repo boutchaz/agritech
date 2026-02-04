@@ -311,26 +311,66 @@ export class ItemsService {
     return data;
   }
 
+  private async generateItemCode(
+    organizationId: string,
+    itemGroupId: string | null,
+    prefix: string = 'ITM'
+  ): Promise<string> {
+    const supabase = this.databaseService.getAdminClient();
+    const year = new Date().getFullYear().toString();
+
+    try {
+      let query = supabase
+        .from('items')
+        .select('item_code')
+        .eq('organization_id', organizationId)
+        .like('item_code', `%-${year}-%`);
+
+      if (itemGroupId) {
+        query = query.eq('item_group_id', itemGroupId);
+      }
+
+      const { data: items, error } = await query;
+
+      if (error) {
+        this.logger.error(`Failed to query items for code generation: ${error.message}`);
+        throw new BadRequestException(`Failed to generate item code: ${error.message}`);
+      }
+
+      let maxSeq = 0;
+      if (items && items.length > 0) {
+        for (const item of items) {
+          if (item.item_code) {
+            const parts = item.item_code.split('-');
+            if (parts.length >= 3) {
+              const seq = parseInt(parts[2], 10);
+              if (!isNaN(seq) && seq > maxSeq) {
+                maxSeq = seq;
+              }
+            }
+          }
+        }
+      }
+
+      const nextSeq = maxSeq + 1;
+      return `${prefix}-${year}-${nextSeq.toString().padStart(5, '0')}`;
+    } catch (error) {
+      this.logger.error(`Item code generation error: ${error.message}`);
+      throw error;
+    }
+  }
+
   async createItem(dto: CreateItemDto): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
     // Generate item code if not provided
     let itemCode = dto.item_code;
     if (!itemCode) {
-      const { data: generatedCode, error: codeError } = await supabase.rpc(
-        'generate_item_code',
-        {
-          p_organization_id: dto.organization_id,
-          p_item_group_id: dto.item_group_id,
-          p_prefix: null,
-        }
+      itemCode = await this.generateItemCode(
+        dto.organization_id,
+        dto.item_group_id || null,
+        'ITM'
       );
-
-      if (codeError) {
-        this.logger.error(`Failed to generate item code: ${codeError.message}`);
-        throw new BadRequestException(`Failed to generate item code: ${codeError.message}`);
-      }
-      itemCode = generatedCode as string;
     }
 
     // Prepare item data with explicit defaults for boolean fields

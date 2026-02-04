@@ -1,12 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, MapPin, Users } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
+import { useFormErrors } from '../../hooks/useFormErrors';
 import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
-import type { Task, CreateTaskRequest, TaskType, TaskPriority } from '../../types/tasks';
+import type { Task, CreateTaskRequest, TaskType } from '../../types/tasks';
 import { TASK_TYPE_LABELS } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
 import type { Parcel } from '../../lib/api/parcels';
@@ -31,6 +35,27 @@ interface TaskFormProps {
   onSuccess: () => void;
 }
 
+const taskFormSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string(),
+  task_type: z.string().min(1, 'Task type is required'),
+  priority: z.string().min(1, 'Priority is required'),
+  farm_id: z.string().min(1, 'Farm is required'),
+  parcel_id: z.string(),
+  assigned_to: z.string(),
+  scheduled_start: z.string().min(1, 'Start date is required'),
+  due_date: z.string().min(1, 'Due date is required'),
+  estimated_duration: z.number(),
+  notes: z.string(),
+  payment_type: z.string(),
+  work_unit_id: z.string(),
+  units_required: z.number().optional(),
+  rate_per_unit: z.number().optional(),
+  crop_id: z.string(),
+});
+
+type TaskFormData = z.infer<typeof taskFormSchema>;
+
 // Helper to format date for input (YYYY-MM-DD)
 const formatDateForInput = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -53,29 +78,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  // Default dates for new tasks: today as start, 7 days from now as due date
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  const [formData, setFormData] = useState<Partial<CreateTaskRequest>>({
-    title: task?.title || '',
-    description: task?.description || '',
-    task_type: task?.task_type || 'general',
-    priority: task?.priority || 'medium',
-    farm_id: task?.farm_id || '',
-    parcel_id: task?.parcel_id || undefined,
-    assigned_to: task?.assigned_to || undefined,
-    scheduled_start: task ? formatDateForInput(task.scheduled_start) : today,
-    due_date: task ? formatDateForInput(task.due_date) : nextWeek,
-    estimated_duration: task?.estimated_duration || 8,
-    notes: task?.notes || '',
-    payment_type: task?.payment_type || 'daily',
-    work_unit_id: task?.work_unit_id || undefined,
-    units_required: task?.units_required || undefined,
-    rate_per_unit: task?.rate_per_unit || undefined,
-  });
-
-  // State for multiple worker selection
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>(
     task?.assigned_to ? [task.assigned_to] : []
   );
@@ -83,6 +88,62 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const bulkCreateAssignments = useBulkCreateTaskAssignments();
+  const { handleFormError } = useFormErrors<TaskFormData>();
+
+  const {
+    register,
+    handleSubmit: rhfHandleSubmit,
+    reset,
+    setError,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<TaskFormData>({
+    resolver: zodResolver(taskFormSchema),
+    defaultValues: {
+      title: task?.title || '',
+      description: task?.description || '',
+      task_type: task?.task_type || 'general',
+      priority: task?.priority || 'medium',
+      farm_id: task?.farm_id || '',
+      parcel_id: task?.parcel_id || '',
+      assigned_to: task?.assigned_to || '',
+      scheduled_start: task ? formatDateForInput(task.scheduled_start) : today,
+      due_date: task ? formatDateForInput(task.due_date) : nextWeek,
+      estimated_duration: task?.estimated_duration || 8,
+      notes: task?.notes || '',
+      payment_type: task?.payment_type || 'daily',
+      work_unit_id: task?.work_unit_id || '',
+      units_required: task?.units_required,
+      rate_per_unit: task?.rate_per_unit,
+      crop_id: '',
+    },
+  });
+
+  const formData = watch();
+
+  useEffect(() => {
+    if (task) {
+      reset({
+        title: task.title || '',
+        description: task.description || '',
+        task_type: task.task_type || 'general',
+        priority: task.priority || 'medium',
+        farm_id: task.farm_id || '',
+        parcel_id: task.parcel_id || '',
+        assigned_to: task.assigned_to || '',
+        scheduled_start: formatDateForInput(task.scheduled_start),
+        due_date: formatDateForInput(task.due_date),
+        estimated_duration: task.estimated_duration || 8,
+        notes: task.notes || '',
+        payment_type: task.payment_type || 'daily',
+        work_unit_id: task.work_unit_id || '',
+        units_required: task.units_required,
+        rate_per_unit: task.rate_per_unit,
+        crop_id: '',
+      });
+      setSelectedWorkerIds(task.assigned_to ? [task.assigned_to] : []);
+    }
+  }, [task, reset]);
 
   // Fetch workers - include all workers if no farm is selected, or filter by farm
   // Pass undefined (not null) when no farm is selected to get all workers
@@ -118,108 +179,57 @@ const TaskForm: React.FC<TaskFormProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get selected parcel details to auto-fill crop info - memoize to prevent infinite loops
   const selectedParcel = useMemo(() => {
     return parcels.find((p: Parcel) => p.id === formData.parcel_id);
   }, [parcels, formData.parcel_id]);
 
-  // Auto-update title and crop_id when parcel is selected (only for new tasks without a custom title)
-  React.useEffect(() => {
-    // Only run for new tasks (not editing existing task)
+  useEffect(() => {
     if (!task && selectedParcel && formData.parcel_id) {
-      const updates: Partial<CreateTaskRequest> = {};
-
-      // Auto-fill crop_id from parcel
-      if (selectedParcel.crop_id && formData.crop_id !== selectedParcel.crop_id) {
-        updates.crop_id = selectedParcel.crop_id;
-      }
-
-      // Auto-update title with crop type ONLY if title is currently empty or matches the auto-generated pattern
       if (selectedParcel.crop_type && formData.task_type) {
         const cropType = selectedParcel.crop_type;
-        const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type]?.fr || 'tâche';
+        const taskTypeLabel = TASK_TYPE_LABELS[formData.task_type as TaskType]?.fr || 'tâche';
         const newTitle = `${taskTypeLabel} - ${cropType} (${selectedParcel.name})`;
-
-        // Only update if title is empty or matches the auto-generated pattern (to allow manual edits)
         const isAutoGenerated = !formData.title || formData.title.includes(cropType) || formData.title.includes(selectedParcel.name);
         if (isAutoGenerated && formData.title !== newTitle) {
-          updates.title = newTitle;
+          reset({ ...formData, title: newTitle });
         }
       }
-
-      // Only update if there are actual changes to prevent infinite loops
-      if (Object.keys(updates).length > 0) {
-        setFormData(prev => {
-          // Check if updates are actually different from current state
-          const hasChanges = Object.keys(updates).some(key => {
-            return prev[key as keyof typeof prev] !== updates[key as keyof typeof updates];
-          });
-          return hasChanges ? { ...prev, ...updates } : prev;
-        });
-      }
     }
-  }, [
-    formData.parcel_id,
-    formData.task_type,
-    formData.crop_id,
-    formData.title,
-    selectedParcel?.crop_id,
-    selectedParcel?.crop_type,
-    selectedParcel?.name,
-    task,
-  ]);
+  }, [formData.parcel_id, formData.task_type, selectedParcel, task, formData, reset]);
 
-  const [validationError, setValidationError] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setValidationError(null);
-
-    // Validate required dates
-    if (!formData.scheduled_start) {
-      setValidationError('La date de début est requise.');
+  const onSubmit = async (data: TaskFormData) => {
+    if (data.due_date < data.scheduled_start) {
+      setError('due_date', {
+        type: 'manual',
+        message: 'Due date must be after start date',
+      });
       return;
     }
 
-    if (!formData.due_date) {
-      setValidationError('La date limite est requise.');
-      return;
-    }
-
-    // Validate date order
-    if (formData.due_date < formData.scheduled_start) {
-      setValidationError('La date limite doit être après la date de début.');
-      return;
-    }
-
-    // Validate: harvesting tasks require a parcel_id for "Complete with Harvest" workflow
-    if (formData.task_type === 'harvesting' && !formData.parcel_id) {
-      setValidationError('Les tâches de récolte nécessitent une parcelle pour permettre l\'enregistrement de la récolte.');
+    if (data.task_type === 'harvesting' && !data.parcel_id) {
+      setError('parcel_id', {
+        type: 'manual',
+        message: 'Parcel is required for harvesting tasks',
+      });
       return;
     }
 
     try {
-      // Clean up form data: convert empty strings to undefined for optional fields
-      // Convert dates to ISO format for backend
       const cleanedData = Object.fromEntries(
-        Object.entries(formData).map(([key, value]) => {
-          // Convert date fields to ISO format (add time component)
+        Object.entries(data).map(([key, value]) => {
           if ((key === 'scheduled_start' || key === 'due_date') && value && typeof value === 'string') {
-            // If it's a date-only string (YYYY-MM-DD), convert to ISO format
             if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
               return [key, `${value}T00:00:00.000Z`];
             }
             return [key, value];
           }
-          // Convert empty strings to undefined so Postgres can handle them
-          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description'].includes(key)) {
+          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id'].includes(key)) {
             return [key, undefined];
           }
           return [key, value];
         })
       ) as Partial<CreateTaskRequest>;
 
-      // Set the primary assigned_to to the first selected worker (for backward compatibility)
       if (selectedWorkerIds.length > 0) {
         cleanedData.assigned_to = selectedWorkerIds[0];
       } else {
@@ -232,7 +242,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
           organizationId,
           updates: cleanedData,
         });
-        // For existing tasks, create additional assignments for workers beyond the first
         if (selectedWorkerIds.length > 1) {
           await bulkCreateAssignments.mutateAsync({
             taskId: task.id,
@@ -245,12 +254,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
           });
         }
       } else {
-        // Create the task first
         const newTask = await createTask.mutateAsync({
           ...cleanedData as CreateTaskRequest,
           organization_id: organizationId,
         });
-        // Then create assignments for additional workers (first worker is already assigned via assigned_to)
         if (selectedWorkerIds.length > 1 && newTask?.id) {
           await bulkCreateAssignments.mutateAsync({
             taskId: newTask.id,
@@ -265,7 +272,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       }
       onSuccess();
     } catch (error) {
-      console.error('Error saving task:', error);
+      handleFormError(error, setError);
     }
   };
 
@@ -300,25 +307,20 @@ const TaskForm: React.FC<TaskFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Validation Error */}
-          {validationError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
-              {validationError}
-            </div>
-          )}
-
+        <form onSubmit={rhfHandleSubmit(onSubmit)} className="p-6 space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Titre *</Label>
             <Input
               id="title"
               type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              {...register('title')}
+              invalid={!!errors.title}
               placeholder="Ex: Taille des arbres fruitiers"
             />
+            {errors.title && (
+              <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
+            )}
           </div>
 
           {/* Task Type & Priority */}
@@ -327,7 +329,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Label htmlFor="task_type">Type de tâche *</Label>
               <Select
                 value={formData.task_type}
-                onValueChange={(value) => setFormData({ ...formData, task_type: value as TaskType })}
+                onValueChange={(value) => {
+                  const event = { target: { name: 'task_type', value } } as any;
+                  register('task_type').onChange(event);
+                }}
               >
                 <SelectTrigger id="task_type">
                   <SelectValue placeholder="Sélectionner type" />
@@ -340,13 +345,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.task_type && (
+                <p className="text-red-600 text-sm mt-1">{errors.task_type.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="priority">Priorité *</Label>
               <Select
                 value={formData.priority}
-                onValueChange={(value) => setFormData({ ...formData, priority: value as TaskPriority })}
+                onValueChange={(value) => {
+                  const event = { target: { name: 'priority', value } } as any;
+                  register('priority').onChange(event);
+                }}
               >
                 <SelectTrigger id="priority">
                   <SelectValue placeholder="Sélectionner priorité" />
@@ -358,6 +369,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <SelectItem value="urgent">Urgente</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.priority && (
+                <p className="text-red-600 text-sm mt-1">{errors.priority.message}</p>
+              )}
             </div>
           </div>
 
@@ -366,11 +380,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              {...register('description')}
               rows={3}
               placeholder="Détails de la tâche..."
             />
+            {errors.description && (
+              <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           {/* Farm & Parcel */}
@@ -379,7 +395,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Label htmlFor="farm_id">Ferme *</Label>
               <Select
                 value={formData.farm_id}
-                onValueChange={(value) => setFormData({ ...formData, farm_id: value, parcel_id: undefined, assigned_to: undefined })}
+                onValueChange={(value) => {
+                  const event = { target: { name: 'farm_id', value } } as any;
+                  register('farm_id').onChange(event);
+                }}
               >
                 <SelectTrigger id="farm_id">
                   <SelectValue placeholder="Sélectionnez une ferme" />
@@ -392,6 +411,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {errors.farm_id && (
+                <p className="text-red-600 text-sm mt-1">{errors.farm_id.message}</p>
+              )}
             </div>
 
             {/* Parcel - especially important for harvesting tasks */}
@@ -403,8 +425,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Select
                 value={formData.parcel_id || '__none__'}
                 onValueChange={(value) => {
-                  const newParcelId = value === '__none__' ? undefined : value;
-                  setFormData(prev => ({ ...prev, parcel_id: newParcelId }));
+                  const newValue = value === '__none__' ? '' : value;
+                  const event = { target: { name: 'parcel_id', value: newValue } } as any;
+                  register('parcel_id').onChange(event);
                 }}
                 disabled={!formData.farm_id}
               >
@@ -432,7 +455,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   ))}
                 </SelectContent>
               </Select>
-              {/* Show selected parcel crop info */}
               {selectedParcel && (
                 <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
                   🌱 Culture: {selectedParcel.crop_type || 'Non définie'}
@@ -444,6 +466,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 <p className="text-xs text-amber-600">
                   Sélectionnez une parcelle pour les tâches de récolte
                 </p>
+              )}
+              {errors.parcel_id && (
+                <p className="text-red-600 text-sm mt-1">{errors.parcel_id.message}</p>
               )}
             </div>
           </div>
@@ -523,24 +548,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Input
                 id="scheduled_start"
                 type="date"
-                required
+                {...register('scheduled_start')}
+                invalid={!!errors.scheduled_start}
                 min={new Date().toISOString().split('T')[0]}
-                value={formData.scheduled_start || ''}
-                onChange={(e) => {
-                  const dateValue = e.target.value;
-                  setFormData({
-                    ...formData,
-                    scheduled_start: dateValue,
-                    // Auto-set due_date to scheduled_start if not set or if earlier
-                    due_date: formData.due_date && formData.due_date >= dateValue
-                      ? formData.due_date
-                      : dateValue
-                  });
-                }}
-                className={!formData.scheduled_start ? 'border-amber-400' : ''}
               />
-              {!formData.scheduled_start && (
-                <p className="text-xs text-amber-600">Requis</p>
+              {errors.scheduled_start && (
+                <p className="text-red-600 text-sm mt-1">{errors.scheduled_start.message}</p>
               )}
             </div>
 
@@ -549,17 +562,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Input
                 id="due_date"
                 type="date"
-                required
+                {...register('due_date')}
+                invalid={!!errors.due_date}
                 min={formData.scheduled_start || new Date().toISOString().split('T')[0]}
-                value={formData.due_date || ''}
-                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                className={!formData.due_date ? 'border-amber-400' : ''}
               />
-              {!formData.due_date && (
-                <p className="text-xs text-amber-600">Requis</p>
-              )}
-              {formData.scheduled_start && formData.due_date && formData.due_date < formData.scheduled_start && (
-                <p className="text-xs text-red-600">La date limite doit être après la date de début</p>
+              {errors.due_date && (
+                <p className="text-red-600 text-sm mt-1">{errors.due_date.message}</p>
               )}
             </div>
 
@@ -568,10 +576,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <Input
                 id="estimated_duration"
                 type="number"
+                {...register('estimated_duration', { valueAsNumber: true })}
+                invalid={!!errors.estimated_duration}
                 min="1"
-                value={formData.estimated_duration || ''}
-                onChange={(e) => setFormData({ ...formData, estimated_duration: parseInt(e.target.value) || undefined })}
               />
+              {errors.estimated_duration && (
+                <p className="text-red-600 text-sm mt-1">{errors.estimated_duration.message}</p>
+              )}
             </div>
           </div>
 
@@ -612,14 +623,16 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   )}
                 </Label>
                 <Select
-                  value={formData.payment_type || 'none'}
-                  onValueChange={(value) => setFormData({ ...formData, payment_type: value === 'none' ? undefined : value as any })}
+                  value={formData.payment_type || 'daily'}
+                  onValueChange={(value) => {
+                    const event = { target: { name: 'payment_type', value } } as any;
+                    register('payment_type').onChange(event);
+                  }}
                 >
                   <SelectTrigger id="payment_type">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Show "none" option only when all selected workers are fixed salary */}
                     {selectedWorkerIds.length > 0 &&
                       workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
                       <SelectItem value="none">Aucun (inclus dans le salaire)</SelectItem>
@@ -630,6 +643,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     <SelectItem value="metayage">Métayage</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.payment_type && (
+                  <p className="text-red-600 text-sm mt-1">{errors.payment_type.message}</p>
+                )}
               </div>
 
               {/* Work Unit (only if payment type is per_unit) */}
@@ -638,7 +654,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <Label htmlFor="work_unit_id">Unité de travail *</Label>
                   <Select
                     value={formData.work_unit_id || '__none__'}
-                    onValueChange={(value) => setFormData({ ...formData, work_unit_id: value === '__none__' ? undefined : value })}
+                    onValueChange={(value) => {
+                      const newValue = value === '__none__' ? '' : value;
+                      const event = { target: { name: 'work_unit_id', value: newValue } } as any;
+                      register('work_unit_id').onChange(event);
+                    }}
                   >
                     <SelectTrigger id="work_unit_id">
                       <SelectValue placeholder="Sélectionner..." />
@@ -652,6 +672,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
+                  {errors.work_unit_id && (
+                    <p className="text-red-600 text-sm mt-1">{errors.work_unit_id.message}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -664,15 +687,18 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <Input
                     id="units_required"
                     type="number"
+                    {...register('units_required', { valueAsNumber: true })}
+                    invalid={!!errors.units_required}
                     min="0"
                     step="0.01"
-                    value={formData.units_required || ''}
-                    onChange={(e) => setFormData({ ...formData, units_required: parseFloat(e.target.value) || undefined })}
                     placeholder="Ex: 100 (optionnel)"
                   />
                   <p className="text-xs text-muted-foreground">
                     Les unités réelles seront enregistrées à la fin de la tâche
                   </p>
+                  {errors.units_required && (
+                    <p className="text-red-600 text-sm mt-1">{errors.units_required.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -680,16 +706,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   <Input
                     id="rate_per_unit"
                     type="number"
+                    {...register('rate_per_unit', { valueAsNumber: true })}
+                    invalid={!!errors.rate_per_unit}
                     min="0"
                     step="0.01"
-                    value={formData.rate_per_unit || ''}
-                    onChange={(e) => setFormData({ ...formData, rate_per_unit: parseFloat(e.target.value) || undefined })}
                     placeholder="Ex: 5.00 (optionnel)"
                   />
                   {formData.units_required && formData.rate_per_unit && (
                     <p className="text-xs text-muted-foreground">
                       Total estimé: {(formData.units_required * formData.rate_per_unit).toFixed(2)} MAD
                     </p>
+                  )}
+                  {errors.rate_per_unit && (
+                    <p className="text-red-600 text-sm mt-1">{errors.rate_per_unit.message}</p>
                   )}
                 </div>
               </div>
@@ -701,11 +730,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <Label htmlFor="notes">Notes</Label>
             <Textarea
               id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              {...register('notes')}
               rows={2}
               placeholder="Notes additionnelles..."
             />
+            {errors.notes && (
+              <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
+            )}
           </div>
 
           {/* Actions */}
@@ -714,14 +745,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
               type="button"
               variant="outline"
               onClick={onClose}
+              disabled={isSubmitting}
             >
               Annuler
             </Button>
             <Button
               type="submit"
-              disabled={createTask.isPending || updateTask.isPending}
+              disabled={createTask.isPending || updateTask.isPending || isSubmitting}
             >
-              {createTask.isPending || updateTask.isPending ? 'Enregistrement...' : 'Enregistrer'}
+              {createTask.isPending || updateTask.isPending || isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
           </div>
         </form>
