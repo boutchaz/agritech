@@ -1,8 +1,8 @@
-import { useOrganizationStore } from '../stores/organizationStore';
-import { useAuthStore } from '../stores/authStore';
-import { ErrorHandlers } from './errors';
+import { useOrganizationStore } from "../stores/organizationStore";
+import { useAuthStore } from "../stores/authStore";
+import { ErrorHandlers } from "./errors";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // Flag to prevent multiple redirects to login
 let isRedirectingToLogin = false;
@@ -21,13 +21,16 @@ function handleSessionExpired(): void {
   // Clear all auth-related data
   useAuthStore.getState().clearAuth();
   useOrganizationStore.getState().clearOrganization();
-  localStorage.removeItem('currentOrganization');
-  localStorage.removeItem('currentFarm');
+  localStorage.removeItem("currentOrganization");
+  localStorage.removeItem("currentFarm");
 
   // Redirect to login after a short delay to allow error handling
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-      window.location.href = '/login';
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/login"
+    ) {
+      window.location.href = "/login";
     }
     isRedirectingToLogin = false;
   }, 100);
@@ -35,7 +38,7 @@ function handleSessionExpired(): void {
 
 // Device Analytics Headers
 interface DeviceInfo {
-  deviceType: 'web' | 'desktop';
+  deviceType: "web" | "desktop";
   deviceOs: string;
   appVersion: string;
   deviceId: string;
@@ -43,31 +46,36 @@ interface DeviceInfo {
 
 function getDeviceInfo(): DeviceInfo {
   // Check if running in Tauri desktop app
-  const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+  const isTauri = typeof window !== "undefined" && "__TAURI__" in window;
 
-  const deviceType = isTauri ? 'desktop' : 'web';
+  const deviceType = isTauri ? "desktop" : "web";
 
   // Get or generate device ID
-  let deviceId = localStorage.getItem('agritech_device_id');
+  let deviceId = localStorage.getItem("agritech_device_id");
   if (!deviceId) {
     deviceId = `${deviceType}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    localStorage.setItem('agritech_device_id', deviceId);
+    localStorage.setItem("agritech_device_id", deviceId);
   }
 
   // Detect OS
-  let deviceOs = 'unknown';
-  if (typeof navigator !== 'undefined') {
+  let deviceOs = "unknown";
+  if (typeof navigator !== "undefined") {
     const userAgent = navigator.userAgent;
-    if (userAgent.includes('Windows')) deviceOs = 'windows';
-    else if (userAgent.includes('Mac')) deviceOs = 'macos';
-    else if (userAgent.includes('Linux')) deviceOs = 'linux';
-    else if (userAgent.includes('Android')) deviceOs = 'android';
-    else if (userAgent.includes('iOS') || userAgent.includes('iPhone') || userAgent.includes('iPad')) deviceOs = 'ios';
-    else deviceOs = 'web';
+    if (userAgent.includes("Windows")) deviceOs = "windows";
+    else if (userAgent.includes("Mac")) deviceOs = "macos";
+    else if (userAgent.includes("Linux")) deviceOs = "linux";
+    else if (userAgent.includes("Android")) deviceOs = "android";
+    else if (
+      userAgent.includes("iOS") ||
+      userAgent.includes("iPhone") ||
+      userAgent.includes("iPad")
+    )
+      deviceOs = "ios";
+    else deviceOs = "web";
   }
 
   // Get app version from package.json or build info
-  const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0';
+  const appVersion = import.meta.env.VITE_APP_VERSION || "1.0.0";
 
   return {
     deviceType,
@@ -80,10 +88,10 @@ function getDeviceInfo(): DeviceInfo {
 function getAnalyticsHeaders(): Record<string, string> {
   const deviceInfo = getDeviceInfo();
   return {
-    'X-Device-Type': deviceInfo.deviceType,
-    'X-Device-OS': deviceInfo.deviceOs,
-    'X-App-Version': deviceInfo.appVersion,
-    'X-Device-Id': deviceInfo.deviceId,
+    "X-Device-Type": deviceInfo.deviceType,
+    "X-Device-OS": deviceInfo.deviceOs,
+    "X-App-Version": deviceInfo.appVersion,
+    "X-Device-Id": deviceInfo.deviceId,
   };
 }
 
@@ -92,10 +100,11 @@ function getAnalyticsHeaders(): Record<string, string> {
  */
 function getCurrentOrganizationId(): string | null {
   try {
-    const currentOrganization = useOrganizationStore.getState().currentOrganization;
+    const currentOrganization =
+      useOrganizationStore.getState().currentOrganization;
     return currentOrganization?.id || null;
   } catch (error) {
-    ErrorHandlers.log(error, 'Error reading organization from store');
+    ErrorHandlers.log(error, "Error reading organization from store");
     return null;
   }
 }
@@ -104,14 +113,16 @@ function getCurrentOrganizationId(): string | null {
  * Get authentication headers with organization ID
  * @param organizationId - Optional organization ID from React context (preferred over localStorage)
  */
-export async function getApiHeaders(organizationId?: string | null): Promise<HeadersInit> {
+export async function getApiHeaders(
+  organizationId?: string | null,
+): Promise<HeadersInit> {
   // Refresh access token if expired and refresh token exists
   if (useAuthStore.getState().isTokenExpired()) {
     const refreshed = await useAuthStore.getState().refreshAccessToken();
     if (!refreshed) {
-      ErrorHandlers.log(null, '[API Client] Token expired and refresh failed');
+      ErrorHandlers.log(null, "[API Client] Token expired and refresh failed");
       handleSessionExpired();
-      throw new Error('Session expired. Please log in again.');
+      throw new Error("Session expired. Please log in again.");
     }
   }
 
@@ -119,12 +130,12 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
   const accessToken = useAuthStore.getState().getAccessToken();
 
   if (!accessToken) {
-    ErrorHandlers.log(null, '[API Client] No active session found');
+    ErrorHandlers.log(null, "[API Client] No active session found");
     // If the auth store thinks we're authenticated but there's no token, clear the invalid state
     if (useAuthStore.getState().isAuthenticated) {
       handleSessionExpired();
     }
-    throw new Error('No active session. Please log in again.');
+    throw new Error("No active session. Please log in again.");
   }
 
   const orgId = organizationId || getCurrentOrganizationId();
@@ -132,15 +143,15 @@ export async function getApiHeaders(organizationId?: string | null): Promise<Hea
   const analyticsHeaders = getAnalyticsHeaders();
 
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${accessToken}`,
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${accessToken}`,
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    Pragma: "no-cache",
     ...analyticsHeaders,
   };
 
-  if (orgId && orgId !== 'undefined' && typeof orgId === 'string') {
-    headers['X-Organization-Id'] = orgId;
+  if (orgId && orgId !== "undefined" && typeof orgId === "string") {
+    headers["X-Organization-Id"] = orgId;
   }
 
   return headers;
@@ -157,10 +168,10 @@ export async function apiRequest<T>(
   url: string,
   options: RequestInit = {},
   organizationId?: string | null,
-  retryOnUnauthorized: boolean = true
+  retryOnUnauthorized: boolean = true,
 ): Promise<T> {
   const headers = await getApiHeaders(organizationId);
-  const fullUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+  const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
 
   const response = await fetch(fullUrl, {
     ...options,
@@ -176,7 +187,9 @@ export async function apiRequest<T>(
       error = await response.json();
     } catch {
       if (response.status === 0 || response.status >= 500) {
-        throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
+        throw new Error(
+          "Connection error. The server may be unavailable. Please check your internet connection and try again.",
+        );
       } else if (response.status === 401) {
         if (retryOnUnauthorized) {
           const refreshed = await useAuthStore.getState().refreshAccessToken();
@@ -186,39 +199,62 @@ export async function apiRequest<T>(
         }
         // Clear auth state and redirect to login
         handleSessionExpired();
-        throw new Error('Session expired. Please log in again.');
+        throw new Error("Session expired. Please log in again.");
       } else if (response.status === 403) {
-        throw new Error('Access denied. You may not have permission to perform this action.');
+        throw new Error(
+          "Access denied. You may not have permission to perform this action.",
+        );
       } else if (response.status === 404) {
-        throw new Error('The requested resource was not found.');
+        throw new Error("The requested resource was not found.");
       } else {
         error = {
-          message: response.statusText || 'API request failed',
-          error: 'Unknown error',
-          statusCode: response.status
+          message: response.statusText || "API request failed",
+          error: "Unknown error",
+          statusCode: response.status,
         };
       }
     }
 
-    const errorMessage = error?.message || error?.error || 'API request failed';
+    const errorMessage = error?.message || error?.error || "API request failed";
 
-    if (errorMessage.includes('Connection error') || response.status === 0) {
-      throw new Error('Connection error. The server may be unavailable. Please check your internet connection and try again.');
+    if (errorMessage.includes("Connection error") || response.status === 0) {
+      throw new Error(
+        "Connection error. The server may be unavailable. Please check your internet connection and try again.",
+      );
+    }
+
+    if (
+      response.status === 404 &&
+      errorMessage.toLowerCase().includes("not found")
+    ) {
+      const orgId = organizationId || getCurrentOrganizationId();
+      const orgName = useOrganizationStore.getState().currentOrganization?.name;
+      ErrorHandlers.log(
+        { url: fullUrl, status: 404, orgId, orgName, error },
+        `[API 404] ${errorMessage} - Check if resource belongs to current organization`,
+      );
+      throw new Error(
+        `${errorMessage}. Make sure you have the correct organization selected (current: ${orgName || "none"}).`,
+      );
     }
 
     throw new Error(errorMessage);
   }
 
-  const contentLength = response.headers.get('content-length');
-  const contentType = response.headers.get('content-type');
-  
-  if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+  const contentLength = response.headers.get("content-length");
+  const contentType = response.headers.get("content-type");
+
+  if (
+    response.status === 204 ||
+    contentLength === "0" ||
+    !contentType?.includes("application/json")
+  ) {
     return {} as T;
   }
 
   try {
     const text = await response.text();
-    if (!text || text.trim() === '') {
+    if (!text || text.trim() === "") {
       return {} as T;
     }
     return JSON.parse(text) as T;
@@ -250,68 +286,126 @@ export class ApiClient {
    * Make a GET request
    * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async get<T>(endpoint: string, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
-    return apiRequest<T>(url, {
-      ...options,
-      method: 'GET',
-    }, orgId);
+  async get<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    organizationId?: string | null,
+  ): Promise<T> {
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseUrl}${endpoint}`;
+    const orgId =
+      organizationId !== undefined ? organizationId : this.organizationId;
+    return apiRequest<T>(
+      url,
+      {
+        ...options,
+        method: "GET",
+      },
+      orgId,
+    );
   }
 
   /**
    * Make a POST request
    * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async post<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
-    return apiRequest<T>(url, {
-      ...options,
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    }, orgId);
+  async post<T>(
+    endpoint: string,
+    data?: unknown,
+    options: RequestInit = {},
+    organizationId?: string | null,
+  ): Promise<T> {
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseUrl}${endpoint}`;
+    const orgId =
+      organizationId !== undefined ? organizationId : this.organizationId;
+    return apiRequest<T>(
+      url,
+      {
+        ...options,
+        method: "POST",
+        body: data ? JSON.stringify(data) : undefined,
+      },
+      orgId,
+    );
   }
 
   /**
    * Make a PUT request
    * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async put<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
-    return apiRequest<T>(url, {
-      ...options,
-      method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
-    }, orgId);
+  async put<T>(
+    endpoint: string,
+    data?: unknown,
+    options: RequestInit = {},
+    organizationId?: string | null,
+  ): Promise<T> {
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseUrl}${endpoint}`;
+    const orgId =
+      organizationId !== undefined ? organizationId : this.organizationId;
+    return apiRequest<T>(
+      url,
+      {
+        ...options,
+        method: "PUT",
+        body: data ? JSON.stringify(data) : undefined,
+      },
+      orgId,
+    );
   }
 
   /**
    * Make a PATCH request
    * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async patch<T>(endpoint: string, data?: unknown, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
-    return apiRequest<T>(url, {
-      ...options,
-      method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
-    }, orgId);
+  async patch<T>(
+    endpoint: string,
+    data?: unknown,
+    options: RequestInit = {},
+    organizationId?: string | null,
+  ): Promise<T> {
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseUrl}${endpoint}`;
+    const orgId =
+      organizationId !== undefined ? organizationId : this.organizationId;
+    return apiRequest<T>(
+      url,
+      {
+        ...options,
+        method: "PATCH",
+        body: data ? JSON.stringify(data) : undefined,
+      },
+      orgId,
+    );
   }
 
   /**
    * Make a DELETE request
    * @param organizationId - Optional organization ID from React context (overrides instance-level org ID)
    */
-  async delete<T>(endpoint: string, options: RequestInit = {}, organizationId?: string | null): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-    const orgId = organizationId !== undefined ? organizationId : this.organizationId;
-    return apiRequest<T>(url, {
-      ...options,
-      method: 'DELETE',
-    }, orgId);
+  async delete<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    organizationId?: string | null,
+  ): Promise<T> {
+    const url = endpoint.startsWith("http")
+      ? endpoint
+      : `${this.baseUrl}${endpoint}`;
+    const orgId =
+      organizationId !== undefined ? organizationId : this.organizationId;
+    return apiRequest<T>(
+      url,
+      {
+        ...options,
+        method: "DELETE",
+      },
+      orgId,
+    );
   }
 }
 

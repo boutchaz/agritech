@@ -1,15 +1,19 @@
 // Unified Worker Management Types
 // Supports: Fixed Employees, Daily Workers, and Métayage (Khammass/Rebâa)
 
-export type WorkerType = 'fixed_salary' | 'daily_worker' | 'metayage';
+export type WorkerType = "fixed_salary" | "daily_worker" | "metayage";
 
-export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'harvest_share';
+export type PaymentFrequency =
+  | "monthly"
+  | "daily"
+  | "per_task"
+  | "harvest_share";
 
-export type MetayageType = 'khammass' | 'rebaa' | 'tholth' | 'custom';
+export type MetayageType = "khammass" | "rebaa" | "tholth" | "custom";
 
-export type CalculationBasis = 'gross_revenue' | 'net_revenue';
+export type CalculationBasis = "gross_revenue" | "net_revenue";
 
-export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
+export type PaymentStatus = "pending" | "paid" | "cancelled";
 
 // Métayage contract details
 export interface MetayageContractDetails {
@@ -52,6 +56,7 @@ export interface Worker {
 
   // Daily Worker
   daily_rate?: number;
+  per_unit_rate?: number;
 
   // Métayage
   metayage_type?: MetayageType;
@@ -191,6 +196,7 @@ export interface WorkerFormData {
   // Compensation based on type
   monthly_salary?: number; // for fixed_salary
   daily_rate?: number; // for daily_worker
+  per_unit_rate?: number; // for daily_worker piece work
   metayage_type?: MetayageType; // for metayage
   metayage_percentage?: number; // for metayage
   calculation_basis?: CalculationBasis; // for metayage
@@ -206,29 +212,90 @@ export interface WorkerFormData {
 }
 
 // Constants for dropdown options
-export const WORKER_TYPE_OPTIONS: { value: WorkerType; label: string; labelFr: string; labelAr: string }[] = [
-  { value: 'fixed_salary', label: 'Fixed Employee', labelFr: 'Salarié fixe', labelAr: 'موظف ثابت' },
-  { value: 'daily_worker', label: 'Daily Worker', labelFr: 'Ouvrier journalier', labelAr: 'عامل يومي' },
-  { value: 'metayage', label: 'Revenue Share (Métayage)', labelFr: 'Partage de production (Khammass/Rebâa)', labelAr: 'مشاركة في الإنتاج (خماس/رباع)' },
+export const WORKER_TYPE_OPTIONS: {
+  value: WorkerType;
+  label: string;
+  labelFr: string;
+  labelAr: string;
+}[] = [
+  {
+    value: "fixed_salary",
+    label: "Fixed Employee",
+    labelFr: "Salarié fixe",
+    labelAr: "موظف ثابت",
+  },
+  {
+    value: "daily_worker",
+    label: "Daily Worker",
+    labelFr: "Ouvrier journalier",
+    labelAr: "عامل يومي",
+  },
+  {
+    value: "metayage",
+    label: "Revenue Share (Métayage)",
+    labelFr: "Partage de production (Khammass/Rebâa)",
+    labelAr: "مشاركة في الإنتاج (خماس/رباع)",
+  },
 ];
 
-export const METAYAGE_TYPE_OPTIONS: { value: MetayageType; label: string; percentage: number; description: string }[] = [
-  { value: 'khammass', label: 'Khammass (1/5)', percentage: 20, description: 'Worker receives 20% of harvest/revenue' },
-  { value: 'rebaa', label: 'Rebâa (1/4)', percentage: 25, description: 'Worker receives 25% of harvest/revenue' },
-  { value: 'tholth', label: 'Tholth (1/3)', percentage: 33.33, description: 'Worker receives 33.33% of harvest/revenue' },
-  { value: 'custom', label: 'Custom', percentage: 0, description: 'Custom percentage' },
+export const METAYAGE_TYPE_OPTIONS: {
+  value: MetayageType;
+  label: string;
+  percentage: number;
+  description: string;
+}[] = [
+  {
+    value: "khammass",
+    label: "Khammass (1/5)",
+    percentage: 20,
+    description: "Worker receives 20% of harvest/revenue",
+  },
+  {
+    value: "rebaa",
+    label: "Rebâa (1/4)",
+    percentage: 25,
+    description: "Worker receives 25% of harvest/revenue",
+  },
+  {
+    value: "tholth",
+    label: "Tholth (1/3)",
+    percentage: 33.33,
+    description: "Worker receives 33.33% of harvest/revenue",
+  },
+  {
+    value: "custom",
+    label: "Custom",
+    percentage: 0,
+    description: "Custom percentage",
+  },
 ];
 
-export const CALCULATION_BASIS_OPTIONS: { value: CalculationBasis; label: string; labelFr: string }[] = [
-  { value: 'gross_revenue', label: 'Gross Revenue', labelFr: 'Revenu brut' },
-  { value: 'net_revenue', label: 'Net Revenue (after charges)', labelFr: 'Revenu net (après charges)' },
+export const CALCULATION_BASIS_OPTIONS: {
+  value: CalculationBasis;
+  label: string;
+  labelFr: string;
+}[] = [
+  { value: "gross_revenue", label: "Gross Revenue", labelFr: "Revenu brut" },
+  {
+    value: "net_revenue",
+    label: "Net Revenue (after charges)",
+    labelFr: "Revenu net (après charges)",
+  },
 ];
 
-export const PAYMENT_FREQUENCY_OPTIONS: { value: PaymentFrequency; label: string; labelFr: string }[] = [
-  { value: 'monthly', label: 'Monthly', labelFr: 'Mensuel' },
-  { value: 'daily', label: 'Daily', labelFr: 'Journalier' },
-  { value: 'per_task', label: 'Per Task', labelFr: 'À la tâche' },
-  { value: 'harvest_share', label: 'Harvest Share', labelFr: 'Partage de récolte' },
+export const PAYMENT_FREQUENCY_OPTIONS: {
+  value: PaymentFrequency;
+  label: string;
+  labelFr: string;
+}[] = [
+  { value: "monthly", label: "Monthly", labelFr: "Mensuel" },
+  { value: "daily", label: "Daily", labelFr: "Journalier" },
+  { value: "per_task", label: "Per Task", labelFr: "À la tâche" },
+  {
+    value: "harvest_share",
+    label: "Harvest Share",
+    labelFr: "Partage de récolte",
+  },
 ];
 
 // Utility functions
@@ -236,29 +303,44 @@ export const getWorkerDisplayName = (worker: Worker): string => {
   return `${worker.first_name} ${worker.last_name}`;
 };
 
-export const getWorkerTypeLabel = (type: WorkerType, lang: 'en' | 'fr' | 'ar' = 'fr'): string => {
-  const option = WORKER_TYPE_OPTIONS.find(o => o.value === type);
+export const getWorkerTypeLabel = (
+  type: WorkerType,
+  lang: "en" | "fr" | "ar" = "fr",
+): string => {
+  const option = WORKER_TYPE_OPTIONS.find((o) => o.value === type);
   if (!option) return type;
-  return lang === 'fr' ? option.labelFr : lang === 'ar' ? option.labelAr : option.label;
+  return lang === "fr"
+    ? option.labelFr
+    : lang === "ar"
+      ? option.labelAr
+      : option.label;
 };
 
 export const getMetayageTypeLabel = (type: MetayageType): string => {
-  const option = METAYAGE_TYPE_OPTIONS.find(o => o.value === type);
+  const option = METAYAGE_TYPE_OPTIONS.find((o) => o.value === type);
   return option?.label || type;
 };
 
 export const getCompensationDisplay = (worker: Worker): string => {
   switch (worker.worker_type) {
-    case 'fixed_salary':
-      return worker.monthly_salary ? `${worker.monthly_salary.toFixed(2)} DH/mois` : 'N/A';
-    case 'daily_worker':
-      return worker.daily_rate ? `${worker.daily_rate.toFixed(2)} DH/jour` : 'N/A';
-    case 'metayage': {
-      const typeLabel = worker.metayage_type ? getMetayageTypeLabel(worker.metayage_type) : 'Custom';
-      return worker.metayage_percentage ? `${worker.metayage_percentage}% (${typeLabel})` : 'N/A';
+    case "fixed_salary":
+      return worker.monthly_salary
+        ? `${worker.monthly_salary.toFixed(2)} DH/mois`
+        : "N/A";
+    case "daily_worker":
+      return worker.daily_rate
+        ? `${worker.daily_rate.toFixed(2)} DH/jour`
+        : "N/A";
+    case "metayage": {
+      const typeLabel = worker.metayage_type
+        ? getMetayageTypeLabel(worker.metayage_type)
+        : "Custom";
+      return worker.metayage_percentage
+        ? `${worker.metayage_percentage}% (${typeLabel})`
+        : "N/A";
     }
     default:
-      return 'N/A';
+      return "N/A";
   }
 };
 
@@ -266,8 +348,9 @@ export const calculateMetayageShare = (
   grossRevenue: number,
   totalCharges: number,
   percentage: number,
-  basis: CalculationBasis
+  basis: CalculationBasis,
 ): number => {
-  const baseAmount = basis === 'gross_revenue' ? grossRevenue : grossRevenue - totalCharges;
+  const baseAmount =
+    basis === "gross_revenue" ? grossRevenue : grossRevenue - totalCharges;
   return baseAmount * (percentage / 100);
 };

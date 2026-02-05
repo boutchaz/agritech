@@ -11,11 +11,13 @@ import { TaskFiltersDto } from "./dto/task-filters.dto";
 import { AssignTaskDto } from "./dto/assign-task.dto";
 import { CompleteTaskDto } from "./dto/complete-task.dto";
 import { CompleteHarvestTaskDto } from "./dto/complete-harvest-task.dto";
+import { ConsumedItemDto } from "./dto/consumed-item.dto";
 import { DatabaseService } from "../database/database.service";
 import { AccountingAutomationService } from "../journal-entries/accounting-automation.service";
 import { ReceptionBatchesService } from "../reception-batches/reception-batches.service";
 import { AdoptionService, MilestoneType } from "../adoption/adoption.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { ProductApplicationsService } from "../product-applications/product-applications.service";
 
 @Injectable()
 export class TasksService {
@@ -27,6 +29,7 @@ export class TasksService {
     private readonly receptionBatchesService: ReceptionBatchesService,
     private readonly adoptionService: AdoptionService,
     private readonly notificationsService: NotificationsService,
+    private readonly productApplicationsService: ProductApplicationsService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -680,11 +683,10 @@ export class TasksService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    // Verify task belongs to organization and get full details
     const { data: existingTask } = await client
       .from("tasks")
       .select(
-        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end",
+        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end, farm_id, parcel_id, payment_type, units_required, rate_per_unit, work_unit_id",
       )
       .eq("id", taskId)
       .eq("organization_id", organizationId)
@@ -738,16 +740,45 @@ export class TasksService {
           }
         }
 
+        // Handle per-unit payment tasks
+        const isPerUnitTask = existingTask.payment_type === "per_unit";
+        const unitsCompleted =
+          completeTaskDto.units_completed ??
+          (isPerUnitTask ? existingTask.units_required : null);
+        const ratePerUnit =
+          completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
+        const workUnitId =
+          completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
+
+        // Calculate total payment based on payment type
+        let totalPayment: number | null = null;
+        if (isPerUnitTask && unitsCompleted && ratePerUnit) {
+          totalPayment = unitsCompleted * ratePerUnit;
+        }
+
         const { data: workRecord, error: workRecordError } = await client
           .from("work_records")
           .insert({
             worker_id: existingTask.assigned_to,
-            work_date: now.split("T")[0], // Use current date
+            farm_id: existingTask.farm_id,
+            organization_id: organizationId,
+            worker_type: isPerUnitTask ? "per_unit" : "daily",
+            work_date: now.split("T")[0],
             hours_worked: hoursWorked,
-            description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
-            status: "completed",
+            task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
+            payment_status: totalPayment ? "pending" : "not_applicable",
+            total_payment: totalPayment,
             task_id: taskId,
-            created_by: userId,
+            units_completed: unitsCompleted,
+            rate_per_unit: ratePerUnit,
+            work_unit_id: workUnitId,
+            notes: JSON.stringify({
+              task_id: taskId,
+              task_type: existingTask.task_type,
+              payment_type: existingTask.payment_type,
+              parcel_id: existingTask.parcel_id,
+              completed_at: now,
+            }),
           })
           .select()
           .single();
@@ -758,7 +789,10 @@ export class TasksService {
           );
         } else {
           this.logger.log(
-            `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}`,
+            `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}` +
+              (isPerUnitTask
+                ? `, units: ${unitsCompleted}, payment: ${totalPayment}`
+                : ""),
           );
         }
       } catch (workRecordError) {
@@ -809,6 +843,15 @@ export class TasksService {
           `Cannot create journal entry without task_type for account mapping.`,
       );
     }
+
+    // Process consumed items - deduct from stock
+    await this.processConsumedItems(
+      userId,
+      organizationId,
+      taskId,
+      task,
+      completeTaskDto.consumed_items,
+    );
 
     return {
       ...task,
@@ -1569,5 +1612,86 @@ export class TasksService {
           ? locationValidation.message
           : undefined,
     };
+  }
+
+  private async processConsumedItems(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    task: any,
+    consumedItems?: ConsumedItemDto[],
+  ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+
+    let itemsToProcess = consumedItems;
+
+    if (!itemsToProcess || itemsToProcess.length === 0) {
+      const { data: taskData } = await client
+        .from("tasks")
+        .select("planned_items")
+        .eq("id", taskId)
+        .maybeSingle();
+
+      if (taskData?.planned_items && Array.isArray(taskData.planned_items)) {
+        itemsToProcess = taskData.planned_items;
+      }
+    }
+
+    if (!itemsToProcess || itemsToProcess.length === 0) {
+      return;
+    }
+
+    const applicableTaskTypes = [
+      "fertilization",
+      "pest_control",
+      "irrigation",
+      "planting",
+      "soil_preparation",
+    ];
+
+    if (!applicableTaskTypes.includes(task.task_type)) {
+      this.logger.log(
+        `Task type ${task.task_type} does not consume stock items, skipping`,
+      );
+      return;
+    }
+
+    const completedDate = new Date().toISOString().split("T")[0];
+    const productApplications: any[] = [];
+
+    for (const item of itemsToProcess) {
+      try {
+        const result =
+          await this.productApplicationsService.createProductApplication(
+            userId,
+            organizationId,
+            {
+              product_id: item.product_id,
+              application_date: completedDate,
+              quantity_used: item.quantity,
+              area_treated: item.area_treated || task.parcel_area || 0,
+              farm_id: task.farm_id,
+              parcel_id: task.parcel_id || undefined,
+              task_id: taskId,
+              notes: `Auto-generated from task: ${task.title}`,
+            },
+          );
+
+        productApplications.push(result.application);
+        this.logger.log(
+          `Stock deducted for task ${taskId}: ${item.quantity} of product ${item.product_id}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to deduct stock for product ${item.product_id} in task ${taskId}: ${error.message}`,
+        );
+      }
+    }
+
+    if (productApplications.length > 0) {
+      this.logger.log(
+        `Processed ${productApplications.length} product applications for task ${taskId}`,
+      );
+    }
   }
 }

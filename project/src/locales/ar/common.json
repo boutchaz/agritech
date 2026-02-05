@@ -3324,14 +3324,18 @@
     "workRecords": {
       "date": "التاريخ",
       "hours": "الساعات",
+      "units": "الوحدات",
       "description": "الوصف",
+      "payment": "المبلغ",
       "status": "الحالة"
     },
     "workRecordStatuses": {
       "pending": "قيد الانتظار",
       "approved": "موافق عليه",
       "paid": "مدفوع",
-      "cancelled": "ملغي"
+      "cancelled": "ملغي",
+      "completed": "مكتمل",
+      "not_applicable": "غير قابل للتطبيق"
     },
     "settlements": {
       "period": "الفترة",
@@ -3499,6 +3503,7 @@
         "cnssNumber": "رقم الضمان الاجتماعي",
         "monthlySalary": "الراتب الشهري ({{currency}})",
         "dailyRate": "الأجر اليومي ({{currency}})",
+        "perUnitRate": "السعر بالوحدة ({{currency}})",
         "metayageType": "نوع المشاركة",
         "metayagePercentage": "النسبة المئوية (%)",
         "calculationBasis": "أساس الحساب",
@@ -3520,6 +3525,7 @@
         "cnssNumber": "CNSS123456",
         "monthlySalary": "3000.00",
         "dailyRate": "120.00",
+        "perUnitRate": "5.00",
         "metayagePercentage": "20.00",
         "bankAccount": "IBAN أو RIB",
         "specialties": "مثال: التقليم، الري، الحصاد...",
@@ -3542,6 +3548,7 @@
         "emailRequired": "مطلوب بريد إلكتروني لإنشاء حساب منصة. يرجى توفير بريد العامل الإلكتروني.",
         "alreadyHasAccess": "لديك هذا العامل وصول للمنصة بالفعل (الدور: عامل مزرعة)."
       },
+      "perUnitRateInfo": "السعر بالوحدة يُستخدم للعمل بالقطعة. سيتم تطبيقه عند إتمام المهام ذات الدفع بالوحدة.",
       "metayageInfo": {
         "title": "معلومات عن المشاركة",
         "khammass": {
@@ -4829,7 +4836,15 @@
       "recalculate": "إعادة الحساب",
       "createPayment": "إنشاء الدفعة",
       "calculationError": "خطأ في حساب الدفعة",
-      "createError": "خطأ في إنشاء الدفعة"
+      "createError": "خطأ في إنشاء الدفعة",
+      "bonusInfo": "أدخل مبلغ المكافأة للدفع. سيتم تسجيل هذا كدفعة إضافية.",
+      "overtimeInfo": "أدخل مبلغ العمل الإضافي للدفع. سيتم تسجيل هذا كدفعة إضافية.",
+      "advanceInfo": "أدخل مبلغ السلفة. سيتم خصم هذا المبلغ من مدفوعات الراتب المستقبلية.",
+      "amount": "المبلغ",
+      "description": "الوصف",
+      "descriptionPlaceholder": "سبب هذه الدفعة...",
+      "totalToPay": "إجمالي المستحق",
+      "amountRequired": "يرجى إدخال مبلغ أكبر من صفر"
     },
     "paymentAllocation": {
       "title": "تخصيص وترحيل الدفعة",

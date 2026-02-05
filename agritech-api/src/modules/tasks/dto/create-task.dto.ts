@@ -11,7 +11,9 @@ import {
   IsDateString,
   Min,
   Max,
+  ValidateNested,
 } from "class-validator";
+import { ConsumedItemDto } from "./consumed-item.dto";
 
 // Custom transform to convert empty strings to null
 function EmptyStringToNull() {
@@ -189,4 +191,15 @@ export class CreateTaskDto {
   @IsNumber()
   @Min(0)
   rate_per_unit?: number;
+
+  @ApiPropertyOptional({
+    description:
+      "Planned items/products to consume when task is completed (e.g., fertilizers, pesticides)",
+    type: [ConsumedItemDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ConsumedItemDto)
+  planned_items?: ConsumedItemDto[];
 }

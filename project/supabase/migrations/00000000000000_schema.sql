@@ -2023,6 +2023,7 @@ CREATE TABLE IF NOT EXISTS workers (
   cnss_number TEXT,
   monthly_salary NUMERIC(10, 2),
   daily_rate NUMERIC(10, 2),
+  per_unit_rate NUMERIC(10, 2),
   metayage_type metayage_type,
   metayage_percentage NUMERIC(5, 2),
   calculation_basis calculation_basis DEFAULT 'net_revenue',
@@ -2116,6 +2117,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   parent_task_id UUID REFERENCES tasks(id),
   attachments JSONB,
   checklist JSONB,
+  planned_items JSONB DEFAULT NULL,
   notes TEXT,
   -- Work Unit Payment fields (for piece-work tracking)
   payment_type TEXT DEFAULT NULL,
@@ -2292,6 +2294,12 @@ CREATE TABLE IF NOT EXISTS work_records (
   notes TEXT,
   amount_paid NUMERIC,
   payment_date DATE,
+  -- Piece work / per-unit fields
+  units_completed NUMERIC,
+  unit_type TEXT,
+  rate_per_unit NUMERIC,
+  work_unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -2846,6 +2854,7 @@ CREATE TABLE IF NOT EXISTS product_applications (
   currency TEXT DEFAULT 'MAD',
   notes TEXT,
   task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+  images TEXT[] DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT product_applications_area_positive CHECK (area_treated > 0)
@@ -3197,6 +3206,7 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
   batch_number TEXT,
   serial_number TEXT,
   remaining_quantity NUMERIC DEFAULT 0,
+  variant_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0),
   CHECK (remaining_quantity >= 0)
@@ -3205,6 +3215,7 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_org ON stock_valuation(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_item ON stock_valuation(item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_valuation_warehouse ON stock_valuation(warehouse_id);
+CREATE INDEX IF NOT EXISTS idx_stock_valuation_variant ON stock_valuation(variant_id) WHERE variant_id IS NOT NULL;
 
 -- Opening Stock Balances
 CREATE TABLE IF NOT EXISTS opening_stock_balances (
@@ -5409,126 +5420,6 @@ BEGIN
 END $$;
 
 -- Ensure organization exists for organization ID 9a735597-c0a7-495c-b9f7-70842e34e3df
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_exists boolean;
-BEGIN
-    SELECT EXISTS(SELECT 1 FROM organizations WHERE id = v_org_id) INTO v_org_exists;
-    
-    IF NOT v_org_exists THEN
-        INSERT INTO organizations (
-            id,
-            name,
-            slug,
-            email,
-            currency_code,
-            timezone,
-            is_active
-        )
-        VALUES (
-            v_org_id,
-            'AgriTech Organization',
-            'agritech-org',
-            (SELECT email FROM auth.users ORDER BY created_at DESC LIMIT 1),
-            'MAD',
-            'Africa/Casablanca',
-            true
-        );
-        RAISE NOTICE '✅ Created organization: AgriTech Organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already exists';
-    END IF;
-END $$;
-
--- Link all auth users to the default organization as admins if they don't have an organization
-DO $$
-DECLARE
-    v_user RECORD;
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_org_admin_role_id UUID;
-    v_linked_count integer := 0;
-BEGIN
-    -- Get the organization_admin role_id
-    SELECT id INTO v_org_admin_role_id FROM roles WHERE name = 'organization_admin';
-    
-    IF v_org_admin_role_id IS NULL THEN
-        RAISE EXCEPTION 'organization_admin role not found';
-    END IF;
-    
-    FOR v_user IN 
-        SELECT u.id 
-        FROM auth.users u
-        WHERE NOT EXISTS (
-            SELECT 1 FROM organization_users ou 
-            WHERE ou.user_id = u.id AND ou.is_active = true
-        )
-    LOOP
-        INSERT INTO organization_users (
-            user_id,
-            organization_id,
-            role_id,
-            is_active
-        )
-        VALUES (
-            v_user.id,
-            v_org_id,
-            v_org_admin_role_id,
-            true
-        )
-        ON CONFLICT (user_id, organization_id) 
-        DO UPDATE SET 
-            is_active = true,
-            role_id = v_org_admin_role_id,
-            updated_at = NOW();
-        
-        v_linked_count := v_linked_count + 1;
-    END LOOP;
-    
-    IF v_linked_count > 0 THEN
-        RAISE NOTICE '✅ Linked % user(s) to organization', v_linked_count;
-    ELSE
-        RAISE NOTICE 'ℹ️  All users already linked to organizations';
-    END IF;
-END $$;
-
--- Create a trial subscription for the organization if it doesn't have one
-DO $$
-DECLARE
-    v_org_id uuid := '9a735597-c0a7-495c-b9f7-70842e34e3df';
-    v_sub_exists boolean;
-BEGIN
-    SELECT EXISTS(
-        SELECT 1 FROM subscriptions 
-        WHERE organization_id = v_org_id 
-        AND status IN ('trialing', 'active')
-    ) INTO v_sub_exists;
-    
-    IF NOT v_sub_exists THEN
-        INSERT INTO subscriptions (
-            organization_id,
-            status,
-            plan_id,
-            current_period_start,
-            current_period_end,
-            cancel_at_period_end
-        )
-        VALUES (
-            v_org_id,
-            'trialing',
-            'basic',
-            NOW(),
-            NOW() + INTERVAL '30 days',
-            false
-        )
-        ON CONFLICT DO NOTHING;
-        
-        RAISE NOTICE '✅ Created trial subscription for organization';
-    ELSE
-        RAISE NOTICE 'ℹ️  Organization already has an active subscription';
-    END IF;
-END $$;
-
 -- Final verification and summary
 DO $$
 DECLARE

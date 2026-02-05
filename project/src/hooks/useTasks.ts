@@ -1,7 +1,12 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { tasksApi, type PaginatedTaskQuery } from '../lib/api/tasks';
-import { useAuth } from '../hooks/useAuth';
-import type { PaginatedResponse } from '../lib/api/types';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query";
+import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
+import { useAuth } from "../hooks/useAuth";
+import type { PaginatedResponse } from "../lib/api/types";
 import type {
   TaskFilters,
   TaskSummary,
@@ -12,7 +17,7 @@ import type {
   ClockInRequest,
   ClockOutRequest,
   WorkerAvailability,
-} from '../types/tasks';
+} from "../types/tasks";
 
 export type { PaginatedTaskQuery };
 
@@ -22,7 +27,7 @@ export type { PaginatedTaskQuery };
 
 export function useTasks(organizationId: string, filters?: TaskFilters) {
   return useQuery({
-    queryKey: ['tasks', organizationId, filters],
+    queryKey: ["tasks", organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
       return tasksApi.getAll(organizationId, filters);
@@ -31,9 +36,12 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
   });
 }
 
-export function usePaginatedTasks(organizationId: string, query: PaginatedTaskQuery) {
+export function usePaginatedTasks(
+  organizationId: string,
+  query: PaginatedTaskQuery,
+) {
   return useQuery({
-    queryKey: ['tasks', 'paginated', organizationId, query],
+    queryKey: ["tasks", "paginated", organizationId, query],
     queryFn: async (): Promise<PaginatedResponse<TaskSummary>> => {
       if (!organizationId) {
         return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
@@ -48,7 +56,7 @@ export function usePaginatedTasks(organizationId: string, query: PaginatedTaskQu
 
 export function useTask(organizationId: string | null, taskId: string | null) {
   return useQuery({
-    queryKey: ['task', organizationId, taskId],
+    queryKey: ["task", organizationId, taskId],
     queryFn: async () => {
       if (!organizationId || !taskId) return null;
       return tasksApi.getById(organizationId, taskId);
@@ -59,7 +67,7 @@ export function useTask(organizationId: string | null, taskId: string | null) {
 
 export function useTaskCategories(organizationId: string) {
   return useQuery({
-    queryKey: ['task-categories', organizationId],
+    queryKey: ["task-categories", organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
       return tasksApi.getCategories(organizationId);
@@ -72,7 +80,7 @@ export function useTaskComments(taskId: string | null) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['task-comments', taskId],
+    queryKey: ["task-comments", taskId],
     queryFn: async () => {
       if (!taskId || !currentOrganization) return [];
       return tasksApi.getComments(currentOrganization.id, taskId);
@@ -85,7 +93,7 @@ export function useTaskTimeLogs(taskId: string | null) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['task-time-logs', taskId],
+    queryKey: ["task-time-logs", taskId],
     queryFn: async () => {
       if (!taskId || !currentOrganization) return [];
       return tasksApi.getTimeLogs(currentOrganization.id, taskId);
@@ -98,7 +106,7 @@ export function useTaskTimeLogs(taskId: string | null) {
 // Currently this hook is not being used in the application
 export function useWorkerAvailability(_workerId: string | null, _date: string) {
   return useQuery({
-    queryKey: ['worker-availability', _workerId, _date],
+    queryKey: ["worker-availability", _workerId, _date],
     queryFn: async () => {
       // Placeholder - needs NestJS API endpoint implementation
       return null as WorkerAvailability | null;
@@ -109,7 +117,7 @@ export function useWorkerAvailability(_workerId: string | null, _date: string) {
 
 export function useTaskStatistics(organizationId: string) {
   return useQuery({
-    queryKey: ['task-statistics', organizationId],
+    queryKey: ["task-statistics", organizationId],
     queryFn: async () => {
       if (!organizationId) return null;
       return tasksApi.getStatistics(organizationId);
@@ -126,16 +134,19 @@ export function useCreateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (request: CreateTaskRequest & { organization_id: string }) => {
+    mutationFn: async (
+      request: CreateTaskRequest & { organization_id: string },
+    ) => {
       const { organization_id, ...taskData } = request;
       return tasksApi.create(taskData, organization_id);
     },
     onSuccess: (_data, variables) => {
       const orgId = variables.organization_id;
-      queryClient.invalidateQueries({ queryKey: ['tasks', orgId] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', orgId] });
+      // Invalidate all tasks queries (both paginated and non-paginated)
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task-statistics", orgId] });
       // Also invalidate workers queries as tasks can affect worker data
-      queryClient.invalidateQueries({ queryKey: ['workers', orgId] });
+      queryClient.invalidateQueries({ queryKey: ["workers", orgId] });
     },
   });
 }
@@ -144,15 +155,27 @@ export function useUpdateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, organizationId, updates }: { taskId: string; organizationId: string; updates: UpdateTaskRequest }) => {
+    mutationFn: async ({
+      taskId,
+      organizationId,
+      updates,
+    }: {
+      taskId: string;
+      organizationId: string;
+      updates: UpdateTaskRequest;
+    }) => {
       return tasksApi.update(taskId, updates, organizationId);
     },
     onSuccess: (_data, variables) => {
       const orgId = variables.organizationId;
-      queryClient.invalidateQueries({ queryKey: ['task', orgId, variables.taskId] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', orgId] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', orgId] });
-      queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
+      queryClient.invalidateQueries({
+        queryKey: ["task", orgId, variables.taskId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task-statistics", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-comments", variables.taskId],
+      });
     },
   });
 }
@@ -161,13 +184,21 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, organizationId }: { taskId: string; organizationId: string }) => {
+    mutationFn: async ({
+      taskId,
+      organizationId,
+    }: {
+      taskId: string;
+      organizationId: string;
+    }) => {
       await tasksApi.delete(taskId, organizationId);
       return { taskId, organizationId };
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', variables.organizationId] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-statistics", variables.organizationId],
+      });
     },
   });
 }
@@ -176,12 +207,22 @@ export function useAssignTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, organizationId, workerId }: { taskId: string; organizationId: string; workerId: string }) => {
+    mutationFn: async ({
+      taskId,
+      organizationId,
+      workerId,
+    }: {
+      taskId: string;
+      organizationId: string;
+      workerId: string;
+    }) => {
       return tasksApi.assign(organizationId, taskId, workerId);
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', data.organization_id, data.id] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', data.organization_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["task", data.organization_id, data.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 }
@@ -193,7 +234,7 @@ export function useClockIn() {
   return useMutation({
     mutationFn: async (request: ClockInRequest) => {
       if (!currentOrganization) {
-        throw new Error('No organization selected');
+        throw new Error("No organization selected");
       }
 
       return tasksApi.clockIn(currentOrganization.id, request.task_id, {
@@ -204,9 +245,13 @@ export function useClockIn() {
       });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task.id] });
-      queryClient.invalidateQueries({ queryKey: ['task-time-logs', data.task.id] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', currentOrganization?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["task", currentOrganization?.id, data.task.id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["task-time-logs", data.task.id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 }
@@ -218,7 +263,7 @@ export function useClockOut() {
   return useMutation({
     mutationFn: async (request: ClockOutRequest) => {
       if (!currentOrganization) {
-        throw new Error('No organization selected');
+        throw new Error("No organization selected");
       }
 
       return tasksApi.clockOut(currentOrganization.id, request.time_log_id, {
@@ -228,9 +273,13 @@ export function useClockOut() {
     },
     onSuccess: (data) => {
       if (data.task) {
-        queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task.id] });
-        queryClient.invalidateQueries({ queryKey: ['task-time-logs', data.task.id] });
-        queryClient.invalidateQueries({ queryKey: ['tasks', currentOrganization?.id] });
+        queryClient.invalidateQueries({
+          queryKey: ["task", currentOrganization?.id, data.task.id],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["task-time-logs", data.task.id],
+        });
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
       }
     },
   });
@@ -241,9 +290,11 @@ export function useAddTaskComment() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (comment: Omit<TaskComment, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (
+      comment: Omit<TaskComment, "id" | "created_at" | "updated_at">,
+    ) => {
       if (!currentOrganization) {
-        throw new Error('No organization selected');
+        throw new Error("No organization selected");
       }
 
       return tasksApi.addComment(currentOrganization.id, comment.task_id, {
@@ -252,8 +303,12 @@ export function useAddTaskComment() {
       });
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['task-comments', data.task_id] });
-      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, data.task_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-comments", data.task_id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["task", currentOrganization?.id, data.task_id],
+      });
     },
   });
 }
@@ -267,7 +322,7 @@ export function useCompleteTask() {
       organizationId,
       qualityRating,
       actualCost,
-      notes
+      notes,
     }: {
       taskId: string;
       organizationId: string;
@@ -282,9 +337,13 @@ export function useCompleteTask() {
       });
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['task', variables.organizationId, variables.taskId] });
-      queryClient.invalidateQueries({ queryKey: ['tasks', variables.organizationId] });
-      queryClient.invalidateQueries({ queryKey: ['task-statistics', variables.organizationId] });
+      queryClient.invalidateQueries({
+        queryKey: ["task", variables.organizationId, variables.taskId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-statistics", variables.organizationId],
+      });
     },
   });
 }
@@ -294,16 +353,22 @@ export function useCreateTaskCategory() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (category: Omit<TaskCategory, 'id' | 'created_at' | 'updated_at' | 'is_active'>) => {
+    mutationFn: async (
+      category: Omit<
+        TaskCategory,
+        "id" | "created_at" | "updated_at" | "is_active"
+      >,
+    ) => {
       if (!currentOrganization) {
-        throw new Error('No organization selected');
+        throw new Error("No organization selected");
       }
 
       return tasksApi.createCategory(currentOrganization.id, category);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['task-categories', currentOrganization?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["task-categories", currentOrganization?.id],
+      });
     },
   });
 }
-
