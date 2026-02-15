@@ -169,4 +169,4 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
 ];
 
 // Marketplace external link
-export const MARKETPLACE_EXTERNAL_URL = 'https://marketplace.thebzlab.online';
+export const MARKETPLACE_EXTERNAL_URL = import.meta.env.VITE_MARKETPLACE_URL || 'https://marketplace.thebzlab.online';

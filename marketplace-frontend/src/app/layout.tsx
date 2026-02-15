@@ -7,6 +7,8 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import GoogleTagManager from "@/components/GTM";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
+import { Suspense } from 'react';
+import { CodeExchanger } from '@/components/CodeExchanger';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,15 +40,18 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <GoogleTagManager />
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <QueryProvider>
-            <AuthProvider>
-              <CartProvider>
-                {children}
-              </CartProvider>
-            </AuthProvider>
-          </QueryProvider>
-        </NextIntlClientProvider>
+         <NextIntlClientProvider locale={locale} messages={messages}>
+           <QueryProvider>
+             <AuthProvider>
+               <Suspense fallback={null}>
+                 <CodeExchanger />
+               </Suspense>
+               <CartProvider>
+                 {children}
+               </CartProvider>
+             </AuthProvider>
+           </QueryProvider>
+         </NextIntlClientProvider>
       </body>
     </html>
   );

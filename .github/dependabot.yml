@@ -1,0 +1,85 @@
+version: 2
+updates:
+  # Root package.json and pnpm-lock.yaml
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 10
+    reviewers:
+      - 'boutchaz'
+    labels:
+      - 'dependencies'
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+
+  # Frontend project
+  - package-ecosystem: 'npm'
+    directory: '/project'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'boutchaz'
+    labels:
+      - 'dependencies'
+      - 'frontend'
+    commit-message:
+      prefix: 'deps(frontend)'
+      include: 'scope'
+
+  # API
+  - package-ecosystem: 'npm'
+    directory: '/agritech-api'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'boutchaz'
+    labels:
+      - 'dependencies'
+      - 'api'
+    commit-message:
+      prefix: 'deps(api)'
+      include: 'scope'
+
+  # Python backend service
+  - package-ecosystem: 'pip'
+    directory: '/backend-service'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'boutchaz'
+    labels:
+      - 'dependencies'
+      - 'python'
+    commit-message:
+      prefix: 'deps(python)'
+      include: 'scope'
+
+  # GitHub Actions
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+    open-pull-requests-limit: 5
+    reviewers:
+      - 'boutchaz'
+    labels:
+      - 'dependencies'
+      - 'github-actions'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'

@@ -7,6 +7,7 @@ import CurrencySelector from './CurrencySelector';
 import type { Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
 import AIProvidersSettings from './settings/AIProvidersSettings';
+import { getMarketplaceUrl } from '@/lib/marketplace-link';
 
 interface OrganizationData {
   id: string;
@@ -218,16 +219,17 @@ const OrganizationSettings: React.FC = () => {
           </h2>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <a
-            href={`https://marketplace.thebzlab.online/sellers/${orgData.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-          >
-            <ExternalLink className="h-4 w-4" />
-            <span className="hidden sm:inline">Preview on Marketplace</span>
-            <span className="sm:hidden">Preview</span>
-          </a>
+           <button
+             onClick={async () => {
+               const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
+               window.open(url, '_blank', 'noopener,noreferrer');
+             }}
+             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+           >
+             <ExternalLink className="h-4 w-4" />
+             <span className="hidden sm:inline">Preview on Marketplace</span>
+             <span className="sm:hidden">Preview</span>
+           </button>
           {activeTab === 'general' && (
             <button
               onClick={handleSave}

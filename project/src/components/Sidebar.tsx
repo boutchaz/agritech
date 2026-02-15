@@ -32,6 +32,7 @@ import type { Module } from '../types';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 import { appConfig } from '../config/app';
+import { getMarketplaceUrl } from '@/lib/marketplace-link';
 
 import { ProtectedNavItem } from './authorization/ProtectedNavItem';
 import { Button } from './ui/button';
@@ -952,27 +953,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {isCollapsed ? (
                   <div className="hidden lg:block">
                     <CollapsedSectionPopover icon={ShoppingBag} title="Marketplace">
-                      <PopoverNavItem path="/marketplace/quote-requests/received" label="Demandes reçues" isActive={currentPath === '/marketplace/quote-requests/received'} />
-                      <PopoverNavItem path="/marketplace/quote-requests/sent" label="Demandes envoyées" isActive={currentPath === '/marketplace/quote-requests/sent'} />
-                      <a
-                        href="https://marketplace.thebzlab.online"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block"
-                      >
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group"
-                          )}
-                        >
-                          <div className="flex items-center w-full">
-                            <span className="flex-1">Voir la marketplace</span>
-                            <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        </Button>
-                      </a>
-                    </CollapsedSectionPopover>
+                       <PopoverNavItem path="/marketplace/quote-requests/received" label="Demandes reçues" isActive={currentPath === '/marketplace/quote-requests/received'} />
+                       <PopoverNavItem path="/marketplace/quote-requests/sent" label="Demandes envoyées" isActive={currentPath === '/marketplace/quote-requests/sent'} />
+                       <button
+                         onClick={async () => {
+                           const url = await getMarketplaceUrl('/');
+                           window.open(url, '_blank', 'noopener,noreferrer');
+                         }}
+                         className="block w-full text-left"
+                       >
+                         <Button
+                           variant="ghost"
+                           className={cn(
+                             "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group"
+                           )}
+                         >
+                           <div className="flex items-center w-full">
+                             <span className="flex-1">Voir la marketplace</span>
+                             <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                           </div>
+                         </Button>
+                       </button>
+                     </CollapsedSectionPopover>
                   </div>
                 ) : (
                   <>
@@ -1003,22 +1005,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText("Demandes envoyées")}
                         </Button>
-                        <a
-                          href="https://marketplace.thebzlab.online"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block"
-                        >
-                          <Button
-                            variant="ghost"
-                            className={cn(getSubItemClassName(false), "group")}
-                          >
-                            <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
-                              <span className="flex-1">{renderText("Voir la marketplace")}</span>
-                              <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                          </Button>
-                        </a>
+                         <button
+                           onClick={async () => {
+                             const url = await getMarketplaceUrl('/');
+                             window.open(url, '_blank', 'noopener,noreferrer');
+                           }}
+                           className="block w-full text-left"
+                         >
+                           <Button
+                             variant="ghost"
+                             className={cn(getSubItemClassName(false), "group")}
+                           >
+                             <div className={cn("flex items-center w-full", isRTL && "flex-row-reverse")}>
+                               <span className="flex-1">{renderText("Voir la marketplace")}</span>
+                               <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                             </div>
+                           </Button>
+                         </button>
                       </>
                     )}
                   </>

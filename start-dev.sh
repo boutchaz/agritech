@@ -31,6 +31,7 @@ echo "🛑 Stopping existing services..."
 pkill -f "nest start" 2>/dev/null || true
 pkill -f "uvicorn app.main" 2>/dev/null || true
 pkill -f "vite" 2>/dev/null || true
+pkill -f "next dev" 2>/dev/null || true
 sleep 2
 
 # ========================================
@@ -79,7 +80,28 @@ echo "✅ Frontend starting on port 5173..."
 sleep 5
 
 # ========================================
-# 6. Show Status
+# 6. Start Marketplace Frontend (Next.js)
+# ========================================
+echo "🛒 Starting Marketplace Frontend (Next.js)..."
+cd "$AGRITECH_ROOT/marketplace-frontend"
+
+# Ensure .env.local is configured
+if [ ! -f .env.local ]; then
+    echo "⚠️  Creating .env.local for local development..."
+    cat > .env.local << 'MKTENVEOF'
+# Local Development - Marketplace Frontend
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+NEXT_PUBLIC_API_URL=http://localhost:3001
+MKTENVEOF
+fi
+
+nohup npx next dev --port 3002 > "$LOG_DIR/marketplace.log" 2>&1 &
+echo "✅ Marketplace starting on port 3002..."
+sleep 5
+
+# ========================================
+# 7. Show Status
 # ========================================
 echo ""
 echo "=========================================="
@@ -92,11 +114,13 @@ echo "Supabase          | N/A   | Local Docker           | $LOG_DIR/supabase.log
 echo "Backend API       | 3001  | http://localhost:3001  | $LOG_DIR/backend.log"
 echo "Satellite Service | 8001  | http://localhost:8001  | $LOG_DIR/satellite.log"
 echo "Frontend          | 5173  | http://localhost:5173  | $LOG_DIR/frontend.log"
+echo "Marketplace       | 3002  | http://localhost:3002  | $LOG_DIR/marketplace.log"
 echo ""
 echo "📝 View logs:"
 echo "   tail -f $LOG_DIR/frontend.log"
 echo "   tail -f $LOG_DIR/backend.log"
 echo "   tail -f $LOG_DIR/satellite.log"
+echo "   tail -f $LOG_DIR/marketplace.log"
 echo ""
 echo "🛑 Stop all services:"
 echo "   ./stop-dev.sh"
@@ -104,7 +128,7 @@ echo ""
 echo "=========================================="
 
 # ========================================
-# 7. Verify Services
+# 8. Verify Services
 # ========================================
 sleep 3
 echo "🔍 Verifying services..."
@@ -121,8 +145,10 @@ check_port() {
 check_port 3001  # Backend API
 check_port 5173  # Frontend
 check_port 8001  # Satellite Service
+check_port 3002  # Marketplace
 
 echo ""
 echo "✨ Development environment ready!"
 echo "   Frontend: http://localhost:5173"
+echo "   Marketplace: http://localhost:3002"
 echo ""

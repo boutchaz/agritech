@@ -18,6 +18,19 @@ import { CaslAbilityFactory } from '../casl/casl-ability.factory';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
+  // In-memory store for exchange codes
+  private exchangeCodes = new Map<string, { userId: string; createdAt: number }>();
+
+  // Clean expired codes every 60 seconds
+  private cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [code, data] of this.exchangeCodes) {
+      if (now - data.createdAt > 30_000) {
+        this.exchangeCodes.delete(code);
+      }
+    }
+  }, 60_000);
+
   constructor(
     private databaseService: DatabaseService,
     private configService: ConfigService,
@@ -219,45 +232,59 @@ export class AuthService {
     };
   }
 
-  /**
-   * Change current user password and mark password_set
-   */
-  async changePassword(userId: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 8) {
-      throw new BadRequestException('Password must be at least 8 characters long');
-    }
+   /**
+    * Change current user password and mark password_set
+    */
+   async changePassword(userId: string, newPassword: string) {
+     if (!newPassword || newPassword.length < 8) {
+       throw new BadRequestException('Password must be at least 8 characters long');
+     }
 
-    const client = this.databaseService.getAdminClient();
+     const client = this.databaseService.getAdminClient();
 
-    const { error: updateError } = await client.auth.admin.updateUserById(userId, {
-      password: newPassword,
-    });
+     const { error: updateError } = await client.auth.admin.updateUserById(userId, {
+       password: newPassword,
+     });
 
-    if (updateError) {
-      throw new BadRequestException(`Failed to update password: ${updateError.message}`);
-    }
+     if (updateError) {
+       throw new BadRequestException(`Failed to update password: ${updateError.message}`);
+     }
 
-    await client
-      .from('user_profiles')
-      .upsert({
-        id: userId,
-        password_set: true,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'id',
-      });
+     await client
+       .from('user_profiles')
+       .upsert({
+         id: userId,
+         password_set: true,
+         updated_at: new Date().toISOString(),
+       }, {
+         onConflict: 'id',
+       });
 
-    // Clear worker temp password if applicable
-    await client
-      .from('workers')
-      .update({
-        temp_password: null,
-        temp_password_expires_at: null,
-      })
-      .eq('user_id', userId);
+     // Clear worker temp password if applicable
+     await client
+       .from('workers')
+       .update({
+         temp_password: null,
+         temp_password_expires_at: null,
+       })
+       .eq('user_id', userId);
 
-    return { success: true };
-  }
+     return { success: true };
+   }
+
+   /**
+    * Logout and revoke all refresh tokens globally
+    */
+   async logout(jwt: string): Promise<void> {
+     try {
+       const adminClient = this.databaseService.getAdminClient();
+       await adminClient.auth.admin.signOut(jwt, 'global');
+       this.logger.log('User logged out successfully and all sessions revoked');
+     } catch (error) {
+       // Fire-and-forget: log error but don't throw
+       this.logger.error(`Failed to revoke session: ${error.message}`);
+     }
+   }
 
   /**
    * Check if user has required role level
@@ -882,5 +909,75 @@ export class AuthService {
    */
   async getUserAbilities(userId: string, organizationId: string) {
     return this.caslAbilityFactory.getAbilitiesForUser({ id: userId }, organizationId);
+  }
+
+  /**
+   * Generate one-time exchange code for cross-app authentication
+   * Code expires after 30 seconds and is single-use
+   */
+  async generateExchangeCode(userId: string): Promise<{ code: string; expiresIn: number }> {
+    const { randomUUID } = await import('crypto');
+    const code = randomUUID();
+    this.exchangeCodes.set(code, { userId, createdAt: Date.now() });
+    this.logger.log(`Exchange code generated for user ${userId}`);
+    return { code, expiresIn: 30 };
+  }
+
+  /**
+   * Redeem exchange code for session tokens
+   * Code must be valid, not expired, and is deleted after use
+   */
+  async redeemExchangeCode(code: string): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
+    const entry = this.exchangeCodes.get(code);
+    if (!entry) {
+      throw new UnauthorizedException('Invalid or expired exchange code');
+    }
+
+    if (Date.now() - entry.createdAt > 30_000) {
+      this.exchangeCodes.delete(code);
+      throw new UnauthorizedException('Exchange code expired');
+    }
+
+    this.exchangeCodes.delete(code);
+
+    const adminClient = this.databaseService.getAdminClient();
+    const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(entry.userId);
+    
+    if (userError || !userData?.user?.email) {
+      throw new UnauthorizedException('Failed to retrieve user');
+    }
+
+    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userData.user.email,
+    });
+
+    if (linkError || !linkData) {
+      throw new UnauthorizedException('Failed to create session');
+    }
+
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    const { data: sessionData, error: sessionError } = await freshClient.auth.verifyOtp({
+      token_hash: linkData.properties.hashed_token,
+      type: 'magiclink',
+    });
+
+    if (sessionError || !sessionData.session) {
+      throw new UnauthorizedException('Failed to create session');
+    }
+
+    return {
+      access_token: sessionData.session.access_token,
+      refresh_token: sessionData.session.refresh_token,
+      expires_in: sessionData.session.expires_in,
+    };
   }
 }

@@ -1,0 +1,25 @@
+# Code Owners for AgriTech
+
+# Default owners for everything
+* @boutchaz
+
+# CI/CD configuration
+/.github/ @boutchaz
+
+# API
+/agritech-api/ @boutchaz
+
+# Frontend
+/project/ @boutchaz
+
+# Python backend service
+/backend-service/ @boutchaz
+
+# Mobile app
+/mobile/ @boutchaz
+
+# Documentation
+/docs/ @boutchaz
+
+# Infrastructure
+/supabase/ @boutchaz

@@ -10,6 +10,7 @@ echo ""
 echo "🛑 Stopping Node.js services..."
 pkill -f "nest start" 2>/dev/null && echo "✅ Backend API stopped" || echo "ℹ️  Backend API not running"
 pkill -f "vite" 2>/dev/null && echo "✅ Frontend stopped" || echo "ℹ️  Frontend not running"
+pkill -f "next dev" 2>/dev/null && echo "✅ Marketplace stopped" || echo "ℹ️  Marketplace not running"
 
 # Stop Python processes
 echo ""

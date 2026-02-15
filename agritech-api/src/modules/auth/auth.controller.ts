@@ -191,16 +191,29 @@ export class AuthController {
     );
   }
 
-  @Post('change-password')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change current user password' })
-  @ApiResponse({ status: 200, description: 'Password updated successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(req.user.id, dto.newPassword);
-  }
+   @Post('change-password')
+   @UseGuards(JwtAuthGuard)
+   @ApiBearerAuth()
+   @ApiOperation({ summary: 'Change current user password' })
+   @ApiResponse({ status: 200, description: 'Password updated successfully' })
+   @ApiResponse({ status: 400, description: 'Bad request' })
+   @ApiResponse({ status: 401, description: 'Unauthorized' })
+   async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
+     return this.authService.changePassword(req.user.id, dto.newPassword);
+   }
+
+   @Post('logout')
+   @UseGuards(JwtAuthGuard)
+   @ApiBearerAuth()
+   @ApiOperation({ summary: 'Logout and revoke session globally' })
+   @ApiResponse({ status: 200, description: 'Logged out successfully' })
+   @ApiResponse({ status: 401, description: 'Unauthorized' })
+   async logout(@Request() req) {
+     const authHeader = req.headers.authorization;
+     const jwt = authHeader?.substring(7);
+     await this.authService.logout(jwt);
+     return { message: 'Logged out successfully' };
+   }
 
   @Post('forgot-password')
   @Public()
@@ -229,5 +242,24 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
   async refreshToken(@Body() body: { refreshToken: string }) {
     return this.authService.refreshToken(body.refreshToken);
+  }
+
+  @Post('exchange-code')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate one-time exchange code for cross-app auth' })
+  @ApiResponse({ status: 201, description: 'Exchange code generated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async generateExchangeCode(@Request() req) {
+    return this.authService.generateExchangeCode(req.user.id);
+  }
+
+  @Post('exchange-code/redeem')
+  @Public()
+  @ApiOperation({ summary: 'Redeem exchange code for session tokens' })
+  @ApiResponse({ status: 200, description: 'Session tokens returned' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired code' })
+  async redeemExchangeCode(@Body() body: { code: string }) {
+    return this.authService.redeemExchangeCode(body.code);
   }
 }

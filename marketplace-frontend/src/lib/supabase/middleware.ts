@@ -29,6 +29,36 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Handle cross-app auth exchange code
+  const exchangeCode = request.nextUrl.searchParams.get('code');
+
+  if (exchangeCode) {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/v1/auth/exchange-code/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: exchangeCode }),
+      });
+
+      if (response.ok) {
+        const { access_token, refresh_token } = await response.json();
+        await supabase.auth.setSession({ access_token, refresh_token });
+        
+        const cleanUrl = request.nextUrl.clone();
+        cleanUrl.searchParams.delete('code');
+        
+        const redirectResponse = NextResponse.redirect(cleanUrl);
+        supabaseResponse.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+        });
+        return redirectResponse;
+      }
+    } catch (error) {
+      console.warn('[middleware] Exchange code redemption failed:', error);
+    }
+  }
+
   // IMPORTANT: Do not write any logic between createServerClient and
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
