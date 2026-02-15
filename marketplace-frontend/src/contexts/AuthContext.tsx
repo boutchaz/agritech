@@ -55,12 +55,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   }, [supabase]);
 
-  const signOut = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setUser(null);
-    setSession(null);
-  }, [supabase]);
+   const signOut = useCallback(async () => {
+     // Get current session before signing out
+     const { data: { session: currentSession } } = await supabase.auth.getSession();
+     
+     // Call logout API with fire-and-forget (before supabase.auth.signOut)
+     if (currentSession?.access_token) {
+       try {
+         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+         fetch(`${apiUrl}/api/v1/auth/logout`, {
+           method: 'POST',
+           headers: {
+             'Authorization': `Bearer ${currentSession.access_token}`,
+             'Content-Type': 'application/json'
+           }
+         }).catch(() => {}); // Fire-and-forget, ignore errors
+       } catch {
+         // Fire-and-forget
+       }
+     }
+     
+     // Proceed with existing cleanup
+     const { error } = await supabase.auth.signOut();
+     if (error) throw error;
+     setUser(null);
+     setSession(null);
+   }, [supabase]);
 
   const getToken = useCallback(async (): Promise<string | null> => {
     const { data: { session: currentSession } } = await supabase.auth.getSession();

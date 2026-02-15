@@ -252,6 +252,25 @@ export const useSignOut = () => {
       // Track logout before clearing auth
       trackLogout();
 
+      // Capture access token BEFORE clearing auth state
+      const token = useAuthStore.getState().tokens?.access_token;
+
+      // Call logout API with fire-and-forget pattern
+      if (token) {
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+          fetch(`${apiUrl}/api/v1/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }).catch(() => {}); // Fire-and-forget, ignore errors
+        } catch {
+          // Fire-and-forget
+        }
+      }
+
       // Clear auth store (tokens and user)
       useAuthStore.getState().clearAuth();
       // Clear organization store
