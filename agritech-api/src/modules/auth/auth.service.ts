@@ -383,6 +383,16 @@ export class AuthService {
     if (signUpError || !signUpData.user) {
       this.logger.error(`Failed to create user: ${JSON.stringify(signUpError, null, 2)}`);
       this.logger.error(`Signup error details - code: ${signUpError?.code}, status: ${signUpError?.status}, message: ${signUpError?.message}`);
+
+      // Handle duplicate user error gracefully
+      if (signUpError?.message?.includes('already been registered') ||
+          signUpError?.message?.includes('already exists') ||
+          signUpError?.code === 'user_already_exists') {
+        throw new BadRequestException(
+          'An account with this email already exists. Please try logging in instead.',
+        );
+      }
+
       throw new BadRequestException(
         signUpError?.message || 'Failed to create user',
       );
