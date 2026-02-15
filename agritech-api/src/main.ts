@@ -237,6 +237,11 @@ async function bootstrap() {
       'x-device-os',
       'X-App-Version',
       'x-app-version',
+      // Marketplace headers
+      'X-Client-App',
+      'x-client-app',
+      'X-Locale',
+      'x-locale',
     ],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
     preflightContinue: false,
