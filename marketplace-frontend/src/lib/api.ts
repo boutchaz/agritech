@@ -1,3 +1,5 @@
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+
 // Device Analytics Headers
 interface DeviceInfo {
     deviceType: 'web' | 'mobile' | 'desktop';
@@ -67,6 +69,21 @@ function getAnalyticsHeaders(): Record<string, string> {
     };
 }
 
+/**
+ * Get the current Supabase access token from the browser session.
+ * Returns null if no session exists (user not logged in).
+ */
+async function getSupabaseToken(): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    try {
+        const supabase = createBrowserSupabaseClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.access_token ?? null;
+    } catch {
+        return null;
+    }
+}
+
 export class ApiClient {
     private static get baseUrl() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -74,15 +91,10 @@ export class ApiClient {
         return apiUrl.endsWith('/api/v1') ? apiUrl : `${apiUrl}/api/v1`;
     }
 
-    private static getAuthToken(): string | null {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem('auth_token');
-    }
-
     private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        const token = this.getAuthToken();
+        const token = await getSupabaseToken();
         const analyticsHeaders = getAnalyticsHeaders();
         let headers: Record<string, string> = {
             'Content-Type': 'application/json',
@@ -105,17 +117,15 @@ export class ApiClient {
             try {
                 const errorData = await response.json();
                 errorMessage = errorData.message || errorData.error || errorMessage;
-            } catch (e) {
+            } catch {
                 // Response body is not JSON, use statusText
             }
 
             if (response.status === 401) {
-                // Only redirect to login if we have a token (user was authenticated but token expired)
-                // Don't redirect on login failures
-                const token = this.getAuthToken();
+                // Token expired or invalid — redirect to login
+                // (middleware handles session refresh, so if we get 401 the session is truly gone)
                 if (token && endpoint !== '/auth/login') {
                     if (typeof window !== 'undefined') {
-                        localStorage.removeItem('auth_token');
                         window.location.href = '/login';
                     }
                 }
@@ -126,20 +136,7 @@ export class ApiClient {
         return response.json();
     }
 
-    // AUTH METHODS
-    static async login(email: string, password: string) {
-        const response = await this.request<{ access_token: string; user: any }>('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
-        });
-
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('auth_token', response.access_token);
-        }
-
-        return response;
-    }
-
+    // AUTH METHODS — signup still goes through backend for provisioning
     static async signup(data: {
         email: string;
         password: string;
@@ -159,12 +156,6 @@ export class ApiClient {
         });
     }
 
-    static async logout() {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
-        }
-    }
-
     static async getCurrentUser() {
         return this.request<any>('/auth/me');
     }
@@ -173,6 +164,29 @@ export class ApiClient {
     static async getProducts(category?: string) {
         const params = category ? `?category=${encodeURIComponent(category)}` : '';
         return this.request<any[]>(`/marketplace/products${params}`);
+    }
+
+    static async getProductsPaginated(params?: {
+        category?: string;
+        search?: string;
+        sort?: string;
+        min_price?: number;
+        max_price?: number;
+        page?: number;
+        limit?: number;
+    }) {
+        const searchParams = new URLSearchParams();
+        if (params?.category) searchParams.set('category', params.category);
+        if (params?.search) searchParams.set('search', params.search);
+        if (params?.sort) searchParams.set('sort', params.sort);
+        if (params?.min_price !== undefined) searchParams.set('min_price', params.min_price.toString());
+        if (params?.max_price !== undefined) searchParams.set('max_price', params.max_price.toString());
+        if (params?.page) searchParams.set('page', params.page.toString());
+        if (params?.limit) searchParams.set('limit', params.limit.toString());
+        const query = searchParams.toString();
+        return this.request<{ data: any[]; total: number; page: number; limit: number; totalPages: number }>(
+            `/marketplace/products${query ? `?${query}` : ''}`
+        );
     }
 
     static async getProduct(id: string) {
@@ -331,6 +345,18 @@ export class ApiClient {
         const query = params.toString();
         return this.request<{ reviews: SellerReview[]; total: number }>(`/marketplace/sellers/${slug}/reviews${query ? `?${query}` : ''}`);
     }
+
+    // REVIEW METHODS
+    static async canReview(sellerId: string) {
+        return this.request<{ canReview: boolean; reason?: string }>(`/marketplace/reviews/can-review/${sellerId}`);
+    }
+
+    static async createReview(data: CreateReviewDto) {
+        return this.request<SellerReview>('/marketplace/reviews', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
 }
 
 // Types
@@ -396,6 +422,13 @@ export interface CreateOrderDto {
     };
     payment_method: 'cod' | 'online';
     notes?: string;
+}
+
+export interface CreateReviewDto {
+    seller_organization_id: string;
+    order_id: string;
+    rating: number;
+    comment?: string;
 }
 
 export interface OrderItem {

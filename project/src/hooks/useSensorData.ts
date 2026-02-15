@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import io from 'socket.io-client';
 import type { SensorData } from '../types';
 
-const SOCKET_URL = 'wss://your-sensor-websocket-url';
-const DISABLE_SENSORS = true;
+const SENSOR_WS_URL = import.meta.env.VITE_SENSOR_WS_URL || '';
+const SENSORS_ENABLED = !!SENSOR_WS_URL;
 
 export function useSensorData() {
   const [sensorData, setSensorData] = useState<SensorData[]>([]);
@@ -11,51 +10,34 @@ export function useSensorData() {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (DISABLE_SENSORS) {
-      // Sensors temporarily disabled
-      setIsConnected(false);
-      return () => {};
+    if (!SENSORS_ENABLED) {
+      return;
     }
 
-    const socket = io(SOCKET_URL);
+    let socket: ReturnType<typeof import('socket.io-client').default> | null = null;
 
-    socket.on('connect', () => {
-      setIsConnected(true);
-      console.log('Connected to sensor WebSocket');
+    import('socket.io-client').then(({ default: io }) => {
+      socket = io(SENSOR_WS_URL);
+
+      socket.on('connect', () => {
+        setIsConnected(true);
+      });
+
+      socket.on('disconnect', () => {
+        setIsConnected(false);
+      });
+
+      socket.on('sensorData', (data: SensorData) => {
+        setSensorData(prev => [...prev, data].slice(-50));
+        setLatestReadings(prev => ({
+          ...prev,
+          [data.type]: data
+        }));
+      });
     });
-
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-      console.log('Disconnected from sensor WebSocket');
-    });
-
-    socket.on('sensorData', (data: SensorData) => {
-      setSensorData(prev => [...prev, data].slice(-50)); // Keep last 50 readings
-      setLatestReadings(prev => ({
-        ...prev,
-        [data.type]: data
-      }));
-    });
-
-    // Simulate sensor data for development
-    if (!DISABLE_SENSORS && import.meta.env.DEV) {
-      const interval = setInterval(() => {
-        const mockData: SensorData = {
-          id: Date.now().toString(),
-          type: ['moisture', 'temperature', 'wind', 'ph'][Math.floor(Math.random() * 4)],
-          value: Math.random() * 100,
-          unit: '%',
-          timestamp: new Date(),
-          location: 'Parcelle A'
-        };
-        socket.emit('sensorData', mockData);
-      }, 2000);
-
-      return () => clearInterval(interval);
-    }
 
     return () => {
-      socket.disconnect();
+      socket?.disconnect();
     };
   }, []);
 

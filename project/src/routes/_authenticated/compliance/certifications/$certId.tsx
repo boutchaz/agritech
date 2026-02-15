@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { 
   ArrowLeft, 
@@ -6,7 +7,8 @@ import {
   Building, 
   FileText, 
   Trash2,
-  ExternalLink
+  ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,10 +21,19 @@ import { EditCertificationDialog } from '@/components/compliance/EditCertificati
 import { CreateComplianceCheckDialog } from '@/components/compliance/CreateComplianceCheckDialog';
 import { AddDocumentDialog } from '@/components/compliance/AddDocumentDialog';
 import { ScheduleAuditDialog } from '@/components/compliance/ScheduleAuditDialog';
+import { CorrectiveActionsList } from '@/components/compliance/CorrectiveActionsList';
+import { CreateCorrectiveActionDialog } from '@/components/compliance/CreateCorrectiveActionDialog';
+import { UpdateActionStatusDialog } from '@/components/compliance/UpdateActionStatusDialog';
 
-import { useCertification, useComplianceChecks, useDeleteCertification } from '@/hooks/useCompliance';
+import {
+  useCertification,
+  useComplianceChecks,
+  useDeleteCertification,
+  useCorrectiveActions,
+  useDeleteCorrectiveAction,
+} from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
-import { CertificationStatus } from '@/lib/api/compliance';
+import { CertificationStatus, type CorrectiveActionPlanResponseDto } from '@/lib/api/compliance';
 
 export const Route = createFileRoute('/_authenticated/compliance/certifications/$certId')({
   component: CertificationDetailPage,
@@ -32,11 +43,18 @@ function CertificationDetailPage() {
   const { certId } = Route.useParams();
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
-  const { data: certification, isLoading: isLoadingCert } = useCertification(currentOrganization?.id || null, certId);
-  const { data: checks, isLoading: isLoadingChecks } = useComplianceChecks(currentOrganization?.id || null);
+  const orgId = currentOrganization?.id || null;
+  const { data: certification, isLoading: isLoadingCert } = useCertification(orgId, certId);
+  const { data: checks, isLoading: isLoadingChecks } = useComplianceChecks(orgId);
+  const { data: correctiveActions, isLoading: isLoadingActions } = useCorrectiveActions(orgId, { certification_id: certId });
   const deleteCertification = useDeleteCertification();
+  const deleteCorrectiveAction = useDeleteCorrectiveAction();
+
+  const [selectedAction, setSelectedAction] = useState<CorrectiveActionPlanResponseDto | null>(null);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   const certificationChecks = checks?.filter(check => check.certification_id === certId) || [];
+  const certCorrectiveActions = correctiveActions || [];
 
   if (isLoadingCert) {
     return (
@@ -193,6 +211,54 @@ function CertificationDetailPage() {
             </div>
             <ComplianceChecksList checks={certificationChecks} isLoading={isLoadingChecks} />
           </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-orange-500" />
+                <h2 className="text-xl font-semibold">Actions Correctives</h2>
+                {certCorrectiveActions.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {certCorrectiveActions.length}
+                  </Badge>
+                )}
+              </div>
+              {certificationChecks.length > 0 && (
+                <CreateCorrectiveActionDialog
+                  certificationId={certId}
+                  complianceCheckId={certificationChecks[0].id}
+                />
+              )}
+            </div>
+            <CorrectiveActionsList
+              actions={certCorrectiveActions}
+              isLoading={isLoadingActions}
+              onUpdateStatus={(action) => {
+                setSelectedAction(action);
+                setShowUpdateDialog(true);
+              }}
+              onDelete={(action) => {
+                if (!currentOrganization) return;
+                if (confirm('Supprimer cette action corrective ?')) {
+                  deleteCorrectiveAction.mutate({
+                    organizationId: currentOrganization.id,
+                    actionId: action.id,
+                  });
+                }
+              }}
+            />
+          </div>
+
+          {selectedAction && (
+            <UpdateActionStatusDialog
+              action={selectedAction}
+              open={showUpdateDialog}
+              onOpenChange={(open) => {
+                setShowUpdateDialog(open);
+                if (!open) setSelectedAction(null);
+              }}
+            />
+          )}
         </div>
 
         {/* Sidebar */}

@@ -296,7 +296,8 @@
     "cropCycles": "Crop Cycles",
     "chat": "AI Assistant",
     "compliance": "Compliance",
-    "certifications": "Certifications"
+    "certifications": "Certifications",
+    "correctiveActions": "Corrective Actions"
   },
   "stock": {
     "title": "Stock Management",
@@ -1622,7 +1623,8 @@
       "contactInfo": "Contact Information",
       "address": "Address",
       "regionalSettings": "Regional Settings",
-      "status": "Organization Status"
+      "status": "Organization Status",
+      "mapConfiguration": "Map Configuration"
     },
     "fields": {
       "name": "Organization Name",
@@ -1637,8 +1639,15 @@
       "city": "City",
       "state": "Region/Province",
       "postalCode": "Postal Code",
-      "country": "Country"
+      "country": "Country",
+      "mapProvider": "Map tile provider"
     },
+    "mapProviderDefault": "Default (OpenStreetMap / ESRI)",
+    "mapProviderDefaultDesc": "Free, no API key required. Good general-purpose satellite and street tiles.",
+    "mapProviderMapbox": "Mapbox",
+    "mapProviderMapboxDesc": "Higher-quality satellite imagery. Requires an API token.",
+    "mapProviderDescription": "Select the tile source for map backgrounds.",
+    "mapProviderTokenWarning": "Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.",
     "placeholders": {
       "name": "Your organization name",
       "slug": "organization-slug",
@@ -2675,6 +2684,90 @@
       "ageBucket": "Age",
       "outstanding": "Outstanding",
       "noOutstanding": "No outstanding payables as of this date."
+    },
+    "generalLedger": {
+      "title": "General Ledger",
+      "subtitle": "Detailed transaction history for a specific account",
+      "account": "Account",
+      "selectAccount": "Select an account...",
+      "loadingAccounts": "Loading accounts...",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "exportPdf": "Export PDF",
+      "exportCsv": "Export CSV",
+      "loading": "Loading general ledger...",
+      "error": "Failed to load general ledger",
+      "selectPrompt": "Select an account to view its ledger",
+      "selectPromptDesc": "Choose an account from the dropdown above and set the date range.",
+      "accountLabel": "Account",
+      "openingBalance": "Opening Balance",
+      "closingBalance": "Closing Balance",
+      "transactions": "Transactions",
+      "entries": "entries",
+      "noEntries": "No transactions found for this period.",
+      "noEntriesHint": "Try adjusting the date range or selecting a different account.",
+      "openingBalanceRow": "Opening Balance",
+      "closingBalanceRow": "Closing Balance",
+      "table": {
+        "date": "Date",
+        "entryNumber": "Entry #",
+        "description": "Description",
+        "reference": "Reference",
+        "debit": "Debit",
+        "credit": "Credit",
+        "balance": "Balance"
+      },
+      "about": {
+        "title": "About General Ledger",
+        "description": "The general ledger shows a complete record of all transactions posted to a specific account within a date range. It includes the opening balance, each journal entry affecting the account, a running balance after each transaction, and the closing balance."
+      }
+    },
+    "cashFlow": {
+      "title": "Cash Flow Statement",
+      "subtitle": "Cash inflows and outflows from operations, investing, and financing activities",
+      "campaign": "Agricultural Campaign",
+      "allCampaigns": "All Campaigns",
+      "fiscalYear": "Fiscal Year",
+      "allFiscalYears": "All Fiscal Years",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "exportPdf": "Export PDF",
+      "exportCsv": "Export CSV",
+      "loading": "Loading cash flow statement...",
+      "error": "Failed to load cash flow statement",
+      "noData": "No Cash Flow Data",
+      "noDataHint": "Post journal entries with asset, liability, or equity accounts to see your cash flow statement.",
+      "reportPeriod": "Report period",
+      "to": "to",
+      "netOperating": "Net Cash from Operations",
+      "netInvesting": "Net Cash from Investing",
+      "netFinancing": "Net Cash from Financing",
+      "netChange": "Net Change in Cash",
+      "netChangeInCash": "Net Change in Cash",
+      "operatingActivities": "Operating Activities",
+      "investingActivities": "Investing Activities",
+      "financingActivities": "Financing Activities",
+      "netIncome": "Net Income (from Profit & Loss)",
+      "depreciation": "Depreciation & Amortization",
+      "changesInAR": "Changes in Accounts Receivable",
+      "changesInAP": "Changes in Accounts Payable",
+      "changesInInventory": "Changes in Inventory",
+      "otherAdjustments": "Other Operating Adjustments",
+      "totalOperating": "Net Cash from Operating Activities",
+      "fixedAssetPurchases": "Purchase of Fixed Assets",
+      "fixedAssetSales": "Sale of Fixed Assets",
+      "totalInvesting": "Net Cash from Investing Activities",
+      "debtProceeds": "Proceeds from Debt",
+      "debtRepayments": "Repayment of Debt",
+      "equityChanges": "Changes in Equity",
+      "dividends": "Dividends Paid",
+      "totalFinancing": "Net Cash from Financing Activities",
+      "openingCash": "Opening Cash Balance",
+      "closingCash": "Closing Cash Balance",
+      "noTransactions": "No transactions in this period",
+      "description": "Description",
+      "amount": "Amount",
+      "tableLabel": "Cash Flow Statement Details"
     }
   },
   "qualityControl": {
@@ -5328,6 +5421,60 @@
       "send": "Send",
       "error": "Error sending message",
       "retry": "Retry"
+    }
+  },
+  "emptyState": {
+    "noData": "No data available",
+    "noResults": "No results found",
+    "noFarms": "No farms found",
+    "noFarmsMessage": "Get started by creating your first farm to manage your agricultural operations.",
+    "noParcels": "No parcels found",
+    "noParcelsMessage": "Add parcels to your farm to start tracking crops and analysis.",
+    "noTasks": "No tasks found",
+    "noTasksMessage": "Create tasks to plan and track your farm operations.",
+    "noCycles": "No crop cycles found",
+    "noCyclesMessage": "Start tracking your production cycles from planting to harvest.",
+    "cta": {
+      "createFarm": "Create Farm",
+      "createParcel": "Create Parcel",
+      "createTask": "Create Task",
+      "createCycle": "Create Cycle",
+      "clearFilters": "Clear Filters"
+    }
+  },
+  "onboarding": {
+    "setup": {
+      "checkingAuth": "Checking authentication...",
+      "creatingOrg": "Creating organization...",
+      "activatingTrial": "Activating trial...",
+      "complete": "Complete!"
+    }
+  },
+  "landing": {
+    "stats": {
+      "farms": "Farms Managed",
+      "parcels": "Parcels Tracked",
+      "hectares": "Hectares Monitored",
+      "satisfaction": "Customer Satisfaction"
+    },
+    "testimonials": {
+      "title": "Trusted by Moroccan Farmers",
+      "subtitle": "See what agricultural professionals say about AgriProfy",
+      "farmer1": {
+        "quote": "AgriProfy transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
+        "author": "Hassan B.",
+        "role": "Citrus Grower, Souss-Massa"
+      },
+      "coop1": {
+        "quote": "Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.",
+        "author": "Fatima Z.",
+        "role": "Director, Olive Cooperative, Meknès"
+      },
+      "exporter1": {
+        "quote": "The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.",
+        "author": "Karim M.",
+        "role": "Export Director, AgriExport Maroc"
+      }
     }
   }
 }

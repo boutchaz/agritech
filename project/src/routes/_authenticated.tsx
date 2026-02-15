@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
+import MobileBottomNav from '../components/MobileBottomNav'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
@@ -54,14 +55,6 @@ function AuthenticatedLayout() {
     { id: 'legumes', name: 'Légumes', icon: 'Sprout', active: true, category: 'agriculture' },
   ]
 
-  // Debug logging
-  console.log('🔍 Subscription check:', {
-    subscription,
-    subscriptionLoading,
-    currentOrganization,
-    isValid: isSubscriptionValid(subscription),
-  })
-
   // Show loading while checking subscription or if subscription is null but we're not done loading yet
   // This prevents the race condition where subscription is null during initial load
   const isSubscriptionPending = subscriptionLoading || (subscription === null && currentOrganization)
@@ -79,18 +72,11 @@ function AuthenticatedLayout() {
   const hasValidSubscription = isSubscriptionValid(subscription)
   const isOnSettingsPage = window.location.pathname.includes('/settings/')
 
-  console.log('🚦 Access check:', {
-    hasValidSubscription,
-    isOnSettingsPage,
-    shouldBlock: !hasValidSubscription && !isOnSettingsPage && currentOrganization,
-  })
-
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
     // Check if user has never created a subscription - redirect to trial selection
     // Only redirect if we're certain there's no subscription (not just loading)
     if (!subscription && !isSubscriptionPending) {
-      console.log('📋 No subscription found - redirecting to trial selection')
       // Use window.location.href for full navigation to ensure clean state
       window.location.href = '/onboarding/select-trial'
       return (
@@ -109,11 +95,8 @@ function AuthenticatedLayout() {
       ? 'past_due'
       : 'expired'
 
-    console.log('🚫 BLOCKING ACCESS - Reason:', reason)
     return <SubscriptionRequired reason={reason} />
   }
-
-  console.log('✅ ACCESS GRANTED')
 
   return (
     <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -149,10 +132,12 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </header> */}
-          <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+          <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 lg:pb-0">
             <Outlet />
           </main>
         </div>
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
       </div>
       {/* Level-up suggestion toast */}
       <LevelUpSuggestion />

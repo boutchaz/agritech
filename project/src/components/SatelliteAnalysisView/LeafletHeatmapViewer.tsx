@@ -90,13 +90,9 @@ export const GridHeatmapLayer: React.FC<{
   };
 
   useEffect(() => {
-    console.log('GridHeatmapLayer useEffect - data:', data);
     if (!data || !data.pixel_data) {
-      console.log('No data or pixel_data available');
       return;
     }
-
-    console.log(`Processing ${data.pixel_data.length} pixels`);
 
     // Remove existing grid layer
     if (gridLayerRef.current) {
@@ -116,25 +112,13 @@ export const GridHeatmapLayer: React.FC<{
       return a.lon - b.lon; // Then by lon (left to right)
     });
 
-    // Create rectangular grid cells matching reference visualization
-    console.log(`Creating ${sortedPixels.length} rectangles with pixel size: ${pixelSizeDegrees} degrees (${pixelScale}m)`);
-
-    sortedPixels.forEach((point, index) => {
+    sortedPixels.forEach((point) => {
       const color = getColorForValue(point.value, data.statistics.min, data.statistics.max);
 
       const bounds: [number, number][] = [
         [point.lat - pixelSizeDegrees/2, point.lon - pixelSizeDegrees/2],
         [point.lat + pixelSizeDegrees/2, point.lon + pixelSizeDegrees/2]
       ];
-
-      if (index < 5) { // Log first few rectangles for debugging
-        console.log(`Rectangle ${index}:`, {
-          point,
-          color,
-          bounds,
-          value: point.value
-        });
-      }
 
       const rectangle = L.rectangle(bounds, {
         fillColor: color,
@@ -153,10 +137,7 @@ export const GridHeatmapLayer: React.FC<{
       gridLayerRef.current!.addLayer(rectangle);
     });
 
-    console.log(`Added ${gridLayerRef.current.getLayers().length} layers to grid`);
-
     gridLayerRef.current.addTo(map);
-    console.log('Grid layer added to map');
 
     // Fit map to data bounds
     const lats = data.pixel_data.map(p => p.lat);
@@ -201,11 +182,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   const [isCheckingDates, setIsCheckingDates] = useState(false);
   const [recommendedDate, setRecommendedDate] = useState<string | null>(null);
 
-  // Debug data changes
-  useEffect(() => {
-    console.log('LeafletHeatmapViewer - data state changed:', data);
-    console.log('Data has pixel_data:', data?.pixel_data?.length || 0, 'pixels');
-  }, [data]);
+
 
   // Initialize with today's date if no props provided
   useEffect(() => {
@@ -225,9 +202,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   }, [propSelectedDate]);
 
   useEffect(() => {
-    console.log('LeafletHeatmapViewer - initialData changed:', initialData);
     if (initialData) {
-      console.log('Setting data from initialData:', initialData);
       setData(initialData);
     }
   }, [initialData]);
@@ -304,14 +279,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         grid_size: samplePoints
       };
 
-      console.log('🚀 Making heatmap API request with params:', requestParams);
-      console.log('📊 Sample points:', samplePoints);
-      console.log('📅 Selected date:', selectedDate);
-
       const result = await satelliteApi.getHeatmapData(requestParams);
-
-      console.log('📥 Received heatmap data:', result);
-      console.log('🔢 Pixel count:', result.pixel_data?.length || 0);
 
       setData(result as HeatmapDataResponse);
     } catch (err) {
@@ -432,9 +400,9 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             })}
           </div>
           <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
-            <span>{data.statistics.max.toFixed(1)}</span>
-            <span>{((data.statistics.max + data.statistics.min) / 2).toFixed(1)}</span>
-            <span>{data.statistics.min.toFixed(1)}</span>
+            <span>{(data.statistics?.max ?? 0).toFixed(1)}</span>
+            <span>{(((data.statistics?.max ?? 0) + (data.statistics?.min ?? 0)) / 2).toFixed(1)}</span>
+            <span>{(data.statistics?.min ?? 0).toFixed(1)}</span>
           </div>
         </div>
       </div>
@@ -587,13 +555,13 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           )}
           <ColorScale />
           {/* Statistics Box (like desired.png) */}
-          {data && (
+          {data?.statistics && (
             <div key="stats-box" className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">
-              <div>Mean: {data.statistics.mean.toFixed(3)}</div>
-              <div>Median: {data.statistics.median.toFixed(3)}</div>
-              <div>P10: {data.statistics.p10.toFixed(3)}</div>
-              <div>P90: {data.statistics.p90.toFixed(3)}</div>
-              <div>Std: {data.statistics.std.toFixed(3)}</div>
+              <div>Mean: {(data.statistics.mean ?? 0).toFixed(3)}</div>
+              <div>Median: {(data.statistics.median ?? 0).toFixed(3)}</div>
+              <div>P10: {(data.statistics.p10 ?? 0).toFixed(3)}</div>
+              <div>P90: {(data.statistics.p90 ?? 0).toFixed(3)}</div>
+              <div>Std: {(data.statistics.std ?? 0).toFixed(3)}</div>
             </div>
           )}
           <MapContainer

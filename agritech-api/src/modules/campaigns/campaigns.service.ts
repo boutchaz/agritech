@@ -10,7 +10,7 @@ export class CampaignsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string, filters: CampaignFiltersDto = {}) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('campaigns')
       .select('*', { count: 'exact' })
@@ -79,7 +79,7 @@ export class CampaignsService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('campaigns')
       .select('*')
@@ -96,7 +96,7 @@ export class CampaignsService {
   }
 
   async create(organizationId: string, userId: string, createDto: CreateCampaignDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if campaign with same name exists
     const { data: existing } = await client
@@ -130,7 +130,7 @@ export class CampaignsService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: Partial<CreateCampaignDto>) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if campaign exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -174,7 +174,7 @@ export class CampaignsService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if campaign exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -202,7 +202,7 @@ export class CampaignsService {
   }
 
   async updateStatus(id: string, organizationId: string, userId: string, status: CampaignStatus) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if campaign exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -231,7 +231,7 @@ export class CampaignsService {
   }
 
   async getStatistics(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Get total count by type
     const { data: byType, error: typeError } = await client

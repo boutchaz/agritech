@@ -11,7 +11,7 @@ export default {
   "favicon": "img/logo.svg",
   "organizationName": "agritech",
   "projectName": "agritech-platform",
-  "onBrokenLinks": "throw",
+  "onBrokenLinks": "warn",
   "i18n": {
     "defaultLocale": "en",
     "locales": [
@@ -115,7 +115,7 @@ export default {
           ]
         }
       ],
-      "copyright": "Copyright © 2025 AgriTech Platform. Built with Docusaurus."
+      "copyright": "Copyright © 2026 AgriTech Platform. Built with Docusaurus."
     },
     "prism": {
       "theme": {

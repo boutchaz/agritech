@@ -12,7 +12,7 @@ export class CostCentersService {
    * Get all cost centers for an organization
    */
   async findAll(organizationId: string, filters?: { is_active?: boolean; search?: string }) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       let query = supabaseClient
@@ -47,7 +47,7 @@ export class CostCentersService {
    * Get a single cost center by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -72,7 +72,7 @@ export class CostCentersService {
    * Create a new cost center
    */
   async create(dto: CreateCostCenterDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check for duplicate code
@@ -119,7 +119,7 @@ export class CostCentersService {
    * Update a cost center
    */
   async update(id: string, organizationId: string, userId: string, dto: UpdateCostCenterDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if cost center exists
@@ -176,7 +176,7 @@ export class CostCentersService {
    * Delete a cost center
    */
   async delete(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if cost center exists

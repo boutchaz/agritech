@@ -13,15 +13,11 @@ export const useAssignableUsers = (organizationId: string | null) => {
     queryKey: ['assignable-users', organizationId],
     queryFn: async () => {
       if (!organizationId) {
-        console.log('useAssignableUsers: No organizationId provided');
         return [];
       }
 
-      console.log('useAssignableUsers: Fetching users for organization:', organizationId);
-
       try {
         const users = await organizationUsersApi.getAssignableUsers(organizationId);
-        console.log('useAssignableUsers: API response:', users?.length, 'users');
         return users || [];
       } catch (error) {
         console.error('useAssignableUsers: API error:', error);

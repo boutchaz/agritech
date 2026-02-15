@@ -250,6 +250,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   accounting_standard VARCHAR(50), -- Primary accounting standard (CGNC=Morocco, PCG=France, US_GAAP=USA, FRS102=UK, HGB=Germany)
   accounting_settings JSONB DEFAULT '{}'::jsonb, -- Country-specific accounting configurations stored as JSONB
   fiscal_year_start_month INTEGER DEFAULT 1, -- Month when fiscal year starts (1=January, 4=April for UK, etc.)
+  map_provider TEXT DEFAULT NULL, -- Map provider preference (e.g., 'google', 'mapbox', 'openstreetmap')
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -1488,6 +1489,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   tax_amount DECIMAL(12, 2) DEFAULT 0,
   line_total DECIMAL(15, 2) NOT NULL,
   account_id UUID REFERENCES accounts(id),
+  item_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(invoice_id, line_number),
   CHECK (quantity > 0),
@@ -1495,6 +1497,7 @@ CREATE TABLE IF NOT EXISTS invoice_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_items_item_id ON invoice_items(item_id);
 
 -- Accounting Payments
 CREATE TABLE IF NOT EXISTS accounting_payments (
@@ -2835,6 +2838,9 @@ CREATE INDEX IF NOT EXISTS idx_items_org ON items(organization_id);
 CREATE INDEX IF NOT EXISTS idx_items_group ON items(item_group_id);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL;
 
+-- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
+ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
+
 -- =====================================================
 -- PRODUCT APPLICATIONS (Historical tracking)
 -- Migration: 20260204004522_create_product_applications.sql
@@ -3048,6 +3054,7 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   posted_by UUID REFERENCES auth.users(id),
   journal_entry_id UUID REFERENCES journal_entries(id),
   reception_batch_id UUID,
+  crop_cycle_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3060,6 +3067,10 @@ CREATE INDEX IF NOT EXISTS idx_stock_entries_org ON stock_entries(organization_i
 CREATE INDEX IF NOT EXISTS idx_stock_entries_type ON stock_entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_status ON stock_entries(status);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_date ON stock_entries(entry_date DESC);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_crop_cycle ON stock_entries(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_org_crop_cycle ON stock_entries(organization_id, crop_cycle_id);
+
+COMMENT ON COLUMN stock_entries.crop_cycle_id IS 'Links the stock entry to a specific crop cycle for cost tracking and allocation';
 
 -- Stock Entry Items
 CREATE TABLE IF NOT EXISTS stock_entry_items (
@@ -3109,6 +3120,7 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   marketplace_order_item_id UUID,
   base_quantity_at_movement NUMERIC,
   variant_id UUID,
+  crop_cycle_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
@@ -3120,6 +3132,10 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_warehouse ON stock_movements(ware
 CREATE INDEX IF NOT EXISTS idx_stock_movements_date ON stock_movements(movement_date DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_listing ON stock_movements(marketplace_listing_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_order_item ON stock_movements(marketplace_order_item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_crop_cycle ON stock_movements(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_org_crop_cycle ON stock_movements(organization_id, crop_cycle_id);
+
+COMMENT ON COLUMN stock_movements.crop_cycle_id IS 'Links the stock movement to a specific crop cycle for cost tracking and allocation';
 
 -- =====================================================
 -- STOCK MOVEMENT TRIGGERS AND FUNCTIONS
@@ -8884,6 +8900,13 @@ CREATE TABLE IF NOT EXISTS crop_cycles (
 
   notes TEXT,
 
+  cycle_type VARCHAR(20) DEFAULT 'annual',
+  cycle_category VARCHAR(50),
+  is_perennial BOOLEAN DEFAULT false,
+  cycle_start_year INTEGER,
+  cycle_end_year INTEGER,
+  template_id UUID,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -8903,6 +8926,152 @@ CREATE INDEX IF NOT EXISTS idx_crop_cycles_fiscal ON crop_cycles(fiscal_year_id)
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_status ON crop_cycles(organization_id, status);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_dates ON crop_cycles(planting_date, expected_harvest_end);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_crop_type ON crop_cycles(organization_id, crop_type);
+
+-- Add foreign key constraint to stock_entries (deferred because crop_cycles table is created after stock_entries)
+ALTER TABLE stock_entries ADD CONSTRAINT fk_stock_entries_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+
+-- Add foreign key constraint to stock_movements (deferred because crop_cycles table is created after stock_movements)
+ALTER TABLE stock_movements ADD CONSTRAINT fk_stock_movements_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+
+-- Crop Templates (global and per-organization crop configuration)
+CREATE TABLE IF NOT EXISTS crop_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  crop_type VARCHAR(100) NOT NULL,
+  crop_name VARCHAR(255) NOT NULL,
+  cycle_type VARCHAR(20) NOT NULL DEFAULT 'annual',
+  cycle_category VARCHAR(50),
+  is_perennial BOOLEAN DEFAULT false,
+  typical_duration_days INTEGER,
+  typical_duration_months INTEGER,
+  typical_planting_months INTEGER[],
+  typical_harvest_months INTEGER[],
+  yield_unit VARCHAR(20) DEFAULT 'kg',
+  average_yield_per_ha NUMERIC,
+  code_prefix VARCHAR(10),
+  stages JSONB,
+  is_global BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_crop_templates_org ON crop_templates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_crop_templates_global ON crop_templates(is_global) WHERE is_global = true;
+
+ALTER TABLE crop_templates ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "crop_templates_select_global" ON crop_templates;
+CREATE POLICY "crop_templates_select_global" ON crop_templates
+  FOR SELECT USING (is_global = true);
+
+DROP POLICY IF EXISTS "crop_templates_select_org" ON crop_templates;
+CREATE POLICY "crop_templates_select_org" ON crop_templates
+  FOR SELECT USING (organization_id IN (
+    SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+  ));
+
+DROP POLICY IF EXISTS "crop_templates_manage_org" ON crop_templates;
+CREATE POLICY "crop_templates_manage_org" ON crop_templates
+  FOR ALL USING (organization_id IN (
+    SELECT ou.organization_id FROM organization_users ou
+    JOIN roles r ON ou.role_id = r.id
+    WHERE ou.user_id = auth.uid() AND r.name IN ('system_admin', 'organization_admin')
+  ));
+
+-- FK from crop_cycles.template_id to crop_templates
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_crop_cycles_template') THEN
+    ALTER TABLE crop_cycles
+      ADD CONSTRAINT fk_crop_cycles_template
+      FOREIGN KEY (template_id) REFERENCES crop_templates(id) ON DELETE SET NULL;
+  END IF;
+END$$;
+
+-- Crop Cycle Stages (tracking stages within a crop cycle)
+CREATE TABLE IF NOT EXISTS crop_cycle_stages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_cycle_id UUID NOT NULL REFERENCES crop_cycles(id) ON DELETE CASCADE,
+  stage_name VARCHAR(50) NOT NULL,
+  stage_order INTEGER NOT NULL,
+  expected_start_date DATE,
+  actual_start_date DATE,
+  expected_end_date DATE,
+  actual_end_date DATE,
+  status VARCHAR(20) DEFAULT 'pending',
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(crop_cycle_id, stage_order)
+);
+
+CREATE INDEX IF NOT EXISTS idx_crop_cycle_stages_cycle ON crop_cycle_stages(crop_cycle_id);
+
+ALTER TABLE crop_cycle_stages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "crop_cycle_stages_select" ON crop_cycle_stages;
+CREATE POLICY "crop_cycle_stages_select" ON crop_cycle_stages
+  FOR SELECT USING (crop_cycle_id IN (
+    SELECT id FROM crop_cycles WHERE organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    )
+  ));
+
+DROP POLICY IF EXISTS "crop_cycle_stages_manage" ON crop_cycle_stages;
+CREATE POLICY "crop_cycle_stages_manage" ON crop_cycle_stages
+  FOR ALL USING (crop_cycle_id IN (
+    SELECT id FROM crop_cycles WHERE organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid() AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+    )
+  ));
+
+-- Harvest Events (multiple harvests per crop cycle)
+CREATE TABLE IF NOT EXISTS harvest_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_cycle_id UUID NOT NULL REFERENCES crop_cycles(id) ON DELETE CASCADE,
+  harvest_date DATE NOT NULL,
+  harvest_number INTEGER NOT NULL,
+  quantity NUMERIC,
+  quantity_unit VARCHAR(20) DEFAULT 'kg',
+  quality_grade VARCHAR(20),
+  quality_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_harvest_events_cycle ON harvest_events(crop_cycle_id);
+
+ALTER TABLE harvest_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "harvest_events_select" ON harvest_events;
+CREATE POLICY "harvest_events_select" ON harvest_events
+  FOR SELECT USING (crop_cycle_id IN (
+    SELECT id FROM crop_cycles WHERE organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    )
+  ));
+
+DROP POLICY IF EXISTS "harvest_events_manage" ON harvest_events;
+CREATE POLICY "harvest_events_manage" ON harvest_events
+  FOR ALL USING (crop_cycle_id IN (
+    SELECT id FROM crop_cycles WHERE organization_id IN (
+      SELECT ou.organization_id FROM organization_users ou
+      JOIN roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid() AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+    )
+  ));
+
+-- Seed global Morocco crop templates
+INSERT INTO crop_templates (crop_type, crop_name, cycle_type, cycle_category, is_perennial, typical_duration_months, typical_planting_months, typical_harvest_months, yield_unit, average_yield_per_ha, code_prefix, is_global)
+VALUES
+  ('wheat', 'Blé tendre', 'annual', 'medium', false, 7, ARRAY[11], ARRAY[6], 'quintaux', 20, 'BLE', true),
+  ('barley', 'Orge', 'annual', 'medium', false, 6, ARRAY[11], ARRAY[5], 'quintaux', 18, 'ORG', true),
+  ('olive', 'Olivier', 'perennial', 'perennial', true, 12, ARRAY[0], ARRAY[12], 'kg', 2500, 'OLV', true),
+  ('citrus', 'Agrumes', 'perennial', 'perennial', true, 12, ARRAY[0], ARRAY[1], 'tonnes', 25, 'AGR', true),
+  ('tomato', 'Tomate', 'annual', 'medium', false, 4, ARRAY[3], ARRAY[7], 'tonnes', 80, 'TOM', true),
+  ('potato', 'Pomme de terre', 'annual', 'medium', false, 4, ARRAY[2], ARRAY[6], 'tonnes', 30, 'PDT', true),
+  ('sugar_beet', 'Betterave sucrière', 'annual', 'long', false, 9, ARRAY[9], ARRAY[6], 'tonnes', 60, 'BET', true),
+  ('date_palm', 'Palmier dattier', 'perennial', 'perennial', true, 12, ARRAY[0], ARRAY[10], 'kg', 6000, 'DAT', true)
+ON CONFLICT DO NOTHING;
 
 -- Add foreign key constraints for tables that reference time dimension tables
 -- These are added here because the referenced tables (fiscal_years, fiscal_periods, agricultural_campaigns, crop_cycles, biological_assets)
@@ -13101,6 +13270,689 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
 CREATE INDEX IF NOT EXISTS idx_work_records_task_ref ON work_records USING GIN ((notes::jsonb) jsonb_path_ops) WHERE notes IS NOT NULL AND notes::jsonb ? 'task_id';
 
 -- ============================================================================
+-- COMPLIANCE TRACKING SYSTEM
+-- ============================================================================
+
+-- Certifications (organization certifications: GlobalGAP, HACCP, ISO9001, etc.)
+CREATE TABLE IF NOT EXISTS certifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  certification_type TEXT NOT NULL CHECK (certification_type IN (
+    'GlobalGAP',
+    'HACCP',
+    'ISO9001',
+    'ISO14001',
+    'Organic',
+    'FairTrade',
+    'Rainforest',
+    'USDA_Organic'
+  )),
+  certification_number TEXT NOT NULL,
+  issued_date DATE NOT NULL,
+  expiry_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN (
+    'active',
+    'expired',
+    'pending_renewal',
+    'suspended'
+  )),
+  issuing_body TEXT NOT NULL,
+  scope TEXT,
+  documents JSONB DEFAULT '[]'::jsonb,
+  audit_schedule JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(organization_id, certification_type, certification_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_certifications_org ON certifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_certifications_type ON certifications(certification_type);
+CREATE INDEX IF NOT EXISTS idx_certifications_status ON certifications(status);
+CREATE INDEX IF NOT EXISTS idx_certifications_expiry ON certifications(expiry_date);
+
+COMMENT ON TABLE certifications IS 'Organization certifications and compliance credentials';
+COMMENT ON COLUMN certifications.organization_id IS 'Organization that holds the certification';
+COMMENT ON COLUMN certifications.certification_type IS 'Type of certification (GlobalGAP, HACCP, ISO9001, etc.)';
+COMMENT ON COLUMN certifications.certification_number IS 'Unique certification number/code';
+COMMENT ON COLUMN certifications.issued_date IS 'Date certification was issued';
+COMMENT ON COLUMN certifications.expiry_date IS 'Date certification expires';
+COMMENT ON COLUMN certifications.status IS 'Current status: active, expired, pending_renewal, suspended';
+COMMENT ON COLUMN certifications.issuing_body IS 'Organization that issued the certification';
+COMMENT ON COLUMN certifications.scope IS 'Scope of certification (e.g., specific farms, products, processes)';
+COMMENT ON COLUMN certifications.documents IS 'JSONB array of document references {url, type, uploaded_at}';
+COMMENT ON COLUMN certifications.audit_schedule IS 'JSONB object with next_audit_date, audit_frequency, auditor_name';
+
+ALTER TABLE certifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "certifications_read_policy" ON certifications;
+CREATE POLICY "certifications_read_policy" ON certifications
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "certifications_create_policy" ON certifications;
+CREATE POLICY "certifications_create_policy" ON certifications
+  FOR INSERT WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "certifications_update_policy" ON certifications;
+CREATE POLICY "certifications_update_policy" ON certifications
+  FOR UPDATE USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "certifications_delete_policy" ON certifications;
+CREATE POLICY "certifications_delete_policy" ON certifications
+  FOR DELETE USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Compliance Checks (audit records and compliance verification)
+CREATE TABLE IF NOT EXISTS compliance_checks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  certification_id UUID NOT NULL REFERENCES certifications(id) ON DELETE CASCADE,
+  check_type TEXT NOT NULL CHECK (check_type IN (
+    'pesticide_usage',
+    'traceability',
+    'worker_safety',
+    'record_keeping',
+    'environmental',
+    'quality_control'
+  )),
+  check_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN (
+    'compliant',
+    'non_compliant',
+    'needs_review',
+    'in_progress'
+  )),
+  findings JSONB DEFAULT '[]'::jsonb,
+  corrective_actions JSONB DEFAULT '[]'::jsonb,
+  next_check_date DATE,
+  auditor_name TEXT,
+  score NUMERIC(5,2) CHECK (score >= 0 AND score <= 100),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_org ON compliance_checks(organization_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_cert ON compliance_checks(certification_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_type ON compliance_checks(check_type);
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_status ON compliance_checks(status);
+CREATE INDEX IF NOT EXISTS idx_compliance_checks_date ON compliance_checks(check_date);
+
+COMMENT ON TABLE compliance_checks IS 'Audit records and compliance verification checks';
+COMMENT ON COLUMN compliance_checks.organization_id IS 'Organization being audited';
+COMMENT ON COLUMN compliance_checks.certification_id IS 'Certification being audited against';
+COMMENT ON COLUMN compliance_checks.check_type IS 'Type of compliance check performed';
+COMMENT ON COLUMN compliance_checks.check_date IS 'Date the compliance check was conducted';
+COMMENT ON COLUMN compliance_checks.status IS 'Result: compliant, non_compliant, needs_review, in_progress';
+COMMENT ON COLUMN compliance_checks.findings IS 'JSONB array of findings {requirement_code, finding_description, severity}';
+COMMENT ON COLUMN compliance_checks.corrective_actions IS 'JSONB array of actions {action_description, due_date, responsible_person, status}';
+COMMENT ON COLUMN compliance_checks.next_check_date IS 'Scheduled date for next compliance check';
+COMMENT ON COLUMN compliance_checks.auditor_name IS 'Name of auditor who conducted the check';
+COMMENT ON COLUMN compliance_checks.score IS 'Compliance score (0-100)';
+
+ALTER TABLE compliance_checks ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "compliance_checks_read_policy" ON compliance_checks;
+CREATE POLICY "compliance_checks_read_policy" ON compliance_checks
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "compliance_checks_create_policy" ON compliance_checks;
+CREATE POLICY "compliance_checks_create_policy" ON compliance_checks
+  FOR INSERT WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "compliance_checks_update_policy" ON compliance_checks;
+CREATE POLICY "compliance_checks_update_policy" ON compliance_checks
+  FOR UPDATE USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "compliance_checks_delete_policy" ON compliance_checks;
+CREATE POLICY "compliance_checks_delete_policy" ON compliance_checks
+  FOR DELETE USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Compliance Requirements (reference table for requirements by certification type)
+CREATE TABLE IF NOT EXISTS compliance_requirements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certification_type TEXT NOT NULL CHECK (certification_type IN (
+    'GlobalGAP',
+    'HACCP',
+    'ISO9001',
+    'ISO14001',
+    'Organic',
+    'FairTrade',
+    'Rainforest',
+    'USDA_Organic'
+  )),
+  requirement_code TEXT NOT NULL,
+  requirement_description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  verification_method TEXT,
+  frequency TEXT,
+  is_critical BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(certification_type, requirement_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_compliance_requirements_type ON compliance_requirements(certification_type);
+CREATE INDEX IF NOT EXISTS idx_compliance_requirements_code ON compliance_requirements(requirement_code);
+CREATE INDEX IF NOT EXISTS idx_compliance_requirements_category ON compliance_requirements(category);
+CREATE INDEX IF NOT EXISTS idx_compliance_requirements_critical ON compliance_requirements(is_critical);
+
+COMMENT ON TABLE compliance_requirements IS 'Reference library of compliance requirements by certification type';
+COMMENT ON COLUMN compliance_requirements.certification_type IS 'Certification standard this requirement applies to';
+COMMENT ON COLUMN compliance_requirements.requirement_code IS 'Unique code for the requirement (e.g., AF.1.1)';
+COMMENT ON COLUMN compliance_requirements.requirement_description IS 'Detailed description of the requirement';
+COMMENT ON COLUMN compliance_requirements.category IS 'Category of requirement (e.g., Traceability, IPM, Worker Safety)';
+COMMENT ON COLUMN compliance_requirements.verification_method IS 'How to verify compliance (e.g., Document Review, Field Inspection)';
+COMMENT ON COLUMN compliance_requirements.frequency IS 'How often requirement must be verified (e.g., Annual, Per Harvest)';
+COMMENT ON COLUMN compliance_requirements.is_critical IS 'Whether this is a critical requirement (failure = non-compliance)';
+
+ALTER TABLE compliance_requirements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "compliance_requirements_read_policy" ON compliance_requirements;
+CREATE POLICY "compliance_requirements_read_policy" ON compliance_requirements
+  FOR SELECT USING (
+    true
+  );
+
+DROP POLICY IF EXISTS "compliance_requirements_write_policy" ON compliance_requirements;
+CREATE POLICY "compliance_requirements_write_policy" ON compliance_requirements
+  FOR ALL USING (
+    is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Compliance Evidence (supporting documents for compliance checks)
+CREATE TABLE IF NOT EXISTS compliance_evidence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  compliance_check_id UUID NOT NULL REFERENCES compliance_checks(id) ON DELETE CASCADE,
+  evidence_type TEXT NOT NULL CHECK (evidence_type IN (
+    'document',
+    'photo',
+    'video',
+    'inspection_report',
+    'test_result',
+    'record',
+    'certificate',
+    'other'
+  )),
+  file_url TEXT NOT NULL,
+  description TEXT,
+  uploaded_by UUID NOT NULL REFERENCES user_profiles(id) ON DELETE RESTRICT,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_compliance_evidence_check ON compliance_evidence(compliance_check_id);
+CREATE INDEX IF NOT EXISTS idx_compliance_evidence_type ON compliance_evidence(evidence_type);
+CREATE INDEX IF NOT EXISTS idx_compliance_evidence_uploaded_by ON compliance_evidence(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_compliance_evidence_uploaded_at ON compliance_evidence(uploaded_at);
+
+COMMENT ON TABLE compliance_evidence IS 'Supporting documents and evidence for compliance checks';
+COMMENT ON COLUMN compliance_evidence.compliance_check_id IS 'Compliance check this evidence supports';
+COMMENT ON COLUMN compliance_evidence.evidence_type IS 'Type of evidence (document, photo, video, etc.)';
+COMMENT ON COLUMN compliance_evidence.file_url IS 'URL to the evidence file in cloud storage';
+COMMENT ON COLUMN compliance_evidence.description IS 'Description of what the evidence shows';
+COMMENT ON COLUMN compliance_evidence.uploaded_by IS 'User who uploaded the evidence';
+COMMENT ON COLUMN compliance_evidence.uploaded_at IS 'Timestamp when evidence was uploaded';
+
+ALTER TABLE compliance_evidence ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "compliance_evidence_read_policy" ON compliance_evidence;
+CREATE POLICY "compliance_evidence_read_policy" ON compliance_evidence
+  FOR SELECT USING (
+    compliance_check_id IN (
+      SELECT id FROM compliance_checks
+      WHERE organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "compliance_evidence_create_policy" ON compliance_evidence;
+CREATE POLICY "compliance_evidence_create_policy" ON compliance_evidence
+  FOR INSERT WITH CHECK (
+    compliance_check_id IN (
+      SELECT id FROM compliance_checks
+      WHERE organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "compliance_evidence_delete_policy" ON compliance_evidence;
+CREATE POLICY "compliance_evidence_delete_policy" ON compliance_evidence
+  FOR DELETE USING (
+    compliance_check_id IN (
+      SELECT id FROM compliance_checks
+      WHERE organization_id IN (
+        SELECT organization_id FROM organization_users
+        WHERE user_id = auth.uid() AND is_active = true
+      )
+    )
+    OR is_internal_admin()
+    OR current_setting('role', true) = 'service_role'
+  );
+
+-- Audit Reminders (scheduled reminders for certification audits)
+CREATE TABLE IF NOT EXISTS audit_reminders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  certification_id UUID NOT NULL REFERENCES certifications(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  reminder_type TEXT NOT NULL CHECK (reminder_type IN ('30_days', '14_days', '7_days', '1_day', 'overdue')),
+  scheduled_for TIMESTAMPTZ NOT NULL,
+  sent_at TIMESTAMPTZ,
+  notification_id UUID REFERENCES notifications(id),
+  email_sent BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(certification_id, reminder_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_reminders_scheduled ON audit_reminders(scheduled_for) WHERE sent_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_audit_reminders_certification ON audit_reminders(certification_id);
+CREATE INDEX IF NOT EXISTS idx_audit_reminders_org ON audit_reminders(organization_id);
+
+ALTER TABLE audit_reminders ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their org audit reminders" ON audit_reminders;
+CREATE POLICY "Users can view their org audit reminders"
+ON audit_reminders FOR SELECT
+TO authenticated
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Service role can manage audit reminders" ON audit_reminders;
+CREATE POLICY "Service role can manage audit reminders"
+ON audit_reminders FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+-- ============================================================================
+-- COMPLIANCE DOCUMENTS STORAGE BUCKET
+-- ============================================================================
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'compliance-documents',
+  'compliance-documents',
+  false,
+  10485760,
+  ARRAY[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+    'image/tiff',
+    'text/plain',
+    'text/csv'
+  ]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = false,
+  file_size_limit = 10485760,
+  allowed_mime_types = ARRAY[
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+    'image/tiff',
+    'text/plain',
+    'text/csv'
+  ];
+
+DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects;
+CREATE POLICY "Org members can read compliance documents"
+ON storage.objects FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'compliance-documents'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text
+    FROM organization_users
+    WHERE user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects;
+CREATE POLICY "Org members can upload compliance documents"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'compliance-documents'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text
+    FROM organization_users
+    WHERE user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects;
+CREATE POLICY "Org members can update compliance documents"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'compliance-documents'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text
+    FROM organization_users
+    WHERE user_id = auth.uid()
+  )
+)
+WITH CHECK (
+  bucket_id = 'compliance-documents'
+  AND (storage.foldername(name))[1] IN (
+    SELECT organization_id::text
+    FROM organization_users
+    WHERE user_id = auth.uid()
+  )
+);
+
+DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects;
+CREATE POLICY "Org admins can delete compliance documents"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'compliance-documents'
+  AND (storage.foldername(name))[1] IN (
+    SELECT ou.organization_id::text
+    FROM organization_users ou
+    JOIN roles r ON r.id = ou.role_id
+    WHERE ou.user_id = auth.uid()
+    AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
+  )
+);
+
+-- ============================================================================
+-- COMPLIANCE REALTIME PUBLICATION
+-- ============================================================================
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE certifications;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE compliance_checks;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE compliance_evidence;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- ============================================================================
+-- SEED COMPLIANCE REQUIREMENTS DATA
+-- ============================================================================
+
+-- GlobalGAP Requirements (10 requirements)
+INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
+VALUES
+  (
+    'GlobalGAP',
+    'AF.1.1',
+    'Traceability system for all products from production to sale',
+    'Traceability',
+    'Document Review, System Inspection',
+    'Continuous',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'AF.2.1',
+    'Record keeping for all farm activities including inputs, outputs, and labor',
+    'Record Keeping',
+    'Document Review',
+    'Per Activity',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'CB.4.1',
+    'Fertilizer application records with dates, products, rates, and fields',
+    'Input Management',
+    'Document Review, Field Inspection',
+    'Per Application',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'CB.5.1',
+    'Irrigation water quality testing and records',
+    'Water Management',
+    'Test Results, Document Review',
+    'Annual',
+    false
+  ),
+  (
+    'GlobalGAP',
+    'CB.7.1',
+    'Integrated pest management plan with pesticide records',
+    'Pest Management',
+    'Document Review, Field Inspection',
+    'Annual',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'FV.5.1',
+    'Harvest hygiene procedures and worker training documentation',
+    'Harvest Management',
+    'Document Review, Worker Interview',
+    'Per Harvest',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'FV.6.1',
+    'Post-harvest handling and storage procedures',
+    'Post-Harvest',
+    'Document Review, Facility Inspection',
+    'Annual',
+    false
+  ),
+  (
+    'GlobalGAP',
+    'SA.1.1',
+    'Worker safety training and incident records',
+    'Worker Safety',
+    'Document Review, Worker Interview',
+    'Annual',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'SA.2.1',
+    'Personal protective equipment (PPE) provision and usage',
+    'Worker Safety',
+    'Facility Inspection, Worker Interview',
+    'Quarterly',
+    true
+  ),
+  (
+    'GlobalGAP',
+    'SA.3.1',
+    'Child labor and forced labor prevention policies',
+    'Labor Practices',
+    'Document Review, Worker Interview',
+    'Annual',
+    true
+  )
+ON CONFLICT (certification_type, requirement_code) DO NOTHING;
+
+-- HACCP Requirements (5 requirements)
+INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
+VALUES
+  (
+    'HACCP',
+    'CCP1',
+    'Receiving raw materials inspection and acceptance criteria',
+    'Receiving',
+    'Inspection Records, Supplier Verification',
+    'Per Delivery',
+    true
+  ),
+  (
+    'HACCP',
+    'CCP2',
+    'Storage temperature monitoring and records for perishables',
+    'Storage',
+    'Temperature Records, Equipment Calibration',
+    'Continuous',
+    true
+  ),
+  (
+    'HACCP',
+    'CCP3',
+    'Processing temperature control and time records',
+    'Processing',
+    'Temperature Records, Process Logs',
+    'Per Batch',
+    true
+  ),
+  (
+    'HACCP',
+    'CCP4',
+    'Metal detection and foreign material prevention',
+    'Quality Control',
+    'Equipment Logs, Test Records',
+    'Per Batch',
+    true
+  ),
+  (
+    'HACCP',
+    'CCP5',
+    'Final product testing and microbiological analysis',
+    'Testing',
+    'Lab Test Results, Certificate of Analysis',
+    'Per Batch',
+    true
+  )
+ON CONFLICT (certification_type, requirement_code) DO NOTHING;
+
+-- ISO 9001 Requirements (5 requirements)
+INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
+VALUES
+  (
+    'ISO9001',
+    'QMS.1',
+    'Quality management system documentation and procedures',
+    'Quality Management',
+    'Document Review, System Audit',
+    'Annual',
+    true
+  ),
+  (
+    'ISO9001',
+    'QMS.2',
+    'Management review and effectiveness evaluation',
+    'Management Review',
+    'Meeting Minutes, Performance Data',
+    'Annual',
+    false
+  ),
+  (
+    'ISO9001',
+    'QMS.3',
+    'Customer satisfaction monitoring and feedback management',
+    'Customer Focus',
+    'Survey Results, Complaint Records',
+    'Quarterly',
+    false
+  ),
+  (
+    'ISO9001',
+    'QMS.4',
+    'Internal audit program and corrective actions',
+    'Internal Audit',
+    'Audit Reports, Corrective Action Records',
+    'Annual',
+    true
+  ),
+  (
+    'ISO9001',
+    'QMS.5',
+    'Competence and training of personnel',
+    'Personnel',
+    'Training Records, Competency Assessment',
+    'Annual',
+    false
+  )
+ON CONFLICT (certification_type, requirement_code) DO NOTHING;
+
+-- ============================================================================
 -- ENSURE RLS IS ENABLED ON ALL TABLES
 -- ============================================================================
 ALTER TABLE IF EXISTS account_templates ENABLE ROW LEVEL SECURITY;
@@ -13116,3 +13968,11 @@ ALTER TABLE IF EXISTS soil_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS irrigation_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS rootstocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS plantation_systems ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS certifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS compliance_checks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS compliance_requirements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS compliance_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS audit_reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_cycle_stages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS harvest_events ENABLE ROW LEVEL SECURITY;

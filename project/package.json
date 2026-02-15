@@ -115,7 +115,10 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx": "^7.28.6",
     "@hookform/resolvers": "^5.2.2",
+    "@locator/babel-jsx": "^0.5.1",
+    "@locator/runtime": "^0.5.1",
     "@playwright/test": "^1.56.1",
     "@tauri-apps/cli": "^1.5.11",
     "@testing-library/jest-dom": "^6.9.1",

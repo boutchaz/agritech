@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, ArrowLeft, Trash2, ShoppingCart, LogIn } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { CartItem } from '@/components/CartItem';
 
 export default function CartPage() {
     const router = useRouter();
     const { cart, loading, error, clearCart, itemCount, total } = useCart();
+    const { user, loading: authLoading } = useAuth();
     const [isClearing, setIsClearing] = useState(false);
 
     const formatPrice = (price: number) => {
@@ -37,9 +39,9 @@ export default function CartPage() {
     };
 
     // Check if user is logged in
-    const isLoggedIn = typeof window !== 'undefined' && localStorage.getItem('auth_token');
+    const isLoggedIn = !!user;
 
-    if (loading) {
+    if (loading || authLoading) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-4xl mx-auto px-4 py-8">

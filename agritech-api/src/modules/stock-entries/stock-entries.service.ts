@@ -8,6 +8,7 @@ import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
 import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
 import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
 import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
+import { StockAccountingService } from './stock-accounting.service';
 
 @Injectable()
 export class StockEntriesService {
@@ -16,6 +17,7 @@ export class StockEntriesService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly stockAccountingService: StockAccountingService,
   ) {}
 
   /**
@@ -56,6 +58,9 @@ export class StockEntriesService {
     }
     if (filters?.search) {
       query = query.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+    }
+    if (filters?.crop_cycle_id) {
+      query = query.eq('crop_cycle_id', filters.crop_cycle_id);
     }
 
     const { data, error } = await query;
@@ -123,8 +128,8 @@ export class StockEntriesService {
         `INSERT INTO stock_entries (
           organization_id, entry_type, entry_number, entry_date,
           from_warehouse_id, to_warehouse_id, reference_type, reference_id,
-          reference_number, purpose, notes, status, created_by, posted_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          reference_number, purpose, crop_cycle_id, notes, status, created_by, posted_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *`,
         [
           dto.organization_id,
@@ -137,6 +142,7 @@ export class StockEntriesService {
           dto.reference_id || null,
           dto.reference_number || null,
           dto.purpose || null,
+          dto.crop_cycle_id || null,
           dto.notes || null,
           dto.status || StockEntryStatus.DRAFT,
           dto.created_by || null,
@@ -193,6 +199,22 @@ export class StockEntriesService {
           entryItems,
           dto.entry_type,
         );
+
+        // 4. Create journal entry for accounting integration
+        const accountingResult = await this.stockAccountingService.createJournalEntryForStockEntry(
+          client,
+          stockEntry,
+          entryItems,
+        );
+
+        // If accounting failed and it's not a stock transfer (which has no accounting impact),
+        // throw an error to rollback the transaction
+        if (!accountingResult.success && accountingResult.error) {
+          this.logger.error(`Accounting integration failed: ${accountingResult.error}`);
+          throw new BadRequestException(
+            `Failed to create accounting entry: ${accountingResult.error}`,
+          );
+        }
       }
 
       return {
@@ -245,6 +267,7 @@ export class StockEntriesService {
         'reference_id',
         'reference_number',
         'purpose',
+        'crop_cycle_id',
         'notes',
       ];
 
@@ -364,6 +387,22 @@ export class StockEntriesService {
         stockEntry.entry_type,
       );
 
+      // 5. Create journal entry for accounting integration
+      const accountingResult = await this.stockAccountingService.createJournalEntryForStockEntry(
+        client,
+        stockEntry,
+        entryItems,
+      );
+
+      // If accounting failed and it's not a stock transfer (which has no accounting impact),
+      // throw an error to rollback the transaction
+      if (!accountingResult.success && accountingResult.error) {
+        this.logger.error(`Accounting integration failed: ${accountingResult.error}`);
+        throw new BadRequestException(
+          `Failed to create accounting entry: ${accountingResult.error}`,
+        );
+      }
+
       return { message: 'Stock entry posted successfully' };
     });
   }
@@ -464,6 +503,9 @@ export class StockEntriesService {
     if (filters?.stock_entry_id) {
       query = query.eq('stock_entry_id', filters.stock_entry_id);
     }
+    if (filters?.crop_cycle_id) {
+      query = query.eq('crop_cycle_id', filters.crop_cycle_id);
+    }
 
     const { data, error } = await query;
 
@@ -531,8 +573,8 @@ export class StockEntriesService {
       `INSERT INTO stock_movements (
         organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
-        stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -549,6 +591,7 @@ export class StockEntriesService {
         item.id,
         item.batch_number || null,
         item.serial_number || null,
+        stockEntry.crop_cycle_id || null,
       ],
     );
 
@@ -633,8 +676,8 @@ export class StockEntriesService {
       `INSERT INTO stock_movements (
         organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
-        stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -651,6 +694,7 @@ export class StockEntriesService {
         item.id,
         item.batch_number || null,
         item.serial_number || null,
+        stockEntry.crop_cycle_id || null,
       ],
     );
 
@@ -722,8 +766,8 @@ export class StockEntriesService {
       `INSERT INTO stock_movements (
         organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
-        stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -740,6 +784,7 @@ export class StockEntriesService {
         item.id,
         item.batch_number || null,
         item.serial_number || null,
+        stockEntry.crop_cycle_id || null,
       ],
     );
 
@@ -748,8 +793,8 @@ export class StockEntriesService {
       `INSERT INTO stock_movements (
         organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
         quantity, unit, balance_quantity, cost_per_unit, total_cost,
-        stock_entry_id, stock_entry_item_id, batch_number, serial_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -766,6 +811,7 @@ export class StockEntriesService {
         item.id,
         item.batch_number || null,
         item.serial_number || null,
+        stockEntry.crop_cycle_id || null,
       ],
     );
 
@@ -882,8 +928,8 @@ export class StockEntriesService {
         `INSERT INTO stock_movements (
           organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
           quantity, unit, balance_quantity, cost_per_unit, total_cost,
-          stock_entry_id, stock_entry_item_id, batch_number, serial_number
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           stockEntry.organization_id,
           item.item_id,
@@ -900,6 +946,7 @@ export class StockEntriesService {
           item.id,
           item.batch_number || null,
           item.serial_number || null,
+          stockEntry.crop_cycle_id || null,
         ],
       );
 
@@ -954,8 +1001,8 @@ export class StockEntriesService {
           `INSERT INTO stock_movements (
             organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
             quantity, unit, balance_quantity, cost_per_unit, total_cost,
-            stock_entry_id, stock_entry_item_id, batch_number, serial_number
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            stock_entry_id, stock_entry_item_id, batch_number, serial_number, crop_cycle_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
           [
             stockEntry.organization_id,
             item.item_id,
@@ -972,6 +1019,7 @@ export class StockEntriesService {
             item.id,
             item.batch_number || null,
             item.serial_number || null,
+            stockEntry.crop_cycle_id || null,
           ],
         );
 

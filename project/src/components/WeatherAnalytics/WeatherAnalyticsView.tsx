@@ -90,9 +90,6 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
       longitude: sumLng / parcelBoundary.length,
     };
 
-    // Debug log to verify coordinates
-    console.log('Parcel center coordinates:', center, 'Is Web Mercator:', isWebMercator);
-
     return center;
   }, [parcelBoundary]);
 

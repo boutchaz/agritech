@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -45,13 +45,6 @@ export default function CheckoutPage() {
 
     const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
     const [notes, setNotes] = useState('');
-
-    // Check if user is logged in
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
-            router.push('/login?redirect=/checkout');
-        }
-    }, [router]);
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat('fr-MA', {

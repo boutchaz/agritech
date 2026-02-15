@@ -23,6 +23,7 @@ export interface Organization {
   tax_id?: string;
   logo_url?: string;
   account_type?: 'individual' | 'business' | 'farm';
+  map_provider?: 'default' | 'mapbox' | null;
 }
 
 export interface UpdateOrganizationInput {
@@ -43,6 +44,7 @@ export interface UpdateOrganizationInput {
   website?: string;
   tax_id?: string;
   logo_url?: string;
+  map_provider?: 'default' | 'mapbox' | null;
 }
 
 const BASE_URL = '/api/v1/organizations';

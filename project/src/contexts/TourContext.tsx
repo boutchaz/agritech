@@ -805,7 +805,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         preferences.dismissed_tours as TourId[]
       );
 
-      console.log('[TourContext] Loaded preferences from backend:', preferences);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load tour preferences';
       console.error('[TourContext] Failed to load from backend, using localStorage fallback:', errorMessage);
@@ -847,7 +846,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         lastSyncError: null,
       }));
 
-      console.log('[TourContext] Saved completed tours to backend');
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save completed tours';
@@ -888,7 +886,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         lastSyncError: null,
       }));
 
-      console.log('[TourContext] Saved dismissed tours to backend');
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save dismissed tours';
@@ -1002,7 +999,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           result.dismissed_tours as TourId[]
         );
 
-        console.log(`[TourContext] Tour '${tourId}' dismissed and synced to backend`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to dismiss tour';
         console.error('[TourContext] Failed to sync dismiss to backend:', errorMessage);
@@ -1116,7 +1112,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           result.dismissed_tours as TourId[]
         );
 
-        console.log(`[TourContext] Tour '${tourId}' reset and synced to backend`);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to reset tour';
         console.error('[TourContext] Failed to sync reset to backend:', errorMessage);
@@ -1165,7 +1160,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           result.dismissed_tours as TourId[]
         );
 
-        console.log('[TourContext] All tours reset and synced to backend');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to reset all tours';
         console.error('[TourContext] Failed to sync reset-all to backend:', errorMessage);

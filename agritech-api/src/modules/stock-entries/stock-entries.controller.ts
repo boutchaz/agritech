@@ -43,6 +43,7 @@ export class StockEntriesController {
   @ApiQuery({ name: 'to_date', required: false })
   @ApiQuery({ name: 'warehouse_id', required: false })
   @ApiQuery({ name: 'reference_type', required: false })
+  @ApiQuery({ name: 'crop_cycle_id', required: false })
   @ApiQuery({ name: 'search', required: false })
   @ApiResponse({ status: 200, description: 'Stock entries retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -54,6 +55,7 @@ export class StockEntriesController {
     @Query('to_date') toDate?: string,
     @Query('warehouse_id') warehouseId?: string,
     @Query('reference_type') referenceType?: string,
+    @Query('crop_cycle_id') cropCycleId?: string,
     @Query('search') search?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
@@ -64,6 +66,7 @@ export class StockEntriesController {
       to_date: toDate,
       warehouse_id: warehouseId,
       reference_type: referenceType,
+      crop_cycle_id: cropCycleId,
       search,
     });
   }
@@ -145,6 +148,7 @@ export class StockEntriesController {
   @ApiQuery({ name: 'from_date', required: false })
   @ApiQuery({ name: 'to_date', required: false })
   @ApiQuery({ name: 'stock_entry_id', required: false })
+  @ApiQuery({ name: 'crop_cycle_id', required: false })
   @ApiResponse({ status: 200, description: 'Stock movements retrieved successfully' })
   async getMovements(
     @Req() req: any,
@@ -154,6 +158,7 @@ export class StockEntriesController {
     @Query('from_date') fromDate?: string,
     @Query('to_date') toDate?: string,
     @Query('stock_entry_id') stockEntryId?: string,
+    @Query('crop_cycle_id') cropCycleId?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.stockEntriesService.getStockMovements(organizationId, {
@@ -163,6 +168,7 @@ export class StockEntriesController {
       from_date: fromDate,
       to_date: toDate,
       stock_entry_id: stockEntryId,
+      crop_cycle_id: cropCycleId,
     });
   }
 

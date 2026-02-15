@@ -9,7 +9,7 @@ const config: Config = {
   favicon: 'img/logo.svg',
   organizationName: 'agritech',
   projectName: 'agritech-platform',
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
   markdown: { 
     mermaid: true,

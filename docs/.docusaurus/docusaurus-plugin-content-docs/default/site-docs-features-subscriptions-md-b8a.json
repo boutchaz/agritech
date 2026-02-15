@@ -1,7 +1,7 @@
 {
   "id": "features/subscriptions",
-  "title": "Subscriptions and Feature Gating",
-  "description": "Overview",
+  "title": "Subscriptions & Module System",
+  "description": "The AgriTech Platform uses a subscription-based module system that enables features based on the organization's plan tier. This document covers the implementation of subscriptions, module configuration, and access control.",
   "source": "@site/docs/features/subscriptions.md",
   "sourceDirName": "features",
   "slug": "/features/subscriptions",
@@ -10,14 +10,17 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {},
+  "sidebarPosition": 13,
+  "frontMatter": {
+    "sidebar_position": 13
+  },
   "sidebar": "docs",
   "previous": {
-    "title": "Quality Control & Lab Services",
-    "permalink": "/features/quality-control"
+    "title": "Satellite Analysis Service",
+    "permalink": "/features/satellite-analysis"
   },
   "next": {
-    "title": "Adding a New Route",
-    "permalink": "/guides/adding-new-route"
+    "title": "Adding a Feature",
+    "permalink": "/guides/adding-feature"
   }
 }

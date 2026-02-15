@@ -9,7 +9,7 @@ export type StockEntryType =
   | 'Stock Transfer'
   | 'Stock Reconciliation';
 
-export type StockEntryStatus = 'Draft' | 'Submitted' | 'Posted' | 'Cancelled';
+export type StockEntryStatus = 'Draft' | 'Posted' | 'Cancelled';
 
 export type StockMovementType = 'IN' | 'OUT' | 'TRANSFER';
 
@@ -47,6 +47,12 @@ export interface StockEntry {
   // Additional Information
   purpose: string | null;
   notes: string | null;
+
+  // Crop Cycle Link for Cost Tracking
+  crop_cycle_id: string | null;
+
+  // Journal Entry Reference (auto-generated)
+  journal_entry_id: string | null;
 
   // Posting Information
   posted_at: string | null; // ISO datetime
@@ -152,6 +158,9 @@ export interface StockMovement {
   stock_entry_id: string | null;
   stock_entry_item_id: string | null;
 
+  // Crop Cycle Link for Cost Tracking
+  crop_cycle_id: string | null;
+
   // Batch/Serial
   batch_number: string | null;
   serial_number: string | null;
@@ -196,9 +205,13 @@ export interface CreateStockEntryInput {
   reference_id?: string;
   reference_number?: string;
   purpose?: string;
+  crop_cycle_id?: string;
   notes?: string;
   items: CreateStockEntryItemInput[];
 }
+
+// Valuation method for stock costing
+export type ValuationMethod = 'FIFO' | 'LIFO' | 'Moving Average';
 
 // Create Stock Entry Item Input
 export interface CreateStockEntryItemInput {
@@ -213,6 +226,7 @@ export interface CreateStockEntryItemInput {
   serial_number?: string;
   expiry_date?: string;
   cost_per_unit?: number;
+  valuation_method?: ValuationMethod; // FIFO, LIFO, or Moving Average
   system_quantity?: number; // For reconciliation
   physical_quantity?: number; // For reconciliation
   notes?: string;
@@ -224,6 +238,7 @@ export interface UpdateStockEntryInput {
   from_warehouse_id?: string;
   to_warehouse_id?: string;
   purpose?: string;
+  crop_cycle_id?: string;
   notes?: string;
   status?: StockEntryStatus;
 }
@@ -238,6 +253,7 @@ export interface StockEntryFilters {
   to_date?: string;
   warehouse_id?: string; // Either from or to warehouse
   reference_type?: ReferenceType;
+  crop_cycle_id?: string; // Filter by crop cycle
   search?: string; // Search by entry number or notes
 }
 
@@ -248,6 +264,7 @@ export interface StockMovementFilters {
   from_date?: string;
   to_date?: string;
   stock_entry_id?: string;
+  crop_cycle_id?: string; // Filter by crop cycle
 }
 
 // =====================================================
@@ -335,7 +352,6 @@ export const STOCK_ENTRY_TYPES: Record<StockEntryType, StockEntryTypeConfig> = {
 // Status badge colors
 export const STOCK_ENTRY_STATUS_COLORS: Record<StockEntryStatus, string> = {
   Draft: 'bg-gray-100 text-gray-800',
-  Submitted: 'bg-blue-100 text-blue-800',
   Posted: 'bg-green-100 text-green-800',
   Cancelled: 'bg-red-100 text-red-800',
 };

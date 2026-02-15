@@ -11,31 +11,34 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 class SupabaseService:
     def __init__(self):
         self.supabase_url = settings.SUPABASE_URL
         self.supabase_key = settings.SUPABASE_SERVICE_KEY
         self.headers = {
-            'apikey': self.supabase_key,
-            'Authorization': f'Bearer {self.supabase_key}',
-            'Content-Type': 'application/json'
+            "apikey": self.supabase_key,
+            "Authorization": f"Bearer {self.supabase_key}",
+            "Content-Type": "application/json",
         }
-    
-    async def get_organization_farms(self, organization_id: str) -> List[Dict[str, Any]]:
+
+    async def get_organization_farms(
+        self, organization_id: str
+    ) -> List[Dict[str, Any]]:
         """Get all farms for an organization"""
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_organization_farms",
                     headers=self.headers,
-                    params={'org_uuid': organization_id}
+                    params={"org_uuid": organization_id},
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching organization farms: {e}")
             return []
-    
+
     async def get_farm_parcels(self, farm_id: str) -> List[Dict[str, Any]]:
         """Get all parcels for a farm"""
         try:
@@ -43,33 +46,35 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_farm_parcels",
                     headers=self.headers,
-                    params={'farm_uuid': farm_id}
+                    params={"farm_uuid": farm_id},
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching farm parcels: {e}")
             return []
-    
-    async def get_farm_hierarchy_tree(self, organization_id: str, root_farm_id: Optional[str] = None) -> List[Dict[str, Any]]:
+
+    async def get_farm_hierarchy_tree(
+        self, organization_id: str, root_farm_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Get farm hierarchy tree"""
         try:
             async with httpx.AsyncClient() as client:
-                params = {'org_uuid': organization_id}
+                params = {"org_uuid": organization_id}
                 if root_farm_id:
-                    params['root_farm_id'] = root_farm_id
-                
+                    params["root_farm_id"] = root_farm_id
+
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_farm_hierarchy_tree",
                     headers=self.headers,
-                    params=params
+                    params=params,
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching farm hierarchy: {e}")
             return []
-    
+
     async def get_parcel_details(self, parcel_id: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a parcel"""
         try:
@@ -77,7 +82,7 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/parcels",
                     headers=self.headers,
-                    params={'id': f'eq.{parcel_id}', 'select': '*'}
+                    params={"id": f"eq.{parcel_id}", "select": "*"},
                 )
                 response.raise_for_status()
                 parcels = response.json()
@@ -85,7 +90,7 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error fetching parcel details: {e}")
             return None
-    
+
     async def get_farm_details(self, farm_id: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a farm"""
         try:
@@ -93,7 +98,7 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/farms",
                     headers=self.headers,
-                    params={'id': f'eq.{farm_id}', 'select': '*'}
+                    params={"id": f"eq.{farm_id}", "select": "*"},
                 )
                 response.raise_for_status()
                 farms = response.json()
@@ -101,7 +106,7 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error fetching farm details: {e}")
             return None
-    
+
     async def save_processing_job(self, job_data: Dict[str, Any]) -> Optional[str]:
         """Save a processing job to the database"""
         try:
@@ -109,15 +114,31 @@ class SupabaseService:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
                     headers=self.headers,
-                    json=job_data
+                    json=job_data,
                 )
                 response.raise_for_status()
                 result = response.json()
-                return result[0]['id'] if result else None
+                return result[0]["id"] if result else None
         except Exception as e:
             logger.error(f"Error saving processing job: {e}")
             return None
-    
+
+    async def get_processing_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """Get a processing job by ID"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
+                    headers=self.headers,
+                    params={"id": f"eq.{job_id}", "select": "*"},
+                )
+                response.raise_for_status()
+                jobs = response.json()
+                return jobs[0] if jobs else None
+        except Exception as e:
+            logger.error(f"Error fetching processing job: {e}")
+            return None
+
     async def update_processing_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
         """Update a processing job"""
         try:
@@ -125,15 +146,15 @@ class SupabaseService:
                 response = await client.patch(
                     f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
                     headers=self.headers,
-                    params={'id': f'eq.{job_id}'},
-                    json=updates
+                    params={"id": f"eq.{job_id}"},
+                    json=updates,
                 )
                 response.raise_for_status()
                 return True
         except Exception as e:
             logger.error(f"Error updating processing job: {e}")
             return False
-    
+
     async def save_satellite_data(self, data: Dict[str, Any]) -> Optional[str]:
         """Save satellite indices data"""
         try:
@@ -141,38 +162,46 @@ class SupabaseService:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_indices_data",
                     headers=self.headers,
-                    json=data
+                    json=data,
                 )
                 response.raise_for_status()
                 result = response.json()
-                return result[0]['id'] if result else None
+                return result[0]["id"] if result else None
         except Exception as e:
             logger.error(f"Error saving satellite data: {e}")
             return None
-    
-    async def get_satellite_data(self, parcel_id: str, date_range: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
+
+    async def get_satellite_data(
+        self, parcel_id: str, date_range: Optional[Dict[str, str]] = None
+    ) -> List[Dict[str, Any]]:
         """Get satellite indices data for a parcel"""
         try:
             async with httpx.AsyncClient() as client:
-                params = {'parcel_id': f'eq.{parcel_id}'}
+                # Use list-of-tuples so httpx emits duplicate 'date' keys
+                # for PostgREST range filtering on the same column
+                query_params: list[tuple[str, str]] = [("parcel_id", f"eq.{parcel_id}")]
                 if date_range:
-                    if date_range.get('start_date'):
-                        params['date'] = f'gte.{date_range["start_date"]}'
-                    if date_range.get('end_date'):
-                        params['date'] = f'lte.{date_range["end_date"]}'
-                
+                    start = date_range.get("start_date")
+                    end = date_range.get("end_date")
+                    if start:
+                        query_params.append(("date", f"gte.{start}"))
+                    if end:
+                        query_params.append(("date", f"lte.{end}"))
+
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/satellite_indices_data",
                     headers=self.headers,
-                    params=params
+                    params=query_params,
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching satellite data: {e}")
             return []
-    
-    async def convert_boundary_to_geojson(self, boundary: List[List[float]]) -> Dict[str, Any]:
+
+    async def convert_boundary_to_geojson(
+        self, boundary: List[List[float]]
+    ) -> Dict[str, Any]:
         """Convert parcel boundary to GeoJSON format"""
         try:
             # Check if coordinates are in Web Mercator (EPSG:3857) or geographic (WGS84)
@@ -181,17 +210,19 @@ class SupabaseService:
 
             if abs(first_coord[0]) > 180 or abs(first_coord[1]) > 90:
                 # Coordinates are in Web Mercator (EPSG:3857), need to convert to WGS84
-                logger.info('Converting coordinates from Web Mercator to WGS84')
+                logger.info("Converting coordinates from Web Mercator to WGS84")
                 geo_coordinates = []
                 for coord in boundary:
                     x, y = coord
                     # Convert from Web Mercator to WGS84
                     lon = (x / 20037508.34) * 180
-                    lat = (math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi) - 90
+                    lat = (
+                        math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi
+                    ) - 90
                     geo_coordinates.append([lon, lat])
             else:
                 # Coordinates are already in geographic (WGS84)
-                logger.info('Coordinates are already in WGS84')
+                logger.info("Coordinates are already in WGS84")
                 geo_coordinates = boundary
 
             # Ensure the polygon is closed (first and last points should be the same)
@@ -201,17 +232,11 @@ class SupabaseService:
                 if first[0] != last[0] or first[1] != last[1]:
                     geo_coordinates.append([first[0], first[1]])
 
-            return {
-                'type': 'Polygon',
-                'coordinates': [geo_coordinates]
-            }
+            return {"type": "Polygon", "coordinates": [geo_coordinates]}
         except Exception as e:
             logger.error(f"Error converting boundary to GeoJSON: {e}")
-            return {
-                'type': 'Polygon',
-                'coordinates': [[]]
-            }
-    
+            return {"type": "Polygon", "coordinates": [[]]}
+
     async def get_organization_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         """Get organizations for a user"""
         try:
@@ -219,65 +244,67 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_user_organizations",
                     headers=self.headers,
-                    params={'user_uuid': user_id}
+                    params={"user_uuid": user_id},
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching user organizations: {e}")
             return []
-    
+
     async def upload_satellite_file(
-        self, 
-        file_data: bytes, 
-        filename: str, 
+        self,
+        file_data: bytes,
+        filename: str,
         organization_id: str,
         index: str,
         date: str,
-        parcel_id: Optional[str] = None
+        parcel_id: Optional[str] = None,
     ) -> Optional[str]:
         """Upload satellite data file to Supabase Storage"""
         try:
             # Create folder structure: satellite-data/{organization_id}/{index}/{date}/
             folder_path = f"satellite-data/{organization_id}/{index}/{date}"
             file_path = f"{folder_path}/{filename}"
-            
+
             # Upload file to Supabase Storage
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
                     headers={
-                        'apikey': self.supabase_key,
-                        'Authorization': f'Bearer {self.supabase_key}',
-                        'Content-Type': 'application/octet-stream'
+                        "apikey": self.supabase_key,
+                        "Authorization": f"Bearer {self.supabase_key}",
+                        "Content-Type": "application/octet-stream",
                     },
-                    content=file_data
+                    content=file_data,
                 )
                 response.raise_for_status()
-                
+
                 # Return the public URL
                 public_url = f"{self.supabase_url}/storage/v1/object/public/satellite-data/{file_path}"
-                
+
                 # Save file metadata to database
-                await self.save_file_metadata({
-                    'organization_id': organization_id,
-                    'parcel_id': parcel_id,
-                    'index': index,
-                    'date': date,
-                    'filename': filename,
-                    'file_path': file_path,
-                    'public_url': public_url,
-                    'file_size': len(file_data),
-                    'created_at': datetime.utcnow().isoformat()
-                })
-                
+                await self.save_file_metadata(
+                    {
+                        "organization_id": organization_id,
+                        "parcel_id": parcel_id,
+                        "index": index,
+                        "date": date,
+                        "filename": filename,
+                        "file_path": file_path,
+                        "public_url": public_url,
+                        "file_size": len(file_data),
+                        "created_at": datetime.utcnow().isoformat(),
+                    }
+                )
+
                 logger.info(f"Uploaded satellite file: {file_path}")
                 return public_url
-                
+
         except Exception as e:
             logger.error(f"Error uploading satellite file: {e}")
             return None
-    
+
     async def save_file_metadata(self, metadata: Dict[str, Any]) -> Optional[str]:
         """Save file metadata to database"""
         try:
@@ -285,46 +312,48 @@ class SupabaseService:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
-                    json=metadata
+                    json=metadata,
                 )
                 response.raise_for_status()
                 result = response.json()
-                return result[0]['id'] if result else None
+                return result[0]["id"] if result else None
         except Exception as e:
             logger.error(f"Error saving file metadata: {e}")
             return None
-    
+
     async def get_satellite_files(
-        self, 
-        organization_id: str, 
+        self,
+        organization_id: str,
         index: Optional[str] = None,
-        date_range: Optional[Dict[str, str]] = None
+        date_range: Optional[Dict[str, str]] = None,
     ) -> List[Dict[str, Any]]:
         """Get satellite files for an organization"""
         try:
             async with httpx.AsyncClient() as client:
-                params = {'organization_id': f'eq.{organization_id}'}
-                
+                query_params: list[tuple[str, str]] = [
+                    ("organization_id", f"eq.{organization_id}")
+                ]
+
                 if index:
-                    params['index'] = f'eq.{index}'
-                
+                    query_params.append(("index", f"eq.{index}"))
+
                 if date_range:
-                    if date_range.get('start_date'):
-                        params['date'] = f'gte.{date_range["start_date"]}'
-                    if date_range.get('end_date'):
-                        params['date'] = f'lte.{date_range["end_date"]}'
-                
+                    if date_range.get("start_date"):
+                        query_params.append(("date", f"gte.{date_range['start_date']}"))
+                    if date_range.get("end_date"):
+                        query_params.append(("date", f"lte.{date_range['end_date']}"))
+
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
-                    params=params
+                    params=query_params,
                 )
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
             logger.error(f"Error fetching satellite files: {e}")
             return []
-    
+
     async def delete_satellite_file(self, file_id: str) -> bool:
         """Delete satellite file and its metadata"""
         try:
@@ -333,41 +362,67 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
-                    params={'id': f'eq.{file_id}'}
+                    params={"id": f"eq.{file_id}"},
                 )
                 response.raise_for_status()
                 files = response.json()
-                
+
                 if not files:
                     return False
-                
+
                 file_metadata = files[0]
-                file_path = file_metadata['file_path']
-                
+                file_path = file_metadata["file_path"]
+
                 # Delete from storage
                 delete_response = await client.delete(
                     f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
                     headers={
-                        'apikey': self.supabase_key,
-                        'Authorization': f'Bearer {self.supabase_key}'
-                    }
+                        "apikey": self.supabase_key,
+                        "Authorization": f"Bearer {self.supabase_key}",
+                    },
                 )
                 delete_response.raise_for_status()
-                
+
                 # Delete metadata
                 meta_response = await client.delete(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
-                    params={'id': f'eq.{file_id}'}
+                    params={"id": f"eq.{file_id}"},
                 )
                 meta_response.raise_for_status()
-                
+
                 logger.info(f"Deleted satellite file: {file_path}")
                 return True
-                
+
         except Exception as e:
             logger.error(f"Error deleting satellite file: {e}")
             return False
+
+    async def get_organizations_with_active_subscriptions(
+        self,
+    ) -> List[Dict[str, Any]]:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/subscriptions",
+                    headers={**self.headers, "Accept": "application/json"},
+                    params={
+                        "select": "organization_id,organizations(id,name)",
+                        "status": "in.(active,trialing)",
+                    },
+                )
+                response.raise_for_status()
+                rows = response.json()
+                results = []
+                for row in rows:
+                    org = row.get("organizations")
+                    if org:
+                        results.append({"id": org["id"], "name": org.get("name", "")})
+                return results
+        except Exception as e:
+            logger.error(f"Error fetching organizations with active subscriptions: {e}")
+            return []
+
 
 # Singleton instance
 supabase_service = SupabaseService()

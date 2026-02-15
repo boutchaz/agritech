@@ -3,43 +3,47 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDashboardStats } from '@/hooks/useDashboard';
 import Link from 'next/link';
-import { Package, ShoppingCart, TrendingUp, Plus, LogOut } from 'lucide-react';
+import { useOrders } from '@/hooks/useOrders';
+import { Package, ShoppingCart, ShoppingBag, TrendingUp, Plus, LogOut, ExternalLink } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 export default function DashboardPage() {
     const router = useRouter();
+    const { signOut } = useAuth();
     const [user, setUser] = useState<any>(null);
-    const [stats, setStats] = useState({
-        listingsCount: 0,
-        ordersCount: 0,
-        revenue: 0
-    });
-    const [loading, setLoading] = useState(true);
+    const [userLoading, setUserLoading] = useState(true);
 
     useEffect(() => {
-        loadDashboard();
-    }, []);
-
-    const loadDashboard = async () => {
-        try {
-            const currentUser = await ApiClient.getCurrentUser();
-            setUser(currentUser);
-
-            // Load stats if we have user data
-            if (currentUser?.organization_id) {
-                const dashboardStats = await ApiClient.getDashboardStats(currentUser.organization_id);
-                setStats(dashboardStats);
+        async function loadUser() {
+            try {
+                const currentUser = await ApiClient.getCurrentUser();
+                setUser(currentUser);
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                router.push('/login');
+            } finally {
+                setUserLoading(false);
             }
-        } catch (error) {
-            console.error('Failed to load dashboard:', error);
-            router.push('/login');
-        } finally {
-            setLoading(false);
         }
-    };
+        loadUser();
+    }, [router]);
+
+    const { data: stats = { listingsCount: 0, ordersCount: 0, revenue: 0 }, isLoading: statsLoading } = useDashboardStats(user?.organization_id || '');
+    const { data: orders = [], isLoading: ordersLoading } = useOrders();
+    const pendingOrdersCount = orders.filter((o: any) =>
+        o.status === 'pending' && o.seller_organization_id === user?.organization_id
+    ).length;
+    const sellerOrders = orders.filter((o: any) =>
+        o.seller_organization_id === user?.organization_id
+    );
+    const loading = userLoading || statsLoading || ordersLoading;
 
     const handleLogout = async () => {
-        await ApiClient.logout();
+        await signOut();
         router.push('/');
     };
 
@@ -66,7 +70,7 @@ export default function DashboardPage() {
                         </Link>
                         <div className="flex items-center space-x-4">
                             <Link href="/products" className="text-gray-700 hover:text-green-700">
-                                Browse Products
+                                Parcourir les produits
                             </Link>
                             <div className="text-sm text-gray-500">
                                 {user?.email}
@@ -76,7 +80,7 @@ export default function DashboardPage() {
                                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
                             >
                                 <LogOut className="h-4 w-4" />
-                                <span className="text-sm">Logout</span>
+                                <span className="text-sm">Déconnexion</span>
                             </button>
                         </div>
                     </div>
@@ -86,68 +90,102 @@ export default function DashboardPage() {
             <div className="container mx-auto px-4 py-8">
                 {/* Page Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Seller Dashboard</h1>
-                    <p className="text-gray-600">Manage your listings and track your sales</p>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Tableau de bord vendeur</h1>
+                    <p className="text-gray-600">Gérez vos annonces et suivez vos ventes</p>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white rounded-lg shadow p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div className="bg-white rounded-xl p-6 border">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-medium text-gray-500">Active Listings</h3>
-                            <Package className="h-5 w-5 text-green-600" />
+                            <div className="p-3 bg-green-100 rounded-lg">
+                                <Package className="h-6 w-6 text-green-600" />
+                            </div>
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats.listingsCount}</p>
-                        <p className="text-sm text-gray-500 mt-2">Total products listed</p>
+                        <p className="text-3xl font-bold text-gray-900">{stats.listingsCount}</p>
+                        <p className="text-gray-600">Annonces actives</p>
+                        <Link
+                            href="/dashboard/listings"
+                            className="mt-4 inline-flex items-center text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                        >
+                            Gérer les annonces →
+                        </Link>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-xl p-6 border">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-medium text-gray-500">Pending Orders</h3>
-                            <ShoppingCart className="h-5 w-5 text-blue-600" />
+                            <div className="p-3 bg-red-100 rounded-lg">
+                                <ShoppingBag className="h-6 w-6 text-red-600" />
+                            </div>
+                            {pendingOrdersCount > 0 && (
+                                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                    {pendingOrdersCount} en attente
+                                </span>
+                            )}
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats.ordersCount}</p>
-                        <p className="text-sm text-gray-500 mt-2">Orders to fulfill</p>
+                        <p className="text-3xl font-bold text-gray-900">{sellerOrders.length}</p>
+                        <p className="text-gray-600">Commandes reçues</p>
+                        <a
+                            href="https://agritech-dashboard.thebzlab.online/marketplace/orders"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-4 inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 font-medium text-sm"
+                        >
+                            Gérer les commandes <ExternalLink className="h-3 w-3" />
+                        </a>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow p-6">
+                    <div className="bg-white rounded-xl p-6 border">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
-                            <TrendingUp className="h-5 w-5 text-purple-600" />
+                            <div className="p-3 bg-blue-100 rounded-lg">
+                                <ShoppingCart className="h-6 w-6 text-blue-600" />
+                            </div>
                         </div>
-                        <p className="text-3xl font-bold text-gray-800">{stats.revenue.toFixed(2)} MAD</p>
-                        <p className="text-sm text-gray-500 mt-2">All time earnings</p>
+                        <p className="text-3xl font-bold text-gray-900">{stats.ordersCount}</p>
+                        <p className="text-gray-600">Commandes en cours</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 border">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-purple-100 rounded-lg">
+                                <TrendingUp className="h-6 w-6 text-purple-600" />
+                            </div>
+                        </div>
+                        <p className="text-3xl font-bold text-gray-900">{stats.revenue.toFixed(2)} MAD</p>
+                        <p className="text-gray-600">Revenus totaux</p>
                     </div>
                 </div>
 
                 {/* Quick Actions */}
                 <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Actions rapides</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Link
                             href="/dashboard/listings/new"
                             className="flex items-center justify-center space-x-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                         >
                             <Plus className="h-5 w-5" />
-                            <span>Create Listing</span>
+                            <span>Créer une annonce</span>
                         </Link>
                         <Link
                             href="/dashboard/listings"
                             className="flex items-center justify-center px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-green-600 hover:text-green-700 transition"
                         >
-                            Manage Listings
+                            Gérer les annonces
                         </Link>
-                        <Link
-                            href="/dashboard/orders"
-                            className="flex items-center justify-center px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-green-600 hover:text-green-700 transition"
+                        <a
+                            href="https://agritech-dashboard.thebzlab.online/marketplace/orders"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-green-600 hover:text-green-700 transition"
                         >
-                            View Orders
-                        </Link>
+                            Voir les commandes <ExternalLink className="h-4 w-4" />
+                        </a>
                         <Link
                             href="/dashboard/analytics"
                             className="flex items-center justify-center px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-green-600 hover:text-green-700 transition"
                         >
-                            Analytics
+                            Analytiques
                         </Link>
                     </div>
                 </div>
@@ -155,24 +193,24 @@ export default function DashboardPage() {
                 {/* Recent Listings */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-gray-800">Your Listings</h2>
+                        <h2 className="text-xl font-bold text-gray-800">Vos annonces</h2>
                         <Link href="/dashboard/listings" className="text-green-700 hover:text-green-800 text-sm font-semibold">
-                            View All →
+                            Voir tout →
                         </Link>
                     </div>
 
                     <div className="text-center py-12">
                         <div className="text-6xl mb-4">📦</div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-2">No listings yet</h3>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Aucune annonce</h3>
                         <p className="text-gray-600 mb-6">
-                            Start selling by creating your first product listing
+                            Commencez à vendre en créant votre première annonce
                         </p>
                         <Link
                             href="/dashboard/listings/new"
                             className="inline-flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
                         >
                             <Plus className="h-5 w-5" />
-                            <span>Create Your First Listing</span>
+                            <span>Créer votre première annonce</span>
                         </Link>
                     </div>
                 </div>

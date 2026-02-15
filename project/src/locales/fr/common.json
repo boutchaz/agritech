@@ -296,7 +296,8 @@
     "cropCycles": "Cycles de Culture",
     "chat": "Assistant IA",
     "compliance": "Conformité",
-    "certifications": "Certifications"
+    "certifications": "Certifications",
+    "correctiveActions": "Actions correctives"
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -1617,7 +1618,8 @@
       "contactInfo": "Informations de contact",
       "address": "Adresse",
       "regionalSettings": "Paramètres régionaux",
-      "status": "Statut de l'organisation"
+      "status": "Statut de l'organisation",
+      "mapConfiguration": "Configuration de la carte"
     },
     "fields": {
       "name": "Nom de l'organisation",
@@ -1632,8 +1634,15 @@
       "city": "Ville",
       "state": "Région/Province",
       "postalCode": "Code postal",
-      "country": "Pays"
+      "country": "Pays",
+      "mapProvider": "Fournisseur de carte"
     },
+    "mapProviderDefault": "Par défaut (OpenStreetMap / ESRI)",
+    "mapProviderDefaultDesc": "Gratuit, aucune clé API requise. Tuiles satellite et routières polyvalentes.",
+    "mapProviderMapbox": "Mapbox",
+    "mapProviderMapboxDesc": "Imagerie satellite de meilleure qualité. Nécessite un jeton API.",
+    "mapProviderDescription": "Sélectionnez la source de tuiles pour les fonds de carte.",
+    "mapProviderTokenWarning": "Mapbox nécessite une variable d'environnement VITE_MAPBOX_TOKEN. La carte utilisera les tuiles par défaut tant qu'elle n'est pas configurée.",
     "placeholders": {
       "name": "Nom de votre organisation",
       "slug": "slug-organisation",
@@ -2670,6 +2679,90 @@
       "ageBucket": "Ancienneté",
       "outstanding": "En cours",
       "noOutstanding": "Aucune dette fournisseur en cours à cette date."
+    },
+    "generalLedger": {
+      "title": "Grand Livre",
+      "subtitle": "Historique détaillé des transactions pour un compte spécifique",
+      "account": "Compte",
+      "selectAccount": "Sélectionnez un compte...",
+      "loadingAccounts": "Chargement des comptes...",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "exportPdf": "Exporter PDF",
+      "exportCsv": "Exporter CSV",
+      "loading": "Chargement du grand livre...",
+      "error": "Échec du chargement du grand livre",
+      "selectPrompt": "Sélectionnez un compte pour afficher son grand livre",
+      "selectPromptDesc": "Choisissez un compte dans la liste déroulante et définissez la période.",
+      "accountLabel": "Compte",
+      "openingBalance": "Solde d'ouverture",
+      "closingBalance": "Solde de clôture",
+      "transactions": "Transactions",
+      "entries": "écritures",
+      "noEntries": "Aucune transaction trouvée pour cette période.",
+      "noEntriesHint": "Essayez d'ajuster la période ou de sélectionner un autre compte.",
+      "openingBalanceRow": "Solde d'ouverture",
+      "closingBalanceRow": "Solde de clôture",
+      "table": {
+        "date": "Date",
+        "entryNumber": "N° Écriture",
+        "description": "Description",
+        "reference": "Référence",
+        "debit": "Débit",
+        "credit": "Crédit",
+        "balance": "Solde"
+      },
+      "about": {
+        "title": "À propos du Grand Livre",
+        "description": "Le grand livre montre un enregistrement complet de toutes les transactions portées à un compte spécifique dans une période. Il inclut le solde d'ouverture, chaque écriture affectant le compte, un solde cumulé après chaque transaction, et le solde de clôture."
+      }
+    },
+    "cashFlow": {
+      "title": "Tableau de Trésorerie",
+      "subtitle": "Flux de trésorerie des activités opérationnelles, d'investissement et de financement",
+      "campaign": "Campagne Agricole",
+      "allCampaigns": "Toutes les campagnes",
+      "fiscalYear": "Année Fiscale",
+      "allFiscalYears": "Toutes les années",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "exportPdf": "Exporter PDF",
+      "exportCsv": "Exporter CSV",
+      "loading": "Chargement du tableau de trésorerie...",
+      "error": "Échec du chargement du tableau de trésorerie",
+      "noData": "Aucune donnée de trésorerie",
+      "noDataHint": "Passez des écritures avec des comptes d'actif, de passif ou de capitaux propres pour voir votre tableau de trésorerie.",
+      "reportPeriod": "Période du rapport",
+      "to": "au",
+      "netOperating": "Trésorerie nette des opérations",
+      "netInvesting": "Trésorerie nette des investissements",
+      "netFinancing": "Trésorerie nette du financement",
+      "netChange": "Variation nette de trésorerie",
+      "netChangeInCash": "Variation nette de la trésorerie",
+      "operatingActivities": "Activités opérationnelles",
+      "investingActivities": "Activités d'investissement",
+      "financingActivities": "Activités de financement",
+      "netIncome": "Résultat net (du Compte de Résultat)",
+      "depreciation": "Amortissements et provisions",
+      "changesInAR": "Variation des créances clients",
+      "changesInAP": "Variation des dettes fournisseurs",
+      "changesInInventory": "Variation des stocks",
+      "otherAdjustments": "Autres ajustements opérationnels",
+      "totalOperating": "Trésorerie nette des activités opérationnelles",
+      "fixedAssetPurchases": "Acquisitions d'immobilisations",
+      "fixedAssetSales": "Cessions d'immobilisations",
+      "totalInvesting": "Trésorerie nette des activités d'investissement",
+      "debtProceeds": "Produit des emprunts",
+      "debtRepayments": "Remboursement des emprunts",
+      "equityChanges": "Variations des capitaux propres",
+      "dividends": "Dividendes versés",
+      "totalFinancing": "Trésorerie nette des activités de financement",
+      "openingCash": "Trésorerie d'ouverture",
+      "closingCash": "Trésorerie de clôture",
+      "noTransactions": "Aucune transaction sur cette période",
+      "description": "Description",
+      "amount": "Montant",
+      "tableLabel": "Détails du Tableau de Trésorerie"
     }
   },
   "qualityControl": {
@@ -5146,6 +5239,60 @@
       "send": "Envoyer",
       "error": "Erreur lors de l'envoi du message",
       "retry": "Réessayer"
+    }
+  },
+  "emptyState": {
+    "noData": "Aucune donnée disponible",
+    "noResults": "Aucun résultat trouvé",
+    "noFarms": "Aucune ferme trouvée",
+    "noFarmsMessage": "Commencez par créer votre première ferme pour gérer vos opérations agricoles.",
+    "noParcels": "Aucune parcelle trouvée",
+    "noParcelsMessage": "Ajoutez des parcelles à votre ferme pour suivre les cultures et les analyses.",
+    "noTasks": "Aucune tâche trouvée",
+    "noTasksMessage": "Créez des tâches pour planifier et suivre vos opérations agricoles.",
+    "noCycles": "Aucun cycle de culture trouvé",
+    "noCyclesMessage": "Commencez à suivre vos cycles de production de la plantation à la récolte.",
+    "cta": {
+      "createFarm": "Créer une ferme",
+      "createParcel": "Créer une parcelle",
+      "createTask": "Créer une tâche",
+      "createCycle": "Créer un cycle",
+      "clearFilters": "Effacer les filtres"
+    }
+  },
+  "onboarding": {
+    "setup": {
+      "checkingAuth": "Vérification de l'authentification...",
+      "creatingOrg": "Création de l'organisation...",
+      "activatingTrial": "Activation de l'essai...",
+      "complete": "Terminé!"
+    }
+  },
+  "landing": {
+    "stats": {
+      "farms": "Fermes gérées",
+      "parcels": "Parcelles suivies",
+      "hectares": "Hectares surveillés",
+      "satisfaction": "Satisfaction client"
+    },
+    "testimonials": {
+      "title": "La confiance des agriculteurs marocains",
+      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AgriProfy",
+      "farmer1": {
+        "quote": "AgriProfy a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
+        "author": "Hassan B.",
+        "role": "Producteur d'agrumes, Souss-Massa"
+      },
+      "coop1": {
+        "quote": "La gestion de plus de 50 fermes membres était un cauchemar auparavant. Nous avons maintenant une visibilité complète sur les coûts, les rendements et la rentabilité de chaque parcelle.",
+        "author": "Fatima Z.",
+        "role": "Directrice, Coopérative oléicole, Meknès"
+      },
+      "exporter1": {
+        "quote": "Les fonctionnalités d'analyse satellite et de suivi qualité nous ont aidés à obtenir la certification GlobalGAP pour toutes nos fermes fournisseurs.",
+        "author": "Karim M.",
+        "role": "Directeur Export, AgriExport Maroc"
+      }
     }
   }
 }

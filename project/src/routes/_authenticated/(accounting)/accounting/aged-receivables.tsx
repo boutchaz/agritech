@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { financialReportsApi, AgedReport } from '@/lib/api/financial-reports';
+import { exportAgedReportCsv } from '@/lib/utils/report-export';
 
 export const Route = createFileRoute('/_authenticated/(accounting)/accounting/aged-receivables')({
-  component: withRouteProtection(AppContent, ['accounting.viewReports']),
+  component: withRouteProtection(AppContent, 'read', 'AccountingReport'),
 });
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
@@ -94,9 +95,14 @@ function AppContent() {
                   className="max-w-xs"
                 />
               </div>
-              <Button variant="outline" className="gap-2" disabled>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={!report || report.by_party.length === 0}
+                onClick={() => report && exportAgedReportCsv('receivables', report.by_party, asOfDate, currencySymbol)}
+              >
                 <Download className="h-4 w-4" />
-                {t('reportsModule.agedReceivables.exportPdf', 'Export PDF')}
+                {t('reportsModule.agedReceivables.exportCsv', 'Export CSV')}
               </Button>
             </div>
           </CardContent>
@@ -171,16 +177,19 @@ function AppContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table
+                      className="w-full text-sm"
+                      aria-label={t('reportsModule.agedReceivables.byCustomer', 'By Customer')}
+                    >
                       <thead>
                         <tr className="border-b dark:border-gray-700">
-                          <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</th>
-                          <th className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.current', 'Current')}</th>
-                          <th className="text-right py-3 px-2 font-medium">1-30</th>
-                          <th className="text-right py-3 px-2 font-medium">31-60</th>
-                          <th className="text-right py-3 px-2 font-medium">61-90</th>
-                          <th className="text-right py-3 px-2 font-medium">90+</th>
-                          <th className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.total', 'Total')}</th>
+                          <th scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.current', 'Current')}</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">1-30</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">31-60</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">61-90</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">90+</th>
+                          <th scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.total', 'Total')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -212,10 +221,13 @@ function AppContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table
+                      className="w-full text-sm"
+                      aria-label={t('reportsModule.agedReceivables.invoiceDetails', 'Invoice Details')}
+                    >
                       <thead>
                         <tr className="border-b dark:border-gray-700">
-                          <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceNumber', 'Invoice #')}</th>
+                          <th scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceNumber', 'Invoice #')}</th>
                           <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</th>
                           <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceDate', 'Date')}</th>
                           <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.dueDate', 'Due Date')}</th>

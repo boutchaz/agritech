@@ -11,6 +11,7 @@ export interface Organization {
     is_active: boolean;
     created_at: string;
     updated_at: string;
+    map_provider?: 'default' | 'mapbox' | null;
 }
 
 interface OrganizationState {
@@ -24,7 +25,6 @@ export const useOrganizationStore = create<OrganizationState>()(
         (set) => ({
             currentOrganization: null,
             setCurrentOrganization: (organization) => {
-                console.log('[organizationStore] setCurrentOrganization called with:', organization);
                 if (organization && typeof organization.id !== 'string') {
                     console.error('[organizationStore] ERROR: organization.id is not a string!', organization.id, typeof organization.id);
                 }

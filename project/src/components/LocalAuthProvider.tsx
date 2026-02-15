@@ -144,7 +144,6 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const loadOrganizations = async (userId: string) => {
     try {
       const orgsData = await tauriCommands.organizations.getAll(userId);
-      console.log('[LocalAuthProvider] loadOrganizations result:', orgsData);
       
       const mappedOrgs: AuthOrganization[] = orgsData.map((o: OrganizationWithRole) => ({
         id: o.id,
@@ -159,7 +158,6 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         language: o.language ?? undefined,
       }));
       
-      console.log('[LocalAuthProvider] Setting needsImport:', mappedOrgs.length === 0);
       setOrganizations(mappedOrgs);
       setNeedsImport(mappedOrgs.length === 0);
       
@@ -223,17 +221,7 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   useEffect(() => {
-    console.log('[LocalAuthProvider] Redirect check:', {
-      loading,
-      hasUser: !!user,
-      needsImport,
-      isOnImportPage,
-      isOnPublicPage,
-      pathname: location.pathname,
-    });
-    
     if (!loading && user && needsImport && !isOnImportPage && !isOnPublicPage) {
-      console.log('[LocalAuthProvider] Redirecting to /import-data');
       window.location.href = '/import-data';
     }
   }, [loading, user, needsImport, isOnImportPage, isOnPublicPage]);

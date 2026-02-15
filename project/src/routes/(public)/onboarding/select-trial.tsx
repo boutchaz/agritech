@@ -21,12 +21,41 @@ export const Route = createFileRoute('/(public)/onboarding/select-trial')({
   component: SelectTrialPage,
 })
 
+// Setup progress steps for better UX
+const SETUP_STEPS = [
+  { id: 'auth', label: 'Checking authentication...' },
+  { id: 'organization', label: 'Creating organization...' },
+  { id: 'subscription', label: 'Activating trial...' },
+  { id: 'complete', label: 'Complete!' },
+] as const
+
+type SetupStepId = typeof SETUP_STEPS[number]['id']
+
+// Polling utility - replaces arbitrary setTimeout delays
+const pollUntil = async <T,>(
+  fn: () => Promise<T | null>,
+  options: { interval?: number; maxAttempts?: number; label?: string } = {}
+): Promise<T | null> => {
+  const { interval = 200, maxAttempts = 25, label = 'condition' } = options
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await fn()
+    if (result) {
+      return result
+    }
+    await new Promise(resolve => setTimeout(resolve, interval))
+  }
+  console.warn(`⚠️ Polling timeout: ${label} not met after ${maxAttempts} attempts`)
+  return null
+}
+
 function SelectTrialPage() {
   const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('professional')
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
+  const [setupStep, setSetupStep] = useState<SetupStepId>('auth')
   const setupAttempted = useRef(false)
   const queryClient = useQueryClient()
 
@@ -47,7 +76,6 @@ function SelectTrialPage() {
   // Reset setup attempt when organization is successfully loaded
   useEffect(() => {
     if (hasOrganization && setupAttempted.current) {
-      console.log('✅ Organization loaded, resetting setup attempt flag')
       setupAttempted.current = false
     }
   }, [hasOrganization])
@@ -57,36 +85,33 @@ function SelectTrialPage() {
     const setupUserIfNeeded = async () => {
       // Prevent multiple attempts
       if (setupAttempted.current) {
-        console.log('⏸️ Setup already attempted, skipping...')
         return
       }
-      
+
       if (!loading && user && !hasOrganization && !isSettingUp) {
         setupAttempted.current = true
         setIsSettingUp(true)
+        setSetupStep('auth')
         try {
-          console.log('🔄 Setting up user organization...', { userId: user.id, email: user.email })
-          
-          // Wait a moment for session to be available
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Get organization name from user metadata or use default
-          const orgName = user.user_metadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
+          // Step 1: Poll for access token availability instead of fixed delay
+          const accessToken = await pollUntil(
+            async () => {
+              const token = useAuthStore.getState().getAccessToken()
+              return token || null
+            },
+            { interval: 100, maxAttempts: 30, label: 'access token' }
+          )
 
-          console.log('📞 Calling NestJS API to setup organization:', {
-            userId: user.id,
-            email: user.email,
-            organizationName: orgName
-          })
-
-          // Get access token from authStore (this is where loginViaApi stores it)
-          const accessToken = useAuthStore.getState().getAccessToken()
           if (!accessToken) {
             console.error('❌ No access token available')
             setError('Authentication required. Please try logging in again.')
             setupAttempted.current = false
             return
           }
+
+          // Step 2: Create organization via API
+          setSetupStep('organization')
+          const orgName = (user as any).user_metadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
 
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
           const response = await fetch(`${apiUrl}/api/v1/auth/setup-organization`, {
@@ -108,68 +133,37 @@ function SelectTrialPage() {
             return
           }
 
-          const data = await response.json()
-          console.log('✅ Organization setup completed:', data)
-          
-          // Wait a moment for database to sync
-          await new Promise(resolve => setTimeout(resolve, 1500))
-          
-          // Wait a bit more for database transaction to complete
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Force a refetch by directly querying the organization_users table first
-          // This ensures we get the latest data even if React Query cache hasn't updated
-          let orgFound = false
-          try {
-            const { data: orgUsers, error: checkError } = await authSupabase
-              .from('organization_users')
-              .select('organization_id, organizations(id, name, slug)')
-              .eq('user_id', user.id)
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle()
-            
-            if (checkError) {
-              console.error('❌ Error checking organization:', checkError)
-            } else if (orgUsers?.organization_id) {
-              console.log('✅ Organization found after creation:', orgUsers.organization_id)
-              orgFound = true
-            } else {
-              console.warn('⚠️ Organization not found in database yet, waiting...')
-            }
-          } catch (checkErr) {
-            console.error('❌ Error checking organization:', checkErr)
-          }
-          
-          // Always refresh user data to ensure React Query cache is updated
-          console.log('🔄 Refreshing user data to load organization...')
-          await refreshUserData()
-          
-          // Wait for React Query to update and component to re-render
-          // The organizations array should now be populated
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          
-          // Double-check that organization exists by querying again
-          if (!orgFound) {
-            console.log('⏳ Organization not found initially, checking again...')
-            const { data: retryOrgUsers } = await authSupabase
-              .from('organization_users')
-              .select('organization_id')
-              .eq('user_id', user.id)
-              .eq('is_active', true)
-              .limit(1)
-              .maybeSingle()
-            
-            if (retryOrgUsers?.organization_id) {
-              console.log('✅ Organization found on retry:', retryOrgUsers.organization_id)
-              // One more refresh to ensure it's loaded
-              await refreshUserData()
-              await new Promise(resolve => setTimeout(resolve, 1000))
-            } else {
-              console.warn('⚠️ Organization still not found after retry')
-            }
+          // Step 3: Poll for organization creation in database (replaces fixed delays)
+          setSetupStep('subscription')
+          const orgResult = await pollUntil(
+            async () => {
+              const { data: orgUsers, error: checkError } = await authSupabase
+                .from('organization_users')
+                .select('organization_id, organizations(id, name, slug)')
+                .eq('user_id', user.id)
+                .eq('is_active', true)
+                .limit(1)
+                .maybeSingle()
+
+              if (checkError) {
+                console.error('❌ Error checking organization:', checkError)
+                return null
+              }
+              return orgUsers?.organization_id ? orgUsers : null
+            },
+            { interval: 200, maxAttempts: 25, label: 'organization creation' }
+          )
+
+          if (orgResult) {
+            console.log('✅ Organization found:', orgResult)
+          } else {
+            console.warn('⚠️ Organization not found after polling, proceeding anyway')
           }
 
+          // Refresh user data to update React Query cache
+          await refreshUserData()
+
+          setSetupStep('complete')
         } catch (error) {
           console.error('❌ Error calling Edge Function:', error)
           setError(`Setup error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try refreshing the page.`)
@@ -185,14 +179,38 @@ function SelectTrialPage() {
 
   // Show loading state while auth data is being fetched or setting up
   if (loading || isSettingUp) {
+    const currentStepIndex = SETUP_STEPS.findIndex(s => s.id === setupStep)
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4" data-testid="trial-loading">
-      <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" data-testid="loading-spinner" />
-        <p className="text-gray-600 dark:text-gray-400">
-          {isSettingUp ? 'Setting up your account...' : 'Loading your account...'}
-        </p>
-      </div>
+        <div className="text-center max-w-sm">
+          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-6" data-testid="loading-spinner" />
+          <p className="text-gray-900 dark:text-white font-medium mb-4">
+            {isSettingUp ? 'Setting up your account...' : 'Loading your account...'}
+          </p>
+          {isSettingUp && (
+            <div className="space-y-2">
+              {SETUP_STEPS.map((step, index) => (
+                <div
+                  key={step.id}
+                  className={`flex items-center gap-2 text-sm transition-opacity duration-200 ${
+                    index <= currentStepIndex
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-400 dark:text-gray-500 opacity-50'
+                  }`}
+                >
+                  {index < currentStepIndex ? (
+                    <Check className="h-4 w-4" />
+                  ) : index === currentStepIndex ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-current" />
+                  )}
+                  <span>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -228,15 +246,15 @@ function SelectTrialPage() {
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-400">
                   After confirming, visit{' '}
-                  <a 
-                    href="/select-trial" 
+                  <a
+                    href="/select-trial"
                     className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
                     onClick={(e) => {
                       e.preventDefault()
                       window.location.href = '/select-trial'
                     }}
                   >
-                    http://localhost:5173/select-trial
+                    {typeof window !== 'undefined' ? window.location.origin : ''}/select-trial
                   </a>
                   {' '}to activate your account and select your free trial plan.
                 </p>
@@ -358,7 +376,6 @@ function SelectTrialPage() {
         throw new Error(data?.error || 'Failed to create trial subscription')
       }
 
-      console.log('✅ Trial subscription created:', data.subscription)
       trackTrialStartSuccess(selectedPlan)
 
       // Ensure organization is saved to BOTH localStorage AND Zustand store
@@ -375,8 +392,6 @@ function SelectTrialPage() {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      console.log('✅ Organization saved to both localStorage and Zustand store')
-
       // Invalidate and refetch subscription query to ensure it's loaded before navigation
       await queryClient.invalidateQueries({ queryKey: ['subscription', orgToUse.id] })
 
@@ -385,12 +400,6 @@ function SelectTrialPage() {
         queryKey: ['subscription', orgToUse.id],
         type: 'active'
       })
-
-      // Additional wait to ensure:
-      // 1. Subscription is fully cached
-      // 2. Database transaction is committed
-      // 3. Organization membership is fully established
-      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Use window.location.href to force a full page reload and ensure provider re-evaluates
       // Redirect to onboarding flow, not dashboard

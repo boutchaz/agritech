@@ -1,7 +1,7 @@
 {
   "id": "database/schema",
   "title": "Database Schema",
-  "description": "This document provides a comprehensive overview of the AgriTech Platform database schema, including all tables, relationships, and Entity Relationship Diagrams (ERD).",
+  "description": "This document describes the database schema used by the AgriTech Platform, including tables for multi-tenancy, module configuration, and core farming entities.",
   "source": "@site/docs/database/schema.md",
   "sourceDirName": "database",
   "slug": "/database/schema",
@@ -10,5 +10,17 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {}
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Architecture Overview",
+    "permalink": "/architecture/overview"
+  },
+  "next": {
+    "title": "Satellite Analysis Service",
+    "permalink": "/features/satellite-analysis"
+  }
 }

@@ -6,11 +6,12 @@ import {
     Delete,
     Body,
     Param,
-    Req,
+    Request,
+    UseGuards,
     HttpException,
     HttpStatus
 } from '@nestjs/common';
-import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CartService } from './cart.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/add-to-cart.dto';
 
@@ -18,20 +19,13 @@ import { AddToCartDto, UpdateCartItemDto } from './dto/add-to-cart.dto';
 export class CartController {
     constructor(private readonly cartService: CartService) {}
 
-    private extractToken(request: Request): string {
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-        return authHeader.split(' ')[1];
-    }
-
     /**
      * Get user's cart with items and totals
      */
     @Get()
-    async getCart(@Req() request: Request) {
-        const token = this.extractToken(request);
+    @UseGuards(JwtAuthGuard)
+    async getCart(@Request() req: any) {
+        const token = req.headers.authorization?.substring(7);
         return this.cartService.getCart(token);
     }
 
@@ -39,8 +33,9 @@ export class CartController {
      * Add item to cart
      */
     @Post('items')
-    async addToCart(@Req() request: Request, @Body() dto: AddToCartDto) {
-        const token = this.extractToken(request);
+    @UseGuards(JwtAuthGuard)
+    async addToCart(@Request() req: any, @Body() dto: AddToCartDto) {
+        const token = req.headers.authorization?.substring(7);
         return this.cartService.addToCart(token, dto);
     }
 
@@ -48,12 +43,13 @@ export class CartController {
      * Update cart item quantity
      */
     @Patch('items/:id')
+    @UseGuards(JwtAuthGuard)
     async updateCartItem(
-        @Req() request: Request,
+        @Request() req: any,
         @Param('id') id: string,
         @Body() dto: UpdateCartItemDto
     ) {
-        const token = this.extractToken(request);
+        const token = req.headers.authorization?.substring(7);
         return this.cartService.updateCartItem(token, id, dto);
     }
 
@@ -61,8 +57,9 @@ export class CartController {
      * Remove item from cart
      */
     @Delete('items/:id')
-    async removeFromCart(@Req() request: Request, @Param('id') id: string) {
-        const token = this.extractToken(request);
+    @UseGuards(JwtAuthGuard)
+    async removeFromCart(@Request() req: any, @Param('id') id: string) {
+        const token = req.headers.authorization?.substring(7);
         return this.cartService.removeFromCart(token, id);
     }
 
@@ -70,8 +67,9 @@ export class CartController {
      * Clear entire cart
      */
     @Delete('clear')
-    async clearCart(@Req() request: Request) {
-        const token = this.extractToken(request);
+    @UseGuards(JwtAuthGuard)
+    async clearCart(@Request() req: any) {
+        const token = req.headers.authorization?.substring(7);
         return this.cartService.clearCart(token);
     }
 }

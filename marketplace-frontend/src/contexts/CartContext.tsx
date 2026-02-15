@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { ApiClient, Cart, CartItem } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CartContextType {
     cart: Cart | null;
@@ -22,10 +23,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cart, setCart] = useState<Cart | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { user, loading: authLoading } = useAuth();
 
     const refreshCart = useCallback(async () => {
-        // Check if user is authenticated
-        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
+        // Don't fetch cart if not authenticated
+        if (!user) {
             setCart(null);
             setLoading(false);
             return;
@@ -47,11 +49,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
-        refreshCart();
-    }, [refreshCart]);
+        if (!authLoading) {
+            refreshCart();
+        }
+    }, [refreshCart, authLoading]);
 
     const addToCart = async (productId: string, quantity: number, source: 'listing' | 'item') => {
         try {

@@ -14,16 +14,6 @@ export function NetworkDebug() {
   const networkStatus = useNetworkStatusContext();
 
   React.useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('🌐 Network Status Update:', {
-      isOnline: networkStatus.isOnline,
-      isSlowConnection: networkStatus.isSlowConnection,
-      connectionType: networkStatus.connectionType,
-      downlink: networkStatus.downlink,
-      rtt: networkStatus.rtt,
-      saveData: networkStatus.saveData,
-      wasOffline: networkStatus.wasOffline,
-    });
   }, [networkStatus]);
 
   if (import.meta.env.PROD) {

@@ -105,7 +105,7 @@ def _determine_provider_type() -> str:
         Provider type string ("gee", "cdse", or "auto")
     """
     # Check explicit environment variable
-    env_provider = getattr(settings, 'SATELLITE_PROVIDER', 'gee').lower()
+    env_provider = getattr(settings, "SATELLITE_PROVIDER", "gee").lower()
     if env_provider in [ProviderType.GEE.value, ProviderType.CDSE.value]:
         return env_provider
 
@@ -114,26 +114,31 @@ def _determine_provider_type() -> str:
 
 
 def _select_available_provider() -> ProviderType:
-    """
-    Select the best available provider based on configuration.
+    gee_service_account = getattr(settings, "GEE_SERVICE_ACCOUNT", None)
+    gee_private_key = getattr(settings, "GEE_PRIVATE_KEY", None)
+    cdse_client_id = getattr(settings, "CDSE_CLIENT_ID", None)
+    cdse_client_secret = getattr(settings, "CDSE_CLIENT_SECRET", None)
+    commercial_mode = getattr(settings, "SATELLITE_COMMERCIAL_MODE", False)
 
-    Priority order:
-    1. GEE (default provider, always preferred)
-    2. CDSE (fallback if GEE unavailable)
-
-    Returns:
-        ProviderType enum value
-    """
-    # Check if GEE credentials are available
-    gee_service_account = getattr(settings, 'GEE_SERVICE_ACCOUNT', None)
-    gee_private_key = getattr(settings, 'GEE_PRIVATE_KEY', None)
+    if commercial_mode and cdse_client_id and cdse_client_secret:
+        logger.info(
+            "Commercial mode enabled with CDSE credentials, selecting CDSE provider"
+        )
+        return ProviderType.CDSE
 
     if gee_service_account and gee_private_key:
         logger.info("GEE credentials found, selecting GEE provider")
         return ProviderType.GEE
 
-    # GEE is default even without explicit credentials (may use default auth)
-    logger.info("Using GEE as default provider")
+    if cdse_client_id and cdse_client_secret:
+        logger.info(
+            "No GEE credentials, CDSE credentials found, selecting CDSE provider"
+        )
+        return ProviderType.CDSE
+
+    logger.info(
+        "No explicit credentials found, defaulting to GEE (may use default auth)"
+    )
     return ProviderType.GEE
 
 
@@ -192,15 +197,15 @@ def get_provider_info() -> Dict[str, Any]:
         Dictionary with provider status information
     """
     gee_configured = bool(
-        getattr(settings, 'GEE_SERVICE_ACCOUNT', None) and
-        getattr(settings, 'GEE_PRIVATE_KEY', None)
+        getattr(settings, "GEE_SERVICE_ACCOUNT", None)
+        and getattr(settings, "GEE_PRIVATE_KEY", None)
     )
     cdse_configured = bool(
-        getattr(settings, 'CDSE_CLIENT_ID', None) and
-        getattr(settings, 'CDSE_CLIENT_SECRET', None)
+        getattr(settings, "CDSE_CLIENT_ID", None)
+        and getattr(settings, "CDSE_CLIENT_SECRET", None)
     )
-    commercial_mode = getattr(settings, 'SATELLITE_COMMERCIAL_MODE', False)
-    env_provider = getattr(settings, 'SATELLITE_PROVIDER', 'auto').lower()
+    commercial_mode = getattr(settings, "SATELLITE_COMMERCIAL_MODE", False)
+    env_provider = getattr(settings, "SATELLITE_PROVIDER", "auto").lower()
 
     current_provider = _determine_provider_type()
     if current_provider == ProviderType.AUTO.value:

@@ -104,4 +104,18 @@ export class FinancialReportsController {
     const organizationId = req.headers['x-organization-id'];
     return this.reportsService.getAccountBalance(organizationId, accountId, asOfDate);
   }
+
+  @Get('cash-flow')
+  @ApiOperation({ summary: 'Get cash flow statement' })
+  @ApiQuery({ name: 'start_date', required: true, description: 'Start date (YYYY-MM-DD)' })
+  @ApiQuery({ name: 'end_date', required: false, description: 'End date (YYYY-MM-DD)' })
+  @ApiResponse({ status: 200, description: 'Cash flow statement retrieved successfully' })
+  async getCashFlow(
+    @Req() req: any,
+    @Query('start_date') startDate: string,
+    @Query('end_date') endDate?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.reportsService.getCashFlow(organizationId, startDate, endDate);
+  }
 }

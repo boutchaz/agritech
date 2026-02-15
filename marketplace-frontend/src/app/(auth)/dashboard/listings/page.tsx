@@ -1,62 +1,60 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ApiClient } from '@/lib/api';
-import { Package, Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMyListings, useDeleteListing, useUpdateListing } from '@/hooks/useListings';
+import { Package, Plus, Edit, Trash2, Eye, EyeOff, LogOut, ArrowLeft, ExternalLink } from 'lucide-react';
 
 export default function ListingsPage() {
     const router = useRouter();
-    const [listings, setListings] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { signOut } = useAuth();
     const [user, setUser] = useState<any>(null);
-    const [deleting, setDeleting] = useState<string | null>(null);
+    const [userLoading, setUserLoading] = useState(true);
 
     useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        try {
-            const currentUser = await ApiClient.getCurrentUser();
-            setUser(currentUser);
-
-            const myListings = await ApiClient.getMyListings();
-            setListings(myListings);
-        } catch (error) {
-            console.error('Failed to load listings:', error);
-            router.push('/login');
-        } finally {
-            setLoading(false);
+        async function loadUser() {
+            try {
+                const currentUser = await ApiClient.getCurrentUser();
+                setUser(currentUser);
+            } catch (error) {
+                console.error('Failed to load user:', error);
+                router.push('/login');
+            } finally {
+                setUserLoading(false);
+            }
         }
-    };
+        loadUser();
+    }, [router]);
+
+    const { data: listings = [], isLoading: listingsLoading } = useMyListings();
+    const deleteListing = useDeleteListing();
+    const updateListing = useUpdateListing();
+
+    const loading = userLoading || listingsLoading;
 
     const handleDelete = async (id: string) => {
         if (!confirm('Êtes-vous sûr de vouloir supprimer cette annonce?')) {
             return;
         }
 
-        setDeleting(id);
         try {
-            await ApiClient.deleteListing(id);
-            setListings(listings.filter(l => l.id !== id));
+            await deleteListing.mutateAsync(id);
         } catch (error) {
             console.error('Failed to delete listing:', error);
             alert('Échec de la suppression de l\'annonce');
-        } finally {
-            setDeleting(null);
         }
     };
 
     const handleToggleVisibility = async (listing: any) => {
         try {
-            await ApiClient.updateListing(listing.id, {
-                is_public: !listing.is_public
+            await updateListing.mutateAsync({
+                id: listing.id,
+                data: { is_public: !listing.is_public }
             });
-            setListings(listings.map(l =>
-                l.id === listing.id ? { ...l, is_public: !l.is_public } : l
-            ));
         } catch (error) {
             console.error('Failed to update listing:', error);
             alert('Échec de la mise à jour de la visibilité');
@@ -64,7 +62,7 @@ export default function ListingsPage() {
     };
 
     const handleLogout = async () => {
-        await ApiClient.logout();
+        await signOut();
         router.push('/');
     };
 
@@ -158,6 +156,15 @@ export default function ListingsPage() {
                                             <Package className="h-16 w-16 text-gray-400" />
                                         </div>
                                     )}
+                                    <div className="absolute top-2 left-2">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                            listing.is_public
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                        }`}>
+                                            {listing.is_public ? 'Actif' : 'Inactif'}
+                                        </span>
+                                    </div>
                                     {!listing.is_public && (
                                         <div className="absolute top-2 right-2 bg-yellow-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                                             Masqué
@@ -182,6 +189,18 @@ export default function ListingsPage() {
                                         </span>
                                     </div>
 
+                                    {/* Marketplace Link */}
+                                    {listing.is_public && (
+                                        <Link
+                                            href={`/products/${listing.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 mb-4"
+                                        >
+                                            Voir sur la marketplace <ExternalLink className="h-3 w-3" />
+                                        </Link>
+                                    )}
+
                                     {/* Actions */}
                                     <div className="flex items-center gap-2">
                                         <Link
@@ -200,11 +219,11 @@ export default function ListingsPage() {
                                         </button>
                                         <button
                                             onClick={() => handleDelete(listing.id)}
-                                            disabled={deleting === listing.id}
+                                            disabled={deleteListing.isPending}
                                             className="flex items-center justify-center px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
                                             title="Supprimer"
                                         >
-                                            {deleting === listing.id ? (
+                                            {deleteListing.isPending ? (
                                                 <div className="h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
                                             ) : (
                                                 <Trash2 className="h-4 w-4" />

@@ -32,7 +32,6 @@ export const modulesApi = {
    * Get all modules for an organization
    */
   async getAll(filters?: undefined, organizationId?: string): Promise<OrganizationModule[]> {
-    console.log('[modulesApi.getAll] organizationId:', organizationId, 'Type:', typeof organizationId);
     requireOrganizationId(organizationId, 'modulesApi.getAll');
     return apiClient.get<OrganizationModule[]>(getBaseUrl(organizationId));
   },
@@ -45,8 +44,6 @@ export const modulesApi = {
     moduleId: string,
     data: UpdateModuleInput,
   ): Promise<OrganizationModule> {
-    console.log('[modulesApi.update] organizationId:', organizationId, 'Type:', typeof organizationId);
-    console.log('[modulesApi.update] moduleId:', moduleId);
     return apiClient.patch<OrganizationModule>(
       `${getBaseUrl(organizationId)}/${moduleId}`,
       data,

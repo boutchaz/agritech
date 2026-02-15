@@ -9,6 +9,9 @@ import type {
   CropCycleAllocation,
   CropCyclePnL,
   CampaignSummary,
+  CropCycleStage,
+  HarvestEvent,
+  HarvestEventStats,
   CreateFiscalYearInput,
   UpdateFiscalYearInput,
   CreateCampaignInput,
@@ -18,6 +21,10 @@ import type {
   CreateBiologicalAssetInput,
   CreateBiologicalAssetValuationInput,
   CreateCropCycleAllocationInput,
+  CreateCropCycleStageInput,
+  UpdateCropCycleStageInput,
+  CreateHarvestEventInput,
+  UpdateHarvestEventInput,
 } from '@/types/agricultural-accounting';
 
 export const fiscalYearsApi = {
@@ -314,6 +321,211 @@ export const cropCyclesApi = {
       .eq('id', id);
 
     if (error) throw error;
+  },
+};
+
+export const cropCycleStagesApi = {
+  async getByCropCycle(cropCycleId: string): Promise<CropCycleStage[]> {
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .select('*')
+      .eq('crop_cycle_id', cropCycleId)
+      .order('stage_order', { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as CropCycleStage[];
+  },
+
+  async getById(id: string): Promise<CropCycleStage> {
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data as CropCycleStage;
+  },
+
+  async create(input: CreateCropCycleStageInput): Promise<CropCycleStage> {
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .insert(input)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as CropCycleStage;
+  },
+
+  async createBulk(stages: CreateCropCycleStageInput[]): Promise<CropCycleStage[]> {
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .insert(stages)
+      .select();
+
+    if (error) throw error;
+    return (data || []) as CropCycleStage[];
+  },
+
+  async update(input: UpdateCropCycleStageInput): Promise<CropCycleStage> {
+    const { id, ...updates } = input;
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as CropCycleStage;
+  },
+
+  async updateStatus(id: string, status: CropCycleStage['status']): Promise<CropCycleStage> {
+    const now = new Date().toISOString().split('T')[0];
+    const updates: Record<string, string> = { status };
+
+    if (status === 'in_progress') {
+      updates.actual_start_date = now;
+    } else if (status === 'completed') {
+      updates.actual_end_date = now;
+    }
+
+    const { data, error } = await supabase
+      .from('crop_cycle_stages')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as CropCycleStage;
+  },
+
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('crop_cycle_stages')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async generateFromTemplate(
+    cropCycleId: string,
+    templateStages: { name: string; order: number; duration_days: number }[],
+    plantingDate: string
+  ): Promise<CropCycleStage[]> {
+    const stages: CreateCropCycleStageInput[] = [];
+    let currentDate = new Date(plantingDate);
+
+    for (const tmpl of templateStages.sort((a, b) => a.order - b.order)) {
+      const startDate = new Date(currentDate);
+      const endDate = new Date(currentDate);
+      endDate.setDate(endDate.getDate() + tmpl.duration_days);
+
+      stages.push({
+        crop_cycle_id: cropCycleId,
+        stage_name: tmpl.name,
+        stage_order: tmpl.order,
+        expected_start_date: startDate.toISOString().split('T')[0],
+        expected_end_date: endDate.toISOString().split('T')[0],
+        status: 'pending',
+      });
+
+      currentDate = endDate;
+    }
+
+    return this.createBulk(stages);
+  },
+};
+
+export const harvestEventsApi = {
+  async getByCropCycle(cropCycleId: string): Promise<HarvestEvent[]> {
+    const { data, error } = await supabase
+      .from('harvest_events')
+      .select('*')
+      .eq('crop_cycle_id', cropCycleId)
+      .order('harvest_number', { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as HarvestEvent[];
+  },
+
+  async getById(id: string): Promise<HarvestEvent> {
+    const { data, error } = await supabase
+      .from('harvest_events')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data as HarvestEvent;
+  },
+
+  async create(input: CreateHarvestEventInput): Promise<HarvestEvent> {
+    // Auto-set harvest_number if not provided
+    let harvestNumber = input.harvest_number;
+    if (!harvestNumber) {
+      const { count, error: countError } = await supabase
+        .from('harvest_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('crop_cycle_id', input.crop_cycle_id);
+
+      if (countError) throw countError;
+      harvestNumber = (count || 0) + 1;
+    }
+
+    const { data, error } = await supabase
+      .from('harvest_events')
+      .insert({ ...input, harvest_number: harvestNumber })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as HarvestEvent;
+  },
+
+  async update(input: UpdateHarvestEventInput): Promise<HarvestEvent> {
+    const { id, ...updates } = input;
+    const { data, error } = await supabase
+      .from('harvest_events')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as HarvestEvent;
+  },
+
+  async remove(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('harvest_events')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async getStatsByCropCycle(cropCycleId: string): Promise<HarvestEventStats> {
+    const { data, error } = await supabase
+      .from('harvest_events')
+      .select('*')
+      .eq('crop_cycle_id', cropCycleId);
+
+    if (error) throw error;
+
+    const events = data || [];
+    const totalQuantity = events.reduce((sum, e) => sum + (e.quantity || 0), 0);
+    const dates = events.map(e => e.harvest_date).sort();
+
+    return {
+      total_harvests: events.length,
+      total_quantity: totalQuantity,
+      average_quantity: events.length > 0 ? totalQuantity / events.length : 0,
+      last_harvest_date: dates.length > 0 ? dates[dates.length - 1] : null,
+    };
   },
 };
 

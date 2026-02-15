@@ -44,18 +44,13 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
   const query = useQuery({
     queryKey: ['subscription', orgId],
     queryFn: async (): Promise<Subscription | null> => {
-      console.log('[useSubscription] queryFn called', { orgId });
-
       if (orgId === 'none') {
-        console.log('[useSubscription] No org ID, returning null');
         return null;
       }
 
       try {
         // Use subscriptionsService (apiClient) instead of Supabase
-        console.log('[useSubscription] Calling subscriptionsService.getSubscription...');
         const result = await subscriptionsService.getSubscription(orgId);
-        console.log('[useSubscription] Got subscription result:', result);
         return result;
       } catch (error) {
         console.error('[useSubscription] Error in queryFn:', error);
@@ -69,7 +64,6 @@ export const useSubscription = (organizationOverride?: { id: string; name: strin
         }
         // For 404 errors, return null (no subscription found is expected)
         if (error instanceof Error && error.message?.includes('404')) {
-          console.log('[useSubscription] 404 - no subscription found (expected)');
           return null; // No subscription found - this is expected
         }
         // For 403 errors, re-throw to prevent false "no subscription" state

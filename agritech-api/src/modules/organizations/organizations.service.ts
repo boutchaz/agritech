@@ -41,6 +41,8 @@ export interface UpdateOrganizationDto {
     website?: string;
     taxId?: string;
     logoUrl?: string;
+    mapProvider?: string;
+    map_provider?: string;
 }
 
 @Injectable()
@@ -238,6 +240,7 @@ export class OrganizationsService {
         if (updateData.website !== undefined) dbUpdateData.website = updateData.website;
         if (updateData.taxId !== undefined) dbUpdateData.tax_id = updateData.taxId;
         if (updateData.logoUrl !== undefined) dbUpdateData.logo_url = updateData.logoUrl;
+        if (updateData.map_provider !== undefined) dbUpdateData.map_provider = updateData.map_provider;
 
         // Update organization
         const { data: organization, error: updateError } = await this.supabaseAdmin

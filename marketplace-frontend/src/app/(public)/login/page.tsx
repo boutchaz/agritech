@@ -3,12 +3,13 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ApiClient } from '@/lib/api';
 import { CheckCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -33,16 +34,11 @@ function LoginForm() {
         setLoading(true);
 
         try {
-            console.log('[Login] Starting login attempt...');
-            await ApiClient.login(email, password);
-            console.log('[Login] Login successful, token received');
-
-            // Check if token was stored
-            const storedToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-            console.log('[Login] Token stored in localStorage:', !!storedToken);
-
-            console.log('[Login] Redirecting to dashboard...');
-            router.push('/dashboard');
+            // Use Supabase signInWithPassword via AuthContext — sets cookies
+            await signIn(email, password);
+            
+            const redirect = searchParams.get('redirect') || '/dashboard';
+            router.push(redirect);
         } catch (err: any) {
             console.error('[Login] Login failed:', err);
             setError(err.message || 'Invalid email or password');
@@ -59,12 +55,12 @@ function LoginForm() {
                     <span className="text-2xl font-bold text-green-700">AgriTech Market</span>
                 </Link>
                 <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-                    Sign in to your account
+                    Connectez-vous à votre compte
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                    Or{' '}
+                    Ou{' '}
                     <Link href="/signup" className="font-medium text-green-600 hover:text-green-500">
-                        create a new account
+                        créer un nouveau compte
                     </Link>
                 </p>
             </div>
@@ -92,7 +88,7 @@ function LoginForm() {
 
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                Email address
+                                Adresse email
                             </label>
                             <div className="mt-1">
                                 <input
@@ -110,7 +106,7 @@ function LoginForm() {
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                                Password
+                                Mot de passe
                             </label>
                             <div className="mt-1">
                                 <input
@@ -135,13 +131,13 @@ function LoginForm() {
                                     className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                                 />
                                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                    Remember me
+                                    Se souvenir de moi
                                 </label>
                             </div>
 
                             <div className="text-sm">
                                 <a href="#" className="font-medium text-green-600 hover:text-green-500">
-                                    Forgot your password?
+                                    Mot de passe oublié ?
                                 </a>
                             </div>
                         </div>
@@ -152,7 +148,7 @@ function LoginForm() {
                                 disabled={loading}
                                 className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? 'Signing in...' : 'Sign in'}
+                                {loading ? 'Connexion en cours...' : 'Se connecter'}
                             </button>
                         </div>
                     </form>
@@ -163,7 +159,7 @@ function LoginForm() {
                                 <div className="w-full border-t border-gray-300" />
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">New to AgriTech Market?</span>
+                                <span className="px-2 bg-white text-gray-500">Nouveau sur AgriTech Market ?</span>
                             </div>
                         </div>
 
@@ -172,7 +168,7 @@ function LoginForm() {
                                 href="/signup"
                                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                             >
-                                Create an account
+                                Créer un compte
                             </Link>
                         </div>
                     </div>

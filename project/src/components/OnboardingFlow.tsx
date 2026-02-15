@@ -157,7 +157,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
           setCurrentStep(1);
         }
       } catch (error) {
-        console.log('Error checking existing data:', error);
+        console.error('Error checking existing data:', error);
       } finally {
         setInitialLoading(false);
       }

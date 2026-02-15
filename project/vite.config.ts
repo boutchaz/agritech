@@ -1,13 +1,24 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { createRequire } from 'module';
 import path from 'path';
+
+const require = createRequire(import.meta.url);
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     tanstackRouter(),
-    react(),
+    react({
+      // Use Babel for better React DevTools source info
+      babel: {
+        plugins: [
+          // Locator plugin for component source info in devtools
+          [require.resolve('@locator/babel-jsx'), { env: 'development' }],
+        ],
+      },
+    }),
   ],
   // API proxy configuration
   server: {
@@ -23,6 +34,8 @@ export default defineConfig({
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   build: {
+    // Enable sourcemaps for better debugging in development
+    sourcemap: process.env.NODE_ENV !== 'production',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {

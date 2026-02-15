@@ -2,7 +2,7 @@
 
 import { useState, useRef, DragEvent } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { getAuthenticatedSupabase } from '../lib/supabase';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { ApiClient } from '../lib/api';
 
 interface ProductImageUploadProps {
@@ -94,7 +94,7 @@ export default function ProductImageUpload({
                 throw new Error('Organization ID not found');
             }
 
-            const supabase = getAuthenticatedSupabase();
+            const supabase = createBrowserSupabaseClient();
             const uploadedUrls: string[] = [];
 
             for (const file of validFiles) {
@@ -144,7 +144,7 @@ export default function ProductImageUpload({
             const filePath = urlParts[1].split('?')[0]; // Remove query params
 
             try {
-                const supabase = getAuthenticatedSupabase();
+                const supabase = createBrowserSupabaseClient();
                 await supabase.storage.from('products').remove([filePath]);
             } catch (err) {
                 console.error('Failed to delete image from storage:', err);

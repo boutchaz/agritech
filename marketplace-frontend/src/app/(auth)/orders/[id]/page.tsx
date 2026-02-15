@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -15,10 +14,12 @@ import {
     MapPin,
     Phone,
     Mail,
-    Leaf,
     CreditCard
 } from 'lucide-react';
-import { ApiClient, Order } from '@/lib/api';
+import { Order } from '@/lib/api';
+import { useOrder, useCancelOrder } from '@/hooks/useOrders';
+import { useCanReview, useCreateReview } from '@/hooks/useReviews';
+import { ReviewForm } from '@/components/ReviewForm';
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; bgColor: string }> = {
     pending: { label: 'En attente', color: 'text-yellow-700', bgColor: 'bg-yellow-100', icon: Clock },
@@ -36,29 +37,10 @@ export default function OrderDetailPage() {
     const router = useRouter();
     const orderId = params.id as string;
 
-    const [order, setOrder] = useState<Order | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Check if user is logged in
-        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
-            router.push('/login?redirect=/orders/' + orderId);
-            return;
-        }
-
-        fetchOrder();
-    }, [orderId, router]);
-
-    const fetchOrder = async () => {
-        try {
-            const data = await ApiClient.getOrder(orderId);
-            setOrder(data);
-        } catch (error) {
-            console.error('Failed to fetch order:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: order, isLoading: loading } = useOrder(orderId);
+    const cancelOrder = useCancelOrder();
+    const { data: canReviewData } = useCanReview(order?.seller_organization_id ?? '');
+    const createReview = useCreateReview();
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat('fr-MA', {
@@ -81,8 +63,7 @@ export default function OrderDetailPage() {
         if (!confirm('Voulez-vous vraiment annuler cette commande?')) return;
 
         try {
-            await ApiClient.cancelOrder(orderId);
-            fetchOrder();
+            await cancelOrder.mutateAsync(orderId);
         } catch (error) {
             console.error('Failed to cancel order:', error);
             alert('Echec de l\'annulation de la commande');
@@ -100,7 +81,7 @@ export default function OrderDetailPage() {
     if (!order) {
         return (
             <div className="min-h-screen bg-gray-50">
-                <div className="max-w-4xl mx-auto px-4 py-16 text-center">
+                <div className="max-w-4xl mx-auto px-4 pt-24 py-16 text-center">
                     <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Commande non trouvee</h1>
                     <p className="text-gray-500 mb-6">
@@ -124,28 +105,16 @@ export default function OrderDetailPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <Link href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                                <Leaf className="w-5 h-5 text-white" />
-                            </div>
-                            <span className="text-xl font-bold text-gray-900">AgriTech</span>
-                        </Link>
-                        <Link
-                            href="/orders"
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Retour aux commandes
-                        </Link>
-                    </div>
-                </div>
-            </nav>
+            <div className="max-w-4xl mx-auto px-4 pt-24 py-8">
+                {/* Back link */}
+                <Link
+                    href="/orders"
+                    className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Retour aux commandes
+                </Link>
 
-            <div className="max-w-4xl mx-auto px-4 py-8">
                 {/* Order Header */}
                 <div className="bg-white rounded-lg border p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
@@ -158,7 +127,6 @@ export default function OrderDetailPage() {
                             <span className="font-medium">{status.label}</span>
                         </div>
                     </div>
-
                     <p className="text-sm text-gray-500">
                         Passee le {formatDate(order.created_at)}
                     </p>
@@ -337,6 +305,22 @@ export default function OrderDetailPage() {
                                 Annuler la commande
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {order.status === 'delivered' && canReviewData?.canReview && (
+                    <div className="mt-8">
+                        <ReviewForm
+                            sellerName={(order as any).seller?.name || 'le vendeur'}
+                            onSubmit={async (data) => {
+                                await createReview.mutateAsync({
+                                    seller_organization_id: order.seller_organization_id,
+                                    order_id: order.id,
+                                    ...data,
+                                });
+                            }}
+                            isSubmitting={createReview.isPending}
+                        />
                     </div>
                 )}
             </div>

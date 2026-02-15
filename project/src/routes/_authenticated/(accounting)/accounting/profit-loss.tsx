@@ -13,6 +13,7 @@ import { NativeSelect } from '@/components/ui/NativeSelect';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useProfitLoss, type ProfitLossRow } from '@/hooks/useFinancialReports';
 import { useCampaigns, useFiscalYears } from '@/hooks/useAgriculturalAccounting';
+import { exportProfitLossCsv } from '@/lib/utils/report-export';
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -40,12 +41,12 @@ const ProfitLossSection: React.FC<{
       {accounts.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No transactions in this period</div>
       ) : (
-        <table className="w-full">
+        <table className="w-full" aria-label={`${title} Accounts`}>
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
-              <th className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
-              <th className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
+              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
+              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
+              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -202,9 +203,14 @@ const AppContent: React.FC = () => {
                   className="max-w-xs"
                 />
               </div>
-              <Button variant="outline" className="gap-2" disabled>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={!report || (report.revenue.length === 0 && report.expenses.length === 0)}
+                onClick={() => report && exportProfitLossCsv(report.revenue, report.expenses, startDate, endDate, currencySymbol)}
+              >
                 <Download className="h-4 w-4" />
-                {t('reportsModule.profitLoss.exportPdf', 'Export PDF')}
+                {t('reportsModule.profitLoss.exportCsv', 'Export CSV')}
               </Button>
             </div>
           </CardContent>

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { GetProductsQueryDto } from './dto/get-products-query.dto';
 
 @Injectable()
 export class MarketplaceService {
@@ -10,11 +11,22 @@ export class MarketplaceService {
     ) { }
 
     /**
+     * Helper to check if a string looks like a UUID.
+     */
+    private isUuid(value: string): boolean {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+    }
+
+    /**
      * Fetch public products from Supabase.
      * Combines marketplace_listings AND items marked as is_sales_item.
      * Now includes seller info for each product.
+     *
+     * Supports search, category, price filtering, sorting, and pagination.
+     * Backward compatible: no page/limit params returns a raw Product[] array.
      */
-    async getPublicProducts(category?: string) {
+    async getPublicProducts(query: GetProductsQueryDto = {}) {
+        const { category, search, sort, min_price, max_price, page, limit } = query;
         const supabase = this.databaseService.getAdminClient();
 
         // Fetch marketplace listings with seller info
@@ -31,12 +43,31 @@ export class MarketplaceService {
                 )
             `)
             .eq('is_public', true)
-            .eq('status', 'active')
-            .order('created_at', { ascending: false });
+            .eq('status', 'active');
 
+        // Category filter for listings
         if (category) {
-            listingsQuery = listingsQuery.eq('product_category_id', category);
+            if (this.isUuid(category)) {
+                listingsQuery = listingsQuery.eq('product_category_id', category);
+            } else {
+                listingsQuery = listingsQuery.eq('product_category_id', category);
+            }
         }
+
+        // Search filter for listings
+        if (search) {
+            listingsQuery = listingsQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+        }
+
+        // Price filter for listings
+        if (min_price !== undefined) {
+            listingsQuery = listingsQuery.gte('price', min_price);
+        }
+        if (max_price !== undefined) {
+            listingsQuery = listingsQuery.lte('price', max_price);
+        }
+
+        listingsQuery = listingsQuery.order('created_at', { ascending: false });
 
         const { data: listings, error: listingsError } = await listingsQuery;
 
@@ -45,7 +76,7 @@ export class MarketplaceService {
         }
 
         // Fetch items marked as sales items AND published to marketplace (from stock/items)
-        const { data: salesItems, error: itemsError } = await supabase
+        let itemsQuery = supabase
             .from('items')
             .select(`
                 id,
@@ -80,8 +111,35 @@ export class MarketplaceService {
             `)
             .eq('is_sales_item', true)
             .eq('is_active', true)
-            .eq('show_in_website', true) // Only show items published to marketplace
-            .order('created_at', { ascending: false });
+            .eq('show_in_website', true);
+
+        // Category filter for items
+        if (category) {
+            if (this.isUuid(category)) {
+                // UUID-based category: match item_groups id or marketplace_category_slug
+                itemsQuery = itemsQuery.eq('marketplace_category_slug', category);
+            } else {
+                // Slug-based category
+                itemsQuery = itemsQuery.eq('marketplace_category_slug', category);
+            }
+        }
+
+        // Search filter for items
+        if (search) {
+            itemsQuery = itemsQuery.or(`item_name.ilike.%${search}%,description.ilike.%${search}%`);
+        }
+
+        // Price filter for items
+        if (min_price !== undefined) {
+            itemsQuery = itemsQuery.gte('standard_rate', min_price);
+        }
+        if (max_price !== undefined) {
+            itemsQuery = itemsQuery.lte('standard_rate', max_price);
+        }
+
+        itemsQuery = itemsQuery.order('created_at', { ascending: false });
+
+        const { data: salesItems, error: itemsError } = await itemsQuery;
 
         if (itemsError) {
             this.logger.error(`Error fetching sales items: ${itemsError.message}`);
@@ -116,18 +174,44 @@ export class MarketplaceService {
             seller: (item as any).seller || null,
         }));
 
-        // Combine and return both sources
+        // Combine both sources
         const combinedProducts = [
             ...(listings || []).map(l => ({ ...l, source: 'marketplace_listing' })),
             ...transformedItems,
         ];
 
-        // Sort by created_at descending
-        combinedProducts.sort((a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
+        // Sort
+        if (sort === 'price_asc') {
+            combinedProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
+        } else if (sort === 'price_desc') {
+            combinedProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
+        } else {
+            // Default: newest first (current behavior)
+            combinedProducts.sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+        }
 
-        return combinedProducts;
+        // Backward compatibility: no pagination params = raw array
+        if (!page && !limit) {
+            return combinedProducts;
+        }
+
+        // Paginate
+        const currentPage = page || 1;
+        const pageSize = limit || 20;
+        const total = combinedProducts.length;
+        const totalPages = Math.ceil(total / pageSize);
+        const start = (currentPage - 1) * pageSize;
+        const paginatedData = combinedProducts.slice(start, start + pageSize);
+
+        return {
+            data: paginatedData,
+            total,
+            page: currentPage,
+            limit: pageSize,
+            totalPages,
+        };
     }
 
     /**

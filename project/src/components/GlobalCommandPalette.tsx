@@ -78,6 +78,69 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
       },
     ];
 
+    const createActions: Action[] = [
+      {
+        id: 'create-parcel',
+        name: 'Créer une parcelle',
+        shortcut: ['c', 'p'],
+        keywords: 'nouvelle parcelle create parcel new',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/parcels?create=true';
+        },
+      },
+      {
+        id: 'create-task',
+        name: 'Créer une tâche',
+        shortcut: ['c', 't'],
+        keywords: 'nouvelle tâche create task new',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/tasks?create=true';
+        },
+      },
+      {
+        id: 'create-cycle',
+        name: 'Créer un cycle de culture',
+        shortcut: ['c', 'c'],
+        keywords: 'nouveau cycle crop create',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/crop-cycles?create=true';
+        },
+      },
+      {
+        id: 'create-stock-entry',
+        name: 'Créer une entrée de stock',
+        shortcut: ['c', 's'],
+        keywords: 'nouvelle entrée stock create',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/stock?tab=entries&create=true';
+        },
+      },
+      {
+        id: 'create-invoice',
+        name: 'Créer une facture',
+        shortcut: ['c', 'i'],
+        keywords: 'nouvelle facture invoice create',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/accounting/invoices?create=true';
+        },
+      },
+      {
+        id: 'create-worker',
+        name: 'Ajouter un travailleur',
+        shortcut: ['c', 'w'],
+        keywords: 'nouveau travailleur worker create',
+        section: 'Création',
+        perform: () => {
+          window.location.href = '/workers?create=true';
+        },
+      },
+    ];
+
     const preferenceActions: Action[] = [
       {
         id: 'toggle-theme',
@@ -91,7 +154,7 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
       },
     ];
 
-    return [...navigationActions, ...preferenceActions];
+    return [...navigationActions, ...createActions, ...preferenceActions];
   }, [navigate]);
 
   return <CommandPalette actions={globalActions}>{children}</CommandPalette>;

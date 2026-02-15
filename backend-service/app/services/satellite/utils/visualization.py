@@ -6,6 +6,8 @@ color scales, and statistics annotations.
 """
 
 import logging
+import os
+import platform
 from typing import Dict, Any, List, Tuple
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
@@ -15,6 +17,28 @@ import base64
 from app.services.satellite.types import VISUALIZATION_PARAMS, get_visualization_params
 
 logger = logging.getLogger(__name__)
+
+
+def _find_system_font() -> str:
+    _FONT_PATHS = {
+        "Darwin": [
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/System/Library/Fonts/Arial.ttf",
+        ],
+        "Linux": [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ],
+        "Windows": [
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\segoeui.ttf",
+        ],
+    }
+    for path in _FONT_PATHS.get(platform.system(), []):
+        if os.path.isfile(path):
+            return path
+    raise OSError("No system font found")
 
 
 def get_visualization_params(index: str) -> Dict[str, Any]:
@@ -91,9 +115,7 @@ def create_enhanced_visualization(
         return _create_simple_visualization(image_array, index, vis_params)
 
 
-def normalize_array(
-    array: np.ndarray, min_val: float, max_val: float
-) -> np.ndarray:
+def normalize_array(array: np.ndarray, min_val: float, max_val: float) -> np.ndarray:
     """
     Normalize array values to 0-1 range.
 
@@ -117,9 +139,7 @@ def normalize_array(
     return normalized
 
 
-def apply_color_palette(
-    normalized_array: np.ndarray, palette: List[str]
-) -> np.ndarray:
+def apply_color_palette(normalized_array: np.ndarray, palette: List[str]) -> np.ndarray:
     """
     Apply a color palette to a normalized array.
 
@@ -150,9 +170,7 @@ def apply_color_palette(
                 if not np.isnan(value) and 0 <= value <= 1:
                     # Find which segment we're in
                     segment_size = 1.0 / (len(rgb_palette) - 1)
-                    segment_idx = min(
-                        int(value / segment_size), len(rgb_palette) - 2
-                    )
+                    segment_idx = min(int(value / segment_size), len(rgb_palette) - 2)
 
                     # Local position within segment
                     local_pos = (value - segment_idx * segment_size) / segment_size
@@ -212,10 +230,10 @@ def add_overlays(
 
     # Try to load fonts, fallback to default
     try:
-        title_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 24)
-        label_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 14)
-        stats_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)
-    except:
+        title_font = ImageFont.truetype(_find_system_font(), 24)
+        label_font = ImageFont.truetype(_find_system_font(), 14)
+        stats_font = ImageFont.truetype(_find_system_font(), 12)
+    except Exception:
         title_font = ImageFont.load_default()
         label_font = ImageFont.load_default()
         stats_font = ImageFont.load_default()
@@ -343,7 +361,9 @@ def _create_simple_visualization(
     # Interpolate color based on value
     min_val = vis_params.get("min", -1)
     max_val = vis_params.get("max", 1)
-    normalized = (mean_val - min_val) / (max_val - min_val) if max_val > min_val else 0.5
+    normalized = (
+        (mean_val - min_val) / (max_val - min_val) if max_val > min_val else 0.5
+    )
     normalized = max(0, min(1, normalized))
 
     # Create a simple gradient image
@@ -359,8 +379,8 @@ def _create_simple_visualization(
 
     # Add text
     try:
-        font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 16)
-    except:
+        font = ImageFont.truetype(_find_system_font(), 16)
+    except Exception:
         font = ImageFont.load_default()
 
     draw.text((10, 5), f"{index}: {mean_val:.2f}", fill="black", font=font)

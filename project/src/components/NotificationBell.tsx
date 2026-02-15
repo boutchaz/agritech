@@ -268,7 +268,7 @@ export function NotificationBell() {
     // Navigate based on notification type
     const { data } = notification;
     if (data?.taskId) {
-      navigate({ to: '/tasks', search: { id: data.taskId } });
+      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
     } else if (data?.orderId) {
       navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
     } else if (data?.quoteRequestId) {

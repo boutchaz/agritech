@@ -24,6 +24,7 @@ export const stockEntriesApi = {
     if (filters?.to_date) params.append('to_date', filters.to_date);
     if (filters?.warehouse_id) params.append('warehouse_id', filters.warehouse_id);
     if (filters?.reference_type) params.append('reference_type', filters.reference_type);
+    if (filters?.crop_cycle_id) params.append('crop_cycle_id', filters.crop_cycle_id);
     if (filters?.search) params.append('search', filters.search);
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
@@ -84,6 +85,7 @@ export const stockEntriesApi = {
     if (filters?.from_date) params.append('from_date', filters.from_date);
     if (filters?.to_date) params.append('to_date', filters.to_date);
     if (filters?.stock_entry_id) params.append('stock_entry_id', filters.stock_entry_id);
+    if (filters?.crop_cycle_id) params.append('crop_cycle_id', filters.crop_cycle_id);
 
     const url = `${BASE_URL}/movements/list${params.toString() ? `?${params.toString()}` : ''}`;
     return apiClient.get<StockMovementWithDetails[]>(url, {}, organizationId);

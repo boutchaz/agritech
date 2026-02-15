@@ -1,7 +1,7 @@
 {
   "id": "features/satellite-analysis",
-  "title": "Satellite Analysis",
-  "description": "Overview",
+  "title": "Satellite Analysis Service",
+  "description": "The AgriTech Platform's satellite service provides multi-provider access to Sentinel-2 data through a unified interface, supporting both Google Earth Engine (GEE) and Copernicus Data Space Ecosystem (CDSE/openEO).",
   "source": "@site/docs/features/satellite-analysis.md",
   "sourceDirName": "features",
   "slug": "/features/satellite-analysis",
@@ -10,14 +10,17 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {},
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
   "sidebar": "docs",
   "previous": {
-    "title": "Farm Management",
-    "permalink": "/features/farm-management"
+    "title": "Database Schema",
+    "permalink": "/database/schema"
   },
   "next": {
-    "title": "Agricultural Accounting",
-    "permalink": "/features/agricultural-accounting"
+    "title": "Subscriptions & Module System",
+    "permalink": "/features/subscriptions"
   }
 }

@@ -5,6 +5,7 @@ import uuid
 import httpx
 import math
 import tempfile
+import platform
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -16,6 +17,28 @@ import io
 import base64
 
 logger = logging.getLogger(__name__)
+
+
+def _find_system_font() -> str:
+    _FONT_PATHS = {
+        "Darwin": [
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/System/Library/Fonts/Arial.ttf",
+        ],
+        "Linux": [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ],
+        "Windows": [
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\segoeui.ttf",
+        ],
+    }
+    for path in _FONT_PATHS.get(platform.system(), []):
+        if os.path.isfile(path):
+            return path
+    raise OSError("No system font found")
 
 
 class EarthEngineService:
@@ -35,13 +58,8 @@ class EarthEngineService:
                 # Diagnostic logging (without exposing sensitive data)
                 data_type = type(private_key_data).__name__
                 if isinstance(private_key_data, str):
-                    preview = (
-                        private_key_data[:50] + "..."
-                        if len(private_key_data) > 50
-                        else private_key_data
-                    )
                     logger.info(
-                        f"GEE_PRIVATE_KEY type: {data_type}, length: {len(private_key_data)}, preview: {preview}"
+                        f"GEE_PRIVATE_KEY type: {data_type}, length: {len(private_key_data)}"
                     )
                 else:
                     logger.info(
@@ -223,30 +241,38 @@ class EarthEngineService:
     def calculate_vegetation_indices(
         self, image: ee.Image, indices: List[str]
     ) -> Dict[str, ee.Image]:
-        """Calculate requested vegetation indices"""
+        """Calculate requested vegetation indices.
 
-        # Select bands
+        S2_SR_HARMONIZED stores reflectance as integers in [0, 10000].
+        Normalized-difference indices (NDVI, NDRE, …) are scale-invariant,
+        but indices with additive soil-correction constants (SAVI, OSAVI,
+        MSAVI2) require reflectance in [0, 1].  We therefore rescale the
+        bands once upfront.
+        """
+
+        # Rescale reflectance bands from [0, 10000] to [0, 1]
+        scale_factor = 0.0001
         bands = {
-            "blue": image.select("B2"),
-            "green": image.select("B3"),
-            "red": image.select("B4"),
-            "red_edge": image.select("B5"),
-            "red_edge_2": image.select("B6"),
-            "red_edge_3": image.select("B7"),
-            "nir": image.select("B8"),
-            "nir_narrow": image.select("B8A"),
-            "swir1": image.select("B11"),
-            "swir2": image.select("B12"),
+            "blue": image.select("B2").multiply(scale_factor),
+            "green": image.select("B3").multiply(scale_factor),
+            "red": image.select("B4").multiply(scale_factor),
+            "red_edge": image.select("B5").multiply(scale_factor),
+            "red_edge_2": image.select("B6").multiply(scale_factor),
+            "red_edge_3": image.select("B7").multiply(scale_factor),
+            "nir": image.select("B8").multiply(scale_factor),
+            "nir_narrow": image.select("B8A").multiply(scale_factor),
+            "swir1": image.select("B11").multiply(scale_factor),
+            "swir2": image.select("B12").multiply(scale_factor),
         }
 
         results = {}
 
-        # NDVI
+        # NDVI — scale-invariant, unaffected by rescaling
         if "NDVI" in indices:
             results["NDVI"] = (
                 bands["nir"]
                 .subtract(bands["red"])
-                .divide(bands["nir"].add(bands["red"]))
+                .divide(bands["nir"].add(bands["red"]).max(ee.Image(1e-10)))
                 .rename("NDVI")
             )
 
@@ -255,7 +281,7 @@ class EarthEngineService:
             results["NDRE"] = (
                 bands["nir"]
                 .subtract(bands["red_edge"])
-                .divide(bands["nir"].add(bands["red_edge"]))
+                .divide(bands["nir"].add(bands["red_edge"]).max(ee.Image(1e-10)))
                 .rename("NDRE")
             )
 
@@ -264,7 +290,7 @@ class EarthEngineService:
             results["NDMI"] = (
                 bands["nir"]
                 .subtract(bands["swir1"])
-                .divide(bands["nir"].add(bands["swir1"]))
+                .divide(bands["nir"].add(bands["swir1"]).max(ee.Image(1e-10)))
                 .rename("NDMI")
             )
 
@@ -273,37 +299,40 @@ class EarthEngineService:
             results["MNDWI"] = (
                 bands["green"]
                 .subtract(bands["swir1"])
-                .divide(bands["green"].add(bands["swir1"]))
+                .divide(bands["green"].add(bands["swir1"]).max(ee.Image(1e-10)))
                 .rename("MNDWI")
             )
 
         # GCI
         if "GCI" in indices:
             results["GCI"] = (
-                bands["nir"].divide(bands["green"]).subtract(1).rename("GCI")
+                bands["nir"]
+                .divide(bands["green"].max(ee.Image(1e-10)))
+                .subtract(1)
+                .rename("GCI")
             )
 
-        # SAVI
+        # SAVI  — L=0.5 now works correctly with [0,1] reflectance
         if "SAVI" in indices:
             L = 0.5
             results["SAVI"] = (
                 bands["nir"]
                 .subtract(bands["red"])
                 .multiply(1 + L)
-                .divide(bands["nir"].add(bands["red"]).add(L))
+                .divide(bands["nir"].add(bands["red"]).add(L).max(ee.Image(1e-10)))
                 .rename("SAVI")
             )
 
-        # OSAVI
+        # OSAVI — 0.16 adjustment now meaningful with [0,1] reflectance
         if "OSAVI" in indices:
             results["OSAVI"] = (
                 bands["nir"]
                 .subtract(bands["red"])
-                .divide(bands["nir"].add(bands["red"]).add(0.16))
+                .divide(bands["nir"].add(bands["red"]).add(0.16).max(ee.Image(1e-10)))
                 .rename("OSAVI")
             )
 
-        # MSAVI2
+        # MSAVI2 — requires [0,1] reflectance for sqrt discriminant
         if "MSAVI2" in indices:
             results["MSAVI2"] = (
                 bands["nir"]
@@ -315,17 +344,21 @@ class EarthEngineService:
                     .add(1)
                     .pow(2)
                     .subtract(bands["nir"].subtract(bands["red"]).multiply(8))
+                    .max(ee.Image(0))  # clamp discriminant >= 0
                     .sqrt()
                 )
                 .divide(2)
             ).rename("MSAVI2")
 
-        # PRI
+        # PRI — Photochemical Reflectance Index
+        # True PRI uses 531nm & 570nm (not available on S2).
+        # Best S2 approximation: B3 (green, 560nm) vs B4 (red, 665nm)
+        # captures xanthophyll-cycle reflectance shift.
         if "PRI" in indices:
             results["PRI"] = (
-                bands["red_edge"]
-                .subtract(bands["red_edge_2"])
-                .divide(bands["red_edge"].add(bands["red_edge_2"]))
+                bands["green"]
+                .subtract(bands["red"])
+                .divide(bands["green"].add(bands["red"]).max(ee.Image(1e-10)))
                 .rename("PRI")
             )
 
@@ -369,45 +402,55 @@ class EarthEngineService:
         index: str,
         interval: str = "month",
     ) -> List[Dict]:
-        """Get time series data for a specific index"""
+        """Get time series data for a specific index, aggregated by interval."""
         self.initialize()
 
-        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
         aoi = ee.Geometry(geometry)
 
-        # Calculate index for each image
-        def calculate_index(image):
-            indices = self.calculate_vegetation_indices(image, [index])
-            return image.set(
-                {
-                    "date": image.date().format("YYYY-MM-dd"),
-                    "mean_value": indices[index]
-                    .reduceRegion(
-                        reducer=ee.Reducer.mean(),
-                        geometry=aoi,
-                        scale=settings.DEFAULT_SCALE,
-                        maxPixels=settings.MAX_PIXELS,
-                    )
-                    .get(index),
-                }
+        interval_days = {"day": 1, "week": 7, "month": 30, "quarter": 90}
+        step = interval_days.get(interval, 30)
+
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+        time_series: List[Dict] = []
+        current = start_dt
+        while current < end_dt:
+            window_end = min(current + timedelta(days=step), end_dt)
+            sub_collection = self.get_sentinel2_collection(
+                geometry,
+                current.strftime("%Y-%m-%d"),
+                window_end.strftime("%Y-%m-%d"),
             )
 
-        # Map over collection
-        processed = collection.map(calculate_index)
+            count = sub_collection.size().getInfo()
+            if count == 0:
+                current = window_end
+                continue
 
-        # Extract time series
-        features = processed.reduceColumns(
-            ee.Reducer.toList(2), ["date", "mean_value"]
-        ).get("list")
+            composite = sub_collection.median()
+            index_image = self.calculate_vegetation_indices(composite, [index]).get(
+                index
+            )
+            if index_image is None:
+                current = window_end
+                continue
 
-        # Convert to Python list
-        time_series = features.getInfo()
+            stats = index_image.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=aoi,
+                scale=settings.DEFAULT_SCALE,
+                maxPixels=settings.MAX_PIXELS,
+            ).get(index)
+            value = stats.getInfo()
+            if value is not None:
+                time_series.append(
+                    {"date": current.strftime("%Y-%m-%d"), "value": value}
+                )
 
-        return [
-            {"date": item[0], "value": item[1]}
-            for item in time_series
-            if item[1] is not None
-        ]
+            current = window_end
+
+        return time_series
 
     async def check_existing_file(
         self, organization_id: str, index: str, date: str, geometry: Dict = None
@@ -531,12 +574,10 @@ class EarthEngineService:
         draw = ImageDraw.Draw(enhanced)
 
         try:
-            # Try to use a system font, fallback to default if not available
-            title_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 24)
-            label_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 14)
-            stats_font = ImageFont.truetype("/System/Library/Fonts/Arial.ttf", 12)
-        except:
-            # Fallback to default font
+            title_font = ImageFont.truetype(_find_system_font(), 24)
+            label_font = ImageFont.truetype(_find_system_font(), 14)
+            stats_font = ImageFont.truetype(_find_system_font(), 12)
+        except Exception:
             title_font = ImageFont.load_default()
             label_font = ImageFont.load_default()
             stats_font = ImageFont.load_default()

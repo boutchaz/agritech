@@ -1,19 +1,18 @@
 {
   "id": "intro",
   "title": "AgriTech Platform Documentation",
-  "description": "Welcome to the AgriTech Platform documentation! This comprehensive agricultural technology platform combines multi-tenant architecture, satellite data analysis via Google Earth Engine, and AI-powered insights to revolutionize farm management.",
+  "description": "Welcome to the AgriTech Platform - a comprehensive agricultural technology solution built for modern farming operations.",
   "source": "@site/docs/intro.md",
   "sourceDirName": ".",
-  "slug": "/",
-  "permalink": "/",
+  "slug": "/intro",
+  "permalink": "/intro",
   "draft": false,
   "unlisted": false,
   "tags": [],
   "version": "current",
   "sidebarPosition": 1,
   "frontMatter": {
-    "sidebar_position": 1,
-    "slug": "/"
+    "sidebar_position": 1
   },
   "sidebar": "docs",
   "next": {

@@ -10,7 +10,7 @@ export class FiscalYearsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('fiscal_years')
       .select('*')
@@ -26,7 +26,7 @@ export class FiscalYearsService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('fiscal_years')
       .select('*')
@@ -43,7 +43,7 @@ export class FiscalYearsService {
   }
 
   async create(organizationId: string, userId: string, createDto: CreateFiscalYearDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year with same name exists
     const { data: existing } = await client
@@ -85,7 +85,7 @@ export class FiscalYearsService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: UpdateFiscalYearDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year exists
     const existing = await this.findOne(id, organizationId);
@@ -138,7 +138,7 @@ export class FiscalYearsService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year exists
     const existing = await this.findOne(id, organizationId);
@@ -171,7 +171,7 @@ export class FiscalYearsService {
   }
 
   async close(id: string, organizationId: string, userId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year exists
     const existing = await this.findOne(id, organizationId);
@@ -206,7 +206,7 @@ export class FiscalYearsService {
   }
 
   async reopen(id: string, organizationId: string, userId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year exists
     const existing = await this.findOne(id, organizationId);
@@ -240,7 +240,7 @@ export class FiscalYearsService {
   }
 
   async getActive(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('fiscal_years')
       .select('*')

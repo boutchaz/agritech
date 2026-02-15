@@ -189,18 +189,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
         scale: scale
       };
 
-      // Debug log
-      console.log('[IndicesCalculator] Sending request to satellite API:', {
-        url: import.meta.env.VITE_SATELLITE_SERVICE_URL,
-        request: {
-          ...request,
-          aoi: { ...request.aoi, geometry: '(omitted for brevity)' }
-        }
-      });
-
       const response = await satelliteApi.calculateIndices(request);
-
-      console.log('[IndicesCalculator] Received response:', response);
 
       // Validate response
       if (!response || !response.indices || response.indices.length === 0) {
@@ -222,7 +211,6 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             },
             organizationId
           );
-          console.log('[IndicesCalculator] Saved index to cache:', indexResult.index, indexResult.value);
         } catch (saveError) {
           console.warn('[IndicesCalculator] Failed to save index to cache:', saveError);
           // Continue anyway - the main result is what matters
@@ -236,7 +224,6 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
       setResults(response);
       onResultsUpdate?.(response);
 
-      console.log('[IndicesCalculator] Calculation completed successfully');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Échec du calcul des indices';
       console.error('[IndicesCalculator] Error:', errorMessage, err);

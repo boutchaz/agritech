@@ -162,13 +162,11 @@ export function ChatInterface() {
   const handleSend = () => {
     const trimmedInput = input.trim();
     if (!trimmedInput || isSending) {
-      console.log('Cannot send:', { trimmedInput, isSending });
       return;
     }
 
     // Stop voice input if it's active
     if (isListening) {
-      console.log('Stopping voice input before sending');
       stopListening();
     }
 
@@ -189,8 +187,6 @@ export function ChatInterface() {
       resetTranscript(); // Reset transcript in voice mode
     }
 
-    console.log('Sending message:', messageText);
-
     setLoadingStage(t('chat.loading.analyzing', 'Analyzing your question...'));
     
     setTimeout(() => setLoadingStage(t('chat.loading.loadingData', 'Loading data...')), 1000);
@@ -202,7 +198,6 @@ export function ChatInterface() {
         {
           onSuccess: (data) => {
             setLoadingStage(null);
-            console.log('Message sent successfully:', data);
             const assistantMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'assistant',

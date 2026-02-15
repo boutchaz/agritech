@@ -6,8 +6,8 @@ import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import OSM from 'ol/source/OSM';
-import XYZ from 'ol/source/XYZ';
+import { createTileLayers } from '../lib/map/tile-providers';
+import { useMapProvider } from '../hooks/useMapProvider';
 import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import Polygon from 'ol/geom/Polygon';
@@ -116,6 +116,7 @@ const MapComponent: React.FC<MapProps> = ({
   onBoundaryUpdated
 }) => {
   const { t } = useTranslation();
+  const tileProvider = useMapProvider();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
@@ -235,7 +236,6 @@ const MapComponent: React.FC<MapProps> = ({
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
   const viewRef = useRef<View | null>(null);
-  const zoomCenterRef = useRef<{ zoom: number; center: number[] } | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [selectedParcel, setSelectedParcel] = useState<ParcelDetails | null>(null);
   const [drawingMode, setDrawingMode] = useState<'manual' | 'assisted'>('manual');
@@ -397,16 +397,9 @@ const MapComponent: React.FC<MapProps> = ({
       const layers = mapInstanceRef.current.getLayers();
       const layerArray = layers.getArray();
 
-      // Find the labels layer
       layerArray.forEach((layer) => {
-        if (layer instanceof TileLayer) {
-          const source = layer.getSource();
-          if (source instanceof XYZ) {
-            const url = source.getUrls()?.[0];
-            if (url?.includes('World_Boundaries_and_Places')) {
-              layer.setVisible(showPlaceNames);
-            }
-          }
+        if (layer instanceof TileLayer && layer.getProperties()?.role === 'labels') {
+          layer.setVisible(showPlaceNames);
         }
       });
     }
@@ -446,7 +439,9 @@ const MapComponent: React.FC<MapProps> = ({
     };
   }, [isFullScreen]);
 
-  // Handle place names toggle (no zoom preservation needed)
+  // (duplicate place names toggle removed — handled above)
+
+  // Handle map type changes — just toggle layer visibility, no map rebuild
   useEffect(() => {
     if (mapInstanceRef.current) {
       const layers = mapInstanceRef.current.getLayers();
@@ -454,59 +449,14 @@ const MapComponent: React.FC<MapProps> = ({
 
       layerArray.forEach((layer) => {
         if (layer instanceof TileLayer) {
-          const source = layer.getSource();
-          if (source instanceof XYZ) {
-            const url = source.getUrls()?.[0];
-            if (url?.includes('World_Boundaries_and_Places')) {
-              // Labels controlled by showPlaceNames, not mapType
-              layer.setVisible(showPlaceNames);
-            }
-          }
-        }
-      });
-    }
-  }, [showPlaceNames]);
-
-  // Handle map type changes (preserve zoom and center)
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      const storedZoomCenter = zoomCenterRef.current;
-
-      // Update layer visibility
-      const layers = mapInstanceRef.current.getLayers();
-      const layerArray = layers.getArray();
-
-      layerArray.forEach((layer) => {
-        if (layer instanceof TileLayer) {
-          const source = layer.getSource();
-          if (source instanceof OSM) {
+          const role = layer.getProperties()?.role;
+          if (role === 'streets') {
             layer.setVisible(mapType === 'osm');
-          } else if (source instanceof XYZ) {
-            const url = source.getUrls()?.[0];
-            if (url?.includes('World_Imagery')) {
-              layer.setVisible(mapType === 'satellite');
-            }
+          } else if (role === 'satellite') {
+            layer.setVisible(mapType === 'satellite');
           }
         }
       });
-
-      // Restore zoom and center after layer updates (if we stored them before state change)
-      if (storedZoomCenter?.zoom && storedZoomCenter?.center) {
-        const { zoom, center } = storedZoomCenter;
-        // Use multiple animation frames to ensure layers are fully updated
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            if (mapInstanceRef.current && zoom && center) {
-              const view = mapInstanceRef.current.getView();
-              view.cancelAnimations();
-              view.setZoom(zoom);
-              view.setCenter(center);
-              // Clear the stored values after restoring
-              zoomCenterRef.current = null;
-            }
-          });
-        });
-      }
     }
   }, [mapType]);
 
@@ -782,8 +732,13 @@ const MapComponent: React.FC<MapProps> = ({
         return;
       }
 
-      // Clear any existing map instance
+      // Preserve current view state before destroying the map
+      let savedZoom: number | undefined;
+      let savedCenter: number[] | undefined;
       if (mapInstanceRef.current) {
+        const currentView = mapInstanceRef.current.getView();
+        savedZoom = currentView.getZoom();
+        savedCenter = currentView.getCenter() as number[] | undefined;
         mapInstanceRef.current.setTarget(undefined);
         mapInstanceRef.current = null;
       }
@@ -793,35 +748,15 @@ const MapComponent: React.FC<MapProps> = ({
         source: vectorSource,
       });
 
-      // OpenStreetMap layer
-      const osmLayer = new TileLayer({
-        source: new OSM(),
-        visible: mapType === 'osm'
-      });
-
-      // Satellite layer (using ESRI World Imagery - free)
-      const satelliteLayer = new TileLayer({
-        source: new XYZ({
-          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-          maxZoom: 19,
-          attributions: 'Tiles © Esri'
-        }),
-        visible: mapType === 'satellite'
-      });
-
-      // Labels overlay (place names) - always available
-      const labelsLayer = new TileLayer({
-        source: new XYZ({
-          url: 'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-          maxZoom: 19,
-          attributions: 'Labels © Esri'
-        }),
-        visible: showPlaceNames
-      });
+      // Create tile layers from provider factory
+      const { streets: osmLayer, satellite: satelliteLayer, labels: labelsLayer } = createTileLayers(
+        tileProvider,
+        { initialMapType: mapType, showPlaceNames }
+      );
 
       const view = new View({
-        center: fromLonLat([center[1], center[0]]),
-        zoom: 6,
+        center: savedCenter || fromLonLat([center[1], center[0]]),
+        zoom: savedZoom || 6,
       });
 
       viewRef.current = view;
@@ -870,6 +805,21 @@ const MapComponent: React.FC<MapProps> = ({
           }
         });
 
+        // Handle drawing abort (Escape key) — reset partial state so user can draw again
+        draw.on('drawabort', () => {
+          // Remove any unfinished drawn features
+          if (vectorSourceRef.current) {
+            const features = vectorSourceRef.current.getFeatures();
+            const tempFeatures = features.filter(f =>
+              !f.get('parcelId') && !f.get('type') && f.getGeometry() instanceof Polygon
+            );
+            tempFeatures.forEach(f => vectorSourceRef.current?.removeFeature(f));
+          }
+          setTempBoundary([]);
+          setCalculatedArea(0);
+          setCalculatedPerimeter(0);
+        });
+
         draw.on('drawend', (event) => {
           const feature = event.feature;
           const geometry = feature.getGeometry();
@@ -884,8 +834,6 @@ const MapComponent: React.FC<MapProps> = ({
             const coordinates = geometry.getCoordinates()[0];
             // Store coordinates in EPSG:3857 format (Web Mercator) for consistency
             let boundary = coordinates.map((coord: number[]) => [coord[0], coord[1]]);
-
-            console.log('Drawing coordinates (EPSG:3857):', boundary[0], 'to', boundary[boundary.length - 1]);
 
             // Ensure the polygon is closed
             if (boundary.length > 0) {
@@ -927,10 +875,7 @@ const MapComponent: React.FC<MapProps> = ({
       vectorSourceRef.current = vectorSource;
 
       // Add existing parcels as polygons on the map
-      console.log('Rendering parcels on map:', parcels.length, 'parcels'); // Debug
-
       parcels.forEach(parcel => {
-        console.log('Processing parcel:', parcel.name, 'has boundary:', !!parcel.boundary, 'sample coord:', parcel.boundary?.[0]); // Debug
         if (parcel.boundary && parcel.boundary.length > 0) {
           // Check if coordinates are already in projected format (EPSG:3857) or geographic (EPSG:4326)
           const firstCoord = parcel.boundary[0];
@@ -939,18 +884,10 @@ const MapComponent: React.FC<MapProps> = ({
           // If coordinates have large absolute values (> 20000), they're likely already in Web Mercator (EPSG:3857)
           // Geographic coordinates should be between -180 to 180 for longitude and -90 to 90 for latitude
           if (Math.abs(firstCoord[0]) > 20000 || Math.abs(firstCoord[1]) > 20000) {
-            console.log(`EPSG:3857 detected - Using coordinates as-is: [${firstCoord[0]}, ${firstCoord[1]}]`);
             coordinates = parcel.boundary.map((coord: number[]) => [coord[0], coord[1]]);
           } else {
-            console.log(`Geographic coords detected - Converting to EPSG:3857: [${firstCoord[0]}, ${firstCoord[1]}]`);
             coordinates = parcel.boundary.map((coord: number[]) => fromLonLat([coord[0], coord[1]]));
           }
-
-          console.log('Final coordinates for rendering:', coordinates[0], 'to', coordinates[coordinates.length - 1]);
-
-          // Test coordinate conversion - what would this look like in geographic coords?
-          const testCoordGeo = transform([coordinates[0][0], coordinates[0][1]], 'EPSG:3857', 'EPSG:4326');
-          console.log('First coordinate converted to geographic (lon, lat):', testCoordGeo);
 
           // Ensure polygon is closed
           if (coordinates.length > 0) {
@@ -1249,7 +1186,11 @@ const MapComponent: React.FC<MapProps> = ({
         }
       };
     }
-  }, [center, zones, sensors, parcels, farmId, enableDrawing, mapType, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect]);
+  // NOTE: mapType is NOT in this dependency array on purpose.
+  // Layer visibility for mapType is handled by a separate useEffect that
+  // toggles layers without destroying the map — preserving zoom/position.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect, tileProvider]);
 
   // Helper function to clean up drawing state
   const cleanupDrawingState = () => {
@@ -1291,8 +1232,6 @@ const MapComponent: React.FC<MapProps> = ({
 
   const handleSaveParcel = async () => {
     if (!farmId || !parcelName || tempBoundary.length === 0) return;
-
-    console.log('Saving parcel with boundary:', tempBoundary[0], 'to', tempBoundary[tempBoundary.length - 1]);
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
@@ -1390,6 +1329,15 @@ const MapComponent: React.FC<MapProps> = ({
             className="w-full h-full"
             key="openlayers-map-container"
           />
+
+          {/* Tile provider badge */}
+          {tileProvider !== 'default' && (
+            <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-black/50 text-white backdrop-blur-sm">
+                {tileProvider === 'mapbox' ? 'Mapbox' : tileProvider}
+              </span>
+            </div>
+          )}
 
           {/* Full-Screen Close Button */}
           {isFullScreen && (
@@ -1883,25 +1831,7 @@ const MapComponent: React.FC<MapProps> = ({
 
               {/* Map Type Toggle Button */}
               <button
-                onClick={() => {
-                  // Capture zoom and center BEFORE state change
-                  if (mapInstanceRef.current) {
-                    const view = mapInstanceRef.current.getView();
-                    const currentZoom = view.getZoom();
-                    const currentCenter = view.getCenter();
-
-                    // Store in ref to restore after state update
-                    if (currentZoom && currentCenter) {
-                      zoomCenterRef.current = {
-                        zoom: currentZoom,
-                        center: currentCenter as number[]
-                      };
-                    }
-                  }
-
-                  // Then update the map type
-                  setMapType(mapType === 'osm' ? 'satellite' : 'osm');
-                }}
+                onClick={() => setMapType(mapType === 'osm' ? 'satellite' : 'osm')}
                 className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
                 title={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
               >

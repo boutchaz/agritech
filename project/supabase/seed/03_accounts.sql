@@ -21,7 +21,7 @@ WITH roots AS (
     VALUES
       ('1000', 'Assets', 'Actifs', 'الأصول', 'Asset'),
       ('2000', 'Liabilities', 'Passifs', 'الخصوم', 'Liability'),
-      ('3000', "Owner's Equity", 'Capitaux propres', 'حقوق الملكية', 'Equity'),
+      ('3000', 'Owner''s Equity', 'Capitaux propres', 'حقوق الملكية', 'Equity'),
       ('4000', 'Income', 'Produits', 'الإيرادات', 'Revenue'),
       ('5000', 'Expenses', 'Charges', 'المصاريف', 'Expense')
   ) AS t(code, name_en, name_fr, name_ar, account_type)
@@ -104,7 +104,7 @@ WITH seed AS (
       ('1210', 'Fixed Assets', 'Immobilisations', 'الأصول الثابتة', 'Asset', 'Fixed Asset'),
       ('2110', 'Accounts Payable', 'Fournisseurs', 'الذمم الدائنة', 'Liability', 'Payable'),
       ('2120', 'Taxes Payable', 'Taxes à payer', 'ضرائب مستحقة', 'Liability', 'Tax'),
-      ('3010', "Owner's Equity", 'Capitaux propres', 'حقوق الملكية', 'Equity', 'Equity'),
+      ('3010', 'Owner''s Equity', 'Capitaux propres', 'حقوق الملكية', 'Equity', 'Equity'),
       ('4110', 'Sales Revenue', 'Ventes', 'إيرادات المبيعات', 'Revenue', 'Sales'),
       ('5110', 'Cost of Goods Sold', 'Coût des ventes', 'تكلفة البضائع المباعة', 'Expense', 'COGS'),
       ('5120', 'Salaries Expense', 'Salaires', 'مصروف الرواتب', 'Expense', 'Payroll'),

@@ -1,9 +1,9 @@
-import lunr from "/Users/boutchaz/Documents/CodeLovers/agritech/docs/node_modules/lunr/lunr.js";
+import lunr from "/Users/boutchaz/Documents/CodeLovers/agritech/node_modules/.pnpm/lunr@2.3.9/node_modules/lunr/lunr.js";
 export const language = ["en"];
 export const removeDefaultStopWordFilter = false;
 export const removeDefaultStemmer = false;
 export const Mark = null;
-export const searchIndexUrl = "search-index{dir}.json?_=60786d84";
+export const searchIndexUrl = "search-index{dir}.json?_=22fb92fa";
 export const searchResultLimits = 8;
 export const searchResultContextMaxLength = 50;
 export const explicitSearchResultPath = false;

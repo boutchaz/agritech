@@ -107,7 +107,6 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Integrate with email service
-    console.log('ROI Report Request:', { email, formData, roiData, selectedPlan });
     setEmailSubmitted(true);
   };
 

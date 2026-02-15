@@ -10,7 +10,7 @@ export class BiologicalAssetsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string, filters: BiologicalAssetFiltersDto = {}) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('biological_assets')
       .select('*', { count: 'exact' })
@@ -79,7 +79,7 @@ export class BiologicalAssetsService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('biological_assets')
       .select('*')
@@ -96,7 +96,7 @@ export class BiologicalAssetsService {
   }
 
   async create(organizationId: string, userId: string, createDto: CreateBiologicalAssetDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Calculate age if not provided
     if (!createDto.age_years && createDto.planting_date) {
@@ -126,7 +126,7 @@ export class BiologicalAssetsService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: Partial<CreateBiologicalAssetDto>) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if biological asset exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -163,7 +163,7 @@ export class BiologicalAssetsService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if biological asset exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -186,7 +186,7 @@ export class BiologicalAssetsService {
   }
 
   async updateStatus(id: string, organizationId: string, userId: string, status: BiologicalAssetStatus) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if biological asset exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -215,7 +215,7 @@ export class BiologicalAssetsService {
   }
 
   async getStatistics(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Get total count by type
     const { data: byType, error: typeError } = await client

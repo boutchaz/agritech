@@ -17,16 +17,9 @@ interface ParcelsListContentProps {
 }
 
 const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
-  console.log('🎨 ParcelsListContent rendering', { search });
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
-
-  console.log('Auth state:', {
-    hasOrg: !!currentOrganization,
-    orgName: currentOrganization?.name,
-    hasFarm: !!currentFarm
-  });
 
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -132,13 +125,9 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   };
 
   const handleParcelSelect = (parcelId: string) => {
-    console.log('handleParcelSelect called with:', parcelId);
-    console.log('Attempting to navigate to:', `/parcels/${parcelId}`);
-
     try {
       // Navigate to the parcel detail page instead of using state
       navigate({ to: `/parcels/${parcelId}` });
-      console.log('Navigation successful');
     } catch (error) {
       console.error('Navigation error:', error);
       toast.error(`Error navigating to parcel: ${error}`);
@@ -471,7 +460,6 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log('View Details button clicked for:', parcel.id);
                               handleParcelSelect(parcel.id);
                             }}
                             className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
@@ -637,20 +625,12 @@ const AppContent: React.FC = () => {
   // Match /parcels/{id} or /parcels/{id}/ or /parcels/{id}/something
   const isParcelDetailRoute = location.pathname.match(/^\/parcels\/[^/]+(\/.*)?$/);
 
-  console.log('📋 Parcels route check', {
-    pathname: location.pathname,
-    isParcelDetailRoute: !!isParcelDetailRoute,
-    search
-  });
-
   // If we're on a parcel detail route, show the full-page detail view
   if (isParcelDetailRoute) {
-    console.log('🎯 Rendering full-page parcel detail');
     return <Outlet />;
   }
 
   // Otherwise show the parcels list
-  console.log('📝 Rendering parcels list with search:', search);
   return <ParcelsListContent search={search} />;
 };
 

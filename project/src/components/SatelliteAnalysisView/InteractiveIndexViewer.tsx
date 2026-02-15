@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -75,8 +75,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   parcelName,
   boundary
 }) => {
-  // View mode: single, multi-grid, or multi-overlay
-  const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay'>('single');
+  // View mode: single, multi-grid, multi-overlay, or temporal-compare
+  const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare'>('single');
 
   // Always default to NDVI as requested
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NDVI');
@@ -89,6 +89,11 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | InteractiveDataResponse | null>(null);
   const [multiData, setMultiData] = useState<Map<VegetationIndexType, HeatmapDataResponse>>(new Map());
+
+  // Temporal comparison state
+  const [compareDate, setCompareDate] = useState('');
+  const [leftTemporalData, setLeftTemporalData] = useState<HeatmapDataResponse | null>(null);
+  const [rightTemporalData, setRightTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Overlay opacity control (per index)
@@ -164,7 +169,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         name: parcelName || 'Selected Parcel'
       };
 
-      if (viewMode === 'single') {
+      if (viewMode === 'temporal-compare') {
+        if (!compareDate) {
+          setError('Veuillez sélectionner les deux dates pour la comparaison.');
+          setIsLoading(false);
+          return;
+        }
+
+        const [leftResult, rightResult] = await Promise.all([
+          satelliteApi.generateInteractiveVisualization(aoi, selectedDate, selectedIndex, 'heatmap') as Promise<HeatmapDataResponse>,
+          satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap') as Promise<HeatmapDataResponse>,
+        ]);
+
+        setLeftTemporalData(leftResult);
+        setRightTemporalData(rightResult);
+      } else if (viewMode === 'single') {
         const result = await satelliteApi.generateInteractiveVisualization(
           aoi,
           selectedDate,
@@ -173,7 +192,6 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         );
         setData(result);
       } else {
-        // Multi-index mode (both grid and overlay): fetch data for all selected indices
         const results = new Map<VegetationIndexType, HeatmapDataResponse>();
 
         for (const index of selectedIndices) {
@@ -192,7 +210,6 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
         setMultiData(results);
 
-        // Initialize color palettes for any new indices that don't have one
         const newPalettes = new Map(indexColorPalettes);
         let updated = false;
         for (const index of selectedIndices) {
@@ -208,7 +225,6 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate interactive visualization';
 
-      // Provide more helpful error messages
       if (errorMessage.includes('No images found')) {
         setError(`No satellite imagery available for ${selectedDate}. Please select a different date from the calendar.`);
       } else if (errorMessage.includes('cloud coverage')) {
@@ -219,7 +235,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelName, selectedDate, selectedIndex, selectedIndices, visualizationType, viewMode]);
+  }, [boundary, parcelName, selectedDate, compareDate, selectedIndex, selectedIndices, visualizationType, viewMode]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -314,6 +330,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             ? `${selectedIndex} Interactive Visualization`
             : viewMode === 'multi-grid'
             ? 'Multi-Index Comparison (Grille)'
+            : viewMode === 'temporal-compare'
+            ? `Comparaison Temporelle — ${selectedIndex}`
             : 'Multi-Index Overlay (Même Carte)'}
         </h1>
         <div className="text-lg text-gray-600 mt-2">
@@ -321,6 +339,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             ? VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]
             : viewMode === 'multi-grid'
             ? 'Comparer plusieurs indices côte à côte'
+            : viewMode === 'temporal-compare'
+            ? 'Comparer le même indice entre deux dates différentes'
             : 'Superposer plusieurs indices sur la même carte'}
         </div>
       </div>
@@ -352,6 +372,14 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           >
             Multi-Overlay
           </Button>
+          <Button
+            variant={viewMode === 'temporal-compare' ? 'default' : 'outline'}
+            className={cn("flex-1", viewMode === 'temporal-compare' && "bg-purple-600 hover:bg-purple-700")}
+            onClick={() => setViewMode('temporal-compare')}
+          >
+            <GitCompareArrows className="w-4 h-4 mr-1" />
+            Comparaison
+          </Button>
         </div>
 
         {/* Base Layer Selector (for leaflet views) */}
@@ -377,71 +405,122 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Date</label>
-            <DatePicker
-              value={selectedDate}
-              onChange={(date) => date && setSelectedDate(date)}
-              availableDates={availableDates}
-              isLoading={isLoadingDates}
-              disabled={!boundary}
-              placeholder="Select date with satellite data"
-            />
-          </div>
-
-          {viewMode === 'single' ? (
-            <>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
-                <select
-                  value={selectedIndex}
-                  onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  {VEGETATION_INDICES.map(index => (
-                    <option key={index} value={index}>{index}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Type de Visualisation</label>
-                <select
-                  value={visualizationType}
-                  onChange={(e) => setVisualizationType(e.target.value as VisualizationType)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="leaflet">Carte Leaflet (Recommandé)</option>
-                  <option value="scatter">Nuage de Points</option>
-                </select>
-              </div>
-            </>
-          ) : (
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium mb-2 block">Indices à Comparer</label>
-              <div className="grid grid-cols-3 gap-2">
+        {viewMode === 'temporal-compare' ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
+              <select
+                value={selectedIndex}
+                onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
                 {VEGETATION_INDICES.map(index => (
-                  <label key={index} className="flex items-center gap-2 p-2 border rounded-md hover:bg-white cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedIndices.includes(index)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedIndices([...selectedIndices, index]);
-                        } else {
-                          setSelectedIndices(selectedIndices.filter(i => i !== index));
-                        }
-                      }}
-                      className="rounded text-green-600"
-                    />
-                    <span className="text-sm font-medium">{index}</span>
-                  </label>
+                  <option key={index} value={index}>{index}</option>
                 ))}
-              </div>
+              </select>
             </div>
-          )}
-        </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Date A (Avant)</label>
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+                availableDates={availableDates}
+                isLoading={isLoadingDates}
+                disabled={!boundary}
+                placeholder="Date de référence"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Date B (Après)</label>
+              <DatePicker
+                value={compareDate}
+                onChange={(date) => date && setCompareDate(date)}
+                availableDates={availableDates}
+                isLoading={isLoadingDates}
+                disabled={!boundary}
+                placeholder="Date à comparer"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
+              <select
+                value={colorPalette}
+                onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                {Object.entries(COLOR_PALETTES).map(([key, palette]) => (
+                  <option key={key} value={key}>{palette.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Date</label>
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+                availableDates={availableDates}
+                isLoading={isLoadingDates}
+                disabled={!boundary}
+                placeholder="Select date with satellite data"
+              />
+            </div>
+
+            {viewMode === 'single' ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
+                  <select
+                    value={selectedIndex}
+                    onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    {VEGETATION_INDICES.map(index => (
+                      <option key={index} value={index}>{index}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Type de Visualisation</label>
+                  <select
+                    value={visualizationType}
+                    onChange={(e) => setVisualizationType(e.target.value as VisualizationType)}
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="leaflet">Carte Leaflet (Recommandé)</option>
+                    <option value="scatter">Nuage de Points</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium mb-2 block">Indices à Comparer</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {VEGETATION_INDICES.map(index => (
+                    <label key={index} className="flex items-center gap-2 p-2 border rounded-md hover:bg-white cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedIndices.includes(index)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIndices([...selectedIndices, index]);
+                          } else {
+                            setSelectedIndices(selectedIndices.filter(i => i !== index));
+                          }
+                        }}
+                        className="rounded text-green-600"
+                      />
+                      <span className="text-sm font-medium">{index}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Opacity Controls for Multi-Overlay */}
         {viewMode === 'multi-overlay' && selectedIndices.length > 0 && (
@@ -552,11 +631,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         <div className="flex items-center gap-4">
           <Button
             onClick={generateVisualization}
-            disabled={isLoading || !boundary || (viewMode !== 'single' && selectedIndices.length === 0)}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={
+              isLoading || !boundary ||
+              (viewMode === 'temporal-compare' && (!selectedDate || !compareDate)) ||
+              (viewMode !== 'single' && viewMode !== 'temporal-compare' && selectedIndices.length === 0)
+            }
+            className={viewMode === 'temporal-compare' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'}
           >
-            {isLoading ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <ZoomIn className="w-4 h-4 mr-2" />}
-            {isLoading ? 'Génération...' : 'Générer la Visualisation'}
+            {isLoading ? <Loader className="w-4 h-4 animate-spin mr-2" /> : viewMode === 'temporal-compare' ? <GitCompareArrows className="w-4 h-4 mr-2" /> : <ZoomIn className="w-4 h-4 mr-2" />}
+            {isLoading ? 'Génération...' : viewMode === 'temporal-compare' ? 'Comparer les Dates' : 'Générer la Visualisation'}
           </Button>
 
           {((viewMode === 'single' && data) || (viewMode !== 'single' && multiData.size > 0)) && (
@@ -596,23 +679,23 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg">
             <div className="text-center">
               <div className="text-sm text-gray-600">Mean</div>
-              <div className="font-semibold">{data.statistics.mean.toFixed(3)}</div>
+              <div className="font-semibold">{(data.statistics?.mean ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Median</div>
-              <div className="font-semibold">{data.statistics.median.toFixed(3)}</div>
+              <div className="font-semibold">{(data.statistics?.median ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">P10</div>
-              <div className="font-semibold">{data.statistics.p10.toFixed(3)}</div>
+              <div className="font-semibold">{(data.statistics?.p10 ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">P90</div>
-              <div className="font-semibold">{data.statistics.p90.toFixed(3)}</div>
+              <div className="font-semibold">{(data.statistics?.p90 ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Std Dev</div>
-              <div className="font-semibold">{data.statistics.std.toFixed(3)}</div>
+              <div className="font-semibold">{(data.statistics?.std ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Count</div>
@@ -688,15 +771,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="text-center">
                       <div className="text-gray-600">Moy.</div>
-                      <div className="font-semibold">{indexData.statistics.mean.toFixed(3)}</div>
+                      <div className="font-semibold">{(indexData.statistics?.mean ?? 0).toFixed(3)}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-gray-600">Min</div>
-                      <div className="font-semibold">{indexData.statistics.min.toFixed(3)}</div>
+                      <div className="font-semibold">{(indexData.statistics?.min ?? 0).toFixed(3)}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-gray-600">Max</div>
-                      <div className="font-semibold">{indexData.statistics.max.toFixed(3)}</div>
+                      <div className="font-semibold">{(indexData.statistics?.max ?? 0).toFixed(3)}</div>
                     </div>
                   </div>
                 </div>
@@ -813,19 +896,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {data.statistics.mean.toFixed(3)}
+                      {(data.statistics?.mean ?? 0).toFixed(3)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {data.statistics.median.toFixed(3)}
+                      {(data.statistics?.median ?? 0).toFixed(3)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {data.statistics.std.toFixed(3)}
+                      {(data.statistics?.std ?? 0).toFixed(3)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {data.statistics.min.toFixed(3)} / {data.statistics.max.toFixed(3)}
+                      {(data.statistics?.min ?? 0).toFixed(3)} / {(data.statistics?.max ?? 0).toFixed(3)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {data.statistics.count.toLocaleString()}
+                      {(data.statistics?.count ?? 0).toLocaleString()}
                     </td>
                   </tr>
                 ))}
@@ -950,15 +1033,208 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                             <span className="font-medium">{index}</span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-right">{data.statistics.mean.toFixed(3)}</td>
-                        <td className="px-3 py-2 text-right">{data.statistics.min.toFixed(3)}</td>
-                        <td className="px-3 py-2 text-right">{data.statistics.max.toFixed(3)}</td>
+                        <td className="px-3 py-2 text-right">{(data.statistics?.mean ?? 0).toFixed(3)}</td>
+                        <td className="px-3 py-2 text-right">{(data.statistics?.min ?? 0).toFixed(3)}</td>
+                        <td className="px-3 py-2 text-right">{(data.statistics?.max ?? 0).toFixed(3)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Temporal Comparison View */}
+      {viewMode === 'temporal-compare' && leftTemporalData && rightTemporalData && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold flex items-center gap-2">
+              <GitCompareArrows className="w-5 h-5 text-purple-600" />
+              {selectedIndex} — {selectedDate} vs {compareDate}
+            </h3>
+          </div>
+
+          {/* Side-by-side Maps */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left Map - Date A */}
+            <div className="bg-white border-2 border-purple-200 rounded-lg overflow-hidden">
+              <div className="bg-purple-50 p-3 border-b border-purple-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-lg text-purple-900">Date A: {selectedDate}</h4>
+                  <span className="text-sm text-purple-700 font-medium">
+                    Moy: {(leftTemporalData.statistics?.mean ?? 0).toFixed(3)}
+                  </span>
+                </div>
+              </div>
+              <div className="relative h-[400px]">
+                <LeafletHeatmapViewer
+                  parcelId={parcelId}
+                  parcelName={parcelName}
+                  boundary={boundary}
+                  initialData={leftTemporalData}
+                  selectedIndex={selectedIndex}
+                  selectedDate={selectedDate}
+                  embedded={true}
+                  colorPalette={colorPalette}
+                  baseLayer={baseLayer}
+                />
+              </div>
+            </div>
+
+            {/* Right Map - Date B */}
+            <div className="bg-white border-2 border-purple-200 rounded-lg overflow-hidden">
+              <div className="bg-purple-50 p-3 border-b border-purple-200">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-lg text-purple-900">Date B: {compareDate}</h4>
+                  <span className="text-sm text-purple-700 font-medium">
+                    Moy: {(rightTemporalData.statistics?.mean ?? 0).toFixed(3)}
+                  </span>
+                </div>
+              </div>
+              <div className="relative h-[400px]">
+                <LeafletHeatmapViewer
+                  parcelId={parcelId}
+                  parcelName={parcelName}
+                  boundary={boundary}
+                  initialData={rightTemporalData}
+                  selectedIndex={selectedIndex}
+                  selectedDate={compareDate}
+                  embedded={true}
+                  colorPalette={colorPalette}
+                  baseLayer={baseLayer}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Delta Statistics */}
+          <div className="bg-white border rounded-lg overflow-hidden">
+            <div className="bg-purple-50 p-4 border-b">
+              <h4 className="font-semibold text-purple-900">
+                Comparaison Statistique — {selectedIndex}
+              </h4>
+              <p className="text-sm text-purple-700 mt-1">
+                Variation entre {selectedDate} et {compareDate}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statistique</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date A ({selectedDate})</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date B ({compareDate})</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Delta</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variation %</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {([
+                    { label: 'Moyenne', key: 'mean' as const },
+                    { label: 'Médiane', key: 'median' as const },
+                    { label: 'Minimum', key: 'min' as const },
+                    { label: 'Maximum', key: 'max' as const },
+                    { label: 'P10', key: 'p10' as const },
+                    { label: 'P90', key: 'p90' as const },
+                    { label: 'Écart-type', key: 'std' as const },
+                  ]).map(({ label, key }) => {
+                    const valA = leftTemporalData.statistics?.[key] ?? 0;
+                    const valB = rightTemporalData.statistics?.[key] ?? 0;
+                    const delta = valB - valA;
+                    const pctChange = valA !== 0 ? (delta / Math.abs(valA)) * 100 : 0;
+
+                    return (
+                      <tr key={key} className="hover:bg-gray-50">
+                        <td className="px-6 py-3 text-sm font-medium text-gray-900">{label}</td>
+                        <td className="px-6 py-3 text-sm text-right tabular-nums">{valA.toFixed(3)}</td>
+                        <td className="px-6 py-3 text-sm text-right tabular-nums">{valB.toFixed(3)}</td>
+                        <td className="px-6 py-3 text-sm text-right tabular-nums">
+                          <span className={`inline-flex items-center gap-1 ${delta > 0.001 ? 'text-green-600' : delta < -0.001 ? 'text-red-600' : 'text-gray-500'}`}>
+                            {delta > 0.001 ? <ArrowUp className="w-3 h-3" /> : delta < -0.001 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
+                            {delta >= 0 ? '+' : ''}{delta.toFixed(3)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm text-right tabular-nums">
+                          <span className={`${pctChange > 0.1 ? 'text-green-600' : pctChange < -0.1 ? 'text-red-600' : 'text-gray-500'}`}>
+                            {pctChange >= 0 ? '+' : ''}{pctChange.toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-gray-50 font-medium">
+                    <td className="px-6 py-3 text-sm text-gray-900">Pixels</td>
+                    <td className="px-6 py-3 text-sm text-right tabular-nums">{(leftTemporalData.statistics?.count ?? 0).toLocaleString()}</td>
+                    <td className="px-6 py-3 text-sm text-right tabular-nums">{(rightTemporalData.statistics?.count ?? 0).toLocaleString()}</td>
+                    <td className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</td>
+                    <td className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Comparison Bar Chart */}
+          <div className="bg-white border rounded-lg p-4">
+            <h4 className="font-semibold mb-4">Comparaison Visuelle</h4>
+            <ReactECharts
+              option={{
+                tooltip: {
+                  trigger: 'axis',
+                  axisPointer: { type: 'shadow' }
+                },
+                legend: {
+                  data: [selectedDate, compareDate]
+                },
+                grid: {
+                  left: '3%',
+                  right: '4%',
+                  bottom: '3%',
+                  containLabel: true
+                },
+                xAxis: {
+                  type: 'category',
+                  data: ['Moyenne', 'Médiane', 'Min', 'Max', 'P10', 'P90', 'Écart-type']
+                },
+                yAxis: {
+                  type: 'value',
+                  name: selectedIndex
+                },
+                series: [
+                  {
+                    name: selectedDate,
+                    type: 'bar',
+                    data: [
+                      leftTemporalData.statistics?.mean ?? 0,
+                      leftTemporalData.statistics?.median ?? 0,
+                      leftTemporalData.statistics?.min ?? 0,
+                      leftTemporalData.statistics?.max ?? 0,
+                      leftTemporalData.statistics?.p10 ?? 0,
+                      leftTemporalData.statistics?.p90 ?? 0,
+                      leftTemporalData.statistics?.std ?? 0,
+                    ],
+                    itemStyle: { color: '#8b5cf6' }
+                  },
+                  {
+                    name: compareDate,
+                    type: 'bar',
+                    data: [
+                      rightTemporalData.statistics?.mean ?? 0,
+                      rightTemporalData.statistics?.median ?? 0,
+                      rightTemporalData.statistics?.min ?? 0,
+                      rightTemporalData.statistics?.max ?? 0,
+                      rightTemporalData.statistics?.p10 ?? 0,
+                      rightTemporalData.statistics?.p90 ?? 0,
+                      rightTemporalData.statistics?.std ?? 0,
+                    ],
+                    itemStyle: { color: '#a78bfa' }
+                  }
+                ]
+              }}
+              style={{ height: '300px', width: '100%' }}
+            />
           </div>
         </div>
       )}

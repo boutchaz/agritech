@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Building2, Tractor, Loader2, Leaf } from 'lucide-react';
 import { ApiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 type SellerType = 'individual' | 'business' | 'farm';
 
@@ -31,6 +32,7 @@ const sellerTypeOptions = [
 
 export default function SignupPage() {
     const router = useRouter();
+    const { signIn } = useAuth();
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -63,6 +65,7 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
+            // CRITICAL: Call backend signup first for provisioning (profile + org + role)
             const response = await ApiClient.signup({
                 email: formData.email,
                 password: formData.password,
@@ -70,12 +73,23 @@ export default function SignupPage() {
                 sellerType: formData.sellerType,
             });
 
-            // Check if email confirmation is required
             if (response.requiresLogin) {
-                router.push(`/login?registered=true&email=${encodeURIComponent(formData.email)}`);
+                // Backend provisioned everything. Now establish cookie session via Supabase.
+                try {
+                    await signIn(formData.email, formData.password);
+                    router.push('/dashboard');
+                } catch {
+                    // If signIn fails (e.g., email confirmation required), redirect to login
+                    router.push(`/login?registered=true&email=${encodeURIComponent(formData.email)}`);
+                }
             } else {
-                // Auto-login successful
-                router.push('/dashboard');
+                // Auto-login — try to establish session
+                try {
+                    await signIn(formData.email, formData.password);
+                    router.push('/dashboard');
+                } catch {
+                    router.push('/dashboard');
+                }
             }
         } catch (err: any) {
             setError(err.message || 'Echec de la creation du compte');

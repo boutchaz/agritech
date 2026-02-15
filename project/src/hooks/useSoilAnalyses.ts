@@ -76,7 +76,6 @@ export function useSoilAnalyses(farmId: string) {
     notes?: string
   ) => {
     try {
-      console.log('addAnalysis called with parcelId:', parcelId); // Debug log
       // Map form data to API structure
       const apiData = {
         parcel_id: parcelId,

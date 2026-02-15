@@ -158,17 +158,6 @@ export const useOnboardingStore = create<OnboardingStore>()(
             finalState.existingOrgId = storedOrgId;
           }
 
-          console.log('[OnboardingStore] Restored state:', {
-            hasSavedState: !!savedState,
-            hasOrgData: !!orgData,
-            hasUserProfile: !!userProfile,
-            currentStep: finalState.currentStep,
-            existingOrgId: finalState.existingOrgId,
-            existingFarmId: finalState.existingFarmId,
-            orgName: finalState.organizationData.name,
-            profileName: `${finalState.profileData.first_name} ${finalState.profileData.last_name}`,
-          });
-
           set({
             ...finalState,
             isRestored: true,
@@ -206,12 +195,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
             existingOrgId: overrides?.existingOrgId ?? state.existingOrgId,
             existingFarmId: overrides?.existingFarmId ?? state.existingFarmId,
           };
-          console.log('[OnboardingStore] Persisting state with:', {
-            existingFarmId: backendState.existingFarmId,
-            overrides,
-          });
           await onboardingApi.saveState(backendState);
-          console.log('[OnboardingStore] State persisted to backend');
 
           // Also update local state with overrides
           if (overrides) {

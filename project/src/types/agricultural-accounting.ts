@@ -116,6 +116,11 @@ export interface CropCycle {
   created_by?: string | null;
   updated_at: string;
   updated_by?: string | null;
+  
+  cycle_type?: CycleType | null;
+  cycle_category?: CycleCategory | null;
+  is_perennial?: boolean | null;
+  template_id?: string | null;
 }
 
 export interface BiologicalAsset {
@@ -313,6 +318,10 @@ export interface CreateCropCycleInput {
   expected_total_yield?: number;
   yield_unit?: string;
   notes?: string;
+  cycle_type?: CycleType;
+  cycle_category?: CycleCategory;
+  is_perennial?: boolean;
+  template_id?: string;
 }
 
 export interface UpdateCropCycleInput {
@@ -330,6 +339,9 @@ export interface UpdateCropCycleInput {
   inventory_valuation?: number;
   valuation_method?: ValuationMethod;
   notes?: string;
+  cycle_type?: CycleType;
+  cycle_category?: CycleCategory;
+  is_perennial?: boolean;
 }
 
 export interface CreateBiologicalAssetInput {
@@ -475,6 +487,101 @@ export const MOROCCO_CROP_TEMPLATES: Record<string, MoroccoCropTemplate> = {
     is_perennial: true,
   },
 };
+
+export type CycleType = 'annual' | 'perennial' | 'multi_harvest' | 'continuous';
+export type CycleCategory = 'short' | 'medium' | 'long' | 'perennial';
+
+export interface CropTemplate {
+  id: string;
+  organization_id?: string;
+  crop_type: string;
+  crop_name: string;
+  cycle_type: CycleType;
+  cycle_category?: CycleCategory;
+  is_perennial: boolean;
+  typical_duration_days?: number;
+  typical_duration_months?: number;
+  typical_planting_months: number[];
+  typical_harvest_months: number[];
+  yield_unit: string;
+  average_yield_per_ha?: number;
+  code_prefix: string;
+  stages?: { name: string; order: number; duration_days: number }[];
+  is_global: boolean;
+}
+
+export interface CropCycleStage {
+  id: string;
+  crop_cycle_id: string;
+  stage_name: string;
+  stage_order: number;
+  expected_start_date?: string;
+  actual_start_date?: string;
+  expected_end_date?: string;
+  actual_end_date?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  notes?: string;
+}
+
+export interface HarvestEvent {
+  id: string;
+  crop_cycle_id: string;
+  harvest_date: string;
+  harvest_number: number;
+  quantity?: number;
+  quantity_unit: string;
+  quality_grade?: string;
+  quality_notes?: string;
+}
+
+export interface CreateCropCycleStageInput {
+  crop_cycle_id: string;
+  stage_name: string;
+  stage_order: number;
+  expected_start_date?: string;
+  expected_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  status?: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  notes?: string;
+}
+
+export interface UpdateCropCycleStageInput {
+  id: string;
+  stage_name?: string;
+  expected_start_date?: string;
+  expected_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  status?: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  notes?: string;
+}
+
+export interface CreateHarvestEventInput {
+  crop_cycle_id: string;
+  harvest_date: string;
+  harvest_number?: number;
+  quantity?: number;
+  quantity_unit?: string;
+  quality_grade?: string;
+  quality_notes?: string;
+}
+
+export interface UpdateHarvestEventInput {
+  id: string;
+  harvest_date?: string;
+  quantity?: number;
+  quantity_unit?: string;
+  quality_grade?: string;
+  quality_notes?: string;
+}
+
+export interface HarvestEventStats {
+  total_harvests: number;
+  total_quantity: number;
+  average_quantity: number;
+  last_harvest_date: string | null;
+}
 
 export function generateCycleCode(
   cropPrefix: string,

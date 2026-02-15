@@ -27,7 +27,7 @@ export class AccountingAutomationService {
     description: string,
     createdBy: string,
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
     const expenseAccountId = await this.getAccountIdByMapping(
@@ -158,7 +158,7 @@ export class AccountingAutomationService {
     description: string,
     createdBy: string,
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
     const revenueAccountId = await this.getAccountIdByMapping(
@@ -382,7 +382,7 @@ export class AccountingAutomationService {
     createdBy: string,
     farmId?: string,
   ): Promise<any> {
-    const supabase = this.databaseService.getClient();
+    const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
     // Try to get salary/wages expense account - use 'labor' or 'salary' as mapping key

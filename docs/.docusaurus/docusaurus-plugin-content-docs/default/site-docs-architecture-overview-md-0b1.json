@@ -1,7 +1,7 @@
 {
   "id": "architecture/overview",
   "title": "Architecture Overview",
-  "description": "System architecture, technology stack, and component overview of the AgriTech Platform",
+  "description": "The AgriTech Platform is built as a multi-tenant SaaS application using a monorepo structure with pnpm workspaces.",
   "source": "@site/docs/architecture/overview.md",
   "sourceDirName": "architecture",
   "slug": "/architecture/overview",
@@ -10,17 +10,17 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
+  "sidebarPosition": 1,
   "frontMatter": {
-    "title": "Architecture Overview",
-    "description": "System architecture, technology stack, and component overview of the AgriTech Platform"
+    "sidebar_position": 1
   },
   "sidebar": "docs",
   "previous": {
-    "title": "First Deployment",
-    "permalink": "/getting-started/first-deployment"
+    "title": "Quick Start",
+    "permalink": "/getting-started/quick-start"
   },
   "next": {
-    "title": "Multi-Tenancy Architecture",
-    "permalink": "/architecture/multi-tenancy"
+    "title": "Database Schema",
+    "permalink": "/database/schema"
   }
 }

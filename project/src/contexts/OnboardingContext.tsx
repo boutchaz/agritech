@@ -178,7 +178,6 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
 
     try {
       await onboardingApi.saveState(stateRef.current);
-      console.log('[OnboardingProvider] State persisted to backend');
     } catch (err) {
       console.error('[OnboardingProvider] Failed to persist state:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to save';

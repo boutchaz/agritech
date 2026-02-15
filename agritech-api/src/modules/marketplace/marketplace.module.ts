@@ -9,14 +9,16 @@ import { SellersController } from './sellers.controller';
 import { SellersService } from './sellers.service';
 import { QuoteRequestsController } from './quote-requests.controller';
 import { QuoteRequestsService } from './quote-requests.service';
+import { ReviewsController } from './reviews.controller';
+import { ReviewsService } from './reviews.service';
 import { DatabaseModule } from '../database/database.module';
 import { StrapiModule } from '../strapi/strapi.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
     imports: [DatabaseModule, StrapiModule, NotificationsModule],
-    controllers: [MarketplaceController, CartController, OrdersController, SellersController, QuoteRequestsController],
-    providers: [MarketplaceService, CartService, OrdersService, SellersService, QuoteRequestsService],
-    exports: [MarketplaceService, CartService, OrdersService, SellersService, QuoteRequestsService],
+    controllers: [MarketplaceController, CartController, OrdersController, SellersController, QuoteRequestsController, ReviewsController],
+    providers: [MarketplaceService, CartService, OrdersService, SellersService, QuoteRequestsService, ReviewsService],
+    exports: [MarketplaceService, CartService, OrdersService, SellersService, QuoteRequestsService, ReviewsService],
 })
 export class MarketplaceModule { }

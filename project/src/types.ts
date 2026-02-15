@@ -3,9 +3,9 @@ export interface Module {
   name: string;
   icon: string;
   active: boolean;
-  category: 'agriculture' | 'elevage';
+  category: string;
   description: string;
-  metrics: {
+  metrics?: {
     name: string;
     value: number;
     unit: string;

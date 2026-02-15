@@ -14,7 +14,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { authSupabase } from '../lib/auth-supabase';
 import { useSubscription } from '../hooks/useSubscription';
-import { normalizePlanType } from '../lib/polar';
+import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType } from '../lib/polar';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
@@ -29,6 +29,7 @@ const SubscriptionSettings: React.FC = () => {
   const { t } = useTranslation();
   const [showPlans, setShowPlans] = React.useState(false);
   const { data: moduleConfig } = useModuleConfig();
+  const [selectedPlan, setSelectedPlan] = React.useState<PlanType | 'core' | null>(null);
 
   // Query actual usage counts from NestJS API
   const { data: usage } = useQuery({
@@ -70,6 +71,24 @@ const SubscriptionSettings: React.FC = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || t('subscription.errors.checkoutFailed'));
+    },
+  });
+
+  const purchasePlan = useMutation({
+    mutationFn: async (planType: PlanType | 'core') => {
+      if (!currentOrganization?.id) {
+        throw new Error(t('subscription.errors.noOrganization'));
+      }
+      setSelectedPlan(planType);
+      const { checkoutUrl } = await subscriptionsService.createCheckout(planType, currentOrganization.id);
+      return checkoutUrl;
+    },
+    onSuccess: (checkoutUrl) => {
+      window.location.href = checkoutUrl;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || t('subscription.errors.checkoutFailed'));
+      setSelectedPlan(null);
     },
   });
 
@@ -125,6 +144,41 @@ const SubscriptionSettings: React.FC = () => {
           </button>
         )}
         <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Object.values(SUBSCRIPTION_PLANS).map((plan) => (
+              <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h4>
+                  {plan.highlighted && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">Popular</span>
+                  )}
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">{plan.description}</p>
+                <div className="flex items-baseline space-x-2 mb-4">
+                  <span className="text-3xl font-bold text-green-600">{plan.price}</span>
+                  {plan.priceAmount > 0 && (
+                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => purchasePlan.mutate(plan.id)}
+                  disabled={purchasePlan.isPending && selectedPlan === plan.id}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60"
+                >
+                  {purchasePlan.isPending && selectedPlan === plan.id ? t('subscription.processing') : t('subscription.plans.getStarted')}
+                </button>
+                <ul className="mt-4 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {plan.features.slice(0, 4).map((feature) => (
+                    <li key={feature} className="flex items-start space-x-2">
+                      <span className="mt-1 h-2 w-2 rounded-full bg-green-600" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Core Plan</h3>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
@@ -400,25 +454,24 @@ const SubscriptionSettings: React.FC = () => {
         </div>
 
         {/* Billing Portal */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t('subscription.billingManagement')}
-          </h3>
+            </h3>
 
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
             {t('subscription.billingDescription')}
-          </p>
+            </p>
 
-          <a
-            href={import.meta.env.VITE_POLAR_CHECKOUT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => purchasePlan.mutate(normalizedPlanType || 'professional')}
             className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            disabled={purchasePlan.isPending}
           >
-            <span>{t('subscription.openBillingPortal')}</span>
+            <span>{purchasePlan.isPending ? t('subscription.processing') : t('subscription.openBillingPortal')}</span>
             <ExternalLink className="h-4 w-4" />
-          </a>
-        </div>
+          </button>
+          </div>
       </div>
     </div>
   );

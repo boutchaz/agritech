@@ -12,6 +12,7 @@ export interface AuthOrganization {
   currency?: string;
   timezone?: string;
   language?: string;
+  map_provider?: 'default' | 'mapbox' | null;
 }
 
 export interface AuthFarm {

@@ -1,8 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
+import { useState, useEffect } from 'react';
 import TasksList from '@/components/Tasks/TasksList';
 import TaskForm from '@/components/Tasks/TaskForm';
-import TaskDetailDialog from '@/components/Tasks/TaskDetailDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { tasksApi } from '@/lib/api/tasks';
@@ -11,11 +10,20 @@ import type { Task } from '@/types/tasks';
 
 function TasksListPage() {
   const { currentOrganization } = useAuth();
+  const navigate = useNavigate();
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const [showTaskDetail, setShowTaskDetail] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Fetch selected task data when selectedTaskId changes - now uses NestJS API
+  // Support ?editTaskId= for opening the edit form from detail page
+  const search = Route.useSearch() as { editTaskId?: string };
+  useEffect(() => {
+    if (search.editTaskId) {
+      setSelectedTaskId(search.editTaskId);
+      setShowTaskForm(true);
+    }
+  }, [search.editTaskId]);
+
+  // Fetch selected task data when selectedTaskId changes (for editing)
   const { data: selectedTask } = useQuery({
     queryKey: ['task', currentOrganization?.id, selectedTaskId],
     queryFn: async () => {
@@ -25,7 +33,7 @@ function TasksListPage() {
     enabled: !!selectedTaskId && !!currentOrganization?.id,
   });
 
-  // Fetch farms - now uses NestJS API
+  // Fetch farms
   const { data: farms = [] } = useQuery({
     queryKey: ['farms', currentOrganization?.id],
     queryFn: async () => {
@@ -34,7 +42,6 @@ function TasksListPage() {
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      // Handle paginated response: { success: true, farms: [...], total: ... }
       let farmsList: any[] = [];
       if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
         farmsList = (data as { farms: any[] }).farms;
@@ -46,21 +53,14 @@ function TasksListPage() {
     enabled: !!currentOrganization?.id,
   });
 
-  // Open detail dialog when a task is selected
+  // Navigate to dedicated task detail page
   const handleSelectTask = (taskId: string) => {
-    setSelectedTaskId(taskId);
-    setShowTaskDetail(true);
+    navigate({ to: '/tasks/$taskId', params: { taskId } });
   };
 
   // Open form for creating new task
   const handleCreateTask = () => {
     setSelectedTaskId(null);
-    setShowTaskForm(true);
-  };
-
-  // Switch from detail view to edit view
-  const handleEditTask = () => {
-    setShowTaskDetail(false);
     setShowTaskForm(true);
   };
 
@@ -74,20 +74,7 @@ function TasksListPage() {
         onCreateTask={handleCreateTask}
       />
 
-      {/* Task Detail Dialog */}
-      {showTaskDetail && selectedTask && (
-        <TaskDetailDialog
-          task={selectedTask}
-          organizationId={currentOrganization.id}
-          onClose={() => {
-            setShowTaskDetail(false);
-            setSelectedTaskId(null);
-          }}
-          onEdit={handleEditTask}
-        />
-      )}
-
-      {/* Task Form Modal (for editing) */}
+      {/* Task Form Modal (for creating/editing) */}
       {showTaskForm && (
         <TaskForm
           task={selectedTask}
@@ -109,4 +96,9 @@ function TasksListPage() {
 
 export const Route = createFileRoute('/_authenticated/(workforce)/tasks/')({
   component: TasksListPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      editTaskId: (search.editTaskId as string) || undefined,
+    };
+  },
 });

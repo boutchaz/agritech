@@ -1,7 +1,7 @@
 {
   "id": "getting-started/quick-start",
   "title": "Quick Start",
-  "description": "This guide will help you get the AgriTech Platform up and running on your local machine in just a few minutes.",
+  "description": "Get the AgriTech Platform running locally in about 10 minutes.",
   "source": "@site/docs/getting-started/quick-start.md",
   "sourceDirName": "getting-started",
   "slug": "/getting-started/quick-start",
@@ -12,7 +12,6 @@
   "version": "current",
   "sidebarPosition": 2,
   "frontMatter": {
-    "title": "Quick Start",
     "sidebar_position": 2
   },
   "sidebar": "docs",
@@ -21,7 +20,7 @@
     "permalink": "/getting-started/installation"
   },
   "next": {
-    "title": "Environment Setup",
-    "permalink": "/getting-started/environment-setup"
+    "title": "Architecture Overview",
+    "permalink": "/architecture/overview"
   }
 }

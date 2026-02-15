@@ -4,6 +4,8 @@ import {
   fiscalYearsApi,
   campaignsApi,
   cropCyclesApi,
+  cropCycleStagesApi,
+  harvestEventsApi,
   biologicalAssetsApi,
   reportingApi,
 } from '@/lib/api/agricultural-accounting';
@@ -17,6 +19,11 @@ import type {
   CreateBiologicalAssetInput,
   CreateBiologicalAssetValuationInput,
   CreateCropCycleAllocationInput,
+  CreateCropCycleStageInput,
+  UpdateCropCycleStageInput,
+  CreateHarvestEventInput,
+  UpdateHarvestEventInput,
+  CropCycleStage,
   CropCycleStatus,
   BiologicalAsset,
 } from '@/types/agricultural-accounting';
@@ -290,6 +297,172 @@ export function useCreateCropCycleAllocation() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to create allocation: ${error.message}`);
+    },
+  });
+}
+
+export function useCropCycleStages(cropCycleId: string | null) {
+  return useQuery({
+    queryKey: ['crop-cycle-stages', cropCycleId],
+    queryFn: () => cropCycleStagesApi.getByCropCycle(cropCycleId!),
+    enabled: !!cropCycleId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useCreateCropCycleStage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateCropCycleStageInput) =>
+      cropCycleStagesApi.create(input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['crop-cycle-stages', variables.crop_cycle_id] });
+      toast.success('Stage created successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create stage: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateCropCycleStage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateCropCycleStageInput) =>
+      cropCycleStagesApi.update(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crop-cycle-stages'] });
+      toast.success('Stage updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update stage: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateCropCycleStageStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: CropCycleStage['status'] }) =>
+      cropCycleStagesApi.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crop-cycle-stages'] });
+      toast.success('Stage status updated');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update stage status: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteCropCycleStage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => cropCycleStagesApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crop-cycle-stages'] });
+      toast.success('Stage deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete stage: ${error.message}`);
+    },
+  });
+}
+
+export function useGenerateStagesFromTemplate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      cropCycleId,
+      templateStages,
+      plantingDate,
+    }: {
+      cropCycleId: string;
+      templateStages: { name: string; order: number; duration_days: number }[];
+      plantingDate: string;
+    }) => cropCycleStagesApi.generateFromTemplate(cropCycleId, templateStages, plantingDate),
+    onSuccess: (data) => {
+      if (data.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['crop-cycle-stages', data[0].crop_cycle_id] });
+      }
+      toast.success(`${data.length} stages generated from template`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to generate stages: ${error.message}`);
+    },
+  });
+}
+
+export function useHarvestEvents(cropCycleId: string | null) {
+  return useQuery({
+    queryKey: ['harvest-events', cropCycleId],
+    queryFn: () => harvestEventsApi.getByCropCycle(cropCycleId!),
+    enabled: !!cropCycleId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useHarvestEventStats(cropCycleId: string | null) {
+  return useQuery({
+    queryKey: ['harvest-events', 'stats', cropCycleId],
+    queryFn: () => harvestEventsApi.getStatsByCropCycle(cropCycleId!),
+    enabled: !!cropCycleId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useCreateHarvestEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateHarvestEventInput) =>
+      harvestEventsApi.create(input),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['harvest-events', variables.crop_cycle_id] });
+      queryClient.invalidateQueries({ queryKey: ['harvest-events', 'stats', variables.crop_cycle_id] });
+      queryClient.invalidateQueries({ queryKey: ['crop-cycles'] });
+      toast.success('Harvest event recorded successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to record harvest event: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateHarvestEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateHarvestEventInput) =>
+      harvestEventsApi.update(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['harvest-events'] });
+      queryClient.invalidateQueries({ queryKey: ['crop-cycles'] });
+      toast.success('Harvest event updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update harvest event: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteHarvestEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => harvestEventsApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['harvest-events'] });
+      queryClient.invalidateQueries({ queryKey: ['crop-cycles'] });
+      toast.success('Harvest event deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete harvest event: ${error.message}`);
     },
   });
 }

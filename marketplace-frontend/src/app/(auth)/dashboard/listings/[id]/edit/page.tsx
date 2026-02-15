@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ApiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMyListings, useUpdateListing } from '@/hooks/useListings';
 import { ArrowLeft, Loader2, LogOut } from 'lucide-react';
 import ProductImageUpload from '@/components/ProductImageUpload';
 
@@ -11,11 +12,12 @@ export default function EditListingPage() {
     const router = useRouter();
     const params = useParams();
     const listingId = params.id as string;
+    const { signOut } = useAuth();
 
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [images, setImages] = useState<string[]>([]);
+    const [formInitialized, setFormInitialized] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -27,20 +29,13 @@ export default function EditListingPage() {
         is_public: true,
     });
 
+    const { data: allListings = [], isLoading: loading } = useMyListings();
+    const updateListingMutation = useUpdateListing();
+    const listing = allListings.find(l => l.id === listingId);
+
+    // Initialize form data when listing is loaded
     useEffect(() => {
-        loadListing();
-    }, [listingId]);
-
-    const loadListing = async () => {
-        try {
-            const listings = await ApiClient.getMyListings();
-            const listing = listings.find(l => l.id === listingId);
-
-            if (!listing) {
-                router.push('/dashboard/listings');
-                return;
-            }
-
+        if (listing && !formInitialized) {
             setFormData({
                 title: listing.title || '',
                 description: listing.description || '',
@@ -52,13 +47,16 @@ export default function EditListingPage() {
                 is_public: listing.is_public !== false,
             });
             setImages(listing.images || []);
-        } catch (error) {
-            console.error('Failed to load listing:', error);
-            router.push('/login');
-        } finally {
-            setLoading(false);
+            setFormInitialized(true);
         }
-    };
+    }, [listing, formInitialized]);
+
+    // Redirect if listing not found after loading
+    useEffect(() => {
+        if (!loading && allListings.length > 0 && !listing) {
+            router.push('/dashboard/listings');
+        }
+    }, [loading, allListings, listing, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,16 +80,19 @@ export default function EditListingPage() {
         setSaving(true);
 
         try {
-            await ApiClient.updateListing(listingId, {
-                title: formData.title,
-                description: formData.description,
-                short_description: formData.short_description || formData.description.substring(0, 150),
-                price: parseFloat(formData.price),
-                unit: formData.unit,
-                quantity_available: formData.quantity_available ? parseFloat(formData.quantity_available) : undefined,
-                sku: formData.sku || undefined,
-                is_public: formData.is_public,
-                images: images,
+            await updateListingMutation.mutateAsync({
+                id: listingId,
+                data: {
+                    title: formData.title,
+                    description: formData.description,
+                    short_description: formData.short_description || formData.description.substring(0, 150),
+                    price: parseFloat(formData.price),
+                    unit: formData.unit,
+                    quantity_available: formData.quantity_available ? parseFloat(formData.quantity_available) : undefined,
+                    sku: formData.sku || undefined,
+                    is_public: formData.is_public,
+                    images: images,
+                },
             });
 
             router.push('/dashboard/listings?updated=true');
@@ -103,7 +104,7 @@ export default function EditListingPage() {
     };
 
     const handleLogout = async () => {
-        await ApiClient.logout();
+        await signOut();
         router.push('/');
     };
 

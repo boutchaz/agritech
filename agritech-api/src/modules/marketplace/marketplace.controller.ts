@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req, Request, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
 import { MarketplaceService } from './marketplace.service';
 import { StrapiService } from '../strapi/strapi.service';
-import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { GetProductsQueryDto } from './dto/get-products-query.dto';
 
 @Controller('marketplace')
 export class MarketplaceController {
@@ -9,6 +10,8 @@ export class MarketplaceController {
         private readonly marketplaceService: MarketplaceService,
         private readonly strapiService: StrapiService
     ) { }
+
+    // ==================== PUBLIC ENDPOINTS (no auth) ====================
 
     /**
      * Get all marketplace categories from CMS
@@ -42,8 +45,8 @@ export class MarketplaceController {
     }
 
     @Get('products')
-    async getProducts(@Query('category') category?: string) {
-        return this.marketplaceService.getPublicProducts(category);
+    async getProducts(@Query() query: GetProductsQueryDto) {
+        return this.marketplaceService.getPublicProducts(query);
     }
 
     @Get('products/:id')
@@ -55,18 +58,13 @@ export class MarketplaceController {
         return product;
     }
 
+    // ==================== PROTECTED ENDPOINTS (auth required) ====================
+
     @Get('dashboard/stats')
-    async getDashboardStats(@Req() request: Request) {
-        // Extract token from header
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        const token = authHeader.split(' ')[1];
-        const organizationId = request.headers['x-organization-id'] as string;
-
-        // We can rely on the service to use this token to query Supabase securely
+    @UseGuards(JwtAuthGuard)
+    async getDashboardStats(@Request() req: any) {
+        const token = req.headers.authorization?.substring(7);
+        const organizationId = req.user?.organizationId || req.headers['x-organization-id'];
         return this.marketplaceService.getDashboardStats(token, organizationId);
     }
 
@@ -74,14 +72,9 @@ export class MarketplaceController {
      * Get seller's own listings
      */
     @Get('my-listings')
-    async getMyListings(@Req() request: Request) {
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        const token = authHeader.split(' ')[1];
-
+    @UseGuards(JwtAuthGuard)
+    async getMyListings(@Request() req: any) {
+        const token = req.headers.authorization?.substring(7);
         try {
             return await this.marketplaceService.getMyListings(token);
         } catch (error) {
@@ -93,7 +86,8 @@ export class MarketplaceController {
      * Create a new listing
      */
     @Post('listings')
-    async createListing(@Req() request: Request, @Body() body: {
+    @UseGuards(JwtAuthGuard)
+    async createListing(@Request() req: any, @Body() body: {
         title: string;
         description: string;
         short_description?: string;
@@ -104,13 +98,7 @@ export class MarketplaceController {
         quantity_available?: number;
         sku?: string;
     }) {
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        const token = authHeader.split(' ')[1];
-
+        const token = req.headers.authorization?.substring(7);
         try {
             return await this.marketplaceService.createListing(token, body);
         } catch (error) {
@@ -122,8 +110,9 @@ export class MarketplaceController {
      * Update a listing
      */
     @Patch('listings/:id')
+    @UseGuards(JwtAuthGuard)
     async updateListing(
-        @Req() request: Request,
+        @Request() req: any,
         @Param('id') id: string,
         @Body() body: Partial<{
             title: string;
@@ -139,13 +128,7 @@ export class MarketplaceController {
             is_public: boolean;
         }>
     ) {
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        const token = authHeader.split(' ')[1];
-
+        const token = req.headers.authorization?.substring(7);
         try {
             return await this.marketplaceService.updateListing(token, id, body);
         } catch (error) {
@@ -160,14 +143,9 @@ export class MarketplaceController {
      * Delete a listing
      */
     @Delete('listings/:id')
-    async deleteListing(@Req() request: Request, @Param('id') id: string) {
-        const authHeader = request.headers.authorization;
-        if (!authHeader) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        const token = authHeader.split(' ')[1];
-
+    @UseGuards(JwtAuthGuard)
+    async deleteListing(@Request() req: any, @Param('id') id: string) {
+        const token = req.headers.authorization?.substring(7);
         try {
             return await this.marketplaceService.deleteListing(token, id);
         } catch (error) {

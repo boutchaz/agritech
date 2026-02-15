@@ -5,17 +5,21 @@ import {
   AlertTriangle, 
   FileText, 
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  RefreshCw,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ComplianceChecksList } from '@/components/compliance/ComplianceChecksList';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
 import { ComplianceChecklistDialog } from '@/components/compliance/ComplianceChecklistDialog';
 
-import { useComplianceDashboard } from '@/hooks/useCompliance';
+import { useComplianceDashboard, useCorrectiveActionStats } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { CertificationType } from '@/lib/api/compliance';
 
@@ -25,7 +29,9 @@ export const Route = createFileRoute('/_authenticated/compliance/')({
 
 function ComplianceDashboardPage() {
   const { currentOrganization } = useAuth();
-  const { data: stats, isLoading } = useComplianceDashboard(currentOrganization?.id || null);
+  const orgId = currentOrganization?.id || null;
+  const { data: stats, isLoading } = useComplianceDashboard(orgId);
+  const { data: capStats } = useCorrectiveActionStats(orgId);
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-8">
@@ -130,6 +136,58 @@ function ComplianceDashboardPage() {
           isLoading={isLoading} 
         />
       </div>
+
+      {/* Corrective Actions Summary */}
+      {capStats && capStats.total > 0 && (
+        <Card className="border-orange-200 dark:border-orange-800">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg">Actions Correctives</CardTitle>
+                <Badge variant="secondary">{capStats.total}</Badge>
+              </div>
+              <Button variant="ghost" size="sm" className="gap-1" asChild>
+                <Link to="/compliance/corrective-actions">
+                  Voir tout <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-gray-500" />
+                <div>
+                  <div className="text-lg font-bold">{capStats.open}</div>
+                  <div className="text-xs text-muted-foreground">Ouvertes</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-blue-500" />
+                <div>
+                  <div className="text-lg font-bold">{capStats.in_progress}</div>
+                  <div className="text-xs text-muted-foreground">En cours</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                <div>
+                  <div className="text-lg font-bold text-red-600">{capStats.overdue}</div>
+                  <div className="text-xs text-muted-foreground">En retard</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <div>
+                  <div className="text-lg font-bold">{Math.round(capStats.resolution_rate)}%</div>
+                  <div className="text-xs text-muted-foreground">Taux de résolution</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions / Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

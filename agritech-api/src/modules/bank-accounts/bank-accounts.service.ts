@@ -12,7 +12,7 @@ export class BankAccountsService {
    * Get all bank accounts for an organization
    */
   async findAll(organizationId: string, filters?: { is_active?: boolean; search?: string }) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       let query = supabaseClient
@@ -47,7 +47,7 @@ export class BankAccountsService {
    * Get a single bank account by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -72,7 +72,7 @@ export class BankAccountsService {
    * Create a new bank account
    */
   async create(dto: CreateBankAccountDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -111,7 +111,7 @@ export class BankAccountsService {
    * Update a bank account
    */
   async update(id: string, organizationId: string, userId: string, dto: UpdateBankAccountDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if bank account exists
@@ -157,7 +157,7 @@ export class BankAccountsService {
    * Delete a bank account
    */
   async delete(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if bank account exists

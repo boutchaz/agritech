@@ -91,8 +91,9 @@ export const initGA = (): void => {
 
   // Initialize dataLayer and gtag
   window.dataLayer = window.dataLayer || [];
+  const dataLayer = window.dataLayer;
   window.gtag = function gtag() {
-    window.dataLayer.push(arguments);
+    dataLayer.push(arguments);
   };
 
   // Configure GA4

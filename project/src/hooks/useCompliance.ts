@@ -12,6 +12,10 @@ import {
   type EvidenceResponseDto,
   type ComplianceRequirementDto,
   type ComplianceDashboardStats,
+  type CreateCorrectiveActionPlanDto,
+  type UpdateCorrectiveActionPlanDto,
+  type CorrectiveActionPlanResponseDto,
+  type CorrectiveActionStats,
 } from '../lib/api/compliance';
 
 // =====================================================
@@ -369,6 +373,154 @@ export function useCreateEvidence() {
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : 'Failed to upload evidence';
+      toast.error(message);
+    },
+  });
+}
+
+// =====================================================
+// QUERY HOOKS - CORRECTIVE ACTIONS
+// =====================================================
+
+export function useCorrectiveActions(
+  organizationId: string | null,
+  filters?: { certification_id?: string; status?: string; priority?: string }
+) {
+  return useQuery({
+    queryKey: ['compliance', 'corrective-actions', organizationId, filters],
+    queryFn: async (): Promise<CorrectiveActionPlanResponseDto[]> => {
+      if (!organizationId) return [];
+      return complianceApi.getCorrectiveActions(organizationId, filters);
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCorrectiveAction(organizationId: string | null, actionId: string | null) {
+  return useQuery({
+    queryKey: ['compliance', 'corrective-action', actionId],
+    queryFn: async (): Promise<CorrectiveActionPlanResponseDto | null> => {
+      if (!actionId || !organizationId) return null;
+      return complianceApi.getCorrectiveAction(organizationId, actionId);
+    },
+    enabled: !!actionId && !!organizationId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCorrectiveActionStats(organizationId: string | null) {
+  return useQuery({
+    queryKey: ['compliance', 'corrective-action-stats', organizationId],
+    queryFn: async (): Promise<CorrectiveActionStats | null> => {
+      if (!organizationId) return null;
+      return complianceApi.getCorrectiveActionStats(organizationId);
+    },
+    enabled: !!organizationId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+// =====================================================
+// MUTATION HOOKS - CORRECTIVE ACTIONS
+// =====================================================
+
+export function useCreateCorrectiveAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      organizationId,
+      data,
+    }: {
+      organizationId: string;
+      data: CreateCorrectiveActionPlanDto;
+    }): Promise<CorrectiveActionPlanResponseDto> => {
+      return complianceApi.createCorrectiveAction(organizationId, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-actions', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-action-stats', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'dashboard', variables.organizationId],
+      });
+      toast.success('Action corrective créée avec succès');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Échec de la création';
+      toast.error(message);
+    },
+  });
+}
+
+export function useUpdateCorrectiveAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      organizationId,
+      actionId,
+      data,
+    }: {
+      organizationId: string;
+      actionId: string;
+      data: UpdateCorrectiveActionPlanDto;
+    }): Promise<CorrectiveActionPlanResponseDto> => {
+      return complianceApi.updateCorrectiveAction(organizationId, actionId, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-action', variables.actionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-actions', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-action-stats', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'dashboard', variables.organizationId],
+      });
+      toast.success('Action corrective mise à jour');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Échec de la mise à jour';
+      toast.error(message);
+    },
+  });
+}
+
+export function useDeleteCorrectiveAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      organizationId,
+      actionId,
+    }: {
+      organizationId: string;
+      actionId: string;
+    }): Promise<void> => {
+      return complianceApi.deleteCorrectiveAction(organizationId, actionId);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-actions', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'corrective-action-stats', variables.organizationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['compliance', 'dashboard', variables.organizationId],
+      });
+      toast.success('Action corrective supprimée');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Échec de la suppression';
       toast.error(message);
     },
   });

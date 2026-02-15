@@ -10,7 +10,7 @@ export class CropCyclesService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string, filters: CropCycleFiltersDto = {}) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('crop_cycles')
       .select('*', { count: 'exact' })
@@ -29,8 +29,8 @@ export class CropCyclesService {
     if (filters.parcel_id) {
       query = query.eq('parcel_id', filters.parcel_id);
     }
-    if (filters.variety) {
-      query = query.ilike('variety', `%${filters.variety}%`);
+    if (filters.variety_name) {
+      query = query.ilike('variety_name', `%${filters.variety_name}%`);
     }
     if (filters.crop_type) {
       query = query.ilike('crop_type', `%${filters.crop_type}%`);
@@ -41,14 +41,23 @@ export class CropCyclesService {
     if (filters.planting_date_to) {
       query = query.lte('planting_date', filters.planting_date_to);
     }
-    if (filters.expected_harvest_date_from) {
-      query = query.gte('expected_harvest_date', filters.expected_harvest_date_from);
+    if (filters.expected_harvest_start_from) {
+      query = query.gte('expected_harvest_start', filters.expected_harvest_start_from);
     }
-    if (filters.expected_harvest_date_to) {
-      query = query.lte('expected_harvest_date', filters.expected_harvest_date_to);
+    if (filters.expected_harvest_start_to) {
+      query = query.lte('expected_harvest_start', filters.expected_harvest_start_to);
+    }
+    if (filters.cycle_type) {
+      query = query.eq('cycle_type', filters.cycle_type);
+    }
+    if (filters.season) {
+      query = query.eq('season', filters.season);
+    }
+    if (filters.is_perennial !== undefined) {
+      query = query.eq('is_perennial', filters.is_perennial);
     }
     if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,variety.ilike.%${filters.search}%`);
+      query = query.or(`cycle_name.ilike.%${filters.search}%,variety_name.ilike.%${filters.search}%`);
     }
 
     // Apply pagination and sorting
@@ -79,7 +88,7 @@ export class CropCyclesService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('crop_cycles')
       .select('*')
@@ -96,7 +105,7 @@ export class CropCyclesService {
   }
 
   async create(organizationId: string, userId: string, createDto: CreateCropCycleDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('crop_cycles')
@@ -118,10 +127,9 @@ export class CropCyclesService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: Partial<CreateCropCycleDto>) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
-    // Check if crop cycle exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Crop cycle not found');
     }
@@ -147,17 +155,15 @@ export class CropCyclesService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
-    // Check if crop cycle exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Crop cycle not found');
     }
 
-    // Prevent deletion of active crop cycles
-    if (existing.status === CropCycleStatus.ACTIVE) {
-      throw new ConflictException('Cannot delete active crop cycle. Pause or complete it first.');
+    if (['land_prep', 'growing', 'harvesting'].includes(existing.status)) {
+      throw new ConflictException('Cannot delete an in-progress crop cycle. Complete or cancel it first.');
     }
 
     const { error } = await client
@@ -175,10 +181,9 @@ export class CropCyclesService {
   }
 
   async updateStatus(id: string, organizationId: string, userId: string, status: CropCycleStatus) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
-    // Check if crop cycle exists
-    const { data: existing } = await this.findOne(id, organizationId);
+    const existing = await this.findOne(id, organizationId);
     if (!existing) {
       throw new NotFoundException('Crop cycle not found');
     }
@@ -204,7 +209,7 @@ export class CropCyclesService {
   }
 
   async getStatistics(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Get total count by status
     const { data: byStatus, error: statusError } = await client
@@ -222,10 +227,9 @@ export class CropCyclesService {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get total area
     const { data: areas, error: areaError } = await client
       .from('crop_cycles')
-      .select('area_hectares')
+      .select('planted_area_ha')
       .eq('organization_id', organizationId);
 
     if (areaError) {
@@ -233,12 +237,11 @@ export class CropCyclesService {
       throw areaError;
     }
 
-    const totalArea = areas.reduce((sum, cycle) => sum + (cycle.area_hectares || 0), 0);
+    const totalArea = areas.reduce((sum, cycle) => sum + (cycle.planted_area_ha || 0), 0);
 
-    // Get expected vs actual yield
     const { data: yields, error: yieldError } = await client
       .from('crop_cycles')
-      .select('expected_yield_kg_per_hectare, actual_yield_kg_per_hectare, area_hectares')
+      .select('expected_total_yield, actual_total_yield')
       .eq('organization_id', organizationId);
 
     if (yieldError) {
@@ -246,8 +249,8 @@ export class CropCyclesService {
       throw yieldError;
     }
 
-    const expectedTotalYield = yields.reduce((sum, cycle) => sum + ((cycle.expected_yield_kg_per_hectare || 0) * (cycle.area_hectares || 0)), 0);
-    const actualTotalYield = yields.reduce((sum, cycle) => sum + ((cycle.actual_yield_kg_per_hectare || 0) * (cycle.area_hectares || 0)), 0);
+    const expectedTotalYield = yields.reduce((sum, cycle) => sum + (cycle.expected_total_yield || 0), 0);
+    const actualTotalYield = yields.reduce((sum, cycle) => sum + (cycle.actual_total_yield || 0), 0);
 
     return {
       total: byStatus.length,

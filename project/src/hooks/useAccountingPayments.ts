@@ -158,7 +158,6 @@ export function useCreatePayment() {
         if (ledgerResult.success && ledgerResult.journalEntryId) {
           // Link the journal entry to the payment
           await linkJournalEntry('accounting_payments', data.id, ledgerResult.journalEntryId);
-          console.log(`✓ Payment ${data.payment_number} synced to ledger: Journal Entry ${ledgerResult.journalEntryId}`);
         } else {
           console.warn(`⚠ Payment ${data.payment_number} created but ledger sync failed: ${ledgerResult.error}`);
         }

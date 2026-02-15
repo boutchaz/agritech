@@ -313,8 +313,6 @@ class SatelliteAPIClient {
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}/api${endpoint}`;
 
-    console.log(`[SatelliteAPI] Request: ${options.method || 'GET'} ${url}`);
-
     // Add timeout handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
@@ -352,7 +350,6 @@ class SatelliteAPIClient {
       }
 
       const data = await response.json();
-      console.log(`[SatelliteAPI] Response received:`, endpoint);
       return data;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -380,13 +377,6 @@ class SatelliteAPIClient {
       cloud_buffer_meters: 300,    // Default 300m buffer
       ...request
     };
-
-    console.log('[SatelliteAPI] calculateIndices request:', {
-      dateRange: requestWithDefaults.date_range,
-      indices: requestWithDefaults.indices,
-      cloudCoverage: requestWithDefaults.cloud_coverage,
-      scale: requestWithDefaults.scale
-    });
 
     return this.request('/indices/calculate', {
       method: 'POST',
@@ -683,11 +673,6 @@ export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry 
     });
     throw new Error(`Invalid coordinates: [${firstCoord[0]}, ${firstCoord[1]}]. Longitude must be between -180 and 180, latitude between -90 and 90.`);
   }
-
-  console.log('[convertBoundaryToGeoJSON] Converted boundary:', {
-    points: convertedBoundary.length,
-    sample: [convertedBoundary[0], convertedBoundary[Math.floor(convertedBoundary.length / 2)]]
-  });
 
   return {
     type: 'Polygon',

@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsUrl } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsUrl, IsIn } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateOrganizationDto {
@@ -123,4 +123,14 @@ export class UpdateOrganizationDto {
   @IsString()
   @IsUrl({}, { message: 'Logo URL must be a valid URL' })
   logo_url?: string;
+
+  @ApiPropertyOptional({
+    description: 'Map tile provider',
+    example: 'default',
+    enum: ['default', 'mapbox']
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['default', 'mapbox'])
+  map_provider?: string;
 }

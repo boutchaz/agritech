@@ -78,8 +78,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
           id: invalidOrg.id,
           idType: typeof invalidOrg.id
         });
-      } else {
-        console.log('[MultiTenantAuthProvider] All organizations have valid string IDs');
       }
     }
   }, [organizations]);
@@ -414,8 +412,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       // Use restored org or default to first organization
       const finalOrg = orgToRestore || organizations[0];
-      console.log('[MultiTenantAuthProvider] Setting currentOrganization:', finalOrg);
-      console.log('[MultiTenantAuthProvider] finalOrg.id:', finalOrg.id, 'Type:', typeof finalOrg.id);
       setCurrentOrganization(finalOrg);
 
       // IMPORTANT: Also save to localStorage so services can read it immediately
@@ -467,6 +463,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   }, [user?.id, currentOrganization?.id]);
 
   // Track session start and set user properties when authenticated
+  const { data: subscription } = useSubscription(currentOrganization);
+
   useEffect(() => {
     if (user && profile && currentOrganization && userRole && !loading) {
       // Track session start
@@ -475,10 +473,24 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       // Determine organization size
       const orgSize = getOrganizationSize(organizations.length, farms.length);
 
-      // Determine subscription tier from subscription data
-      // Default to 'free' if no subscription data available
-      const subscriptionTier = 'free'; // TODO: Get from actual subscription data
-      const trialStatus = 'none'; // TODO: Get from actual trial data
+      const planTypeMap: Record<string, AnalyticsUserProperties['subscriptionTier']> = {
+        essential: 'starter',
+        professional: 'professional',
+        enterprise: 'enterprise',
+      };
+      const subscriptionTier: AnalyticsUserProperties['subscriptionTier'] = subscription
+        ? subscription.status === 'trialing'
+          ? 'trial'
+          : planTypeMap[subscription.plan_type ?? ''] ?? 'free'
+        : 'free';
+
+      const trialStatus: AnalyticsUserProperties['trialStatus'] = !subscription
+        ? 'none'
+        : subscription.status === 'trialing'
+          ? 'active'
+          : subscription.status === 'active' && subscription.plan_type
+            ? 'converted'
+            : 'expired';
 
       // Set user properties for analytics segmentation
       const userProps: AnalyticsUserProperties = {
@@ -497,7 +509,7 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       setAnalyticsUserProperties(userProps);
     }
-  }, [user?.id, profile, currentOrganization?.id, userRole, loading, farms, organizations]);
+  }, [user?.id, profile, currentOrganization?.id, userRole, loading, farms, organizations, subscription]);
 
 /**
  * Calculate total hectares from farms
@@ -608,7 +620,6 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
       // Only redirect to onboarding if the session is truly valid
       if (isTokenValid && hasAccessToken) {
-        console.log('[AuthProvider] Redirecting to onboarding - user needs onboarding');
         window.location.href = '/onboarding';
       } else {
         // Session is invalid - clear auth and redirect to login

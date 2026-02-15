@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useBalanceSheet, type BalanceSheetRow } from '@/hooks/useFinancialReports';
+import { exportBalanceSheetCsv } from '@/lib/utils/report-export';
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -34,12 +35,12 @@ const BalanceSheetSection: React.FC<{
       {accounts.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No accounts with balances</div>
       ) : (
-        <table className="w-full">
+        <table className="w-full" aria-label={`${title} Accounts`}>
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
-              <th className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
-              <th className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Balance</th>
+              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
+              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
+              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Balance</th>
             </tr>
           </thead>
           <tbody>
@@ -119,9 +120,14 @@ const AppContent: React.FC = () => {
                   className="max-w-xs"
                 />
               </div>
-              <Button variant="outline" className="gap-2" disabled>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={!report || (report.assets.length === 0 && report.liabilities.length === 0 && report.equity.length === 0)}
+                onClick={() => report && exportBalanceSheetCsv(report.assets, report.liabilities, report.equity, asOfDate, currencySymbol)}
+              >
                 <Download className="h-4 w-4" />
-                {t('reportsModule.balanceSheet.exportPdf', 'Export PDF')}
+                {t('reportsModule.balanceSheet.exportCsv', 'Export CSV')}
               </Button>
             </div>
           </CardContent>

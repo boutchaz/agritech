@@ -14,14 +14,6 @@ const ParcelLayout = () => {
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: farms = [] } = useFarms(currentOrganization?.id);
 
-  console.log('🔍 ParcelLayout RENDERED!', {
-    parcelId,
-    isLoading,
-    hasParcel: !!parcel,
-    parcelName: parcel?.name,
-    currentOrg: currentOrganization?.name
-  });
-
   const tabs = [
     { id: 'overview', name: t('parcels.detail.tabs.overview'), icon: ChartBar, path: `/parcels/${parcelId}` },
     { id: 'analyse', name: t('parcels.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/analyse` },
@@ -60,8 +52,6 @@ const ParcelLayout = () => {
   }
 
   const farm = farms.find(f => f.id === parcel.farm_id);
-
-  console.log('ParcelLayout rendering:', { parcelId, parcel: parcel?.name, tabsCount: tabs.length });
 
   return (
     <>

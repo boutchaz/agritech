@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ApiClient } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCreateListing } from '@/hooks/useListings';
 import { ArrowLeft, Loader2, LogOut } from 'lucide-react';
 import ProductImageUpload from '@/components/ProductImageUpload';
 
 export default function NewListingPage() {
     const router = useRouter();
-    const [loading, setLoading] = useState(false);
+    const { signOut } = useAuth();
     const [error, setError] = useState('');
     const [images, setImages] = useState<string[]>([]);
     const [formData, setFormData] = useState({
@@ -21,6 +22,8 @@ export default function NewListingPage() {
         quantity_available: '',
         sku: '',
     });
+
+    const createListing = useCreateListing();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,10 +44,8 @@ export default function NewListingPage() {
             return;
         }
 
-        setLoading(true);
-
         try {
-            await ApiClient.createListing({
+            await createListing.mutateAsync({
                 title: formData.title,
                 description: formData.description,
                 short_description: formData.short_description || formData.description.substring(0, 150),
@@ -58,13 +59,11 @@ export default function NewListingPage() {
             router.push('/dashboard/listings?created=true');
         } catch (err: any) {
             setError(err.message || 'Échec de la création de l\'annonce');
-        } finally {
-            setLoading(false);
         }
     };
 
     const handleLogout = async () => {
-        await ApiClient.logout();
+        await signOut();
         router.push('/');
     };
 
@@ -254,10 +253,10 @@ export default function NewListingPage() {
                         <div className="flex items-center gap-4">
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={createListing.isPending}
                                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                             >
-                                {loading ? (
+                                {createListing.isPending ? (
                                     <>
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                         Création en cours...

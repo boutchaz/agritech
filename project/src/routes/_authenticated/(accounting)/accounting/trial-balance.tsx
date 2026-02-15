@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useTrialBalance } from '@/hooks/useFinancialReports';
+import { exportTrialBalanceCsv } from '@/lib/utils/report-export';
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -85,9 +86,14 @@ const AppContent: React.FC = () => {
                     className="max-w-xs"
                   />
                 </div>
-                <Button variant="outline" className="gap-2" disabled>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled={!report || report.accounts.length === 0}
+                  onClick={() => report && exportTrialBalanceCsv(report.accounts, asOfDate, currencySymbol)}
+                >
                   <Download className="h-4 w-4" />
-                  {t('reportsModule.trialBalance.exportPdf', 'Export PDF')}
+                  {t('reportsModule.trialBalance.exportCsv', 'Export CSV')}
                 </Button>
               </div>
             </CardContent>
@@ -187,14 +193,17 @@ const AppContent: React.FC = () => {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full">
+                      <table
+                        className="w-full"
+                        aria-label={t('reportsModule.trialBalance.title', 'Trial Balance Accounts')}
+                      >
                         <thead className="bg-gray-50 dark:bg-gray-800">
                           <tr>
-                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.code', 'Code')}</th>
-                            <th className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.accountName', 'Account Name')}</th>
-                            <th className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.type', 'Type')}</th>
-                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.debit', 'Debit')}</th>
-                            <th className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.credit', 'Credit')}</th>
+                            <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.code', 'Code')}</th>
+                            <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.accountName', 'Account Name')}</th>
+                            <th scope="col" className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.type', 'Type')}</th>
+                            <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.debit', 'Debit')}</th>
+                            <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.credit', 'Credit')}</th>
                           </tr>
                         </thead>
                         <tbody>

@@ -36,6 +36,10 @@ export class UpdateStockEntryDto {
   @IsOptional()
   purpose?: string;
 
+  @IsUUID()
+  @IsOptional()
+  crop_cycle_id?: string;
+
   @IsString()
   @IsOptional()
   notes?: string;

@@ -88,6 +88,24 @@ export class QuoteRequestsApi {
   }
 
   /**
+   * Accept a quoted request
+   */
+  static async accept(id: string): Promise<QuoteRequest> {
+    return ApiClient['request']<QuoteRequest>(`/marketplace/quote-requests/${id}/accept`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Decline a quoted request
+   */
+  static async decline(id: string): Promise<QuoteRequest> {
+    return ApiClient['request']<QuoteRequest>(`/marketplace/quote-requests/${id}/decline`, {
+      method: 'POST',
+    });
+  }
+
+  /**
    * Get seller statistics
    */
   static async getStats(): Promise<{

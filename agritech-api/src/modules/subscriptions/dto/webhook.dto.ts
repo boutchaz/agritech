@@ -65,6 +65,12 @@ export class PolarSubscriptionData {
 
   @ApiProperty({ description: 'Trial end date', required: false })
   trial_end?: string;
+
+  @ApiProperty({ description: 'Plan type sent in checkout metadata', required: false })
+  plan_type?: string;
+
+  @ApiProperty({ description: 'Raw metadata payload from Polar', required: false })
+  metadata?: Record<string, any>;
 }
 
 /**

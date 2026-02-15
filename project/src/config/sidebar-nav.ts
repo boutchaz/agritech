@@ -121,7 +121,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     id: 'accounting',
     label: 'nav.accounting',
     icon: BookOpen,
-    paths: ['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities'],
+    paths: ['/accounting', '/accounting/accounts', '/accounting/invoices', '/accounting/payments', '/accounting/journal', '/utilities', '/accounting/reports'],
     permission: { action: 'read', subject: 'Invoice' },
     items: [
       { id: 'accounting-overview', path: '/accounting', label: 'nav.overview', icon: BookOpen, section: 'accounting', apiPath: '/invoices' },
@@ -130,6 +130,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
       { id: 'payments', path: '/accounting/payments', label: 'nav.payments', icon: BookOpen, section: 'accounting', apiPath: '/payments' },
       { id: 'journal', path: '/accounting/journal', label: 'nav.journal', icon: BookOpen, section: 'accounting', apiPath: '/journal-entries' },
       { id: 'expenses', path: '/utilities', label: 'nav.expenses', icon: BookOpen, section: 'accounting', permission: { action: 'read', subject: 'Utility' }, apiPath: '/utilities' },
+      { id: 'reports', path: '/accounting/reports', label: 'nav.reports', icon: BarChart3, section: 'accounting', permission: { action: 'read', subject: 'Report' }, apiPath: '/financial-reports' },
     ],
   },
   // ========== CONFIGURATION SECTION ==========

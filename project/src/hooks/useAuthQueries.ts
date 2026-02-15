@@ -88,7 +88,6 @@ export const useUserOrganizations = (userId: string | undefined) => {
       try {
         // Use NestJS API instead of direct Supabase call
         const data = await usersApi.getMyOrganizations();
-        console.log('🔍 User organizations from API:', { data });
         return data || [];
       } catch (error) {
         // Check for session expired error (401)

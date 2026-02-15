@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -13,10 +13,10 @@ import {
     XCircle,
     AlertCircle,
     ChevronRight,
-    Leaf,
     ArrowLeft
 } from 'lucide-react';
-import { ApiClient, Order } from '@/lib/api';
+import { Order } from '@/lib/api';
+import { useOrders, useCancelOrder } from '@/hooks/useOrders';
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
@@ -29,42 +29,10 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 
 export default function OrdersPage() {
     const router = useRouter();
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'all' | 'buyer' | 'seller'>('buyer');
 
-    useEffect(() => {
-        // Check if user is logged in
-        if (typeof window !== 'undefined' && !localStorage.getItem('auth_token')) {
-            router.push('/login?redirect=/orders');
-            return;
-        }
-
-        fetchOrders();
-    }, [activeTab, router]);
-
-    const fetchOrders = async () => {
-        try {
-            setLoading(true);
-            const role = activeTab === 'all' ? undefined : activeTab;
-            const data = await ApiClient.getOrders();
-
-            // Filter based on tab
-            let filtered = data;
-            if (activeTab === 'buyer') {
-                // This should be filtered server-side, but we'll handle it here too
-                filtered = data;
-            } else if (activeTab === 'seller') {
-                filtered = data;
-            }
-
-            setOrders(filtered);
-        } catch (error) {
-            console.error('Failed to fetch orders:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: orders = [], isLoading: loading } = useOrders();
+    const cancelOrder = useCancelOrder();
 
     const formatPrice = (price: number) => {
         return new Intl.NumberFormat('fr-MA', {
@@ -85,8 +53,7 @@ export default function OrdersPage() {
         if (!confirm('Voulez-vous vraiment annuler cette commande?')) return;
 
         try {
-            await ApiClient.cancelOrder(orderId);
-            fetchOrders();
+            await cancelOrder.mutateAsync(orderId);
         } catch (error) {
             console.error('Failed to cancel order:', error);
             alert('Echec de l\'annulation de la commande');
@@ -95,30 +62,7 @@ export default function OrdersPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <nav className="bg-white border-b sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Link href="/" className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                                    <Leaf className="w-5 h-5 text-white" />
-                                </div>
-                                <span className="text-xl font-bold text-gray-900">AgriTech</span>
-                            </Link>
-                        </div>
-                        <Link
-                            href="/products"
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-                        >
-                            <ShoppingBag className="h-4 w-4" />
-                            Produits
-                        </Link>
-                    </div>
-                </div>
-            </nav>
-
-            <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto px-4 pt-24 py-8">
                 <div className="flex items-center gap-4 mb-8">
                     <Link
                         href="/products"

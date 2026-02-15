@@ -1,0 +1,30 @@
+{
+  "nav": {
+    "products": "Produits",
+    "categories": "Catégories",
+    "partners": "Partenaires",
+    "login": "Connexion",
+    "getStarted": "Commencer",
+    "cart": "Panier",
+    "myQuotes": "Mes devis",
+    "myOrders": "Mes commandes",
+    "dashboard": "Tableau de bord"
+  },
+  "footer": {
+    "tagline": "La plateforme complète pour moderniser votre agriculture.",
+    "product": "Produit",
+    "allProducts": "Tous les produits",
+    "categories": "Catégories",
+    "partners": "Partenaires",
+    "becomeSeller": "Devenir vendeur",
+    "support": "Support",
+    "documentation": "Documentation",
+    "contact": "Contact",
+    "faq": "FAQ",
+    "legal": "Légal",
+    "privacy": "Confidentialité",
+    "terms": "CGU",
+    "legalNotice": "Mentions légales",
+    "copyright": "© 2025 AgriTech. Tous droits réservés."
+  }
+}

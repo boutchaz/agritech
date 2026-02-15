@@ -24,6 +24,7 @@ import {
 import { Response } from 'express';
 import { ComplianceService } from './compliance.service';
 import { ComplianceReportsService } from './compliance-reports.service';
+import { CorrectiveActionsService } from './corrective-actions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
@@ -43,6 +44,7 @@ export class ComplianceController {
   constructor(
     private complianceService: ComplianceService,
     private complianceReportsService: ComplianceReportsService,
+    private correctiveActionsService: CorrectiveActionsService,
   ) {}
 
   // ============================================================================
@@ -447,5 +449,148 @@ export class ComplianceController {
     });
 
     res.send(pdfBuffer);
+  }
+
+  // ============================================================================
+  // CORRECTIVE ACTIONS ENDPOINTS
+  // ============================================================================
+
+  @Get('corrective-actions/stats')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Get corrective action statistics',
+    description: 'Get statistics about corrective actions for the organization',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Corrective action statistics retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getCorrectiveActionStats(@Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.getStats(organizationId);
+  }
+
+  @Get('corrective-actions')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Get all corrective actions',
+    description: 'Get all corrective actions for the organization',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Corrective actions retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getAllCorrectiveActions(@Request() req, @Query() filters: any) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.findAll(organizationId, filters);
+  }
+
+  @Get('corrective-actions/:id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Get single corrective action',
+    description: 'Get detailed information about a specific corrective action',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Corrective Action ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Corrective action retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Corrective action not found' })
+  async getCorrectiveAction(@Request() req, @Param('id') actionId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.findOne(organizationId, actionId);
+  }
+
+  @Post('corrective-actions')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'Farm'))
+  @ApiOperation({
+    summary: 'Create new corrective action',
+    description: 'Create a new corrective action for a compliance finding',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Corrective action created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async createCorrectiveAction(
+    @Request() req,
+    @Body() dto: any,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.create(organizationId, req.user.id, dto);
+  }
+
+  @Patch('corrective-actions/:id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'Farm'))
+  @ApiOperation({
+    summary: 'Update corrective action',
+    description: 'Update corrective action information',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Corrective Action ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Corrective action updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Corrective action not found' })
+  async updateCorrectiveAction(
+    @Request() req,
+    @Param('id') actionId: string,
+    @Body() dto: any,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.update(organizationId, actionId, req.user.id, dto);
+  }
+
+  @Delete('corrective-actions/:id')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Delete, 'Farm'))
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete corrective action',
+    description: 'Delete a corrective action',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Corrective Action ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Corrective action deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Corrective action not found' })
+  async deleteCorrectiveAction(
+    @Request() req,
+    @Param('id') actionId: string,
+  ): Promise<void> {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.correctiveActionsService.remove(organizationId, actionId);
   }
 }

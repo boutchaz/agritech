@@ -72,6 +72,9 @@ import { FiscalYearsModule } from './modules/fiscal-years/fiscal-years.module';
 import { BiologicalAssetsModule } from './modules/biological-assets/biological-assets.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { CropCyclesModule } from './modules/crop-cycles/crop-cycles.module';
+import { CropCycleStagesModule } from './modules/crop-cycle-stages/crop-cycle-stages.module';
+import { HarvestEventsModule } from './modules/harvest-events/harvest-events.module';
+import { CropTemplatesModule } from './modules/crop-templates/crop-templates.module';
 import { CropsModule } from './modules/crops/crops.module';
 import { QualityControlModule } from './modules/quality-control/quality-control.module';
 import { AdoptionModule } from './modules/adoption/adoption.module';
@@ -161,6 +164,9 @@ import { EntitiesModule } from './modules/entities/entities.module';
     BiologicalAssetsModule,
     CampaignsModule,
     CropCyclesModule,
+    CropCycleStagesModule,
+    HarvestEventsModule,
+    CropTemplatesModule,
     CropsModule,
     QualityControlModule,
 

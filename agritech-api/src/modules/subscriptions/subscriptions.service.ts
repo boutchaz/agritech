@@ -617,12 +617,17 @@ export class SubscriptionsService {
       const organizationId =
         attributes.metadata?.organization_id || attributes.organization_id;
 
+      // Plan type and product id reconciliation
+      const metadataPlanType = attributes.metadata?.plan_type as string | undefined;
+      const productId = attributes.product_id || attributes.product?.id;
+      const priceId = attributes.price_id || attributes.price?.id;
+
       return {
         id: attributes.id || webhookDto.data?.data?.id,
         organization_id: organizationId,
         status: attributes.status,
-        product_id: attributes.product_id || attributes.product?.id,
-        price_id: attributes.price_id || attributes.price?.id,
+        product_id: productId,
+        price_id: priceId,
         current_period_start: attributes.current_period_start,
         current_period_end: attributes.current_period_end,
         cancel_at_period_end: attributes.cancel_at_period_end ?? false,
@@ -634,6 +639,8 @@ export class SubscriptionsService {
         currency: attributes.currency,
         recurring: attributes.recurring,
         trial_end: attributes.trial_end,
+        plan_type: metadataPlanType,
+        metadata: attributes.metadata,
       };
     } catch (error) {
       this.logger.error('Error extracting subscription data from webhook', error);
@@ -667,6 +674,8 @@ export class SubscriptionsService {
         currency: subscriptionData.currency,
         recurring: subscriptionData.recurring,
         trial_end: subscriptionData.trial_end,
+        plan_type: subscriptionData.plan_type,
+        raw: subscriptionData.metadata,
       },
     };
 
@@ -714,8 +723,11 @@ export class SubscriptionsService {
           updated_at: new Date().toISOString(),
         };
 
-        // Map Polar product to plan type
-        const planType = this.mapPolarProductToPlan(subscriptionData.product_id);
+        // Map Polar product to plan type, prefer explicit metadata
+        const planType = this.mapPolarProductToPlan(
+          subscriptionData.product_id,
+          subscriptionData.plan_type,
+        );
         if (planType) {
           subscriptionUpdateData.plan_type = planType;
           // Add plan limits based on the mapped plan type
@@ -746,7 +758,10 @@ export class SubscriptionsService {
 
         // Update plan if changed
         if (subscriptionData.product_id) {
-          const mappedPlanType = this.mapPolarProductToPlan(subscriptionData.product_id);
+          const mappedPlanType = this.mapPolarProductToPlan(
+            subscriptionData.product_id,
+            subscriptionData.plan_type,
+          );
           if (mappedPlanType) {
             subscriptionUpdateData.plan_type = mappedPlanType;
             subscriptionUpdateData.plan_id = subscriptionData.product_id;
@@ -851,20 +866,32 @@ export class SubscriptionsService {
    * Map Polar product ID to plan type
    * Maps 'starter' to 'essential' to match frontend plan types
    */
-  private mapPolarProductToPlan(productId: string): string | null {
-    // Extract plan type from product ID or use a mapping
-    // Product IDs from Polar are like: "starter", "professional", "enterprise"
-    const lowerProductId = productId?.toLowerCase() || '';
-
-    if (lowerProductId.includes('starter')) {
-      return 'essential'; // Map starter to essential for frontend compatibility
-    } else if (lowerProductId.includes('professional') || lowerProductId.includes('pro')) {
-      return 'professional';
-    } else if (lowerProductId.includes('enterprise')) {
-      return 'enterprise';
+  private mapPolarProductToPlan(productId: string, planTypeFromMetadata?: string | null): string | null {
+    // Prefer explicit plan type from checkout metadata to avoid guessing by GUID substring
+    if (planTypeFromMetadata) {
+      const normalized = planTypeFromMetadata.toLowerCase();
+      if (normalized === 'starter') return 'essential';
+      if (['essential', 'professional', 'enterprise'].includes(normalized)) {
+        return normalized;
+      }
     }
 
-    // Default to professional if unknown
+    // Fallback to configured product IDs from env
+    const essentialId = this.configService.get<string>('POLAR_ESSENTIAL_PRODUCT_ID');
+    const professionalId = this.configService.get<string>('POLAR_PROFESSIONAL_PRODUCT_ID');
+    const enterpriseId = this.configService.get<string>('POLAR_ENTERPRISE_PRODUCT_ID');
+
+    if (productId && essentialId && productId === essentialId) return 'essential';
+    if (productId && professionalId && productId === professionalId) return 'professional';
+    if (productId && enterpriseId && productId === enterpriseId) return 'enterprise';
+
+    // Last resort: heuristic substring match for legacy data
+    const lowerProductId = productId?.toLowerCase() || '';
+    if (lowerProductId.includes('starter')) return 'essential';
+    if (lowerProductId.includes('professional') || lowerProductId.includes('pro')) return 'professional';
+    if (lowerProductId.includes('enterprise')) return 'enterprise';
+
+    // Default to professional if still unknown
     return 'professional';
   }
 

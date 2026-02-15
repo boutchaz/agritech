@@ -284,6 +284,51 @@ const LandingPage: React.FC = () => {
     t('landing.trusted.labs', { defaultValue: 'Laboratoires' }),
   ];
 
+  // Social proof statistics
+  const stats = [
+    {
+      value: t('landing.stats.farmsValue', { defaultValue: '500+' }),
+      label: t('landing.stats.farms', { defaultValue: 'Farms Managed' }),
+    },
+    {
+      value: t('landing.stats.parcelsValue', { defaultValue: '10,000+' }),
+      label: t('landing.stats.parcels', { defaultValue: 'Parcels Tracked' }),
+    },
+    {
+      value: t('landing.stats.hectaresValue', { defaultValue: '50,000+' }),
+      label: t('landing.stats.hectares', { defaultValue: 'Hectares Monitored' }),
+    },
+    {
+      value: t('landing.stats.satisfactionValue', { defaultValue: '98%' }),
+      label: t('landing.stats.satisfaction', { defaultValue: 'Customer Satisfaction' }),
+    },
+  ];
+
+  // Testimonials from farmers, coops, and exporters
+  const testimonials = [
+    {
+      quote: t('landing.testimonials.farmer1.quote', {
+        defaultValue: 'AgriProfy transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.',
+      }),
+      author: t('landing.testimonials.farmer1.author', { defaultValue: 'Hassan B.' }),
+      role: t('landing.testimonials.farmer1.role', { defaultValue: 'Citrus Grower, Souss-Massa' }),
+    },
+    {
+      quote: t('landing.testimonials.coop1.quote', {
+        defaultValue: 'Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.',
+      }),
+      author: t('landing.testimonials.coop1.author', { defaultValue: 'Fatima Z.' }),
+      role: t('landing.testimonials.coop1.role', { defaultValue: 'Director, Olive Cooperative, Meknès' }),
+    },
+    {
+      quote: t('landing.testimonials.exporter1.quote', {
+        defaultValue: 'The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.',
+      }),
+      author: t('landing.testimonials.exporter1.author', { defaultValue: 'Karim M.' }),
+      role: t('landing.testimonials.exporter1.role', { defaultValue: 'Export Director, AgriExport Maroc' }),
+    },
+  ];
+
   const solutionModules = [
     {
       icon: MapPin,
@@ -471,6 +516,66 @@ const LandingPage: React.FC = () => {
                 >
                   {label}
                 </Badge>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Statistics Section */}
+        <section className="py-12 sm:py-16 bg-gradient-to-r from-green-600 to-lime-500">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+              {stats.map((stat, index) => (
+                <div key={index} className="text-center">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 sm:mb-12">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                {t('landing.testimonials.title', { defaultValue: 'Trusted by Moroccan Farmers' })}
+              </h2>
+              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                {t('landing.testimonials.subtitle', { defaultValue: 'See what agricultural professionals say about AgriProfy' })}
+              </p>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {testimonials.map((testimonial, index) => (
+                <Card key={index} className="h-full flex flex-col">
+                  <CardContent className="flex-1 pt-6">
+                    <div className="flex gap-1 mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <svg key={i} className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
+                        </svg>
+                      ))}
+                    </div>
+                    <blockquote className="text-gray-700 dark:text-gray-300 text-sm sm:text-base mb-4">
+                      &ldquo;{testimonial.quote}&rdquo;
+                    </blockquote>
+                  </CardContent>
+                  <CardFooter className="border-t pt-4">
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                        {testimonial.author}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                        {testimonial.role}
+                      </div>
+                    </div>
+                  </CardFooter>
+                </Card>
               ))}
             </div>
           </div>

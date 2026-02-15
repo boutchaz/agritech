@@ -8,6 +8,7 @@ import {
   NotificationFiltersDto,
   NotificationType,
 } from './dto/notification.dto';
+import { marketplaceEmailTemplates } from './templates/marketplace-templates';
 
 export interface EmailOptions {
   to: string;
@@ -1920,5 +1921,24 @@ export class NotificationsService {
     text += `Envoyé via AgriProfy\n`;
 
     return text;
+  }
+
+  async sendMarketplaceEmail(
+    type: keyof typeof marketplaceEmailTemplates,
+    to: string,
+    data: Parameters<(typeof marketplaceEmailTemplates)[typeof type]>[0],
+  ): Promise<boolean> {
+    const templateFn = marketplaceEmailTemplates[type] as (data: any) => {
+      subject: string;
+      html: string;
+      text: string;
+    };
+    const template = templateFn(data);
+    return this.sendEmail({
+      to,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
   }
 }

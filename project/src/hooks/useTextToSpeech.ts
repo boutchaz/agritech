@@ -42,10 +42,7 @@ export function useTextToSpeech(
 
       // Wait for voices to load
       const loadVoices = () => {
-        const voices = synthRef.current?.getVoices() || [];
-        if (voices.length > 0) {
-          console.log(`Loaded ${voices.length} voices`);
-        }
+        synthRef.current?.getVoices();   
       };
 
       // Voices may load asynchronously

@@ -7,13 +7,6 @@ import { useAuthStore } from '../stores/authStore';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || API_URL.replace(/\/api\/v\d+\/?$/, '');
 
-// Log on module load
-if (typeof window !== 'undefined') {
-  console.log('[Socket] Module loaded');
-  console.log('[Socket] API_URL:', API_URL);
-  console.log('[Socket] SOCKET_URL:', SOCKET_URL);
-}
-
 export interface NotificationData {
   id: string;
   user_id: string;
@@ -44,7 +37,6 @@ class SocketManager {
     // Disconnect existing connection if any
     if (this.socket?.connected) {
       if (this.organizationId === organizationId) {
-        console.log('[Socket] Already connected to same organization');
         return;
       }
       this.disconnect();
@@ -64,9 +56,6 @@ class SocketManager {
       }
 
       const socketUrl = `${SOCKET_URL}/notifications`;
-      console.log('[Socket] Connecting to:', socketUrl);
-      console.log('[Socket] With token:', accessToken.substring(0, 20) + '...');
-      console.log('[Socket] Organization:', organizationId);
 
       this.socket = io(socketUrl, {
         query: {
@@ -94,17 +83,14 @@ class SocketManager {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('[Socket] Connected:', this.socket?.id);
       this.reconnectAttempts = 0;
       this.setStatus('connected');
     });
 
-    this.socket.on('connected', (data) => {
-      console.log('[Socket] Server confirmed connection:', data);
+    this.socket.on('connected', (_data) => {
     });
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('[Socket] Disconnected:', reason);
+    this.socket.on('disconnect', () => {
       this.setStatus('disconnected');
     });
 
@@ -119,24 +105,20 @@ class SocketManager {
 
     // Handle notification events
     this.socket.on('notification:new', (notification: NotificationData) => {
-      console.log('[Socket] New notification:', notification.title);
       this.emit('notification:new', notification);
     });
 
     this.socket.on('notification:read', (data: { notificationId: string; readAt: string }) => {
-      console.log('[Socket] Notification read:', data.notificationId);
       this.emit('notification:read', data);
     });
 
     this.socket.on('notification:read-all', (data: { count: number; readAt: string }) => {
-      console.log('[Socket] All notifications read:', data.count);
       this.emit('notification:read-all', data);
     });
   }
 
   disconnect(): void {
     if (this.socket) {
-      console.log('[Socket] Disconnecting...');
       this.socket.disconnect();
       this.socket = null;
     }

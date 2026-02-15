@@ -10,7 +10,7 @@ export class QualityControlService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async findAll(organizationId: string, filters: QualityInspectionFiltersDto = {}) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     let query = client
       .from('quality_inspections')
       .select('*', { count: 'exact' })
@@ -79,7 +79,7 @@ export class QualityControlService {
   }
 
   async findOne(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('quality_inspections')
       .select('*')
@@ -96,7 +96,7 @@ export class QualityControlService {
   }
 
   async create(organizationId: string, userId: string, createDto: CreateQualityInspectionDto) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('quality_inspections')
@@ -118,7 +118,7 @@ export class QualityControlService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: Partial<CreateQualityInspectionDto>) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if quality inspeection exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -147,7 +147,7 @@ export class QualityControlService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if quality inspeection exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -175,7 +175,7 @@ export class QualityControlService {
   }
 
   async updateStatus(id: string, organizationId: string, userId: string, status: InspectionStatus) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Check if quality inspeection exists
     const { data: existing } = await this.findOne(id, organizationId);
@@ -204,7 +204,7 @@ export class QualityControlService {
   }
 
   async getStatistics(organizationId: string) {
-    const client = this.databaseService.getClient();
+    const client = this.databaseService.getAdminClient();
 
     // Get total count by type
     const { data: byType, error: typeError } = await client

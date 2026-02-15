@@ -9,6 +9,13 @@ import { useAuthStore, waitForHydration } from './stores/authStore'
 import './i18n/config'
 import './index.css'
 
+// Initialize Locator for React DevTools debugging (development only)
+if (import.meta.env.DEV) {
+  import('@locator/runtime').then((setupLocator) => {
+    setupLocator.default();
+  });
+}
+
 // Create a client with sensible defaults
 const queryClient = new QueryClient({
   defaultOptions: {

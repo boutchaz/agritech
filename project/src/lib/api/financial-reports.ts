@@ -117,6 +117,41 @@ export interface GeneralLedgerReport {
   closing_balance: number;
 }
 
+export interface CashFlowOperating {
+  net_income: number;
+  depreciation: number;
+  changes_in_ar: number;
+  changes_in_ap: number;
+  changes_in_inventory: number;
+  other_adjustments: number;
+  total: number;
+}
+
+export interface CashFlowInvesting {
+  fixed_asset_purchases: number;
+  fixed_asset_sales: number;
+  total: number;
+}
+
+export interface CashFlowFinancing {
+  debt_proceeds: number;
+  debt_repayments: number;
+  equity_changes: number;
+  dividends: number;
+  total: number;
+}
+
+export interface CashFlowReport {
+  start_date: string;
+  end_date: string;
+  operating: CashFlowOperating;
+  investing: CashFlowInvesting;
+  financing: CashFlowFinancing;
+  net_change: number;
+  opening_cash: number;
+  closing_cash: number;
+}
+
 // API Client
 export interface AgedInvoice {
   invoice_id: string;
@@ -259,6 +294,19 @@ export const financialReportsApi = {
     const query = params.toString();
     return apiClient.get<AgedReport>(
       `/api/v1/financial-reports/aged-payables${query ? `?${query}` : ''}`,
+      {},
+      organizationId
+    );
+  },
+
+  /**
+   * Get cash flow statement
+   */
+  async getCashFlow(startDate: string, endDate?: string, organizationId?: string): Promise<CashFlowReport> {
+    const params = new URLSearchParams({ start_date: startDate });
+    if (endDate) params.append('end_date', endDate);
+    return apiClient.get<CashFlowReport>(
+      `/api/v1/financial-reports/cash-flow?${params.toString()}`,
       {},
       organizationId
     );

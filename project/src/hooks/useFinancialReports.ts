@@ -14,6 +14,10 @@ export type {
   BalanceSheetRow,
   ProfitLossRow,
   GeneralLedgerRow,
+  CashFlowReport,
+  CashFlowOperating,
+  CashFlowInvesting,
+  CashFlowFinancing,
 } from '../lib/api/financial-reports';
 
 /**
@@ -134,5 +138,26 @@ export function useAccountBalance(accountId: string | undefined, asOfDate?: stri
       return financialReportsApi.getAccountBalance(accountId, asOfDate, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id && !!accountId,
+  });
+}
+
+/**
+ * Hook to fetch cash flow statement
+ */
+export function useCashFlow(startDate: string | undefined, endDate?: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['financial-reports', 'cash-flow', currentOrganization?.id, startDate, endDate],
+    queryFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      if (!startDate) {
+        throw new Error('Start date is required');
+      }
+      return financialReportsApi.getCashFlow(startDate, endDate, currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id && !!startDate,
   });
 }

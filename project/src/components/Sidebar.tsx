@@ -315,7 +315,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className={cn(
-            "lg:hidden fixed top-4 z-50 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg",
+            "lg:hidden fixed top-4 z-50 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg",
+            "min-h-11 min-w-11", // 44px minimum touch target
             isRTL ? "right-4" : "left-4"
           )}
           aria-label="Toggle menu"
@@ -373,10 +374,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden h-8 w-8"
+                className="lg:hidden h-11 w-11"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
           </div>
@@ -711,6 +712,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <ProtectedNavItem action="read" subject="Certification">
                       <PopoverNavItem path="/compliance/certifications" label={t('nav.certifications')} isActive={currentPath === '/compliance/certifications'} />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Certification">
+                      <PopoverNavItem path="/compliance/corrective-actions" label={t('nav.correctiveActions', 'Actions correctives')} isActive={currentPath === '/compliance/corrective-actions'} />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -744,6 +748,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                           onClick={(e) => handleNavigation('/compliance/certifications', e)}
                         >
                           {renderText(t('nav.certifications'))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Certification">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(currentPath === '/compliance/corrective-actions')}
+                          onClick={(e) => handleNavigation('/compliance/corrective-actions', e)}
+                        >
+                          {renderText(t('nav.correctiveActions', 'Actions correctives'))}
                         </Button>
                       </ProtectedNavItem>
                     </>

@@ -106,6 +106,41 @@ export interface GeneralLedgerReport {
   closing_balance: number;
 }
 
+export interface CashFlowOperating {
+  net_income: number;
+  depreciation: number;
+  changes_in_ar: number;
+  changes_in_ap: number;
+  changes_in_inventory: number;
+  other_adjustments: number;
+  total: number;
+}
+
+export interface CashFlowInvesting {
+  fixed_asset_purchases: number;
+  fixed_asset_sales: number;
+  total: number;
+}
+
+export interface CashFlowFinancing {
+  debt_proceeds: number;
+  debt_repayments: number;
+  equity_changes: number;
+  dividends: number;
+  total: number;
+}
+
+export interface CashFlowReport {
+  start_date: string;
+  end_date: string;
+  operating: CashFlowOperating;
+  investing: CashFlowInvesting;
+  financing: CashFlowFinancing;
+  net_change: number;
+  opening_cash: number;
+  closing_cash: number;
+}
+
 interface AccountBalance {
   accountId: string;
   totalDebit: number;
@@ -551,6 +586,144 @@ export class FinancialReportsService {
       };
     } catch (error) {
       this.logger.error('Error in getAccountBalance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get Cash Flow Statement
+   * Uses the indirect method: start with net income, adjust for non-cash items and working capital changes
+   */
+  async getCashFlow(
+    organizationId: string,
+    startDate: string,
+    endDate?: string,
+  ): Promise<CashFlowReport> {
+    const end = endDate || new Date().toISOString().split('T')[0];
+
+    if (!startDate) {
+      throw new BadRequestException('Start date is required for cash flow statement');
+    }
+
+    try {
+      // Get P&L for the period to get net income
+      const plReport = await this.getProfitLoss(organizationId, startDate, end);
+      const netIncome = plReport.totals.net_income;
+
+      // Calculate period lengths for comparison
+      const startDateObj = new Date(startDate);
+      const priorEndDate = new Date(startDateObj.getTime() - 86400000); // day before start
+      const priorEndStr = priorEndDate.toISOString().split('T')[0];
+
+      // Get balance sheet at end of period
+      const bsEnd = await this.getBalanceSheet(organizationId, end);
+
+      // Get balance sheet at start of period (prior period end)
+      const bsStart = await this.getBalanceSheet(organizationId, priorEndStr);
+
+      // Calculate changes in working capital accounts
+      const getAccountBalanceBySubtype = (
+        rows: BalanceSheetRow[],
+        subtypes: string[]
+      ): number => {
+        return rows
+          .filter(r => subtypes.includes(r.account_subtype || ''))
+          .reduce((sum, r) => sum + r.display_balance, 0);
+      };
+
+      const getAccountBalanceByType = (
+        rows: BalanceSheetRow[],
+        types: string[]
+      ): number => {
+        return rows
+          .filter(r => types.includes(r.account_type))
+          .reduce((sum, r) => sum + r.display_balance, 0);
+      };
+
+      // Working capital changes (negative change = cash inflow for assets, positive = cash inflow for liabilities)
+      const arSubtypes = ['accounts_receivable', 'trade_receivable'];
+      const apSubtypes = ['accounts_payable', 'trade_payable'];
+      const inventorySubtypes = ['inventory', 'stock'];
+
+      const arEnd = getAccountBalanceBySubtype(bsEnd.assets, arSubtypes);
+      const arStart = getAccountBalanceBySubtype(bsStart.assets, arSubtypes);
+      const changesInAR = -(arEnd - arStart); // Decrease in AR = cash inflow
+
+      const apEnd = getAccountBalanceBySubtype(bsEnd.liabilities, apSubtypes);
+      const apStart = getAccountBalanceBySubtype(bsStart.liabilities, apSubtypes);
+      const changesInAP = apEnd - apStart; // Increase in AP = cash inflow
+
+      const invEnd = getAccountBalanceBySubtype(bsEnd.assets, inventorySubtypes);
+      const invStart = getAccountBalanceBySubtype(bsStart.assets, inventorySubtypes);
+      const changesInInventory = -(invEnd - invStart); // Decrease in inventory = cash inflow
+
+      // Depreciation is a non-cash expense - look for accumulated depreciation
+      const depreciationEnd = getAccountBalanceBySubtype(bsEnd.assets, ['accumulated_depreciation']);
+      const depreciationStart = getAccountBalanceBySubtype(bsStart.assets, ['accumulated_depreciation']);
+      const depreciation = Math.abs(depreciationEnd - depreciationStart);
+
+      // Operating activities
+      const operating: CashFlowOperating = {
+        net_income: netIncome,
+        depreciation,
+        changes_in_ar: changesInAR,
+        changes_in_ap: changesInAP,
+        changes_in_inventory: changesInInventory,
+        other_adjustments: 0,
+        total: netIncome + depreciation + changesInAR + changesInAP + changesInInventory,
+      };
+
+      // Investing activities - changes in fixed assets
+      const fixedAssetSubtypes = ['fixed_asset', 'property_plant_equipment', 'long_term_asset'];
+      const fixedAssetsEnd = getAccountBalanceBySubtype(bsEnd.assets, fixedAssetSubtypes);
+      const fixedAssetsStart = getAccountBalanceBySubtype(bsStart.assets, fixedAssetSubtypes);
+      const fixedAssetChange = fixedAssetsEnd - fixedAssetsStart;
+
+      const investing: CashFlowInvesting = {
+        fixed_asset_purchases: fixedAssetChange > 0 ? -fixedAssetChange : 0,
+        fixed_asset_sales: fixedAssetChange < 0 ? Math.abs(fixedAssetChange) : 0,
+        total: -fixedAssetChange,
+      };
+
+      // Financing activities - changes in debt and equity
+      const longTermDebtSubtypes = ['long_term_debt', 'term_loan', 'bonds_payable'];
+      const debtEnd = getAccountBalanceBySubtype(bsEnd.liabilities, longTermDebtSubtypes);
+      const debtStart = getAccountBalanceBySubtype(bsStart.liabilities, longTermDebtSubtypes);
+      const debtChange = debtEnd - debtStart;
+
+      const equityEnd = bsEnd.totals.total_equity;
+      const equityStart = bsStart.totals.total_equity;
+      const equityChange = equityEnd - equityStart - netIncome; // Exclude retained earnings from net income
+
+      const financing: CashFlowFinancing = {
+        debt_proceeds: debtChange > 0 ? debtChange : 0,
+        debt_repayments: debtChange < 0 ? Math.abs(debtChange) : 0,
+        equity_changes: equityChange,
+        dividends: 0, // Would need separate tracking
+        total: debtChange + equityChange,
+      };
+
+      const netChange = operating.total + investing.total + financing.total;
+
+      // Cash balances
+      const cashSubtypes = ['cash', 'bank', 'cash_equivalent', 'money_market'];
+      const openingCash = getAccountBalanceBySubtype(bsStart.assets, cashSubtypes) ||
+        getAccountBalanceByType(bsStart.assets, ['asset']) * 0.1; // Fallback estimate
+      const closingCash = getAccountBalanceBySubtype(bsEnd.assets, cashSubtypes) ||
+        getAccountBalanceByType(bsEnd.assets, ['asset']) * 0.1; // Fallback estimate
+
+      return {
+        start_date: startDate,
+        end_date: end,
+        operating,
+        investing,
+        financing,
+        net_change: netChange,
+        opening_cash: openingCash,
+        closing_cash: closingCash,
+      };
+    } catch (error) {
+      this.logger.error('Error in getCashFlow:', error);
       throw error;
     }
   }

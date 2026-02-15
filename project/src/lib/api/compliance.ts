@@ -49,6 +49,21 @@ export enum EvidenceType {
   OTHER = 'other',
 }
 
+export enum CorrectiveActionStatus {
+  OPEN = 'open',
+  IN_PROGRESS = 'in_progress',
+  RESOLVED = 'resolved',
+  VERIFIED = 'verified',
+  OVERDUE = 'overdue',
+}
+
+export enum CorrectiveActionPriority {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
+}
+
 // =====================================================
 // TYPES - DTOs
 // =====================================================
@@ -119,6 +134,78 @@ export interface CorrectiveActionDto {
   due_date: string;
   responsible_person: string;
   status: string;
+}
+
+export interface CorrectiveActionEvidenceDto {
+  id: string;
+  file_url: string;
+  file_name: string;
+  uploaded_at: string;
+  uploaded_by: string;
+  description?: string;
+}
+
+export interface CreateCorrectiveActionPlanDto {
+  compliance_check_id: string;
+  certification_id: string;
+  finding_description: string;
+  requirement_code?: string;
+  priority: CorrectiveActionPriority;
+  action_description: string;
+  responsible_person: string;
+  due_date: string;
+  notes?: string;
+}
+
+export interface UpdateCorrectiveActionPlanDto {
+  finding_description?: string;
+  requirement_code?: string;
+  priority?: CorrectiveActionPriority;
+  action_description?: string;
+  responsible_person?: string;
+  due_date?: string;
+  status?: CorrectiveActionStatus;
+  resolution_notes?: string;
+  resolved_at?: string;
+  verified_by?: string;
+  verified_at?: string;
+  notes?: string;
+}
+
+export interface CorrectiveActionPlanResponseDto {
+  id: string;
+  organization_id: string;
+  compliance_check_id: string;
+  certification_id: string;
+  finding_description: string;
+  requirement_code?: string;
+  priority: CorrectiveActionPriority;
+  action_description: string;
+  responsible_person: string;
+  due_date: string;
+  status: CorrectiveActionStatus;
+  resolution_notes?: string;
+  resolved_at?: string;
+  verified_by?: string;
+  verified_at?: string;
+  notes?: string;
+  evidence?: CorrectiveActionEvidenceDto[];
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  certification?: CertificationResponseDto;
+  compliance_check?: ComplianceCheckResponseDto;
+}
+
+export interface CorrectiveActionStats {
+  total: number;
+  open: number;
+  in_progress: number;
+  resolved: number;
+  verified: number;
+  overdue: number;
+  resolution_rate: number;
+  average_resolution_days: number;
 }
 
 export interface CreateComplianceCheckDto {
@@ -205,6 +292,7 @@ export interface ComplianceDashboardStats {
     non_compliant_count: number;
     average_score: number;
   };
+  corrective_actions?: CorrectiveActionStats;
 }
 
 // =====================================================
@@ -376,12 +464,78 @@ export const complianceApi = {
     );
   },
 
-  /**
-   * Get compliance dashboard statistics
-   */
   async getDashboardStats(organizationId: string): Promise<ComplianceDashboardStats> {
     return apiClient.get<ComplianceDashboardStats>(
       `${API_BASE}/dashboard`,
+      {},
+      organizationId
+    );
+  },
+
+  async getCorrectiveActions(
+    organizationId: string,
+    filters?: { certification_id?: string; status?: string; priority?: string }
+  ): Promise<CorrectiveActionPlanResponseDto[]> {
+    const params = filters ? (filters as Record<string, string>) : {};
+    return apiClient.get<CorrectiveActionPlanResponseDto[]>(
+      `${API_BASE}/corrective-actions`,
+      params,
+      organizationId
+    );
+  },
+
+  async getCorrectiveAction(
+    organizationId: string,
+    actionId: string
+  ): Promise<CorrectiveActionPlanResponseDto> {
+    return apiClient.get<CorrectiveActionPlanResponseDto>(
+      `${API_BASE}/corrective-actions/${actionId}`,
+      {},
+      organizationId
+    );
+  },
+
+  async createCorrectiveAction(
+    organizationId: string,
+    data: CreateCorrectiveActionPlanDto
+  ): Promise<CorrectiveActionPlanResponseDto> {
+    return apiClient.post<CorrectiveActionPlanResponseDto>(
+      `${API_BASE}/corrective-actions`,
+      data,
+      {},
+      organizationId
+    );
+  },
+
+  async updateCorrectiveAction(
+    organizationId: string,
+    actionId: string,
+    data: UpdateCorrectiveActionPlanDto
+  ): Promise<CorrectiveActionPlanResponseDto> {
+    return apiClient.patch<CorrectiveActionPlanResponseDto>(
+      `${API_BASE}/corrective-actions/${actionId}`,
+      data,
+      {},
+      organizationId
+    );
+  },
+
+  async deleteCorrectiveAction(
+    organizationId: string,
+    actionId: string
+  ): Promise<void> {
+    return apiClient.delete<void>(
+      `${API_BASE}/corrective-actions/${actionId}`,
+      {},
+      organizationId
+    );
+  },
+
+  async getCorrectiveActionStats(
+    organizationId: string
+  ): Promise<CorrectiveActionStats> {
+    return apiClient.get<CorrectiveActionStats>(
+      `${API_BASE}/corrective-actions/stats`,
       {},
       organizationId
     );

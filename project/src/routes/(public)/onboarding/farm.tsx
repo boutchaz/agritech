@@ -34,7 +34,6 @@ function FarmStepComponent() {
 
     try {
       const result = await onboardingApi.saveFarm(farmData, existingFarmId || undefined);
-      console.log('[FarmStep] saveFarm result:', result);
 
       // Calculate the farm ID (either new or existing)
       const farmId = result.id || existingFarmId;

@@ -20,7 +20,7 @@ export class AccountMappingsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   private async getOrganizationAccountingContext(organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
     const { data, error } = await supabaseClient
       .from('organizations')
       .select('country_code, accounting_standard')
@@ -45,7 +45,7 @@ export class AccountMappingsService {
    * Get all account mappings for an organization
    */
   async findAll(organizationId: string, filters?: AccountMappingFilters) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       let query = supabaseClient
@@ -93,7 +93,7 @@ export class AccountMappingsService {
    * Get a single account mapping by ID
    */
   async findOne(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -126,7 +126,7 @@ export class AccountMappingsService {
    * Get mapping types and keys for an organization (org + global templates)
    */
   async getMappingOptions(organizationId: string): Promise<AccountMappingOptions> {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
     const { countryCode, accountingStandard } = await this.getOrganizationAccountingContext(organizationId);
 
     try {
@@ -182,7 +182,7 @@ export class AccountMappingsService {
    * Get mapping types summary (for dropdown)
    */
   async getMappingTypes(organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { data, error } = await supabaseClient
@@ -209,7 +209,7 @@ export class AccountMappingsService {
    * Create a new account mapping
    */
   async create(dto: CreateAccountMappingDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       if (!dto.organization_id) {
@@ -291,7 +291,7 @@ export class AccountMappingsService {
    * Update an account mapping
    */
   async update(id: string, organizationId: string, dto: UpdateAccountMappingDto) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if mapping exists
@@ -373,7 +373,7 @@ export class AccountMappingsService {
    * Delete an account mapping
    */
   async delete(id: string, organizationId: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       // Check if mapping exists
@@ -401,7 +401,7 @@ export class AccountMappingsService {
    * Initialize default mappings for an organization based on country code
    */
   async initializeDefaultMappings(organizationId: string, countryCode: string) {
-    const supabaseClient = this.databaseService.getClient();
+    const supabaseClient = this.databaseService.getAdminClient();
 
     try {
       const { countryCode: orgCountry, accountingStandard } = await this.getOrganizationAccountingContext(organizationId);

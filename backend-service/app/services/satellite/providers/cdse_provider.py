@@ -15,7 +15,6 @@ import tempfile
 import os
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import numpy as np
 import rioxarray
@@ -64,42 +63,47 @@ class CDSEProvider(ISatelliteProvider):
         self._connection = None
         self._client_id = None
         self._client_secret = None
-        self._access_token = None
-        self._token_expiry = None
 
     def initialize(self) -> None:
         """
         Initialize the CDSE provider with openEO connection.
 
-        CDSE authentication requires OAuth2/OIDC flow with client credentials.
+        Uses the openEO Python client's built-in OIDC client credentials flow,
+        which handles token management, refresh, and OIDC discovery automatically.
+
+        Sentinel Hub Dashboard OAuth clients (sh-*) are supported by CDSE for
+        openEO access — no separate CDSE Identity client is needed.
         """
         try:
             import openeo
-            import requests
 
-            cdse_url = getattr(settings, 'CDSE_OPENEO_URL', 'https://openeo.dataspace.copernicus.eu')
-            self._client_id = getattr(settings, 'CDSE_CLIENT_ID', '')
-            self._client_secret = getattr(settings, 'CDSE_CLIENT_SECRET', '')
+            cdse_url = getattr(
+                settings, "CDSE_OPENEO_URL", "https://openeo.dataspace.copernicus.eu"
+            )
+            self._client_id = getattr(settings, "CDSE_CLIENT_ID", "")
+            self._client_secret = getattr(settings, "CDSE_CLIENT_SECRET", "")
 
             if not self._client_id or not self._client_secret:
-                raise ValueError("CDSE credentials (CDSE_CLIENT_ID and CDSE_CLIENT_SECRET) are required")
+                raise ValueError(
+                    "CDSE credentials (CDSE_CLIENT_ID and CDSE_CLIENT_SECRET) are required"
+                )
 
             # Connect to CDSE openEO backend
             logger.info(f"Connecting to CDSE at {cdse_url}")
             self._connection = openeo.connect(cdse_url)
 
-            # Get OIDC access token manually
-            self._refresh_token()
-
-            # Set the bearer token on the connection
-            self._connection.session.headers.update({
-                "Authorization": f"Bearer {self._access_token}"
-            })
+            logger.info("Authenticating with CDSE via OIDC client credentials flow")
+            self._connection.authenticate_oidc_client_credentials(
+                client_id=self._client_id,
+                client_secret=self._client_secret,
+            )
 
             # Verify connection works
             try:
-                _ = self._connection.list_collections()
-                logger.info("CDSE connection verified successfully")
+                collections = self._connection.list_collections()
+                logger.info(
+                    f"CDSE connection verified: {len(collections)} collections available"
+                )
             except Exception as test_error:
                 logger.warning(f"Could not fully verify CDSE connection: {test_error}")
 
@@ -115,67 +119,6 @@ class CDSEProvider(ISatelliteProvider):
             logger.error(f"Failed to initialize CDSE Provider: {e}")
             raise
 
-    def _refresh_token(self) -> None:
-        """
-        Refresh the CDSE access token using OAuth2 client credentials.
-        """
-        import requests
-
-        logger.info("Refreshing CDSE access token via OAuth2")
-
-        # CDSE token endpoint
-        token_url = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
-
-        # Request access token with audience for openEO
-        token_response = requests.post(
-            token_url,
-            data={
-                "grant_type": "client_credentials",
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "audience": "openeo",  # Specify audience for openEO API
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=30,
-        )
-
-        token_response.raise_for_status()
-        token_data = token_response.json()
-        access_token = token_data.get("access_token")
-        expires_in = token_data.get("expires_in", 3600)  # Default 1 hour
-
-        if not access_token:
-            raise ValueError("No access token in response from CDSE")
-
-        # Store the access token and calculate expiry time
-        self._access_token = access_token
-        # Set expiry to 5 minutes before actual expiry to be safe
-        self._token_expiry = datetime.now() + timedelta(seconds=expires_in - 300)
-
-        logger.info(f"CDSE token refreshed, expires at {self._token_expiry}, token prefix: {access_token[:20]}...")
-
-    def _ensure_valid_token(self) -> None:
-        """
-        Ensure the current access token is valid, refresh if needed.
-        """
-        if self._token_expiry is None or datetime.now() >= self._token_expiry:
-            logger.info("Token expired or missing, refreshing...")
-            self._refresh_token()
-
-            # Re-create the connection with the new token
-            import openeo
-            cdse_url = getattr(settings, 'CDSE_OPENEO_URL', 'https://openeo.dataspace.copernicus.eu')
-            self._connection = openeo.connect(cdse_url)
-            self._connection.session.headers.update({
-                "Authorization": f"Bearer {self._access_token}"
-            })
-
-            logger.info(f"Connection recreated with new token, expiry: {self._token_expiry}")
-            logger.info(f"Token prefix: {self._access_token[:30] if self._access_token else 'None'}...")
-            logger.info(f"Auth header: {self._connection.session.headers.get('Authorization', 'None')[:60]}")
-        else:
-            logger.debug(f"Token is valid until {self._token_expiry}")
-
     def check_cloud_coverage(
         self,
         geometry: Dict,
@@ -183,56 +126,94 @@ class CDSEProvider(ISatelliteProvider):
         end_date: str,
         max_cloud_coverage: float = 10.0,
     ) -> CloudCoverageInfo:
-        """
-        Check cloud coverage for available images in the date range.
-
-        Uses the SCL (Scene Classification Layer) band for accurate cloud detection.
-        """
         self._ensure_initialized()
 
         try:
-            import openeo
+            import pystac_client
 
-            # Create spatial extent from geometry
-            bounds = self._get_bounds_from_geometry(geometry)
-            spatial_extent = {
-                "west": bounds[0],
-                "east": bounds[1],
-                "south": bounds[2],
-                "north": bounds[3],
-            }
-
-            # Load Sentinel-2 collection
-            s2_collection = (
-                self._connection.load_collection(
-                    "SENTINEL2_L2A",
-                    spatial_extent=spatial_extent,
-                    temporal_extent=[start_date, end_date],
-                    bands=["SCL"],
-                )
-                .aggregate_polygon(spatial_extent)
+            catalog = pystac_client.Client.open(
+                "https://catalogue.dataspace.copernicus.eu/stac"
             )
 
-            # Get metadata for available images
-            # Note: CDSE/openEO handles cloud filtering differently
-            # We need to search for available images first
+            bounds = self._get_bounds_from_geometry(geometry)
 
-            # For now, return a basic response
-            # In production, you'd use CDSE's STAC API for metadata search
+            search = catalog.search(
+                collections=["sentinel-2-l2a"],
+                bbox=[bounds[0], bounds[2], bounds[1], bounds[3]],
+                datetime=[start_date, end_date],
+                max_items=100,
+            )
+
+            items = list(search.items())
+            available_count = len(items)
+
+            if available_count == 0:
+                return CloudCoverageInfo(
+                    has_suitable_images=False,
+                    available_images_count=0,
+                    suitable_images_count=0,
+                    min_cloud_coverage=None,
+                    max_cloud_coverage=None,
+                    avg_cloud_coverage=None,
+                    recommended_date=None,
+                    metadata={"provider": self.provider_name},
+                )
+
+            cloud_values = []
+            suitable_items = []
+            for item in items:
+                cc = item.properties.get("eo:cloud_cover", 100)
+                cloud_values.append(cc)
+                if cc <= max_cloud_coverage:
+                    suitable_items.append(item)
+
+            suitable_count = len(suitable_items)
+            min_cloud = min(cloud_values)
+            max_cloud_val = max(cloud_values)
+            avg_cloud = sum(cloud_values) / len(cloud_values)
+
+            best_date = None
+            if suitable_items:
+                best_item = min(
+                    suitable_items,
+                    key=lambda i: i.properties.get("eo:cloud_cover", 100),
+                )
+                best_date = best_item.properties["datetime"][:10]
+            elif items:
+                best_item = min(
+                    items, key=lambda i: i.properties.get("eo:cloud_cover", 100)
+                )
+                best_date = best_item.properties["datetime"][:10]
+
             return CloudCoverageInfo(
-                has_suitable_images=True,  # Assume suitable for now
-                available_images_count=1,
-                suitable_images_count=1,
-                min_cloud_coverage=0.0,
-                max_cloud_coverage=5.0,
-                avg_cloud_coverage=2.5,
-                recommended_date=start_date,
+                has_suitable_images=suitable_count > 0
+                or (best_date is not None and available_count > 0),
+                available_images_count=available_count,
+                suitable_images_count=suitable_count,
+                min_cloud_coverage=round(min_cloud, 2),
+                max_cloud_coverage=round(max_cloud_val, 2),
+                avg_cloud_coverage=round(avg_cloud, 2),
+                recommended_date=best_date,
                 metadata={"provider": self.provider_name},
             )
 
+        except ImportError:
+            logger.warning("pystac_client not available for cloud coverage check")
+            return CloudCoverageInfo(
+                has_suitable_images=False,
+                available_images_count=0,
+                suitable_images_count=0,
+                min_cloud_coverage=None,
+                max_cloud_coverage=None,
+                avg_cloud_coverage=None,
+                recommended_date=None,
+                metadata={
+                    "provider": self.provider_name,
+                    "error": "pystac_client not installed",
+                },
+            )
         except Exception as e:
             logger.error(f"Error checking cloud coverage with CDSE: {e}")
-            # Return default response on error
             return CloudCoverageInfo(
                 has_suitable_images=False,
                 available_images_count=0,
@@ -403,9 +384,6 @@ class CDSEProvider(ISatelliteProvider):
         logger.info(f"export_heatmap_data called for date={date}, index={index}")
         self._ensure_initialized()
 
-        logger.info(f"Token status: expiry={self._token_expiry}, token_prefix={self._access_token[:20] if self._access_token else 'None'}...")
-        logger.info(f"Connection auth header: {self._connection.session.headers.get('Authorization', 'None')[:50] if self._connection.session.headers.get('Authorization') else 'None'}...")
-
         try:
             import openeo
 
@@ -437,68 +415,98 @@ class CDSEProvider(ISatelliteProvider):
             # Calculate the index
             datacube = self._calculate_index(datacube, index)
 
-            # For now, use synchronous execution which may work better with authentication
-            # If this fails, the CDSE credentials may not have openEO batch job access
-            logger.info("Executing datacube synchronously...")
+            logger.info("Downloading datacube as GeoTIFF...")
 
-            # Force token refresh before execution
-            self._ensure_valid_token()
+            with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
+                tmp_path = tmp_file.name
 
             try:
-                result = datacube.execute()
-                logger.info("Datacube execution successful")
-
-                # Save result to temporary file
-                with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
-                    tmp_path = tmp_file.name
-
-                result.save_file(tmp_path)
-                logger.info(f"Result saved to {tmp_path}")
-            except Exception as exec_error:
-                logger.error(f"Datacube execution failed: {exec_error}")
-                # Fallback: return empty heatmap data with error info
+                datacube.download(tmp_path, format="GTiff")
+                logger.info(f"GeoTIFF downloaded to {tmp_path}")
+            except Exception as dl_error:
+                logger.error(f"Datacube download failed: {dl_error}")
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
                 return HeatmapData(
                     date=date,
                     index=index,
-                    bounds={"min_lon": bounds[0], "max_lon": bounds[1], "min_lat": bounds[2], "max_lat": bounds[3]},
+                    bounds={
+                        "min_lon": bounds[0],
+                        "max_lon": bounds[1],
+                        "min_lat": bounds[2],
+                        "max_lat": bounds[3],
+                    },
                     pixel_data=[],
                     aoi_boundary=self._extract_aoi_boundary(geometry),
-                    statistics={},
-                    visualization={"min": 0, "max": 1, "palette": ["#000000", "#00ff00"]},
+                    statistics={
+                        "mean": 0,
+                        "median": 0,
+                        "min": 0,
+                        "max": 0,
+                        "std": 0,
+                        "p10": 0,
+                        "p90": 0,
+                        "count": 0,
+                    },
+                    visualization={
+                        "min": 0,
+                        "max": 1,
+                        "palette": ["#000000", "#00ff00"],
+                    },
                     metadata={
                         "provider": self.provider_name,
-                        "error": f"CDSE openEO execution failed: {str(exec_error)}. Note: Your CDSE credentials may not have access to the openEO batch job API. Available dates query works, but data download requires additional permissions.",
+                        "error": f"CDSE openEO download failed: {str(dl_error)}",
                     },
                 )
 
-            # Read with rioxarray
             data = rioxarray.open_rasterio(tmp_path)
 
-            # Extract pixel data
+            # Sentinel-2 data from CDSE arrives in UTM projection (meters).
+            # Reproject to EPSG:4326 so pixel coords are lat/lon for the map.
+            src_crs = data.rio.crs
+            if src_crs and str(src_crs) != "EPSG:4326":
+                logger.info(f"Reprojecting from {src_crs} to EPSG:4326")
+                data = data.rio.reproject("EPSG:4326")
+
             pixel_data = []
             values = []
 
-            # Sample the data
-            band_data = data.values[0]  # First band
+            if len(data.shape) == 3:
+                band_data = data.values[0]
+            else:
+                band_data = data.values
+
             height, width = band_data.shape
+            step = max(1, int(((height * width) / grid_size) ** 0.5))
 
-            # Sample based on grid_size
-            step = max(1, int((height * width) / grid_size) ** 0.5)
+            y_coords = data.y.values
+            x_coords = data.x.values
 
-            for y in range(0, height, step):
-                for x in range(0, width, step):
-                    value = float(band_data[y, x])
-                    if not np.isnan(value):
-                        # Convert pixel coordinates to lat/lon
-                        lon, lat = data.xy(x, y)
+            for yi in range(0, height, step):
+                for xi in range(0, width, step):
+                    value = float(band_data[yi, xi])
+                    if not np.isnan(value) and not np.isinf(value):
+                        lon = float(x_coords[xi])
+                        lat = float(y_coords[yi])
                         pixel_data.append({"lon": lon, "lat": lat, "value": value})
                         values.append(value)
 
-            # Clean up temp file
+            data.close()
             os.unlink(tmp_path)
 
-            # Calculate statistics
-            stats = calculate_statistics_from_array(np.array(values)) if values else {}
+            if values:
+                stats = calculate_statistics_from_array(np.array(values))
+            else:
+                stats = {
+                    "mean": 0,
+                    "median": 0,
+                    "min": 0,
+                    "max": 0,
+                    "std": 0,
+                    "p10": 0,
+                    "p90": 0,
+                    "count": 0,
+                }
 
             # Get visualization params
             vis_params = get_visualization_params(index)
@@ -561,25 +569,84 @@ class CDSEProvider(ISatelliteProvider):
         organization_id: Optional[str] = None,
         interactive: bool = False,
     ) -> Union[ExportResult, HeatmapData]:
-        """
-        Export vegetation index map as GeoTIFF or interactive data.
-
-        For interactive mode, returns HeatmapData.
-        For static mode, returns ExportResult with download URL.
-        """
         if interactive:
             return await self.export_heatmap_data(geometry, date, index)
 
-        # For static export, we'd need to implement storage
-        # For now, return a placeholder
-        return ExportResult(
-            url="",
-            file_format="GeoTIFF",
-            metadata={
-                "provider": self.provider_name,
-                "note": "Static export not yet implemented for CDSE provider",
-            },
-        )
+        self._ensure_initialized()
+
+        try:
+            import openeo
+
+            bounds = self._get_bounds_from_geometry(geometry)
+            spatial_extent = {
+                "west": bounds[0],
+                "east": bounds[1],
+                "south": bounds[2],
+                "north": bounds[3],
+            }
+
+            end_date = (
+                datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
+
+            s2_bands = self._get_bands_for_index(index)
+            datacube = self._connection.load_collection(
+                "SENTINEL2_L2A",
+                spatial_extent=spatial_extent,
+                temporal_extent=[date, end_date],
+                bands=s2_bands,
+            )
+            datacube = self._apply_scl_cloud_mask(datacube)
+            datacube = self._calculate_index(datacube, index)
+
+            with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+
+            datacube.download(tmp_path, format="GTiff")
+            logger.info(f"CDSE GeoTIFF downloaded to {tmp_path}")
+
+            if organization_id:
+                try:
+                    from app.services.supabase_service import supabase_service
+                    import uuid as _uuid
+
+                    with open(tmp_path, "rb") as f:
+                        file_data = f.read()
+
+                    file_id = str(_uuid.uuid4())[:8]
+                    filename = f"{index}_{date}_{file_id}.tif"
+
+                    public_url = await supabase_service.upload_satellite_file(
+                        file_data=file_data,
+                        filename=filename,
+                        organization_id=organization_id,
+                        index=index,
+                        date=date,
+                    )
+                    os.unlink(tmp_path)
+
+                    if public_url:
+                        return {"type": "static", "url": public_url}
+                except Exception as upload_err:
+                    logger.warning(f"Failed to upload to Supabase: {upload_err}")
+
+            os.unlink(tmp_path)
+            return ExportResult(
+                url="",
+                file_format="GeoTIFF",
+                metadata={
+                    "provider": self.provider_name,
+                    "note": "GeoTIFF generated but no storage configured (pass organization_id)",
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"Error exporting index map with CDSE: {e}")
+            return ExportResult(
+                url="",
+                file_format="GeoTIFF",
+                metadata={"provider": self.provider_name, "error": str(e)},
+            )
 
     def get_statistics(
         self,
@@ -656,16 +723,19 @@ class CDSEProvider(ISatelliteProvider):
             # Process items
             available_dates = []
             for item in items:
-                available_dates.append({
-                    "date": item.properties["datetime"][:10],
-                    "cloud_coverage": item.properties.get("eo:cloud_cover", 0),
-                    "timestamp": int(
-                        datetime.fromisoformat(
-                            item.properties["datetime"].replace("Z", "+00:00")
-                        ).timestamp() * 1000
-                    ),
-                    "available": True,
-                })
+                available_dates.append(
+                    {
+                        "date": item.properties["datetime"][:10],
+                        "cloud_coverage": item.properties.get("eo:cloud_cover", 0),
+                        "timestamp": int(
+                            datetime.fromisoformat(
+                                item.properties["datetime"].replace("Z", "+00:00")
+                            ).timestamp()
+                            * 1000
+                        ),
+                        "available": True,
+                    }
+                )
 
             return {
                 "available_dates": available_dates,
@@ -708,11 +778,8 @@ class CDSEProvider(ISatelliteProvider):
         return self._initialized
 
     def _ensure_initialized(self) -> None:
-        """Ensure the provider is initialized and has a valid token"""
         if not self._initialized:
             self.initialize()
-        # Ensure token is valid (refresh if expired)
-        self._ensure_valid_token()
 
     def _get_bounds_from_geometry(self, geometry: Dict) -> tuple:
         """Extract bounding box from GeoJSON geometry"""
@@ -749,19 +816,21 @@ class CDSEProvider(ISatelliteProvider):
     def _apply_scl_cloud_mask(self, datacube: Any) -> Any:
         """Apply SCL-based cloud masking to the datacube"""
         try:
-            import openeo
-
-            # Load SCL band
             scl = datacube.band("SCL")
 
-            # Create mask for clear pixels
-            # SCL values: 0=NoData, 1=Saturated, 2=Dark, 3=CloudShadow, 4=Vegetation,
-            # 5=NotVegetated, 6=Water, 7=Unclassified, 8=CloudMedium, 9=CloudHigh,
-            # 10=Cirrus, 11=Snow
-            clear_mask = (scl != 0) & (scl != 1) & (scl != 3) & (scl != 8) & (scl != 9) & (scl != 10)
+            # openEO mask() sets pixels to nodata WHERE mask is True,
+            # so we build a mask that is True for bad pixels (clouds, shadow, etc.)
+            # SCL: 0=NoData, 1=Saturated, 3=CloudShadow, 8=CloudMedium, 9=CloudHigh, 10=Cirrus
+            cloud_mask = (
+                (scl == 0)
+                | (scl == 1)
+                | (scl == 3)
+                | (scl == 8)
+                | (scl == 9)
+                | (scl == 10)
+            )
 
-            # Apply mask
-            return datacube.mask(clear_mask)
+            return datacube.mask(cloud_mask)
 
         except Exception as e:
             logger.warning(f"Could not apply SCL cloud mask: {e}")
@@ -791,13 +860,13 @@ class CDSEProvider(ISatelliteProvider):
             return datacube.band("B08") / datacube.band("B03") - 1
         elif index == "SAVI":
             L = 0.5
-            return (datacube.band("B08") - datacube.band("B04")) * (1 + L) / (
-                datacube.band("B08") + datacube.band("B04") + L
+            return (
+                (datacube.band("B08") - datacube.band("B04"))
+                * (1 + L)
+                / (datacube.band("B08") + datacube.band("B04") + L)
             )
         else:
-            # For other indices, return a basic calculation
-            # In production, implement all index formulas
-            logger.warning(f"Index {index} calculation not fully implemented, using NDVI")
-            return (datacube.band("B08") - datacube.band("B04")) / (
-                datacube.band("B08") + datacube.band("B04")
+            raise ValueError(
+                f"Index '{index}' is not implemented in the CDSE provider. "
+                f"Supported indices: NDVI, NDRE, NDMI, MNDWI, GCI, SAVI"
             )

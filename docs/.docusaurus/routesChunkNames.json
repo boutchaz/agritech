@@ -5,154 +5,26 @@
       "plugin": "138e0e15"
     }
   },
-  "/-8d3": {
+  "/-bfd": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-b55": {
+  "/-bf1": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-5af": {
+  "/-14b": {
     "__comp": "a94703ab"
-  },
-  "/api/hooks-732": {
-    "__comp": "17896441",
-    "content": "0685996c"
-  },
-  "/api/satellite-api-83a": {
-    "__comp": "17896441",
-    "content": "204ccb1c"
-  },
-  "/architecture/backend-3b4": {
-    "__comp": "17896441",
-    "content": "9dd2f382"
-  },
-  "/architecture/database-f31": {
-    "__comp": "17896441",
-    "content": "f6da1e1d"
-  },
-  "/architecture/frontend-b82": {
-    "__comp": "17896441",
-    "content": "f964e206"
-  },
-  "/architecture/multi-tenancy-277": {
-    "__comp": "17896441",
-    "content": "50260c19"
-  },
-  "/architecture/nestjs-api-491": {
-    "__comp": "17896441",
-    "content": "0fcba9dc"
   },
   "/architecture/overview-f3c": {
     "__comp": "17896441",
     "content": "0b1ac180"
   },
-  "/architecture/satellite-service-2a8": {
-    "__comp": "17896441",
-    "content": "5e59c55d"
-  },
-  "/contributing-159": {
-    "__comp": "17896441",
-    "content": "4d54d076"
-  },
-  "/database/functions-36a": {
-    "__comp": "17896441",
-    "content": "60070010"
-  },
-  "/database/migrations-db6": {
-    "__comp": "17896441",
-    "content": "5390b312"
-  },
-  "/database/rls-policies-49d": {
-    "__comp": "17896441",
-    "content": "945d8bb2"
-  },
-  "/database/schema-6c3": {
+  "/database/schema-86d": {
     "__comp": "17896441",
     "content": "a9b4524a"
-  },
-  "/database/triggers-bc5": {
-    "__comp": "17896441",
-    "content": "1f6e35fe"
-  },
-  "/database/type-generation-f63": {
-    "__comp": "17896441",
-    "content": "03661aba"
-  },
-  "/deployment/environment-variables-334": {
-    "__comp": "17896441",
-    "content": "8c074c3c"
-  },
-  "/deployment/monitoring-dcd": {
-    "__comp": "17896441",
-    "content": "2fd99a78"
-  },
-  "/deployment/production-7c6": {
-    "__comp": "17896441",
-    "content": "1973956f"
-  },
-  "/deployment/staging-223": {
-    "__comp": "17896441",
-    "content": "7136399c"
-  },
-  "/development/coding-standards-2bb": {
-    "__comp": "17896441",
-    "content": "948a5165"
-  },
-  "/development/debugging-7e5": {
-    "__comp": "17896441",
-    "content": "b540f618"
-  },
-  "/development/git-workflow-2cd": {
-    "__comp": "17896441",
-    "content": "1a1f3b01"
-  },
-  "/development/performance-8ee": {
-    "__comp": "17896441",
-    "content": "bf75f4d4"
-  },
-  "/development/testing-strategy-6f5": {
-    "__comp": "17896441",
-    "content": "a527c3a9"
-  },
-  "/features/accounting-acd": {
-    "__comp": "17896441",
-    "content": "eeae4b08"
-  },
-  "/features/agricultural-accounting-f15": {
-    "__comp": "17896441",
-    "content": "5b2e7858"
-  },
-  "/features/billing-cycle-54f": {
-    "__comp": "17896441",
-    "content": "9e442115"
-  },
-  "/features/enhanced-parcel-planting-systems-f65": {
-    "__comp": "17896441",
-    "content": "56c410da"
-  },
-  "/features/farm-management-842": {
-    "__comp": "17896441",
-    "content": "eb44cfb8"
-  },
-  "/features/inventory-a01": {
-    "__comp": "17896441",
-    "content": "94120069"
-  },
-  "/features/production-intelligence-data-flow-ab5": {
-    "__comp": "17896441",
-    "content": "8df03cef"
-  },
-  "/features/profitability-930": {
-    "__comp": "17896441",
-    "content": "0b09a1de"
-  },
-  "/features/quality-control-2fc": {
-    "__comp": "17896441",
-    "content": "ce42c03a"
   },
   "/features/satellite-analysis-1b8": {
     "__comp": "17896441",
@@ -161,62 +33,6 @@
   "/features/subscriptions-9e9": {
     "__comp": "17896441",
     "content": "b8a79ce1"
-  },
-  "/features/task-management-db0": {
-    "__comp": "17896441",
-    "content": "7402a10c"
-  },
-  "/features/weather-b22": {
-    "__comp": "17896441",
-    "content": "7cfc34a4"
-  },
-  "/features/workers-8ce": {
-    "__comp": "17896441",
-    "content": "7e24f425"
-  },
-  "/frontend/authentication-ac1": {
-    "__comp": "17896441",
-    "content": "6cdde7c7"
-  },
-  "/frontend/authorization-bfa": {
-    "__comp": "17896441",
-    "content": "13f9f791"
-  },
-  "/frontend/components-2ca": {
-    "__comp": "17896441",
-    "content": "2fed089c"
-  },
-  "/frontend/forms-dd4": {
-    "__comp": "17896441",
-    "content": "af21bf87"
-  },
-  "/frontend/internationalization-53f": {
-    "__comp": "17896441",
-    "content": "dd1d75a4"
-  },
-  "/frontend/routing-198": {
-    "__comp": "17896441",
-    "content": "4a2cf9ac"
-  },
-  "/frontend/state-management-2f6": {
-    "__comp": "17896441",
-    "content": "f46fd0e3"
-  },
-  "/frontend/styling-e70": {
-    "__comp": "17896441",
-    "content": "d841af02"
-  },
-  "/frontend/tech-stack-9f3": {
-    "__comp": "17896441",
-    "content": "fb2f7885"
-  },
-  "/getting-started/environment-setup-596": {
-    "__comp": "17896441",
-    "content": "7caf9634"
-  },
-  "/getting-started/first-deployment-c75": {
-    "__comp": "17896441",
-    "content": "5aa12780"
   },
   "/getting-started/installation-e0c": {
     "__comp": "17896441",
@@ -230,43 +46,7 @@
     "__comp": "17896441",
     "content": "6d844230"
   },
-  "/guides/adding-new-route-cc8": {
-    "__comp": "17896441",
-    "content": "f326630d"
-  },
-  "/guides/creating-component-dac": {
-    "__comp": "17896441",
-    "content": "c1774488"
-  },
-  "/guides/data-fetching-5c1": {
-    "__comp": "17896441",
-    "content": "3eef3149"
-  },
-  "/guides/database-migration-23a": {
-    "__comp": "17896441",
-    "content": "785f8437"
-  },
-  "/guides/deployment-f82": {
-    "__comp": "17896441",
-    "content": "caaf7770"
-  },
-  "/guides/satellite-integration-363": {
-    "__comp": "17896441",
-    "content": "32f88b6f"
-  },
-  "/guides/testing-64d": {
-    "__comp": "17896441",
-    "content": "e4439411"
-  },
-  "/testing/tax-calculations-13c": {
-    "__comp": "17896441",
-    "content": "0b2b7749"
-  },
-  "/troubleshooting-ab5": {
-    "__comp": "17896441",
-    "content": "9d9f8394"
-  },
-  "/-7da": {
+  "/intro-32d": {
     "__comp": "17896441",
     "content": "0e384e19"
   }

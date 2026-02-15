@@ -15,7 +15,8 @@ import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
 import EditFarmManagerModal from './EditFarmManagerModal';
-import { Building2, X, Trash2 } from 'lucide-react';
+import { X, Trash2, Building2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -165,13 +166,11 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       // Fetch parcels for each farm using parcelsService (apiClient)
       const farmIds = Array.from(farmMap.keys());
-      console.log('🔍 Fetching parcels for', farmIds.length, 'farms');
 
       if (farmIds.length > 0) {
         try {
           // Fetch parcels for all farms in the organization (no farm_id filter to get all)
           const parcelsData = await parcelsService.listParcels();
-          console.log('✅ Parcels fetched:', parcelsData.length, 'parcels');
 
           // Filter parcels for our farms and group by farm_id
           const parcelsByFarm = parcelsData
@@ -683,28 +682,25 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       {/* Farms Grid/List */}
       {filteredFarms.length === 0 ? (
-        <div data-testid="farms-empty-state" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full mb-4">
-            <Building2 className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {searchTerm ? t('farmHierarchy.farm.noFarmsFound') : t('farmHierarchy.farm.noFarms')}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {searchTerm
+        <EmptyState
+          data-testid="farms-empty-state"
+          variant="card"
+          icon={Building2}
+          title={searchTerm ? t('farmHierarchy.farm.noFarmsFound') : t('farmHierarchy.farm.noFarms')}
+          description={
+            searchTerm
               ? t('farmHierarchy.farm.noSearchResults')
-              : t('farmHierarchy.farm.noFarmsMessage')}
-          </p>
-          {!searchTerm && (
-            <button
-              data-testid="empty-state-create-farm-button"
-              onClick={() => setShowAddForm(true)}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-            >
-              {t('farmHierarchy.farm.create')}
-            </button>
-          )}
-        </div>
+              : t('farmHierarchy.farm.noFarmsMessage')
+          }
+          action={
+            !searchTerm
+              ? {
+                  label: t('farmHierarchy.farm.create'),
+                  onClick: () => setShowAddForm(true),
+                }
+              : undefined
+          }
+        />
       ) : (
         <div data-testid="farms-list" data-tour="farm-list" className="space-y-3">
           {viewMode === 'grid' ? renderFarmTree(filteredFarms) : renderFarmList(allFarms.filter(farm =>

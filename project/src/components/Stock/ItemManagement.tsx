@@ -297,7 +297,6 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     queryFn: async () => {
       try {
         const response = await marketplaceCategoriesApi.getAll(undefined, currentOrganization?.id);
-        console.log('[DEBUG] Marketplace categories response:', response);
         return response.data || [];
       } catch (error) {
         console.error('[ERROR] Could not fetch marketplace categories:', error);

@@ -59,6 +59,7 @@ import { Route as publicOnboardingFarmRouteImport } from './routes/(public)/onbo
 import { Route as publicOnboardingCompleteRouteImport } from './routes/(public)/onboarding/complete'
 import { Route as publicBlogSlugRouteImport } from './routes/(public)/blog/$slug'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
+import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
 import { Route as AuthenticatedworkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/tasks/index'
 import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes/_authenticated/(settings)/settings.index'
@@ -69,6 +70,7 @@ import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
+import { Route as AuthenticatedworkforceTasksTaskIdRouteImport } from './routes/_authenticated/(workforce)/tasks/$taskId'
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
 import { Route as AuthenticatedsettingsSettingsUsersRouteImport } from './routes/_authenticated/(settings)/settings.users'
 import { Route as AuthenticatedsettingsSettingsSubscriptionRouteImport } from './routes/_authenticated/(settings)/settings.subscription'
@@ -92,6 +94,8 @@ import { Route as AuthenticatedproductionProductionIntelligenceRouteImport } fro
 import { Route as AuthenticatedproductionProductionHarvestsRouteImport } from './routes/_authenticated/(production)/production/harvests'
 import { Route as AuthenticatedproductionProductionCropCyclesRouteImport } from './routes/_authenticated/(production)/production/crop-cycles'
 import { Route as AuthenticatedproductionParcelsParcelIdRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId'
+import { Route as AuthenticatedproductionCropCyclesCycleIdRouteImport } from './routes/_authenticated/(production)/crop-cycles/$cycleId'
+import { Route as AuthenticatedmiscMarketplaceOrdersRouteImport } from './routes/_authenticated/(misc)/marketplace/orders'
 import { Route as AuthenticatedinventoryStockWarehousesRouteImport } from './routes/_authenticated/(inventory)/stock/warehouses'
 import { Route as AuthenticatedinventoryStockSuppliersRouteImport } from './routes/_authenticated/(inventory)/stock/suppliers'
 import { Route as AuthenticatedinventoryStockStockRouteImport } from './routes/_authenticated/(inventory)/stock/stock'
@@ -111,7 +115,9 @@ import { Route as AuthenticatedaccountingAccountingProfitLossRouteImport } from 
 import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from './routes/_authenticated/(accounting)/accounting/payments'
 import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './routes/_authenticated/(accounting)/accounting/journal'
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
+import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
+import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
 import { Route as AuthenticatedaccountingAccountingAgedReceivablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-receivables'
 import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-payables'
@@ -409,6 +415,12 @@ const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedComplianceCorrectiveActionsIndexRoute =
+  AuthenticatedComplianceCorrectiveActionsIndexRouteImport.update({
+    id: '/compliance/corrective-actions/',
+    path: '/compliance/corrective-actions/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedComplianceCertificationsIndexRoute =
   AuthenticatedComplianceCertificationsIndexRouteImport.update({
     id: '/compliance/certifications/',
@@ -467,6 +479,12 @@ const AuthenticatedworkforceTasksCalendarRoute =
   AuthenticatedworkforceTasksCalendarRouteImport.update({
     id: '/calendar',
     path: '/calendar',
+    getParentRoute: () => AuthenticatedworkforceTasksRoute,
+  } as any)
+const AuthenticatedworkforceTasksTaskIdRoute =
+  AuthenticatedworkforceTasksTaskIdRouteImport.update({
+    id: '/$taskId',
+    path: '/$taskId',
     getParentRoute: () => AuthenticatedworkforceTasksRoute,
   } as any)
 const AuthenticatedsettingsSettingsWorkUnitsRoute =
@@ -607,6 +625,18 @@ const AuthenticatedproductionParcelsParcelIdRoute =
     path: '/$parcelId',
     getParentRoute: () => AuthenticatedproductionParcelsRoute,
   } as any)
+const AuthenticatedproductionCropCyclesCycleIdRoute =
+  AuthenticatedproductionCropCyclesCycleIdRouteImport.update({
+    id: '/$cycleId',
+    path: '/$cycleId',
+    getParentRoute: () => AuthenticatedproductionCropCyclesRoute,
+  } as any)
+const AuthenticatedmiscMarketplaceOrdersRoute =
+  AuthenticatedmiscMarketplaceOrdersRouteImport.update({
+    id: '/orders',
+    path: '/orders',
+    getParentRoute: () => AuthenticatedmiscMarketplaceRoute,
+  } as any)
 const AuthenticatedinventoryStockWarehousesRoute =
   AuthenticatedinventoryStockWarehousesRouteImport.update({
     id: '/warehouses',
@@ -721,10 +751,22 @@ const AuthenticatedaccountingAccountingInvoicesRoute =
     path: '/invoices',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingGeneralLedgerRoute =
+  AuthenticatedaccountingAccountingGeneralLedgerRouteImport.update({
+    id: '/general-ledger',
+    path: '/general-ledger',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCustomersRoute =
   AuthenticatedaccountingAccountingCustomersRouteImport.update({
     id: '/customers',
     path: '/customers',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingCashFlowRoute =
+  AuthenticatedaccountingAccountingCashFlowRouteImport.update({
+    id: '/cash-flow',
+    path: '/cash-flow',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingBalanceSheetRoute =
@@ -858,7 +900,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
-  '/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
+  '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -878,7 +920,9 @@ export interface FileRoutesByFullPath {
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
@@ -898,6 +942,8 @@ export interface FileRoutesByFullPath {
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
+  '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
+  '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
   '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
@@ -921,6 +967,7 @@ export interface FileRoutesByFullPath {
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
+  '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
@@ -931,6 +978,7 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
+  '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -975,7 +1023,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
-  '/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
+  '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -993,7 +1041,9 @@ export interface FileRoutesByTo {
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
@@ -1013,6 +1063,8 @@ export interface FileRoutesByTo {
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
+  '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
+  '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
   '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
@@ -1035,6 +1087,7 @@ export interface FileRoutesByTo {
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
+  '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
@@ -1045,6 +1098,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
+  '/compliance/corrective-actions': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1094,7 +1148,7 @@ export interface FileRoutesById {
   '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
-  '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRoute
+  '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1114,7 +1168,9 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/_authenticated/(accounting)/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/_authenticated/(accounting)/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
@@ -1134,6 +1190,8 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/stock': typeof AuthenticatedinventoryStockStockRoute
   '/_authenticated/(inventory)/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/_authenticated/(inventory)/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
+  '/_authenticated/(misc)/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
+  '/_authenticated/(production)/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/_authenticated/(production)/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/_authenticated/(production)/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
   '/_authenticated/(production)/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
@@ -1157,6 +1215,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/_authenticated/(settings)/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
+  '/_authenticated/(workforce)/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
@@ -1167,6 +1226,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
+  '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/_authenticated/(production)/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1236,7 +1296,9 @@ export interface FileRouteTypes {
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/cash-flow'
     | '/accounting/customers'
+    | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
     | '/accounting/payments'
@@ -1256,6 +1318,8 @@ export interface FileRouteTypes {
     | '/stock/stock'
     | '/stock/suppliers'
     | '/stock/warehouses'
+    | '/marketplace/orders'
+    | '/crop-cycles/$cycleId'
     | '/parcels/$parcelId'
     | '/production/crop-cycles'
     | '/production/harvests'
@@ -1279,6 +1343,7 @@ export interface FileRouteTypes {
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
+    | '/tasks/$taskId'
     | '/tasks/calendar'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
@@ -1289,6 +1354,7 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/compliance/certifications/'
+    | '/compliance/corrective-actions/'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1351,7 +1417,9 @@ export interface FileRouteTypes {
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/cash-flow'
     | '/accounting/customers'
+    | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
     | '/accounting/payments'
@@ -1371,6 +1439,8 @@ export interface FileRouteTypes {
     | '/stock/stock'
     | '/stock/suppliers'
     | '/stock/warehouses'
+    | '/marketplace/orders'
+    | '/crop-cycles/$cycleId'
     | '/production/crop-cycles'
     | '/production/harvests'
     | '/production/intelligence'
@@ -1393,6 +1463,7 @@ export interface FileRouteTypes {
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
+    | '/tasks/$taskId'
     | '/tasks/calendar'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
@@ -1403,6 +1474,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/compliance/certifications'
+    | '/compliance/corrective-actions'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1471,7 +1543,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
     | '/_authenticated/(accounting)/accounting/balance-sheet'
+    | '/_authenticated/(accounting)/accounting/cash-flow'
     | '/_authenticated/(accounting)/accounting/customers'
+    | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
     | '/_authenticated/(accounting)/accounting/journal'
     | '/_authenticated/(accounting)/accounting/payments'
@@ -1491,6 +1565,8 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/stock'
     | '/_authenticated/(inventory)/stock/suppliers'
     | '/_authenticated/(inventory)/stock/warehouses'
+    | '/_authenticated/(misc)/marketplace/orders'
+    | '/_authenticated/(production)/crop-cycles/$cycleId'
     | '/_authenticated/(production)/parcels/$parcelId'
     | '/_authenticated/(production)/production/crop-cycles'
     | '/_authenticated/(production)/production/harvests'
@@ -1514,6 +1590,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/subscription'
     | '/_authenticated/(settings)/settings/users'
     | '/_authenticated/(settings)/settings/work-units'
+    | '/_authenticated/(workforce)/tasks/$taskId'
     | '/_authenticated/(workforce)/tasks/calendar'
     | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
@@ -1524,6 +1601,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/'
     | '/_authenticated/(workforce)/tasks/'
     | '/_authenticated/compliance/certifications/'
+    | '/_authenticated/compliance/corrective-actions/'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
     | '/_authenticated/(production)/parcels/$parcelId/analyse'
@@ -1907,6 +1985,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/compliance/corrective-actions/': {
+      id: '/_authenticated/compliance/corrective-actions/'
+      path: '/compliance/corrective-actions'
+      fullPath: '/compliance/corrective-actions/'
+      preLoaderRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/compliance/certifications/': {
       id: '/_authenticated/compliance/certifications/'
       path: '/compliance/certifications'
@@ -1975,6 +2060,13 @@ declare module '@tanstack/react-router' {
       path: '/calendar'
       fullPath: '/tasks/calendar'
       preLoaderRoute: typeof AuthenticatedworkforceTasksCalendarRouteImport
+      parentRoute: typeof AuthenticatedworkforceTasksRoute
+    }
+    '/_authenticated/(workforce)/tasks/$taskId': {
+      id: '/_authenticated/(workforce)/tasks/$taskId'
+      path: '/$taskId'
+      fullPath: '/tasks/$taskId'
+      preLoaderRoute: typeof AuthenticatedworkforceTasksTaskIdRouteImport
       parentRoute: typeof AuthenticatedworkforceTasksRoute
     }
     '/_authenticated/(settings)/settings/work-units': {
@@ -2138,6 +2230,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsRoute
     }
+    '/_authenticated/(production)/crop-cycles/$cycleId': {
+      id: '/_authenticated/(production)/crop-cycles/$cycleId'
+      path: '/$cycleId'
+      fullPath: '/crop-cycles/$cycleId'
+      preLoaderRoute: typeof AuthenticatedproductionCropCyclesCycleIdRouteImport
+      parentRoute: typeof AuthenticatedproductionCropCyclesRoute
+    }
+    '/_authenticated/(misc)/marketplace/orders': {
+      id: '/_authenticated/(misc)/marketplace/orders'
+      path: '/orders'
+      fullPath: '/marketplace/orders'
+      preLoaderRoute: typeof AuthenticatedmiscMarketplaceOrdersRouteImport
+      parentRoute: typeof AuthenticatedmiscMarketplaceRoute
+    }
     '/_authenticated/(inventory)/stock/warehouses': {
       id: '/_authenticated/(inventory)/stock/warehouses'
       path: '/warehouses'
@@ -2271,11 +2377,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingInvoicesRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/general-ledger': {
+      id: '/_authenticated/(accounting)/accounting/general-ledger'
+      path: '/general-ledger'
+      fullPath: '/accounting/general-ledger'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/customers': {
       id: '/_authenticated/(accounting)/accounting/customers'
       path: '/customers'
       fullPath: '/accounting/customers'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/cash-flow': {
+      id: '/_authenticated/(accounting)/accounting/cash-flow'
+      path: '/cash-flow'
+      fullPath: '/accounting/cash-flow'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingCashFlowRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/balance-sheet': {
@@ -2398,7 +2518,9 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingAgedPayablesRoute: typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   AuthenticatedaccountingAccountingAgedReceivablesRoute: typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
+  AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
   AuthenticatedaccountingAccountingJournalRoute: typeof AuthenticatedaccountingAccountingJournalRoute
   AuthenticatedaccountingAccountingPaymentsRoute: typeof AuthenticatedaccountingAccountingPaymentsRoute
@@ -2421,8 +2543,12 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingAgedReceivablesRoute,
     AuthenticatedaccountingAccountingBalanceSheetRoute:
       AuthenticatedaccountingAccountingBalanceSheetRoute,
+    AuthenticatedaccountingAccountingCashFlowRoute:
+      AuthenticatedaccountingAccountingCashFlowRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
+    AuthenticatedaccountingAccountingGeneralLedgerRoute:
+      AuthenticatedaccountingAccountingGeneralLedgerRoute,
     AuthenticatedaccountingAccountingInvoicesRoute:
       AuthenticatedaccountingAccountingInvoicesRoute,
     AuthenticatedaccountingAccountingJournalRoute:
@@ -2508,12 +2634,15 @@ const AuthenticatedinventoryStockRouteWithChildren =
   )
 
 interface AuthenticatedmiscMarketplaceRouteChildren {
+  AuthenticatedmiscMarketplaceOrdersRoute: typeof AuthenticatedmiscMarketplaceOrdersRoute
   AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   AuthenticatedmiscMarketplaceQuoteRequestsSentRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
 }
 
 const AuthenticatedmiscMarketplaceRouteChildren: AuthenticatedmiscMarketplaceRouteChildren =
   {
+    AuthenticatedmiscMarketplaceOrdersRoute:
+      AuthenticatedmiscMarketplaceOrdersRoute,
     AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute:
       AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute,
     AuthenticatedmiscMarketplaceQuoteRequestsSentRoute:
@@ -2523,6 +2652,21 @@ const AuthenticatedmiscMarketplaceRouteChildren: AuthenticatedmiscMarketplaceRou
 const AuthenticatedmiscMarketplaceRouteWithChildren =
   AuthenticatedmiscMarketplaceRoute._addFileChildren(
     AuthenticatedmiscMarketplaceRouteChildren,
+  )
+
+interface AuthenticatedproductionCropCyclesRouteChildren {
+  AuthenticatedproductionCropCyclesCycleIdRoute: typeof AuthenticatedproductionCropCyclesCycleIdRoute
+}
+
+const AuthenticatedproductionCropCyclesRouteChildren: AuthenticatedproductionCropCyclesRouteChildren =
+  {
+    AuthenticatedproductionCropCyclesCycleIdRoute:
+      AuthenticatedproductionCropCyclesCycleIdRoute,
+  }
+
+const AuthenticatedproductionCropCyclesRouteWithChildren =
+  AuthenticatedproductionCropCyclesRoute._addFileChildren(
+    AuthenticatedproductionCropCyclesRouteChildren,
   )
 
 interface AuthenticatedproductionParcelsParcelIdRouteChildren {
@@ -2634,12 +2778,15 @@ const AuthenticatedsettingsSettingsRouteWithChildren =
   )
 
 interface AuthenticatedworkforceTasksRouteChildren {
+  AuthenticatedworkforceTasksTaskIdRoute: typeof AuthenticatedworkforceTasksTaskIdRoute
   AuthenticatedworkforceTasksCalendarRoute: typeof AuthenticatedworkforceTasksCalendarRoute
   AuthenticatedworkforceTasksIndexRoute: typeof AuthenticatedworkforceTasksIndexRoute
 }
 
 const AuthenticatedworkforceTasksRouteChildren: AuthenticatedworkforceTasksRouteChildren =
   {
+    AuthenticatedworkforceTasksTaskIdRoute:
+      AuthenticatedworkforceTasksTaskIdRoute,
     AuthenticatedworkforceTasksCalendarRoute:
       AuthenticatedworkforceTasksCalendarRoute,
     AuthenticatedworkforceTasksIndexRoute:
@@ -2682,7 +2829,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
-  AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRoute
+  AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
@@ -2707,6 +2854,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
+  AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
@@ -2734,7 +2882,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
-    AuthenticatedproductionCropCyclesRoute,
+    AuthenticatedproductionCropCyclesRouteWithChildren,
   AuthenticatedproductionFarmHierarchyRoute:
     AuthenticatedproductionFarmHierarchyRoute,
   AuthenticatedproductionHarvestsRoute: AuthenticatedproductionHarvestsRoute,
@@ -2776,6 +2924,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:
     AuthenticatedComplianceCertificationsIndexRoute,
+  AuthenticatedComplianceCorrectiveActionsIndexRoute:
+    AuthenticatedComplianceCorrectiveActionsIndexRoute,
   AuthenticatedworkforceWorkforceTasksCalendarRoute:
     AuthenticatedworkforceWorkforceTasksCalendarRoute,
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute:

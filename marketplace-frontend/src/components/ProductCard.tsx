@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ShoppingBag, MapPin, Calendar, Building2 } from 'lucide-react';
+import { ShoppingBag, MapPin, Calendar, Building2, Star } from 'lucide-react';
 
 interface Seller {
     id: string;
@@ -7,6 +7,7 @@ interface Seller {
     slug?: string;
     logo_url?: string;
     city?: string;
+    average_rating?: number;
 }
 
 interface Product {
@@ -93,6 +94,14 @@ export function ProductCard({ product }: ProductCardProps) {
                             )}
                         </div>
                         <span className="text-xs text-gray-600 truncate">{product.seller.name}</span>
+                        {product.seller.average_rating != null && product.seller.average_rating > 0 && (
+                            <div className="flex items-center gap-0.5 ml-auto">
+                                <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                                <span className="text-xs text-gray-600">
+                                    {product.seller.average_rating.toFixed(1)}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
 

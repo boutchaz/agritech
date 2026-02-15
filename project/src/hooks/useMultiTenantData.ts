@@ -187,8 +187,6 @@ export function useMultiTenantData<T extends { id: string }>(
           filter: `organization_id=eq.${currentOrganization.id}`
         },
         (payload) => {
-          console.log(`Realtime ${table} change:`, payload);
-
           switch (payload.eventType) {
             case 'INSERT':
               setData(prev => [...prev, payload.new as T]);

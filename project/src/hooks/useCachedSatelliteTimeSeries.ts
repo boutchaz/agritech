@@ -140,11 +140,9 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
         const missingDates = allDates.filter((date) => !cachedDatesForIndex.has(date));
 
         if (missingDates.length === 0) {
-          console.log(`All data for ${index} is cached`);
           continue;
         }
 
-        console.log(`Fetching ${missingDates.length} missing dates for ${index}`);
         setFetchedFromApi(true);
 
         // Fetch from satellite API
