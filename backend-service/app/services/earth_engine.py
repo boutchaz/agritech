@@ -350,16 +350,34 @@ class EarthEngineService:
                 .divide(2)
             ).rename("MSAVI2")
 
-        # PRI — Photochemical Reflectance Index
-        # True PRI uses 531nm & 570nm (not available on S2).
-        # Best S2 approximation: B3 (green, 560nm) vs B4 (red, 665nm)
-        # captures xanthophyll-cycle reflectance shift.
-        if "PRI" in indices:
-            results["PRI"] = (
-                bands["green"]
+        # NIRv — Near-Infrared Reflectance of vegetation
+        # NIRv = NDVI * NIR
+        # Uses the same NDVI base with NIR reflectance scaling.
+        if "NIRv" in indices:
+            ndvi_for_nirv = results.get("NDVI")
+            if ndvi_for_nirv is None:
+                ndvi_for_nirv = (
+                    bands["nir"]
+                    .subtract(bands["red"])
+                    .divide(bands["nir"].add(bands["red"]).max(ee.Image(1e-10)))
+            )
+            results["NIRv"] = ndvi_for_nirv.multiply(bands["nir"]).rename("NIRv")
+
+        # EVI — Enhanced Vegetation Index
+        # EVI = 2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)
+        if "EVI" in indices:
+            evi_denominator = (
+                bands["nir"]
+                .add(bands["red"].multiply(6))
+                .subtract(bands["blue"].multiply(7.5))
+                .add(1)
+            )
+            results["EVI"] = (
+                bands["nir"]
                 .subtract(bands["red"])
-                .divide(bands["green"].add(bands["red"]).max(ee.Image(1e-10)))
-                .rename("PRI")
+                .multiply(2.5)
+                .divide(evi_denominator.where(evi_denominator.eq(0), ee.Image(1e-10)))
+                .rename("EVI")
             )
 
         # MSI
@@ -407,7 +425,7 @@ class EarthEngineService:
 
         aoi = ee.Geometry(geometry)
 
-        interval_days = {"day": 1, "week": 7, "month": 30, "quarter": 90}
+        interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
         step = interval_days.get(interval, 30)
 
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
@@ -759,9 +777,9 @@ class EarthEngineService:
                 "max": 0.8,
                 "palette": ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
             },
-            "PRI": {
-                "min": -0.2,
-                "max": 0.2,
+            "NIRv": {
+                "min": 0.0,
+                "max": 0.4,
                 "palette": ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
             },
             "MSI": {

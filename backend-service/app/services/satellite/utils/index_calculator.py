@@ -8,6 +8,7 @@ CDSE/openEO provider and other numpy-based satellite data processing.
 import logging
 from typing import Dict, List, Callable, Any
 import numpy as np
+from app.services.satellite.types import calculate_nirv, calculate_evi
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Band Grouping for Index Calculations
 # =============================================================================
+
 
 def prepare_bands(
     blue: np.ndarray,
@@ -63,6 +65,7 @@ def prepare_bands(
 # =============================================================================
 # Vegetation Index Calculation Functions
 # =============================================================================
+
 
 def calculate_ndvi(nir: np.ndarray, red: np.ndarray) -> np.ndarray:
     """
@@ -144,9 +147,7 @@ def calculate_gci(nir: np.ndarray, green: np.ndarray) -> np.ndarray:
     return result
 
 
-def calculate_savi(
-    nir: np.ndarray, red: np.ndarray, L: float = 0.5
-) -> np.ndarray:
+def calculate_savi(nir: np.ndarray, red: np.ndarray, L: float = 0.5) -> np.ndarray:
     """
     Calculate Soil Adjusted Vegetation Index.
 
@@ -194,24 +195,6 @@ def calculate_msavi2(nir: np.ndarray, red: np.ndarray) -> np.ndarray:
     return (term1 - np.sqrt(discriminant)) / 2
 
 
-def calculate_pri(
-    red_edge: np.ndarray, red_edge_2: np.ndarray
-) -> np.ndarray:
-    """
-    Calculate Photochemical Reflectance Index.
-
-    PRI = (RedEdge1 - RedEdge2) / (RedEdge1 + RedEdge2)
-
-    Range: -1 to 1
-    - Sensitive to changes in carotenoid pigment content
-    - Used for light use efficiency assessment
-    """
-    result = np.zeros_like(red_edge, dtype=np.float32)
-    mask = (red_edge + red_edge_2) != 0
-    result[mask] = (red_edge[mask] - red_edge_2[mask]) / (red_edge[mask] + red_edge_2[mask])
-    return result
-
-
 def calculate_msi(swir1: np.ndarray, nir: np.ndarray) -> np.ndarray:
     """
     Calculate Moisture Stress Index.
@@ -241,10 +224,9 @@ def calculate_mcari(
     """
     result = np.zeros_like(red_edge, dtype=np.float32)
     mask = green != 0
-    result[mask] = (
-        (red_edge[mask] - red[mask])
-        - 0.2 * (red_edge[mask] - green[mask]) * (red_edge[mask] / green[mask])
-    )
+    result[mask] = (red_edge[mask] - red[mask]) - 0.2 * (
+        red_edge[mask] - green[mask]
+    ) * (red_edge[mask] / green[mask])
     return result
 
 
@@ -272,6 +254,7 @@ def calculate_tcari(
 # Batch Index Calculation
 # =============================================================================
 
+
 def calculate_all_indices(
     bands: Dict[str, np.ndarray],
     indices: List[str],
@@ -298,7 +281,8 @@ def calculate_all_indices(
         "SAVI": ["nir", "red"],
         "OSAVI": ["nir", "red"],
         "MSAVI2": ["nir", "red"],
-        "PRI": ["red_edge", "red_edge_2"],
+        "NIRv": ["nir", "red"],
+        "EVI": ["nir", "red", "blue"],
         "MSI": ["swir1", "nir"],
         "MCARI": ["red_edge", "red", "green"],
         "TCARI": ["red_edge", "red", "green"],
@@ -324,15 +308,11 @@ def calculate_all_indices(
             if index_name == "NDVI":
                 results[index_name] = calculate_ndvi(bands["nir"], bands["red"])
             elif index_name == "NDRE":
-                results[index_name] = calculate_ndre(
-                    bands["nir"], bands["red_edge"]
-                )
+                results[index_name] = calculate_ndre(bands["nir"], bands["red_edge"])
             elif index_name == "NDMI":
                 results[index_name] = calculate_ndmi(bands["nir"], bands["swir1"])
             elif index_name == "MNDWI":
-                results[index_name] = calculate_mndwi(
-                    bands["green"], bands["swir1"]
-                )
+                results[index_name] = calculate_mndwi(bands["green"], bands["swir1"])
             elif index_name == "GCI":
                 results[index_name] = calculate_gci(bands["nir"], bands["green"])
             elif index_name == "SAVI":
@@ -341,9 +321,11 @@ def calculate_all_indices(
                 results[index_name] = calculate_osavi(bands["nir"], bands["red"])
             elif index_name == "MSAVI2":
                 results[index_name] = calculate_msavi2(bands["nir"], bands["red"])
-            elif index_name == "PRI":
-                results[index_name] = calculate_pri(
-                    bands["red_edge"], bands["red_edge_2"]
+            elif index_name == "NIRv":
+                results[index_name] = calculate_nirv(bands["nir"], bands["red"])
+            elif index_name == "EVI":
+                results[index_name] = calculate_evi(
+                    bands["nir"], bands["red"], bands["blue"]
                 )
             elif index_name == "MSI":
                 results[index_name] = calculate_msi(bands["swir1"], bands["nir"])
@@ -401,7 +383,8 @@ def get_required_bands(indices: List[str]) -> List[str]:
         "SAVI": ["nir", "red"],
         "OSAVI": ["nir", "red"],
         "MSAVI2": ["nir", "red"],
-        "PRI": ["red_edge", "red_edge_2"],
+        "NIRv": ["nir", "red"],
+        "EVI": ["nir", "red", "blue"],
         "MSI": ["swir1", "nir"],
         "MCARI": ["red_edge", "red", "green"],
         "TCARI": ["red_edge", "red", "green"],

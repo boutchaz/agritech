@@ -110,7 +110,8 @@ class VegetationIndex(str, Enum):
     SAVI = "SAVI"     # Soil Adjusted Vegetation Index
     OSAVI = "OSAVI"   # Optimized Soil Adjusted Vegetation Index
     MSAVI2 = "MSAVI2" # Modified Soil Adjusted Vegetation Index 2
-    PRI = "PRI"       # Photochemical Reflectance Index
+    NIRv = "NIRv"     # Near-Infrared Reflectance of vegetation
+    EVI = "EVI"       # Enhanced Vegetation Index
     MSI = "MSI"       # Moisture Stress Index
     MCARI = "MCARI"   # Modified Chlorophyll Absorption Ratio Index
     TCARI = "TCARI"   # Transformed Chlorophyll Absorption Ratio Index
@@ -257,21 +258,42 @@ def calculate_msavi2(nir: np.ndarray, red: np.ndarray) -> np.ndarray:
     return (term1 - np.sqrt(discriminant)) / 2
 
 
-def calculate_pri(red_edge: np.ndarray, red_edge_2: np.ndarray) -> np.ndarray:
+def calculate_nirv(nir: np.ndarray, red: np.ndarray) -> np.ndarray:
     """
-    Calculate Photochemical Reflectance Index.
+    Calculate Near-Infrared Reflectance of vegetation.
 
-    PRI = (RedEdge1 - RedEdge2) / (RedEdge1 + RedEdge2)
+    NIRv = NDVI * NIR
+    NDVI = (NIR - Red) / (NIR + Red)
 
-    Range: -1 to 1
-    - Sensitive to changes in carotenoid pigment content
-    - Used for light use efficiency assessment
+    Typical range: 0 to ~0.6
+    - Reduces bare-soil influence compared to NDVI
+    - Strong proxy for canopy photosynthetic activity
     """
+    ndvi = np.divide(
+        nir - red,
+        nir + red,
+        out=np.zeros_like(nir, dtype=np.float32),
+        where=(nir + red) != 0
+    )
+    return ndvi * nir
+
+
+def calculate_evi(nir: np.ndarray, red: np.ndarray, blue: np.ndarray) -> np.ndarray:
+    """
+    Calculate Enhanced Vegetation Index.
+
+    EVI = 2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)
+
+    Typical range: -1 to 1
+    - Less prone to saturation in dense canopies than NDVI
+    - More resilient to atmospheric and soil background effects
+    """
+    denominator = nir + 6 * red - 7.5 * blue + 1
     return np.divide(
-        red_edge - red_edge_2,
-        red_edge + red_edge_2,
-        out=np.zeros_like(red_edge, dtype=np.float32),
-        where=(red_edge + red_edge_2) != 0
+        2.5 * (nir - red),
+        denominator,
+        out=np.zeros_like(nir, dtype=np.float32),
+        where=denominator != 0
     )
 
 
@@ -326,7 +348,8 @@ VEGETATION_INDEX_CALCULATORS: Dict[str, callable] = {
     VegetationIndex.SAVI: lambda bands: calculate_savi(bands["nir"], bands["red"]),
     VegetationIndex.OSAVI: lambda bands: calculate_osavi(bands["nir"], bands["red"]),
     VegetationIndex.MSAVI2: lambda bands: calculate_msavi2(bands["nir"], bands["red"]),
-    VegetationIndex.PRI: lambda bands: calculate_pri(bands["red_edge"], bands["red_edge_2"]),
+    VegetationIndex.NIRv: lambda bands: calculate_nirv(bands["nir"], bands["red"]),
+    VegetationIndex.EVI: lambda bands: calculate_evi(bands["nir"], bands["red"], bands["blue"]),
     VegetationIndex.MSI: lambda bands: calculate_msi(bands["swir1"], bands["nir"]),
     VegetationIndex.MCARI: lambda bands: calculate_mcari(bands["red_edge"], bands["red"], bands["green"]),
     VegetationIndex.TCARI: lambda bands: calculate_tcari(bands["red_edge"], bands["red"], bands["green"]),
@@ -402,11 +425,11 @@ VISUALIZATION_PARAMS: Dict[str, VisualizationParams] = {
         palette=["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
         description="Enhanced Vegetation Index"
     ),
-    "PRI": VisualizationParams(
-        min=-0.2,
-        max=0.2,
+    "NIRv": VisualizationParams(
+        min=0.0,
+        max=0.4,
         palette=["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
-        description="Photochemical Reflectance Index"
+        description="Near-Infrared Reflectance of vegetation"
     ),
     "MSI": VisualizationParams(
         min=0,

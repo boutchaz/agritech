@@ -22,6 +22,11 @@ class SupabaseService:
             "Content-Type": "application/json",
         }
 
+    @staticmethod
+    def _round_weather_coordinate(value: float) -> float:
+        """Round coordinates so nearby AOIs reuse the same weather cache entry."""
+        return round(float(value), 2)
+
     async def get_organization_farms(
         self, organization_id: str
     ) -> List[Dict[str, Any]]:
@@ -198,6 +203,94 @@ class SupabaseService:
         except Exception as e:
             logger.error(f"Error fetching satellite data: {e}")
             return []
+
+    async def get_cached_par_data(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str,
+        end_date: str,
+    ) -> Dict[str, float]:
+        """Get cached daily PAR values for a rounded location and date range."""
+        if not self.supabase_url or not self.supabase_key:
+            return {}
+
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+
+        try:
+            async with httpx.AsyncClient() as client:
+                query_params: list[tuple[str, str]] = [
+                    ("select", "date,par_value"),
+                    ("latitude", f"eq.{lat:.2f}"),
+                    ("longitude", f"eq.{lon:.2f}"),
+                    ("date", f"gte.{start_date}"),
+                    ("date", f"lte.{end_date}"),
+                    ("order", "date.asc"),
+                ]
+
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/satellite_par_data",
+                    headers=self.headers,
+                    params=query_params,
+                )
+                response.raise_for_status()
+                rows = response.json()
+
+                par_by_date: Dict[str, float] = {}
+                for row in rows:
+                    date_key = row.get("date")
+                    par_value = row.get("par_value")
+                    if date_key and par_value is not None:
+                        par_by_date[str(date_key)] = float(par_value)
+
+                return par_by_date
+        except Exception as e:
+            logger.error(f"Error fetching cached PAR data: {e}")
+            return {}
+
+    async def upsert_par_data(
+        self,
+        latitude: float,
+        longitude: float,
+        par_by_date: Dict[str, float],
+        source: str = "open-meteo-archive",
+    ) -> bool:
+        """Upsert daily PAR values for a rounded location."""
+        if not self.supabase_url or not self.supabase_key or not par_by_date:
+            return False
+
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+
+        rows = [
+            {
+                "latitude": lat,
+                "longitude": lon,
+                "date": date_key,
+                "par_value": float(par_value),
+                "source": source,
+            }
+            for date_key, par_value in sorted(par_by_date.items())
+            if par_value is not None
+        ]
+
+        if not rows:
+            return False
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.supabase_url}/rest/v1/satellite_par_data",
+                    headers={**self.headers, "Prefer": "resolution=merge-duplicates"},
+                    params={"on_conflict": "latitude,longitude,date"},
+                    json=rows,
+                )
+                response.raise_for_status()
+                return True
+        except Exception as e:
+            logger.error(f"Error upserting PAR data: {e}")
+            return False
 
     async def convert_boundary_to_geojson(
         self, boundary: List[List[float]]

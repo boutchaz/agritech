@@ -10,7 +10,8 @@ export interface VegetationIndex {
   SAVI: string;
   OSAVI: string;
   MSAVI2: string;
-  PRI: string;
+  NIRv: string;
+  EVI: string;
   MSI: string;
   MCARI: string;
   TCARI: string;
@@ -330,7 +331,7 @@ export class SatelliteIndicesService {
     } catch (error) {
       ErrorHandlers.log(error, 'Error getting available indices');
       // Return default indices if service is unavailable
-      return ['NDVI', 'NDRE', 'NDMI', 'GCI', 'SAVI'];
+      return ['NDVI', 'NDRE', 'NDMI', 'NIRv', 'EVI', 'GCI', 'SAVI'];
     }
   }
 

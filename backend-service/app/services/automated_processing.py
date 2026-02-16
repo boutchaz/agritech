@@ -174,7 +174,7 @@ class AutomatedProcessingService:
         cloud_check: Dict[str, Any],
     ):
         try:
-            indices_to_calculate = ["NDVI", "NDRE", "GCI", "SAVI"]
+            indices_to_calculate = ["NDVI", "NDRE", "NIRv", "EVI", "GCI", "SAVI"]
             satellite_provider = get_satellite_provider()
 
             if satellite_provider.provider_name == "Google Earth Engine":
@@ -312,7 +312,7 @@ class AutomatedProcessingService:
         """Create a batch processing job for specific parameters"""
         try:
             if indices is None:
-                indices = ["NDVI", "NDRE", "GCI", "SAVI"]
+                indices = ["NDVI", "NDRE", "NIRv", "EVI", "GCI", "SAVI"]
 
             end_date = datetime.utcnow().date()
             start_date = end_date - timedelta(days=days_back)

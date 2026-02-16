@@ -806,7 +806,6 @@ class CDSEProvider(ISatelliteProvider):
             "NDRE": ["B05", "B08"],
             "NDMI": ["B08", "B11"],
             "MNDWI": ["B03", "B11"],
-            "PRI": ["B05", "B06"],
             "MCARI": ["B03", "B04", "B05"],
             "TCARI": ["B04", "B05"],
         }
@@ -844,6 +843,22 @@ class CDSEProvider(ISatelliteProvider):
             return (datacube.band("B08") - datacube.band("B04")) / (
                 datacube.band("B08") + datacube.band("B04")
             )
+        elif index == "NIRv":
+            ndvi = (datacube.band("B08") - datacube.band("B04")) / (
+                datacube.band("B08") + datacube.band("B04")
+            )
+            return ndvi * datacube.band("B08")
+        elif index == "EVI":
+            return (
+                2.5
+                * (datacube.band("B08") - datacube.band("B04"))
+                / (
+                    datacube.band("B08")
+                    + 6 * datacube.band("B04")
+                    - 7.5 * datacube.band("B02")
+                    + 1
+                )
+            )
         elif index == "NDRE":
             return (datacube.band("B08") - datacube.band("B05")) / (
                 datacube.band("B08") + datacube.band("B05")
@@ -868,5 +883,5 @@ class CDSEProvider(ISatelliteProvider):
         else:
             raise ValueError(
                 f"Index '{index}' is not implemented in the CDSE provider. "
-                f"Supported indices: NDVI, NDRE, NDMI, MNDWI, GCI, SAVI"
+                f"Supported indices: NDVI, NIRv, EVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, MSI, MCARI, TCARI"
             )

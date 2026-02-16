@@ -3,8 +3,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw } from 'lucide-react';
 import {
   satelliteApi,
-  VegetationIndexType,
-  VEGETATION_INDICES,
+  TimeSeriesIndexType,
+  TIME_SERIES_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
   TimeSeriesRequest,
   convertBoundaryToGeoJSON,
@@ -19,7 +19,7 @@ interface TimeSeriesChartProps {
   parcelName?: string;
   farmId?: string;
   boundary?: number[][];
-  defaultIndex?: VegetationIndexType;
+  defaultIndex?: TimeSeriesIndexType;
 }
 
 interface MultiIndexData {
@@ -45,7 +45,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
-  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>([defaultIndex]);
+  const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
+  const [liveSeriesData, setLiveSeriesData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
   const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -59,8 +60,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     setEndDate(defaultRange.end_date);
   }, []);
 
-  const getIndexColor = (index: VegetationIndexType): string => {
-    const colors: Record<VegetationIndexType, string> = {
+  const getIndexColor = (index: TimeSeriesIndexType): string => {
+    const colors: Record<TimeSeriesIndexType, string> = {
       NDVI: '#22c55e',
       NDRE: '#10b981',
       NDMI: '#3b82f6',
@@ -69,13 +70,22 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       SAVI: '#eab308',
       OSAVI: '#f59e0b',
       MSAVI2: '#f97316',
-      PRI: '#ef4444',
+      NIRv: '#ef4444',
+      NIRvP: '#9333ea',
+      EVI: '#0ea5e9',
       MSI: '#8b5cf6',
       MCARI: '#ec4899',
       TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
   };
+
+   const getIndexDescription = (index: TimeSeriesIndexType): string => {
+     if (index === 'NIRvP') {
+       return 'NIRv × PAR product - Photosynthetic productivity proxy';
+     }
+     return VEGETATION_INDEX_DESCRIPTIONS[index];
+   };
 
   // Query cached data from database
   const {
@@ -90,6 +100,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       const result: Record<string, any[]> = {};
 
       for (const index of selectedIndices) {
+        if (index === 'NIRvP') {
+          result[index] = [];
+          continue;
+        }
+
         try {
           const response = await satelliteIndicesApi.getAll(
             {
@@ -138,9 +153,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           };
 
           const response = await satelliteApi.getTimeSeries(request);
+          setLiveSeriesData(prev => ({ ...prev, [index]: response.data ?? [] }));
 
           // Save data points to database (duplicates ignored by unique constraint)
-          if (response.data && response.data.length > 0) {
+          if (index !== 'NIRvP' && response.data && response.data.length > 0) {
             for (const point of response.data) {
               try {
                 await satelliteIndicesApi.create(
@@ -175,14 +191,24 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const chartData = useCallback((): MultiIndexData[] => {
     const dateMap = new Map<string, MultiIndexData>();
 
-    if (cachedData) {
-      for (const index of selectedIndices) {
-        const indexData = cachedData[index] || [];
+    for (const index of selectedIndices) {
+      const indexData = cachedData?.[index] || [];
+      if (indexData.length > 0) {
         for (const item of indexData) {
           const date = item.date?.split('T')[0];
           if (date) {
             const existing: MultiIndexData = dateMap.get(date) || { date };
             existing[index] = item.mean_value ?? item.index_value ?? 0;
+            dateMap.set(date, existing);
+          }
+        }
+      } else {
+        const liveIndexData = liveSeriesData[index] || [];
+        for (const point of liveIndexData) {
+          const date = point.date?.split('T')[0];
+          if (date) {
+            const existing: MultiIndexData = dateMap.get(date) || { date };
+            existing[index] = point.value;
             dateMap.set(date, existing);
           }
         }
@@ -192,9 +218,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [cachedData, selectedIndices]);
+  }, [cachedData, selectedIndices, liveSeriesData]);
 
-  const toggleIndex = (index: VegetationIndexType) => {
+  const toggleIndex = (index: TimeSeriesIndexType) => {
     setSelectedIndices(prev => {
       if (prev.includes(index)) {
         if (prev.length === 1) return prev;
@@ -209,7 +235,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return value?.toFixed(3) ?? 'N/A';
   };
 
-  const calculateStatistics = (index: VegetationIndexType): IndexStats | null => {
+  const calculateStatistics = (index: TimeSeriesIndexType): IndexStats | null => {
     const data = chartData();
     const values = data.map(d => d[index] as number).filter(v => typeof v === 'number' && !isNaN(v));
 
@@ -223,7 +249,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return { mean, min, max, std };
   };
 
-  const getTrendIcon = (index: VegetationIndexType) => {
+  const getTrendIcon = (index: TimeSeriesIndexType) => {
     const data = chartData();
     const values = data.map(d => d[index] as number).filter(v => typeof v === 'number');
 
@@ -328,7 +354,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
           {showIndexSelector && (
             <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {VEGETATION_INDICES.map(index => (
+              {TIME_SERIES_INDICES.map(index => (
                 <button
                   key={index}
                   type="button"
@@ -504,7 +530,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   {index}
                 </div>
               </div>
-              <p className="text-sm text-gray-600">{VEGETATION_INDEX_DESCRIPTIONS[index]}</p>
+              <p className="text-sm text-gray-600">{getIndexDescription(index)}</p>
             </div>
           ))}
         </div>

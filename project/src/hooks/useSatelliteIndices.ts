@@ -1,12 +1,11 @@
 import { useState, useCallback } from 'react';
 import {
-  satelliteIndicesService,
-  SatelliteIndicesService,
-  IndexCalculationRequest,
-  IndexCalculationResponse,
-  TimeSeriesResponse,
-  ExportFormat,
-  ExportOptions
+   satelliteIndicesService,
+   SatelliteIndicesService,
+   IndexCalculationRequest,
+   IndexCalculationResponse,
+   TimeSeriesResponse,
+   ExportOptions
 } from '../services/satelliteIndicesService';
 
 interface UseSatelliteIndicesReturn {
@@ -177,7 +176,7 @@ export function useSatelliteIndices(): UseSatelliteIndicesReturn {
     } catch (err) {
       console.error('Failed to load available indices:', err);
       // Set default indices as fallback
-      setAvailableIndices(['NDVI', 'NDRE', 'NDMI', 'GCI', 'SAVI']);
+      setAvailableIndices(['NDVI', 'NDRE', 'NDMI', 'NIRv', 'EVI', 'GCI', 'SAVI']);
     }
   }, []);
 

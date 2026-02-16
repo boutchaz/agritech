@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer, Upload, X, Maximize2 } from 'lucide-react';
+import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer, X, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
 import { TimeSeriesResponse, IndexCalculationResponse, ExportFormat } from '../services/satelliteIndicesService';
-import TimeSeriesChart, { TemperatureDataPoint } from './TimeSeriesChart';
+import TimeSeriesChart from './TimeSeriesChart';
 import MultiIndexChart from './MultiIndexChart';
 import { useTifUpload } from '../hooks/useTifUpload';
 
@@ -46,9 +46,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
   const [showTemperatureOverlay, setShowTemperatureOverlay] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // TIF Image state
-  const [showTifModal, setShowTifModal] = useState(false);
-  const [tifImageUrl, setTifImageUrl] = useState<string | null>(parcel.tif_image_url || null);
+   // TIF Image state
+   const [tifImageUrl, setTifImageUrl] = useState<string | null>(parcel.tif_image_url || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TIF upload hook
@@ -57,7 +56,6 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     parcelName: parcel.name,
     onSuccess: (imageUrl) => {
       setTifImageUrl(imageUrl);
-      setShowTifModal(false);
     },
   });
 
@@ -81,6 +79,18 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       setSelectedIndex(availableIndices[0]);
     }
   }, [availableIndices, selectedIndex]);
+
+  const timeSeriesIndices = Array.from(new Set([...availableIndices, 'NIRvP']));
+
+  useEffect(() => {
+    if (
+      activeTab === 'current' &&
+      availableIndices.length > 0 &&
+      !availableIndices.includes(selectedIndex)
+    ) {
+      setSelectedIndex(availableIndices[0]);
+    }
+  }, [activeTab, availableIndices, selectedIndex]);
 
   const getDateRange = (range: string) => {
     const endDate = new Date();
@@ -143,7 +153,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         // Use Promise.all for parallel fetching
         const promises = selectedIndices.map(async (index) => {
           const result = await getTimeSeries(
-            parcel.boundary,
+            parcel.boundary || [],
             parcel.name,
             index,
             dateRange
@@ -248,7 +258,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       SAVI: '#f59e0b',   // amber
       OSAVI: '#8b5cf6',  // violet
       MSAVI2: '#ec4899', // pink
-      PRI: '#f97316',    // orange
+      NIRv: '#f97316',    // orange
+      EVI: '#0ea5e9',    // sky
+      NIRvP: '#9333ea',  // violet
       MSI: '#ef4444',    // red
       MCARI: '#a855f7',  // purple
       TCARI: '#14b8a6',  // teal
@@ -283,7 +295,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       MNDWI: 'Indice d\'eau différentiel normalisé modifié - Détection de l\'eau',
       OSAVI: 'Indice de végétation ajusté au sol optimisé',
       MSAVI2: 'Indice de végétation ajusté au sol modifié 2',
-      PRI: 'Indice de réflectance photochimique',
+      NIRv: 'Indice NIRv - Réflectance proche infrarouge de la végétation',
+      EVI: 'Indice de végétation amélioré - adapté aux couverts denses',
+      NIRvP: 'Produit de NIRv et PAR - proxy de productivité photosynthétique',
       MSI: 'Indice de stress hydrique',
       MCARI: 'Indice de chlorophylle résistant à l\'atmosphère modifié',
       TCARI: 'Indice de chlorophylle résistant à l\'atmosphère transformé',
@@ -328,7 +342,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             onChange={(e) => setSelectedIndex(e.target.value)}
             className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
-            {availableIndices.map(index => (
+            {(activeTab === 'timeseries' ? timeSeriesIndices : availableIndices).map(index => (
               <option key={index} value={index}>{index}</option>
             ))}
           </select>
@@ -574,7 +588,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     onChange={(e) => setSelectedIndex(e.target.value)}
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    {availableIndices.map(index => (
+                    {timeSeriesIndices.map(index => (
                       <option key={index} value={index}>{index}</option>
                     ))}
                   </select>
@@ -648,7 +662,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 </button>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {availableIndices.map(index => {
+                {timeSeriesIndices.map(index => {
                   const isSelected = selectedIndices.includes(index);
                   return (
                     <button

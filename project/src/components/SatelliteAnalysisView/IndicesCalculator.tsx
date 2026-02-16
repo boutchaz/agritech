@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Satellite, Download, BarChart3, Database, RefreshCw } from 'lucide-react';
+import { AlertCircle, Satellite, Download, Database, RefreshCw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
@@ -10,7 +10,7 @@ import {
   IndexCalculationResponse,
   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
-import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
+import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 
 interface IndicesCalculatorProps {
@@ -251,7 +251,8 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
       SAVI: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       OSAVI: 'bg-amber-100 text-amber-800 border-amber-200',
       MSAVI2: 'bg-orange-100 text-orange-800 border-orange-200',
-      PRI: 'bg-red-100 text-red-800 border-red-200',
+      NIRv: 'bg-red-100 text-red-800 border-red-200',
+      EVI: 'bg-sky-100 text-sky-800 border-sky-200',
       MSI: 'bg-purple-100 text-purple-800 border-purple-200',
       MCARI: 'bg-pink-100 text-pink-800 border-pink-200',
       TCARI: 'bg-rose-100 text-rose-800 border-rose-200'

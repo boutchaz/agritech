@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.models.schemas import (
     IndexCalculationRequest,
     IndexCalculationResponse,
@@ -14,19 +14,123 @@ from app.models.schemas import (
     HeatmapRequest,
     HeatmapDataResponse,
     IndexValue,
-    ErrorResponse
+    ErrorResponse,
 )
 from app.services.satellite import get_satellite_provider
+from app.services.supabase_service import supabase_service
 import logging
 import ee
+import httpx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
+def _extract_centroid(geometry: Dict) -> Optional[Tuple[float, float]]:
+    """Extract a simple centroid (lat, lon) from GeoJSON geometry coordinates."""
+    geo_type = geometry.get("type")
+    coordinates = geometry.get("coordinates", [])
+
+    points: List[List[float]] = []
+    if geo_type == "Polygon" and coordinates:
+        points = coordinates[0]
+    elif geo_type == "MultiPolygon" and coordinates and coordinates[0]:
+        points = coordinates[0][0]
+    elif (
+        geo_type == "Point" and isinstance(coordinates, list) and len(coordinates) == 2
+    ):
+        points = [coordinates]
+
+    if not points:
+        return None
+
+    lons = [p[0] for p in points]
+    lats = [p[1] for p in points]
+    return (sum(lats) / len(lats), sum(lons) / len(lons))
+
+
+async def _fetch_daily_par(
+    latitude: float,
+    longitude: float,
+    start_date: str,
+    end_date: str,
+) -> Dict[str, float]:
+    """
+    Fetch daily PAR approximation from Open-Meteo archive.
+    PAR ≈ 0.48 * shortwave_radiation_sum.
+    """
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "start_date": start_date,
+        "end_date": end_date,
+        "daily": "shortwave_radiation_sum",
+        "timezone": "UTC",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, params=params, timeout=15)
+            response.raise_for_status()
+            payload = response.json()
+
+        daily = payload.get("daily", {})
+        dates = daily.get("time", [])
+        shortwave = daily.get("shortwave_radiation_sum", [])
+
+        par_by_date: Dict[str, float] = {}
+        for date_str, sw in zip(dates, shortwave):
+            if sw is None:
+                continue
+            par_by_date[date_str] = float(sw) * 0.48
+
+        return par_by_date
+    except Exception as exc:
+        logger.warning(f"Failed to fetch PAR data from Open-Meteo: {exc}")
+        return {}
+
+
+def _window_par_mean(
+    start_date: str,
+    step_days: int,
+    par_by_date: Dict[str, float],
+) -> Optional[float]:
+    """Compute mean PAR over [start_date, start_date + step_days)."""
+    start_dt = datetime.strptime(start_date[:10], "%Y-%m-%d")
+    values: List[float] = []
+
+    for offset in range(max(step_days, 1)):
+        current = (start_dt + timedelta(days=offset)).strftime("%Y-%m-%d")
+        par_value = par_by_date.get(current)
+        if par_value is not None:
+            values.append(par_value)
+
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def _daily_date_range(start_date: str, end_date: str) -> List[str]:
+    """Build an inclusive YYYY-MM-DD date range."""
+    start_dt = datetime.strptime(start_date[:10], "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date[:10], "%Y-%m-%d")
+    dates: List[str] = []
+
+    current = start_dt
+    while current <= end_dt:
+        dates.append(current.strftime("%Y-%m-%d"))
+        current += timedelta(days=1)
+
+    return dates
+
+
 @router.post("/calculate", response_model=IndexCalculationResponse)
 async def calculate_indices(
     request: IndexCalculationRequest,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Calculate vegetation indices for a given AOI and date range"""
     try:
@@ -44,17 +148,17 @@ async def calculate_indices(
                 request.date_range.end_date,
                 request.cloud_coverage,
                 use_aoi_cloud_filter=request.use_aoi_cloud_filter,
-                cloud_buffer_meters=request.cloud_buffer_meters
+                cloud_buffer_meters=request.cloud_buffer_meters,
             )
 
             # Get the median composite
             import ee
+
             composite = collection.median()
 
             # Calculate requested indices
             index_results = earth_engine_service.calculate_vegetation_indices(
-                composite,
-                [idx.value for idx in request.indices]
+                composite, [idx.value for idx in request.indices]
             )
 
             # Calculate mean values for each index
@@ -62,18 +166,24 @@ async def calculate_indices(
             index_values = []
 
             for index_name, index_image in index_results.items():
-                mean_value = index_image.reduceRegion(
-                    reducer=ee.Reducer.mean(),
-                    geometry=aoi,
-                    scale=request.scale,
-                    maxPixels=1e13
-                ).get(index_name).getInfo()
+                mean_value = (
+                    index_image.reduceRegion(
+                        reducer=ee.Reducer.mean(),
+                        geometry=aoi,
+                        scale=request.scale,
+                        maxPixels=1e13,
+                    )
+                    .get(index_name)
+                    .getInfo()
+                )
 
-                index_values.append(IndexValue(
-                    index=index_name,
-                    value=mean_value if mean_value is not None else 0.0,
-                    timestamp=datetime.utcnow()
-                ))
+                index_values.append(
+                    IndexValue(
+                        index=index_name,
+                        value=mean_value if mean_value is not None else 0.0,
+                        timestamp=datetime.utcnow(),
+                    )
+                )
 
             return IndexCalculationResponse(
                 request_id=str(uuid.uuid4()),
@@ -86,8 +196,8 @@ async def calculate_indices(
                     "cloud_coverage": request.cloud_coverage,
                     "scale": request.scale,
                     "image_count": collection.size().getInfo(),
-                    "provider": "Google Earth Engine"
-                }
+                    "provider": "Google Earth Engine",
+                },
             )
         else:
             # CDSE provider - use the statistics method to get mean values
@@ -99,7 +209,7 @@ async def calculate_indices(
                     geometry=request.aoi.geometry.model_dump(),
                     start_date=request.date_range.start_date,
                     end_date=request.date_range.end_date,
-                    indices=[idx.value for idx in request.indices]
+                    indices=[idx.value for idx in request.indices],
                 )
 
                 for idx in request.indices:
@@ -109,20 +219,20 @@ async def calculate_indices(
                     else:
                         mean_val = 0.0
 
-                    index_values.append(IndexValue(
-                        index=idx.value,
-                        value=mean_val,
-                        timestamp=datetime.utcnow()
-                    ))
+                    index_values.append(
+                        IndexValue(
+                            index=idx.value, value=mean_val, timestamp=datetime.utcnow()
+                        )
+                    )
             except Exception as e:
                 logger.warning(f"Failed to get statistics from CDSE: {e}")
                 # Return zero values if statistics fail
                 for idx in request.indices:
-                    index_values.append(IndexValue(
-                        index=idx.value,
-                        value=0.0,
-                        timestamp=datetime.utcnow()
-                    ))
+                    index_values.append(
+                        IndexValue(
+                            index=idx.value, value=0.0, timestamp=datetime.utcnow()
+                        )
+                    )
 
             return IndexCalculationResponse(
                 request_id=str(uuid.uuid4()),
@@ -134,32 +244,38 @@ async def calculate_indices(
                     "end_date": request.date_range.end_date,
                     "cloud_coverage": request.cloud_coverage,
                     "scale": request.scale,
-                    "provider": satellite_provider.provider_name
-                }
+                    "provider": satellite_provider.provider_name,
+                },
             )
 
     except Exception as e:
         logger.error(f"Error calculating indices: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/timeseries", response_model=TimeSeriesResponse)
 async def get_time_series(
     request: TimeSeriesRequest,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Get time series data for a specific vegetation index"""
     try:
         satellite_provider = get_satellite_provider(provider)
+        requested_index = request.index.value
+        base_index = "NIRv" if requested_index == "NIRvP" else requested_index
 
         # For GEE provider, use the existing service directly
         if satellite_provider.provider_name == "Google Earth Engine":
             from app.services import earth_engine_service
+
             time_series_data = earth_engine_service.get_time_series(
                 request.aoi.geometry.model_dump(),
                 request.date_range.start_date,
                 request.date_range.end_date,
-                request.index.value,
-                request.interval.value
+                base_index,
+                request.interval.value,
             )
         else:
             # Use the provider interface
@@ -167,45 +283,132 @@ async def get_time_series(
                 geometry=request.aoi.geometry.model_dump(),
                 start_date=request.date_range.start_date,
                 end_date=request.date_range.end_date,
-                index=request.index.value,
-                interval=request.interval.value
+                index=base_index,
+                interval=request.interval.value,
             )
-            time_series_data = [{"date": p.date, "value": p.value} for p in ts_result.data]
-        
+            time_series_data = [
+                {"date": p.date, "value": p.value} for p in ts_result.data
+            ]
+
+        # Build NIRvP = NIRv * PAR for time-series use cases
+        if requested_index == "NIRvP":
+            centroid = _extract_centroid(request.aoi.geometry.model_dump())
+            interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
+            step_days = interval_days.get(request.interval.value, 30)
+
+            par_by_date: Dict[str, float] = {}
+            if centroid is not None:
+                latitude, longitude = centroid
+
+                # 1) Read cache
+                par_by_date = await supabase_service.get_cached_par_data(
+                    latitude=latitude,
+                    longitude=longitude,
+                    start_date=request.date_range.start_date,
+                    end_date=request.date_range.end_date,
+                )
+
+                # 2) Fetch and persist only missing days
+                required_dates = set(
+                    _daily_date_range(
+                        request.date_range.start_date,
+                        request.date_range.end_date,
+                    )
+                )
+                missing_dates = sorted(required_dates - set(par_by_date.keys()))
+
+                if missing_dates:
+                    fetched_par = await _fetch_daily_par(
+                        latitude=latitude,
+                        longitude=longitude,
+                        start_date=request.date_range.start_date,
+                        end_date=request.date_range.end_date,
+                    )
+                    if fetched_par:
+                        missing_par = {
+                            date_key: value
+                            for date_key, value in fetched_par.items()
+                            if date_key in missing_dates
+                        }
+                        par_by_date.update(missing_par)
+
+                        if missing_par:
+                            await supabase_service.upsert_par_data(
+                                latitude=latitude,
+                                longitude=longitude,
+                                par_by_date=missing_par,
+                            )
+                    else:
+                        logger.warning(
+                            "PAR fetch returned no data for NIRvP "
+                            f"({request.date_range.start_date} -> {request.date_range.end_date})"
+                        )
+
+            fallback_par = (
+                sum(par_by_date.values()) / len(par_by_date) if par_by_date else None
+            )
+
+            nirvp_series = []
+            for point in time_series_data:
+                point_date = str(point["date"])[:10]
+                par_mean = _window_par_mean(point_date, step_days, par_by_date)
+                if par_mean is None:
+                    par_mean = fallback_par
+                if par_mean is None:
+                    logger.warning(
+                        f"Skipping NIRvP point {point_date}: no PAR data available"
+                    )
+                    continue
+                nirvp_series.append(
+                    {
+                        "date": point_date,
+                        "value": float(point["value"]) * float(par_mean),
+                    }
+                )
+            time_series_data = nirvp_series
+
         # Calculate statistics
         if time_series_data:
-            values = [point['value'] for point in time_series_data if point['value'] is not None]
+            values = [
+                point["value"]
+                for point in time_series_data
+                if point["value"] is not None
+            ]
             if values:
                 import numpy as np
+
                 statistics = {
                     "mean": float(np.mean(values)),
                     "std": float(np.std(values)),
                     "min": float(np.min(values)),
                     "max": float(np.max(values)),
-                    "median": float(np.median(values))
+                    "median": float(np.median(values)),
                 }
             else:
                 statistics = None
         else:
             statistics = None
-        
+
         return TimeSeriesResponse(
-            index=request.index.value,
+            index=requested_index,
             aoi_name=request.aoi.name,
             start_date=request.date_range.start_date,
             end_date=request.date_range.end_date,
             data=time_series_data,
-            statistics=statistics
+            statistics=statistics,
         )
-    
+
     except Exception as e:
         logger.error(f"Error getting time series: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/export")
 async def export_index_map(
     request: ExportRequest,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Export vegetation index map as GeoTIFF or interactive data"""
     try:
@@ -214,12 +417,13 @@ async def export_index_map(
         # For GEE provider, use the existing service directly
         if satellite_provider.provider_name == "Google Earth Engine":
             from app.services import earth_engine_service
+
             result = await earth_engine_service.export_index_map(
                 request.aoi.geometry.model_dump(),
                 request.date,
                 request.index.value,
                 request.scale,
-                interactive=request.interactive
+                interactive=request.interactive,
             )
         else:
             # Use the provider interface for CDSE and other providers
@@ -228,7 +432,7 @@ async def export_index_map(
                 date=request.date,
                 index=request.index.value,
                 scale=request.scale,
-                interactive=request.interactive
+                interactive=request.interactive,
             )
 
         if request.interactive:
@@ -237,10 +441,15 @@ async def export_index_map(
         else:
             # Return traditional export response
             from datetime import timedelta
+
             expires_at = datetime.utcnow() + timedelta(hours=24)
 
             # Handle different result formats from providers
-            download_url = result.get("url", "") if isinstance(result, dict) else getattr(result, "url", "")
+            download_url = (
+                result.get("url", "")
+                if isinstance(result, dict)
+                else getattr(result, "url", "")
+            )
 
             return ExportResponse(
                 request_id=str(uuid.uuid4()),
@@ -251,18 +460,21 @@ async def export_index_map(
                 metadata={
                     "date": request.date,
                     "scale": request.scale,
-                    "aoi_name": request.aoi.name
-                }
+                    "aoi_name": request.aoi.name,
+                },
             )
 
     except Exception as e:
         logger.error(f"Error exporting index map: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/interactive", response_model=InteractiveDataResponse)
 async def get_interactive_data(
     request: InteractiveRequest,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Get interactive pixel data for scatter plot visualization"""
     try:
@@ -271,12 +483,13 @@ async def get_interactive_data(
         # For GEE provider, use the existing service directly
         if satellite_provider.provider_name == "Google Earth Engine":
             from app.services import earth_engine_service
+
             data = await earth_engine_service.export_interactive_data(
                 request.aoi.geometry.model_dump(),
                 request.date,
                 request.index.value,
                 request.scale,
-                request.max_pixels
+                request.max_pixels,
             )
         else:
             # Use the provider interface for CDSE and other providers
@@ -285,7 +498,7 @@ async def get_interactive_data(
                 date=request.date,
                 index=request.index.value,
                 scale=request.scale,
-                max_pixels=request.max_pixels
+                max_pixels=request.max_pixels,
             )
 
         return InteractiveDataResponse(**data)
@@ -294,10 +507,13 @@ async def get_interactive_data(
         logger.error(f"Error getting interactive data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/heatmap", response_model=HeatmapDataResponse)
 async def get_heatmap_data(
     request: HeatmapRequest,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Get heatmap data for ECharts heatmap visualization"""
     try:
@@ -306,11 +522,12 @@ async def get_heatmap_data(
         # For GEE provider, use the existing service directly
         if satellite_provider.provider_name == "Google Earth Engine":
             from app.services import earth_engine_service
+
             data = await earth_engine_service.export_heatmap_data(
                 request.aoi.geometry.model_dump(),
                 request.date,
                 request.index.value,
-                request.grid_size
+                request.grid_size,
             )
         else:
             # Use the provider interface for CDSE and other providers
@@ -318,14 +535,14 @@ async def get_heatmap_data(
                 geometry=request.aoi.geometry.model_dump(),
                 date=request.date,
                 index=request.index.value,
-                grid_size=request.grid_size
+                grid_size=request.grid_size,
             )
 
         # Convert dataclass to dict for response
-        if hasattr(data, 'model_dump'):
+        if hasattr(data, "model_dump"):
             # Pydantic model
             data_dict = data.model_dump()
-        elif hasattr(data, '__dict__'):
+        elif hasattr(data, "__dict__"):
             # Dataclass
             data_dict = data.__dict__
         else:
@@ -337,9 +554,12 @@ async def get_heatmap_data(
         logger.error(f"Error getting heatmap data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/available", response_model=List[str])
 async def get_available_indices(
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Get list of available vegetation indices"""
     from app.models.schemas import VegetationIndex
@@ -358,10 +578,13 @@ async def get_provider_info():
 
     return get_provider_info()
 
+
 @router.post("/available-dates")
 async def get_available_dates(
     request: Dict,
-    provider: Optional[str] = Query(None, description="Satellite provider (gee, cdse, or auto)")
+    provider: Optional[str] = Query(
+        None, description="Satellite provider (gee, cdse, or auto)"
+    ),
 ):
     """Get dates with available satellite imagery for a given AOI and date range"""
     try:
@@ -396,7 +619,7 @@ async def get_available_dates(
                 end_date,
                 max_cloud_coverage,
                 use_aoi_cloud_filter=True,
-                cloud_buffer_meters=300
+                cloud_buffer_meters=300,
             )
 
             # Check collection size first
@@ -405,49 +628,57 @@ async def get_available_dates(
 
             # If no images found with AOI filtering, try without it (fallback)
             if collection_size == 0:
-                logger.info("No images with AOI cloud filter, trying tile-based filtering...")
+                logger.info(
+                    "No images with AOI cloud filter, trying tile-based filtering..."
+                )
                 collection = earth_engine_service.get_sentinel2_collection(
                     aoi_geometry,
                     start_date,
                     end_date,
                     max_cloud_coverage,
-                    use_aoi_cloud_filter=False  # Disable AOI-based filtering
+                    use_aoi_cloud_filter=False,  # Disable AOI-based filtering
                 )
                 collection_size = collection.size().getInfo()
-                logger.info(f"Collection size with tile-based filter: {collection_size}")
+                logger.info(
+                    f"Collection size with tile-based filter: {collection_size}"
+                )
 
             if collection_size == 0:
-                logger.warning(f"No images found for AOI in date range {start_date} to {end_date} with cloud coverage < {max_cloud_coverage}%")
+                logger.warning(
+                    f"No images found for AOI in date range {start_date} to {end_date} with cloud coverage < {max_cloud_coverage}%"
+                )
                 return {
                     "available_dates": [],
                     "total_images": 0,
-                    "date_range": {
-                        "start": start_date,
-                        "end": end_date
-                    },
-                    "filters": {
-                        "max_cloud_coverage": max_cloud_coverage
-                    },
+                    "date_range": {"start": start_date, "end": end_date},
+                    "filters": {"max_cloud_coverage": max_cloud_coverage},
                     "debug_info": {
                         "message": "No Sentinel-2 images found for this location and time period",
-                        "suggestion": "Try increasing cloud coverage threshold or expanding date range"
+                        "suggestion": "Try increasing cloud coverage threshold or expanding date range",
                     },
-                    "provider": satellite_provider.provider_name
+                    "provider": satellite_provider.provider_name,
                 }
 
             # Get image dates and cloud coverage
             def extract_date_info(image):
-                date = ee.Date(image.get('system:time_start'))
-                return ee.Feature(None, {
-                    'date': date.format('YYYY-MM-dd'),
-                    'cloud_coverage': image.get('CLOUDY_PIXEL_PERCENTAGE'),
-                    'timestamp': date.millis()
-                })
+                date = ee.Date(image.get("system:time_start"))
+                return ee.Feature(
+                    None,
+                    {
+                        "date": date.format("YYYY-MM-dd"),
+                        "cloud_coverage": image.get("CLOUDY_PIXEL_PERCENTAGE"),
+                        "timestamp": date.millis(),
+                    },
+                )
 
             features = collection.map(extract_date_info)
-            date_info = features.reduceColumns(
-                ee.Reducer.toList(3), ['date', 'cloud_coverage', 'timestamp']
-            ).get('list').getInfo()
+            date_info = (
+                features.reduceColumns(
+                    ee.Reducer.toList(3), ["date", "cloud_coverage", "timestamp"]
+                )
+                .get("list")
+                .getInfo()
+            )
 
             # Process and deduplicate dates
             dates_dict = {}
@@ -458,28 +689,26 @@ async def get_available_dates(
                     timestamp = item[2]
 
                     # Keep the image with lowest cloud coverage for each date
-                    if date_str not in dates_dict or dates_dict[date_str]['cloud_coverage'] > cloud_coverage:
+                    if (
+                        date_str not in dates_dict
+                        or dates_dict[date_str]["cloud_coverage"] > cloud_coverage
+                    ):
                         dates_dict[date_str] = {
-                            'date': date_str,
-                            'cloud_coverage': round(cloud_coverage, 2),
-                            'timestamp': timestamp,
-                            'available': True
+                            "date": date_str,
+                            "cloud_coverage": round(cloud_coverage, 2),
+                            "timestamp": timestamp,
+                            "available": True,
                         }
 
             # Sort by date and return
-            available_dates = sorted(dates_dict.values(), key=lambda x: x['date'])
+            available_dates = sorted(dates_dict.values(), key=lambda x: x["date"])
 
             return {
                 "available_dates": available_dates,
                 "total_images": len(available_dates),
-                "date_range": {
-                    "start": start_date,
-                    "end": end_date
-                },
-                "filters": {
-                    "max_cloud_coverage": max_cloud_coverage
-                },
-                "provider": satellite_provider.provider_name
+                "date_range": {"start": start_date, "end": end_date},
+                "filters": {"max_cloud_coverage": max_cloud_coverage},
+                "provider": satellite_provider.provider_name,
             }
         else:
             # Use the provider interface for CDSE and other providers
@@ -487,7 +716,7 @@ async def get_available_dates(
                 geometry=aoi_geometry,
                 start_date=start_date,
                 end_date=end_date,
-                max_cloud_coverage=max_cloud_coverage
+                max_cloud_coverage=max_cloud_coverage,
             )
 
             # Ensure provider info is in the response

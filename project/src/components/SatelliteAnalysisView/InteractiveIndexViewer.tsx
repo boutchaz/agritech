@@ -5,20 +5,17 @@ import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  satelliteApi,
-  VegetationIndexType,
-  VEGETATION_INDICES,
-  VEGETATION_INDEX_DESCRIPTIONS,
-  HeatmapDataResponse,
-  InteractiveDataResponse,
-  convertBoundaryToGeoJSON
+   satelliteApi,
+   VegetationIndexType,
+   VEGETATION_INDICES,
+   VEGETATION_INDEX_DESCRIPTIONS,
+   HeatmapDataResponse,
+   InteractiveDataResponse,
+   convertBoundaryToGeoJSON
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { DatePicker } from '../ui/DatePicker';
 import { Button } from '../ui/button';
-import { Select } from '../ui/Select';
-import { Card } from '../ui/card';
-import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 
 interface InteractiveIndexViewerProps {
@@ -61,12 +58,12 @@ export const COLOR_PALETTES: Record<ColorPalette, { name: string; colors: string
   'green-red-inverted': {
     name: 'Vert-Rouge (Inversé)',
     colors: ['#228b22', '#32cd32', '#adff2f', '#ffff00', '#ffa500', '#ff6347', '#dc143c'],
-    description: 'Pour indices inversés (MSI, PRI) - bas = bon'
+    description: 'Pour indices inversés (MSI) - bas = bon'
   },
   'blue-red-inverted': {
     name: 'Bleu-Rouge (Inversé)',
     colors: ['#0000ff', '#4169e1', '#00bfff', '#ffffff', '#ff69b4', '#ff0000', '#8b0000'],
-    description: 'Pour indices inversés (MSI, PRI) - bas = bon'
+    description: 'Pour indices inversés (MSI) - bas = bon'
   }
 };
 
@@ -241,7 +238,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      PRI: '#ef4444', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
   };
@@ -1341,7 +1338,8 @@ function getDefaultPaletteForIndex(index: VegetationIndexType): ColorPalette {
     SAVI: 'red-green',
     OSAVI: 'red-green',
     MSAVI2: 'red-green',
-    PRI: 'rainbow',
+    NIRv: 'red-green',
+    EVI: 'viridis',
     MSI: 'blue-red',
     MCARI: 'viridis',
     TCARI: 'viridis'

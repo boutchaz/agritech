@@ -145,8 +145,17 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       case 'NDVI': return '#22c55e'; // green
       case 'NDRE': return '#eab308'; // yellow
       case 'NDMI': return '#3b82f6'; // blue
+      case 'MNDWI': return '#06b6d4'; // cyan
       case 'GCI': return '#10b981'; // emerald
       case 'SAVI': return '#f59e0b'; // amber
+      case 'OSAVI': return '#8b5cf6'; // violet
+      case 'MSAVI2': return '#ec4899'; // pink
+      case 'NIRv': return '#f97316'; // orange
+      case 'EVI': return '#0ea5e9'; // sky
+      case 'NIRvP': return '#9333ea'; // violet
+      case 'MSI': return '#ef4444'; // red
+      case 'MCARI': return '#a855f7'; // purple
+      case 'TCARI': return '#14b8a6'; // teal
       default: return '#6366f1'; // indigo
     }
   };

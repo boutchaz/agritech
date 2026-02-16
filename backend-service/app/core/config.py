@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # Automated processing
     AUTOMATED_PROCESSING_ENABLED: bool = os.getenv("AUTOMATED_PROCESSING_ENABLED", "false").lower() == "true"
     PROCESSING_INTERVAL: int = int(os.getenv("PROCESSING_INTERVAL", "3600"))  # seconds
-    DEFAULT_INDICES: List[str] = ["NDVI", "NDRE", "GCI", "SAVI"]
+    DEFAULT_INDICES: List[str] = ["NDVI", "NDRE", "NIRv", "EVI", "GCI", "SAVI"]
     DEFAULT_DAYS_BACK: int = int(os.getenv("DEFAULT_DAYS_BACK", "7"))
     
     # Background tasks

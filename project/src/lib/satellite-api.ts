@@ -12,13 +12,15 @@ export interface VegetationIndex {
   SAVI: "SAVI";
   OSAVI: "OSAVI";
   MSAVI2: "MSAVI2";
-  PRI: "PRI";
+  NIRv: "NIRv";
+  EVI: "EVI";
   MSI: "MSI";
   MCARI: "MCARI";
   TCARI: "TCARI";
 }
 
 export type VegetationIndexType = keyof VegetationIndex;
+export type TimeSeriesIndexType = VegetationIndexType | 'NIRvP';
 
 export interface GeoJSONGeometry {
   type: 'Point' | 'Polygon' | 'MultiPolygon';
@@ -48,7 +50,7 @@ export interface IndexCalculationRequest {
 export interface TimeSeriesRequest {
   aoi: AOIRequest;
   date_range: DateRangeRequest;
-  index: VegetationIndexType;
+  index: TimeSeriesIndexType;
   interval?: 'day' | 'week' | 'month' | 'year';
   cloud_coverage?: number;
 }
@@ -696,8 +698,10 @@ export const getDateRangeLastNDays = (days: number): DateRangeRequest => {
 };
 
 export const VEGETATION_INDICES: VegetationIndexType[] = [
-  'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'PRI', 'MSI', 'MCARI', 'TCARI'
+  'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'
 ];
+
+export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES, 'NIRvP'];
 
 export const VEGETATION_INDEX_DESCRIPTIONS: Record<VegetationIndexType, string> = {
   NDVI: 'Normalized Difference Vegetation Index - General vegetation health',
@@ -708,7 +712,8 @@ export const VEGETATION_INDEX_DESCRIPTIONS: Record<VegetationIndexType, string> 
   SAVI: 'Soil Adjusted Vegetation Index - Vegetation with soil background',
   OSAVI: 'Optimized Soil Adjusted Vegetation Index - Enhanced SAVI',
   MSAVI2: 'Modified Soil Adjusted Vegetation Index - Version 2',
-  PRI: 'Photochemical Reflectance Index - Light use efficiency',
+  NIRv: 'Near-Infrared Reflectance of Vegetation - Canopy photosynthetic activity',
+  EVI: 'Enhanced Vegetation Index - Dense canopy monitoring',
   MSI: 'Moisture Stress Index - Plant water stress',
   MCARI: 'Modified Chlorophyll Absorption Ratio Index - Chlorophyll',
   TCARI: 'Transformed Chlorophyll Absorption Reflectance Index - Chlorophyll'

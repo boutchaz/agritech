@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { BarChart3, Download, Cloud, AlertTriangle, CheckCircle, Database, TrendingUp, Info, Satellite, RefreshCw } from 'lucide-react';
+import { Download, Cloud, AlertTriangle, CheckCircle, Database, Info, Satellite, RefreshCw, BarChart3 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
@@ -269,7 +269,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      PRI: '#ef4444', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
   };

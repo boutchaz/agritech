@@ -37,7 +37,7 @@ CREATE TABLE public.satellite_indices_data (
     parcel_id uuid NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
     processing_job_id uuid REFERENCES public.satellite_processing_jobs(id) ON DELETE SET NULL,
     date date NOT NULL,
-    index_name text NOT NULL CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'PRI', 'MSI', 'MCARI', 'TCARI')),
+    index_name text NOT NULL CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI')),
     mean_value numeric(10,6),
     min_value numeric(10,6),
     max_value numeric(10,6),
@@ -55,6 +55,19 @@ CREATE TABLE public.satellite_indices_data (
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     UNIQUE(parcel_id, date, index_name) -- Prevent duplicate data for same parcel/date/index
+);
+
+-- Daily PAR cache table (for NIRvP time-series)
+CREATE TABLE public.satellite_par_data (
+    id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+    latitude numeric(9,2) NOT NULL,
+    longitude numeric(9,2) NOT NULL,
+    date date NOT NULL,
+    par_value numeric(12,4) NOT NULL,
+    source text DEFAULT 'open-meteo-archive',
+    created_at timestamptz DEFAULT now() NOT NULL,
+    updated_at timestamptz DEFAULT now() NOT NULL,
+    UNIQUE(latitude, longitude, date)
 );
 
 -- AOI (Area of Interest) table for satellite processing
@@ -137,6 +150,9 @@ CREATE INDEX idx_satellite_indices_data_index ON public.satellite_indices_data(i
 CREATE INDEX idx_satellite_indices_data_parcel_date ON public.satellite_indices_data(parcel_id, date);
 CREATE INDEX idx_satellite_indices_data_parcel_index ON public.satellite_indices_data(parcel_id, index_name);
 
+CREATE INDEX idx_satellite_par_data_date ON public.satellite_par_data(date);
+CREATE INDEX idx_satellite_par_data_location ON public.satellite_par_data(latitude, longitude);
+
 CREATE INDEX idx_satellite_aois_org ON public.satellite_aois(organization_id);
 CREATE INDEX idx_satellite_aois_farm ON public.satellite_aois(farm_id);
 CREATE INDEX idx_satellite_aois_parcel ON public.satellite_aois(parcel_id);
@@ -154,6 +170,7 @@ CREATE INDEX idx_satellite_processing_tasks_priority ON public.satellite_process
 -- Enable Row Level Security
 ALTER TABLE public.satellite_processing_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.satellite_indices_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.satellite_par_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.satellite_aois ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cloud_coverage_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.satellite_processing_tasks ENABLE ROW LEVEL SECURITY;
@@ -183,6 +200,10 @@ CREATE POLICY "Service can insert satellite data" ON public.satellite_indices_da
 
 CREATE POLICY "Service can update satellite data" ON public.satellite_indices_data
     FOR UPDATE USING (true); -- Allow service to update data
+
+-- RLS Policies for satellite_par_data
+CREATE POLICY "Authenticated users can view PAR cache" ON public.satellite_par_data
+    FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- RLS Policies for satellite_aois
 CREATE POLICY "Organization members can manage AOIs" ON public.satellite_aois
@@ -223,6 +244,7 @@ CREATE POLICY "Service can manage processing tasks" ON public.satellite_processi
 -- Create triggers for updated_at timestamps
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.satellite_processing_jobs FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.satellite_indices_data FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.satellite_par_data FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.satellite_aois FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.cloud_coverage_checks FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.satellite_processing_tasks FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Image, Download, Calendar, Cloud, AlertTriangle, CheckCircle, Loader, Eye, Grid3X3, Activity, MousePointer, CalendarDays, Satellite, Database, RefreshCw } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -46,8 +46,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
   const [displayMode, setDisplayMode] = useState<'static' | 'interactive'>('static');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const syncedRef = useRef<Set<string>>(new Set());
+   const [isSyncing, setIsSyncing] = useState(false);
 
   // Initialize with last 30 days for better date availability
   useEffect(() => {
@@ -224,7 +223,7 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      PRI: '#ef4444', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
   };
@@ -248,7 +247,8 @@ const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
       SAVI: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
       OSAVI: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
       MSAVI2: { min: '-1 (Bare Soil)', max: '+1 (Dense Vegetation)', colors: ['#D2691E', '#F4A460', '#FFFF00', '#9ACD32', '#228B22'] },
-      PRI: { min: '-0.2 (Stressed)', max: '+0.2 (Healthy)', colors: ['#FF0000', '#FF8C00', '#FFD700', '#ADFF2F', '#32CD32'] },
+      NIRv: { min: '0.0 (Low Activity)', max: '0.4 (High Activity)', colors: ['#FF0000', '#FF8C00', '#FFD700', '#ADFF2F', '#32CD32'] },
+      EVI: { min: '-0.2 (Low)', max: '+0.8 (High)', colors: ['#8B4513', '#FF8C00', '#FFD700', '#7CFC00', '#006400'] },
       MSI: { min: '0 (Wet)', max: '2+ (Dry)', colors: ['#0000FF', '#87CEEB', '#FFFFE0', '#FFA500', '#FF4500'] },
       MCARI: { min: '0 (Low Chlorophyll)', max: '2+ (High Chlorophyll)', colors: ['#FFB6C1', '#FFFF00', '#ADFF2F', '#32CD32', '#006400'] },
       TCARI: { min: '0 (Low Chlorophyll)', max: '3+ (High Chlorophyll)', colors: ['#FFB6C1', '#FFFF00', '#ADFF2F', '#32CD32', '#006400'] }

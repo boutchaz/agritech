@@ -13,10 +13,28 @@ class VegetationIndex(str, Enum):
     SAVI = "SAVI"
     OSAVI = "OSAVI"
     MSAVI2 = "MSAVI2"
-    PRI = "PRI"
+    NIRv = "NIRv"
+    EVI = "EVI"
     MSI = "MSI"
     MCARI = "MCARI"
     TCARI = "TCARI"
+
+
+class TimeSeriesIndex(str, Enum):
+    NDVI = "NDVI"
+    NDRE = "NDRE"
+    NDMI = "NDMI"
+    MNDWI = "MNDWI"
+    GCI = "GCI"
+    SAVI = "SAVI"
+    OSAVI = "OSAVI"
+    MSAVI2 = "MSAVI2"
+    NIRv = "NIRv"
+    EVI = "EVI"
+    MSI = "MSI"
+    MCARI = "MCARI"
+    TCARI = "TCARI"
+    NIRvP = "NIRvP"
 
 class TimeInterval(str, Enum):
     DAY = "day"
@@ -73,7 +91,7 @@ class IndexCalculationRequest(BaseModel):
 class TimeSeriesRequest(BaseModel):
     aoi: AOIRequest
     date_range: DateRangeRequest
-    index: VegetationIndex
+    index: TimeSeriesIndex
     interval: Optional[TimeInterval] = TimeInterval.MONTH
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100)
 
