@@ -120,7 +120,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
           const defaultState = getDefaultState(userId, email);
 
           // Start with defaults merged with any saved state
-          let finalState = {
+          const finalState = {
             ...defaultState,
             ...savedState,
             profileData: { ...defaultState.profileData, ...savedState?.profileData },

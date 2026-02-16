@@ -1,6 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import ProfileSettings from '@/components/ProfileSettings'
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 
+/**
+ * Redirects to the new consolidated Account Settings page.
+ * This route is kept for backwards compatibility.
+ */
 export const Route = createFileRoute('/_authenticated/(settings)/settings/profile')({
-  component: ProfileSettings,
-})
+  component: () => <Navigate to="/settings/account" />,
+});

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
+import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer } from 'lucide-react';
 import {
   satelliteApi,
   TimeSeriesIndexType,
@@ -14,6 +14,8 @@ import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+const WEATHER_API_URL = import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+
 interface TimeSeriesChartProps {
   parcelId: string;
   parcelName?: string;
@@ -24,7 +26,11 @@ interface TimeSeriesChartProps {
 
 interface MultiIndexData {
   date: string;
-  [key: string]: number | string;
+  temperature_mean?: number;
+  temperature_min?: number;
+  temperature_max?: number;
+  temperature_range?: [number, number];
+  [key: string]: string | number | [number, number] | undefined;
 }
 
 interface IndexStats {
@@ -32,6 +38,17 @@ interface IndexStats {
   min: number;
   max: number;
   std: number;
+}
+
+interface WeatherPoint {
+  date: string;
+  temperature_min: number;
+  temperature_max: number;
+  temperature_mean: number;
+  precipitation_sum?: number;
+  relative_humidity_mean?: number;
+  wind_speed_max?: number;
+  et0_fao_evapotranspiration?: number;
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
@@ -52,10 +69,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showTemperature, setShowTemperature] = useState(false);
 
-  // Initialize with last 6 months
+  // Initialize with last 2 years for calibration across crop cycles
   useEffect(() => {
-    const defaultRange = getDateRangeLastNDays(180);
+    const defaultRange = getDateRangeLastNDays(730);
     setStartDate(defaultRange.start_date);
     setEndDate(defaultRange.end_date);
   }, []);
@@ -187,6 +205,27 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     }
   }, [boundary, organizationId, selectedIndices, startDate, endDate, interval, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
+  // Fetch weather data
+  const { data: weatherData } = useQuery({
+    queryKey: ['weather-history', parcelId, startDate, endDate],
+    queryFn: async () => {
+      if (!parcelId || !startDate || !endDate) return [];
+      
+      const response = await fetch(
+        `${WEATHER_API_URL}/api/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch weather data');
+      }
+      
+      const json: { data: WeatherPoint[] } = await response.json();
+      return json.data || [];
+    },
+    enabled: showTemperature && !!parcelId && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Transform data for chart
   const chartData = useCallback((): MultiIndexData[] => {
     const dateMap = new Map<string, MultiIndexData>();
@@ -215,10 +254,25 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       }
     }
 
+    // Merge weather data if enabled
+    if (showTemperature && weatherData) {
+      for (const point of weatherData) {
+        const date = point.date?.split('T')[0];
+        if (date) {
+          const existing: MultiIndexData = dateMap.get(date) || { date };
+          existing.temperature_mean = point.temperature_mean;
+          existing.temperature_range = [point.temperature_min, point.temperature_max];
+          existing.temperature_min = point.temperature_min;
+          existing.temperature_max = point.temperature_max;
+          dateMap.set(date, existing);
+        }
+      }
+    }
+
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [cachedData, selectedIndices, liveSeriesData]);
+  }, [cachedData, selectedIndices, liveSeriesData, weatherData, showTemperature]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
     setSelectedIndices(prev => {
@@ -267,11 +321,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     const STABILITY_THRESHOLD = 2;
 
     if (percentChange <= STABILITY_THRESHOLD) {
-      return <Minus className="w-3 h-3 text-yellow-600" title="Stable" />;
+      return <span title="Stable"><Minus className="w-3 h-3 text-yellow-600" /></span>;
     } else if (lastValue > firstValue) {
-      return <TrendingUp className="w-3 h-3 text-green-600" title="En hausse" />;
+      return <span title="En hausse"><TrendingUp className="w-3 h-3 text-green-600" /></span>;
     } else {
-      return <TrendingDown className="w-3 h-3 text-red-600" title="En baisse" />;
+      return <span title="En baisse"><TrendingDown className="w-3 h-3 text-red-600" /></span>;
     }
   };
 
@@ -294,13 +348,34 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-800 mb-2">{label}</p>
-          {payload.map((entry: any, idx: number) => (
-            <div key={idx} className="flex items-center gap-2 text-sm">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="font-medium">{entry.dataKey}:</span>
-              <span>{formatTooltipValue(entry.value)}</span>
+          {payload.map((entry: any, idx: number) => {
+            if (entry.name === 'Temp. Min/Max') return null;
+            
+            const isTemp = entry.dataKey === 'temperature_mean';
+            const value = isTemp 
+              ? `${entry.value.toFixed(1)} °C`
+              : formatTooltipValue(entry.value);
+
+            return (
+              <div key={idx} className="flex items-center gap-2 text-sm">
+                <div 
+                  className="w-3 h-3 rounded-full" 
+                  style={{ 
+                    backgroundColor: entry.color,
+                    border: isTemp ? '1px dashed #f97316' : undefined 
+                  }} 
+                />
+                <span className="font-medium">{entry.name}:</span>
+                <span>{value}</span>
+              </div>
+            );
+          })}
+          {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
+            <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-gray-500 flex gap-3">
+              <span>Min: {payload[0].payload.temperature_min.toFixed(1)}°C</span>
+              <span>Max: {payload[0].payload.temperature_max.toFixed(1)}°C</span>
             </div>
-          ))}
+          )}
         </div>
       );
     }
@@ -333,7 +408,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       </p>
 
       {/* Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {/* Multi-select Index Dropdown */}
         <div className="relative">
           <label className="text-sm font-medium mb-2 block">Indices de végétation</label>
@@ -409,6 +484,21 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
+
+        <div className="flex flex-col justify-end">
+           <label className="flex items-center gap-2 p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 h-[42px]">
+             <input
+               type="checkbox"
+               checked={showTemperature}
+               onChange={(e) => setShowTemperature(e.target.checked)}
+               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+             />
+             <div className="flex items-center gap-1.5 text-sm text-gray-700">
+               <Thermometer className="w-4 h-4 text-orange-500" />
+               <span>Afficher T°</span>
+             </div>
+           </label>
+        </div>
       </div>
 
       {showIndexSelector && (
@@ -470,6 +560,27 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   </tr>
                 );
               })}
+              {showTemperature && weatherData && weatherData.length > 0 && (
+                <tr className="border-b hover:bg-gray-50 bg-orange-50/30">
+                  <td className="py-2 px-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-orange-500" />
+                      <span className="font-medium text-gray-800">Temp. moyenne</span>
+                    </div>
+                  </td>
+                  <td className="text-center py-2 px-2">
+                    {(weatherData.reduce((acc, curr) => acc + curr.temperature_mean, 0) / weatherData.length).toFixed(1)} °C
+                  </td>
+                  <td className="text-center py-2 px-2">
+                    {Math.min(...weatherData.map(d => d.temperature_min)).toFixed(1)} °C
+                  </td>
+                  <td className="text-center py-2 px-2">
+                    {Math.max(...weatherData.map(d => d.temperature_max)).toFixed(1)} °C
+                  </td>
+                  <td className="text-center py-2 px-2">-</td>
+                  <td className="text-center py-2 px-2">-</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -491,11 +602,54 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
-              <YAxis tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
+              {showTemperature && (
+                 <YAxis 
+                   yAxisId="right" 
+                   orientation="right" 
+                   tick={{ fontSize: 12, fill: '#f97316' }} 
+                   unit="°C" 
+                   domain={['auto', 'auto']}
+                   tickFormatter={(val) => val.toFixed(0)} 
+                 />
+              )}
               <Tooltip content={<CustomTooltip />} />
               <Legend />
+              
+              {showTemperature && (
+                <>
+                   <defs>
+                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                   <Area
+                     yAxisId="right"
+                     type="monotone"
+                     dataKey="temperature_range"
+                     stroke="none"
+                     fill="#f97316"
+                     fillOpacity={0.15}
+                     name="Temp. Min/Max"
+                   />
+                   <Line
+                     yAxisId="right"
+                     type="monotone"
+                     dataKey="temperature_mean"
+                     name="Temp. Moyenne"
+                     stroke="#f97316"
+                     strokeWidth={2}
+                     strokeDasharray="5 5"
+                     dot={false}
+                     connectNulls
+                   />
+                </>
+              )}
+
               {selectedIndices.map(index => (
                 <Line
+                  yAxisId="left"
                   key={index}
                   type="monotone"
                   dataKey={index}

@@ -372,11 +372,10 @@ export class SatelliteIndicesService {
     };
   }
 
-  // Helper method to get date range (last 30 days by default)
   static getDefaultDateRange(): { start_date: string; end_date: string } {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
+    startDate.setFullYear(endDate.getFullYear() - 2);
 
     return {
       start_date: startDate.toISOString().split('T')[0],

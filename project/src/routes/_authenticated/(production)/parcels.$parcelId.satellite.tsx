@@ -6,8 +6,6 @@ import { useCalibrationStatus } from '@/hooks/useAIReports'
 import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText } from 'lucide-react'
 
 const IndexImageViewer = lazy(() => import('../../../components/SatelliteAnalysisView/IndexImageViewer'));
-const StatisticsCalculator = lazy(() => import('../../../components/SatelliteAnalysisView/StatisticsCalculator'));
-const IndicesCalculator = lazy(() => import('../../../components/SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('../../../components/SatelliteAnalysisView/TimeSeriesChart'));
 
 const ParcelSatellite = () => {
@@ -79,22 +77,10 @@ const ParcelSatellite = () => {
             farmId={parcel.farm_id || undefined}
             boundary={parcel.boundary}
           />
-          <StatisticsCalculator
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-            farmId={parcel.farm_id || undefined}
-            boundary={parcel.boundary}
-          />
-          <IndicesCalculator
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-            farmId={parcel.farm_id || undefined}
-            boundary={parcel.boundary}
-          />
           <TimeSeriesChart
             parcelId={parcel.id}
             parcelName={parcel.name}
-            farmId={parcel.farm_id}
+            farmId={parcel.farm_id ?? undefined}
             boundary={parcel.boundary}
           />
         </Suspense>

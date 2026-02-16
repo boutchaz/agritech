@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Home,
   Leaf,
-  Settings,
   Sun,
   Moon,
   Map,
@@ -20,7 +19,6 @@ import {
   ShoppingCart,
   ShoppingBag,
   Wheat,
-  Bell,
   BarChart3,
   ExternalLink,
   PanelLeftClose,
@@ -115,9 +113,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showStockManagement, setShowStockManagement] = useState(() =>
     getInitialSectionState(['/stock', '/stock/items', '/stock/warehouses', '/stock/suppliers', '/accounting/customers'])
   );
-  const [showConfiguration, setShowConfiguration] = useState(() =>
-    getInitialSectionState(['/settings'])
-  );
   const [showMarketplace, setShowMarketplace] = useState(() =>
     getInitialSectionState(['/marketplace/quote-requests'])
   );
@@ -147,10 +142,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Stock Management section
     if (['/stock', '/stock/items', '/stock/suppliers', '/stock/warehouses', '/accounting/customers'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
       setShowStockManagement(true);
-    }
-    // Configuration section
-    if (['/settings'].some(p => currentPath === p || currentPath.startsWith(p + '/'))) {
-      setShowConfiguration(true);
     }
     // Marketplace section
     if (currentPath.startsWith('/marketplace/')) {
@@ -904,47 +895,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </ProtectedNavItem>
 
-            {/* ========== CONFIGURATION SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-settings">
-                {isCollapsed ? (
-                  <div className="hidden lg:block">
-                    <CollapsedSectionPopover icon={Settings} title={t('nav.configuration')}>
-                      <ProtectedNavItem action="manage" subject="User" fallback={<></>}>
-                        <PopoverNavItem path="/settings/profile" label={t('nav.settings')} isActive={currentPath.startsWith('/settings')} />
-                      </ProtectedNavItem>
-                    </CollapsedSectionPopover>
-                  </div>
-                ) : (
-                  <>
-                    <Button
-                      variant="ghost"
-                      className={getSectionHeaderClassName()}
-                      onClick={() => setShowConfiguration(!showConfiguration)}
-                    >
-                      <div className={cn("flex items-center", isRTL && "flex-row-reverse")}>
-                        {renderIcon(Settings)}
-                        {renderSectionTitle(t('nav.configuration'))}
-                      </div>
-                      {renderChevron(showConfiguration)}
-                    </Button>
-                    {showConfiguration && (
-                      <>
-                        <ProtectedNavItem action="manage" subject="User" fallback={<></>}>
-                          <Button
-                            variant="ghost"
-                            className={getSubItemClassName(currentPath.startsWith('/settings'))}
-                            onClick={(e) => handleNavigation('/settings/profile', e)}
-                          >
-                            {renderText(t('nav.settings'))}
-                          </Button>
-                        </ProtectedNavItem>
-                      </>
-                    )}
-                  </>
-                )}
-            </div>
-
 
             {/* ========== MARKETPLACE ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
@@ -1037,18 +987,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           "flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1",
           isCollapsed ? "lg:p-2 p-3" : "p-3"
         )}>
-          <ProtectedNavItem action="read" subject="Dashboard">
-            <Button
-              variant="ghost"
-              className={getButtonClassName(currentPath === '/alerts')}
-              onClick={(e) => handleNavigation('/alerts', e)}
-              title={isCollapsed ? t('nav.alerts') : undefined}
-            >
-              {renderIcon(Bell)}
-              {renderText(t('nav.alerts'))}
-            </Button>
-          </ProtectedNavItem>
-
           <ProtectedNavItem action="read" subject="Report">
             <Button
               variant="ghost"

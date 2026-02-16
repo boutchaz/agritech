@@ -19,13 +19,13 @@ const sellerTypeOptions = [
     {
         value: 'business' as SellerType,
         label: 'Entreprise',
-        description: 'Je represente une societe ou cooperative',
+        description: 'Je représente une société ou coopérative',
         icon: Building2,
     },
     {
         value: 'farm' as SellerType,
         label: 'Ferme / Exploitation',
-        description: 'Je gere une exploitation agricole',
+        description: 'Je gère une exploitation agricole',
         icon: Tractor,
     },
 ];
@@ -38,6 +38,7 @@ export default function SignupPage() {
         password: '',
         confirmPassword: '',
         displayName: '',
+        phone: '',
         sellerType: 'individual' as SellerType,
     });
     const [error, setError] = useState('');
@@ -53,12 +54,17 @@ export default function SignupPage() {
         }
 
         if (formData.password.length < 8) {
-            setError('Le mot de passe doit contenir au moins 8 caracteres');
+            setError('Le mot de passe doit contenir au moins 8 caractères');
             return;
         }
 
         if (!formData.displayName.trim()) {
             setError('Veuillez entrer votre nom');
+            return;
+        }
+
+        if (!formData.phone.trim()) {
+            setError('Veuillez entrer votre numéro de téléphone');
             return;
         }
 
@@ -70,6 +76,7 @@ export default function SignupPage() {
                 email: formData.email,
                 password: formData.password,
                 displayName: formData.displayName,
+                phone: formData.phone,
                 sellerType: formData.sellerType,
             });
 
@@ -92,7 +99,7 @@ export default function SignupPage() {
                 }
             }
         } catch (err: any) {
-            setError(err.message || 'Echec de la creation du compte');
+            setError(err.message || 'Échec de la création du compte');
         } finally {
             setLoading(false);
         }
@@ -130,10 +137,10 @@ export default function SignupPage() {
                     <span className="text-2xl font-bold text-gray-900">AgriTech Market</span>
                 </Link>
                 <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-                    Creer un compte
+                    Créer un compte
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                    Vous avez deja un compte?{' '}
+                    Vous avez déjà un compte?{' '}
                     <Link href="/login" className="font-medium text-green-600 hover:text-green-500">
                         Se connecter
                     </Link>
@@ -199,6 +206,25 @@ export default function SignupPage() {
                             </div>
                         </div>
 
+                        {/* Phone Number */}
+                        <div>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                Numéro de téléphone <span className="text-red-500">*</span>
+                            </label>
+                            <div className="mt-1">
+                                <input
+                                    id="phone"
+                                    name="phone"
+                                    type="tel"
+                                    required
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                    placeholder="+212 6XX XXX XXX"
+                                />
+                            </div>
+                        </div>
+
                         {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -234,7 +260,7 @@ export default function SignupPage() {
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     className="appearance-none block w-full px-3 py-2.5 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                                    placeholder="Minimum 8 caracteres"
+                                    placeholder="Minimum 8 caractères"
                                 />
                             </div>
                         </div>
@@ -269,10 +295,10 @@ export default function SignupPage() {
                                 {loading ? (
                                     <>
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Creation en cours...
+                                        Création en cours...
                                     </>
                                 ) : (
-                                    'Creer mon compte'
+                                    'Créer mon compte'
                                 )}
                             </button>
                         </div>
@@ -286,7 +312,7 @@ export default function SignupPage() {
                             </Link>{' '}
                             et notre{' '}
                             <Link href="/privacy" className="text-green-600 hover:underline">
-                                Politique de confidentialite
+                                Politique de confidentialité
                             </Link>
                         </p>
                     </div>

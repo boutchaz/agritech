@@ -35,7 +35,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const [selectedIndex, setSelectedIndex] = useState<string>('NDVI');
   const [selectedIndices, setSelectedIndices] = useState<string[]>(['NDVI']);
-  const [timeRange, setTimeRange] = useState<'30d' | '90d' | '6m' | '1y'>('30d');
+  const [timeRange, setTimeRange] = useState<'30d' | '90d' | '6m' | '1y' | '2y'>('2y');
   const [indicesData, setIndicesData] = useState<IndexCalculationResponse | null>(null);
   const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesResponse | null>(null);
   const [multiTimeSeriesData, setMultiTimeSeriesData] = useState<Record<string, TimeSeriesResponse>>({});
@@ -108,6 +108,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         break;
       case '1y':
         startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      case '2y':
+        startDate.setFullYear(endDate.getFullYear() - 2);
         break;
     }
 
@@ -574,6 +577,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   <option value="90d">3 derniers mois</option>
                   <option value="6m">6 derniers mois</option>
                   <option value="1y">1 dernière année</option>
+                  <option value="2y">2 dernières années</option>
                 </select>
               </div>
 

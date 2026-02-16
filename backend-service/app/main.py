@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import health, indices, analysis, supabase, billing
+from app.api import health, indices, analysis, supabase, billing, weather
 from app.core.config import settings
 
 app = FastAPI(
     title="AgriTech Backend Service",
     description="Agricultural technology backend service for satellite imagery analysis, PDF generation, and data processing",
-    version="2.0.0"
+    version="2.0.0",
 )
 
 # Configure CORS - Allow all origins for development
@@ -26,6 +26,8 @@ app.include_router(indices.router, prefix="/api/indices", tags=["indices"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(supabase.router, prefix="/api/supabase", tags=["supabase"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
+
 
 @app.get("/")
 async def root():
@@ -33,5 +35,10 @@ async def root():
         "service": "AgriTech Backend Service",
         "version": "2.0.0",
         "status": "operational",
-        "features": ["satellite-indices", "pdf-generation", "data-processing"]
+        "features": [
+            "satellite-indices",
+            "pdf-generation",
+            "data-processing",
+            "weather-data",
+        ],
     }

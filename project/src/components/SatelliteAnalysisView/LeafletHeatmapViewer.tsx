@@ -215,10 +215,9 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     setError(null);
 
     try {
-      // Check dates in the last 3 months
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 3);
+      startDate.setFullYear(startDate.getFullYear() - 2);
       const startDateStr = startDate.toISOString().split('T')[0];
 
       const aoi = {

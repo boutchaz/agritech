@@ -86,6 +86,7 @@ import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './r
 import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
 import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
+import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
 import { Route as AuthenticatedproductionProductionSoilAnalysisRouteImport } from './routes/_authenticated/(production)/production/soil-analysis'
 import { Route as AuthenticatedproductionProductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/production/satellite-analysis'
 import { Route as AuthenticatedproductionProductionQualityControlRouteImport } from './routes/_authenticated/(production)/production/quality-control'
@@ -577,6 +578,12 @@ const AuthenticatedsettingsSettingsAccountMappingsRoute =
     path: '/account-mappings',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsAccountRoute =
+  AuthenticatedsettingsSettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedproductionProductionSoilAnalysisRoute =
   AuthenticatedproductionProductionSoilAnalysisRouteImport.update({
     id: '/(production)/production/soil-analysis',
@@ -952,6 +959,7 @@ export interface FileRoutesByFullPath {
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
+  '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
@@ -1072,6 +1080,7 @@ export interface FileRoutesByTo {
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
+  '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
@@ -1200,6 +1209,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/_authenticated/(production)/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/_authenticated/(production)/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
+  '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
@@ -1328,6 +1338,7 @@ export interface FileRouteTypes {
     | '/production/quality-control'
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
+    | '/settings/account'
     | '/settings/account-mappings'
     | '/settings/biological-assets'
     | '/settings/cost-centers'
@@ -1448,6 +1459,7 @@ export interface FileRouteTypes {
     | '/production/quality-control'
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
+    | '/settings/account'
     | '/settings/account-mappings'
     | '/settings/biological-assets'
     | '/settings/cost-centers'
@@ -1575,6 +1587,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/production/quality-control'
     | '/_authenticated/(production)/production/satellite-analysis'
     | '/_authenticated/(production)/production/soil-analysis'
+    | '/_authenticated/(settings)/settings/account'
     | '/_authenticated/(settings)/settings/account-mappings'
     | '/_authenticated/(settings)/settings/biological-assets'
     | '/_authenticated/(settings)/settings/cost-centers'
@@ -2174,6 +2187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
+    '/_authenticated/(settings)/settings/account': {
+      id: '/_authenticated/(settings)/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsAccountRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
     '/_authenticated/(production)/production/soil-analysis': {
       id: '/_authenticated/(production)/production/soil-analysis'
       path: '/production/soil-analysis'
@@ -2718,6 +2738,7 @@ const AuthenticatedproductionParcelsRouteWithChildren =
   )
 
 interface AuthenticatedsettingsSettingsRouteChildren {
+  AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
   AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
@@ -2738,6 +2759,8 @@ interface AuthenticatedsettingsSettingsRouteChildren {
 
 const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsRouteChildren =
   {
+    AuthenticatedsettingsSettingsAccountRoute:
+      AuthenticatedsettingsSettingsAccountRoute,
     AuthenticatedsettingsSettingsAccountMappingsRoute:
       AuthenticatedsettingsSettingsAccountMappingsRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:

@@ -3,17 +3,26 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Leaf, ArrowRight, Menu, X, FileText } from 'lucide-react';
+import { Leaf, ArrowRight, Menu, X, FileText, LogOut } from 'lucide-react';
 import { CartIcon } from '@/components/CartIcon';
 import { NotificationBell } from '@/components/NotificationBell';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { UserMenu } from '@/components/UserMenu';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const t = useTranslations('nav');
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   const navLinks = [
     { href: '/products', label: t('products') },
@@ -54,38 +63,11 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            <LanguageSwitcher />
             <CartIcon />
             {user && <NotificationBell />}
             {user ? (
-              <>
-                <Link
-                  href="/quote-requests"
-                  className={`flex items-center gap-1.5 transition ${
-                    isActive('/quote-requests')
-                      ? 'text-emerald-600 font-medium'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  {t('myQuotes')}
-                </Link>
-                <Link
-                  href="/orders"
-                  className={`transition ${
-                    isActive('/orders')
-                      ? 'text-emerald-600 font-medium'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {t('myOrders')}
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-medium"
-                >
-                  {t('dashboard')}
-                </Link>
-              </>
+              <UserMenu t={t} />
             ) : (
               <>
                 <Link href="/login" className="text-gray-600 hover:text-gray-900 transition">
@@ -131,6 +113,10 @@ export function Navbar() {
               </Link>
             ))}
             <hr className="border-gray-100" />
+            <div className="flex items-center gap-2">
+              <LanguageSwitcher />
+              <span className="text-sm text-gray-500">Langue</span>
+            </div>
             <div className="flex items-center gap-3">
               <CartIcon />
               <span className="text-sm text-gray-500">{t('cart')}</span>
@@ -173,6 +159,13 @@ export function Navbar() {
                 >
                   {t('dashboard')}
                 </Link>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Déconnexion
+                </button>
               </>
             ) : (
               <>

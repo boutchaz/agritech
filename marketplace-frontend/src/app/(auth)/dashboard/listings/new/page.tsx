@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateListing } from '@/hooks/useListings';
+import { useCategories } from '@/hooks/useCategories';
 import { ArrowLeft, Loader2, LogOut } from 'lucide-react';
 import ProductImageUpload from '@/components/ProductImageUpload';
 
@@ -19,11 +20,13 @@ export default function NewListingPage() {
         short_description: '',
         price: '',
         unit: 'kg',
+        category_id: '',
         quantity_available: '',
         sku: '',
     });
 
     const createListing = useCreateListing();
+    const { data: categories } = useCategories('fr');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,6 +54,7 @@ export default function NewListingPage() {
                 short_description: formData.short_description || formData.description.substring(0, 150),
                 price: parseFloat(formData.price),
                 unit: formData.unit,
+                product_category_id: formData.category_id || undefined,
                 quantity_available: formData.quantity_available ? parseFloat(formData.quantity_available) : undefined,
                 sku: formData.sku || undefined,
                 images: images.length > 0 ? images : undefined,
@@ -124,6 +128,25 @@ export default function NewListingPage() {
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                                 placeholder="ex: Tomates fraîches Bio"
                             />
+                        </div>
+
+                        {/* Category */}
+                        <div>
+                            <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-2">
+                                Catégorie <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                id="category_id"
+                                required
+                                value={formData.category_id}
+                                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            >
+                                <option value="">Sélectionnez une catégorie</option>
+                                {categories?.map((cat: any) => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* Short Description */}

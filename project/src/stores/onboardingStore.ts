@@ -112,7 +112,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
           // Build final state - saved state takes precedence over defaults
           // But we still need to ensure all required fields exist
-          let finalState: OnboardingState = {
+          const finalState: OnboardingState = {
             userId: savedState?.userId ?? defaultState.userId,
             version: savedState?.version ?? defaultState.version,
             currentStep: savedState?.currentStep ?? defaultState.currentStep,

@@ -141,6 +141,7 @@ export class ApiClient {
         email: string;
         password: string;
         displayName: string;
+        phone?: string;
         sellerType: 'individual' | 'business' | 'farm';
     }) {
         return this.request<{ user: any; organization: any; requiresLogin: boolean }>('/auth/signup', {
@@ -149,6 +150,7 @@ export class ApiClient {
                 email: data.email,
                 password: data.password,
                 displayName: data.displayName,
+                phone: data.phone,
                 organizationName: data.sellerType !== 'individual' ? data.displayName : undefined,
                 sellerType: data.sellerType,
                 accountType: 'marketplace_only',

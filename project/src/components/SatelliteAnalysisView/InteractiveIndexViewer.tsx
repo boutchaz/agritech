@@ -119,10 +119,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           name: parcelName || 'Selected Parcel'
         };
 
-        // Get dates for last 6 months
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setMonth(endDate.getMonth() - 6);
+        startDate.setFullYear(endDate.getFullYear() - 2);
 
         const result = await satelliteApi.getAvailableDates(
           aoi,

@@ -1189,7 +1189,7 @@ const MapComponent: React.FC<MapProps> = ({
   // NOTE: mapType is NOT in this dependency array on purpose.
   // Layer visibility for mapType is handled by a separate useEffect that
   // toggles layers without destroying the map — preserving zoom/position.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect, tileProvider]);
 
   // Helper function to clean up drawing state

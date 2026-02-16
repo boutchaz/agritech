@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   ShoppingCart,
   BookOpen,
-  Settings,
   ShoppingBag,
   Bell,
   BarChart3,
@@ -131,16 +130,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
       { id: 'journal', path: '/accounting/journal', label: 'nav.journal', icon: BookOpen, section: 'accounting', apiPath: '/journal-entries' },
       { id: 'expenses', path: '/utilities', label: 'nav.expenses', icon: BookOpen, section: 'accounting', permission: { action: 'read', subject: 'Utility' }, apiPath: '/utilities' },
       { id: 'reports', path: '/accounting/reports', label: 'nav.reports', icon: BarChart3, section: 'accounting', permission: { action: 'read', subject: 'Report' }, apiPath: '/financial-reports' },
-    ],
-  },
-  // ========== CONFIGURATION SECTION ==========
-  {
-    id: 'configuration',
-    label: 'nav.configuration',
-    icon: Settings,
-    paths: ['/settings'],
-    items: [
-      { id: 'settings', path: '/settings/profile', label: 'nav.settings', icon: Settings, section: 'configuration', permission: { action: 'manage', subject: 'User' } },
     ],
   },
   // ========== MARKETPLACE SECTION ==========

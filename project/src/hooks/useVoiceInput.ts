@@ -96,7 +96,7 @@ export function useVoiceInput(
         recognitionRef.current.abort();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [language, continuous, interimResults]);
 
   const startListening = useCallback(() => {

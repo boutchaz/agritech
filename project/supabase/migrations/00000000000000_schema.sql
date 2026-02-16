@@ -3457,7 +3457,7 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'PRI', 'MSI', 'MCARI', 'TCARI'))
+  CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_org ON satellite_indices_data(organization_id);
@@ -3468,6 +3468,22 @@ CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_index ON satellite_indices
 -- Unique constraint to prevent duplicate entries for same parcel/date/index
 CREATE UNIQUE INDEX IF NOT EXISTS idx_satellite_indices_data_unique
   ON satellite_indices_data(parcel_id, date, index_name);
+
+-- Daily PAR cache (for NIRvP index computation)
+CREATE TABLE IF NOT EXISTS satellite_par_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(9, 4) NOT NULL,
+  longitude NUMERIC(9, 4) NOT NULL,
+  date DATE NOT NULL,
+  par_value NUMERIC(12, 4) NOT NULL,
+  source TEXT DEFAULT 'open-meteo-archive',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (latitude, longitude, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_satellite_par_data_date ON satellite_par_data(date DESC);
+CREATE INDEX IF NOT EXISTS idx_satellite_par_data_location ON satellite_par_data(latitude, longitude);
 
 -- Satellite Processing Jobs
 CREATE TABLE IF NOT EXISTS satellite_processing_jobs (
@@ -3677,6 +3693,18 @@ CREATE TABLE IF NOT EXISTS crop_types (
 
 CREATE INDEX IF NOT EXISTS idx_crop_types_org ON crop_types(organization_id);
 
+-- Enrich crop_types with agronomic data
+DO $$ BEGIN
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS scientific_name TEXT;
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS family TEXT;
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS tbase NUMERIC(4, 1);
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS frost_threshold NUMERIC(4, 1);
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS heat_threshold NUMERIC(4, 1);
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS chill_hours_min INTEGER;
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS chill_hours_max INTEGER;
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+END $$;
+
 -- Crop Categories
 CREATE TABLE IF NOT EXISTS crop_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -3703,6 +3731,22 @@ CREATE TABLE IF NOT EXISTS crop_varieties (
 );
 
 CREATE INDEX IF NOT EXISTS idx_crop_varieties_category ON crop_varieties(category_id);
+
+-- Enrich crop_varieties with agronomic data
+DO $$ BEGIN
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS yield_potential_low NUMERIC(8, 2);
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS yield_potential_high NUMERIC(8, 2);
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS alternance_tendency TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS frost_tolerance TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS chill_hours_requirement INTEGER;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS gdd_to_harvest INTEGER;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS flower_type TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS pollination_requirements TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS oil_content_percent NUMERIC(4, 1);
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS use_type TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS origin_country TEXT;
+  ALTER TABLE crop_varieties ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+END $$;
 
 -- Crops
 CREATE TABLE IF NOT EXISTS crops (
@@ -3871,6 +3915,22 @@ CREATE TABLE IF NOT EXISTS plantation_systems (
 );
 
 CREATE INDEX IF NOT EXISTS idx_plantation_systems_org ON plantation_systems(organization_id);
+
+-- Enrich plantation_systems with agronomic data
+DO $$ BEGIN
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS system_type TEXT;
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS trees_per_hectare_min INTEGER;
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS trees_per_hectare_max INTEGER;
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS row_spacing_m NUMERIC(4, 1);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS tree_spacing_m NUMERIC(4, 1);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS canopy_coverage_percent NUMERIC(4, 1);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS expected_ndvi_min NUMERIC(4, 3);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS expected_ndvi_max NUMERIC(4, 3);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS expected_nirv_min NUMERIC(4, 3);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS expected_nirv_max NUMERIC(4, 3);
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS crop_type_name TEXT;
+  ALTER TABLE plantation_systems ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+END $$;
 
 -- =====================================================
 -- 17. PRODUCT & INVENTORY CATEGORIES TABLES
@@ -4672,6 +4732,7 @@ CREATE POLICY "org_write_reception_batches" ON reception_batches
 ALTER TABLE IF EXISTS satellite_aois ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS satellite_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS satellite_indices_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS satellite_par_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS satellite_processing_jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS satellite_processing_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS cloud_coverage_checks ENABLE ROW LEVEL SECURITY;
@@ -5194,6 +5255,434 @@ FROM tree_categories tc
 WHERE t.category_id = tc.id
   AND t.organization_id IS NULL
   AND tc.organization_id IS NOT NULL;
+
+-- =====================================================
+-- XX. METEOROLOGICAL DATA TABLES
+-- =====================================================
+
+-- Weather daily data: location-based weather cache (NOT org-scoped, shared geographically like satellite_par_data)
+CREATE TABLE IF NOT EXISTS weather_daily_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,    -- ~1km grid (same as PAR cache)
+  longitude NUMERIC(7, 2) NOT NULL,
+  date DATE NOT NULL,
+  -- Raw weather variables from Open-Meteo
+  temperature_min NUMERIC(5, 1),       -- °C
+  temperature_max NUMERIC(5, 1),       -- °C
+  temperature_mean NUMERIC(5, 1),      -- °C
+  relative_humidity_mean NUMERIC(5, 1), -- %
+  relative_humidity_max NUMERIC(5, 1),
+  relative_humidity_min NUMERIC(5, 1),
+  precipitation_sum NUMERIC(7, 2),     -- mm
+  wind_speed_max NUMERIC(5, 1),        -- km/h
+  wind_gusts_max NUMERIC(5, 1),        -- km/h
+  shortwave_radiation_sum NUMERIC(8, 2), -- MJ/m²
+  et0_fao_evapotranspiration NUMERIC(6, 2), -- mm (pre-calculated ET₀ from Open-Meteo)
+  soil_temperature_0_7cm NUMERIC(5, 1),  -- °C
+  soil_temperature_7_28cm NUMERIC(5, 1), -- °C
+  soil_moisture_0_7cm NUMERIC(6, 4),     -- m³/m³
+  soil_moisture_7_28cm NUMERIC(6, 4),    -- m³/m³
+  source TEXT DEFAULT 'open-meteo-archive',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (latitude, longitude, date)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_daily_data_date ON weather_daily_data(date DESC);
+CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data(latitude, longitude);
+
+-- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
+CREATE TABLE IF NOT EXISTS weather_derived_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  gdd_daily NUMERIC(6, 2),
+  gdd_cumulative NUMERIC(8, 2),
+  gdd_base_temp NUMERIC(4, 1),
+  chill_hours_daily NUMERIC(5, 1),
+  chill_hours_cumulative NUMERIC(7, 1),
+  frost_risk BOOLEAN DEFAULT false,
+  heat_stress BOOLEAN DEFAULT false,
+  water_balance NUMERIC(7, 2),
+  kc_used NUMERIC(4, 2),
+  phenological_stage TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (parcel_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_derived_data_org ON weather_derived_data(organization_id);
+CREATE INDEX IF NOT EXISTS idx_weather_derived_data_parcel ON weather_derived_data(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_weather_derived_data_date ON weather_derived_data(date DESC);
+
+-- Weather forecasts: location-based forecast cache (NOT org-scoped)
+CREATE TABLE IF NOT EXISTS weather_forecasts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,
+  longitude NUMERIC(7, 2) NOT NULL,
+  forecast_date DATE NOT NULL,
+  target_date DATE NOT NULL,
+  temperature_min NUMERIC(5, 1),
+  temperature_max NUMERIC(5, 1),
+  temperature_mean NUMERIC(5, 1),
+  relative_humidity_mean NUMERIC(5, 1),
+  precipitation_sum NUMERIC(7, 2),
+  wind_speed_max NUMERIC(5, 1),
+  et0_fao_evapotranspiration NUMERIC(6, 2),
+  source TEXT DEFAULT 'open-meteo-forecast',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (latitude, longitude, forecast_date, target_date)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_forecasts_location ON weather_forecasts(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_weather_forecasts_target ON weather_forecasts(target_date);
+
+-- RLS: weather_daily_data and weather_forecasts are location caches (NO RLS, like satellite_par_data)
+-- RLS: weather_derived_data is org-scoped
+ALTER TABLE IF EXISTS weather_derived_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "org_read_weather_derived_data" ON weather_derived_data;
+CREATE POLICY "org_read_weather_derived_data" ON weather_derived_data
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_weather_derived_data" ON weather_derived_data;
+CREATE POLICY "org_write_weather_derived_data" ON weather_derived_data
+  FOR INSERT WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_weather_derived_data" ON weather_derived_data;
+CREATE POLICY "org_update_weather_derived_data" ON weather_derived_data
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_weather_derived_data" ON weather_derived_data;
+CREATE POLICY "org_delete_weather_derived_data" ON weather_derived_data
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- Triggers for updated_at
+DROP TRIGGER IF EXISTS trg_weather_daily_data_updated_at ON weather_daily_data;
+CREATE TRIGGER trg_weather_daily_data_updated_at
+  BEFORE UPDATE ON weather_daily_data
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_weather_derived_data_updated_at ON weather_derived_data;
+CREATE TRIGGER trg_weather_derived_data_updated_at
+  BEFORE UPDATE ON weather_derived_data
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_weather_forecasts_updated_at ON weather_forecasts;
+CREATE TRIGGER trg_weather_forecasts_updated_at
+  BEFORE UPDATE ON weather_forecasts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- XX. CROP AGRONOMIC REFERENTIAL TABLES
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS phenological_stages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type_name TEXT NOT NULL,
+  stage_name TEXT NOT NULL,
+  stage_name_fr TEXT,
+  stage_name_ar TEXT,
+  bbch_code TEXT,
+  stage_order INTEGER NOT NULL,
+  gdd_threshold_min NUMERIC(7, 1),
+  gdd_threshold_max NUMERIC(7, 1),
+  typical_month_start INTEGER,
+  typical_month_end INTEGER,
+  satellite_signal_description TEXT,
+  ndvi_expected_min NUMERIC(4, 3),
+  ndvi_expected_max NUMERIC(4, 3),
+  description TEXT,
+  description_fr TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(crop_type_name, stage_order)
+);
+CREATE INDEX IF NOT EXISTS idx_phenological_stages_crop ON phenological_stages(crop_type_name);
+CREATE INDEX IF NOT EXISTS idx_phenological_stages_bbch ON phenological_stages(bbch_code);
+
+CREATE TABLE IF NOT EXISTS crop_kc_coefficients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type_name TEXT NOT NULL,
+  phenological_stage_name TEXT NOT NULL,
+  kc_value NUMERIC(4, 2) NOT NULL,
+  kc_min NUMERIC(4, 2),
+  kc_max NUMERIC(4, 2),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(crop_type_name, phenological_stage_name)
+);
+CREATE INDEX IF NOT EXISTS idx_crop_kc_crop ON crop_kc_coefficients(crop_type_name);
+
+CREATE TABLE IF NOT EXISTS crop_mineral_exports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type_name TEXT NOT NULL,
+  product_type TEXT DEFAULT 'fruit',
+  n_kg_per_ton NUMERIC(6, 2),
+  p2o5_kg_per_ton NUMERIC(6, 2),
+  k2o_kg_per_ton NUMERIC(6, 2),
+  cao_kg_per_ton NUMERIC(6, 2),
+  mgo_kg_per_ton NUMERIC(6, 2),
+  fe_g_per_ton NUMERIC(6, 2),
+  zn_g_per_ton NUMERIC(6, 2),
+  b_g_per_ton NUMERIC(6, 2),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(crop_type_name, product_type)
+);
+CREATE INDEX IF NOT EXISTS idx_crop_mineral_exports_crop ON crop_mineral_exports(crop_type_name);
+
+CREATE TABLE IF NOT EXISTS crop_diseases (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type_name TEXT NOT NULL,
+  disease_name TEXT NOT NULL,
+  disease_name_fr TEXT,
+  disease_name_ar TEXT,
+  pathogen_name TEXT,
+  disease_type TEXT,
+  temperature_min NUMERIC(4, 1),
+  temperature_max NUMERIC(4, 1),
+  humidity_threshold NUMERIC(4, 1),
+  moisture_condition TEXT,
+  season TEXT,
+  treatment_product TEXT,
+  treatment_dose TEXT,
+  treatment_method TEXT,
+  treatment_timing TEXT,
+  days_after_treatment INTEGER,
+  satellite_signal TEXT,
+  severity TEXT,
+  description TEXT,
+  description_fr TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(crop_type_name, disease_name)
+);
+CREATE INDEX IF NOT EXISTS idx_crop_diseases_crop ON crop_diseases(crop_type_name);
+CREATE INDEX IF NOT EXISTS idx_crop_diseases_type ON crop_diseases(disease_type);
+
+CREATE TABLE IF NOT EXISTS crop_index_thresholds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type_name TEXT NOT NULL,
+  plantation_system_type TEXT,
+  index_name TEXT NOT NULL,
+  healthy_min NUMERIC(5, 3),
+  healthy_max NUMERIC(5, 3),
+  stress_low NUMERIC(5, 3),
+  stress_high NUMERIC(5, 3),
+  critical_low NUMERIC(5, 3),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_crop_index_thresholds_unique
+  ON crop_index_thresholds(crop_type_name, COALESCE(plantation_system_type, ''), index_name);
+CREATE INDEX IF NOT EXISTS idx_crop_index_thresholds_crop ON crop_index_thresholds(crop_type_name);
+CREATE INDEX IF NOT EXISTS idx_crop_index_thresholds_index ON crop_index_thresholds(index_name);
+
+DROP TRIGGER IF EXISTS trg_phenological_stages_updated_at ON phenological_stages;
+CREATE TRIGGER trg_phenological_stages_updated_at BEFORE UPDATE ON phenological_stages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_kc_coefficients_updated_at ON crop_kc_coefficients;
+CREATE TRIGGER trg_crop_kc_coefficients_updated_at BEFORE UPDATE ON crop_kc_coefficients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_mineral_exports_updated_at ON crop_mineral_exports;
+CREATE TRIGGER trg_crop_mineral_exports_updated_at BEFORE UPDATE ON crop_mineral_exports FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_diseases_updated_at ON crop_diseases;
+CREATE TRIGGER trg_crop_diseases_updated_at BEFORE UPDATE ON crop_diseases FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_index_thresholds_updated_at ON crop_index_thresholds;
+CREATE TRIGGER trg_crop_index_thresholds_updated_at BEFORE UPDATE ON crop_index_thresholds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed system crop types with agronomic data
+DO $$
+BEGIN
+  INSERT INTO crop_types (name, name_fr, name_ar, scientific_name, family, tbase, frost_threshold, heat_threshold, chill_hours_min, chill_hours_max, is_system)
+  SELECT * FROM (VALUES
+    ('olive', 'Olivier', 'الزيتون', 'Olea europaea', 'Oleaceae', 10.0::numeric, -5.0::numeric, 40.0::numeric, 200, 1000, true),
+    ('avocado', 'Avocatier', 'الأفوكادو', 'Persea americana', 'Lauraceae', 10.0, -1.0, 35.0, 100, 400, true),
+    ('citrus', 'Agrumes', 'الحوامض', 'Citrus spp.', 'Rutaceae', 13.0, -3.0, 38.0, 100, 500, true),
+    ('almond', 'Amandier', 'اللوز', 'Prunus dulcis', 'Rosaceae', 4.5, -2.0, 38.0, 400, 800, true),
+    ('vine', 'Vigne', 'الكرمة', 'Vitis vinifera', 'Vitaceae', 10.0, -2.0, 40.0, 300, 700, true),
+    ('pomegranate', 'Grenadier', 'الرمان', 'Punica granatum', 'Lythraceae', 10.0, -10.0, 42.0, 200, 500, true),
+    ('fig', 'Figuier', 'التين', 'Ficus carica', 'Moraceae', 10.0, -8.0, 42.0, 100, 300, true),
+    ('apple_pear', 'Pommier/Poirier', 'التفاح/الإجاص', 'Malus/Pyrus spp.', 'Rosaceae', 7.0, -2.0, 35.0, 500, 1200, true),
+    ('stone_fruit', 'Fruits à noyau', 'الفواكه ذات النواة', 'Prunus spp.', 'Rosaceae', 7.0, -2.0, 38.0, 400, 1000, true),
+    ('date_palm', 'Palmier dattier', 'النخيل', 'Phoenix dactylifera', 'Arecaceae', 18.0, -5.0, 50.0, 0, 0, true),
+    ('walnut', 'Noyer', 'الجوز', 'Juglans regia', 'Juglandaceae', 7.0, -2.0, 38.0, 400, 1000, true)
+  ) AS v(name, name_fr, name_ar, scientific_name, family, tbase, frost_threshold, heat_threshold, chill_hours_min, chill_hours_max, is_system)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM crop_types WHERE crop_types.name = v.name AND crop_types.organization_id IS NULL
+  );
+
+  UPDATE crop_types SET scientific_name = 'Olea europaea', family = 'Oleaceae', tbase = 10.0, frost_threshold = -5.0, heat_threshold = 40.0, chill_hours_min = 200, chill_hours_max = 1000, is_system = true, name_fr = 'Olivier', name_ar = 'الزيتون' WHERE name = 'olive' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Persea americana', family = 'Lauraceae', tbase = 10.0, frost_threshold = -1.0, heat_threshold = 35.0, chill_hours_min = 100, chill_hours_max = 400, is_system = true, name_fr = 'Avocatier', name_ar = 'الأفوكادو' WHERE name = 'avocado' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Citrus spp.', family = 'Rutaceae', tbase = 13.0, frost_threshold = -3.0, heat_threshold = 38.0, chill_hours_min = 100, chill_hours_max = 500, is_system = true, name_fr = 'Agrumes', name_ar = 'الحوامض' WHERE name = 'citrus' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Prunus dulcis', family = 'Rosaceae', tbase = 4.5, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 800, is_system = true, name_fr = 'Amandier', name_ar = 'اللوز' WHERE name = 'almond' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Vitis vinifera', family = 'Vitaceae', tbase = 10.0, frost_threshold = -2.0, heat_threshold = 40.0, chill_hours_min = 300, chill_hours_max = 700, is_system = true, name_fr = 'Vigne', name_ar = 'الكرمة' WHERE name = 'vine' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Punica granatum', family = 'Lythraceae', tbase = 10.0, frost_threshold = -10.0, heat_threshold = 42.0, chill_hours_min = 200, chill_hours_max = 500, is_system = true, name_fr = 'Grenadier', name_ar = 'الرمان' WHERE name = 'pomegranate' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Ficus carica', family = 'Moraceae', tbase = 10.0, frost_threshold = -8.0, heat_threshold = 42.0, chill_hours_min = 100, chill_hours_max = 300, is_system = true, name_fr = 'Figuier', name_ar = 'التين' WHERE name = 'fig' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Malus/Pyrus spp.', family = 'Rosaceae', tbase = 7.0, frost_threshold = -2.0, heat_threshold = 35.0, chill_hours_min = 500, chill_hours_max = 1200, is_system = true, name_fr = 'Pommier/Poirier', name_ar = 'التفاح/الإجاص' WHERE name = 'apple_pear' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Prunus spp.', family = 'Rosaceae', tbase = 7.0, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 1000, is_system = true, name_fr = 'Fruits à noyau', name_ar = 'الفواكه ذات النواة' WHERE name = 'stone_fruit' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Phoenix dactylifera', family = 'Arecaceae', tbase = 18.0, frost_threshold = -5.0, heat_threshold = 50.0, chill_hours_min = 0, chill_hours_max = 0, is_system = true, name_fr = 'Palmier dattier', name_ar = 'النخيل' WHERE name = 'date_palm' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Juglans regia', family = 'Juglandaceae', tbase = 7.0, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 1000, is_system = true, name_fr = 'Noyer', name_ar = 'الجوز' WHERE name = 'walnut' AND organization_id IS NULL;
+END $$;
+
+-- Seed phenological stages
+INSERT INTO phenological_stages (crop_type_name, stage_name, stage_name_fr, bbch_code, stage_order, gdd_threshold_min, gdd_threshold_max, typical_month_start, typical_month_end, description_fr)
+VALUES
+  ('olive', 'Dormancy', 'Repos végétatif', '00', 1, 0, 100, 1, 2, 'Période de dormance hivernale'),
+  ('olive', 'Bud break', 'Débourrement', '08', 2, 100, 200, 2, 3, 'Éclatement des bourgeons'),
+  ('olive', 'Shoot growth', 'Croissance végétative', '10', 3, 200, 400, 3, 4, 'Allongement des pousses'),
+  ('olive', 'Inflorescence emergence', 'Apparition des inflorescences', '51', 4, 400, 600, 4, 5, 'Formation des grappes florales'),
+  ('olive', 'Flowering', 'Floraison', '60', 5, 600, 800, 5, 6, 'Pleine floraison'),
+  ('olive', 'Fruit set', 'Nouaison', '71', 6, 800, 1000, 6, 6, 'Formation des fruits'),
+  ('olive', 'Fruit growth', 'Grossissement du fruit', '72', 7, 1000, 2000, 6, 9, 'Phase de croissance du fruit'),
+  ('olive', 'Veraison/Lipogenesis', 'Véraison/Lipogenèse', '81', 8, 2000, 2500, 9, 10, 'Changement de couleur et accumulation huile'),
+  ('olive', 'Maturation', 'Maturation', '86', 9, 2500, 3000, 10, 12, 'Maturation complète du fruit'),
+  ('olive', 'Harvest', 'Récolte', '89', 10, 3000, NULL, 11, 1, 'Période de récolte'),
+  ('avocado', 'Vegetative rest', 'Repos végétatif', '00', 1, 0, 100, 12, 1, 'Période de repos'),
+  ('avocado', 'Bud break', 'Débourrement', '08', 2, 100, 300, 1, 2, 'Éclatement des bourgeons'),
+  ('avocado', 'Flowering', 'Floraison', '60', 3, 300, 600, 2, 4, 'Pleine floraison (Type A ou B)'),
+  ('avocado', 'Fruit set', 'Nouaison', '71', 4, 600, 900, 4, 5, 'Formation des fruits'),
+  ('avocado', 'Fruit growth phase 1', 'Croissance fruit phase 1', '72', 5, 900, 1500, 5, 7, 'Division cellulaire rapide'),
+  ('avocado', 'Fruit growth phase 2', 'Croissance fruit phase 2', '75', 6, 1500, 2200, 7, 9, 'Accumulation lipidique'),
+  ('avocado', 'Maturation', 'Maturation', '86', 7, 2200, 2800, 9, 11, 'Maturation physiologique'),
+  ('avocado', 'Harvest', 'Récolte', '89', 8, 2800, NULL, 11, 3, 'Période de récolte')
+ON CONFLICT (crop_type_name, stage_order) DO UPDATE SET
+  stage_name = EXCLUDED.stage_name,
+  stage_name_fr = EXCLUDED.stage_name_fr,
+  bbch_code = EXCLUDED.bbch_code,
+  gdd_threshold_min = EXCLUDED.gdd_threshold_min,
+  gdd_threshold_max = EXCLUDED.gdd_threshold_max,
+  typical_month_start = EXCLUDED.typical_month_start,
+  typical_month_end = EXCLUDED.typical_month_end,
+  description_fr = EXCLUDED.description_fr;
+
+-- Seed Kc coefficients
+INSERT INTO crop_kc_coefficients (crop_type_name, phenological_stage_name, kc_value, kc_min, kc_max)
+VALUES
+  ('olive', 'Dormancy', 0.45, 0.40, 0.50),
+  ('olive', 'Bud break', 0.50, 0.45, 0.55),
+  ('olive', 'Shoot growth', 0.55, 0.50, 0.60),
+  ('olive', 'Inflorescence emergence', 0.60, 0.55, 0.65),
+  ('olive', 'Flowering', 0.65, 0.60, 0.70),
+  ('olive', 'Fruit set', 0.65, 0.60, 0.70),
+  ('olive', 'Fruit growth', 0.70, 0.65, 0.75),
+  ('olive', 'Veraison/Lipogenesis', 0.65, 0.60, 0.70),
+  ('olive', 'Maturation', 0.55, 0.50, 0.60),
+  ('olive', 'Harvest', 0.50, 0.45, 0.55),
+  ('avocado', 'Vegetative rest', 0.60, 0.55, 0.65),
+  ('avocado', 'Bud break', 0.65, 0.60, 0.70),
+  ('avocado', 'Flowering', 0.75, 0.70, 0.80),
+  ('avocado', 'Fruit set', 0.80, 0.75, 0.85),
+  ('avocado', 'Fruit growth phase 1', 0.85, 0.80, 0.90),
+  ('avocado', 'Fruit growth phase 2', 0.85, 0.80, 0.90),
+  ('avocado', 'Maturation', 0.70, 0.65, 0.75),
+  ('avocado', 'Harvest', 0.65, 0.60, 0.70),
+  ('citrus', 'Dormancy', 0.50, 0.45, 0.55),
+  ('citrus', 'Flowering', 0.65, 0.60, 0.70),
+  ('citrus', 'Fruit growth', 0.70, 0.65, 0.75),
+  ('citrus', 'Maturation', 0.65, 0.60, 0.70),
+  ('vine', 'Dormancy', 0.30, 0.25, 0.35),
+  ('vine', 'Bud break', 0.40, 0.35, 0.45),
+  ('vine', 'Flowering', 0.60, 0.55, 0.65),
+  ('vine', 'Fruit growth', 0.70, 0.65, 0.80),
+  ('vine', 'Veraison', 0.65, 0.60, 0.70),
+  ('vine', 'Maturation', 0.55, 0.50, 0.60),
+  ('almond', 'Dormancy', 0.40, 0.35, 0.45),
+  ('almond', 'Flowering', 0.55, 0.50, 0.60),
+  ('almond', 'Fruit growth', 0.80, 0.75, 0.90),
+  ('almond', 'Maturation', 0.65, 0.60, 0.70)
+ON CONFLICT (crop_type_name, phenological_stage_name) DO UPDATE SET
+  kc_value = EXCLUDED.kc_value,
+  kc_min = EXCLUDED.kc_min,
+  kc_max = EXCLUDED.kc_max;
+
+-- Seed mineral exports for all 11 crops
+INSERT INTO crop_mineral_exports (crop_type_name, product_type, n_kg_per_ton, p2o5_kg_per_ton, k2o_kg_per_ton, cao_kg_per_ton, mgo_kg_per_ton)
+VALUES
+  ('olive', 'fruit', 15.0, 4.0, 20.0, 5.0, 2.0),
+  ('olive', 'oil', 0.0, 0.0, 0.5, 0.0, 0.0),
+  ('avocado', 'fruit', 8.5, 2.5, 25.0, 3.0, 2.0),
+  ('citrus', 'fruit', 2.5, 0.8, 3.5, 2.0, 0.5),
+  ('almond', 'fruit', 50.0, 10.0, 12.0, 3.0, 4.0),
+  ('vine', 'fruit', 5.0, 2.0, 7.0, 3.0, 1.0),
+  ('pomegranate', 'fruit', 3.0, 1.0, 4.0, 2.0, 0.5),
+  ('fig', 'fruit', 4.0, 1.5, 5.0, 3.0, 1.0),
+  ('apple_pear', 'fruit', 3.5, 1.2, 4.5, 1.5, 0.5),
+  ('stone_fruit', 'fruit', 4.5, 1.5, 6.0, 2.0, 0.8),
+  ('date_palm', 'fruit', 6.0, 2.0, 12.0, 3.0, 2.0),
+  ('walnut', 'fruit', 30.0, 8.0, 10.0, 5.0, 3.0)
+ON CONFLICT (crop_type_name, product_type) DO UPDATE SET
+  n_kg_per_ton = EXCLUDED.n_kg_per_ton,
+  p2o5_kg_per_ton = EXCLUDED.p2o5_kg_per_ton,
+  k2o_kg_per_ton = EXCLUDED.k2o_kg_per_ton,
+  cao_kg_per_ton = EXCLUDED.cao_kg_per_ton,
+  mgo_kg_per_ton = EXCLUDED.mgo_kg_per_ton;
+
+-- Seed crop diseases (olive and avocado priority)
+INSERT INTO crop_diseases (crop_type_name, disease_name, disease_name_fr, pathogen_name, disease_type, temperature_min, temperature_max, humidity_threshold, season, treatment_product, treatment_dose, treatment_timing, days_after_treatment, satellite_signal, severity)
+VALUES
+  ('olive', 'Peacock spot', 'Oeil de paon', 'Spilocaea oleagina', 'fungal', 15.0, 20.0, 80.0, 'spring', 'Copper hydroxide', '3-5 L/ha', 'Preventive autumn + spring', 21, 'NDVI drop, leaf spots visible in NDRE', 'high'),
+  ('olive', 'Verticillium wilt', 'Verticilliose', 'Verticillium dahliae', 'fungal', 20.0, 25.0, NULL, 'spring', 'No chemical cure', NULL, 'Resistant rootstocks, solarization', NULL, 'Asymmetric NDVI decline in canopy', 'critical'),
+  ('olive', 'Olive knot', 'Tuberculose', 'Pseudomonas savastanoi', 'bacterial', 15.0, 25.0, 90.0, 'year_round', 'Copper compounds', '5 L/ha', 'After pruning wounds', 14, 'Branch dieback in NIRv', 'medium'),
+  ('olive', 'Olive fruit fly', 'Mouche de l''olive', 'Bactrocera oleae', 'insect', 20.0, 30.0, NULL, 'autumn', 'Dimethoate or traps', '0.5-1 L/ha', 'When fruit starts coloring', 28, 'Not directly visible', 'high'),
+  ('olive', 'Black scale', 'Cochenille noire', 'Saissetia oleae', 'insect', 20.0, 30.0, 70.0, 'summer', 'Mineral oil', '10-15 L/ha', 'Crawler stage (May-Jun)', 7, 'Sooty mold reduces NDVI', 'medium'),
+  ('olive', 'Anthracnose', 'Dalmatica', 'Colletotrichum spp.', 'fungal', 15.0, 25.0, 85.0, 'autumn', 'Copper + mancozeb', '3-4 L/ha', 'Before rainy season', 21, 'Fruit damage, late NDVI drop', 'high'),
+  ('avocado', 'Phytophthora root rot', 'Pourriture des racines', 'Phytophthora cinnamomi', 'fungal', 20.0, 30.0, 90.0, 'year_round', 'Phosphonic acid (Fosetyl-Al)', '2-3 g/L trunk injection', 'Preventive in spring/autumn', 30, 'NDVI and NIRv progressive decline, canopy thinning', 'critical'),
+  ('avocado', 'Anthracnose', 'Anthracnose', 'Colletotrichum gloeosporioides', 'fungal', 25.0, 30.0, 85.0, 'summer', 'Copper hydroxide', '3-5 L/ha', 'Pre-harvest preventive', 14, 'Fruit spots, late NDVI impact', 'high'),
+  ('avocado', 'Scab', 'Gale', 'Sphaceloma perseae', 'fungal', 20.0, 28.0, 80.0, 'spring', 'Copper oxychloride', '4 L/ha', 'Spring flush protection', 21, 'Leaf lesions visible in NDRE', 'medium'),
+  ('avocado', 'Cercospora spot', 'Cercosporiose', 'Cercospora purpurea', 'fungal', 20.0, 28.0, 80.0, 'summer', 'Mancozeb', '2-3 kg/ha', 'Before symptoms appear', 14, 'Leaf spotting, NDVI decrease', 'medium')
+ON CONFLICT (crop_type_name, disease_name) DO UPDATE SET
+  disease_name_fr = EXCLUDED.disease_name_fr,
+  pathogen_name = EXCLUDED.pathogen_name,
+  disease_type = EXCLUDED.disease_type,
+  temperature_min = EXCLUDED.temperature_min,
+  temperature_max = EXCLUDED.temperature_max,
+  humidity_threshold = EXCLUDED.humidity_threshold,
+  season = EXCLUDED.season,
+  treatment_product = EXCLUDED.treatment_product,
+  treatment_dose = EXCLUDED.treatment_dose,
+  treatment_timing = EXCLUDED.treatment_timing,
+  days_after_treatment = EXCLUDED.days_after_treatment,
+  satellite_signal = EXCLUDED.satellite_signal,
+  severity = EXCLUDED.severity;
+
+-- Seed index thresholds by crop and plantation system
+INSERT INTO crop_index_thresholds (crop_type_name, plantation_system_type, index_name, healthy_min, healthy_max, stress_low, critical_low, notes)
+VALUES
+  ('olive', 'traditional', 'NDVI', 0.300, 0.550, 0.250, 0.150, 'Traditional olive 100-200 trees/ha'),
+  ('olive', 'intensive', 'NDVI', 0.450, 0.700, 0.350, 0.250, 'Intensive olive 200-500 trees/ha'),
+  ('olive', 'super_intensive', 'NDVI', 0.550, 0.800, 0.400, 0.300, 'Super-intensive >1000 trees/ha'),
+  ('olive', 'traditional', 'NIRv', 0.100, 0.250, 0.080, 0.050, NULL),
+  ('olive', 'intensive', 'NIRv', 0.150, 0.350, 0.120, 0.080, NULL),
+  ('olive', 'super_intensive', 'NIRv', 0.200, 0.450, 0.150, 0.100, NULL),
+  ('olive', 'traditional', 'EVI', 0.200, 0.450, 0.150, 0.100, NULL),
+  ('olive', 'intensive', 'EVI', 0.300, 0.550, 0.250, 0.150, NULL),
+  ('olive', 'super_intensive', 'EVI', 0.400, 0.650, 0.300, 0.200, NULL),
+  ('olive', NULL, 'NDMI', 0.050, 0.300, 0.000, -0.100, 'Water stress indicator'),
+  ('olive', NULL, 'NDRE', 0.200, 0.500, 0.150, 0.100, 'Nitrogen status indicator'),
+  ('avocado', 'traditional', 'NDVI', 0.500, 0.800, 0.400, 0.300, 'Traditional avocado 100-200 trees/ha'),
+  ('avocado', 'intensive', 'NDVI', 0.600, 0.850, 0.500, 0.400, 'Intensive avocado 400-600 trees/ha'),
+  ('avocado', NULL, 'NDMI', 0.100, 0.400, 0.050, -0.050, 'Avocado is moisture-sensitive'),
+  ('avocado', NULL, 'NIRv', 0.200, 0.500, 0.150, 0.100, NULL),
+  ('avocado', NULL, 'EVI', 0.350, 0.700, 0.300, 0.200, NULL),
+  ('citrus', NULL, 'NDVI', 0.450, 0.750, 0.350, 0.250, 'Citrus orchards'),
+  ('citrus', NULL, 'NDMI', 0.100, 0.350, 0.050, -0.050, NULL),
+  ('vine', NULL, 'NDVI', 0.250, 0.600, 0.200, 0.120, 'Vineyard canopy varies by training system'),
+  ('vine', NULL, 'NDMI', 0.000, 0.250, -0.050, -0.150, 'Water stress common in viticulture'),
+  ('almond', NULL, 'NDVI', 0.350, 0.650, 0.280, 0.180, NULL),
+  ('date_palm', NULL, 'NDVI', 0.300, 0.600, 0.200, 0.120, 'Palm canopy structure differs')
+ON CONFLICT (crop_type_name, COALESCE(plantation_system_type, ''), index_name) DO UPDATE SET
+  healthy_min = EXCLUDED.healthy_min,
+  healthy_max = EXCLUDED.healthy_max,
+  stress_low = EXCLUDED.stress_low,
+  critical_low = EXCLUDED.critical_low,
+  notes = EXCLUDED.notes;
 
 -- =====================================================
 -- END OF SCHEMA
@@ -7171,6 +7660,31 @@ DROP POLICY IF EXISTS "org_delete_satellite_indices_data" ON satellite_indices_d
 CREATE POLICY "org_delete_satellite_indices_data" ON satellite_indices_data
   FOR DELETE USING (
     is_organization_member(organization_id)
+  );
+
+-- Satellite PAR Cache Policies
+DROP POLICY IF EXISTS "read_satellite_par_data" ON satellite_par_data;
+CREATE POLICY "read_satellite_par_data" ON satellite_par_data
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+  );
+
+DROP POLICY IF EXISTS "write_satellite_par_data" ON satellite_par_data;
+CREATE POLICY "write_satellite_par_data" ON satellite_par_data
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL
+  );
+
+DROP POLICY IF EXISTS "update_satellite_par_data" ON satellite_par_data;
+CREATE POLICY "update_satellite_par_data" ON satellite_par_data
+  FOR UPDATE USING (
+    auth.uid() IS NOT NULL
+  );
+
+DROP POLICY IF EXISTS "delete_satellite_par_data" ON satellite_par_data;
+CREATE POLICY "delete_satellite_par_data" ON satellite_par_data
+  FOR DELETE USING (
+    auth.uid() IS NOT NULL
   );
 
 -- Satellite Processing Jobs Policies
@@ -12904,6 +13418,10 @@ CREATE TRIGGER trg_satellite_files_updated_at BEFORE UPDATE ON satellite_files
 
 DROP TRIGGER IF EXISTS trg_satellite_indices_data_updated_at ON satellite_indices_data;
 CREATE TRIGGER trg_satellite_indices_data_updated_at BEFORE UPDATE ON satellite_indices_data
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_satellite_par_data_updated_at ON satellite_par_data;
+CREATE TRIGGER trg_satellite_par_data_updated_at BEFORE UPDATE ON satellite_par_data
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS trg_satellite_processing_jobs_updated_at ON satellite_processing_jobs;

@@ -1,0 +1,30 @@
+{
+  "nav": {
+    "products": "المنتجات",
+    "categories": "الفئات",
+    "partners": "الشركاء",
+    "login": "تسجيل الدخول",
+    "getStarted": "ابدأ الآن",
+    "cart": "السلة",
+    "myQuotes": "عروض أسعاري",
+    "myOrders": "طلباتي",
+    "dashboard": "لوحة التحكم"
+  },
+  "footer": {
+    "tagline": "المنصة الشاملة لتحديث زراعتكم.",
+    "product": "المنتج",
+    "allProducts": "جميع المنتجات",
+    "categories": "الفئات",
+    "partners": "الشركاء",
+    "becomeSeller": "كن بائعاً",
+    "support": "الدعم",
+    "documentation": "التوثيق",
+    "contact": "اتصل بنا",
+    "faq": "الأسئلة الشائعة",
+    "legal": "قانوني",
+    "privacy": "الخصوصية",
+    "terms": "شروط الاستخدام",
+    "legalNotice": "إشعار قانوني",
+    "copyright": "© 2026 AgriTech. جميع الحقوق محفوظة."
+  }
+}

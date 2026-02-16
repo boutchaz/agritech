@@ -157,7 +157,7 @@ ${
 Period: ${data.satelliteIndices.period.start} → ${data.satelliteIndices.period.end}
 
 Available indices:
-PRI, NDVI, GCI, SAVI, OSAVI, MSAVI, NDMI, MNDWI, MSI, NDRE, TCARI, MCARI
+NIRv, NIRvP, NDVI, EVI, GCI, SAVI, OSAVI, MSAVI, NDMI, MNDWI, MSI, NDRE, TCARI, MCARI
 
 Latest values:
 - NDVI: ${data.satelliteIndices.latestData.ndvi?.toFixed(3) ?? 'N/A'} (Vegetation vigor)
