@@ -1,7 +1,17 @@
-from fastapi import FastAPI
+import re
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.api import health, indices, analysis, supabase, billing, weather
 from app.core.config import settings
+
+
+class NormalizePathMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if "//" in request.scope["path"]:
+            request.scope["path"] = re.sub(r"/+", "/", request.scope["path"])
+        return await call_next(request)
+
 
 app = FastAPI(
     title="AgriTech Backend Service",
@@ -9,7 +19,8 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# Configure CORS - Allow all origins for development
+app.add_middleware(NormalizePathMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins

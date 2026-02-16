@@ -14,7 +14,7 @@ import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-const WEATHER_API_URL = import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+const WEATHER_API_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
 
 interface TimeSeriesChartProps {
   parcelId: string;

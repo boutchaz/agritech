@@ -1,7 +1,7 @@
 // Satellite Indices Service API Client
 // This client interfaces with the satellite-indices-service for vegetation analysis
 
-const SATELLITE_SERVICE_URL = import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
+const SATELLITE_SERVICE_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
 
 export interface VegetationIndex {
   NDVI: "NDVI";
