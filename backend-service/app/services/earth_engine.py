@@ -360,7 +360,7 @@ class EarthEngineService:
                     bands["nir"]
                     .subtract(bands["red"])
                     .divide(bands["nir"].add(bands["red"]).max(ee.Image(1e-10)))
-            )
+                )
             results["NIRv"] = ndvi_for_nirv.multiply(bands["nir"]).rename("NIRv")
 
         # EVI — Enhanced Vegetation Index
@@ -431,39 +431,48 @@ class EarthEngineService:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
 
+        total_days = (end_dt - start_dt).days
+        scale = 30 if total_days > 365 else settings.DEFAULT_SCALE
+
         time_series: List[Dict] = []
         current = start_dt
         while current < end_dt:
             window_end = min(current + timedelta(days=step), end_dt)
-            sub_collection = self.get_sentinel2_collection(
-                geometry,
-                current.strftime("%Y-%m-%d"),
-                window_end.strftime("%Y-%m-%d"),
-            )
+            try:
+                sub_collection = self.get_sentinel2_collection(
+                    geometry,
+                    current.strftime("%Y-%m-%d"),
+                    window_end.strftime("%Y-%m-%d"),
+                )
 
-            count = sub_collection.size().getInfo()
-            if count == 0:
-                current = window_end
-                continue
+                count = sub_collection.size().getInfo()
+                if count == 0:
+                    current = window_end
+                    continue
 
-            composite = sub_collection.median()
-            index_image = self.calculate_vegetation_indices(composite, [index]).get(
-                index
-            )
-            if index_image is None:
-                current = window_end
-                continue
+                composite = sub_collection.median()
+                index_image = self.calculate_vegetation_indices(composite, [index]).get(
+                    index
+                )
+                if index_image is None:
+                    current = window_end
+                    continue
 
-            stats = index_image.reduceRegion(
-                reducer=ee.Reducer.mean(),
-                geometry=aoi,
-                scale=settings.DEFAULT_SCALE,
-                maxPixels=settings.MAX_PIXELS,
-            ).get(index)
-            value = stats.getInfo()
-            if value is not None:
-                time_series.append(
-                    {"date": current.strftime("%Y-%m-%d"), "value": value}
+                stats = index_image.reduceRegion(
+                    reducer=ee.Reducer.mean(),
+                    geometry=aoi,
+                    scale=scale,
+                    maxPixels=settings.MAX_PIXELS,
+                ).get(index)
+                value = stats.getInfo()
+                if value is not None:
+                    time_series.append(
+                        {"date": current.strftime("%Y-%m-%d"), "value": value}
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"Time series window {current.strftime('%Y-%m-%d')} - "
+                    f"{window_end.strftime('%Y-%m-%d')} failed for {index}: {e}"
                 )
 
             current = window_end

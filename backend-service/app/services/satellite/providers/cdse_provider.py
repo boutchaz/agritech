@@ -330,8 +330,24 @@ class CDSEProvider(ISatelliteProvider):
             # Aggregate by time interval
             datacube = datacube.aggregate_temporal_period(interval, reducer="mean")
 
-            # Execute and download results
-            result = datacube.execute()
+            # For large date ranges, use download() instead of execute()
+            # to avoid JSON decode errors on big responses
+            import tempfile, os
+
+            try:
+                result = datacube.execute()
+            except Exception:
+                logger.info(
+                    "execute() failed, falling back to download() for large result"
+                )
+                with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
+                    tmp_path = tmp.name
+                try:
+                    datacube.download(tmp_path, format="netCDF")
+                    result = xr.open_dataset(tmp_path)
+                finally:
+                    if os.path.exists(tmp_path):
+                        os.unlink(tmp_path)
 
             # Process results into time series points
             time_series_points = []

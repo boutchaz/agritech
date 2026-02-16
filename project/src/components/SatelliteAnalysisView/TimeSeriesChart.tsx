@@ -206,7 +206,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   }, [boundary, organizationId, selectedIndices, startDate, endDate, interval, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
   // Fetch weather data
-  const { data: weatherData } = useQuery({
+  const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
     queryKey: ['weather-history', parcelId, startDate, endDate],
     queryFn: async () => {
       if (!parcelId || !startDate || !endDate) return [];
@@ -216,7 +216,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       );
       
       if (!response.ok) {
-        throw new Error('Failed to fetch weather data');
+        const text = await response.text().catch(() => '');
+        throw new Error(`Weather API error ${response.status}: ${text || response.statusText}`);
       }
       
       const json: { data: WeatherPoint[] } = await response.json();
@@ -224,6 +225,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     },
     enabled: showTemperature && !!parcelId && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   // Transform data for chart
@@ -494,10 +496,19 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
              />
              <div className="flex items-center gap-1.5 text-sm text-gray-700">
-               <Thermometer className="w-4 h-4 text-orange-500" />
+               {isLoadingWeather ? (
+                 <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+               ) : (
+                 <Thermometer className="w-4 h-4 text-orange-500" />
+               )}
                <span>Afficher T°</span>
              </div>
            </label>
+           {weatherError && showTemperature && (
+             <p className="text-xs text-red-500 mt-1">
+               {(weatherError as Error).message || 'Erreur chargement météo'}
+             </p>
+           )}
         </div>
       </div>
 
