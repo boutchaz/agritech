@@ -121,7 +121,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setFullYear(endDate.getFullYear() - 2);
+        startDate.setMonth(endDate.getMonth() - 6);
 
         const result = await satelliteApi.getAvailableDates(
           aoi,

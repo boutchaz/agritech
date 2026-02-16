@@ -217,7 +217,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     try {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date();
-      startDate.setFullYear(startDate.getFullYear() - 2);
+      startDate.setMonth(startDate.getMonth() - 6);
       const startDateStr = startDate.toISOString().split('T')[0];
 
       const aoi = {

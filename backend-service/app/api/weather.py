@@ -77,18 +77,11 @@ async def get_weather_forecast(
 @router.post("/derived", response_model=DerivedWeatherResponse)
 async def calculate_derived_variables(request: DerivedWeatherRequest):
     try:
-        parcel_data = (
-            supabase_service.client.table("parcels")
-            .select("id, boundary, crop_type")
-            .eq("id", request.parcel_id)
-            .single()
-            .execute()
-        )
+        parcel = await supabase_service.get_parcel_details(request.parcel_id)
 
-        if not parcel_data.data:
+        if not parcel:
             raise HTTPException(status_code=404, detail="Parcel not found")
 
-        parcel = parcel_data.data
         crop_type = request.crop_type or parcel.get("crop_type") or "olive"
 
         boundary = parcel.get("boundary")
@@ -133,18 +126,12 @@ async def get_parcel_weather(
     end_date: date = Query(...),
 ):
     try:
-        parcel_data = (
-            supabase_service.client.table("parcels")
-            .select("id, boundary")
-            .eq("id", parcel_id)
-            .single()
-            .execute()
-        )
+        parcel = await supabase_service.get_parcel_details(parcel_id)
 
-        if not parcel_data.data:
+        if not parcel:
             raise HTTPException(status_code=404, detail="Parcel not found")
 
-        boundary = parcel_data.data.get("boundary")
+        boundary = parcel.get("boundary")
         if not boundary:
             raise HTTPException(
                 status_code=400, detail="Parcel has no boundary geometry"

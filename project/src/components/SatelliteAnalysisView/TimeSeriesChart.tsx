@@ -64,7 +64,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const [liveSeriesData, setLiveSeriesData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
-  const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('week');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
@@ -405,11 +405,36 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         )}
       </div>
 
-      <p className="text-gray-600 mb-6">
+      <p className="text-gray-600 mb-4">
         Tendances historiques pour {parcelName || `Parcelle ${parcelId}`}
       </p>
 
-      {/* Controls */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {([
+          { label: '3 mois', days: 90 },
+          { label: '6 mois', days: 180 },
+          { label: '1 an', days: 365 },
+          { label: '2 ans', days: 730 },
+        ] as const).map(({ label, days }) => {
+          const range = getDateRangeLastNDays(days);
+          const isActive = startDate === range.start_date && endDate === range.end_date;
+          return (
+            <button
+              key={days}
+              type="button"
+              onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
+              className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                isActive
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {/* Multi-select Index Dropdown */}
         <div className="relative">
