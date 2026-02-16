@@ -161,21 +161,24 @@ async def get_parcel_weather(
 
 
 def _extract_centroid_from_boundary(boundary) -> tuple:
+    points = []
+
     if isinstance(boundary, dict):
         geo_type = boundary.get("type", "")
         coordinates = boundary.get("coordinates", [])
-    else:
-        raise ValueError("Invalid boundary format")
-
-    points = []
-    if geo_type == "Polygon" and coordinates:
-        points = coordinates[0]
-    elif geo_type == "MultiPolygon" and coordinates and coordinates[0]:
-        points = coordinates[0][0]
-    elif (
-        geo_type == "Point" and isinstance(coordinates, list) and len(coordinates) == 2
-    ):
-        points = [coordinates]
+        if geo_type == "Polygon" and coordinates:
+            points = coordinates[0]
+        elif geo_type == "MultiPolygon" and coordinates and coordinates[0]:
+            points = coordinates[0][0]
+        elif (
+            geo_type == "Point"
+            and isinstance(coordinates, list)
+            and len(coordinates) == 2
+        ):
+            points = [coordinates]
+    elif isinstance(boundary, list) and len(boundary) >= 3:
+        if isinstance(boundary[0], (list, tuple)) and len(boundary[0]) == 2:
+            points = boundary
 
     if not points:
         raise ValueError("Cannot extract centroid from boundary")
