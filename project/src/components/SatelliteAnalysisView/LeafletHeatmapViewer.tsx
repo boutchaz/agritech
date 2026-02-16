@@ -609,6 +609,22 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
             {/* Grid Heatmap Layer */}
             <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} />
+
+            {/* Inverted mask: covers everything OUTSIDE the parcel boundary */}
+            {polygonPositions.length > 0 && (
+              <Polygon
+                key="clip-mask"
+                positions={[
+                  [[-90, -180], [-90, 180], [90, 180], [90, -180]],
+                  polygonPositions,
+                ]}
+                pathOptions={{
+                  fillColor: '#000000',
+                  fillOpacity: 0.6,
+                  stroke: false,
+                }}
+              />
+            )}
           </MapContainer>
         </div>
 
