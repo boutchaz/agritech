@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, Satellite } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -102,12 +102,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     new Map([['NIRv', 'red-green'], ['EVI', 'viridis'], ['NDRE', 'blue-red']])
   );
 
-  // Available dates state — NOT auto-fetched on mount to avoid slow GEE calls
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [datesLoaded, setDatesLoaded] = useState(false);
-
-
 
   const fetchAvailableDates = useCallback(async () => {
     if (!boundary || isLoadingDates) return;
@@ -147,6 +144,12 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       setIsLoadingDates(false);
     }
   }, [boundary, parcelName, isLoadingDates]);
+
+  useEffect(() => {
+    if (boundary && !datesLoaded && !isLoadingDates) {
+      fetchAvailableDates();
+    }
+  }, [boundary, datesLoaded, isLoadingDates, fetchAvailableDates]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -398,23 +401,10 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
         {!datesLoaded && (
           <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <Satellite className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <Loader className="w-4 h-4 text-blue-600 flex-shrink-0 animate-spin" />
             <p className="text-sm text-blue-700 flex-1">
-              Charger les dates disponibles depuis le satellite pour filtrer les jours sans nuages.
+              Chargement des dates disponibles depuis le satellite...
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchAvailableDates}
-              disabled={isLoadingDates || !boundary}
-              className="flex-shrink-0"
-            >
-              {isLoadingDates ? (
-                <><Loader className="w-3 h-3 animate-spin mr-1" /> Chargement...</>
-              ) : (
-                'Charger les dates'
-              )}
-            </Button>
           </div>
         )}
 
