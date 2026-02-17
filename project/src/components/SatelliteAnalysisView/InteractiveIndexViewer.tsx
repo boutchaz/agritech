@@ -712,7 +712,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               parcelId={parcelId}
               parcelName={parcelName}
               boundary={boundary}
-              initialData={'pixel_data' in data ? data as HeatmapDataResponse : null}
+              initialData={data != null && typeof data === 'object' && 'pixel_data' in data ? data as HeatmapDataResponse : null}
               selectedIndex={selectedIndex}
               selectedDate={selectedDate}
               embedded={true}

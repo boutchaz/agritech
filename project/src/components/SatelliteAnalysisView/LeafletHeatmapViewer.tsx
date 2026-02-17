@@ -91,7 +91,7 @@ export const GridHeatmapLayer: React.FC<{
   };
 
   useEffect(() => {
-    if (!data || !data.pixel_data || data.pixel_data.length === 0 || !data.statistics) {
+    if (!data || typeof data !== 'object' || !data.pixel_data || data.pixel_data.length === 0 || !data.statistics) {
       return;
     }
 

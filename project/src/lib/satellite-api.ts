@@ -455,6 +455,14 @@ class SatelliteAPIClient {
       }
 
       const data = await response.json();
+      // Defensive: handle double-encoded JSON (e.g. gateway returns string body)
+      if (typeof data === 'string') {
+        try {
+          return JSON.parse(data) as T;
+        } catch {
+          return data as unknown as T;
+        }
+      }
       return data;
     } catch (error) {
       clearTimeout(timeoutId);
