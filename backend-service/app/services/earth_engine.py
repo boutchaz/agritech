@@ -6,6 +6,7 @@ import httpx
 import math
 import tempfile
 import platform
+import concurrent.futures
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timedelta
 from app.core.config import settings
@@ -15,6 +16,8 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import io
 import base64
+
+GEE_INIT_TIMEOUT = 30  # seconds
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +121,13 @@ class EarthEngineService:
                             f"GEE_PRIVATE_KEY has unexpected type: {type(private_key_data)}"
                         )
 
-                    ee.Initialize(credentials, project=settings.GEE_PROJECT_ID)
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=1
+                    ) as executor:
+                        future = executor.submit(
+                            ee.Initialize, credentials, project=settings.GEE_PROJECT_ID
+                        )
+                        future.result(timeout=GEE_INIT_TIMEOUT)
 
                     # Clean up temp file if created
                     if temp_path and os.path.exists(temp_path):
@@ -143,10 +152,21 @@ class EarthEngineService:
                 logger.info(
                     "No service account credentials provided, using default authentication"
                 )
-                ee.Initialize(project=settings.GEE_PROJECT_ID)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(
+                        ee.Initialize, project=settings.GEE_PROJECT_ID
+                    )
+                    future.result(timeout=GEE_INIT_TIMEOUT)
 
             self.initialized = True
             logger.info("Earth Engine initialized successfully")
+        except concurrent.futures.TimeoutError:
+            logger.error(
+                f"Earth Engine initialization timed out after {GEE_INIT_TIMEOUT}s"
+            )
+            raise RuntimeError(
+                f"Earth Engine initialization timed out after {GEE_INIT_TIMEOUT}s"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize Earth Engine: {e}")
             raise
