@@ -1081,29 +1081,42 @@ class EarthEngineService:
     async def export_heatmap_data(
         self, geometry: Dict, date: str, index: str, sample_points: int = 1000
     ) -> Dict[str, Any]:
-        """Export real Earth Engine pixel data for heatmap visualization within AOI"""
+        """Export real Earth Engine pixel data for heatmap visualization within AOI.
+
+        Searches for the nearest available Sentinel-2 image within ±15 days of the
+        requested date to handle days without satellite passes.
+        """
         self.initialize()
 
-        # Get the image for the specific date
-        collection = self.get_sentinel2_collection(
-            geometry,
-            date,
-            (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)).strftime(
-                "%Y-%m-%d"
-            ),
-        )
+        target_date = datetime.strptime(date, "%Y-%m-%d")
+        image = None
+        actual_date = date
 
-        try:
-            collection_size = collection.size().getInfo()
-            if collection_size == 0:
-                raise ValueError(f"No images found for date {date}")
+        # Strategy: try exact date first, then expand window up to ±15 days
+        for delta in range(0, 16):
+            for direction in [0] if delta == 0 else [-1, 1]:
+                search_date = target_date + timedelta(days=delta * direction)
+                search_start = search_date.strftime("%Y-%m-%d")
+                search_end = (search_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
-            image = ee.Image(collection.first())
-        except Exception as e:
-            if "Empty date ranges not supported" in str(e):
-                raise ValueError(f"No images found for date {date}")
-            else:
-                raise e
+                try:
+                    collection = self.get_sentinel2_collection(
+                        geometry, search_start, search_end
+                    )
+                    collection_size = collection.size().getInfo()
+                    if collection_size > 0:
+                        image = ee.Image(
+                            collection.sort("CLOUDY_PIXEL_PERCENTAGE").first()
+                        )
+                        actual_date = search_start
+                        break
+                except Exception:
+                    continue
+            if image is not None:
+                break
+
+        if image is None:
+            raise ValueError(f"No Sentinel-2 images found within ±15 days of {date}")
 
         indices = self.calculate_vegetation_indices(image, [index])
         index_image = indices[index]
@@ -1293,8 +1306,11 @@ class EarthEngineService:
         if geometry.get("type") == "Polygon" and geometry.get("coordinates"):
             aoi_coordinates = geometry["coordinates"][0]
 
+        if actual_date != date:
+            logger.info(f"No image on {date}, using nearest available: {actual_date}")
+
         return {
-            "date": date,
+            "date": actual_date,
             "index": index,
             "bounds": {
                 "min_lon": min_lon,
@@ -1302,8 +1318,8 @@ class EarthEngineService:
                 "min_lat": min_lat,
                 "max_lat": max_lat,
             },
-            "pixel_data": pixel_data,  # Real satellite pixel data with lat/lon
-            "aoi_boundary": aoi_coordinates,  # AOI polygon coordinates for boundary
+            "pixel_data": pixel_data,
+            "aoi_boundary": aoi_coordinates,
             "statistics": stats,
             "visualization": vis_params,
             "metadata": {
@@ -1314,6 +1330,7 @@ class EarthEngineService:
                 "max_requested_pixels": max_pixels,
                 "estimated_total_pixels": estimated_pixels,
                 "aoi_area_deg2": area_deg_lat * area_deg_lon,
+                "requested_date": date,
             },
         }
 

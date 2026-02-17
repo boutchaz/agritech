@@ -550,6 +550,9 @@ async def get_heatmap_data(
             data_dict = data
         return HeatmapDataResponse(**data_dict)
 
+    except ValueError as e:
+        logger.warning(f"No heatmap data available: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error getting heatmap data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
