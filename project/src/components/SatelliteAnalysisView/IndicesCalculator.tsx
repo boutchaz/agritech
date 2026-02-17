@@ -38,7 +38,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
-  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE']);
+  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [cloudCoverage, setCloudCoverage] = useState(10);

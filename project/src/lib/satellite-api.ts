@@ -4,23 +4,126 @@
 const SATELLITE_SERVICE_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
 
 export interface VegetationIndex {
-  NDVI: "NDVI";
-  NDRE: "NDRE";
-  NDMI: "NDMI";
-  MNDWI: "MNDWI";
-  GCI: "GCI";
-  SAVI: "SAVI";
-  OSAVI: "OSAVI";
-  MSAVI2: "MSAVI2";
   NIRv: "NIRv";
   EVI: "EVI";
+  NDRE: "NDRE";
+  NDMI: "NDMI";
+  NDVI: "NDVI";
+  GCI: "GCI";
+  SAVI: "SAVI";
+  MSAVI2: "MSAVI2";
+  OSAVI: "OSAVI";
   MSI: "MSI";
+  MNDWI: "MNDWI";
   MCARI: "MCARI";
   TCARI: "TCARI";
 }
 
 export type VegetationIndexType = keyof VegetationIndex;
-export type TimeSeriesIndexType = VegetationIndexType | 'NIRvP';
+export type TimeSeriesIndexType = VegetationIndexType | 'NIRvP' | 'TCARI_OSAVI';
+
+export type IndexReliability = 'fiable' | 'utile' | 'prudence' | 'inutile';
+
+export interface IndexMetadata {
+  reliability: IndexReliability;
+  priority: number;
+  description: string;
+  shortWarning?: string;
+}
+
+export const INDEX_METADATA: Record<TimeSeriesIndexType, IndexMetadata> = {
+  NIRv: {
+    reliability: 'fiable',
+    priority: 1,
+    description: 'Verdure fonctionnelle — isole le signal végétation du sol, corrélé au GPP',
+  },
+  EVI: {
+    reliability: 'fiable',
+    priority: 2,
+    description: 'Végétation améliorée — réduit l\'effet sol/atmosphère, moins de saturation que NDVI',
+  },
+  NDRE: {
+    reliability: 'fiable',
+    priority: 3,
+    description: 'Chlorophylle/azote (red edge) — détecte le stress azoté avant les symptômes visibles',
+  },
+  NDMI: {
+    reliability: 'utile',
+    priority: 4,
+    description: 'Contenu en eau foliaire — alerte sécheresse, piloter l\'irrigation',
+  },
+  NDVI: {
+    reliability: 'utile',
+    priority: 5,
+    description: 'Verdure globale — référence historique, mélange arbres + herbe + sol',
+    shortWarning: 'Mélange signal arbres/herbe/sol sur canopée clairsemée',
+  },
+  NIRvP: {
+    reliability: 'utile',
+    priority: 6,
+    description: 'Productivité photosynthétique (NIRv × PAR) — proxy GPP, limité en semi-aride',
+    shortWarning: 'Relation GPP se dégrade sous stress hydrique/thermique',
+  },
+  GCI: {
+    reliability: 'utile',
+    priority: 7,
+    description: 'Chlorophylle (bande verte) — complément du NDRE',
+  },
+  SAVI: {
+    reliability: 'utile',
+    priority: 8,
+    description: 'Végétation ajustée au sol (L=0.5) — utile en saison sèche',
+    shortWarning: 'Redondant quand couvert herbacé est dense',
+  },
+  MSAVI2: {
+    reliability: 'utile',
+    priority: 9,
+    description: 'SAVI modifié (L auto) — meilleur quand sol très visible',
+    shortWarning: 'Avantage marginal sur SAVI avec herbe entre les rangs',
+  },
+  OSAVI: {
+    reliability: 'utile',
+    priority: 10,
+    description: 'SAVI optimisé (L=0.16) — surtout utile comme composante du ratio TCARI/OSAVI',
+    shortWarning: 'Redondant avec SAVI — préférer TCARI/OSAVI ratio',
+  },
+  TCARI_OSAVI: {
+    reliability: 'fiable',
+    priority: 3.5,
+    description: 'Ratio TCARI/OSAVI — indicateur de chlorophylle résistant au LAI',
+  },
+  MSI: {
+    reliability: 'prudence',
+    priority: 11,
+    description: 'Stress hydrique — redondant avec NDMI, variations subtiles sur irrigué',
+    shortWarning: 'Redondant avec NDMI, préférer NDMI',
+  },
+  MNDWI: {
+    reliability: 'inutile',
+    priority: 12,
+    description: 'Détection de surfaces d\'eau — conçu pour plans d\'eau, PAS pour le contenu en eau des plantes',
+    shortWarning: 'Hors contexte pour un verger — détecte les plans d\'eau, pas le stress hydrique',
+  },
+  MCARI: {
+    reliability: 'prudence',
+    priority: 13,
+    description: 'Absorption chlorophylle — courbe non monotone, perturbé par le sol',
+    shortWarning: 'DANGEREUX SEUL — même piège que le PRI. Utiliser avec OSAVI ou MTVI2',
+  },
+  TCARI: {
+    reliability: 'prudence',
+    priority: 14,
+    description: 'Absorption chlorophylle (red edge) — très sensible au sol',
+    shortWarning: 'DANGEREUX SEUL — doit être utilisé en ratio TCARI/OSAVI',
+  },
+};
+
+export const RELIABILITY_CONFIG: Record<IndexReliability, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  fiable: { label: 'Fiable', color: 'text-green-700', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
+  utile: { label: 'Utile', color: 'text-blue-700', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+  prudence: { label: 'Prudence', color: 'text-amber-700', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+  inutile: { label: 'Inutile', color: 'text-red-700', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
+};
 
 export interface GeoJSONGeometry {
   type: 'Point' | 'Polygon' | 'MultiPolygon';
@@ -697,24 +800,25 @@ export const getDateRangeLastNDays = (days: number): DateRangeRequest => {
   };
 };
 
+// Ordered by audit priority: fiable → utile → prudence → inutile
 export const VEGETATION_INDICES: VegetationIndexType[] = [
-  'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'
+  'NIRv', 'EVI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI', 'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI'
 ];
 
-export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES, 'NIRvP'];
+export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES, 'TCARI_OSAVI', 'NIRvP'];
 
 export const VEGETATION_INDEX_DESCRIPTIONS: Record<VegetationIndexType, string> = {
-  NDVI: 'Normalized Difference Vegetation Index - General vegetation health',
-  NDRE: 'Normalized Difference Red Edge - Nitrogen content',
-  NDMI: 'Normalized Difference Moisture Index - Plant water stress',
-  MNDWI: 'Modified Normalized Difference Water Index - Surface water',
-  GCI: 'Green Chlorophyll Index - Chlorophyll content',
-  SAVI: 'Soil Adjusted Vegetation Index - Vegetation with soil background',
-  OSAVI: 'Optimized Soil Adjusted Vegetation Index - Enhanced SAVI',
-  MSAVI2: 'Modified Soil Adjusted Vegetation Index - Version 2',
-  NIRv: 'Near-Infrared Reflectance of Vegetation - Canopy photosynthetic activity',
-  EVI: 'Enhanced Vegetation Index - Dense canopy monitoring',
-  MSI: 'Moisture Stress Index - Plant water stress',
-  MCARI: 'Modified Chlorophyll Absorption Ratio Index - Chlorophyll',
-  TCARI: 'Transformed Chlorophyll Absorption Reflectance Index - Chlorophyll'
+  NIRv: 'NIRv — Verdure fonctionnelle (isole végétation du sol)',
+  EVI: 'EVI — Végétation améliorée (corrige sol et atmosphère)',
+  NDRE: 'NDRE — Chlorophylle/azote (détection précoce stress azoté)',
+  NDMI: 'NDMI — Contenu en eau foliaire (alerte sécheresse)',
+  NDVI: 'NDVI — Verdure globale (référence historique)',
+  GCI: 'GCI — Chlorophylle (complément NDRE)',
+  SAVI: 'SAVI — Végétation ajustée au sol (saison sèche)',
+  OSAVI: 'OSAVI — SAVI optimisé (composante TCARI/OSAVI)',
+  MSAVI2: 'MSAVI2 — SAVI modifié (L automatique)',
+  MSI: 'MSI — Stress hydrique (redondant avec NDMI)',
+  MNDWI: 'MNDWI — Surfaces d\'eau (hors contexte verger)',
+  MCARI: 'MCARI — Chlorophylle (⚠ dangereux seul)',
+  TCARI: 'TCARI — Chlorophylle red edge (⚠ dangereux seul)',
 };

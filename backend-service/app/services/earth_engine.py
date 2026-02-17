@@ -414,21 +414,34 @@ class EarthEngineService:
             ).rename("MCARI")
 
         # TCARI
-        if "TCARI" in indices:
-            results["TCARI"] = (
-                ee.Image(3)
-                .multiply(
+        if "TCARI" in indices or "TCARI_OSAVI" in indices:
+            tcari = ee.Image(3).multiply(
+                bands["red_edge"]
+                .subtract(bands["red"])
+                .subtract(
                     bands["red_edge"]
+                    .subtract(bands["green"])
+                    .multiply(0.2)
+                    .multiply(bands["red_edge"].divide(bands["red"]))
+                )
+            )
+            if "TCARI" in indices:
+                results["TCARI"] = tcari.rename("TCARI")
+
+        # TCARI/OSAVI ratio — chlorophyll indicator resistant to LAI variation
+        if "TCARI_OSAVI" in indices:
+            osavi_for_ratio = results.get("OSAVI")
+            if osavi_for_ratio is None:
+                osavi_for_ratio = (
+                    bands["nir"]
                     .subtract(bands["red"])
-                    .subtract(
-                        bands["red_edge"]
-                        .subtract(bands["green"])
-                        .multiply(0.2)
-                        .multiply(bands["red_edge"].divide(bands["red"]))
+                    .divide(
+                        bands["nir"].add(bands["red"]).add(0.16).max(ee.Image(1e-10))
                     )
                 )
-                .rename("TCARI")
-            )
+            results["TCARI_OSAVI"] = tcari.divide(
+                osavi_for_ratio.max(ee.Image(1e-10))
+            ).rename("TCARI_OSAVI")
 
         return results
 
@@ -927,6 +940,11 @@ class EarthEngineService:
                 "min": 0,
                 "max": 3,
                 "palette": ["#00FF00", "#FFD700", "#FF4500", "#8B0000"],
+            },
+            "TCARI_OSAVI": {
+                "min": 0,
+                "max": 0.8,
+                "palette": ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
             },
         }
 

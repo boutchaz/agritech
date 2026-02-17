@@ -31,7 +31,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
-  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
+  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE', 'NDMI']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [cloudCoverage, setCloudCoverage] = useState(10);

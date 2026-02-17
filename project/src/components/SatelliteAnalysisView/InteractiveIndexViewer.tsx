@@ -75,9 +75,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   // View mode: single, multi-grid, multi-overlay, or temporal-compare
   const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare'>('single');
 
-  // Always default to NDVI as requested
-  const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NDVI');
-  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NDVI', 'NDRE', 'NDMI']);
+  const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NIRv');
+  const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE']);
   const [selectedDate, setSelectedDate] = useState('');
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('red-green');
@@ -95,12 +94,12 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
   // Overlay opacity control (per index)
   const [overlayOpacity, setOverlayOpacity] = useState<Map<VegetationIndexType, number>>(
-    new Map([['NDVI', 0.7], ['NDRE', 0.7], ['NDMI', 0.7]])
+    new Map([['NIRv', 0.7], ['EVI', 0.7], ['NDRE', 0.7]])
   );
 
   // Per-index color palette selection for multi-grid view
   const [indexColorPalettes, setIndexColorPalettes] = useState<Map<VegetationIndexType, ColorPalette>>(
-    new Map([['NDVI', 'red-green'], ['NDRE', 'viridis'], ['NDMI', 'blue-red']])
+    new Map([['NIRv', 'red-green'], ['EVI', 'viridis'], ['NDRE', 'blue-red']])
   );
 
   // Available dates state — NOT auto-fetched on mount to avoid slow GEE calls
