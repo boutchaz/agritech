@@ -185,15 +185,6 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
 
 
-  // Initialize with today's date if no props provided
-  useEffect(() => {
-    if (!propSelectedDate) {
-      const today = new Date().toISOString().split('T')[0];
-      setSelectedDate(today);
-    }
-  }, [propSelectedDate]);
-
-  // Update state when props change
   useEffect(() => {
     if (propSelectedIndex) setSelectedIndex(propSelectedIndex);
   }, [propSelectedIndex]);
@@ -208,9 +199,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     }
   }, [initialData]);
 
-  // Check available dates with satellite data - Fixed infinite refetch
   const checkAvailableDates = useCallback(async () => {
-    if (!boundary) return;
+    if (!boundary || embedded) return;
 
     setIsCheckingDates(true);
     setError(null);
@@ -232,16 +222,14 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           start_date: startDateStr,
           end_date: endDate
         },
-        max_cloud_coverage: 20 // Allow up to 20% cloud coverage
+        max_cloud_coverage: 20
       });
 
       if (result.recommended_date) {
         setRecommendedDate(result.recommended_date);
-        // Use the recommended date if we have one
         setSelectedDate(prev => prev || result.recommended_date!);
       }
 
-      // Extract available dates from metadata if provided
       const dates = result.recommended_date ? [result.recommended_date] : [];
       setAvailableDates(dates);
 
@@ -251,14 +239,13 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     } finally {
       setIsCheckingDates(false);
     }
-  }, [boundary, parcelName]); // Removed selectedDate and availableDates from deps to fix infinite loop
+  }, [boundary, parcelName, embedded]);
 
-  // Check available dates when boundary changes
   useEffect(() => {
-    if (boundary && boundary.length > 0) {
+    if (!embedded && boundary && boundary.length > 0) {
       checkAvailableDates();
     }
-  }, [boundary, checkAvailableDates]);
+  }, [embedded, boundary, checkAvailableDates]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;

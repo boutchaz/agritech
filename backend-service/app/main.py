@@ -19,17 +19,17 @@ app = FastAPI(
     version="2.0.0",
 )
 
-app.add_middleware(NormalizePathMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=False,  # Must be False when allow_origins is ["*"]
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=3600,  # Cache preflight requests for 1 hour
+    max_age=3600,
 )
+
+app.add_middleware(NormalizePathMiddleware)
 
 # Include routers
 app.include_router(health.router, prefix="/api/health", tags=["health"])

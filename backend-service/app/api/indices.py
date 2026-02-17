@@ -559,18 +559,10 @@ async def get_heatmap_data(
 
 
 @router.get("/available", response_model=List[str])
-async def get_available_indices(
-    provider: Optional[str] = Query(
-        None, description="Satellite provider (gee, cdse, or auto)"
-    ),
-):
+async def get_available_indices():
     """Get list of available vegetation indices"""
     from app.models.schemas import VegetationIndex
 
-    # Get provider info to see which indices are supported
-    satellite_provider = get_satellite_provider(provider)
-
-    # All providers support the same indices for now
     return [idx.value for idx in VegetationIndex]
 
 
