@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, HTTPException, Query
 from datetime import date
 from typing import Optional
@@ -185,4 +186,14 @@ def _extract_centroid_from_boundary(boundary) -> tuple:
 
     lons = [p[0] for p in points]
     lats = [p[1] for p in points]
-    return (sum(lats) / len(lats), sum(lons) / len(lons))
+    avg_lon = sum(lons) / len(lons)
+    avg_lat = sum(lats) / len(lats)
+
+    if abs(avg_lon) > 180 or abs(avg_lat) > 90:
+        lon_wgs84 = (avg_lon / 20037508.34) * 180
+        lat_wgs84 = (
+            math.atan(math.exp((avg_lat / 20037508.34) * math.pi)) * 360 / math.pi
+        ) - 90
+        return (lat_wgs84, lon_wgs84)
+
+    return (avg_lat, avg_lon)
