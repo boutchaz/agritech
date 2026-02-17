@@ -520,6 +520,38 @@ class EarthEngineService:
             windows.append((current, window_end))
             current = window_end
 
+        count_features = ee.FeatureCollection(
+            [
+                ee.Feature(
+                    None,
+                    {
+                        "idx": i,
+                        "date": w_start.strftime("%Y-%m-%d"),
+                        "count": base_collection.filterDate(
+                            w_start.strftime("%Y-%m-%d"),
+                            w_end.strftime("%Y-%m-%d"),
+                        ).size(),
+                    },
+                )
+                for i, (w_start, w_end) in enumerate(windows)
+            ]
+        )
+        count_results = count_features.getInfo()
+
+        non_empty_indices = set()
+        for feat in count_results.get("features", []):
+            props = feat.get("properties", {})
+            if props.get("count", 0) > 0:
+                non_empty_indices.add(props["idx"])
+
+        non_empty_windows = [w for i, w in enumerate(windows) if i in non_empty_indices]
+        if not non_empty_windows:
+            return []
+
+        logger.info(
+            f"Time series: {len(non_empty_windows)}/{len(windows)} windows have imagery"
+        )
+
         def make_window_feature(window_tuple):
             w_start, w_end = window_tuple
             w_start_str = w_start.strftime("%Y-%m-%d")
@@ -527,6 +559,7 @@ class EarthEngineService:
 
             sub = base_collection.filterDate(w_start_str, w_end_str)
             composite = sub.median()
+            img_count = sub.size()
 
             index_image = self.calculate_vegetation_indices(composite, [index]).get(
                 index
@@ -543,8 +576,6 @@ class EarthEngineService:
                 maxPixels=settings.MAX_PIXELS,
             ).get(index)
 
-            img_count = sub.size()
-
             return ee.Feature(
                 None,
                 {
@@ -554,7 +585,9 @@ class EarthEngineService:
                 },
             )
 
-        features = ee.FeatureCollection([make_window_feature(w) for w in windows])
+        features = ee.FeatureCollection(
+            [make_window_feature(w) for w in non_empty_windows]
+        )
 
         results = features.getInfo()
 
