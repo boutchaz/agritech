@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, Satellite } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -103,55 +103,55 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     new Map([['NDVI', 'red-green'], ['NDRE', 'viridis'], ['NDMI', 'blue-red']])
   );
 
-  // Available dates state
+  // Available dates state — NOT auto-fetched on mount to avoid slow GEE calls
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
+  const [datesLoaded, setDatesLoaded] = useState(false);
 
-  // Fetch available dates when boundary changes
   useEffect(() => {
-    if (!boundary) return;
+    if (!selectedDate) {
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+    }
+  }, []);
 
-    const fetchAvailableDates = async () => {
-      setIsLoadingDates(true);
-      try {
-        const aoi = {
-          geometry: convertBoundaryToGeoJSON(boundary),
-          name: parcelName || 'Selected Parcel'
-        };
+  const fetchAvailableDates = useCallback(async () => {
+    if (!boundary || isLoadingDates) return;
 
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setMonth(endDate.getMonth() - 6);
+    setIsLoadingDates(true);
+    try {
+      const aoi = {
+        geometry: convertBoundaryToGeoJSON(boundary),
+        name: parcelName || 'Selected Parcel'
+      };
 
-        const result = await satelliteApi.getAvailableDates(
-          aoi,
-          startDate.toISOString().split('T')[0],
-          endDate.toISOString().split('T')[0],
-          30 // 30% cloud coverage threshold
-        );
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setMonth(endDate.getMonth() - 3);
 
-        const dates = result.available_dates
-          .filter(d => d.available)
-          .map(d => d.date);
+      const result = await satelliteApi.getAvailableDates(
+        aoi,
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0],
+        30
+      );
 
-        setAvailableDates(dates);
+      const dates = result.available_dates
+        .filter(d => d.available)
+        .map(d => d.date);
 
-        // Set initial date to the most recent available date
-        if (dates.length > 0) {
-          setSelectedDate(dates[dates.length - 1]);
-        }
-      } catch (err) {
-        console.error('Failed to fetch available dates:', err);
-        // Fallback to today's date
-        const today = new Date().toISOString().split('T')[0];
-        setSelectedDate(today);
-      } finally {
-        setIsLoadingDates(false);
+      setAvailableDates(dates);
+      setDatesLoaded(true);
+
+      if (dates.length > 0) {
+        setSelectedDate(dates[dates.length - 1]);
       }
-    };
-
-    fetchAvailableDates();
-  }, [boundary, parcelName]);
+    } catch (err) {
+      console.error('Failed to fetch available dates:', err);
+      setDatesLoaded(true);
+    } finally {
+      setIsLoadingDates(false);
+    }
+  }, [boundary, parcelName, isLoadingDates]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -400,6 +400,28 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             </div>
           </div>
         ) : null}
+
+        {!datesLoaded && (
+          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <Satellite className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <p className="text-sm text-blue-700 flex-1">
+              Charger les dates disponibles depuis le satellite pour filtrer les jours sans nuages.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchAvailableDates}
+              disabled={isLoadingDates || !boundary}
+              className="flex-shrink-0"
+            >
+              {isLoadingDates ? (
+                <><Loader className="w-3 h-3 animate-spin mr-1" /> Chargement...</>
+              ) : (
+                'Charger les dates'
+              )}
+            </Button>
+          </div>
+        )}
 
         {viewMode === 'temporal-compare' ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

@@ -1,18 +1,27 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
-import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText } from 'lucide-react'
+import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon } from 'lucide-react'
 
 const IndexImageViewer = lazy(() => import('../../../components/SatelliteAnalysisView/IndexImageViewer'));
 const TimeSeriesChart = lazy(() => import('../../../components/SatelliteAnalysisView/TimeSeriesChart'));
+
+type SatelliteTab = 'timeseries' | 'heatmap';
+
+const TabSpinner = () => (
+  <div className="flex items-center justify-center p-12">
+    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+  </div>
+);
 
 const ParcelSatellite = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: calibrationStatus } = useCalibrationStatus(parcelId);
+  const [activeTab, setActiveTab] = useState<SatelliteTab>('timeseries');
 
   if (isLoading) {
     return (
@@ -24,9 +33,25 @@ const ParcelSatellite = () => {
 
   if (!parcel) return null;
 
+  const hasBoundary = parcel.boundary && parcel.boundary.length > 0;
+
+  const tabs: { id: SatelliteTab; label: string; icon: ReactNode; description: string }[] = [
+    {
+      id: 'timeseries',
+      label: t('satellite.tabs.timeseries', 'Time Series'),
+      icon: <BarChart3 className="w-4 h-4" />,
+      description: t('satellite.tabs.timeseriesDesc', 'Cached historical trends'),
+    },
+    {
+      id: 'heatmap',
+      label: t('satellite.tabs.heatmap', 'Heatmap Analysis'),
+      icon: <MapIcon className="w-4 h-4" />,
+      description: t('satellite.tabs.heatmapDesc', 'Interactive spatial visualization'),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Calibration Summary Banner */}
       {calibrationStatus && (
         <div className={`flex items-center justify-between p-4 rounded-lg border ${
           calibrationStatus.status === 'ready'
@@ -54,6 +79,7 @@ const ParcelSatellite = () => {
           <Link
             to="/parcels/$parcelId/reports"
             params={{ parcelId }}
+            search={{ farmId: undefined }}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <FileText className="w-4 h-4" />
@@ -62,28 +88,54 @@ const ParcelSatellite = () => {
         </div>
       )}
 
-      {parcel.boundary && parcel.boundary.length > 0 ? (
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('satellite.loading')}</span>
-            </div>
-          }
-        >
-          <IndexImageViewer
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-            farmId={parcel.farm_id || undefined}
-            boundary={parcel.boundary}
-          />
-          <TimeSeriesChart
-            parcelId={parcel.id}
-            parcelName={parcel.name}
-            farmId={parcel.farm_id ?? undefined}
-            boundary={parcel.boundary}
-          />
-        </Suspense>
+      {hasBoundary ? (
+        <>
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex gap-1" role="tablist">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-green-600 text-green-700 dark:text-green-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 ml-1">
+                    — {tab.description}
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {activeTab === 'timeseries' && (
+            <Suspense fallback={<TabSpinner />}>
+              <TimeSeriesChart
+                parcelId={parcel.id}
+                parcelName={parcel.name}
+                farmId={parcel.farm_id ?? undefined}
+                boundary={parcel.boundary}
+              />
+            </Suspense>
+          )}
+
+          {activeTab === 'heatmap' && (
+            <Suspense fallback={<TabSpinner />}>
+              <IndexImageViewer
+                parcelId={parcel.id}
+                parcelName={parcel.name}
+                farmId={parcel.farm_id || undefined}
+                boundary={parcel.boundary}
+              />
+            </Suspense>
+          )}
+        </>
       ) : (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
           <Satellite className="w-16 h-16 text-gray-400 mx-auto mb-4" />
