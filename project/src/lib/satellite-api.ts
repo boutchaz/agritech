@@ -444,7 +444,7 @@ class SatelliteAPIClient {
 
         // Provide more helpful error messages
         if (response.status === 404) {
-          throw new Error('Satellite data service endpoint not found. The service may be temporarily unavailable.');
+          throw new Error(`No satellite imagery available: ${errorText || 'No images found for the selected date range.'}`);
         } else if (response.status >= 500) {
           throw new Error('Satellite data service is experiencing issues. Please try again later.');
         } else if (response.status === 400) {
