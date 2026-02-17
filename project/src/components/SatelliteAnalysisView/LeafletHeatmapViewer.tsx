@@ -333,19 +333,19 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     // Helper function to interpolate colors from the palette
     const getColorForNormalized = (normalized: number): string => {
       const colors = palette.colors;
-      const index = normalized * (colors.length - 1);
+      const safeNorm = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0.5;
+      const index = safeNorm * (colors.length - 1);
       const lowerIndex = Math.floor(index);
-      const upperIndex = Math.ceil(index);
+      const upperIndex = Math.min(Math.ceil(index), colors.length - 1);
 
-      if (lowerIndex === upperIndex) {
-        return colors[lowerIndex];
+      if (lowerIndex === upperIndex || !colors[lowerIndex] || !colors[upperIndex]) {
+        return colors[lowerIndex] || colors[0];
       }
 
       const t = index - lowerIndex;
       const lower = colors[lowerIndex];
       const upper = colors[upperIndex];
 
-      // Parse hex colors and interpolate
       const lowerRGB = {
         r: parseInt(lower.slice(1, 3), 16),
         g: parseInt(lower.slice(3, 5), 16),
