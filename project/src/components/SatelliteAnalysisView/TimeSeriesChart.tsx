@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, Brush } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer, AlertTriangle } from 'lucide-react';
 import {
   satelliteApi,
@@ -731,6 +731,27 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               <Tooltip content={<CustomTooltip />} />
               <Legend />
               
+              <Brush 
+                dataKey="date" 
+                height={40} 
+                stroke={getIndexColor(selectedIndices[0])}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                }}
+                fill="rgba(59, 130, 246, 0.05)"
+              >
+                <LineChart>
+                  <Line
+                    type="monotone"
+                    dataKey={selectedIndices[0]}
+                    stroke={getIndexColor(selectedIndices[0])}
+                    strokeWidth={1}
+                    dot={false}
+                  />
+                </LineChart>
+              </Brush>
+
               {showTemperature && (
                 <>
                    <defs>
