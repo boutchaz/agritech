@@ -461,7 +461,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleParcelSelect(parcel.id);
+                              navigate({ to: `/parcels/${parcel.id}` });
                             }}
                             className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
                           >
