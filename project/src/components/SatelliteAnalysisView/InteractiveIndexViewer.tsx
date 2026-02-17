@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, Satellite } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -107,11 +107,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [datesLoaded, setDatesLoaded] = useState(false);
 
-  useEffect(() => {
-    if (!selectedDate) {
-      setSelectedDate(new Date().toISOString().split('T')[0]);
-    }
-  }, []);
+
 
   const fetchAvailableDates = useCallback(async () => {
     if (!boundary || isLoadingDates) return;
@@ -649,7 +645,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <Button
             onClick={generateVisualization}
             disabled={
-              isLoading || !boundary ||
+              isLoading || !boundary || !datesLoaded || !selectedDate ||
               (viewMode === 'temporal-compare' && (!selectedDate || !compareDate)) ||
               (viewMode !== 'single' && viewMode !== 'temporal-compare' && selectedIndices.length === 0)
             }
