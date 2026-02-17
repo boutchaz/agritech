@@ -415,10 +415,6 @@ const MapComponent: React.FC<MapProps> = ({
 
     if (isFullScreen) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when in full-screen
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
     }
 
     // Resize map when entering/exiting full-screen
@@ -434,7 +430,6 @@ const MapComponent: React.FC<MapProps> = ({
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
       clearTimeout(timer);
     };
   }, [isFullScreen]);
