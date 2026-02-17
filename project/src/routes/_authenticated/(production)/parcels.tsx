@@ -26,6 +26,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string | null>(search.farmId || null);
   const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
+  const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
   // Track if we're currently syncing to prevent loops
   const isSyncingRef = useRef(false);
@@ -125,13 +126,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   };
 
   const handleParcelSelect = (parcelId: string) => {
-    try {
-      // Navigate to the parcel detail page instead of using state
-      navigate({ to: `/parcels/${parcelId}` });
-    } catch (error) {
-      console.error('Navigation error:', error);
-      toast.error(`Error navigating to parcel: ${error}`);
-    }
+    // Highlight and fly-to the parcel on the map
+    setSelectedParcelId(parcelId);
   };
 
 
@@ -320,7 +316,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                   sensors={[]}
                   farmId={targetFarmId}
                   enableDrawing={true}
-                  selectedParcelId={null}
+                  selectedParcelId={selectedParcelId}
                   onParcelSelect={handleParcelSelect}
                   parcels={parcels}
                   editingParcelId={editingBoundaryParcelId}
@@ -349,7 +345,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                       <div
                         key={parcel.id}
                         data-testid={`parcel-card-${parcel.id}`}
-                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-700 transition-all hover:shadow-lg hover:border-green-300"
+                        onClick={() => handleParcelSelect(parcel.id)}
+                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border-2 transition-all hover:shadow-lg cursor-pointer ${
+                          selectedParcelId === parcel.id
+                            ? 'border-green-500 ring-2 ring-green-200 dark:ring-green-800 shadow-lg'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+                        }`}
                       >
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
