@@ -440,7 +440,11 @@ class EarthEngineService:
         index: str,
         interval: str = "month",
     ) -> List[Dict]:
-        """Get time series data for a specific index, aggregated by interval."""
+        """Get time series data for a specific index, aggregated by interval.
+
+        Uses a single batched GEE computation instead of per-window getInfo()
+        calls to avoid N sequential network round-trips.
+        """
         self.initialize()
 
         aoi = ee.Geometry(geometry)
@@ -454,6 +458,114 @@ class EarthEngineService:
         total_days = (end_dt - start_dt).days
         scale = 30 if total_days > 365 else settings.DEFAULT_SCALE
 
+        try:
+            return self._get_time_series_batched(
+                geometry,
+                aoi,
+                start_date,
+                end_date,
+                index,
+                step,
+                scale,
+                start_dt,
+                end_dt,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Batched time series failed ({e}), falling back to sequential"
+            )
+            return self._get_time_series_sequential(
+                geometry, aoi, index, step, scale, start_dt, end_dt
+            )
+
+    def _get_time_series_batched(
+        self,
+        geometry: Dict,
+        aoi: ee.Geometry,
+        start_date: str,
+        end_date: str,
+        index: str,
+        step: int,
+        scale: int,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> List[Dict]:
+        """Batch all windows into a single GEE server-side computation."""
+        max_cloud = settings.MAX_CLOUD_COVERAGE
+
+        base_collection = (
+            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+            .filterBounds(aoi)
+            .filterDate(start_date, end_date)
+            .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", max_cloud))
+        )
+
+        windows = []
+        current = start_dt
+        while current < end_dt:
+            window_end = min(current + timedelta(days=step), end_dt)
+            windows.append((current, window_end))
+            current = window_end
+
+        def make_window_feature(window_tuple):
+            w_start, w_end = window_tuple
+            w_start_str = w_start.strftime("%Y-%m-%d")
+            w_end_str = w_end.strftime("%Y-%m-%d")
+
+            sub = base_collection.filterDate(w_start_str, w_end_str)
+            composite = sub.median()
+
+            index_image = self.calculate_vegetation_indices(composite, [index]).get(
+                index
+            )
+            if index_image is None:
+                return ee.Feature(
+                    None, {"date": w_start_str, "value": None, "count": 0}
+                )
+
+            mean_val = index_image.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=aoi,
+                scale=scale,
+                maxPixels=settings.MAX_PIXELS,
+            ).get(index)
+
+            img_count = sub.size()
+
+            return ee.Feature(
+                None,
+                {
+                    "date": w_start_str,
+                    "value": mean_val,
+                    "count": img_count,
+                },
+            )
+
+        features = ee.FeatureCollection([make_window_feature(w) for w in windows])
+
+        results = features.getInfo()
+
+        time_series = []
+        for feat in results.get("features", []):
+            props = feat.get("properties", {})
+            value = props.get("value")
+            count = props.get("count", 0)
+            if value is not None and count and count > 0:
+                time_series.append({"date": props["date"], "value": value})
+
+        return time_series
+
+    def _get_time_series_sequential(
+        self,
+        geometry: Dict,
+        aoi: ee.Geometry,
+        index: str,
+        step: int,
+        scale: int,
+        start_dt: datetime,
+        end_dt: datetime,
+    ) -> List[Dict]:
+        """Fallback: per-window sequential getInfo() calls."""
         time_series: List[Dict] = []
         current = start_dt
         while current < end_dt:
