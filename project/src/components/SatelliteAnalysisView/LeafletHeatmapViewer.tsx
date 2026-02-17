@@ -51,7 +51,8 @@ export const GridHeatmapLayer: React.FC<{
 
   // Color interpolation function using selected palette
   const getColorForValue = (value: number, min: number, max: number): string => {
-    const normalized = Math.max(0, Math.min(1, (value - min) / (max - min)));
+    const range = max - min;
+    const normalized = range === 0 ? 0.5 : Math.max(0, Math.min(1, (value - min) / range));
     const palette = COLOR_PALETTES[colorPalette];
     const colors = palette.colors;
 
@@ -90,7 +91,7 @@ export const GridHeatmapLayer: React.FC<{
   };
 
   useEffect(() => {
-    if (!data || !data.pixel_data) {
+    if (!data || !data.pixel_data || data.pixel_data.length === 0 || !data.statistics) {
       return;
     }
 

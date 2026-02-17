@@ -695,7 +695,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Count</div>
-              <div className="font-semibold">{data.statistics.count}</div>
+              <div className="font-semibold">{(data.statistics?.count ?? 0).toLocaleString()}</div>
             </div>
           </div>
 
@@ -1247,7 +1247,7 @@ const MultiIndexOverlayMap: React.FC<{
   overlayOpacity: Map<VegetationIndexType, number>;
   selectedDate: string;
   baseLayer: 'osm' | 'satellite';
-}> = ({ _parcelId, _parcelName, boundary, multiData, overlayOpacity, _selectedDate, baseLayer }) => {
+}> = ({ boundary, multiData, overlayOpacity, baseLayer }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const indices = Array.from(multiData.keys());
 
