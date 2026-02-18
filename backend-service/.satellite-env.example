@@ -1,0 +1,8 @@
+export SATELLITE_PROVIDER="gee"
+export CDSE_CLIENT_ID="your-cdse-client-id"
+export CDSE_CLIENT_SECRET="your-cdse-client-secret"
+export CDSE_OPENEO_URL="https://openeo.dataspace.copernicus.eu"
+export GEE_SERVICE_ACCOUNT="your-service-account@project.iam.gserviceaccount.com"
+export GEE_PRIVATE_KEY='{"type": "service_account", ...}'
+export GEE_PROJECT_ID="your-gcp-project-id"
+export PYTHONUNBUFFERED=1

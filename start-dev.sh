@@ -40,17 +40,12 @@ sleep 2
 echo "🛰️  Starting Satellite Service (CDSE)..."
 cd "$AGRITECH_ROOT/backend-service"
 
-# Create satellite startup script
-cat > "$AGRITECH_ROOT/backend-service/.satellite-env" << 'ENVEOF'
-export SATELLITE_PROVIDER="cdse"
-export CDSE_CLIENT_ID="sh-d0d326a1-bf76-42b5-8ab7-fbcc4f3abf75"
-export CDSE_CLIENT_SECRET="BaFw0ySSORrz6Gec4aoV7yrL3P4IE7IZ"
-export CDSE_OPENEO_URL="https://openeo.dataspace.copernicus.eu"
-export PYTHONUNBUFFERED=1
-ENVEOF
-
-# Start satellite service
-source .satellite-env
+# Source satellite env (create backend-service/.satellite-env from .satellite-env.example)
+if [ ! -f "$AGRITECH_ROOT/backend-service/.satellite-env" ]; then
+    echo "❌ Missing backend-service/.satellite-env — copy .satellite-env.example and fill in your keys"
+    exit 1
+fi
+source "$AGRITECH_ROOT/backend-service/.satellite-env"
 nohup venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload > "$LOG_DIR/satellite.log" 2>&1 &
 echo "✅ Satellite Service starting on port 8001..."
 sleep 3

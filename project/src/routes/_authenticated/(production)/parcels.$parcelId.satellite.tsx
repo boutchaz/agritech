@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
-import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon } from 'lucide-react'
+import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database, RefreshCw } from 'lucide-react'
 
 const IndexImageViewer = lazy(() => import('../../../components/SatelliteAnalysisView/IndexImageViewer'));
 const TimeSeriesChart = lazy(() => import('../../../components/SatelliteAnalysisView/TimeSeriesChart'));
@@ -16,12 +17,30 @@ const TabSpinner = () => (
   </div>
 );
 
+const SATELLITE_API_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
+
 const ParcelSatellite = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: calibrationStatus } = useCalibrationStatus(parcelId);
   const [activeTab, setActiveTab] = useState<SatelliteTab>('timeseries');
+
+  const { data: syncStatus } = useQuery({
+    queryKey: ['satellite-sync-status', parcelId],
+    queryFn: async () => {
+      const res = await fetch(`${SATELLITE_API_URL}/api/sync/parcel/${parcelId}/status`);
+      if (!res.ok) return null;
+      return res.json() as Promise<{
+        status: 'no_data' | 'partial' | 'synced';
+        total_records: number;
+        indices: string[];
+        date_range: { start: string | null; end: string | null } | null;
+      }>;
+    },
+    staleTime: 60 * 1000,
+    enabled: !!parcelId,
+  });
 
   if (isLoading) {
     return (
@@ -85,6 +104,30 @@ const ParcelSatellite = () => {
             <FileText className="w-4 h-4" />
             <span className="text-sm font-medium">{t('satellite.goToReports', 'Go to Reports')}</span>
           </Link>
+        </div>
+      )}
+
+      {syncStatus && syncStatus.status !== 'synced' && hasBoundary && (
+        <div className={`flex items-center gap-3 p-3 rounded-lg border text-sm ${
+          syncStatus.status === 'no_data'
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+        }`}>
+          {syncStatus.status === 'no_data' ? (
+            <>
+              <Database className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span className="text-amber-700 dark:text-amber-300">
+                Aucune donnée satellite en cache. La synchronisation initiale est en cours ou peut être lancée via &ldquo;Récupérer depuis satellite&rdquo;.
+              </span>
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 animate-spin" />
+              <span className="text-blue-700 dark:text-blue-300">
+                Synchronisation en cours — {syncStatus.total_records} points, {syncStatus.indices.length}/4 indices ({syncStatus.indices.join(', ')})
+              </span>
+            </>
+          )}
         </div>
       )}
 

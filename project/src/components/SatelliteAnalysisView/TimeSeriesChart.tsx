@@ -200,21 +200,17 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           setLiveSeriesData(prev => ({ ...prev, [index]: response.data ?? [] }));
 
           if (index !== 'NIRvP' && response.data && response.data.length > 0) {
-            for (const point of response.data) {
-              try {
-                await satelliteIndicesApi.create(
-                  {
-                    parcel_id: parcelId,
-                    farm_id: farmId,
-                    index_name: index,
-                    date: point.date,
-                    mean_value: point.value,
-                  },
-                  organizationId
-                );
-              } catch {
-                // Ignore duplicates
-              }
+            const batch = response.data
+              .filter((point: { date: string; value: number }) => point.value != null)
+              .map((point: { date: string; value: number }) => ({
+                parcel_id: parcelId,
+                farm_id: farmId,
+                index_name: index,
+                date: point.date,
+                mean_value: point.value,
+              }));
+            if (batch.length > 0) {
+              await satelliteIndicesApi.createBulk(batch, organizationId);
             }
           }
         } catch (apiErr) {

@@ -458,7 +458,37 @@ export class ParcelsService {
     }
 
     this.logger.log(`Parcel created successfully: ${newParcel.id}`);
+
+    if (newParcel.boundary && Array.isArray(newParcel.boundary) && newParcel.boundary.length >= 3) {
+      this.triggerSatelliteSync(newParcel.id, organizationId, newParcel.boundary, dto.farm_id, dto.name);
+    }
+
     return newParcel;
+  }
+
+  private triggerSatelliteSync(
+    parcelId: string,
+    organizationId: string,
+    boundary: number[][],
+    farmId?: string,
+    parcelName?: string,
+  ) {
+    const satelliteApiUrl = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
+    const url = `${satelliteApiUrl.replace(/\/+$/, '')}/api/sync/parcel`;
+
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        boundary,
+        farm_id: farmId || null,
+        parcel_name: parcelName || null,
+      }),
+    }).catch((err) => {
+      this.logger.warn(`Failed to trigger satellite sync for parcel ${parcelId}: ${err.message}`);
+    });
   }
 
   async updateParcel(

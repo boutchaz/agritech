@@ -2,7 +2,7 @@ import re
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.api import health, indices, analysis, supabase, billing, weather
+from app.api import health, indices, analysis, supabase, billing, weather, sync
 from app.core.config import settings
 
 
@@ -38,6 +38,7 @@ app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
 app.include_router(supabase.router, prefix="/api/supabase", tags=["supabase"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
+app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 
 
 @app.get("/")

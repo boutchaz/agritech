@@ -8,8 +8,13 @@
 .env.*.local
 .env.backup
 .env.temp
+.satellite-env
 !.env.example
 !.env.*.example
+
+# Temporary / scratch files
+temp.txt
+temp/
 
 # Dependencies
 node_modules/

@@ -51,6 +51,12 @@
     height: 100%;
     overflow: hidden;
   }
+
+  /* Defend main scroll container against Radix UI / react-remove-scroll
+     injecting inline style="overflow: initial" when dialogs close */
+  main[data-main-scroll] {
+    overflow-y: auto !important;
+  }
 }
 
 /* Global, professional form styles */

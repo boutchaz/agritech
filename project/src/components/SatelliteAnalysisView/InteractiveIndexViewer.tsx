@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -106,6 +106,31 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [datesLoaded, setDatesLoaded] = useState(false);
 
+  const [navYear, setNavYear] = useState(() => new Date().getFullYear());
+  const [navMonth, setNavMonth] = useState(() => new Date().getMonth());
+
+  const navMonthLabel = useMemo(() => {
+    const d = new Date(navYear, navMonth, 1);
+    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  }, [navYear, navMonth]);
+
+  const navigateMonth = useCallback((direction: -1 | 1) => {
+    setNavMonth(prev => {
+      const newMonth = prev + direction;
+      if (newMonth < 0) {
+        setNavYear(y => y - 1);
+        return 11;
+      }
+      if (newMonth > 11) {
+        setNavYear(y => y + 1);
+        return 0;
+      }
+      return newMonth;
+    });
+    setDatesLoaded(false);
+    setAvailableDates([]);
+  }, []);
+
   const fetchAvailableDates = useCallback(async () => {
     if (!boundary || isLoadingDates) return;
 
@@ -116,14 +141,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         name: parcelName || 'Selected Parcel'
       };
 
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setMonth(endDate.getMonth() - 3);
+      const monthStart = new Date(navYear, navMonth, 1);
+      const monthEnd = new Date(navYear, navMonth + 1, 0);
 
       const result = await satelliteApi.getAvailableDates(
         aoi,
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0],
+        monthStart.toISOString().split('T')[0],
+        monthEnd.toISOString().split('T')[0],
         30
       );
 
@@ -143,7 +167,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } finally {
       setIsLoadingDates(false);
     }
-  }, [boundary, parcelName, isLoadingDates]);
+  }, [boundary, parcelName, isLoadingDates, navYear, navMonth]);
 
   useEffect(() => {
     if (boundary && !datesLoaded && !isLoadingDates) {
@@ -399,14 +423,35 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           </div>
         ) : null}
 
-        {!datesLoaded && (
-          <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <Loader className="w-4 h-4 text-blue-600 flex-shrink-0 animate-spin" />
-            <p className="text-sm text-blue-700 flex-1">
-              Chargement des dates disponibles depuis le satellite...
-            </p>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <Calendar className="w-4 h-4 text-gray-500" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigateMonth(-1)}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <span className="text-sm font-medium min-w-[160px] text-center capitalize">
+            {navMonthLabel}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigateMonth(1)}
+            disabled={navYear === new Date().getFullYear() && navMonth >= new Date().getMonth()}
+            className="h-8 w-8 p-0"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
+          {datesLoaded && (
+            <span className="text-xs text-gray-500">
+              {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
 
         {viewMode === 'temporal-compare' ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
