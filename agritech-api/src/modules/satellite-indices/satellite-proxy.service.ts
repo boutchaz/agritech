@@ -7,7 +7,7 @@ export class SatelliteProxyService {
   private readonly satelliteBaseUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
+    const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
   }
