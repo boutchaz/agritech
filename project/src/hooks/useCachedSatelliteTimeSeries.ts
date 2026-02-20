@@ -6,7 +6,6 @@ import {
   satelliteApi,
   VegetationIndexType,
   TimeSeriesRequest,
-  TimeSeriesResponse,
   convertBoundaryToGeoJSON,
 } from '@/lib/satellite-api';
 
@@ -158,6 +157,8 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
           index,
           interval: params.interval,
           cloud_coverage: params.cloudCoverage || 20,
+          parcel_id: params.parcelId,
+          farm_id: params.farmId,
         };
 
         try {

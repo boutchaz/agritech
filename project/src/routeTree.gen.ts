@@ -135,6 +135,9 @@ import { Route as AuthenticatedproductionParcelsParcelIdProductionRouteImport } 
 import { Route as AuthenticatedproductionParcelsParcelIdAnalyseRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.analyse'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.sent'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.received'
+import { Route as AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.index'
+import { Route as AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.timeseries'
+import { Route as AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.heatmap'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -872,6 +875,24 @@ const AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute =
     path: '/quote-requests/received',
     getParentRoute: () => AuthenticatedmiscMarketplaceRoute,
   } as any)
+const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
+  AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute =
+  AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport.update({
+    id: '/timeseries',
+    path: '/timeseries',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute =
+  AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport.update({
+    id: '/heatmap',
+    path: '/heatmap',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -993,12 +1014,15 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
-  '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+  '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
+  '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1114,12 +1138,14 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
-  '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
+  '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1243,12 +1269,15 @@ export interface FileRoutesById {
   '/_authenticated/(production)/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/_authenticated/(production)/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
   '/_authenticated/(production)/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
-  '/_authenticated/(production)/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+  '/_authenticated/(production)/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren
   '/_authenticated/(production)/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/_authenticated/(workforce)/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
+  '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/_authenticated/(production)/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1378,6 +1407,9 @@ export interface FileRouteTypes {
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
+    | '/parcels/$parcelId/satellite/heatmap'
+    | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/satellite/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1493,12 +1525,14 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
-    | '/parcels/$parcelId/satellite'
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
+    | '/parcels/$parcelId/satellite/heatmap'
+    | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/satellite'
   id:
     | '__root__'
     | '/'
@@ -1627,6 +1661,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
+    | '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap'
+    | '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
+    | '/_authenticated/(production)/parcels/$parcelId/satellite/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2530,6 +2567,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport
       parentRoute: typeof AuthenticatedmiscMarketplaceRoute
     }
+    '/_authenticated/(production)/parcels/$parcelId/satellite/': {
+      id: '/_authenticated/(production)/parcels/$parcelId/satellite/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/satellite/'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': {
+      id: '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
+      path: '/timeseries'
+      fullPath: '/parcels/$parcelId/satellite/timeseries'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap': {
+      id: '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap'
+      path: '/heatmap'
+      fullPath: '/parcels/$parcelId/satellite/heatmap'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+    }
   }
 }
 
@@ -2689,12 +2747,33 @@ const AuthenticatedproductionCropCyclesRouteWithChildren =
     AuthenticatedproductionCropCyclesRouteChildren,
   )
 
+interface AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren {
+  AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
+  AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+}
+
+const AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren: AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren =
+  {
+    AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute:
+      AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute,
+    AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute:
+      AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute,
+    AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute:
+      AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute,
+  }
+
+const AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren =
+  AuthenticatedproductionParcelsParcelIdSatelliteRoute._addFileChildren(
+    AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren,
+  )
+
 interface AuthenticatedproductionParcelsParcelIdRouteChildren {
   AuthenticatedproductionParcelsParcelIdAnalyseRoute: typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   AuthenticatedproductionParcelsParcelIdProductionRoute: typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   AuthenticatedproductionParcelsParcelIdProfitabilityRoute: typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
   AuthenticatedproductionParcelsParcelIdReportsRoute: typeof AuthenticatedproductionParcelsParcelIdReportsRoute
-  AuthenticatedproductionParcelsParcelIdSatelliteRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+  AuthenticatedproductionParcelsParcelIdSatelliteRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren
   AuthenticatedproductionParcelsParcelIdWeatherRoute: typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   AuthenticatedproductionParcelsParcelIdIndexRoute: typeof AuthenticatedproductionParcelsParcelIdIndexRoute
 }
@@ -2710,7 +2789,7 @@ const AuthenticatedproductionParcelsParcelIdRouteChildren: Authenticatedproducti
     AuthenticatedproductionParcelsParcelIdReportsRoute:
       AuthenticatedproductionParcelsParcelIdReportsRoute,
     AuthenticatedproductionParcelsParcelIdSatelliteRoute:
-      AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+      AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren,
     AuthenticatedproductionParcelsParcelIdWeatherRoute:
       AuthenticatedproductionParcelsParcelIdWeatherRoute,
     AuthenticatedproductionParcelsParcelIdIndexRoute:

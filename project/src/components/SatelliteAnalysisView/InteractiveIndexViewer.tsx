@@ -195,8 +195,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         }
 
         const [leftResult, rightResult] = await Promise.all([
-          satelliteApi.generateInteractiveVisualization(aoi, selectedDate, selectedIndex, 'heatmap') as Promise<HeatmapDataResponse>,
-          satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap') as Promise<HeatmapDataResponse>,
+          satelliteApi.generateInteractiveVisualization(aoi, selectedDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
+          satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
         ]);
 
         setLeftTemporalData(leftResult);
@@ -206,7 +206,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           aoi,
           selectedDate,
           selectedIndex,
-          visualizationType === 'leaflet' ? 'heatmap' : 'scatter'
+          visualizationType === 'leaflet' ? 'heatmap' : 'scatter',
+          parcelId
         );
         setData(result);
       } else {
@@ -218,7 +219,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               aoi,
               selectedDate,
               index,
-              'heatmap'
+              'heatmap',
+              parcelId
             ) as HeatmapDataResponse;
             results.set(index, result);
           } catch (err) {

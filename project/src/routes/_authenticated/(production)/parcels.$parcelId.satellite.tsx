@@ -1,42 +1,38 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { Suspense, lazy, useState, type ReactNode } from 'react'
+import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
-import { Satellite, Loader2, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database, RefreshCw } from 'lucide-react'
-
-const IndexImageViewer = lazy(() => import('../../../components/SatelliteAnalysisView/IndexImageViewer'));
-const TimeSeriesChart = lazy(() => import('../../../components/SatelliteAnalysisView/TimeSeriesChart'));
+import { apiRequest } from '@/lib/api-client'
+import { Satellite, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database, RefreshCw } from 'lucide-react'
 
 type SatelliteTab = 'timeseries' | 'heatmap';
 
-const TabSpinner = () => (
-  <div className="flex items-center justify-center p-12">
-    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-  </div>
-);
+interface SyncStatus {
+  status: 'no_data' | 'partial' | 'synced';
+  total_records: number;
+  indices: string[];
+  date_range: { start: string | null; end: string | null } | null;
+}
 
-const SATELLITE_API_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
-
-const ParcelSatellite = () => {
+const ParcelSatelliteLayout = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: calibrationStatus } = useCalibrationStatus(parcelId);
-  const [activeTab, setActiveTab] = useState<SatelliteTab>('timeseries');
+  const matchRoute = useMatchRoute();
 
   const { data: syncStatus } = useQuery({
     queryKey: ['satellite-sync-status', parcelId],
     queryFn: async () => {
-      const res = await fetch(`${SATELLITE_API_URL}/api/sync/parcel/${parcelId}/status`);
-      if (!res.ok) return null;
-      return res.json() as Promise<{
-        status: 'no_data' | 'partial' | 'synced';
-        total_records: number;
-        indices: string[];
-        date_range: { start: string | null; end: string | null } | null;
-      }>;
+      try {
+        return await apiRequest<SyncStatus>(
+          `/api/v1/satellite-proxy/sync/parcel/${parcelId}/status`,
+        );
+      } catch {
+        return null;
+      }
     },
     staleTime: 60 * 1000,
     enabled: !!parcelId,
@@ -54,18 +50,26 @@ const ParcelSatellite = () => {
 
   const hasBoundary = parcel.boundary && parcel.boundary.length > 0;
 
-  const tabs: { id: SatelliteTab; label: string; icon: ReactNode; description: string }[] = [
+  const isTimeseriesActive = !!matchRoute({ to: '/parcels/$parcelId/satellite/timeseries', params: { parcelId } })
+    || !!matchRoute({ to: '/parcels/$parcelId/satellite', params: { parcelId } });
+  const isHeatmapActive = !!matchRoute({ to: '/parcels/$parcelId/satellite/heatmap', params: { parcelId } });
+
+  const tabs: { id: SatelliteTab; to: string; label: string; icon: ReactNode; description: string; active: boolean }[] = [
     {
       id: 'timeseries',
+      to: `/parcels/${parcelId}/satellite/timeseries`,
       label: t('satellite.tabs.timeseries', 'Time Series'),
       icon: <BarChart3 className="w-4 h-4" />,
       description: t('satellite.tabs.timeseriesDesc', 'Cached historical trends'),
+      active: isTimeseriesActive,
     },
     {
       id: 'heatmap',
+      to: `/parcels/${parcelId}/satellite/heatmap`,
       label: t('satellite.tabs.heatmap', 'Heatmap Analysis'),
       icon: <MapIcon className="w-4 h-4" />,
       description: t('satellite.tabs.heatmapDesc', 'Interactive spatial visualization'),
+      active: isHeatmapActive,
     },
   ];
 
@@ -136,13 +140,13 @@ const ParcelSatellite = () => {
           <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="flex gap-1" role="tablist">
               {tabs.map((tab) => (
-                <button
+                <Link
                   key={tab.id}
+                  to={tab.to}
                   role="tab"
-                  aria-selected={activeTab === tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  aria-selected={tab.active}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    activeTab === tab.id
+                    tab.active
                       ? 'border-green-600 text-green-700 dark:text-green-400'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }`}
@@ -152,32 +156,12 @@ const ParcelSatellite = () => {
                   <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500 ml-1">
                     — {tab.description}
                   </span>
-                </button>
+                </Link>
               ))}
             </nav>
           </div>
 
-          {activeTab === 'timeseries' && (
-            <Suspense fallback={<TabSpinner />}>
-              <TimeSeriesChart
-                parcelId={parcel.id}
-                parcelName={parcel.name}
-                farmId={parcel.farm_id ?? undefined}
-                boundary={parcel.boundary}
-              />
-            </Suspense>
-          )}
-
-          {activeTab === 'heatmap' && (
-            <Suspense fallback={<TabSpinner />}>
-              <IndexImageViewer
-                parcelId={parcel.id}
-                parcelName={parcel.name}
-                farmId={parcel.farm_id || undefined}
-                boundary={parcel.boundary}
-              />
-            </Suspense>
-          )}
+          <Outlet />
         </>
       ) : (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl">
@@ -201,5 +185,5 @@ const ParcelSatellite = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(production)/parcels/$parcelId/satellite')({
-  component: ParcelSatellite,
+  component: ParcelSatelliteLayout,
 });

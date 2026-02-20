@@ -16,8 +16,7 @@ import {
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-
-const WEATHER_API_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
+import { apiRequest } from '../../lib/api-client';
 
 interface TimeSeriesChartProps {
   parcelId: string;
@@ -194,6 +193,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             index,
             interval,
             cloud_coverage: 20,
+            parcel_id: parcelId,
+            farm_id: farmId,
           };
 
           const response = await satelliteApi.getTimeSeries(request);
@@ -230,17 +231,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     queryKey: ['weather-history', parcelId, startDate, endDate],
     queryFn: async () => {
       if (!parcelId || !startDate || !endDate) return [];
-      
-      const response = await fetch(
-        `${WEATHER_API_URL}/api/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`
+
+      const json = await apiRequest<{ data: WeatherPoint[] }>(
+        `/api/v1/satellite-proxy/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
       );
-      
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new Error(`Weather API error ${response.status}: ${text || response.statusText}`);
-      }
-      
-      const json: { data: WeatherPoint[] } = await response.json();
       return json.data || [];
     },
     enabled: showTemperature && !!parcelId && !!startDate && !!endDate,

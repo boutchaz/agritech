@@ -263,7 +263,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         aoi,
         date: selectedDate,
         index: selectedIndex,
-        grid_size: samplePoints
+        grid_size: samplePoints,
+        parcel_id: parcelId,
       };
 
       const result = await satelliteApi.getHeatmapData(requestParams);

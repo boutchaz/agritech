@@ -1,7 +1,6 @@
-// Satellite Indices Service API Client
-// This client interfaces with the satellite-indices-service for vegetation analysis
+import { apiClient } from './api-client';
 
-const SATELLITE_SERVICE_URL = (import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001').replace(/\/+$/, '');
+const SATELLITE_PROXY_PREFIX = '/api/v1/satellite-proxy';
 
 export interface VegetationIndex {
   NIRv: "NIRv";
@@ -156,6 +155,8 @@ export interface TimeSeriesRequest {
   index: TimeSeriesIndexType;
   interval?: 'day' | 'week' | 'month' | 'year';
   cloud_coverage?: number;
+  parcel_id?: string;
+  farm_id?: string;
 }
 
 export interface IndexValue {
@@ -384,6 +385,7 @@ export interface HeatmapRequest {
   date: string;
   index: VegetationIndexType;
   grid_size?: number;
+  parcel_id?: string;
 }
 
 export interface CloudCoverageCheckRequest {
@@ -408,126 +410,45 @@ export interface CloudCoverageCheckResponse {
 }
 
 class SatelliteAPIClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string = SATELLITE_SERVICE_URL) {
-    // Remove trailing slash to avoid double slashes in URLs
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
+  private post<T>(endpoint: string, data: unknown): Promise<T> {
+    return apiClient.post<T>(`${SATELLITE_PROXY_PREFIX}${endpoint}`, data);
   }
 
-  public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}/api${endpoint}`;
-
-    // Add timeout handling
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        signal: controller.signal,
-        ...options,
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[SatelliteAPI] Error response:`, {
-          status: response.status,
-          statusText: response.statusText,
-          body: errorText
-        });
-
-        // Provide more helpful error messages
-        if (response.status === 404) {
-          throw new Error(`No satellite imagery available: ${errorText || 'No images found for the selected date range.'}`);
-        } else if (response.status >= 500) {
-          throw new Error('Satellite data service is experiencing issues. Please try again later.');
-        } else if (response.status === 400) {
-          throw new Error(`Invalid request: ${errorText}`);
-        } else {
-          throw new Error(`API Error: ${response.status} - ${errorText}`);
-        }
-      }
-
-      const data = await response.json();
-      // Defensive: handle double-encoded JSON (e.g. gateway returns string body)
-      if (typeof data === 'string') {
-        try {
-          return JSON.parse(data) as T;
-        } catch {
-          return data as unknown as T;
-        }
-      }
-      return data;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[SatelliteAPI] Request timeout: ${url}`);
-        throw new Error('Request timed out. The satellite imagery calculation is taking too long. Try a smaller area or shorter date range.');
-      }
-
-      console.error(`[SatelliteAPI] Request failed:`, error);
-      throw error;
-    }
+  private get<T>(endpoint: string): Promise<T> {
+    return apiClient.get<T>(`${SATELLITE_PROXY_PREFIX}${endpoint}`);
   }
 
-  // Health check
   async getHealth() {
-    return this.request('/health');
+    return this.get('/health');
   }
 
-  // Calculate vegetation indices for a specific area
   async calculateIndices(request: IndexCalculationRequest): Promise<IndexCalculationResponse> {
-    // Set default values for AOI-based cloud filtering
     const requestWithDefaults = {
-      use_aoi_cloud_filter: true,  // Default to AOI-based filtering
-      cloud_buffer_meters: 300,    // Default 300m buffer
-      ...request
+      use_aoi_cloud_filter: true,
+      cloud_buffer_meters: 300,
+      ...request,
     };
-
-    return this.request('/indices/calculate', {
-      method: 'POST',
-      body: JSON.stringify(requestWithDefaults),
-    });
+    return this.post('/indices/calculate', requestWithDefaults);
   }
 
-  // Get time series data for vegetation indices
   async getTimeSeries(request: TimeSeriesRequest): Promise<TimeSeriesResponse> {
-    return this.request('/indices/timeseries', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/indices/timeseries', request);
   }
 
-  // Check cloud coverage for date range
   async checkCloudCoverage(request: CloudCoverageCheckRequest): Promise<CloudCoverageCheckResponse> {
-    return this.request('/analysis/cloud-coverage', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/analysis/cloud-coverage', request);
   }
 
-  // Start batch processing job
   async startBatchProcessing(request: BatchProcessingRequest): Promise<ProcessingJob> {
-    return this.request('/analysis/batch', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/analysis/batch', request);
   }
 
-  // Supabase integration endpoints
   async getOrganizationFarms(organizationId: string) {
-    return this.request(`/supabase/organizations/${organizationId}/farms`);
+    return this.get(`/supabase/organizations/${organizationId}/farms`);
   }
 
   async getFarmParcels(farmId: string) {
-    return this.request(`/supabase/farms/${farmId}/parcels`);
+    return this.get(`/supabase/farms/${farmId}/parcels`);
   }
 
   async getParcelSatelliteData(parcelId: string, dateRange?: DateRangeRequest, indices?: VegetationIndexType[]) {
@@ -539,35 +460,28 @@ class SatelliteAPIClient {
     if (indices) {
       indices.forEach(index => params.append('indices', index));
     }
-
     const query = params.toString() ? `?${params}` : '';
-    return this.request<SatelliteData[]>(`/supabase/parcels/${parcelId}/satellite-data${query}`);
+    return apiClient.get<SatelliteData[]>(`${SATELLITE_PROXY_PREFIX}/supabase/parcels/${parcelId}/satellite-data${query}`);
   }
 
-  // Get latest satellite data for a parcel
   async getLatestSatelliteData(parcelId: string, indexName?: string) {
     const params = indexName ? `?index_name=${indexName}` : '';
-    return this.request<SatelliteData[]>(`/supabase/parcels/${parcelId}/latest-data${params}`);
+    return apiClient.get<SatelliteData[]>(`${SATELLITE_PROXY_PREFIX}/supabase/parcels/${parcelId}/latest-data${params}`);
   }
 
-  // Get satellite data statistics
   async getSatelliteDataStatistics(
     parcelId: string,
     indexName: string,
     startDate: string,
-    endDate: string
+    endDate: string,
   ) {
-    return this.request(`/supabase/parcels/${parcelId}/statistics`, {
-      method: 'POST',
-      body: JSON.stringify({
-        index_name: indexName,
-        start_date: startDate,
-        end_date: endDate
-      }),
+    return this.post(`/supabase/parcels/${parcelId}/statistics`, {
+      index_name: indexName,
+      start_date: startDate,
+      end_date: endDate,
     });
   }
 
-  // Export data as GeoTIFF or Interactive Data
   async exportGeoTIFF(request: {
     aoi: AOIRequest;
     date: string;
@@ -576,36 +490,22 @@ class SatelliteAPIClient {
     format?: string;
     interactive?: boolean;
   }): Promise<TiffExportResponse | HeatmapDataResponse> {
-    return this.request('/indices/export', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/indices/export', request);
   }
 
-  // Calculate comprehensive statistics for a parcel with optional TIFF export
   async calculateParcelStatistics(request: ParcelStatisticsRequest): Promise<ParcelStatisticsResponse> {
-    // Set default values for AOI-based cloud filtering
     const requestWithDefaults = {
-      use_aoi_cloud_filter: true,  // Default to AOI-based filtering
-      cloud_buffer_meters: 300,    // Default 300m buffer
-      ...request
+      use_aoi_cloud_filter: true,
+      cloud_buffer_meters: 300,
+      ...request,
     };
-
-    return this.request('/analysis/parcel-statistics', {
-      method: 'POST',
-      body: JSON.stringify(requestWithDefaults),
-    });
+    return this.post('/analysis/parcel-statistics', requestWithDefaults);
   }
 
-  // Enhanced cloud coverage check with detailed recommendations
   async checkCloudCoverageDetailed(request: CloudCoverageCheckRequest): Promise<CloudCoverageCheckResponse> {
-    return this.request('/analysis/cloud-coverage', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/analysis/cloud-coverage', request);
   }
 
-  // Bulk export TIFF files for multiple indices
   async bulkExportTiffs(request: {
     aoi: AOIRequest;
     date: string;
@@ -613,22 +513,17 @@ class SatelliteAPIClient {
     scale?: number;
     cloud_coverage?: number;
   }) {
-    return this.request('/indices/bulk-export', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/indices/bulk-export', request);
   }
 
-  // Get processing status for batch operations
   async getBatchProcessingStatus(jobId: string) {
-    return this.request(`/analysis/batch/${jobId}/status`);
+    return this.get(`/analysis/batch/${jobId}/status`);
   }
 
-  // Check if cloud-free images are available (quick check)
   async hasCloudFreeImages(
     aoi: AOIRequest,
     dateRange: DateRangeRequest,
-    maxCloudCoverage: number = 10
+    maxCloudCoverage: number = 10,
   ): Promise<boolean> {
     try {
       const result = await this.checkCloudCoverage({
@@ -644,82 +539,58 @@ class SatelliteAPIClient {
   }
 
   async generateIndexImage(request: IndexImageRequest): Promise<IndexImageResponse> {
-    return this.request('/analysis/generate-index-image', {
-      method: 'POST',
-      body: JSON.stringify({
-        aoi: request.aoi,
-        date_range: request.date_range,
-        index: request.index,
-        cloud_coverage: request.cloud_coverage || 10
-      }),
+    return this.post('/analysis/generate-index-image', {
+      aoi: request.aoi,
+      date_range: request.date_range,
+      index: request.index,
+      cloud_coverage: request.cloud_coverage || 10,
     });
   }
 
-  // Generate multiple index images for comparison
   async generateMultipleIndexImages(
     aoi: AOIRequest,
     dateRange: DateRangeRequest,
     indices: VegetationIndexType[],
-    cloudCoverage: number = 10
+    cloudCoverage: number = 10,
   ): Promise<IndexImageResponse[]> {
     const promises = indices.map(index =>
       this.generateIndexImage({
         aoi,
         date_range: dateRange,
         index,
-        cloud_coverage: cloudCoverage
-      })
+        cloud_coverage: cloudCoverage,
+      }),
     );
-
     return Promise.all(promises);
   }
 
-  // Get interactive scatter plot data
   async getInteractiveData(request: InteractiveRequest): Promise<InteractiveDataResponse> {
-    return this.request('/indices/interactive', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/indices/interactive', request);
   }
 
-  // Get heatmap data for ECharts
   async getHeatmapData(request: HeatmapRequest): Promise<HeatmapDataResponse> {
-    return this.request('/indices/heatmap', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    return this.post('/indices/heatmap', request);
   }
 
-  // Generate interactive visualization (chooses best method based on data size)
   async generateInteractiveVisualization(
     aoi: AOIRequest,
     date: string,
     index: VegetationIndexType,
-    visualizationType: 'scatter' | 'heatmap' = 'heatmap'
+    visualizationType: 'scatter' | 'heatmap' = 'heatmap',
+    parcel_id?: string,
   ): Promise<InteractiveDataResponse | HeatmapDataResponse> {
     if (visualizationType === 'heatmap') {
-      return this.getHeatmapData({
-        aoi,
-        date,
-        index,
-        grid_size: 1000 // Updated default for better visualization
-      });
+      return this.getHeatmapData({ aoi, date, index, grid_size: 1000, parcel_id });
     } else {
-      return this.getInteractiveData({
-        aoi,
-        date,
-        index,
-        max_pixels: 10000
-      });
+      return this.getInteractiveData({ aoi, date, index, max_pixels: 10000 });
     }
   }
 
-  // Get available dates with satellite imagery for an AOI
   async getAvailableDates(
     aoi: AOIRequest,
     startDate: string,
     endDate: string,
-    cloudCoverage: number = 30
+    cloudCoverage: number = 30,
   ): Promise<{
     available_dates: Array<{
       date: string;
@@ -731,19 +602,15 @@ class SatelliteAPIClient {
     date_range: { start: string; end: string };
     filters: { max_cloud_coverage: number };
   }> {
-    return this.request('/indices/available-dates', {
-      method: 'POST',
-      body: JSON.stringify({
-        aoi,
-        start_date: startDate,
-        end_date: endDate,
-        cloud_coverage: cloudCoverage
-      }),
+    return this.post('/indices/available-dates', {
+      aoi,
+      start_date: startDate,
+      end_date: endDate,
+      cloud_coverage: cloudCoverage,
     });
   }
 }
 
-// Export singleton instance
 export const satelliteApi = new SatelliteAPIClient();
 
 // Utility functions
