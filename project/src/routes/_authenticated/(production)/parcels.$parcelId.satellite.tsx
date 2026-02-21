@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
 import { apiRequest } from '@/lib/api-client'
-import { Satellite, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database, RefreshCw } from 'lucide-react'
+import { Satellite, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database } from 'lucide-react'
 
 type SatelliteTab = 'timeseries' | 'heatmap';
 
@@ -111,27 +111,12 @@ const ParcelSatelliteLayout = () => {
         </div>
       )}
 
-      {syncStatus && syncStatus.status !== 'synced' && hasBoundary && (
-        <div className={`flex items-center gap-3 p-3 rounded-lg border text-sm ${
-          syncStatus.status === 'no_data'
-            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-        }`}>
-          {syncStatus.status === 'no_data' ? (
-            <>
-              <Database className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <span className="text-amber-700 dark:text-amber-300">
-                Aucune donnée satellite en cache. La synchronisation initiale est en cours ou peut être lancée via &ldquo;Récupérer depuis satellite&rdquo;.
-              </span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 animate-spin" />
-              <span className="text-blue-700 dark:text-blue-300">
-                Synchronisation en cours — {syncStatus.total_records} points, {syncStatus.indices.length}/4 indices ({syncStatus.indices.join(', ')})
-              </span>
-            </>
-          )}
+      {syncStatus && syncStatus.status === 'no_data' && hasBoundary && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border text-sm bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+          <Database className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <span className="text-amber-700 dark:text-amber-300">
+            Aucune donnée satellite en cache. Lancez la synchronisation via &ldquo;Récupérer depuis satellite&rdquo;.
+          </span>
         </div>
       )}
 
