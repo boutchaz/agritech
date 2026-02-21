@@ -66,7 +66,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const [liveSeriesData, setLiveSeriesData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
-  const [interval, setInterval] = useState<'day' | 'week' | 'month' | 'year'>('week');
+  const [cloudCoverage, setCloudCoverage] = useState(20);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
@@ -191,8 +191,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               end_date: endDate,
             },
             index,
-            interval,
-            cloud_coverage: 20,
+            interval: 'week',
+            cloud_coverage: cloudCoverage,
             parcel_id: parcelId,
             farm_id: farmId,
           };
@@ -224,7 +224,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [boundary, organizationId, selectedIndices, startDate, endDate, interval, parcelId, farmId, parcelName, cachedData, refetchCache, queryClient]);
+  }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, cachedData, refetchCache, queryClient]);
 
   // Fetch weather data
   const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
@@ -565,17 +565,19 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Intervalle</label>
-          <select
-            value={interval}
-            onChange={(e) => setInterval(e.target.value as any)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="day">Journalier</option>
-            <option value="week">Hebdomadaire</option>
-            <option value="month">Mensuel</option>
-            <option value="year">Annuel</option>
-          </select>
+          <label className="text-sm font-medium mb-2 block">Couverture nuageuse max</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={5}
+              max={50}
+              step={5}
+              value={cloudCoverage}
+              onChange={(e) => setCloudCoverage(Number(e.target.value))}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <span className="text-sm font-medium text-gray-700 w-10 text-right">{cloudCoverage}%</span>
+          </div>
         </div>
 
         <div>
