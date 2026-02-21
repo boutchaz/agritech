@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, Brush } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer } from 'lucide-react';
 import {
   satelliteApi,
   TimeSeriesIndexType,
   VegetationIndexType,
   TIME_SERIES_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
-  INDEX_METADATA,
-  RELIABILITY_CONFIG,
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
@@ -477,79 +475,26 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
           {showIndexSelector && (
             <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {(() => {
-                // Group indices by reliability
-                const groupedIndices = {
-                  fiable: [] as TimeSeriesIndexType[],
-                  utile: [] as TimeSeriesIndexType[],
-                  prudence: [] as TimeSeriesIndexType[],
-                  inutile: [] as TimeSeriesIndexType[],
-                };
-
-                TIME_SERIES_INDICES.forEach(index => {
-                  const meta = INDEX_METADATA[index];
-                  if (meta && groupedIndices[meta.reliability]) {
-                    groupedIndices[meta.reliability].push(index);
-                  } else {
-                    // Fallback for unknown reliability
-                    groupedIndices.fiable.push(index);
-                  }
-                });
-
-                const groups = [
-                  { key: 'fiable', indices: groupedIndices.fiable },
-                  { key: 'utile', indices: groupedIndices.utile },
-                  { key: 'prudence', indices: groupedIndices.prudence },
-                  { key: 'inutile', indices: groupedIndices.inutile },
-                ];
-
-                return groups.map((group, groupIndex) => (
-                  <React.Fragment key={group.key}>
-                    {groupIndex > 0 && group.indices.length > 0 && (
-                      <div className="border-t border-gray-100 my-1 mx-2" />
-                    )}
-                    {group.indices.map(index => {
-                      const meta = INDEX_METADATA[index];
-                      const reliability = meta?.reliability ? RELIABILITY_CONFIG[meta.reliability] : null;
-                      
-                      return (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => toggleIndex(index)}
-                          className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                        >
-                          <div
-                            className={`w-4 h-4 min-w-[1rem] rounded border flex items-center justify-center ${
-                              selectedIndices.includes(index) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
-                            }`}
-                          >
-                            {selectedIndices.includes(index) && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div className="w-3 h-3 min-w-[0.75rem] rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                          <span className="truncate flex-1">
-                            {index === 'TCARI_OSAVI' ? 'TCARI/OSAVI' : index}
-                          </span>
-                          
-                          {reliability && (
-                            <span 
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${reliability.bgColor} ${reliability.color}`}
-                            >
-                              {reliability.label}
-                            </span>
-                          )}
-                          
-                          {meta?.shortWarning && (
-                            <div title={meta.shortWarning}>
-                              <AlertTriangle className="w-3 h-3 text-amber-500" />
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </React.Fragment>
-                ));
-              })()}
+              {TIME_SERIES_INDICES.map(index => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => toggleIndex(index)}
+                  className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <div
+                    className={`w-4 h-4 min-w-[1rem] rounded border flex items-center justify-center ${
+                      selectedIndices.includes(index) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                    }`}
+                  >
+                    {selectedIndices.includes(index) && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div className="w-3 h-3 min-w-[0.75rem] rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
+                  <span className="truncate flex-1">
+                    {index === 'TCARI_OSAVI' ? 'TCARI/OSAVI' : index}
+                  </span>
+                </button>
+              ))}
             </div>
           )}
         </div>
