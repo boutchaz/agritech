@@ -119,7 +119,6 @@ export class SatelliteSyncService {
       const geometry = this.boundaryToGeoJSON(parcel.boundary!);
       const aoi = { geometry, name: parcel.name || 'Parcel' };
 
-      await this.syncAvailableDates(parcel, aoi);
       await this.syncTimeSeries(parcel, aoi);
       await this.syncLatestHeatmaps(parcel, aoi);
 
@@ -129,32 +128,6 @@ export class SatelliteSyncService {
       this.progress.errors.push(msg);
       this.progress.processedParcels++;
       this.logger.error(`[Sync] ${msg}`);
-    }
-  }
-
-  private async syncAvailableDates(parcel: ParcelRow, aoi: { geometry: unknown; name: string }) {
-    const now = new Date();
-
-    for (let m = 0; m < MONTHS_TO_SYNC; m++) {
-      const monthDate = new Date(now.getFullYear(), now.getMonth() - m, 1);
-      const monthStart = this.formatDate(monthDate);
-      const monthEnd = this.formatDate(new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0));
-
-      try {
-        await this.cache.getAvailableDates(
-          {
-            aoi,
-            start_date: monthStart,
-            end_date: monthEnd,
-            cloud_coverage: 30,
-            parcel_id: parcel.id,
-          },
-          parcel.organization_id,
-        );
-        this.logger.debug(`[Sync] Available dates cached: ${parcel.name} ${monthStart}`);
-      } catch (err) {
-        this.logger.warn(`[Sync] Available dates failed for ${parcel.name} ${monthStart}: ${err}`);
-      }
     }
   }
 

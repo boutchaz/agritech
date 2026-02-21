@@ -25,9 +25,7 @@ export interface ParcelSyncProgress {
 const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;            // 5 min in-memory
 const HEATMAP_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days in DB
 const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
-const AVAIL_DATES_CURRENT_DB_TTL_MS = 24 * 60 * 60 * 1000; // 24h for current month
-const AVAIL_DATES_PAST_DB_TTL_MS = 365 * 24 * 60 * 60 * 1000; // ~1 year for past months
-const TIMESERIES_STALE_DAYS = 1;
+
 const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];
 
 @Injectable()
@@ -548,19 +546,16 @@ export class SatelliteCacheService {
     const parcelId = body.parcel_id as string | undefined;
     const startDate = (body.start_date as string) || '';
     const endDate = (body.end_date as string) || '';
-    const cloudCoverage = (body.cloud_coverage as number) || 30;
-
-    this.logger.log(
-      `[available-dates] parcel=${parcelId || 'NONE'} org=${organizationId || 'NONE'} ` +
-      `range=${startDate}→${endDate} cc=${cloudCoverage}`,
-    );
 
     if (!parcelId) {
-      this.logger.warn('[available-dates] No parcel_id — bypassing cache, forwarding directly');
       return this.proxy.post('/indices/available-dates', body, organizationId);
     }
 
-    const memKey = `ad:${parcelId}:${startDate}:${endDate}:${cloudCoverage}`;
+    if (!startDate || !endDate) {
+      return this.proxy.post('/indices/available-dates', body, organizationId);
+    }
+
+    const memKey = `ad:${parcelId}:${startDate}:${endDate}`;
 
     const memCached = this.availDatesCache.get(memKey);
     if (memCached && memCached.expiresAt > Date.now()) {
@@ -568,155 +563,83 @@ export class SatelliteCacheService {
       return memCached.data;
     }
 
-    if (startDate && endDate) {
-      const dbCached = await this.queryAvailableDatesCache(
-        parcelId,
-        startDate,
-        endDate,
-        cloudCoverage,
-        organizationId,
+    const derived = await this.deriveAvailableDatesFromTimeSeries(
+      parcelId,
+      startDate,
+      endDate,
+      organizationId,
+    );
+
+    if (derived) {
+      this.logger.log(
+        `[available-dates] Derived ${derived.available_dates.length} dates from timeseries cache for parcel ${parcelId}`,
       );
-
-      if (dbCached) {
-        this.logger.log(
-          `[Cache L2 HIT] available-dates ${startDate}→${endDate} for parcel ${parcelId}`,
-        );
-        this.availDatesCache.set(memKey, {
-          data: dbCached,
-          expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
-        });
-        return dbCached;
-      }
-
-      this.logger.log(`[Cache L2 MISS] available-dates ${startDate}→${endDate} for parcel ${parcelId}`);
+      this.availDatesCache.set(memKey, {
+        data: derived,
+        expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
+      });
+      return derived;
     }
 
     this.logger.log(
-      `[Cache MISS] available-dates ${startDate}→${endDate} → forwarding to satellite service`,
+      `[available-dates] No timeseries data — falling back to satellite service for ${parcelId} ${startDate}→${endDate}`,
     );
     const start = Date.now();
     const fresh = await this.proxy.post('/indices/available-dates', body, organizationId);
-    this.logger.log(
-      `[Proxy] available-dates response in ${Date.now() - start}ms`,
-    );
+    this.logger.log(`[Proxy] available-dates response in ${Date.now() - start}ms`);
 
     this.availDatesCache.set(memKey, {
       data: fresh,
       expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
     });
 
-    if (organizationId && startDate && endDate) {
-      this.persistAvailableDatesInBackground(
-        parcelId,
-        startDate,
-        endDate,
-        cloudCoverage,
-        fresh,
-        organizationId,
-      );
-    }
-
     return fresh;
   }
 
-  private async queryAvailableDatesCache(
+  private async deriveAvailableDatesFromTimeSeries(
     parcelId: string,
     startDate: string,
     endDate: string,
-    cloudCoverage: number,
     organizationId?: string,
-  ): Promise<unknown | null> {
+  ): Promise<{
+    available_dates: Array<{ date: string; available: boolean }>;
+    total_images: number;
+    date_range: { start: string; end: string };
+    _source: string;
+  } | null> {
     try {
       const client = this.db.getAdminClient();
 
       let query = client
-        .from('satellite_heatmap_cache')
-        .select('response_data')
+        .from('satellite_indices_data')
+        .select('date')
         .eq('parcel_id', parcelId)
-        .eq('index_name', `avail_dates_cc${cloudCoverage}`)
-        .eq('date', startDate)
-        .eq('grid_size', this.dateToInt(endDate))
-        .gt('expires_at', new Date().toISOString());
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .not('mean_value', 'is', null);
 
       if (organizationId) {
         query = query.eq('organization_id', organizationId);
       }
 
-      const { data, error } = await query.limit(1).single();
+      const { data, error } = await query;
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         return null;
       }
 
-      return data.response_data;
+      const uniqueDates = [...new Set(data.map((row: { date: string }) => row.date))].sort();
+
+      return {
+        available_dates: uniqueDates.map((date) => ({ date, available: true })),
+        total_images: uniqueDates.length,
+        date_range: { start: startDate, end: endDate },
+        _source: 'timeseries_cache',
+      };
     } catch (err) {
-      this.logger.warn(`Available-dates cache query failed for ${parcelId}: ${err}`);
+      this.logger.warn(`Failed to derive available dates from timeseries: ${err}`);
       return null;
     }
-  }
-
-  private persistAvailableDatesInBackground(
-    parcelId: string,
-    startDate: string,
-    endDate: string,
-    cloudCoverage: number,
-    responseData: unknown,
-    organizationId: string,
-  ) {
-    // Use .then/.catch instead of setImmediate + async to avoid silently swallowed errors
-    Promise.resolve().then(async () => {
-      const client = this.db.getAdminClient();
-      const isPastMonth = this.isMonthInPast(endDate);
-      const ttl = isPastMonth ? AVAIL_DATES_PAST_DB_TTL_MS : AVAIL_DATES_CURRENT_DB_TTL_MS;
-      const expiresAt = new Date(Date.now() + ttl).toISOString();
-      const gridSizeInt = this.dateToInt(endDate);
-
-      this.logger.debug(
-        `[Cache WRITE attempt] available-dates parcel=${parcelId} org=${organizationId} ` +
-        `index=avail_dates_cc${cloudCoverage} date=${startDate} grid_size=${gridSizeInt} ` +
-        `expires=${expiresAt} isPast=${isPastMonth}`,
-      );
-
-      const { error } = await client
-        .from('satellite_heatmap_cache')
-        .upsert(
-          {
-            parcel_id: parcelId,
-            organization_id: organizationId,
-            index_name: `avail_dates_cc${cloudCoverage}`,
-            date: startDate,
-            grid_size: gridSizeInt,
-            response_data: responseData,
-            expires_at: expiresAt,
-          },
-          { onConflict: 'parcel_id,index_name,date,grid_size' },
-        );
-
-      if (error) {
-        this.logger.error(
-          `[Cache WRITE FAILED] available-dates for parcel ${parcelId}: ${error.message} ` +
-          `(code=${error.code}, details=${error.details}, hint=${error.hint})`,
-        );
-      } else {
-        this.logger.log(
-          `[Cache WRITE OK] available-dates ${startDate}→${endDate} for parcel ${parcelId} ` +
-          `(ttl=${isPastMonth ? '~1year' : '24h'})`,
-        );
-      }
-    }).catch((err) => {
-      this.logger.error(`[Cache WRITE CRASH] available-dates persist: ${err}`);
-    });
-  }
-
-  private isMonthInPast(endDate: string): boolean {
-    const now = new Date();
-    const end = new Date(endDate);
-    return end.getFullYear() < now.getFullYear() ||
-      (end.getFullYear() === now.getFullYear() && end.getMonth() < now.getMonth());
-  }
-
-  private dateToInt(date: string): number {
-    return parseInt(date.replace(/-/g, ''), 10);
   }
 
   // ── Shared helpers ────────────────────────────────────────
