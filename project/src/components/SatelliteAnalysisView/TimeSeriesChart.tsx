@@ -161,7 +161,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     try {
       for (const index of selectedIndices) {
         try {
-          const request: TimeSeriesRequest = {
+          const request = {
             aoi: {
               geometry: convertBoundaryToGeoJSON(boundary),
               name: parcelName || 'Parcel',
@@ -175,9 +175,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             cloud_coverage: cloudCoverage,
             parcel_id: parcelId,
             farm_id: farmId,
+            force_refresh: true,
           };
 
-          const response = await satelliteApi.getTimeSeries(request);
+          const response = await satelliteApi.getTimeSeries(request as TimeSeriesRequest);
           setLiveSeriesData(prev => ({ ...prev, [index]: response.data ?? [] }));
 
           if (index !== 'NIRvP' && response.data && response.data.length > 0) {

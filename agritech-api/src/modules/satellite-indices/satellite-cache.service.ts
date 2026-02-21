@@ -39,50 +39,55 @@ export class SatelliteCacheService {
     const parcelId = body.parcel_id as string | undefined;
     const indexName = (body.index as string) || '';
     const dateRange = body.date_range as { start_date?: string; end_date?: string } | undefined;
+    const forceRefresh = body.force_refresh as boolean | undefined;
 
     if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {
       return this.proxy.post('/indices/timeseries', body, organizationId);
     }
 
-    const cached = await this.queryTimeSeriesCache(
-      parcelId,
-      indexName,
-      dateRange.start_date,
-      dateRange.end_date,
-      organizationId,
-    );
-
-    if (cached && cached.length >= 3) {
-      this.logger.debug(
-        `[Cache HIT] timeseries ${indexName} for parcel ${parcelId}: ${cached.length} points`,
+    if (!forceRefresh) {
+      const cached = await this.queryTimeSeriesCache(
+        parcelId,
+        indexName,
+        dateRange.start_date,
+        dateRange.end_date,
+        organizationId,
       );
 
-      const values = cached.map((p) => p.value).filter((v) => v != null);
-      const sorted = [...values].sort((a, b) => a - b);
+      if (cached && cached.length >= 3) {
+        this.logger.log(
+          `[Cache HIT] timeseries ${indexName} for parcel ${parcelId}: ${cached.length} points`,
+        );
 
-      return {
-        index: indexName,
-        start_date: dateRange.start_date,
-        end_date: dateRange.end_date,
-        data: cached,
-        statistics: values.length > 0 ? {
-          mean: values.reduce((s, v) => s + v, 0) / values.length,
-          std: Math.sqrt(
-            values.reduce((s, v) => s + (v - values.reduce((a, b) => a + b, 0) / values.length) ** 2, 0) / values.length,
-          ),
-          min: sorted[0],
-          max: sorted[sorted.length - 1],
-          median: sorted[Math.floor(sorted.length / 2)],
-        } : null,
-        _source: 'cache',
-      };
+        const values = cached.map((p) => p.value).filter((v) => v != null);
+        const sorted = [...values].sort((a, b) => a - b);
+
+        return {
+          index: indexName,
+          start_date: dateRange.start_date,
+          end_date: dateRange.end_date,
+          data: cached,
+          statistics: values.length > 0 ? {
+            mean: values.reduce((s, v) => s + v, 0) / values.length,
+            std: Math.sqrt(
+              values.reduce((s, v) => s + (v - values.reduce((a, b) => a + b, 0) / values.length) ** 2, 0) / values.length,
+            ),
+            min: sorted[0],
+            max: sorted[sorted.length - 1],
+            median: sorted[Math.floor(sorted.length / 2)],
+          } : null,
+          _source: 'cache',
+        };
+      }
     }
 
-    this.logger.debug(
-      `[Cache MISS] timeseries ${indexName} for parcel ${parcelId} → forwarding to satellite service`,
+    this.logger.log(
+      `[Cache ${forceRefresh ? 'BYPASS' : 'MISS'}] timeseries ${indexName} for parcel ${parcelId} → forwarding to satellite service`,
     );
 
+    const start = Date.now();
     const fresh = await this.proxy.post('/indices/timeseries', body, organizationId) as Record<string, unknown>;
+    this.logger.log(`[Proxy] timeseries response in ${Date.now() - start}ms`);
 
     this.persistTimeSeriesInBackground(
       parcelId,
