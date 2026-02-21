@@ -138,6 +138,8 @@ export class SatelliteCacheService {
             '/indices/timeseries',
             requestBody,
             organizationId,
+            undefined,
+            300_000,
           ) as Record<string, unknown>;
 
           const points = (result.data as TimeSeriesPoint[]) || [];

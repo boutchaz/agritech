@@ -102,7 +102,7 @@ export class SatelliteProxyService {
     return this.proxy('GET', path, { query, organizationId });
   }
 
-  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>) {
-    return this.proxy('POST', path, { body, organizationId, query });
+  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number) {
+    return this.proxy('POST', path, { body, organizationId, query, timeout });
   }
 }

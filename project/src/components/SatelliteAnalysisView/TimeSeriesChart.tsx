@@ -187,22 +187,29 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         currentIndex: syncResponse.currentIndex,
       });
 
+      let lastCompleted = 0;
       const pollInterval = setInterval(async () => {
         try {
           const status = await satelliteApi.getTimeSeriesSyncStatus(parcelId);
-          setSyncProgress({
-            totalIndices: status.totalIndices,
-            completedIndices: status.completedIndices,
-            currentIndex: status.currentIndex,
-          });
 
-          if (status.completedIndices > 0) {
-            await refetchCache();
+          const isDone = status.status === 'completed' || status.status === 'failed' || status.status === 'idle';
+
+          if (!isDone) {
+            setSyncProgress({
+              totalIndices: status.totalIndices,
+              completedIndices: status.completedIndices,
+              currentIndex: status.currentIndex,
+            });
           }
 
-          if (status.status === 'completed' || status.status === 'failed') {
+          if (status.completedIndices > lastCompleted) {
+            lastCompleted = status.completedIndices;
+            refetchCache().catch(() => {});
+          }
+
+          if (isDone) {
             clearInterval(pollInterval);
-            await refetchCache();
+            await refetchCache().catch(() => undefined);
             queryClient.invalidateQueries({ queryKey: ['satellite-indices-cache', parcelId] });
             setIsSyncing(false);
             setSyncProgress(null);
