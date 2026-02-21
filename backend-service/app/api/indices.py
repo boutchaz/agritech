@@ -276,6 +276,7 @@ async def get_time_series(
                 request.date_range.end_date,
                 base_index,
                 request.interval.value,
+                max_cloud_coverage=request.cloud_coverage,
             )
         else:
             # Use the provider interface

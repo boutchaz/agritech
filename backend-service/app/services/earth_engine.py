@@ -452,44 +452,133 @@ class EarthEngineService:
         end_date: str,
         index: str,
         interval: str = "month",
+        max_cloud_coverage: float = None,
     ) -> List[Dict]:
-        """Get time series data for a specific index, aggregated by interval.
+        """Get time series using real per-observation values (no composites).
 
-        Uses a single batched GEE computation instead of per-window getInfo()
-        calls to avoid N sequential network round-trips.
+        Each data point corresponds to an actual Sentinel-2 acquisition date.
+        Falls back to the legacy composite approach only on failure.
         """
         self.initialize()
 
         aoi = ee.Geometry(geometry)
-
-        interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
-        step = interval_days.get(interval, 30)
+        max_cloud = max_cloud_coverage or settings.MAX_CLOUD_COVERAGE
 
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
-
         total_days = (end_dt - start_dt).days
         scale = 30 if total_days > 365 else settings.DEFAULT_SCALE
 
         try:
-            return self._get_time_series_batched(
+            return self._get_time_series_per_observation(
                 geometry,
                 aoi,
                 start_date,
                 end_date,
                 index,
-                step,
                 scale,
-                start_dt,
-                end_dt,
+                max_cloud,
             )
         except Exception as e:
             logger.warning(
-                f"Batched time series failed ({e}), falling back to sequential"
+                f"Per-observation time series failed ({e}), falling back to composite"
             )
-            return self._get_time_series_sequential(
-                geometry, aoi, index, step, scale, start_dt, end_dt
+            interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
+            step = interval_days.get(interval, 30)
+            try:
+                return self._get_time_series_batched(
+                    geometry,
+                    aoi,
+                    start_date,
+                    end_date,
+                    index,
+                    step,
+                    scale,
+                    start_dt,
+                    end_dt,
+                )
+            except Exception as e2:
+                logger.warning(
+                    f"Batched time series also failed ({e2}), falling back to sequential"
+                )
+                return self._get_time_series_sequential(
+                    geometry, aoi, index, step, scale, start_dt, end_dt
+                )
+
+    def _get_time_series_per_observation(
+        self,
+        geometry: Dict,
+        aoi: ee.Geometry,
+        start_date: str,
+        end_date: str,
+        index: str,
+        scale: int,
+        max_cloud: float,
+    ) -> List[Dict]:
+        """Compute mean index value per real Sentinel-2 image (no composites).
+
+        Single GEE server-side map+getInfo — one data point per observation date.
+        """
+        collection = self.get_sentinel2_collection(
+            geometry,
+            start_date,
+            end_date,
+            max_cloud,
+            use_aoi_cloud_filter=True,
+            cloud_buffer_meters=300,
+        )
+
+        index_name = index
+
+        def extract_observation(image):
+            idx_images = self.calculate_vegetation_indices(image, [index_name])
+            idx_image = idx_images.get(index_name)
+            if idx_image is None:
+                return ee.Feature(None, {"date": None, "value": None, "cloud": None})
+
+            mean_val = idx_image.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=aoi,
+                scale=scale,
+                maxPixels=settings.MAX_PIXELS,
+            ).get(index_name)
+
+            return ee.Feature(
+                None,
+                {
+                    "date": ee.Date(image.get("system:time_start")).format(
+                        "YYYY-MM-dd"
+                    ),
+                    "value": mean_val,
+                    "cloud": image.get("CLOUDY_PIXEL_PERCENTAGE"),
+                },
             )
+
+        features = collection.map(extract_observation)
+        results = features.getInfo()
+
+        date_best: Dict[str, Dict] = {}
+        for feat in results.get("features", []):
+            props = feat.get("properties", {})
+            date_str = props.get("date")
+            value = props.get("value")
+            cloud = props.get("cloud", 100)
+            if date_str is None or value is None:
+                continue
+
+            if date_str not in date_best or date_best[date_str]["cloud"] > cloud:
+                date_best[date_str] = {
+                    "date": date_str,
+                    "value": value,
+                    "cloud": cloud,
+                }
+
+        time_series = sorted(date_best.values(), key=lambda x: x["date"])
+        logger.info(
+            f"Per-observation time series: {len(time_series)} real observations "
+            f"for {index} ({start_date}→{end_date})"
+        )
+        return [{"date": p["date"], "value": p["value"]} for p in time_series]
 
     def _get_time_series_batched(
         self,
