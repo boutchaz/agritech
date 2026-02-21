@@ -9,7 +9,6 @@ import {
   VEGETATION_INDEX_DESCRIPTIONS,
   INDEX_METADATA,
   RELIABILITY_CONFIG,
-  TimeSeriesRequest,
   convertBoundaryToGeoJSON,
   getDateRangeLastNDays
 } from '../../lib/satellite-api';
@@ -65,12 +64,16 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const organizationId = currentOrganization?.id;
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
-  const [liveSeriesData, setLiveSeriesData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
   const [cloudCoverage, setCloudCoverage] = useState(20);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    totalIndices: number;
+    completedIndices: number;
+    currentIndex: string | null;
+  } | null>(null);
   const [showTemperature, setShowTemperature] = useState(false);
 
   // Initialize with last 2 years for calibration across crop cycles
@@ -157,53 +160,64 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     if (!boundary || !organizationId || selectedIndices.length === 0 || !startDate || !endDate) return;
 
     setIsSyncing(true);
+    setSyncProgress(null);
 
     try {
-      for (const index of selectedIndices) {
-        try {
-          const request = {
-            aoi: {
-              geometry: convertBoundaryToGeoJSON(boundary),
-              name: parcelName || 'Parcel',
-            },
-            date_range: {
-              start_date: startDate,
-              end_date: endDate,
-            },
-            index,
-            interval: 'week',
-            cloud_coverage: cloudCoverage,
-            parcel_id: parcelId,
-            farm_id: farmId,
-            force_refresh: true,
-          };
+      const syncResponse = await satelliteApi.startTimeSeriesSync({
+        parcel_id: parcelId,
+        farm_id: farmId,
+        aoi: {
+          geometry: convertBoundaryToGeoJSON(boundary),
+          name: parcelName || 'Parcel',
+        },
+        date_range: { start_date: startDate, end_date: endDate },
+        cloud_coverage: cloudCoverage,
+        indices: selectedIndices,
+      });
 
-          const response = await satelliteApi.getTimeSeries(request as TimeSeriesRequest);
-          setLiveSeriesData(prev => ({ ...prev, [index]: response.data ?? [] }));
-
-          if (index !== 'NIRvP' && response.data && response.data.length > 0) {
-            const batch = response.data
-              .filter((point: { date: string; value: number }) => point.value != null)
-              .map((point: { date: string; value: number }) => ({
-                parcel_id: parcelId,
-                farm_id: farmId,
-                index_name: index,
-                date: point.date,
-                mean_value: point.value,
-              }));
-            if (batch.length > 0) {
-              await satelliteIndicesApi.createBulk(batch, organizationId);
-            }
-          }
-        } catch (apiErr) {
-          console.error(`Failed to fetch ${index} from satellite API:`, apiErr);
-        }
+      if (syncResponse.status === 'failed') {
+        console.error('Sync start failed');
+        setIsSyncing(false);
+        return;
       }
 
-      await refetchCache();
-      queryClient.invalidateQueries({ queryKey: ['satellite-indices-cache', parcelId] });
-    } finally {
+      setSyncProgress({
+        totalIndices: syncResponse.totalIndices,
+        completedIndices: syncResponse.completedIndices,
+        currentIndex: syncResponse.currentIndex,
+      });
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const status = await satelliteApi.getTimeSeriesSyncStatus(parcelId);
+          setSyncProgress({
+            totalIndices: status.totalIndices,
+            completedIndices: status.completedIndices,
+            currentIndex: status.currentIndex,
+          });
+
+          if (status.completedIndices > 0) {
+            await refetchCache();
+          }
+
+          if (status.status === 'completed' || status.status === 'failed') {
+            clearInterval(pollInterval);
+            await refetchCache();
+            queryClient.invalidateQueries({ queryKey: ['satellite-indices-cache', parcelId] });
+            setIsSyncing(false);
+            setSyncProgress(null);
+          }
+        } catch (pollErr) {
+          console.error('Sync poll error:', pollErr);
+          clearInterval(pollInterval);
+          setIsSyncing(false);
+          setSyncProgress(null);
+        }
+      }, 5000);
+    } catch (err) {
+      console.error('Failed to start sync:', err);
       setIsSyncing(false);
+      setSyncProgress(null);
     }
   }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
@@ -245,25 +259,13 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
     for (const index of selectedIndices) {
       const indexData = cachedData?.[index] || [];
-      if (indexData.length > 0) {
-        for (const item of indexData) {
-          const date = item.date?.split('T')[0];
-          const value = item.mean_value ?? item.index_value;
-          if (date && isValidIndexValue(index, value)) {
-            const existing: MultiIndexData = dateMap.get(date) || { date };
-            existing[index] = value;
-            dateMap.set(date, existing);
-          }
-        }
-      } else {
-        const liveIndexData = liveSeriesData[index] || [];
-        for (const point of liveIndexData) {
-          const date = point.date?.split('T')[0];
-          if (date && isValidIndexValue(index, point.value)) {
-            const existing: MultiIndexData = dateMap.get(date) || { date };
-            existing[index] = point.value;
-            dateMap.set(date, existing);
-          }
+      for (const item of indexData) {
+        const date = item.date?.split('T')[0];
+        const value = item.mean_value ?? item.index_value;
+        if (date && isValidIndexValue(index, value)) {
+          const existing: MultiIndexData = dateMap.get(date) || { date };
+          existing[index] = value;
+          dateMap.set(date, existing);
         }
       }
     }
@@ -286,7 +288,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [cachedData, selectedIndices, liveSeriesData, weatherData, showTemperature, isValidIndexValue]);
+  }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
     setSelectedIndices(prev => {
@@ -698,7 +700,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             <div className="flex flex-col items-center gap-2">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="text-gray-500">
-                {isSyncing ? 'Récupération des données satellite...' : 'Chargement...'}
+                {isSyncing && syncProgress
+                  ? `Sync ${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
+                  : isSyncing ? 'Lancement de la synchronisation...' : 'Chargement...'}
               </span>
             </div>
           </div>
@@ -831,7 +835,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           <Satellite className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-          {isSyncing ? 'Récupération...' : 'Récupérer depuis satellite'}
+          {isSyncing && syncProgress
+            ? `${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
+            : isSyncing ? 'Lancement...' : 'Récupérer depuis satellite'}
         </button>
       </div>
     </div>

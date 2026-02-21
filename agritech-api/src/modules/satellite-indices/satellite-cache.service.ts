@@ -12,23 +12,224 @@ interface TimeSeriesPoint {
   value: number;
 }
 
+export interface ParcelSyncProgress {
+  status: 'idle' | 'syncing' | 'completed' | 'failed';
+  startedAt: string | null;
+  completedAt: string | null;
+  totalIndices: number;
+  completedIndices: number;
+  currentIndex: string | null;
+  results: Record<string, { points: number; error?: string }>;
+}
+
 const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;            // 5 min in-memory
 const HEATMAP_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days in DB
 const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
 const AVAIL_DATES_CURRENT_DB_TTL_MS = 24 * 60 * 60 * 1000; // 24h for current month
 const AVAIL_DATES_PAST_DB_TTL_MS = 365 * 24 * 60 * 60 * 1000; // ~1 year for past months
 const TIMESERIES_STALE_DAYS = 1;
+const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];
 
 @Injectable()
 export class SatelliteCacheService {
   private readonly logger = new Logger(SatelliteCacheService.name);
   private readonly heatmapCache = new Map<string, CacheEntry>();
   private readonly availDatesCache = new Map<string, CacheEntry>();
+  private readonly parcelSyncProgress = new Map<string, ParcelSyncProgress>();
 
   constructor(
     private readonly db: DatabaseService,
     private readonly proxy: SatelliteProxyService,
   ) {}
+
+  // ── Per-Parcel Async Sync ─────────────────────────────
+
+  getParcelSyncProgress(parcelId: string): ParcelSyncProgress {
+    return this.parcelSyncProgress.get(parcelId) || {
+      status: 'idle',
+      startedAt: null,
+      completedAt: null,
+      totalIndices: 0,
+      completedIndices: 0,
+      currentIndex: null,
+      results: {},
+    };
+  }
+
+  /**
+   * Starts async background sync for a single parcel.
+   * Returns immediately — caller polls getParcelSyncProgress() for status.
+   */
+  startParcelSync(body: Record<string, unknown>, organizationId?: string): ParcelSyncProgress {
+    const parcelId = body.parcel_id as string;
+    const farmId = body.farm_id as string | undefined;
+    const dateRange = body.date_range as { start_date?: string; end_date?: string } | undefined;
+    const cloudCoverage = (body.cloud_coverage as number) || 20;
+    const indices = (body.indices as string[]) || CORE_INDICES;
+
+    if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {
+      return {
+        status: 'failed',
+        startedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        totalIndices: 0,
+        completedIndices: 0,
+        currentIndex: null,
+        results: {},
+      };
+    }
+
+    const existing = this.parcelSyncProgress.get(parcelId);
+    if (existing?.status === 'syncing') {
+      this.logger.warn(`[ParcelSync] Already syncing parcel ${parcelId}, returning current progress`);
+      return existing;
+    }
+
+    const progress: ParcelSyncProgress = {
+      status: 'syncing',
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      totalIndices: indices.length,
+      completedIndices: 0,
+      currentIndex: null,
+      results: {},
+    };
+    this.parcelSyncProgress.set(parcelId, progress);
+
+    this.runParcelSyncInBackground(
+      parcelId,
+      farmId,
+      dateRange.start_date,
+      dateRange.end_date,
+      cloudCoverage,
+      indices,
+      body,
+      organizationId,
+    );
+
+    return progress;
+  }
+
+  private async runParcelSyncInBackground(
+    parcelId: string,
+    farmId: string | undefined,
+    startDate: string,
+    endDate: string,
+    cloudCoverage: number,
+    indices: string[],
+    originalBody: Record<string, unknown>,
+    organizationId?: string,
+  ): Promise<void> {
+    const progress = this.parcelSyncProgress.get(parcelId)!;
+
+    try {
+      for (const index of indices) {
+        progress.currentIndex = index;
+        this.logger.log(`[ParcelSync] ${parcelId} — syncing ${index} (${progress.completedIndices + 1}/${indices.length})`);
+
+        try {
+          const requestBody = {
+            ...originalBody,
+            index,
+            force_refresh: true,
+            date_range: { start_date: startDate, end_date: endDate },
+            cloud_coverage: cloudCoverage,
+          };
+
+          const result = await this.proxy.post(
+            '/indices/timeseries',
+            requestBody,
+            organizationId,
+          ) as Record<string, unknown>;
+
+          const points = (result.data as TimeSeriesPoint[]) || [];
+
+          await this.persistTimeSeriesSync(
+            parcelId,
+            index,
+            points,
+            organizationId,
+            farmId,
+          );
+
+          progress.results[index] = { points: points.length };
+          this.logger.log(`[ParcelSync] ${parcelId} — ${index} done: ${points.length} points`);
+        } catch (err) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          progress.results[index] = { points: 0, error: errMsg };
+          this.logger.warn(`[ParcelSync] ${parcelId} — ${index} failed: ${errMsg}`);
+        }
+
+        progress.completedIndices++;
+      }
+
+      progress.status = 'completed';
+      progress.completedAt = new Date().toISOString();
+      progress.currentIndex = null;
+      this.logger.log(`[ParcelSync] ${parcelId} — sync complete`);
+    } catch (err) {
+      progress.status = 'failed';
+      progress.completedAt = new Date().toISOString();
+      progress.currentIndex = null;
+      this.logger.error(`[ParcelSync] ${parcelId} — fatal error: ${err}`);
+    }
+
+    setTimeout(() => {
+      const current = this.parcelSyncProgress.get(parcelId);
+      if (current && current.status !== 'syncing') {
+        this.parcelSyncProgress.delete(parcelId);
+      }
+    }, 10 * 60 * 1000);
+  }
+
+  /**
+   * Synchronous persist — used by background sync to ensure data is saved
+   * before reporting completion.
+   */
+  private async persistTimeSeriesSync(
+    parcelId: string,
+    indexName: string,
+    points: TimeSeriesPoint[],
+    organizationId?: string,
+    farmId?: string,
+  ): Promise<{ saved: number; failed: number }> {
+    if (!organizationId || points.length === 0 || indexName === 'NIRvP') {
+      return { saved: 0, failed: 0 };
+    }
+
+    const client = this.db.getAdminClient();
+    let saved = 0;
+    let failed = 0;
+
+    for (const point of points) {
+      if (point.value == null) continue;
+      const { error } = await client
+        .from('satellite_indices_data')
+        .upsert(
+          {
+            parcel_id: parcelId,
+            organization_id: organizationId,
+            farm_id: farmId || null,
+            index_name: indexName,
+            date: point.date,
+            mean_value: point.value,
+            image_source: 'sentinel-2',
+          },
+          { onConflict: 'parcel_id,index_name,date' },
+        );
+
+      if (error) {
+        failed++;
+      } else {
+        saved++;
+      }
+    }
+
+    this.logger.log(
+      `[ParcelSync PERSIST] ${indexName}/${parcelId}: ${saved} saved, ${failed} failed out of ${points.length}`,
+    );
+    return { saved, failed };
+  }
 
   // ── Time Series: DB-backed cache ──────────────────────
 

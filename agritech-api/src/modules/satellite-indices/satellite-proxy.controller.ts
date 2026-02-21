@@ -207,6 +207,21 @@ export class SatelliteProxyController {
     return this.proxy.get(`/weather/parcel/${parcelId}`, query, req.headers['x-organization-id']);
   }
 
+  // ── Per-Parcel Async Sync ────────────────────────────────
+
+  @Post('indices/timeseries-sync')
+  @ApiOperation({ summary: 'Start async timeseries sync for a parcel (returns immediately)' })
+  async startTimeSeriesSync(@Req() req, @Body() body: Record<string, unknown>) {
+    const progress = this.cache.startParcelSync(body, req.headers['x-organization-id']);
+    return progress;
+  }
+
+  @Get('indices/timeseries-sync/:parcelId/status')
+  @ApiOperation({ summary: 'Poll timeseries sync progress for a parcel' })
+  async getTimeSeriesSyncStatus(@Param('parcelId') parcelId: string) {
+    return this.cache.getParcelSyncProgress(parcelId);
+  }
+
   // ── Cache Warmup ────────────────────────────────────────
 
   @Post('cache/warmup')

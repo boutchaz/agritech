@@ -435,6 +435,35 @@ class SatelliteAPIClient {
     return this.post('/indices/timeseries', request);
   }
 
+  async startTimeSeriesSync(body: {
+    parcel_id: string;
+    farm_id?: string;
+    aoi: { geometry: GeoJSONGeometry; name: string };
+    date_range: { start_date: string; end_date: string };
+    cloud_coverage: number;
+    indices?: string[];
+  }): Promise<{
+    status: 'syncing' | 'completed' | 'failed' | 'idle';
+    totalIndices: number;
+    completedIndices: number;
+    currentIndex: string | null;
+    results: Record<string, { points: number; error?: string }>;
+  }> {
+    return this.post('/indices/timeseries-sync', body);
+  }
+
+  async getTimeSeriesSyncStatus(parcelId: string): Promise<{
+    status: 'idle' | 'syncing' | 'completed' | 'failed';
+    startedAt: string | null;
+    completedAt: string | null;
+    totalIndices: number;
+    completedIndices: number;
+    currentIndex: string | null;
+    results: Record<string, { points: number; error?: string }>;
+  }> {
+    return this.get(`/indices/timeseries-sync/${parcelId}/status`);
+  }
+
   async checkCloudCoverage(request: CloudCoverageCheckRequest): Promise<CloudCoverageCheckResponse> {
     return this.post('/analysis/cloud-coverage', request);
   }
