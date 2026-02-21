@@ -144,38 +144,42 @@ export class SatelliteCacheService {
   ) {
     if (!organizationId || points.length === 0 || indexName === 'NIRvP') return;
 
-    setImmediate(async () => {
+    Promise.resolve().then(async () => {
       const client = this.db.getAdminClient();
       let saved = 0;
+      let failed = 0;
 
       for (const point of points) {
         if (point.value == null) continue;
-        try {
-          await client
-            .from('satellite_indices_data')
-            .upsert(
-              {
-                parcel_id: parcelId,
-                organization_id: organizationId,
-                farm_id: farmId || null,
-                index_name: indexName,
-                date: point.date,
-                mean_value: point.value,
-                image_source: 'sentinel-2',
-              },
-              { onConflict: 'parcel_id,index_name,date' },
-            );
+        const { error } = await client
+          .from('satellite_indices_data')
+          .upsert(
+            {
+              parcel_id: parcelId,
+              organization_id: organizationId,
+              farm_id: farmId || null,
+              index_name: indexName,
+              date: point.date,
+              mean_value: point.value,
+              image_source: 'sentinel-2',
+            },
+            { onConflict: 'parcel_id,index_name,date' },
+          );
+
+        if (error) {
+          failed++;
+        } else {
           saved++;
-        } catch {
-          // duplicate or conflict — skip
         }
       }
 
-      if (saved > 0) {
+      if (saved > 0 || failed > 0) {
         this.logger.log(
-          `[Cache WRITE] Persisted ${saved}/${points.length} timeseries points for ${indexName}/${parcelId}`,
+          `[Cache WRITE] timeseries ${indexName}/${parcelId}: ${saved} saved, ${failed} failed out of ${points.length}`,
         );
       }
+    }).catch((err) => {
+      this.logger.error(`[Cache WRITE CRASH] timeseries persist: ${err}`);
     });
   }
 
@@ -295,36 +299,37 @@ export class SatelliteCacheService {
     responseData: unknown,
     organizationId: string,
   ) {
-    setImmediate(async () => {
-      try {
-        const client = this.db.getAdminClient();
-        const expiresAt = new Date(Date.now() + HEATMAP_DB_TTL_MS).toISOString();
+    Promise.resolve().then(async () => {
+      const client = this.db.getAdminClient();
+      const expiresAt = new Date(Date.now() + HEATMAP_DB_TTL_MS).toISOString();
 
-        const { error } = await client
-          .from('satellite_heatmap_cache')
-          .upsert(
-            {
-              parcel_id: parcelId,
-              organization_id: organizationId,
-              index_name: indexName,
-              date,
-              grid_size: gridSize,
-              response_data: responseData,
-              expires_at: expiresAt,
-            },
-            { onConflict: 'parcel_id,index_name,date,grid_size' },
-          );
+      const { error } = await client
+        .from('satellite_heatmap_cache')
+        .upsert(
+          {
+            parcel_id: parcelId,
+            organization_id: organizationId,
+            index_name: indexName,
+            date,
+            grid_size: gridSize,
+            response_data: responseData,
+            expires_at: expiresAt,
+          },
+          { onConflict: 'parcel_id,index_name,date,grid_size' },
+        );
 
-        if (error) {
-          this.logger.warn(`Heatmap cache write failed: ${error.message}`);
-        } else {
-          this.logger.log(
-            `[Cache WRITE] Persisted heatmap ${indexName}/${date} (grid=${gridSize}) for parcel ${parcelId}`,
-          );
-        }
-      } catch (err) {
-        this.logger.warn(`Heatmap cache persist error: ${err}`);
+      if (error) {
+        this.logger.error(
+          `[Cache WRITE FAILED] heatmap ${indexName}/${date} for parcel ${parcelId}: ` +
+          `${error.message} (code=${error.code}, details=${error.details})`,
+        );
+      } else {
+        this.logger.log(
+          `[Cache WRITE OK] heatmap ${indexName}/${date} (grid=${gridSize}) for parcel ${parcelId}`,
+        );
       }
+    }).catch((err) => {
+      this.logger.error(`[Cache WRITE CRASH] heatmap persist: ${err}`);
     });
   }
 
@@ -339,15 +344,25 @@ export class SatelliteCacheService {
     const endDate = (body.end_date as string) || '';
     const cloudCoverage = (body.cloud_coverage as number) || 30;
 
-    const memKey = `ad:${parcelId || ''}:${startDate}:${endDate}:${cloudCoverage}`;
+    this.logger.log(
+      `[available-dates] parcel=${parcelId || 'NONE'} org=${organizationId || 'NONE'} ` +
+      `range=${startDate}→${endDate} cc=${cloudCoverage}`,
+    );
+
+    if (!parcelId) {
+      this.logger.warn('[available-dates] No parcel_id — bypassing cache, forwarding directly');
+      return this.proxy.post('/indices/available-dates', body, organizationId);
+    }
+
+    const memKey = `ad:${parcelId}:${startDate}:${endDate}:${cloudCoverage}`;
 
     const memCached = this.availDatesCache.get(memKey);
     if (memCached && memCached.expiresAt > Date.now()) {
-      this.logger.debug(`[Cache L1 HIT] available-dates ${memKey}`);
+      this.logger.log(`[Cache L1 HIT] available-dates ${memKey}`);
       return memCached.data;
     }
 
-    if (parcelId && startDate && endDate) {
+    if (startDate && endDate) {
       const dbCached = await this.queryAvailableDatesCache(
         parcelId,
         startDate,
@@ -357,7 +372,7 @@ export class SatelliteCacheService {
       );
 
       if (dbCached) {
-        this.logger.debug(
+        this.logger.log(
           `[Cache L2 HIT] available-dates ${startDate}→${endDate} for parcel ${parcelId}`,
         );
         this.availDatesCache.set(memKey, {
@@ -366,19 +381,25 @@ export class SatelliteCacheService {
         });
         return dbCached;
       }
+
+      this.logger.log(`[Cache L2 MISS] available-dates ${startDate}→${endDate} for parcel ${parcelId}`);
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[Cache MISS] available-dates ${startDate}→${endDate} → forwarding to satellite service`,
     );
+    const start = Date.now();
     const fresh = await this.proxy.post('/indices/available-dates', body, organizationId);
+    this.logger.log(
+      `[Proxy] available-dates response in ${Date.now() - start}ms`,
+    );
 
     this.availDatesCache.set(memKey, {
       data: fresh,
       expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
     });
 
-    if (parcelId && organizationId && startDate && endDate) {
+    if (organizationId && startDate && endDate) {
       this.persistAvailableDatesInBackground(
         parcelId,
         startDate,
@@ -436,38 +457,48 @@ export class SatelliteCacheService {
     responseData: unknown,
     organizationId: string,
   ) {
-    setImmediate(async () => {
-      try {
-        const client = this.db.getAdminClient();
-        const isPastMonth = this.isMonthInPast(endDate);
-        const ttl = isPastMonth ? AVAIL_DATES_PAST_DB_TTL_MS : AVAIL_DATES_CURRENT_DB_TTL_MS;
-        const expiresAt = new Date(Date.now() + ttl).toISOString();
+    // Use .then/.catch instead of setImmediate + async to avoid silently swallowed errors
+    Promise.resolve().then(async () => {
+      const client = this.db.getAdminClient();
+      const isPastMonth = this.isMonthInPast(endDate);
+      const ttl = isPastMonth ? AVAIL_DATES_PAST_DB_TTL_MS : AVAIL_DATES_CURRENT_DB_TTL_MS;
+      const expiresAt = new Date(Date.now() + ttl).toISOString();
+      const gridSizeInt = this.dateToInt(endDate);
 
-        const { error } = await client
-          .from('satellite_heatmap_cache')
-          .upsert(
-            {
-              parcel_id: parcelId,
-              organization_id: organizationId,
-              index_name: `avail_dates_cc${cloudCoverage}`,
-              date: startDate,
-              grid_size: this.dateToInt(endDate),
-              response_data: responseData,
-              expires_at: expiresAt,
-            },
-            { onConflict: 'parcel_id,index_name,date,grid_size' },
-          );
+      this.logger.debug(
+        `[Cache WRITE attempt] available-dates parcel=${parcelId} org=${organizationId} ` +
+        `index=avail_dates_cc${cloudCoverage} date=${startDate} grid_size=${gridSizeInt} ` +
+        `expires=${expiresAt} isPast=${isPastMonth}`,
+      );
 
-        if (error) {
-          this.logger.warn(`Available-dates cache write failed: ${error.message}`);
-        } else {
-          this.logger.log(
-            `[Cache WRITE] Persisted available-dates ${startDate}→${endDate} for parcel ${parcelId} (ttl=${isPastMonth ? 'permanent' : '24h'})`,
-          );
-        }
-      } catch (err) {
-        this.logger.warn(`Available-dates cache persist error: ${err}`);
+      const { error } = await client
+        .from('satellite_heatmap_cache')
+        .upsert(
+          {
+            parcel_id: parcelId,
+            organization_id: organizationId,
+            index_name: `avail_dates_cc${cloudCoverage}`,
+            date: startDate,
+            grid_size: gridSizeInt,
+            response_data: responseData,
+            expires_at: expiresAt,
+          },
+          { onConflict: 'parcel_id,index_name,date,grid_size' },
+        );
+
+      if (error) {
+        this.logger.error(
+          `[Cache WRITE FAILED] available-dates for parcel ${parcelId}: ${error.message} ` +
+          `(code=${error.code}, details=${error.details}, hint=${error.hint})`,
+        );
+      } else {
+        this.logger.log(
+          `[Cache WRITE OK] available-dates ${startDate}→${endDate} for parcel ${parcelId} ` +
+          `(ttl=${isPastMonth ? '~1year' : '24h'})`,
+        );
       }
+    }).catch((err) => {
+      this.logger.error(`[Cache WRITE CRASH] available-dates persist: ${err}`);
     });
   }
 

@@ -242,6 +242,22 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     retry: 1,
   });
 
+  const isValidIndexValue = useCallback((index: TimeSeriesIndexType, value: number): boolean => {
+    if (value == null || isNaN(value)) return false;
+
+    const ranges: Record<string, [number, number]> = {
+      NDVI: [-0.2, 1], NIRv: [-0.1, 0.8], EVI: [-0.2, 1],
+      NDRE: [-0.2, 1], NDMI: [-0.5, 0.8], SAVI: [-0.2, 1],
+      OSAVI: [-0.2, 1], MSAVI2: [-0.2, 1], GCI: [-1, 15],
+      MCARI: [-0.5, 1], TCARI: [-0.5, 1], TCARI_OSAVI: [-2, 5],
+      MSI: [0, 4], MNDWI: [-1, 1], NIRvP: [-50, 500],
+    };
+
+    const range = ranges[index];
+    if (!range) return true;
+    return value >= range[0] && value <= range[1];
+  }, []);
+
   // Transform data for chart
   const chartData = useCallback((): MultiIndexData[] => {
     const dateMap = new Map<string, MultiIndexData>();
@@ -252,7 +268,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         for (const item of indexData) {
           const date = item.date?.split('T')[0];
           const value = item.mean_value ?? item.index_value;
-          if (date && value != null && !isNaN(value)) {
+          if (date && isValidIndexValue(index, value)) {
             const existing: MultiIndexData = dateMap.get(date) || { date };
             existing[index] = value;
             dateMap.set(date, existing);
@@ -262,7 +278,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         const liveIndexData = liveSeriesData[index] || [];
         for (const point of liveIndexData) {
           const date = point.date?.split('T')[0];
-          if (date && point.value != null && !isNaN(point.value)) {
+          if (date && isValidIndexValue(index, point.value)) {
             const existing: MultiIndexData = dateMap.get(date) || { date };
             existing[index] = point.value;
             dateMap.set(date, existing);
@@ -289,7 +305,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [cachedData, selectedIndices, liveSeriesData, weatherData, showTemperature]);
+  }, [cachedData, selectedIndices, liveSeriesData, weatherData, showTemperature, isValidIndexValue]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
     setSelectedIndices(prev => {
@@ -785,7 +801,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   strokeWidth={2}
                   dot={{ fill: getIndexColor(index), r: 3 }}
                   activeDot={{ r: 5 }}
-                  connectNulls
                 />
               ))}
             </LineChart>
