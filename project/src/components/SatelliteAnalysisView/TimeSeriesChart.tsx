@@ -153,7 +153,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   });
 
 
-  // Incremental sync: only fetch the gap between last cached date and today
   const forceSync = useCallback(async () => {
     if (!boundary || !organizationId || selectedIndices.length === 0 || !startDate || !endDate) return;
 
@@ -162,32 +161,13 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     try {
       for (const index of selectedIndices) {
         try {
-          // Find the latest cached date for this index to avoid re-fetching everything
-          const cachedForIndex = cachedData?.[index] || [];
-          let syncStartDate = startDate;
-
-          if (cachedForIndex.length > 0) {
-            const dates = cachedForIndex
-              .map((item: { date?: string }) => item.date?.split('T')[0])
-              .filter(Boolean)
-              .sort();
-            const latestCached = dates[dates.length - 1];
-            if (latestCached && latestCached > startDate) {
-              const nextDay = new Date(latestCached);
-              nextDay.setDate(nextDay.getDate() + 1);
-              syncStartDate = nextDay.toISOString().split('T')[0];
-            }
-          }
-
-          if (syncStartDate > endDate) continue;
-
           const request: TimeSeriesRequest = {
             aoi: {
               geometry: convertBoundaryToGeoJSON(boundary),
               name: parcelName || 'Parcel',
             },
             date_range: {
-              start_date: syncStartDate,
+              start_date: startDate,
               end_date: endDate,
             },
             index,
@@ -224,7 +204,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     } finally {
       setIsSyncing(false);
     }
-  }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, cachedData, refetchCache, queryClient]);
+  }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
   // Fetch weather data
   const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
