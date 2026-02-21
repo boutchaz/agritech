@@ -13,6 +13,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SatelliteProxyService } from './satellite-proxy.service';
 import { SatelliteCacheService } from './satellite-cache.service';
+import { SatelliteSyncService } from './satellite-sync.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 
@@ -25,6 +26,7 @@ export class SatelliteProxyController {
   constructor(
     private readonly proxy: SatelliteProxyService,
     private readonly cache: SatelliteCacheService,
+    private readonly sync: SatelliteSyncService,
   ) {}
 
   // ── Indices ────────────────────────────────────────────
@@ -66,9 +68,9 @@ export class SatelliteProxyController {
   }
 
   @Post('indices/available-dates')
-  @ApiOperation({ summary: 'Get available satellite imagery dates' })
+  @ApiOperation({ summary: 'Get available satellite imagery dates (cached: permanent for past months, 24h for current)' })
   async getAvailableDates(@Req() req, @Body() body: Record<string, unknown>) {
-    return this.proxy.post('/indices/available-dates', body, req.headers['x-organization-id']);
+    return this.cache.getAvailableDates(body, req.headers['x-organization-id']);
   }
 
   @Get('indices/available')
@@ -203,6 +205,25 @@ export class SatelliteProxyController {
     @Query() query: Record<string, string>,
   ) {
     return this.proxy.get(`/weather/parcel/${parcelId}`, query, req.headers['x-organization-id']);
+  }
+
+  // ── Cache Warmup ────────────────────────────────────────
+
+  @Post('cache/warmup')
+  @ApiOperation({ summary: 'Trigger full cache warmup for all parcels (runs in background)' })
+  async triggerCacheWarmup() {
+    const progress = this.sync.getProgress();
+    if (progress.status === 'running') {
+      return { message: 'Sync already in progress', ...progress };
+    }
+    this.sync.runFullSync();
+    return { message: 'Cache warmup started', status: 'running' };
+  }
+
+  @Get('cache/warmup/status')
+  @ApiOperation({ summary: 'Get cache warmup progress' })
+  async getCacheWarmupStatus() {
+    return this.sync.getProgress();
   }
 
   // ── Health ─────────────────────────────────────────────

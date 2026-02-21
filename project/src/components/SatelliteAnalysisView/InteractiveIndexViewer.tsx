@@ -148,7 +148,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         aoi,
         monthStart.toISOString().split('T')[0],
         monthEnd.toISOString().split('T')[0],
-        30
+        30,
+        parcelId
       );
 
       const dates = result.available_dates

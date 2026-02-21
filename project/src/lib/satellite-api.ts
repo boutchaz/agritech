@@ -591,6 +591,7 @@ class SatelliteAPIClient {
     startDate: string,
     endDate: string,
     cloudCoverage: number = 30,
+    parcelId?: string,
   ): Promise<{
     available_dates: Array<{
       date: string;
@@ -607,6 +608,7 @@ class SatelliteAPIClient {
       start_date: startDate,
       end_date: endDate,
       cloud_coverage: cloudCoverage,
+      parcel_id: parcelId,
     });
   }
 }

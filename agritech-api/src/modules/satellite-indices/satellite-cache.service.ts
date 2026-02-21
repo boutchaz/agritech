@@ -12,14 +12,18 @@ interface TimeSeriesPoint {
   value: number;
 }
 
-const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;       // 5 min in-memory
-const HEATMAP_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in DB
+const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;            // 5 min in-memory
+const HEATMAP_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days in DB
+const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
+const AVAIL_DATES_CURRENT_DB_TTL_MS = 24 * 60 * 60 * 1000; // 24h for current month
+const AVAIL_DATES_PAST_DB_TTL_MS = 365 * 24 * 60 * 60 * 1000; // ~1 year for past months
 const TIMESERIES_STALE_DAYS = 1;
 
 @Injectable()
 export class SatelliteCacheService {
   private readonly logger = new Logger(SatelliteCacheService.name);
   private readonly heatmapCache = new Map<string, CacheEntry>();
+  private readonly availDatesCache = new Map<string, CacheEntry>();
 
   constructor(
     private readonly db: DatabaseService,
@@ -323,6 +327,162 @@ export class SatelliteCacheService {
       }
     });
   }
+
+  // ── Available Dates: DB-backed cache (permanent for past, 24h for current) ──
+
+  async getAvailableDates(
+    body: Record<string, unknown>,
+    organizationId?: string,
+  ): Promise<unknown> {
+    const parcelId = body.parcel_id as string | undefined;
+    const startDate = (body.start_date as string) || '';
+    const endDate = (body.end_date as string) || '';
+    const cloudCoverage = (body.cloud_coverage as number) || 30;
+
+    const memKey = `ad:${parcelId || ''}:${startDate}:${endDate}:${cloudCoverage}`;
+
+    const memCached = this.availDatesCache.get(memKey);
+    if (memCached && memCached.expiresAt > Date.now()) {
+      this.logger.debug(`[Cache L1 HIT] available-dates ${memKey}`);
+      return memCached.data;
+    }
+
+    if (parcelId && startDate && endDate) {
+      const dbCached = await this.queryAvailableDatesCache(
+        parcelId,
+        startDate,
+        endDate,
+        cloudCoverage,
+        organizationId,
+      );
+
+      if (dbCached) {
+        this.logger.debug(
+          `[Cache L2 HIT] available-dates ${startDate}→${endDate} for parcel ${parcelId}`,
+        );
+        this.availDatesCache.set(memKey, {
+          data: dbCached,
+          expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
+        });
+        return dbCached;
+      }
+    }
+
+    this.logger.debug(
+      `[Cache MISS] available-dates ${startDate}→${endDate} → forwarding to satellite service`,
+    );
+    const fresh = await this.proxy.post('/indices/available-dates', body, organizationId);
+
+    this.availDatesCache.set(memKey, {
+      data: fresh,
+      expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
+    });
+
+    if (parcelId && organizationId && startDate && endDate) {
+      this.persistAvailableDatesInBackground(
+        parcelId,
+        startDate,
+        endDate,
+        cloudCoverage,
+        fresh,
+        organizationId,
+      );
+    }
+
+    return fresh;
+  }
+
+  private async queryAvailableDatesCache(
+    parcelId: string,
+    startDate: string,
+    endDate: string,
+    cloudCoverage: number,
+    organizationId?: string,
+  ): Promise<unknown | null> {
+    try {
+      const client = this.db.getAdminClient();
+
+      let query = client
+        .from('satellite_heatmap_cache')
+        .select('response_data')
+        .eq('parcel_id', parcelId)
+        .eq('index_name', `avail_dates_cc${cloudCoverage}`)
+        .eq('date', startDate)
+        .eq('grid_size', this.dateToInt(endDate))
+        .gt('expires_at', new Date().toISOString());
+
+      if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+      }
+
+      const { data, error } = await query.limit(1).single();
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data.response_data;
+    } catch (err) {
+      this.logger.warn(`Available-dates cache query failed for ${parcelId}: ${err}`);
+      return null;
+    }
+  }
+
+  private persistAvailableDatesInBackground(
+    parcelId: string,
+    startDate: string,
+    endDate: string,
+    cloudCoverage: number,
+    responseData: unknown,
+    organizationId: string,
+  ) {
+    setImmediate(async () => {
+      try {
+        const client = this.db.getAdminClient();
+        const isPastMonth = this.isMonthInPast(endDate);
+        const ttl = isPastMonth ? AVAIL_DATES_PAST_DB_TTL_MS : AVAIL_DATES_CURRENT_DB_TTL_MS;
+        const expiresAt = new Date(Date.now() + ttl).toISOString();
+
+        const { error } = await client
+          .from('satellite_heatmap_cache')
+          .upsert(
+            {
+              parcel_id: parcelId,
+              organization_id: organizationId,
+              index_name: `avail_dates_cc${cloudCoverage}`,
+              date: startDate,
+              grid_size: this.dateToInt(endDate),
+              response_data: responseData,
+              expires_at: expiresAt,
+            },
+            { onConflict: 'parcel_id,index_name,date,grid_size' },
+          );
+
+        if (error) {
+          this.logger.warn(`Available-dates cache write failed: ${error.message}`);
+        } else {
+          this.logger.log(
+            `[Cache WRITE] Persisted available-dates ${startDate}→${endDate} for parcel ${parcelId} (ttl=${isPastMonth ? 'permanent' : '24h'})`,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(`Available-dates cache persist error: ${err}`);
+      }
+    });
+  }
+
+  private isMonthInPast(endDate: string): boolean {
+    const now = new Date();
+    const end = new Date(endDate);
+    return end.getFullYear() < now.getFullYear() ||
+      (end.getFullYear() === now.getFullYear() && end.getMonth() < now.getMonth());
+  }
+
+  private dateToInt(date: string): number {
+    return parseInt(date.replace(/-/g, ''), 10);
+  }
+
+  // ── Shared helpers ────────────────────────────────────────
 
   private heatmapMemKey(body: Record<string, unknown>): string {
     const index = body.index || '';

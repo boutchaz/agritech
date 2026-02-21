@@ -45,6 +45,8 @@ export class SatelliteIndicesService {
         query = query.gte('created_at', filters.created_at_from);
       }
 
+      query = query.not('mean_value', 'is', null);
+
       // Apply pagination
       if (filters?.page && filters?.limit) {
         const offset = (filters.page - 1) * filters.limit;

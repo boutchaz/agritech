@@ -251,9 +251,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       if (indexData.length > 0) {
         for (const item of indexData) {
           const date = item.date?.split('T')[0];
-          if (date) {
+          const value = item.mean_value ?? item.index_value;
+          if (date && value != null && !isNaN(value)) {
             const existing: MultiIndexData = dateMap.get(date) || { date };
-            existing[index] = item.mean_value ?? item.index_value ?? 0;
+            existing[index] = value;
             dateMap.set(date, existing);
           }
         }
@@ -261,7 +262,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         const liveIndexData = liveSeriesData[index] || [];
         for (const point of liveIndexData) {
           const date = point.date?.split('T')[0];
-          if (date) {
+          if (date && point.value != null && !isNaN(point.value)) {
             const existing: MultiIndexData = dateMap.get(date) || { date };
             existing[index] = point.value;
             dateMap.set(date, existing);
