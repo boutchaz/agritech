@@ -103,21 +103,24 @@ export class SatelliteIndicesService {
     try {
       const { data, error } = await client
         .from('satellite_indices_data')
-        .insert({
-          ...dto,
-          organization_id: organizationId,
-        })
+        .upsert(
+          {
+            ...dto,
+            organization_id: organizationId,
+          },
+          { onConflict: 'parcel_id,index_name,date' },
+        )
         .select()
         .single();
 
       if (error) {
-        this.logger.error(`Failed to create satellite index: ${error.message}`);
-        throw new BadRequestException(`Failed to create satellite index: ${error.message}`);
+        this.logger.error(`Failed to upsert satellite index: ${error.message}`);
+        throw new BadRequestException(`Failed to upsert satellite index: ${error.message}`);
       }
 
       return data;
     } catch (error) {
-      this.logger.error('Error creating satellite index:', error);
+      this.logger.error('Error upserting satellite index:', error);
       throw error;
     }
   }
