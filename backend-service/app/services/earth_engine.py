@@ -517,15 +517,68 @@ class EarthEngineService:
     ) -> List[Dict]:
         """Compute mean index value per real Sentinel-2 image (no composites).
 
-        Single GEE server-side map+getInfo — one data point per observation date.
+        Batches into 6-month chunks to avoid GEE timeouts on multi-year ranges.
+        Uses tile-level cloud filtering only (AOI filtering is overkill for means).
         """
+        CHUNK_DAYS = 180
+
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+
+        all_observations: Dict[str, Dict] = {}
+        chunk_start = start_dt
+
+        while chunk_start < end_dt:
+            chunk_end = min(chunk_start + timedelta(days=CHUNK_DAYS), end_dt)
+            c_start = chunk_start.strftime("%Y-%m-%d")
+            c_end = chunk_end.strftime("%Y-%m-%d")
+
+            try:
+                chunk_results = self._per_observation_chunk(
+                    geometry,
+                    aoi,
+                    c_start,
+                    c_end,
+                    index,
+                    scale,
+                    max_cloud,
+                )
+                for obs in chunk_results:
+                    d = obs["date"]
+                    if (
+                        d not in all_observations
+                        or all_observations[d]["cloud"] > obs["cloud"]
+                    ):
+                        all_observations[d] = obs
+            except Exception as e:
+                logger.warning(f"Per-observation chunk {c_start}→{c_end} failed: {e}")
+
+            chunk_start = chunk_end
+
+        time_series = sorted(all_observations.values(), key=lambda x: x["date"])
+        logger.info(
+            f"Per-observation time series: {len(time_series)} real observations "
+            f"for {index} ({start_date}→{end_date})"
+        )
+        return [{"date": p["date"], "value": p["value"]} for p in time_series]
+
+    def _per_observation_chunk(
+        self,
+        geometry: Dict,
+        aoi: ee.Geometry,
+        start_date: str,
+        end_date: str,
+        index: str,
+        scale: int,
+        max_cloud: float,
+    ) -> List[Dict]:
+        """Process a single time chunk: get collection, map index, return observations."""
         collection = self.get_sentinel2_collection(
             geometry,
             start_date,
             end_date,
             max_cloud,
-            use_aoi_cloud_filter=True,
-            cloud_buffer_meters=300,
+            use_aoi_cloud_filter=False,
         )
 
         index_name = index
@@ -557,28 +610,17 @@ class EarthEngineService:
         features = collection.map(extract_observation)
         results = features.getInfo()
 
-        date_best: Dict[str, Dict] = {}
+        observations = []
         for feat in results.get("features", []):
             props = feat.get("properties", {})
             date_str = props.get("date")
             value = props.get("value")
             cloud = props.get("cloud", 100)
-            if date_str is None or value is None:
-                continue
+            if date_str is not None and value is not None:
+                observations.append({"date": date_str, "value": value, "cloud": cloud})
 
-            if date_str not in date_best or date_best[date_str]["cloud"] > cloud:
-                date_best[date_str] = {
-                    "date": date_str,
-                    "value": value,
-                    "cloud": cloud,
-                }
-
-        time_series = sorted(date_best.values(), key=lambda x: x["date"])
-        logger.info(
-            f"Per-observation time series: {len(time_series)} real observations "
-            f"for {index} ({start_date}→{end_date})"
-        )
-        return [{"date": p["date"], "value": p["value"]} for p in time_series]
+        logger.info(f"Chunk {start_date}→{end_date}: {len(observations)} observations")
+        return observations
 
     def _get_time_series_batched(
         self,
