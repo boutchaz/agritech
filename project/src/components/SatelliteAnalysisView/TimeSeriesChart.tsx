@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, Brush } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer } from 'lucide-react';
 import {
   satelliteApi,
@@ -28,8 +28,7 @@ interface MultiIndexData {
   temperature_mean?: number;
   temperature_min?: number;
   temperature_max?: number;
-  temperature_range?: [number, number];
-  [key: string]: string | number | [number, number] | undefined;
+  [key: string]: string | number | undefined;
 }
 
 interface IndexStats {
@@ -62,7 +61,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const organizationId = currentOrganization?.id;
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
-  const [cloudCoverage, setCloudCoverage] = useState(20);
+  const cloudCoverage = 10;
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);
@@ -125,11 +124,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       const result: Record<string, any[]> = {};
 
       for (const index of selectedIndices) {
-        if (index === 'NIRvP') {
-          result[index] = [];
-          continue;
-        }
-
         try {
           const response = await satelliteIndicesApi.getAll(
             {
@@ -260,18 +254,78 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   // Transform data for chart
   const chartData = useCallback((): MultiIndexData[] => {
+    const getQuantile = (sortedValues: number[], quantile: number): number => {
+      if (sortedValues.length === 0) return NaN;
+      const position = (sortedValues.length - 1) * quantile;
+      const base = Math.floor(position);
+      const rest = position - base;
+      const next = sortedValues[base + 1];
+      if (next === undefined) return sortedValues[base];
+      return sortedValues[base] + rest * (next - sortedValues[base]);
+    };
+
     const dateMap = new Map<string, MultiIndexData>();
 
     for (const index of selectedIndices) {
       const indexData = cachedData?.[index] || [];
-      for (const item of indexData) {
-        const date = item.date?.split('T')[0];
-        const value = item.mean_value ?? item.index_value;
-        if (date && isValidIndexValue(index, value)) {
-          const existing: MultiIndexData = dateMap.get(date) || { date };
-          existing[index] = value;
-          dateMap.set(date, existing);
+      const validPoints = indexData
+        .map(item => {
+          const date = item.date?.split('T')[0];
+          const value = item.mean_value ?? item.index_value;
+          if (!date || !isValidIndexValue(index, value)) {
+            return null;
+          }
+          return { date, value: Number(value) };
+        })
+        .filter((point): point is { date: string; value: number } => point !== null)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      const sortedValues = validPoints
+        .map(point => point.value)
+        .sort((a, b) => a - b);
+
+      let iqrFilteredPoints = validPoints;
+      if (sortedValues.length >= 4) {
+        const q1 = getQuantile(sortedValues, 0.25);
+        const q3 = getQuantile(sortedValues, 0.75);
+        const iqr = q3 - q1;
+        const lowerBound = q1 - 1.5 * iqr;
+        const upperBound = q3 + 1.5 * iqr;
+        iqrFilteredPoints = validPoints.filter(point => point.value >= lowerBound && point.value <= upperBound);
+      }
+
+      const temporallyFilteredPoints = iqrFilteredPoints.filter((point, pointIndex, points) => {
+        const neighbors: number[] = [];
+        let offset = 1;
+
+        while (neighbors.length < 3 && (pointIndex - offset >= 0 || pointIndex + offset < points.length)) {
+          if (pointIndex - offset >= 0) {
+            neighbors.push(points[pointIndex - offset].value);
+          }
+          if (neighbors.length < 3 && pointIndex + offset < points.length) {
+            neighbors.push(points[pointIndex + offset].value);
+          }
+          offset += 1;
         }
+
+        if (neighbors.length < 2) return true;
+
+        const neighborMean = neighbors.reduce((sum, value) => sum + value, 0) / neighbors.length;
+        const neighborVariance = neighbors.reduce((sum, value) => sum + Math.pow(value - neighborMean, 2), 0) / neighbors.length;
+        const neighborStd = Math.sqrt(neighborVariance);
+        const difference = Math.abs(point.value - neighborMean);
+
+        if (neighborStd === 0) {
+          return difference <= 1e-6;
+        }
+
+        return difference <= 3 * neighborStd;
+      });
+
+      for (const point of temporallyFilteredPoints) {
+        const existing: MultiIndexData = dateMap.get(point.date) || { date: point.date };
+        existing[index] = point.value;
+        dateMap.set(point.date, existing);
       }
     }
 
@@ -282,7 +336,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         if (date) {
           const existing: MultiIndexData = dateMap.get(date) || { date };
           existing.temperature_mean = point.temperature_mean;
-          existing.temperature_range = [point.temperature_min, point.temperature_max];
           existing.temperature_min = point.temperature_min;
           existing.temperature_max = point.temperature_max;
           dateMap.set(date, existing);
@@ -370,9 +423,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-800 mb-2">{label}</p>
           {payload.map((entry: any, idx: number) => {
-            if (entry.name === 'Temp. Min/Max') return null;
-            
-            const isTemp = entry.dataKey === 'temperature_mean';
+            const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             const value = isTemp 
               ? `${entry.value.toFixed(1)} °C`
               : formatTooltipValue(entry.value);
@@ -497,22 +548,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               ))}
             </div>
           )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">Couverture nuageuse max</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min={5}
-              max={50}
-              step={5}
-              value={cloudCoverage}
-              onChange={(e) => setCloudCoverage(Number(e.target.value))}
-              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-            />
-            <span className="text-sm font-medium text-gray-700 w-10 text-right">{cloudCoverage}%</span>
-          </div>
         </div>
 
         <div>
@@ -700,20 +735,27 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
               {showTemperature && (
                 <>
-                   <defs>
-                    <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                   <Area
+                   <Line
                      yAxisId="right"
                      type="monotone"
-                     dataKey="temperature_range"
-                     stroke="none"
-                     fill="#f97316"
-                     fillOpacity={0.15}
-                     name="Temp. Min/Max"
+                     dataKey="temperature_min"
+                     name="Temp. Min"
+                     stroke="#fdba74"
+                     strokeWidth={1}
+                     strokeDasharray="3 3"
+                     dot={false}
+                     connectNulls
+                   />
+                   <Line
+                     yAxisId="right"
+                     type="monotone"
+                     dataKey="temperature_max"
+                     name="Temp. Max"
+                     stroke="#ea580c"
+                     strokeWidth={1}
+                     strokeDasharray="3 3"
+                     dot={false}
+                     connectNulls
                    />
                    <Line
                      yAxisId="right"

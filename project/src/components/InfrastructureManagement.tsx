@@ -23,7 +23,7 @@ import { Button } from './ui/button';
 type Structure = ApiStructure;
 
 // Structure type keys for translation lookup
-const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well'] as const;
+const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well', 'other'] as const;
 
 // Basin shape keys for translation lookup
 const BASIN_SHAPE_KEYS = ['trapezoidal', 'rectangular', 'cubic', 'circular'] as const;
@@ -481,6 +481,11 @@ const InfrastructureManagement: React.FC = () => {
       return;
     }
 
+    if (newStructure.type === 'other' && !newStructure.structure_details?.custom_type) {
+      toast.error(t('infrastructure.messages.customTypeRequired', 'Please specify the infrastructure type'));
+      return;
+    }
+
     try {
       // Determine farm_id based on active tab and selection
       let farmId = undefined;
@@ -555,14 +560,18 @@ const InfrastructureManagement: React.FC = () => {
               <Wrench className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
             ) : structure.type === 'basin' ? (
               <Droplets className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
-            ) : (
+            ) : structure.type === 'well' ? (
               <Flask className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+            ) : (
+              <Building className="h-5 w-5 sm:h-6 sm:w-6 text-gray-500" />
             )}
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{structure.name}</h3>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-              {t(`infrastructure.types.${structure.type}`)}
+              {structure.type === 'other'
+                ? (structure.structure_details?.custom_type as string) || t('infrastructure.types.other')
+                : t(`infrastructure.types.${structure.type}`)}
             </p>
             {structure.farm && (
               <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
@@ -944,6 +953,42 @@ const InfrastructureManagement: React.FC = () => {
                   </option>
                 ))}
               </select>
+
+              {/* Custom type input when 'other' is selected */}
+              {(editingStructure?.type || newStructure.type) === 'other' && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('infrastructure.fields.customType')} *
+                  </label>
+                  <input
+                    type="text"
+                    value={((editingStructure || newStructure).structure_details?.custom_type as string) || ''}
+                    onChange={(e) => {
+                      const customType = e.target.value;
+                      if (editingStructure) {
+                        setEditingStructure({
+                          ...editingStructure,
+                          structure_details: {
+                            ...editingStructure.structure_details,
+                            custom_type: customType
+                          }
+                        });
+                      } else {
+                        setNewStructure({
+                          ...newStructure,
+                          structure_details: {
+                            ...newStructure.structure_details,
+                            custom_type: customType
+                          }
+                        });
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                    placeholder={t('infrastructure.fields.customTypePlaceholder')}
+                    required
+                  />
+                </div>
+              )}
             </div>
 
             {/* Basic Information */}

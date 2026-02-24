@@ -71,22 +71,32 @@ export class PurchaseOrdersService {
       }
 
       // Create purchase order items
-      const orderItems = items.map((item, index) => ({
-        purchase_order_id: purchaseOrder.id,
-        line_number: item.line_number || index + 1,
-        item_name: item.item_name,
-        description: item.description,
-        quantity: item.quantity,
-        unit_of_measure: item.unit_of_measure || 'unit',
-        unit_price: item.unit_price,
-        discount_percent: item.discount_percent || 0,
-        tax_rate: item.tax_rate || 0,
-        item_id: item.item_id,
-        variant_id: item.variant_id,
-        account_id: item.account_id,
-        // Calculate line totals
-        amount: this.calculateLineAmount(item),
-      }));
+      const orderItems = items.map((item, index) => {
+        const lineAmount = this.calculateLineAmount(item);
+        const discountAmount = item.discount_percent
+          ? (item.quantity * item.unit_price * item.discount_percent) / 100
+          : 0;
+        const taxAmount = item.tax_rate ? (lineAmount * item.tax_rate) / 100 : 0;
+        const lineTotal = lineAmount + taxAmount;
+
+        return {
+          purchase_order_id: purchaseOrder.id,
+          line_number: item.line_number || index + 1,
+          item_name: item.item_name,
+          description: item.description,
+          quantity: item.quantity,
+          unit_of_measure: item.unit_of_measure || 'unit',
+          unit_price: item.unit_price,
+          discount_percent: item.discount_percent || 0,
+          discount_amount: Math.round(discountAmount * 100) / 100,
+          tax_rate: item.tax_rate || 0,
+          tax_amount: Math.round(taxAmount * 100) / 100,
+          inventory_item_id: item.item_id || null,
+          account_id: item.account_id,
+          amount: Math.round(lineAmount * 100) / 100,
+          line_total: Math.round(lineTotal * 100) / 100,
+        };
+      });
 
       const { error: itemsError } = await supabaseClient
         .from('purchase_order_items')

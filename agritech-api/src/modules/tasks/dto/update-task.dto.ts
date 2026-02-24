@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsIn, IsNumber, IsDateString, IsUUID, IsArray, Min, Max } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { CreateTaskDto } from './create-task.dto';
+
+// Custom transform to convert empty strings to null
+function EmptyStringToNull() {
+  return Transform(({ value }) => (value === '' ? null : value));
+}
 
 export class UpdateTaskDto {
   @ApiPropertyOptional({ description: 'Task title' })
@@ -39,21 +45,25 @@ export class UpdateTaskDto {
 
   @ApiPropertyOptional({ description: 'Farm ID' })
   @IsOptional()
+  @EmptyStringToNull()
   @IsUUID()
   farm_id?: string;
 
   @ApiPropertyOptional({ description: 'Parcel ID' })
   @IsOptional()
+  @EmptyStringToNull()
   @IsUUID()
   parcel_id?: string;
 
   @ApiPropertyOptional({ description: 'Crop ID' })
   @IsOptional()
+  @EmptyStringToNull()
   @IsUUID()
   crop_id?: string;
 
   @ApiPropertyOptional({ description: 'Worker ID to assign the task to' })
   @IsOptional()
+  @EmptyStringToNull()
   @IsUUID()
   assigned_to?: string;
 
@@ -116,14 +126,15 @@ export class UpdateTaskDto {
 
   @ApiPropertyOptional({
     description: 'Payment type',
-    enum: ['daily', 'per_unit', 'monthly', 'metayage']
+    enum: ['daily', 'per_unit', 'monthly', 'metayage', 'none']
   })
   @IsOptional()
-  @IsIn(['daily', 'per_unit', 'monthly', 'metayage'])
+  @IsIn(['daily', 'per_unit', 'monthly', 'metayage', 'none'])
   payment_type?: string;
 
   @ApiPropertyOptional({ description: 'Work unit ID for piece-work' })
   @IsOptional()
+  @EmptyStringToNull()
   @IsUUID()
   work_unit_id?: string;
 

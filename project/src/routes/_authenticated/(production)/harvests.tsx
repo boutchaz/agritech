@@ -136,7 +136,7 @@ function HarvestsPage() {
       <div className="hidden md:block">
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: Package, label: t('harvests.title'), isActive: true }
           ]}
           title={t('harvests.title')}

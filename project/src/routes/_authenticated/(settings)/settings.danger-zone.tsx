@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OrganizationRequiredError } from '@/lib/errors';
 import { toast } from 'sonner';
@@ -53,10 +52,10 @@ const STAT_LABELS: Record<string, { label: string; icon: React.ElementType }> = 
 
 function DangerZonePage() {
   const { currentOrganization, userRole } = useAuth();
-  const _t = useTranslation();
   const queryClient = useQueryClient();
   const [confirmText, setConfirmText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteDemoConfirm, setShowDeleteDemoConfirm] = useState(false);
   const [showSeedConfirm, setShowSeedConfirm] = useState(false);
   const [showImportConfirm, setShowImportConfirm] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -102,6 +101,22 @@ function DangerZonePage() {
       refetchStats();
       setShowDeleteConfirm(false);
       setConfirmText('');
+    },
+  });
+
+  const clearDemoOnlyMutation = useMutation({
+    mutationFn: () => {
+      if (!organizationId) throw new OrganizationRequiredError();
+      return demoDataApi.clearDemoDataOnly(organizationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      refetchStats();
+      setShowDeleteDemoConfirm(false);
+      toast.success('Les données de démonstration ont été supprimées.');
+    },
+    onError: () => {
+      toast.error('Une erreur s\'est produite lors de la suppression des données de démo.');
     },
   });
 
@@ -453,6 +468,74 @@ function DangerZonePage() {
                 <p className="text-green-700 dark:text-green-300 flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
                   Données de démonstration générées avec succès !
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-lg p-4 sm:p-6 mb-6">
+        <h2 className="text-lg font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+          <Trash2 className="h-5 w-5" />
+          Supprimer les Données de Démo Uniquement
+        </h2>
+        <p className="text-amber-700 dark:text-amber-400 text-sm mb-4">
+          Supprime uniquement les données générées par la démonstration, tout en conservant vos données personnelles.
+        </p>
+
+        {!showDeleteDemoConfirm ? (
+          <button
+            onClick={() => setShowDeleteDemoConfirm(true)}
+            disabled={clearDemoOnlyMutation.isPending}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {clearDemoOnlyMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Supprimer les Données de Démo
+          </button>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-amber-800 dark:text-amber-300">
+              Confirmez la suppression des données de démonstration uniquement.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => clearDemoOnlyMutation.mutate()}
+                disabled={clearDemoOnlyMutation.isPending}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {clearDemoOnlyMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                Confirmer
+              </button>
+              <button
+                onClick={() => setShowDeleteDemoConfirm(false)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              >
+                <XCircle className="h-4 w-4" />
+                Annuler
+              </button>
+            </div>
+            {clearDemoOnlyMutation.isSuccess && (
+              <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <p className="text-green-700 dark:text-green-300 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Données de démonstration supprimées. Total supprimé: {clearDemoOnlyMutation.data?.totalDeleted} enregistrements.
+                </p>
+              </div>
+            )}
+            {clearDemoOnlyMutation.isError && (
+              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/40 rounded-lg">
+                <p className="text-red-700 dark:text-red-300 flex items-center gap-2">
+                  <XCircle className="h-4 w-4" />
+                  Une erreur s'est produite lors de la suppression des données de démonstration.
                 </p>
               </div>
             )}

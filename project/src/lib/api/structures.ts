@@ -6,7 +6,7 @@ export interface Structure {
   organization_id: string;
   farm_id?: string;
   name: string;
-  type: 'stable' | 'technical_room' | 'basin' | 'well';
+  type: 'stable' | 'technical_room' | 'basin' | 'well' | 'other';
   location?: {
     lat: number;
     lng: number;
@@ -27,7 +27,7 @@ export interface Structure {
 
 export interface CreateStructureInput {
   name: string;
-  type: 'stable' | 'technical_room' | 'basin' | 'well';
+  type: 'stable' | 'technical_room' | 'basin' | 'well' | 'other';
   farm_id?: string;
   location?: {
     lat: number;
@@ -43,7 +43,7 @@ export interface CreateStructureInput {
 
 export interface UpdateStructureInput {
   name?: string;
-  type?: 'stable' | 'technical_room' | 'basin' | 'well';
+  type?: 'stable' | 'technical_room' | 'basin' | 'well' | 'other';
   farm_id?: string;
   location?: {
     lat: number;

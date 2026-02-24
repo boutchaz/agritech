@@ -70,7 +70,7 @@ function AppContent() {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: Truck, label: t('reportsModule.agedPayables.title', 'Aged Payables'), isActive: true }
           ]}
           title={t('reportsModule.agedPayables.title', 'Aged Payables')}

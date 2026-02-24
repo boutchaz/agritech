@@ -112,7 +112,7 @@ function MarketplacePage() {
             <div className="hidden md:block">
               <ModernPageHeader
                 breadcrumbs={[
-                  { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                  { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
                   { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), path: '/marketplace' },
                   { label: t('marketplace.quoteRequests', 'Quote Requests'), isActive: true }
                 ]}
@@ -139,7 +139,7 @@ function MarketplacePage() {
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
                 { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), isActive: true }
               ]}
               title={t('marketplace.title', 'Marketplace')}

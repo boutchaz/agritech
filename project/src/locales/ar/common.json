@@ -81,6 +81,17 @@
       "changeLanguage": "تغيير اللغة"
     },
     "actionsColumn": "إجراءات",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "loading": "جاري التحميل...",
+    "saving": "جاري الحفظ...",
+    "creating": "جاري الإنشاء...",
+    "deleting": "جاري الحذف...",
+    "create": "إنشاء",
+    "selectOption": "اختر خياراً",
     "statusColumn": "الحالة",
     "placeholders": {
       "searchLocation": "البحث عن مكان في المغرب...",
@@ -2716,7 +2727,8 @@
       "stable": "إسطبل",
       "technical_room": "غرفة تقنية",
       "basin": "حوض",
-      "well": "بئر"
+      "well": "بئر",
+      "other": "أخرى"
     },
     "shapes": {
       "trapezoidal": "شبه منحرف",
@@ -2798,6 +2810,8 @@
       "condition": "الحالة",
       "usage": "الاستخدام",
       "usagePlaceholder": "مثال: تخزين المعدات، تربية الماشية، إلخ.",
+      "customType": "حدد النوع",
+      "customTypePlaceholder": "مثال: دفيئة، مخزن، صومعة، إلخ.",
       "width": "العرض",
       "length": "الطول",
       "height": "الارتفاع",
@@ -3641,6 +3655,7 @@
         "alreadyHasAccess": "لديك هذا العامل وصول للمنصة بالفعل (الدور: عامل مزرعة)."
       },
       "perUnitRateInfo": "السعر بالوحدة يُستخدم للعمل بالقطعة. سيتم تطبيقه عند إتمام المهام ذات الدفع بالوحدة.",
+      "perUnitSummary": "الدفع بالوحدة هو {{rate}} {{currency}}",
       "metayageInfo": {
         "title": "معلومات عن المشاركة",
         "khammass": {

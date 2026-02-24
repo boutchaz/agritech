@@ -35,7 +35,7 @@ const ChatPage: React.FC = () => {
     <>
       <ModernPageHeader
         breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
           ...(currentFarm ? [{ icon: Building2, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: Bot, label: t('chat.title', 'AI Assistant'), isActive: true },
         ]}

@@ -65,7 +65,7 @@ function ReceptionBatchesPage() {
       <div className="hidden md:block">
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
           ]}
           title={t('receptionBatches.title')}

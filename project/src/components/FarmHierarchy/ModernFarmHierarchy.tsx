@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -98,6 +98,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     manager_phone?: string;
   } | null>(null);
 
+  const addFormRef = useRef<HTMLDivElement>(null);
   // Debug: Log organization ID on mount and when it changes
   if (!organizationId) {
     console.error('❌ ModernFarmHierarchy: No organizationId provided!');
@@ -111,6 +112,12 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   } = useForm<FarmFormValues>({
     resolver: zodResolver(getFarmSchema(t)),
   });
+
+  useEffect(() => {
+    if (showAddForm && addFormRef.current) {
+      addFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showAddForm]);
 
   // Fetch organization using farmsService (apiClient)
   const { data: organization } = useQuery({
@@ -595,7 +602,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
       {/* Add Farm Form Modal */}
       {showAddForm && (
-        <div data-testid="create-farm-form" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div ref={addFormRef} data-testid="create-farm-form" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {t('farmHierarchy.farm.createNew')}

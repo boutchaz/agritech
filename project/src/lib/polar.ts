@@ -55,6 +55,8 @@ export const CATEGORY_LABELS: Record<string, string> = {
   purchasing: 'Purchasing',
   accounting: 'Accounting & Finance',
   general: 'General',
+  agriculture: 'Agriculture',
+  elevage: 'Élevage',
 } as const;
 
 export interface PlanDetails {

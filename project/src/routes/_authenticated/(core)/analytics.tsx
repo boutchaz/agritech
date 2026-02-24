@@ -25,7 +25,7 @@ const AppContent: React.FC = () => {
     <>
       <ModernPageHeader
         breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
           { icon: Beaker, label: t('analyses.title'), isActive: true }
         ]}
         title={t('analyses.title')}

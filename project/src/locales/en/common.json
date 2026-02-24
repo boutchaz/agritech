@@ -81,6 +81,17 @@
       "changeLanguage": "Change language"
     },
     "actionsColumn": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "creating": "Creating...",
+    "deleting": "Deleting...",
+    "create": "Create",
+    "selectOption": "Select an option",
     "statusColumn": "Status",
     "placeholders": {
       "searchLocation": "Search for a place in Morocco...",
@@ -2830,7 +2841,8 @@
       "stable": "Stable",
       "technical_room": "Technical Room",
       "basin": "Basin",
-      "well": "Well"
+      "well": "Well",
+      "other": "Other"
     },
     "shapes": {
       "trapezoidal": "Trapezoidal",
@@ -2912,6 +2924,8 @@
       "condition": "Condition",
       "usage": "Usage",
       "usagePlaceholder": "Ex: Equipment storage, Livestock, etc.",
+      "customType": "Specify type",
+      "customTypePlaceholder": "Ex: Greenhouse, Shed, Silo, etc.",
       "width": "Width",
       "length": "Length",
       "height": "Height",
@@ -3552,6 +3566,7 @@
         "alreadyHasAccess": "This worker already has platform access"
       },
       "perUnitRateInfo": "The per-unit rate is used for piece work. It will be applied when completing tasks with per-unit payment.",
+      "perUnitSummary": "The per-unit payment is {{rate}} {{currency}}",
       "metayageInfo": {
         "title": "Metayage Types",
         "khammass": {

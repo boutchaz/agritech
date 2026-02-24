@@ -481,7 +481,28 @@ export class TasksService {
   private async createWorkRecordFromTask(task: any, existingTask: any) {
     const client = this.databaseService.getAdminClient();
     const worker = task.worker;
-
+    // Resolve farm_id: task may have it directly, or get from parcel/worker
+    let farmId = task.farm_id;
+    if (!farmId && task.parcel_id) {
+      const { data: parcel } = await client
+        .from("parcels")
+        .select("farm_id")
+        .eq("id", task.parcel_id)
+        .maybeSingle();
+      farmId = parcel?.farm_id || null;
+    }
+    if (!farmId && task.assigned_to) {
+      const { data: workerData } = await client
+        .from("workers")
+        .select("farm_id")
+        .eq("id", task.assigned_to)
+        .maybeSingle();
+      farmId = workerData?.farm_id || null;
+    }
+    if (!farmId) {
+      this.logger.warn(`Cannot create work record for task ${task.id}: no farm_id found`);
+      return;
+    }
     // Calculate hours worked from task duration
     const hoursWorked =
       task.start_date && task.end_date
@@ -489,7 +510,6 @@ export class TasksService {
             new Date(task.start_date).getTime()) /
           (1000 * 60 * 60)
         : 0;
-
     // Calculate payment based on worker payment type
     let totalPayment = 0;
     if (
@@ -501,19 +521,16 @@ export class TasksService {
     } else if (worker.payment_type === "daily" && worker.daily_rate) {
       totalPayment = worker.daily_rate;
     }
-
     // Determine work date
     const workDate = task.due_date
       ? new Date(task.due_date)
       : task.end_date
         ? new Date(task.end_date)
         : new Date();
-
-    // Create work record
     const { error: workRecordError } = await client
       .from("work_records")
       .insert({
-        farm_id: task.farm_id,
+        farm_id: farmId,
         organization_id: task.organization_id,
         worker_id: task.assigned_to,
         worker_type: worker.payment_type,
@@ -728,73 +745,95 @@ export class TasksService {
     // This connects the task system with the worker payment system
     if (existingTask.assigned_to) {
       try {
-        // Calculate hours worked from scheduled time or use default
-        let hoursWorked = 8; // Default to 8 hours
-        if (existingTask.scheduled_start && existingTask.scheduled_end) {
-          const startTime = new Date(existingTask.scheduled_start);
-          const endTime = new Date(existingTask.scheduled_end);
-          const diffMs = endTime.getTime() - startTime.getTime();
-          const calculatedHours = diffMs / (1000 * 60 * 60);
-          if (calculatedHours > 0 && calculatedHours < 24) {
-            hoursWorked = Math.round(calculatedHours * 100) / 100; // Round to 2 decimals
-          }
+        // Resolve farm_id: task may have it directly, or we get it from the parcel
+        let farmId = existingTask.farm_id;
+        if (!farmId && existingTask.parcel_id) {
+          const { data: parcel } = await client
+            .from("parcels")
+            .select("farm_id")
+            .eq("id", existingTask.parcel_id)
+            .maybeSingle();
+          farmId = parcel?.farm_id || null;
+        }
+        // If still no farm_id, try to get it from the worker
+        if (!farmId) {
+          const { data: workerData } = await client
+            .from("workers")
+            .select("farm_id")
+            .eq("id", existingTask.assigned_to)
+            .maybeSingle();
+          farmId = workerData?.farm_id || null;
         }
 
-        // Handle per-unit payment tasks
-        const isPerUnitTask = existingTask.payment_type === "per_unit";
-        const unitsCompleted =
-          completeTaskDto.units_completed ??
-          (isPerUnitTask ? existingTask.units_required : null);
-        const ratePerUnit =
-          completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
-        const workUnitId =
-          completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
-
-        // Calculate total payment based on payment type
-        let totalPayment: number | null = null;
-        if (isPerUnitTask && unitsCompleted && ratePerUnit) {
-          totalPayment = unitsCompleted * ratePerUnit;
-        }
-
-        const { data: workRecord, error: workRecordError } = await client
-          .from("work_records")
-          .insert({
-            worker_id: existingTask.assigned_to,
-            farm_id: existingTask.farm_id,
-            organization_id: organizationId,
-            worker_type: isPerUnitTask ? "per_unit" : "daily",
-            work_date: now.split("T")[0],
-            hours_worked: hoursWorked,
-            task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
-            payment_status: totalPayment ? "pending" : "not_applicable",
-            total_payment: totalPayment,
-            task_id: taskId,
-            units_completed: unitsCompleted,
-            rate_per_unit: ratePerUnit,
-            work_unit_id: workUnitId,
-            notes: JSON.stringify({
-              task_id: taskId,
-              task_type: existingTask.task_type,
-              payment_type: existingTask.payment_type,
-              parcel_id: existingTask.parcel_id,
-              completed_at: now,
-            }),
-          })
-          .select()
-          .single();
-
-        if (workRecordError) {
+        if (!farmId) {
           this.logger.warn(
-            `Failed to create work record for task ${taskId}: ${workRecordError.message}`,
+            `Cannot create work record for task ${taskId}: no farm_id found on task, parcel, or worker`,
           );
         } else {
-          this.logger.log(
-            `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}` +
-              (isPerUnitTask
-                ? `, units: ${unitsCompleted}, payment: ${totalPayment}`
-                : ""),
-          );
-        }
+          // Calculate hours worked from scheduled time or use default
+          let hoursWorked = 8; // Default to 8 hours
+          if (existingTask.scheduled_start && existingTask.scheduled_end) {
+            const startTime = new Date(existingTask.scheduled_start);
+            const endTime = new Date(existingTask.scheduled_end);
+            const diffMs = endTime.getTime() - startTime.getTime();
+            const calculatedHours = diffMs / (1000 * 60 * 60);
+            if (calculatedHours > 0 && calculatedHours < 24) {
+              hoursWorked = Math.round(calculatedHours * 100) / 100;
+            }
+          }
+        // Handle per-unit payment tasks
+          const isPerUnitTask = existingTask.payment_type === "per_unit";
+          const unitsCompleted =
+            completeTaskDto.units_completed ??
+            (isPerUnitTask ? existingTask.units_required : null);
+          const ratePerUnit =
+            completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
+          const workUnitId =
+          completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
+          let totalPayment: number | null = null;
+          if (isPerUnitTask && unitsCompleted && ratePerUnit) {
+            totalPayment = unitsCompleted * ratePerUnit;
+          }
+
+          const { data: workRecord, error: workRecordError } = await client
+            .from("work_records")
+            .insert({
+              worker_id: existingTask.assigned_to,
+              farm_id: farmId,
+              organization_id: organizationId,
+              worker_type: isPerUnitTask ? "per_unit" : "daily",
+              work_date: now.split("T")[0],
+              hours_worked: hoursWorked,
+              task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
+              payment_status: totalPayment ? "pending" : "not_applicable",
+              total_payment: totalPayment,
+              task_id: taskId,
+              units_completed: unitsCompleted,
+              rate_per_unit: ratePerUnit,
+              work_unit_id: workUnitId,
+              notes: JSON.stringify({
+                task_id: taskId,
+                task_type: existingTask.task_type,
+                payment_type: existingTask.payment_type,
+                parcel_id: existingTask.parcel_id,
+                completed_at: now,
+              }),
+            })
+            .select()
+          .single();
+          if (workRecordError) {
+            this.logger.warn(
+              `Failed to create work record for task ${taskId}: ${workRecordError.message}`,
+            );
+          } else {
+            this.logger.log(
+              `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}` +
+                (isPerUnitTask
+                  ? `, units: ${unitsCompleted}, payment: ${totalPayment}`
+                  : ""),
+            );
+          }
+        } // end else (farmId exists)
       } catch (workRecordError) {
         // Don't fail the task completion if work record creation fails
         this.logger.error(
@@ -803,7 +842,6 @@ export class TasksService {
         );
       }
     }
-
     // Create journal entry if actual_cost is provided and > 0
     const actualCost = completeTaskDto.actual_cost ?? 0;
     if (actualCost > 0 && task.task_type) {

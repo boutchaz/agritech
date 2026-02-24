@@ -14,6 +14,7 @@ import {
   AlertCircle,
   PackageCheck,
   Hash,
+  Banknote,
 } from 'lucide-react';
 import { useUpdateTask } from '../../hooks/useTasks';
 import { tasksApi } from '../../lib/api/tasks';
@@ -63,6 +64,15 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [completionType, setCompletionType] = useState<'complete' | 'partial'>('complete');
   const [lotNumber, setLotNumber] = useState<string>('');
+
+  // Per-unit completion form
+  const isPerUnitTask = task.payment_type === 'per_unit';
+  const [showPerUnitForm, setShowPerUnitForm] = useState(false);
+  const [perUnitData, setPerUnitData] = useState({
+    units_completed: task.units_required || 0,
+    rate_per_unit: task.rate_per_unit || 0,
+    notes: '',
+  });
 
   // Generate lot number when harvest form opens
   useEffect(() => {
@@ -195,11 +205,44 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       return;
     }
 
+    // Show per-unit form for per-unit payment tasks
+    if (isPerUnitTask) {
+      setShowPerUnitForm(true);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
       await tasksApi.complete(organizationId, task.id, {});
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['work-records'] });
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompletePerUnit = async () => {
+    if (perUnitData.units_completed <= 0) {
+      setError('Veuillez entrer le nombre d\'unités complétées');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const totalCost = perUnitData.units_completed * perUnitData.rate_per_unit;
+      await tasksApi.complete(organizationId, task.id, {
+        units_completed: perUnitData.units_completed,
+        rate_per_unit: perUnitData.rate_per_unit,
+        actual_cost: totalCost,
+        notes: perUnitData.notes || undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la complétion de la tâche');
@@ -459,6 +502,76 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </div>
           )}
 
+
+          {/* Per-Unit Completion Form */}
+          {showPerUnitForm && (
+            <div className="border-t dark:border-gray-700 pt-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Banknote className="w-5 h-5 text-green-600" />
+                Paiement à l'unité
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="units_completed">Unités complétées *</Label>
+                  <Input
+                    id="units_completed"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={perUnitData.units_completed || ''}
+                    onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ex: 100"
+                  />
+                  {task.units_required && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Unités estimées: {task.units_required}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
+                  <Input
+                    id="rate_per_unit_completion"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={perUnitData.rate_per_unit || ''}
+                    onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ex: 5.00"
+                  />
+                </div>
+              </div>
+
+              {perUnitData.units_completed > 0 && perUnitData.rate_per_unit > 0 && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Paiement total
+                    </span>
+                    <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                      {(perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
+                    </span>
+                  </div>
+                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                    {perUnitData.units_completed} unités × {perUnitData.rate_per_unit} MAD/unité
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="per_unit_notes">Notes</Label>
+                <Textarea
+                  id="per_unit_notes"
+                  value={perUnitData.notes}
+                  onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
+                  rows={2}
+                  placeholder="Notes sur le travail effectué..."
+                />
+              </div>
+            </div>
+          )}
           {/* Harvest Completion Form */}
           {showHarvestForm && (
             <div className="border-t dark:border-gray-700 pt-6 space-y-4">
@@ -696,7 +809,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </Button>
             )}
 
-            {canComplete && !showHarvestForm && (
+            {canComplete && !showHarvestForm && !showPerUnitForm && (
               <Button
                 onClick={handleCompleteTask}
                 disabled={isLoading}
@@ -716,6 +829,31 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </Button>
             )}
 
+
+            {showPerUnitForm && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPerUnitForm(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={handleCompletePerUnit}
+                  disabled={isLoading || perUnitData.units_completed <= 0}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isLoading ? (
+                    'Enregistrement...'
+                  ) : (
+                    <>
+                      <Banknote className="w-4 h-4 mr-2" />
+                      Terminer et payer
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
             {showHarvestForm && (
               <>
                 <Button

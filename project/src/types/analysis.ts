@@ -21,23 +21,54 @@ export interface SoilAnalysisData {
   texture?: 'sand' | 'loamy_sand' | 'sandy_loam' | 'sandy_clay_loam' | 'loam' | 'silt_loam' | 'silt' | 'clay_loam' | 'silty_clay_loam' | 'sandy_clay' | 'silty_clay' | 'clay';
   moisture_percentage?: number;
   bulk_density?: number; // g/cm³
+  granulometry_sand_pct?: number;
+  granulometry_silt_pct?: number;
+  granulometry_clay_pct?: number;
+  granulometry_fine_sand_pct?: number;
+  granulometry_coarse_sand_pct?: number;
 
   // Chemical properties
   organic_matter_percentage?: number;
+  total_limestone_pct?: number;
+  active_limestone_pct?: number;
   nitrogen_ppm?: number;
+  ammonium_nitrogen_ppm?: number;
+  nitrate_nitrogen_ppm?: number;
   phosphorus_ppm?: number;
+  phosphorus_olsen_ppm?: number;
   potassium_ppm?: number;
   calcium_ppm?: number;
   magnesium_ppm?: number;
   sulfur_ppm?: number;
+  sodium_ppm?: number;
+  chloride_ppm?: number;
   iron_ppm?: number;
   zinc_ppm?: number;
   copper_ppm?: number;
   manganese_ppm?: number;
   boron_ppm?: number;
+  silicon_ppm?: number;
+  selenium_ppm?: number;
+  gold_ppm?: number;
+  lithium_ppm?: number;
+  aluminum_ppm?: number;
+  antimony_ppm?: number;
+  bismuth_ppm?: number;
+  cadmium_ppm?: number;
+  lead_ppm?: number;
+  nickel_ppm?: number;
+  chromium_ppm?: number;
+  arsenic_ppm?: number;
+  mercury_ppm?: number;
+
+  cao_meq?: number;
+  mgo_meq?: number;
+  k2o_meq?: number;
+  na2o_meq?: number;
 
   // Soil health indicators
   salinity_level?: number; // EC dS/m
+  electrical_conductivity?: number;
   cec_meq_per_100g?: number; // Cation Exchange Capacity
   base_saturation_percentage?: number;
 
@@ -65,6 +96,8 @@ export interface PlantAnalysisData {
   calcium_percentage?: number;
   magnesium_percentage?: number;
   sulfur_percentage?: number;
+  sodium_percentage?: number;
+  chlorine_percentage?: number;
 
   // Micro nutrients (ppm)
   iron_ppm?: number;
@@ -74,6 +107,23 @@ export interface PlantAnalysisData {
   boron_ppm?: number;
   molybdenum_ppm?: number;
   chlorine_ppm?: number;
+  cadmium_ppm?: number;
+  lead_ppm?: number;
+  arsenic_ppm?: number;
+  cobalt_ppm?: number;
+  silver_ppm?: number;
+  barium_ppm?: number;
+  vanadium_ppm?: number;
+  nickel_ppm?: number;
+  chromium_ppm?: number;
+  mercury_ppm?: number;
+  silicon_ppm?: number;
+  selenium_ppm?: number;
+  gold_ppm?: number;
+  lithium_ppm?: number;
+  aluminum_ppm?: number;
+  antimony_ppm?: number;
+  bismuth_ppm?: number;
 
   // Health indicators
   dry_matter_percentage?: number;
@@ -106,7 +156,9 @@ export interface WaterAnalysisData {
   magnesium_ppm?: number;
   sodium_ppm?: number;
   potassium_ppm?: number;
+  ammonium_ppm?: number;
   bicarbonate_ppm?: number;
+  h2po4_ppm?: number;
   carbonate_ppm?: number;
   chloride_ppm?: number;
   sulfate_ppm?: number;
@@ -119,6 +171,22 @@ export interface WaterAnalysisData {
   zinc_ppm?: number;
   copper_ppm?: number;
   boron_ppm?: number;
+  cobalt_ppm?: number;
+  silver_ppm?: number;
+  barium_ppm?: number;
+  vanadium_ppm?: number;
+  nickel_ppm?: number;
+  chromium_ppm?: number;
+  molybdenum_ppm?: number;
+  silicon_ppm?: number;
+  selenium_ppm?: number;
+  gold_ppm?: number;
+  lithium_ppm?: number;
+  aluminum_ppm?: number;
+  antimony_ppm?: number;
+  bismuth_ppm?: number;
+  cadmium_ppm?: number;
+  mercury_ppm?: number;
 
   // Heavy metals (ppb)
   lead_ppb?: number;

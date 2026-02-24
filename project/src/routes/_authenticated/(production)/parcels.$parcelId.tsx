@@ -57,7 +57,7 @@ const ParcelLayout = () => {
     <>
       <ModernPageHeader
         breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name || '', path: '/settings/organization' },
+          { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
           { icon: TreePine, label: farm?.name || t('parcels.detail.breadcrumbs.farm'), path: '/farms' },
           { icon: MapPin, label: t('parcels.detail.breadcrumbs.parcels'), path: '/parcels' },
           { icon: MapPin, label: parcel.name, isActive: true }

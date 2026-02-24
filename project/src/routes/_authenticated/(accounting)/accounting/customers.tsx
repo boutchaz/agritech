@@ -228,7 +228,7 @@ function CustomersPage() {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: Users, label: t('nav.customers', 'Customers'), isActive: true }
           ]}
           title={t('accountingModule.customers.title', 'Customers')}

@@ -103,7 +103,7 @@ const AppContent: React.FC = () => {
         header={
           <ModernPageHeader
             breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
               { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
             ]}
             title={t('billingModule.salesOrders.title', 'Sales Orders')}
@@ -138,7 +138,7 @@ const AppContent: React.FC = () => {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
           ]}
           title={t('billingModule.salesOrders.title', 'Sales Orders')}

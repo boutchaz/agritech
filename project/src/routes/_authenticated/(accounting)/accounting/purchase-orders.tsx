@@ -174,7 +174,7 @@ const AppContent: React.FC = () => {
         header={
           <ModernPageHeader
             breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
               { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
             ]}
             title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
@@ -215,7 +215,7 @@ const AppContent: React.FC = () => {
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
                 { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
               ]}
               title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}

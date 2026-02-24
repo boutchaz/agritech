@@ -69,6 +69,9 @@ const getParcelSchema = (t: (key: string) => string) => z.object({
   rootstock: z.string().optional(),
   soil_type: z.string().optional(),
   irrigation_type: z.string().optional(),
+  irrigation_frequency: z.string().optional(),
+  water_quantity_per_session: z.number().optional(),
+  water_quantity_unit: z.string().optional(),
 });
 
 type ParcelFormValues = {
@@ -88,6 +91,9 @@ type ParcelFormValues = {
   rootstock?: string;
   soil_type?: string;
   irrigation_type?: string;
+  irrigation_frequency?: string;
+  water_quantity_per_session?: number;
+  water_quantity_unit?: string;
 };
 
 const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
@@ -180,6 +186,9 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         rootstock: formData.rootstock,
         soil_type: formData.soil_type,
         irrigation_type: formData.irrigation_type,
+        irrigation_frequency: formData.irrigation_frequency,
+        water_quantity_per_session: formData.water_quantity_per_session,
+        water_quantity_unit: formData.water_quantity_unit,
       };
 
       if (editingParcel) {
@@ -256,6 +265,9 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     setValue('rootstock', parcel.rootstock || '');
     setValue('soil_type', parcel.soil_type || '');
     setValue('irrigation_type', parcel.irrigation_type || '');
+    setValue('irrigation_frequency', (parcel as any).irrigation_frequency || '');
+    setValue('water_quantity_per_session', (parcel as any).water_quantity_per_session);
+    setValue('water_quantity_unit', (parcel as any).water_quantity_unit || 'm3');
     setShowForm(true);
   };
 
@@ -537,6 +549,47 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                               <SelectItem value="rainfed">{t('farmHierarchy.parcel.irrigation.rainfed')}</SelectItem>
                             </SelectContent>
                           </Select>
+                        </FormField>
+
+                        <FormField label="Fréquence d'irrigation" htmlFor="irrigation_frequency">
+                          <Select value={watch('irrigation_frequency') || undefined} onValueChange={(value) => setValue('irrigation_frequency', value)}>
+                            <SelectTrigger id="irrigation_frequency">
+                              <SelectValue placeholder="Sélectionner la fréquence" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1x/week">1 fois / semaine</SelectItem>
+                              <SelectItem value="2x/week">2 fois / semaine</SelectItem>
+                              <SelectItem value="3x/week">3 fois / semaine</SelectItem>
+                              <SelectItem value="daily">Quotidien</SelectItem>
+                              <SelectItem value="1x/2weeks">1 fois / 2 semaines</SelectItem>
+                              <SelectItem value="1x/month">1 fois / mois</SelectItem>
+                              <SelectItem value="2x/month">2 fois / mois</SelectItem>
+                              <SelectItem value="seasonal">Saisonnier</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormField>
+
+                        <FormField label="Quantité d'eau par session" htmlFor="water_quantity_per_session">
+                          <div className="flex gap-2">
+                            <Input
+                              id="water_quantity_per_session"
+                              type="number"
+                              step="0.01"
+                              {...register('water_quantity_per_session', { valueAsNumber: true })}
+                              placeholder="0"
+                              className="flex-1"
+                            />
+                            <Select value={watch('water_quantity_unit') || 'm3'} onValueChange={(value) => setValue('water_quantity_unit', value)}>
+                              <SelectTrigger className="w-24">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="m3">m³</SelectItem>
+                                <SelectItem value="liters">L</SelectItem>
+                                <SelectItem value="mm">mm</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </FormField>
                       </div>
                     </div>

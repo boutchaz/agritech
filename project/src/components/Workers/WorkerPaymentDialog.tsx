@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Banknote, Calculator, Loader2, AlertCircle } from "lucide-react";
+import { Banknote, Calculator, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
   useCalculatePayment,
   useCreatePaymentRecord,
 } from "../../hooks/usePayments";
+import { useAccounts } from "../../hooks/useAccounts";
 import type { Worker } from "../../types/workers";
 import type {
   PaymentType,
@@ -127,6 +128,8 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
 
   const calculatePayment = useCalculatePayment();
   const createPayment = useCreatePaymentRecord();
+  const { data: accounts = [] } = useAccounts();
+  const hasChartOfAccounts = accounts.length > 0;
 
   useEffect(() => {
     if (open) {
@@ -278,6 +281,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
             </Alert>
           )}
 
+
+          {!hasChartOfAccounts && (
+            <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700 dark:text-amber-400">
+                {t("dialogs.workerPayment.noChartOfAccounts", "Aucun plan comptable n'est configuré. Le paiement sera créé mais aucune écriture comptable ne sera générée. Veuillez configurer le plan comptable dans Comptabilité > Plan comptable.")}
+              </AlertDescription>
+            </Alert>
+          )}
           <Card className="bg-gray-50 dark:bg-gray-900/50 border-0">
             <CardContent className="p-4 space-y-2">
               <div className="flex justify-between text-sm">
@@ -395,6 +407,19 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 </AlertDescription>
               </Alert>
 
+
+              {worker.worker_type === 'fixed_salary' && worker.monthly_salary && (paymentType === 'bonus' || paymentType === 'overtime') && (
+                <Card className="bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Salaire mensuel de référence :</span>
+                      <span className="font-medium">{formatCurrency(worker.monthly_salary)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Ce paiement est supplémentaire au salaire mensuel.</p>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="custom_amount">
                   {t("dialogs.workerPayment.amount")} *
@@ -411,6 +436,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                   placeholder="0.00"
                 />
               </div>
+
+              {worker.worker_type === 'fixed_salary' && worker.monthly_salary && customAmount >= worker.monthly_salary && (paymentType === 'bonus' || paymentType === 'overtime') && (
+                <Alert variant="destructive" className="bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    Attention : le montant saisi ({formatCurrency(customAmount)}) est supérieur ou égal au salaire mensuel ({formatCurrency(worker.monthly_salary)}). Vérifiez que ce montant est correct.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="custom_description">

@@ -113,7 +113,7 @@ const AppContent: React.FC = () => {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: BookOpen, label: t('accountingModule.dashboard.title', 'Accounting Dashboard'), isActive: true }
           ]}
           title={t('accountingModule.dashboard.title', 'Accounting Dashboard')}

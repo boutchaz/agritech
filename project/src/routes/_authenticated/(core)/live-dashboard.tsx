@@ -60,7 +60,7 @@ const LiveDashboardPage: React.FC = () => {
     <>
       <ModernPageHeader
         breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
           ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: Activity, label: t('liveDashboard.title'), isActive: true },
         ]}

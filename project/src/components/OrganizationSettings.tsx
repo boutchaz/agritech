@@ -108,19 +108,22 @@ const OrganizationSettings: React.FC = () => {
     setSuccess(false);
 
     try {
+      // Convert empty strings to undefined for optional validated fields
+      const cleanString = (val: string | undefined | null): string | undefined =>
+        val && val.trim() !== '' ? val.trim() : undefined;
       // Send all fields to the API
       const updatedOrg = await organizationsApi.update(currentOrganization.id, {
         name: orgData.name,
-        description: orgData.description,
-        email: orgData.email,
-        phone: orgData.phone,
-        address: orgData.address,
-        city: orgData.city,
-        state: orgData.state,
-        postal_code: orgData.postal_code,
-        country: orgData.country,
-        contact_person: orgData.contact_person,
-        website: orgData.website,
+        description: cleanString(orgData.description),
+        email: cleanString(orgData.email),
+        phone: cleanString(orgData.phone),
+        address: cleanString(orgData.address),
+        city: cleanString(orgData.city),
+        state: cleanString(orgData.state),
+        postal_code: cleanString(orgData.postal_code),
+        country: cleanString(orgData.country),
+        contact_person: cleanString(orgData.contact_person),
+        website: cleanString(orgData.website),
         map_provider: orgData.map_provider,
       });
 

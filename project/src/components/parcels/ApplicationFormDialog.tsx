@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 import { supabase } from '@/lib/supabase';
+import { tasksApi } from '@/lib/api/tasks';
 import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -315,6 +316,26 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
     enabled: open && !!currentOrganization?.id,
   });
 
+
+  // Fetch tasks for linking applications to tasks
+  const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['tasks', currentOrganization?.id, farmId],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return [];
+      try {
+        const filters: any = {};
+        if (farmId) filters.farm_id = farmId;
+        const result = await tasksApi.getAll(currentOrganization.id, filters);
+        return Array.isArray(result) ? result : [];
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        return [];
+      }
+    },
+    enabled: open && !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Get selected product for validation
   const selectedProduct = products.find((p: any) => p.id === selectedProductId);
   const availableStock = selectedProduct?.quantity || 0;
@@ -487,12 +508,34 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
           {/* Task - Optional */}
           <div className="space-y-2">
             <Label htmlFor="task_id">{t('parcels.index.task')} <span className="text-xs text-gray-500 dark:text-gray-400">({t('parcels.index.adhoc')})</span></Label>
-            <Input
-              id="task_id"
-              type="text"
-              placeholder="12345678-1234-1234-1234-123456789012"
-              {...form.register('task_id')}
-            />
+            {isLoadingTasks ? (
+              <p className="text-sm text-gray-500">{t('common.loading') || 'Chargement...'}</p>
+            ) : tasks.length > 0 ? (
+              <Select
+                value={form.watch('task_id') || '__none__'}
+                onValueChange={(value) => {
+                  form.setValue('task_id', value === '__none__' ? undefined : value);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('parcels.index.selectTask') || 'Sélectionner une tâche'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{t('parcels.index.noTask') || 'Aucune tâche (ad-hoc)'}</SelectItem>
+                  {tasks.map((taskItem: any) => (
+                    <SelectItem key={taskItem.id} value={taskItem.id}>
+                      {taskItem.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select disabled>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('parcels.index.noTasksAvailable') || 'Aucune tâche disponible'} />
+                </SelectTrigger>
+              </Select>
+            )}
           </div>
 
           {/* Cost */}

@@ -108,11 +108,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
   const [navYear, setNavYear] = useState(() => new Date().getFullYear());
   const [navMonth, setNavMonth] = useState(() => new Date().getMonth());
+  const [compareNavYear, setCompareNavYear] = useState(() => new Date().getFullYear());
+  const [compareNavMonth, setCompareNavMonth] = useState(() => new Date().getMonth());
+  const [compareAvailableDates, setCompareAvailableDates] = useState<string[]>([]);
+  const [compareIsLoadingDates, setCompareIsLoadingDates] = useState(false);
+  const [compareDatesLoaded, setCompareDatesLoaded] = useState(false);
 
   const navMonthLabel = useMemo(() => {
     const d = new Date(navYear, navMonth, 1);
     return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   }, [navYear, navMonth]);
+
+  const compareNavMonthLabel = useMemo(() => {
+    const d = new Date(compareNavYear, compareNavMonth, 1);
+    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  }, [compareNavYear, compareNavMonth]);
 
   const navigateMonth = useCallback((direction: -1 | 1) => {
     setNavMonth(prev => {
@@ -129,6 +139,23 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     });
     setDatesLoaded(false);
     setAvailableDates([]);
+  }, []);
+
+  const navigateCompareMonth = useCallback((direction: -1 | 1) => {
+    setCompareNavMonth(prev => {
+      const newMonth = prev + direction;
+      if (newMonth < 0) {
+        setCompareNavYear(y => y - 1);
+        return 11;
+      }
+      if (newMonth > 11) {
+        setCompareNavYear(y => y + 1);
+        return 0;
+      }
+      return newMonth;
+    });
+    setCompareDatesLoaded(false);
+    setCompareAvailableDates([]);
   }, []);
 
   const fetchAvailableDates = useCallback(async () => {
@@ -168,13 +195,59 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } finally {
       setIsLoadingDates(false);
     }
-  }, [boundary, parcelName, isLoadingDates, navYear, navMonth]);
+  }, [boundary, parcelName, isLoadingDates, navYear, navMonth, parcelId]);
+
+  const fetchCompareAvailableDates = useCallback(async () => {
+    if (!boundary || compareIsLoadingDates) return;
+
+    setCompareIsLoadingDates(true);
+    try {
+      const aoi = {
+        geometry: convertBoundaryToGeoJSON(boundary),
+        name: parcelName || 'Selected Parcel'
+      };
+
+      const monthStart = new Date(compareNavYear, compareNavMonth, 1);
+      const monthEnd = new Date(compareNavYear, compareNavMonth + 1, 0);
+
+      const result = await satelliteApi.getAvailableDates(
+        aoi,
+        monthStart.toISOString().split('T')[0],
+        monthEnd.toISOString().split('T')[0],
+        30,
+        parcelId
+      );
+
+      const dates = result.available_dates
+        .filter(d => d.available)
+        .map(d => d.date);
+
+      setCompareAvailableDates(dates);
+      setCompareDatesLoaded(true);
+
+      if (dates.length > 0) {
+        setCompareDate(dates[dates.length - 1]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch compare available dates:', err);
+      setCompareDatesLoaded(true);
+    } finally {
+      setCompareIsLoadingDates(false);
+    }
+  }, [boundary, parcelName, compareIsLoadingDates, compareNavYear, compareNavMonth, parcelId]);
 
   useEffect(() => {
     if (boundary && !datesLoaded && !isLoadingDates) {
       fetchAvailableDates();
     }
   }, [boundary, datesLoaded, isLoadingDates, fetchAvailableDates]);
+
+  useEffect(() => {
+    if (viewMode !== 'temporal-compare') return;
+    if (boundary && !compareDatesLoaded && !compareIsLoadingDates) {
+      fetchCompareAvailableDates();
+    }
+  }, [viewMode, boundary, compareDatesLoaded, compareIsLoadingDates, fetchCompareAvailableDates]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;
@@ -426,83 +499,151 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3">
-          <Calendar className="w-4 h-4 text-gray-500" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigateMonth(-1)}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-sm font-medium min-w-[160px] text-center capitalize">
-            {navMonthLabel}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigateMonth(1)}
-            disabled={navYear === new Date().getFullYear() && navMonth >= new Date().getMonth()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
-          {datesLoaded && (
-            <span className="text-xs text-gray-500">
-              {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+        {viewMode !== 'temporal-compare' && (
+          <div className="flex items-center gap-3">
+            <Calendar className="w-4 h-4 text-gray-500" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth(-1)}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[160px] text-center capitalize">
+              {navMonthLabel}
             </span>
-          )}
-        </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigateMonth(1)}
+              disabled={navYear === new Date().getFullYear() && navMonth >= new Date().getMonth()}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
+            {datesLoaded && (
+              <span className="text-xs text-gray-500">
+                {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        )}
 
         {viewMode === 'temporal-compare' ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
-              <select
-                value={selectedIndex}
-                onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                {VEGETATION_INDICES.map(index => (
-                  <option key={index} value={index}>{index}</option>
-                ))}
-              </select>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
+                <select
+                  value={selectedIndex}
+                  onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  {VEGETATION_INDICES.map(index => (
+                    <option key={index} value={index}>{index}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
+                <select
+                  value={colorPalette}
+                  onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  {Object.entries(COLOR_PALETTES).map(([key, palette]) => (
+                    <option key={key} value={key}>{palette.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date A (Avant)</label>
-              <DatePicker
-                value={selectedDate}
-                onChange={(date) => date && setSelectedDate(date)}
-                availableDates={availableDates}
-                isLoading={isLoadingDates}
-                disabled={!boundary}
-                placeholder="Date de référence"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateMonth(-1)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[160px] text-center capitalize">
+                  {navMonthLabel}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateMonth(1)}
+                  disabled={navYear === new Date().getFullYear() && navMonth >= new Date().getMonth()}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
+                {datesLoaded && (
+                  <span className="text-xs text-gray-500">
+                    {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Date A (Avant)</label>
+                <DatePicker
+                  value={selectedDate}
+                  onChange={(date) => date && setSelectedDate(date)}
+                  availableDates={availableDates}
+                  isLoading={isLoadingDates}
+                  disabled={!boundary}
+                  placeholder="Date de référence"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Date B (Après)</label>
-              <DatePicker
-                value={compareDate}
-                onChange={(date) => date && setCompareDate(date)}
-                availableDates={availableDates}
-                isLoading={isLoadingDates}
-                disabled={!boundary}
-                placeholder="Date à comparer"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
-              <select
-                value={colorPalette}
-                onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                {Object.entries(COLOR_PALETTES).map(([key, palette]) => (
-                  <option key={key} value={key}>{palette.name}</option>
-                ))}
-              </select>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateCompareMonth(-1)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[160px] text-center capitalize">
+                  {compareNavMonthLabel}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigateCompareMonth(1)}
+                  disabled={compareNavYear === new Date().getFullYear() && compareNavMonth >= new Date().getMonth()}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                {compareIsLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
+                {compareDatesLoaded && (
+                  <span className="text-xs text-gray-500">
+                    {compareAvailableDates.length} date{compareAvailableDates.length !== 1 ? 's' : ''} disponible{compareAvailableDates.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Date B (Après)</label>
+                <DatePicker
+                  value={compareDate}
+                  onChange={(date) => date && setCompareDate(date)}
+                  availableDates={compareAvailableDates}
+                  isLoading={compareIsLoadingDates}
+                  disabled={!boundary}
+                  placeholder="Date à comparer"
+                />
+              </div>
             </div>
           </div>
         ) : (

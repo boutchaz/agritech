@@ -32,7 +32,6 @@ import {
 import { useWorkerPayments, useProcessPayment } from "@/hooks/usePayments";
 import { useFarms } from "@/hooks/useParcelsQuery";
 import { useAuth } from "@/hooks/useAuth";
-import { useAuthStore } from "@/stores/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,13 +44,14 @@ import WorkerForm from "@/components/Workers/WorkerForm";
 import WorkerPaymentDialog from "@/components/Workers/WorkerPaymentDialog";
 import type { PaymentType } from "@/types/payments";
 
+import { paymentRecordsApi } from "@/lib/api/payment-records";
+
 function WorkerDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { workerId } = Route.useParams();
   const { currentOrganization } = useAuth();
-  const getAccessToken = useAuthStore((state) => state.getAccessToken);
   const { format: formatCurrency } = useCurrency();
   const [processingPaymentId, setProcessingPaymentId] = useState<string | null>(
     null,
@@ -95,34 +95,8 @@ function WorkerDetailPage() {
 
   const handleApprovePayment = async (paymentId: string) => {
     if (!currentOrganization) return;
-
-    setProcessingPaymentId(paymentId);
     try {
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error("No access token");
-      }
-
-      const response = await fetch(
-        `/api/v1/organizations/${currentOrganization.id}/payment-records/${paymentId}/approve`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            "x-organization-id": currentOrganization.id,
-          },
-          body: JSON.stringify({}),
-        },
-      );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "Failed to approve payment" }));
-        throw new Error(errorData.message || "Failed to approve payment");
-      }
-
+      await paymentRecordsApi.approve(currentOrganization.id, paymentId, {});
       toast.success(t("workers.payments.approveSuccess") || "Payment approved");
       queryClient.invalidateQueries({
         queryKey: ["worker-payments", workerId],
@@ -740,6 +714,11 @@ function WorkerDetailPage() {
                             {record.hours_worked
                               ? `${record.hours_worked}h`
                               : "-"}
+                            {record.hours_worked && record.hours_worked >= 8 && (
+                              <span className="text-xs text-gray-400 ml-1">
+                                ({Math.round((record.hours_worked / 8) * 10) / 10}j)
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             {record.units_completed ? (
@@ -761,9 +740,20 @@ function WorkerDetailPage() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                            {record.task_description ||
-                              record.description ||
-                              "-"}
+                            <div className="flex flex-col">
+                              <span>
+                                {record.task_description ||
+                                  record.description ||
+                                  "-"}
+                              </span>
+                              {record.worker_type && (
+                                <span className="text-xs text-gray-400">
+                                  {record.worker_type === 'per_unit' ? 'À l\'unité' :
+                                   record.worker_type === 'daily' ? 'Journalier' :
+                                   record.worker_type}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
                             {record.total_payment

@@ -325,6 +325,7 @@ export interface CreateTaskRequest {
   work_unit_id?: string;
   units_required?: number;
   rate_per_unit?: number;
+  planned_items?: Array<{ product_id: string; quantity: number; area_treated?: number }>;
 }
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {

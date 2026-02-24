@@ -167,11 +167,11 @@ export class CreateTaskDto {
   // Work Unit Payment fields (for piece-work tracking)
   @ApiPropertyOptional({
     description: "Payment type",
-    enum: ["daily", "per_unit", "monthly", "metayage"],
+    enum: ["daily", "per_unit", "monthly", "metayage", "none"],
     default: "daily",
   })
   @IsOptional()
-  @IsIn(["daily", "per_unit", "monthly", "metayage"])
+  @IsIn(["daily", "per_unit", "monthly", "metayage", "none"])
   payment_type?: string;
 
   @ApiPropertyOptional({ description: "Work unit ID for piece-work" })

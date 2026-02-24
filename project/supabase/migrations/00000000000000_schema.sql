@@ -3122,6 +3122,7 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   variant_id UUID,
   crop_cycle_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
 );
@@ -3224,6 +3225,7 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
   remaining_quantity NUMERIC DEFAULT 0,
   variant_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0),
   CHECK (remaining_quantity >= 0)
 );

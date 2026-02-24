@@ -219,27 +219,33 @@ export class OrganizationsService {
             throw new ForbiddenException('You do not have permission to update this organization');
         }
 
-        // Map camelCase to snake_case for database
+        // Map DTO fields to database columns (DTO uses snake_case)
         const dbUpdateData: any = {
             updated_at: new Date().toISOString(),
         };
-
         if (updateData.name !== undefined) dbUpdateData.name = updateData.name;
         if (updateData.description !== undefined) dbUpdateData.description = updateData.description;
-        if (updateData.currencyCode !== undefined) dbUpdateData.currency_code = updateData.currencyCode;
+        // Support both camelCase and snake_case for backward compatibility
+        const currencyCode = (updateData as any).currency_code ?? (updateData as any).currencyCode;
+        if (currencyCode !== undefined) dbUpdateData.currency_code = currencyCode;
         if (updateData.timezone !== undefined) dbUpdateData.timezone = updateData.timezone;
-        if (updateData.isActive !== undefined) dbUpdateData.is_active = updateData.isActive;
-        if (updateData.email !== undefined) dbUpdateData.email = updateData.email;
-        if (updateData.phone !== undefined) dbUpdateData.phone = updateData.phone;
-        if (updateData.address !== undefined) dbUpdateData.address = updateData.address;
-        if (updateData.city !== undefined) dbUpdateData.city = updateData.city;
-        if (updateData.state !== undefined) dbUpdateData.state = updateData.state;
-        if (updateData.postalCode !== undefined) dbUpdateData.postal_code = updateData.postalCode;
-        if (updateData.country !== undefined) dbUpdateData.country = updateData.country;
-        if (updateData.contactPerson !== undefined) dbUpdateData.contact_person = updateData.contactPerson;
-        if (updateData.website !== undefined) dbUpdateData.website = updateData.website;
-        if (updateData.taxId !== undefined) dbUpdateData.tax_id = updateData.taxId;
-        if (updateData.logoUrl !== undefined) dbUpdateData.logo_url = updateData.logoUrl;
+        const isActive = (updateData as any).is_active ?? (updateData as any).isActive;
+        if (isActive !== undefined) dbUpdateData.is_active = isActive;
+        if (updateData.email !== undefined) dbUpdateData.email = updateData.email || null;
+        if (updateData.phone !== undefined) dbUpdateData.phone = updateData.phone || null;
+        if (updateData.address !== undefined) dbUpdateData.address = updateData.address || null;
+        if (updateData.city !== undefined) dbUpdateData.city = updateData.city || null;
+        if (updateData.state !== undefined) dbUpdateData.state = updateData.state || null;
+        const postalCode = (updateData as any).postal_code ?? (updateData as any).postalCode;
+        if (postalCode !== undefined) dbUpdateData.postal_code = postalCode || null;
+        if (updateData.country !== undefined) dbUpdateData.country = updateData.country || null;
+        const contactPerson = (updateData as any).contact_person ?? (updateData as any).contactPerson;
+        if (contactPerson !== undefined) dbUpdateData.contact_person = contactPerson || null;
+        if (updateData.website !== undefined) dbUpdateData.website = updateData.website || null;
+        const taxId = (updateData as any).tax_id ?? (updateData as any).taxId;
+        if (taxId !== undefined) dbUpdateData.tax_id = taxId || null;
+        const logoUrl = (updateData as any).logo_url ?? (updateData as any).logoUrl;
+        if (logoUrl !== undefined) dbUpdateData.logo_url = logoUrl || null;
         if (updateData.map_provider !== undefined) dbUpdateData.map_provider = updateData.map_provider;
 
         // Update organization

@@ -57,6 +57,10 @@ export const demoDataApi = {
     return apiClient.delete<ClearResult>(`/api/v1/organizations/${organizationId}/demo-data/clear`);
   },
 
+  async clearDemoDataOnly(organizationId: string): Promise<ClearResult> {
+    return apiClient.delete<ClearResult>(`/api/v1/organizations/${organizationId}/demo-data/clear-demo-only`);
+  },
+
   /**
    * Export all organization data as JSON
    */

@@ -24,7 +24,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedFarmId, setSelectedFarmId] = useState<string | null>(search.farmId || null);
+  const [selectedFarmId, setSelectedFarmId] = useState<string>(search.farmId || "");
   const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
@@ -37,7 +37,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const deleteParcelMutation = useDeleteParcel();
 
   // Determine which parcels query to use
-  const targetFarmId = selectedFarmId || currentFarm?.id;
+  const targetFarmId = selectedFarmId === "" ? undefined : (selectedFarmId || currentFarm?.id);
   const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading } = useParcelsByFarm(targetFarmId);
   const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading } = useParcelsByFarms(
     !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
@@ -63,7 +63,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
 
     isSyncingRef.current = true;
 
-    const urlFarmId = search.farmId || null;
+    const urlFarmId = search.farmId || "";
 
     if (urlFarmId !== selectedFarmId) {
       setSelectedFarmId(urlFarmId);
@@ -82,7 +82,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
     };
     const currentFarmId = search.farmId || null;
 
-    if (selectedFarmId) {
+    if (selectedFarmId !== "") {
       newSearch.farmId = selectedFarmId;
     }
 
@@ -147,7 +147,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
     <>
       <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: TreePine, label: t('parcels.farms') },
             { icon: MapPin, label: t('nav.parcels'), isActive: true }
           ]}
@@ -164,8 +164,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
             farms && farms.length > 1 ? (
               <select
                 data-tour="parcel-filters"
-                value={selectedFarmId || currentFarm?.id || ''}
-                onChange={(e) => setSelectedFarmId(e.target.value || null)}
+                value={selectedFarmId}
+                onChange={(e) => setSelectedFarmId(e.target.value)}
                 className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
               >
                 <option value="">{t('parcels.allFarms')}</option>
@@ -186,7 +186,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               </h2>
               {/* Show current context */}
               <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                {selectedFarmId || currentFarm ? (
+                {(selectedFarmId !== "" || currentFarm) ? (
                   <span className="font-medium text-gray-900 dark:text-white">
                     {(() => {
                       const targetFarmId = selectedFarmId || currentFarm?.id;
@@ -217,7 +217,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           ) : parcels.length === 0 && !showAddParcelMap ? (
             <div data-testid="parcels-empty-state" className="space-y-6">
               {/* Show farms overview when no specific farm is selected */}
-              {!selectedFarmId && !currentFarm && farms.length > 0 && (
+              {selectedFarmId === "" && !currentFarm && farms.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     {t('parcels.farmsIn', { orgName: currentOrganization?.name })}
@@ -260,7 +260,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               {/* No parcels message */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {currentFarm || selectedFarmId
+                  {currentFarm || selectedFarmId !== ""
                     ? t('parcels.noParcelsForFarm', { farmName: (() => {
                       const targetFarmId = selectedFarmId || currentFarm?.id;
                       const farm = farms?.find(f => f.id === targetFarmId);
@@ -385,7 +385,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         </div>
 
                         {/* Show farm name when viewing all farms */}
-                        {(!selectedFarmId && !currentFarm) && farm && (
+                        {selectedFarmId === "" && !currentFarm && farm && (
                           <div className="mb-2">
                             <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
                               <TreePine className="h-3 w-3" />

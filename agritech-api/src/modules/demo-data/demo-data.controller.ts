@@ -86,6 +86,24 @@ export class DemoDataController {
     };
   }
 
+  @Delete('clear-demo-only')
+  @HttpCode(HttpStatus.OK)
+  async clearDemoDataOnly(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+  ) {
+    await this.verifyAdminAccess(req.user.id, organizationId);
+
+    const result = await this.demoDataService.clearDemoDataOnly(organizationId);
+
+    return {
+      message: 'Demo data cleared successfully',
+      organizationId,
+      deletedCounts: result.deletedCounts,
+      totalDeleted: Object.values(result.deletedCounts).reduce((sum, count) => sum + count, 0),
+    };
+  }
+
   /**
    * Export all organization data as JSON
    */

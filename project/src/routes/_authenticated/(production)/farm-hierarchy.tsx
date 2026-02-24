@@ -46,7 +46,7 @@ function FarmHierarchyPage() {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: Building2, label: t('nav.farmHierarchy'), isActive: true }
           ]}
           title={t('farmHierarchy.title')}

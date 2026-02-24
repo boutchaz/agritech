@@ -27,23 +27,53 @@ export const soilAnalysisSchema = z.object({
   ]).optional(),
   moisture_percentage: z.number().min(0).max(100).optional(),
   bulk_density: z.number().min(0).optional(),
+  granulometry_sand_pct: z.number().min(0).max(100).optional(),
+  granulometry_silt_pct: z.number().min(0).max(100).optional(),
+  granulometry_clay_pct: z.number().min(0).max(100).optional(),
+  granulometry_fine_sand_pct: z.number().min(0).max(100).optional(),
+  granulometry_coarse_sand_pct: z.number().min(0).max(100).optional(),
 
   // Chemical properties
   organic_matter_percentage: z.number().min(0).max(100).optional(),
+  total_limestone_pct: z.number().min(0).max(100).optional(),
+  active_limestone_pct: z.number().min(0).max(100).optional(),
   nitrogen_ppm: z.number().min(0).optional(),
+  ammonium_nitrogen_ppm: z.number().min(0).optional(),
+  nitrate_nitrogen_ppm: z.number().min(0).optional(),
   phosphorus_ppm: z.number().min(0).optional(),
+  phosphorus_olsen_ppm: z.number().min(0).optional(),
   potassium_ppm: z.number().min(0).optional(),
   calcium_ppm: z.number().min(0).optional(),
   magnesium_ppm: z.number().min(0).optional(),
   sulfur_ppm: z.number().min(0).optional(),
+  sodium_ppm: z.number().min(0).optional(),
+  chloride_ppm: z.number().min(0).optional(),
   iron_ppm: z.number().min(0).optional(),
   zinc_ppm: z.number().min(0).optional(),
   copper_ppm: z.number().min(0).optional(),
   manganese_ppm: z.number().min(0).optional(),
   boron_ppm: z.number().min(0).optional(),
+  silicon_ppm: z.number().min(0).optional(),
+  selenium_ppm: z.number().min(0).optional(),
+  gold_ppm: z.number().min(0).optional(),
+  lithium_ppm: z.number().min(0).optional(),
+  aluminum_ppm: z.number().min(0).optional(),
+  antimony_ppm: z.number().min(0).optional(),
+  bismuth_ppm: z.number().min(0).optional(),
+  cadmium_ppm: z.number().min(0).optional(),
+  lead_ppm: z.number().min(0).optional(),
+  nickel_ppm: z.number().min(0).optional(),
+  chromium_ppm: z.number().min(0).optional(),
+  arsenic_ppm: z.number().min(0).optional(),
+  mercury_ppm: z.number().min(0).optional(),
+  cao_meq: z.number().min(0).optional(),
+  mgo_meq: z.number().min(0).optional(),
+  k2o_meq: z.number().min(0).optional(),
+  na2o_meq: z.number().min(0).optional(),
 
   // Soil health indicators
   salinity_level: z.number().min(0).optional(),
+  electrical_conductivity: z.number().min(0).optional(),
   cec_meq_per_100g: z.number().min(0).optional(),
   base_saturation_percentage: z.number().min(0).max(100).optional(),
 
@@ -64,7 +94,7 @@ export const plantAnalysisSchema = z.object({
 
   // Plant identification
   plant_part: z.enum(['leaf', 'stem', 'root', 'fruit', 'whole_plant'], {
-    required_error: 'La partie de la plante est requise'
+    message: 'La partie de la plante est requise'
   }),
   growth_stage: z.string().optional(),
 
@@ -75,6 +105,8 @@ export const plantAnalysisSchema = z.object({
   calcium_percentage: z.number().min(0).max(100).optional(),
   magnesium_percentage: z.number().min(0).max(100).optional(),
   sulfur_percentage: z.number().min(0).max(100).optional(),
+  sodium_percentage: z.number().min(0).max(100).optional(),
+  chlorine_percentage: z.number().min(0).max(100).optional(),
 
   // Micro nutrients (ppm)
   iron_ppm: z.number().min(0).optional(),
@@ -84,6 +116,23 @@ export const plantAnalysisSchema = z.object({
   boron_ppm: z.number().min(0).optional(),
   molybdenum_ppm: z.number().min(0).optional(),
   chlorine_ppm: z.number().min(0).optional(),
+  cadmium_ppm: z.number().min(0).optional(),
+  lead_ppm: z.number().min(0).optional(),
+  arsenic_ppm: z.number().min(0).optional(),
+  cobalt_ppm: z.number().min(0).optional(),
+  silver_ppm: z.number().min(0).optional(),
+  barium_ppm: z.number().min(0).optional(),
+  vanadium_ppm: z.number().min(0).optional(),
+  nickel_ppm: z.number().min(0).optional(),
+  chromium_ppm: z.number().min(0).optional(),
+  mercury_ppm: z.number().min(0).optional(),
+  silicon_ppm: z.number().min(0).optional(),
+  selenium_ppm: z.number().min(0).optional(),
+  gold_ppm: z.number().min(0).optional(),
+  lithium_ppm: z.number().min(0).optional(),
+  aluminum_ppm: z.number().min(0).optional(),
+  antimony_ppm: z.number().min(0).optional(),
+  bismuth_ppm: z.number().min(0).optional(),
 
   // Health indicators
   dry_matter_percentage: z.number().min(0).max(100).optional(),
@@ -102,7 +151,7 @@ export const waterAnalysisSchema = z.object({
 
   // Source
   water_source: z.enum(['well', 'river', 'irrigation', 'rainwater', 'municipal', 'other'], {
-    required_error: 'La source d\'eau est requise'
+    message: 'La source d\'eau est requise'
   }),
 
   // Physical properties
@@ -119,7 +168,9 @@ export const waterAnalysisSchema = z.object({
   magnesium_ppm: z.number().min(0).optional(),
   sodium_ppm: z.number().min(0).optional(),
   potassium_ppm: z.number().min(0).optional(),
+  ammonium_ppm: z.number().min(0).optional(),
   bicarbonate_ppm: z.number().min(0).optional(),
+  h2po4_ppm: z.number().min(0).optional(),
   carbonate_ppm: z.number().min(0).optional(),
   chloride_ppm: z.number().min(0).optional(),
   sulfate_ppm: z.number().min(0).optional(),
@@ -132,6 +183,22 @@ export const waterAnalysisSchema = z.object({
   zinc_ppm: z.number().min(0).optional(),
   copper_ppm: z.number().min(0).optional(),
   boron_ppm: z.number().min(0).optional(),
+  cobalt_ppm: z.number().min(0).optional(),
+  silver_ppm: z.number().min(0).optional(),
+  barium_ppm: z.number().min(0).optional(),
+  vanadium_ppm: z.number().min(0).optional(),
+  nickel_ppm: z.number().min(0).optional(),
+  chromium_ppm: z.number().min(0).optional(),
+  molybdenum_ppm: z.number().min(0).optional(),
+  silicon_ppm: z.number().min(0).optional(),
+  selenium_ppm: z.number().min(0).optional(),
+  gold_ppm: z.number().min(0).optional(),
+  lithium_ppm: z.number().min(0).optional(),
+  aluminum_ppm: z.number().min(0).optional(),
+  antimony_ppm: z.number().min(0).optional(),
+  bismuth_ppm: z.number().min(0).optional(),
+  cadmium_ppm: z.number().min(0).optional(),
+  mercury_ppm: z.number().min(0).optional(),
 
   // Heavy metals (ppb)
   lead_ppb: z.number().min(0).optional(),

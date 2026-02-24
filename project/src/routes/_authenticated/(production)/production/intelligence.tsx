@@ -29,7 +29,7 @@ const AppContent: React.FC = () => {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
             { icon: BarChart3, label: t('production.intelligence.pageTitle'), isActive: true }
           ]}

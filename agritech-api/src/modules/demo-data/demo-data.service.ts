@@ -4737,6 +4737,642 @@ export class DemoDataService {
     }
   }
 
+  async clearDemoDataOnly(
+    organizationId: string,
+  ): Promise<{ deletedCounts: Record<string, number> }> {
+    this.logger.log(
+      `Clearing demo-only data for organization ${organizationId}`,
+    );
+    const client = this.databaseService.getAdminClient();
+    const deletedCounts: Record<string, number> = {};
+
+    const demoParcelNames = [
+      "Parcelle Olives",
+      "Parcelle Agrumes",
+      "Parcelle Légumes",
+    ];
+    const demoTaskTitles = [
+      "Irrigation Parcelle Olives",
+      "Taille des arbres fruitiers",
+      "Récolte Agrumes",
+      "Plantation Tomates",
+      "Fertilisation Organique",
+      "Traitement Phytosanitaire",
+      "Irrigation Complémentaire",
+      "Désherbage Manuel",
+      "Récolte Olives",
+      "Application Engrais NPK",
+      "Récolte Tomates",
+    ];
+    const demoQuoteNumbers = ["DEV-2024-001", "DEV-2024-002", "DEV-2024-003"];
+    const demoSalesOrderNumbers = ["SO-2024-001", "SO-2024-002", "SO-2024-003"];
+    const demoPurchaseOrderNumbers = ["PO-2024-001", "PO-2024-002", "PO-2024-003"];
+    const demoInvoiceNumbers = [
+      "FAC-2024-001",
+      "FAC-2024-002",
+      "FAC-2024-003",
+      "FAC-2024-004",
+      "FACF-2024-001",
+      "FACF-2024-002",
+    ];
+    const demoItemGroupCodes = [
+      "GRP-ENG",
+      "GRP-SEM",
+      "GRP-PHY",
+      "GRP-EQP",
+      "GRP-REC",
+    ];
+    const demoItemCodes = [
+      "ENG-NPK-15-15-15",
+      "ENG-ORG-50KG",
+      "SEM-TOM-MARM",
+      "SEM-CIT-CLEM",
+      "PHY-FONG-1L",
+      "PHY-INS-500ML",
+      "EQP-SEC-AC",
+      "EQP-PULV-20L",
+      "REC-HUILE-EV",
+      "REC-CLEM-BIO",
+      "REC-ORA-NAV",
+    ];
+
+    try {
+      const { data: demoFarms } = await client
+        .from("farms")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .or(
+          "name.ilike.%Démo%,manager_name.ilike.%Démo%,manager_email.eq.demo@example.com",
+        );
+      const farmIds = [...new Set((demoFarms || []).map((row) => row.id))];
+
+      const { data: demoParcelsByName } = await client
+        .from("parcels")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("name", demoParcelNames);
+      const parcelIdsFromName = (demoParcelsByName || []).map((row) => row.id);
+
+      let parcelIdsFromFarm: string[] = [];
+      if (farmIds.length > 0) {
+        const { data: demoParcelsByFarm } = await client
+          .from("parcels")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .in("farm_id", farmIds);
+        parcelIdsFromFarm = (demoParcelsByFarm || []).map((row) => row.id);
+      }
+      const parcelIds = [...new Set([...parcelIdsFromName, ...parcelIdsFromFarm])];
+
+      const { data: demoWorkersRaw } = await client
+        .from("workers")
+        .select("id, first_name, last_name")
+        .eq("organization_id", organizationId)
+        .in("first_name", ["Ahmed", "Fatima", "Mohamed"])
+        .in("last_name", ["Benali", "Alami", "Tazi"]);
+      const workerIds = [...new Set((demoWorkersRaw || []).map((row) => row.id))];
+
+      const { data: demoTasksByTitle } = await client
+        .from("tasks")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("title", demoTaskTitles);
+      const taskIdsByTitle = (demoTasksByTitle || []).map((row) => row.id);
+
+      let taskIdsByFarm: string[] = [];
+      if (farmIds.length > 0) {
+        const { data: demoTasksByFarm } = await client
+          .from("tasks")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .in("farm_id", farmIds);
+        taskIdsByFarm = (demoTasksByFarm || []).map((row) => row.id);
+      }
+
+      let taskIdsByParcel: string[] = [];
+      if (parcelIds.length > 0) {
+        const { data: demoTasksByParcel } = await client
+          .from("tasks")
+          .select("id")
+          .eq("organization_id", organizationId)
+          .in("parcel_id", parcelIds);
+        taskIdsByParcel = (demoTasksByParcel || []).map((row) => row.id);
+      }
+      const taskIds = [
+        ...new Set([...taskIdsByTitle, ...taskIdsByFarm, ...taskIdsByParcel]),
+      ];
+
+      const { data: demoCustomersByCode } = await client
+        .from("customers")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("customer_code", ["CUST-001", "CUST-002", "CUST-003"]);
+      const { data: demoCustomersByName } = await client
+        .from("customers")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("name", [
+          "Marché Central de Casablanca",
+          "Coopérative Agricole Berkane",
+          "Restaurant Le Jardin",
+        ]);
+      const customerIds = [
+        ...new Set([
+          ...(demoCustomersByCode || []).map((row) => row.id),
+          ...(demoCustomersByName || []).map((row) => row.id),
+        ]),
+      ];
+
+      const { data: demoSuppliersByCode } = await client
+        .from("suppliers")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("supplier_code", ["SUP-001", "SUP-002"]);
+      const { data: demoSuppliersByName } = await client
+        .from("suppliers")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("name", ["AgriSupply Maroc", "Engrais & Semences du Maroc"]);
+      const supplierIds = [
+        ...new Set([
+          ...(demoSuppliersByCode || []).map((row) => row.id),
+          ...(demoSuppliersByName || []).map((row) => row.id),
+        ]),
+      ];
+
+      const { data: demoQuotes } = await client
+        .from("quotes")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("quote_number", demoQuoteNumbers);
+      const quoteIds = [...new Set((demoQuotes || []).map((row) => row.id))];
+
+      const { data: demoSalesOrders } = await client
+        .from("sales_orders")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("order_number", demoSalesOrderNumbers);
+      const salesOrderIds = [
+        ...new Set((demoSalesOrders || []).map((row) => row.id)),
+      ];
+
+      const { data: demoPurchaseOrders } = await client
+        .from("purchase_orders")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("order_number", demoPurchaseOrderNumbers);
+      const purchaseOrderIds = [
+        ...new Set((demoPurchaseOrders || []).map((row) => row.id)),
+      ];
+
+      const { data: demoInvoices } = await client
+        .from("invoices")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("invoice_number", demoInvoiceNumbers);
+      const invoiceIds = [...new Set((demoInvoices || []).map((row) => row.id))];
+
+      const { data: demoWarehouses } = await client
+        .from("warehouses")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("name", ["Entrepôt Principal", "Entrepôt Produits Finis"]);
+      const warehouseIds = [
+        ...new Set((demoWarehouses || []).map((row) => row.id)),
+      ];
+
+      const { data: demoItemGroups } = await client
+        .from("item_groups")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("code", demoItemGroupCodes);
+      const itemGroupIds = [
+        ...new Set((demoItemGroups || []).map((row) => row.id)),
+      ];
+
+      const { data: demoItems } = await client
+        .from("items")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .in("item_code", demoItemCodes);
+      const itemIds = [...new Set((demoItems || []).map((row) => row.id))];
+
+      const { data: demoCostCentersByParcel } = parcelIds.length
+        ? await client
+            .from("cost_centers")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("parcel_id", parcelIds)
+        : { data: [] };
+      const costCenterIds = [
+        ...new Set((demoCostCentersByParcel || []).map((row) => row.id)),
+      ];
+
+      const { data: demoHarvestsByParcel } = parcelIds.length
+        ? await client
+            .from("harvest_records")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("parcel_id", parcelIds)
+        : { data: [] };
+      const harvestIds = [
+        ...new Set((demoHarvestsByParcel || []).map((row) => row.id)),
+      ];
+
+      const { data: demoDeliveriesByFarm } = farmIds.length
+        ? await client
+            .from("deliveries")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { data: [] };
+      const deliveryIds = [
+        ...new Set((demoDeliveriesByFarm || []).map((row) => row.id)),
+      ];
+
+      const { data: demoStockEntries } = await client
+        .from("stock_entries")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .or(
+          "reference_number.eq.PO-2024-001,reference_number.eq.PO-2024-002,reference_number.eq.PO-2024-003,reference_number.eq.SO-2024-001,reference_number.eq.SO-2024-002,reference_number.eq.TSK-2024-001,reference_number.eq.TSK-2024-002,reference_number.eq.REC-PROD-001",
+        );
+      const stockEntryIds = [
+        ...new Set((demoStockEntries || []).map((row) => row.id)),
+      ];
+
+      const { data: demoAccountingPayments } = await client
+        .from("accounting_payments")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .or(
+          "reference_number.eq.VIR-12345,reference_number.eq.VIR-78901,reference_number.eq.VIR-89012,reference_number.eq.CHQ-456789,reference_number.eq.CHQ-789456,reference_number.eq.VIR-34567,reference_number.eq.VIR-OUT-001,reference_number.eq.CHQ-OUT-234,reference_number.eq.VIR-OUT-345,reference_number.eq.VIR-OUT-456,reference_number.eq.CHQ-OUT-567,reference_number.eq.VIR-OUT-678,reference_number.eq.VIR-OUT-789",
+        );
+      const accountingPaymentIds = [
+        ...new Set((demoAccountingPayments || []).map((row) => row.id)),
+      ];
+
+      const { data: demoJournalEntriesByFarm } = farmIds.length
+        ? await client
+            .from("journal_entries")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { data: [] };
+      const journalEntryIds = [
+        ...new Set((demoJournalEntriesByFarm || []).map((row) => row.id)),
+      ];
+
+      const { data: demoAnalysesByParcel } = parcelIds.length
+        ? await client
+            .from("analyses")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("parcel_id", parcelIds)
+        : { data: [] };
+      const analysisIds = [
+        ...new Set((demoAnalysesByParcel || []).map((row) => row.id)),
+      ];
+
+      if (analysisIds.length > 0) {
+        await client
+          .from("analysis_recommendations")
+          .delete()
+          .in("analysis_id", analysisIds);
+      }
+
+      if (deliveryIds.length > 0) {
+        await client
+          .from("delivery_items")
+          .delete()
+          .in("delivery_id", deliveryIds);
+      }
+
+      if (taskIds.length > 0) {
+        await client.from("task_assignments").delete().in("task_id", taskIds);
+        await client.from("task_time_logs").delete().in("task_id", taskIds);
+      }
+
+      if (accountingPaymentIds.length > 0) {
+        await client
+          .from("payment_allocations")
+          .delete()
+          .in("payment_id", accountingPaymentIds);
+      }
+
+      if (invoiceIds.length > 0) {
+        await client.from("invoice_items").delete().in("invoice_id", invoiceIds);
+      }
+
+      if (quoteIds.length > 0) {
+        await client.from("quote_items").delete().in("quote_id", quoteIds);
+      }
+
+      if (salesOrderIds.length > 0) {
+        await client
+          .from("sales_order_items")
+          .delete()
+          .in("sales_order_id", salesOrderIds);
+      }
+
+      if (purchaseOrderIds.length > 0) {
+        await client
+          .from("purchase_order_items")
+          .delete()
+          .in("purchase_order_id", purchaseOrderIds);
+      }
+
+      if (stockEntryIds.length > 0) {
+        await client
+          .from("stock_entry_items")
+          .delete()
+          .in("stock_entry_id", stockEntryIds);
+      }
+
+      if (costCenterIds.length > 0) {
+        await client
+          .from("cost_center_budgets")
+          .delete()
+          .in("cost_center_id", costCenterIds);
+      }
+
+      const { count: notificationsCount } = await client
+        .from("notifications")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId)
+        .in("title", [
+          "Bienvenue sur Agriprofy!",
+          "Rappel: Irrigation programmée",
+          "Stock faible: Engrais NPK",
+          "Facture en retard",
+          "Analyse satellite disponible",
+        ]);
+      deletedCounts["notifications"] = notificationsCount || 0;
+
+      if (farmIds.length > 0) {
+        await client.from("trees").delete().eq("organization_id", organizationId).in("farm_id", farmIds);
+      }
+
+      const { count: bioAssetsCount } = farmIds.length
+        ? await client
+            .from("biological_assets")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { count: 0 };
+      deletedCounts["biological_assets"] = bioAssetsCount || 0;
+
+      const { count: campaignsCount } = farmIds.length
+        ? await client
+            .from("agricultural_campaigns")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { count: 0 };
+      deletedCounts["agricultural_campaigns"] = campaignsCount || 0;
+
+      const { count: workRecordsCount } = farmIds.length
+        ? await client
+            .from("work_records")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { count: 0 };
+      deletedCounts["work_records"] = workRecordsCount || 0;
+
+      const { count: soilAnalysesCount } = parcelIds.length
+        ? await client
+            .from("soil_analyses")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("parcel_id", parcelIds)
+        : { count: 0 };
+      deletedCounts["soil_analyses"] = soilAnalysesCount || 0;
+
+      const { count: analysesCount } = analysisIds.length
+        ? await client
+            .from("analyses")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", analysisIds)
+        : { count: 0 };
+      deletedCounts["analyses"] = analysesCount || 0;
+
+      const { count: applicationsCount } = farmIds.length
+        ? await client
+            .from("product_applications")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { count: 0 };
+      deletedCounts["product_applications"] = applicationsCount || 0;
+
+      const { count: deliveriesCount } = deliveryIds.length
+        ? await client
+            .from("deliveries")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", deliveryIds)
+        : { count: 0 };
+      deletedCounts["deliveries"] = deliveriesCount || 0;
+
+      const { count: receptionBatchesCount } = await client
+        .from("reception_batches")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId)
+        .in("batch_code", [
+          "RB-2024-001",
+          "RB-2024-002",
+          "RB-2024-003",
+          "RB-2024-004",
+          "RB-2024-005",
+        ]);
+      deletedCounts["reception_batches"] = receptionBatchesCount || 0;
+
+      const { count: harvestsCount } = harvestIds.length
+        ? await client
+            .from("harvest_records")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", harvestIds)
+        : { count: 0 };
+      deletedCounts["harvest_records"] = harvestsCount || 0;
+
+      const { count: journalEntriesCount } = journalEntryIds.length
+        ? await client
+            .from("journal_entries")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", journalEntryIds)
+        : { count: 0 };
+      deletedCounts["journal_entries"] = journalEntriesCount || 0;
+
+      const { count: accountingPaymentsCount } = accountingPaymentIds.length
+        ? await client
+            .from("accounting_payments")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", accountingPaymentIds)
+        : { count: 0 };
+      deletedCounts["accounting_payments"] = accountingPaymentsCount || 0;
+
+      const { count: invoicesCount } = invoiceIds.length
+        ? await client
+            .from("invoices")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", invoiceIds)
+        : { count: 0 };
+      deletedCounts["invoices"] = invoicesCount || 0;
+
+      const { count: quotesCount } = quoteIds.length
+        ? await client
+            .from("quotes")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", quoteIds)
+        : { count: 0 };
+      deletedCounts["quotes"] = quotesCount || 0;
+
+      const { count: salesOrdersCount } = salesOrderIds.length
+        ? await client
+            .from("sales_orders")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", salesOrderIds)
+        : { count: 0 };
+      deletedCounts["sales_orders"] = salesOrdersCount || 0;
+
+      const { count: purchaseOrdersCount } = purchaseOrderIds.length
+        ? await client
+            .from("purchase_orders")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", purchaseOrderIds)
+        : { count: 0 };
+      deletedCounts["purchase_orders"] = purchaseOrdersCount || 0;
+
+      const { count: customersCount } = customerIds.length
+        ? await client
+            .from("customers")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", customerIds)
+        : { count: 0 };
+      deletedCounts["customers"] = customersCount || 0;
+
+      const { count: suppliersCount } = supplierIds.length
+        ? await client
+            .from("suppliers")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", supplierIds)
+        : { count: 0 };
+      deletedCounts["suppliers"] = suppliersCount || 0;
+
+      const { count: stockEntriesCount } = stockEntryIds.length
+        ? await client
+            .from("stock_entries")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", stockEntryIds)
+        : { count: 0 };
+      deletedCounts["stock_entries"] = stockEntriesCount || 0;
+
+      const { count: itemsCount } = itemIds.length
+        ? await client
+            .from("items")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", itemIds)
+        : { count: 0 };
+      deletedCounts["items"] = itemsCount || 0;
+
+      const { count: itemGroupsCount } = itemGroupIds.length
+        ? await client
+            .from("item_groups")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", itemGroupIds)
+        : { count: 0 };
+      deletedCounts["item_groups"] = itemGroupsCount || 0;
+
+      const { count: warehousesCount } = warehouseIds.length
+        ? await client
+            .from("warehouses")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", warehouseIds)
+        : { count: 0 };
+      deletedCounts["warehouses"] = warehousesCount || 0;
+
+      const { count: structuresCount } = farmIds.length
+        ? await client
+            .from("structures")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("farm_id", farmIds)
+        : { count: 0 };
+      deletedCounts["structures"] = structuresCount || 0;
+
+      const { count: tasksCount } = taskIds.length
+        ? await client
+            .from("tasks")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", taskIds)
+        : { count: 0 };
+      deletedCounts["tasks"] = tasksCount || 0;
+
+      const { count: costCentersCount } = costCenterIds.length
+        ? await client
+            .from("cost_centers")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", costCenterIds)
+        : { count: 0 };
+      deletedCounts["cost_centers"] = costCentersCount || 0;
+
+      const { count: workersCount } = workerIds.length
+        ? await client
+            .from("workers")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", workerIds)
+        : { count: 0 };
+      deletedCounts["workers"] = workersCount || 0;
+
+      const { count: parcelsCount } = parcelIds.length
+        ? await client
+            .from("parcels")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", parcelIds)
+        : { count: 0 };
+      deletedCounts["parcels"] = parcelsCount || 0;
+
+      const { count: farmsCount } = farmIds.length
+        ? await client
+            .from("farms")
+            .delete({ count: "exact" })
+            .eq("organization_id", organizationId)
+            .in("id", farmIds)
+        : { count: 0 };
+      deletedCounts["farms"] = farmsCount || 0;
+
+      this.logger.log(
+        `✅ Demo-only data cleared for organization ${organizationId}`,
+      );
+      return { deletedCounts };
+    } catch (error) {
+      this.logger.error(
+        `❌ Error clearing demo-only data: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   /**
    * Get data statistics for an organization
    */

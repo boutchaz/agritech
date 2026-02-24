@@ -232,6 +232,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const isCnssDecl = watch("is_cnss_declared");
   const specialties = watch("specialties") || [];
   const certifications = watch("certifications") || [];
+  const perUnitRate = watch("per_unit_rate");
 
   useEffect(() => {
     if (!isEditing) {
@@ -821,6 +822,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 {errors.per_unit_rate && (
                   <p className="text-red-600 text-sm mt-1">
                     {errors.per_unit_rate.message}
+                  </p>
+                )}
+                {perUnitRate != null && perUnitRate > 0 && (
+                  <p className="text-sm font-medium text-green-700 dark:text-green-400 mt-1">
+                    {t('workers.form.perUnitSummary', { rate: perUnitRate, currency: currencySymbol }) || `Le paiement par unité est de ${perUnitRate} ${currencySymbol}`}
                   </p>
                 )}
               </div>

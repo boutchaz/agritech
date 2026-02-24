@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, MapPin, Users } from 'lucide-react';
+import { X, MapPin, Users, Package, Plus, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
 import { useFormErrors } from '../../hooks/useFormErrors';
 import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
+import { inventoryApi, type InventoryProduct } from '../../lib/api/inventory';
 import type { Task, CreateTaskRequest, TaskType } from '../../types/tasks';
 import { TASK_TYPE_LABELS } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
@@ -84,6 +85,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>(
     task?.assigned_to ? [task.assigned_to] : []
   );
+
+  // State for planned inventory items (products to consume when task completes)
+  const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; quantity: number }>>([]);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -162,6 +166,18 @@ const TaskForm: React.FC<TaskFormProps> = ({
   });
   const workUnits = Array.isArray(workUnitsData) ? workUnitsData : [];
 
+  // Task types that can consume inventory products
+  const STOCK_TASK_TYPES = ['fertilization', 'pest_control', 'irrigation', 'planting', 'soil_preparation'];
+  const showProductSection = STOCK_TASK_TYPES.includes(formData.task_type);
+
+  // Fetch available products from inventory
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ['available-products', organizationId],
+    queryFn: () => inventoryApi.getAvailableProducts(organizationId),
+    enabled: !!organizationId && showProductSection,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Fetch parcels for the selected farm
   const { data: parcels = [] } = useQuery({
     queryKey: ['parcels', organizationId, formData.farm_id],
@@ -223,7 +239,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             }
             return [key, value];
           }
-          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id'].includes(key)) {
+          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id', 'crop_id', 'category_id'].includes(key)) {
             return [key, undefined];
           }
           return [key, value];
@@ -236,6 +252,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
         cleanedData.assigned_to = undefined;
       }
 
+
+      // Add planned items for stock-consuming task types
+      if (plannedItems.length > 0 && STOCK_TASK_TYPES.includes(data.task_type)) {
+        cleanedData.planned_items = plannedItems.filter(item => item.product_id && item.quantity > 0);
+      }
       if (task) {
         await updateTask.mutateAsync({
           taskId: task.id,
@@ -725,6 +746,112 @@ const TaskForm: React.FC<TaskFormProps> = ({
             )}
           </div>
 
+
+          {/* Product / Stock Selection (for applicable task types) */}
+          {showProductSection && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Package className="w-4 h-4" />
+                  Produits à utiliser (Stock)
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPlannedItems([...plannedItems, { product_id: '', quantity: 0 }])}
+                  disabled={availableProducts.length === 0}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Ajouter produit
+                </Button>
+              </div>
+
+              {availableProducts.length === 0 ? (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Aucun produit disponible en stock. Ajoutez des produits dans Stock &gt; Réceptions.
+                </p>
+              ) : plannedItems.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Ajoutez les produits qui seront utilisés pour cette tâche. Le stock sera automatiquement déduit à la complétion.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {plannedItems.map((item, index) => {
+                    const selectedProd = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
+                    return (
+                      <div key={index} className="flex items-end gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Produit</Label>
+                          <Select
+                            value={item.product_id || '__none__'}
+                            onValueChange={(value) => {
+                              const newItems = [...plannedItems];
+                              newItems[index] = { ...newItems[index], product_id: value === '__none__' ? '' : value };
+                              setPlannedItems(newItems);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner un produit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">-- Sélectionner --</SelectItem>
+                              {availableProducts.map((product: InventoryProduct) => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} ({product.quantity} {product.unit})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="w-32 space-y-1">
+                          <Label className="text-xs">
+                            Quantité {selectedProd ? `(${selectedProd.unit})` : ''}
+                          </Label>
+                          <Input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={item.quantity || ''}
+                            onChange={(e) => {
+                              const newItems = [...plannedItems];
+                              newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
+                              setPlannedItems(newItems);
+                            }}
+                            placeholder="0"
+                          />
+                          {selectedProd && item.quantity > selectedProd.quantity && (
+                            <p className="text-xs text-red-500">
+                              Dépasse le stock ({selectedProd.quantity})
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPlannedItems(plannedItems.filter((_, i) => i !== index));
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {plannedItems.length > 0 && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    <strong>Note :</strong> Le stock sera automatiquement déduit lorsque la tâche sera marquée comme complétée.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
           {/* Notes */}
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>

@@ -38,7 +38,7 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
   const { currentOrganization } = useAuth()
-  const { data: subscription, isLoading: subscriptionLoading } = useSubscription()
+  const { data: subscription, isLoading: subscriptionLoading, isFetched: subscriptionFetched, isError: subscriptionError } = useSubscription()
   const { i18n } = useTranslation()
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [activeModule, setActiveModule] = useState('dashboard')
@@ -55,10 +55,9 @@ function AuthenticatedLayout() {
     { id: 'legumes', name: 'Légumes', icon: 'Sprout', active: true, category: 'agriculture' },
   ]
 
-  // Show loading while checking subscription or if subscription is null but we're not done loading yet
-  // This prevents the race condition where subscription is null during initial load
-  const isSubscriptionPending = subscriptionLoading || (subscription === null && currentOrganization)
-
+  // Only show loading while subscription hasn't been fetched yet
+  // isFetched ensures we don't get stuck in infinite spinner when subscription is null
+  const isSubscriptionPending = !subscriptionFetched && (subscriptionLoading || !!currentOrganization)
   if (isSubscriptionPending) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -74,9 +73,9 @@ function AuthenticatedLayout() {
 
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
-    // Check if user has never created a subscription - redirect to trial selection
-    // Only redirect if we're certain there's no subscription (not just loading)
-    if (!subscription && !isSubscriptionPending) {
+    // Only redirect to onboarding if we're CERTAIN there's no subscription
+    // (query completed successfully, not an error)
+    if (!subscription && subscriptionFetched && !subscriptionError) {
       // Use window.location.href for full navigation to ensure clean state
       window.location.href = '/onboarding/select-trial'
       return (

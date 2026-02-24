@@ -32,7 +32,7 @@ const NotificationsPage: React.FC = () => {
           <div className="hidden md:block">
             <ModernPageHeader
               breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
                 { icon: Bell, label: 'Notifications', isActive: true },
               ]}
               title="Notifications"

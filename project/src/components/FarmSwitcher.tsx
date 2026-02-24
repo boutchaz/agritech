@@ -3,6 +3,7 @@ import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { useFarms } from '../hooks/useParcelsQuery';
 import type { AuthFarm } from '../contexts/AuthContext';
 
 interface FarmSwitcherProps {
@@ -13,8 +14,11 @@ interface FarmSwitcherProps {
 const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
-  const { farms, currentFarm, setCurrentFarm, loading } = useAuth();
+  const { farms, currentFarm, setCurrentFarm, loading, currentOrganization } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Fetch farms with size data from API
+  const { data: richFarms = [] } = useFarms(currentOrganization?.id);
 
   const handleAddFarm = () => {
     setIsOpen(false);
@@ -33,6 +37,15 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
 
   // Determine which farm ID is selected
   const selectedFarmId = currentFarmId || currentFarm?.id;
+
+  // Merge auth farms with rich farm data (size from API)
+  const enrichedFarms = farms.map(farm => {
+    const richFarm = richFarms.find(f => f.id === farm.id);
+    return {
+      ...farm,
+      size: richFarm?.size ?? farm.size,
+    };
+  });
 
   if (loading) {
     return (
@@ -55,12 +68,12 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
       {isOpen && (
         <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700">
           <div className="py-1">
-            {farms.length === 0 ? (
+            {enrichedFarms.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
                 {t('farmSwitcher.noFarmsAvailable')}
               </div>
             ) : (
-              farms.map(farm => (
+              enrichedFarms.map(farm => (
                 <button
                   key={farm.id}
                   onClick={() => handleFarmSelect(farm)}

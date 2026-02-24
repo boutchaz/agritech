@@ -93,7 +93,7 @@ function WorkersPage() {
         header={
           <ModernPageHeader
             breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
               { icon: UserCog, label: t('nav.personnel'), isActive: true }
             ]}
           />
@@ -135,7 +135,7 @@ function WorkersPage() {
       header={
         <ModernPageHeader
           breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: UserCog, label: t('nav.personnel'), isActive: true }
           ]}
           title={t('workers.title')}

@@ -23,7 +23,7 @@ function QualityControlPage() {
     <>
       <ModernPageHeader
         breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/settings/organization' },
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
           { icon: ClipboardCheck, label: t('production.qualityControl.breadcrumbLabel'), isActive: true }
         ]}
         title={t('production.qualityControl.title')}

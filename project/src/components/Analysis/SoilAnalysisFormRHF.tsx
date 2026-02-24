@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, X } from 'lucide-react';
@@ -6,6 +6,7 @@ import { soilAnalysisSchema, type SoilAnalysisFormValues } from '../../schemas/a
 import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { Checkbox } from '../ui/checkbox';
 
 interface Parcel {
   id: string;
@@ -18,6 +19,113 @@ interface SoilAnalysisFormProps {
   onCancel: () => void;
   selectedParcel?: Parcel | null;
 }
+
+type SoilParamKey = Exclude<keyof SoilAnalysisFormValues, 'analysisDate' | 'laboratory' | 'notes'>;
+
+interface ParameterItem {
+  key: SoilParamKey;
+  label: string;
+  unit?: string;
+  fieldType?: 'number' | 'select';
+}
+
+const SOIL_PARAMETER_GROUPS: Array<{ category: string; parameters: ParameterItem[] }> = [
+  {
+    category: 'Proprietes physiques',
+    parameters: [
+      { key: 'ph_level', label: 'pH', unit: '' },
+      { key: 'texture', label: 'Texture du sol', fieldType: 'select' },
+      { key: 'moisture_percentage', label: 'Humidite', unit: '%' },
+      { key: 'bulk_density', label: 'Densite apparente', unit: 'g/cm3' },
+      { key: 'granulometry_sand_pct', label: 'Granulometrie sable', unit: '%' },
+      { key: 'granulometry_silt_pct', label: 'Granulometrie limon', unit: '%' },
+      { key: 'granulometry_clay_pct', label: 'Granulometrie argile', unit: '%' },
+      { key: 'granulometry_fine_sand_pct', label: 'Granulometrie sable fin', unit: '%' },
+      { key: 'granulometry_coarse_sand_pct', label: 'Granulometrie sable grossier', unit: '%' },
+    ],
+  },
+  {
+    category: 'Macro elements',
+    parameters: [
+      { key: 'organic_matter_percentage', label: 'Matiere organique', unit: '%' },
+      { key: 'nitrogen_ppm', label: 'Azote total (N)', unit: 'ppm' },
+      { key: 'ammonium_nitrogen_ppm', label: 'Azote ammoniacal (N-NH4)', unit: 'ppm' },
+      { key: 'nitrate_nitrogen_ppm', label: 'Azote nitrique (N-NO3)', unit: 'ppm' },
+      { key: 'phosphorus_ppm', label: 'Phosphore (P)', unit: 'ppm' },
+      { key: 'phosphorus_olsen_ppm', label: 'Phosphore Olsen (P2O5)', unit: 'ppm' },
+      { key: 'potassium_ppm', label: 'Potassium (K)', unit: 'ppm' },
+      { key: 'calcium_ppm', label: 'Calcium (Ca)', unit: 'ppm' },
+      { key: 'magnesium_ppm', label: 'Magnesium (Mg)', unit: 'ppm' },
+      { key: 'sulfur_ppm', label: 'Soufre (S)', unit: 'ppm' },
+      { key: 'sodium_ppm', label: 'Sodium (Na2O)', unit: 'ppm' },
+      { key: 'chloride_ppm', label: 'Chlorure (Cl)', unit: 'ppm' },
+      { key: 'total_limestone_pct', label: 'Calcaire total', unit: '%' },
+      { key: 'active_limestone_pct', label: 'Calcaire actif', unit: '%' },
+    ],
+  },
+  {
+    category: 'Oligo-elements',
+    parameters: [
+      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'ppm' },
+      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'ppm' },
+      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'ppm' },
+      { key: 'manganese_ppm', label: 'Manganese (Mn)', unit: 'ppm' },
+      { key: 'boron_ppm', label: 'Bore (B)', unit: 'ppm' },
+      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'ppm' },
+      { key: 'selenium_ppm', label: 'Selenium (Se)', unit: 'ppm' },
+      { key: 'gold_ppm', label: 'Or (Au)', unit: 'ppm' },
+      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'ppm' },
+      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'ppm' },
+      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'ppm' },
+      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'ppm' },
+    ],
+  },
+  {
+    category: 'Metaux lourds',
+    parameters: [
+      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'ppm' },
+      { key: 'lead_ppm', label: 'Plomb (Pb)', unit: 'ppm' },
+      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'ppm' },
+      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'ppm' },
+      { key: 'arsenic_ppm', label: 'Arsenic (As)', unit: 'ppm' },
+      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'ppm' },
+    ],
+  },
+  {
+    category: 'Cations echangeables',
+    parameters: [
+      { key: 'cao_meq', label: 'CaO', unit: 'meq/100g' },
+      { key: 'mgo_meq', label: 'MgO', unit: 'meq/100g' },
+      { key: 'k2o_meq', label: 'K2O', unit: 'meq/100g' },
+      { key: 'na2o_meq', label: 'Na2O', unit: 'meq/100g' },
+      { key: 'cec_meq_per_100g', label: 'CEC', unit: 'meq/100g' },
+      { key: 'base_saturation_percentage', label: 'Saturation des bases', unit: '%' },
+    ],
+  },
+  {
+    category: 'Indicateurs du sol',
+    parameters: [
+      { key: 'salinity_level', label: 'Salinite', unit: 'dS/m' },
+      { key: 'electrical_conductivity', label: 'Conductivite electrique', unit: 'dS/m' },
+      { key: 'earthworm_count', label: 'Nombre de vers de terre', unit: '' },
+      { key: 'biological_carbon', label: 'Carbone biologique', unit: 'ppm' },
+    ],
+  },
+];
+
+const DEFAULT_SOIL_PARAMS: SoilParamKey[] = [
+  'ph_level',
+  'texture',
+  'organic_matter_percentage',
+  'nitrogen_ppm',
+  'phosphorus_ppm',
+  'potassium_ppm',
+  'calcium_ppm',
+  'magnesium_ppm',
+  'sulfur_ppm',
+  'salinity_level',
+  'cec_meq_per_100g',
+];
 
 // TextField component using useFormContext
 const TextField: React.FC<{
@@ -41,7 +149,9 @@ const TextField: React.FC<{
         min={min}
         max={max}
         placeholder={placeholder}
-        {...register(name, { valueAsNumber: type === 'number' })}
+        {...register(name, type === 'number' ? {
+          setValueAs: (value: string) => value === '' ? undefined : Number(value),
+        } : undefined)}
         aria-invalid={errors[name] ? 'true' : 'false'}
         aria-describedby={errors[name] ? `${name}-error` : undefined}
       />
@@ -139,11 +249,42 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
   });
 
   const { handleSubmit, formState: { isSubmitting, errors } } = methods;
+  const [selectedParams, setSelectedParams] = useState<SoilParamKey[]>(DEFAULT_SOIL_PARAMS);
+
+  const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
+  const selectedCount = selectedParams.length;
+
+  const toggleParam = (key: SoilParamKey, checked: boolean) => {
+    setSelectedParams((prev) => {
+      if (checked) {
+        if (prev.includes(key)) {
+          return prev;
+        }
+        return [...prev, key];
+      }
+      methods.setValue(key, undefined);
+      return prev.filter((item) => item !== key);
+    });
+  };
 
   const onSubmit = async (values: SoilAnalysisFormValues) => {
     try {
-      await onSave(values);
+      const cleanValues: Partial<SoilAnalysisFormValues> = {
+        analysisDate: values.analysisDate,
+        laboratory: values.laboratory?.trim() || '',
+        notes: values.notes?.trim() || '',
+      };
+
+      selectedParams.forEach((key) => {
+        const value = values[key];
+        if (value !== undefined && !(typeof value === 'number' && Number.isNaN(value))) {
+          Object.assign(cleanValues, { [key]: value });
+        }
+      });
+
+      await onSave(cleanValues as SoilAnalysisFormValues);
       methods.reset();
+      setSelectedParams(DEFAULT_SOIL_PARAMS);
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -209,109 +350,77 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
             />
           </div>
 
-          {/* Physical Properties */}
-          <div>
-            <h4 className="font-medium mb-4">Propriétés Physiques</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TextField
-                name="ph_level"
-                label="pH"
-                type="number"
-                step="0.01"
-                min="0"
-                max="14"
-              />
-              <SelectField
-                name="texture"
-                label="Texture du sol"
-                options={textureOptions}
-              />
-              <TextField
-                name="organic_matter_percentage"
-                label="Matière organique (%)"
-                type="number"
-                step="0.1"
-                min="0"
-                max="100"
-              />
-            </div>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Parametres analyses</p>
+            <details className="rounded-md border border-gray-200 dark:border-gray-700">
+              <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+                Choisir les parametres testes ({selectedCount})
+              </summary>
+              <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 p-4">
+                {SOIL_PARAMETER_GROUPS.map((group) => (
+                  <div key={group.category}>
+                    <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">{group.category}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {group.parameters.map((parameter) => (
+                        <label key={parameter.key} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <Checkbox
+                            checked={selectedParamSet.has(parameter.key)}
+                            onCheckedChange={(checked) => toggleParam(parameter.key, checked === true)}
+                          />
+                          <span>{parameter.label}{parameter.unit ? ` (${parameter.unit})` : ''}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
           </div>
 
-          {/* Chemical Properties - Macronutrients */}
-          <div>
-            <h4 className="font-medium mb-4">Macronutriments (ppm)</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <TextField
-                name="nitrogen_ppm"
-                label="Azote (N)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="phosphorus_ppm"
-                label="Phosphore (P)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="potassium_ppm"
-                label="Potassium (K)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="calcium_ppm"
-                label="Calcium (Ca)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="magnesium_ppm"
-                label="Magnésium (Mg)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="sulfur_ppm"
-                label="Soufre (S)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-            </div>
-          </div>
+          {SOIL_PARAMETER_GROUPS.map((group) => {
+            const visibleParameters = group.parameters.filter((parameter) => selectedParamSet.has(parameter.key));
+            if (visibleParameters.length === 0) {
+              return null;
+            }
 
-          {/* Soil Health Indicators */}
-          <div>
-            <h4 className="font-medium mb-4">Indicateurs de Santé du Sol</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <TextField
-                name="salinity_level"
-                label="Salinité (EC dS/m)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-              <TextField
-                name="cec_meq_per_100g"
-                label="CEC (meq/100g)"
-                type="number"
-                step="0.1"
-                min="0"
-              />
-            </div>
-          </div>
+            return (
+              <div key={`fields-${group.category}`}>
+                <h4 className="font-medium mb-4">{group.category}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {visibleParameters.map((parameter) => {
+                    const label = parameter.unit ? `${parameter.label} (${parameter.unit})` : parameter.label;
+                    if (parameter.key === 'texture') {
+                      return (
+                        <SelectField
+                          key={parameter.key}
+                          name="texture"
+                          label={label}
+                          options={textureOptions}
+                        />
+                      );
+                    }
+
+                    return (
+                      <TextField
+                        key={parameter.key}
+                        name={parameter.key}
+                        label={label}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Notes */}
           <TextareaField
             name="notes"
             label="Notes (optionnel)"
-            placeholder="Observations supplémentaires..."
+            placeholder="Observations supplementaires..."
             rows={4}
           />
 

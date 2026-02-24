@@ -47,9 +47,9 @@ export class CreateStructureDto {
 
   @ApiProperty({
     description: 'Structure type',
-    enum: ['stable', 'technical_room', 'basin', 'well']
+    enum: ['stable', 'technical_room', 'basin', 'well', 'other']
   })
-  @IsIn(['stable', 'technical_room', 'basin', 'well'])
+  @IsIn(['stable', 'technical_room', 'basin', 'well', 'other'])
   type: string;
 
   @ApiPropertyOptional({ description: 'Farm ID (if farm-specific structure)' })

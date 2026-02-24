@@ -81,6 +81,17 @@
       "changeLanguage": "Changer de langue"
     },
     "actionsColumn": "Actions",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "loading": "Chargement...",
+    "saving": "Enregistrement...",
+    "creating": "Création...",
+    "deleting": "Suppression...",
+    "create": "Créer",
+    "selectOption": "Sélectionner une option",
     "statusColumn": "Statut",
     "placeholders": {
       "searchLocation": "Rechercher un lieu au Maroc...",
@@ -2825,7 +2836,8 @@
       "stable": "Écurie",
       "technical_room": "Local technique",
       "basin": "Bassin",
-      "well": "Puits"
+      "well": "Puits",
+      "other": "Autre"
     },
     "shapes": {
       "trapezoidal": "Trapézoïdal",
@@ -2907,6 +2919,8 @@
       "condition": "État",
       "usage": "Utilisation",
       "usagePlaceholder": "Ex: Stockage matériel, Élevage, etc.",
+      "customType": "Précisez le type",
+      "customTypePlaceholder": "Ex: Serre, Hangar, Silo, etc.",
       "width": "Largeur",
       "length": "Longueur",
       "height": "Hauteur",
@@ -3547,6 +3561,7 @@
         "alreadyHasAccess": "Ce travailleur a déjà accès à la plateforme"
       },
       "perUnitRateInfo": "Le taux par unité est utilisé pour le travail à la pièce. Il sera appliqué lors de la complétion des tâches avec paiement à l'unité.",
+      "perUnitSummary": "Le paiement par unité est de {{rate}} {{currency}}",
       "metayageInfo": {
         "title": "Types de métayage",
         "khammass": {
