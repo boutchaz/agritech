@@ -209,7 +209,18 @@ export class SatelliteSyncService {
   }
 
   private boundaryToGeoJSON(boundary: number[][]): { type: string; coordinates: number[][][] } {
-    const coords = boundary.map((c) => [...c]);
+    // Convert coordinates from EPSG:3857 (Web Mercator) to WGS84 if needed
+    const coords = boundary.map((c) => {
+      const [x, y] = c;
+      // Check if coordinates are in Web Mercator (EPSG:3857) - values exceed WGS84 bounds
+      if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+        // Convert from EPSG:3857 to WGS84
+        const lon = (x / 20037508.34) * 180;
+        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360) / Math.PI - 90;
+        return [lon, lat];
+      }
+      return [x, y];
+    });
 
     if (coords.length > 0) {
       const first = coords[0];
