@@ -295,16 +295,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   // Transform data for chart
   const chartData = useCallback((): MultiIndexData[] => {
-    const getQuantile = (sortedValues: number[], quantile: number): number => {
-      if (sortedValues.length === 0) return NaN;
-      const position = (sortedValues.length - 1) * quantile;
-      const base = Math.floor(position);
-      const rest = position - base;
-      const next = sortedValues[base + 1];
-      if (next === undefined) return sortedValues[base];
-      return sortedValues[base] + rest * (next - sortedValues[base]);
-    };
-
     const dateMap = new Map<string, MultiIndexData>();
 
     for (const index of selectedIndices) {
@@ -321,21 +311,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         .filter((point): point is { date: string; value: number } => point !== null)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const sortedValues = validPoints
-        .map(point => point.value)
-        .sort((a, b) => a - b);
-
-      let iqrFilteredPoints = validPoints;
-      if (sortedValues.length >= 4) {
-        const q1 = getQuantile(sortedValues, 0.25);
-        const q3 = getQuantile(sortedValues, 0.75);
-        const iqr = q3 - q1;
-        const lowerBound = q1 - 1.5 * iqr;
-        const upperBound = q3 + 1.5 * iqr;
-        iqrFilteredPoints = validPoints.filter(point => point.value >= lowerBound && point.value <= upperBound);
-      }
-
-      const temporallyFilteredPoints = iqrFilteredPoints.filter((point, pointIndex, points) => {
+      // Apply temporal neighbor filter to catch sensor errors / cloud artifacts
+      // Note: IQR filtering was removed because it incorrectly treats seasonal
+      // variation as outliers (e.g. winter→spring vegetation increase).
+      const temporallyFilteredPoints = validPoints.filter((point, pointIndex, points) => {
         const neighbors: number[] = [];
         let offset = 1;
 
