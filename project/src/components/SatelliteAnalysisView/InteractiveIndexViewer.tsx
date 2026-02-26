@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar, AlertCircle } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -11,7 +11,8 @@ import {
    VEGETATION_INDEX_DESCRIPTIONS,
    HeatmapDataResponse,
    InteractiveDataResponse,
-   convertBoundaryToGeoJSON
+   convertBoundaryToGeoJSON,
+   DEFAULT_CLOUD_COVERAGE
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { DatePicker } from '../ui/DatePicker';
@@ -91,6 +92,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [leftTemporalData, setLeftTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [rightTemporalData, setRightTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dateMismatch, setDateMismatch] = useState<{requested: string; actual: string} | null>(null);
 
   // Overlay opacity control (per index)
   const [overlayOpacity, setOverlayOpacity] = useState<Map<VegetationIndexType, number>>(
@@ -175,7 +177,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         aoi,
         monthStart.toISOString().split('T')[0],
         monthEnd.toISOString().split('T')[0],
-        30,
+        DEFAULT_CLOUD_COVERAGE,
         parcelId
       );
 
@@ -214,7 +216,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         aoi,
         monthStart.toISOString().split('T')[0],
         monthEnd.toISOString().split('T')[0],
-        30,
+        DEFAULT_CLOUD_COVERAGE,
         parcelId
       );
 
@@ -254,6 +256,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
     setIsLoading(true);
     setError(null);
+    setDateMismatch(null);
 
     try {
       const aoi = {
@@ -273,6 +276,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
         ]);
 
+        // Check for date mismatch in temporal compare mode
+        if (leftResult.metadata?.requested_date && leftResult.date !== leftResult.metadata.requested_date) {
+          setDateMismatch({ requested: leftResult.metadata.requested_date, actual: leftResult.date });
+        } else if (rightResult.metadata?.requested_date && rightResult.date !== rightResult.metadata.requested_date) {
+          setDateMismatch({ requested: rightResult.metadata.requested_date, actual: rightResult.date });
+        }
+
         setLeftTemporalData(leftResult);
         setRightTemporalData(rightResult);
       } else if (viewMode === 'single') {
@@ -283,9 +293,17 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           visualizationType === 'leaflet' ? 'heatmap' : 'scatter',
           parcelId
         );
+
+        // Check for date mismatch in single mode
+        const heatmapResult = result as HeatmapDataResponse;
+        if (heatmapResult.metadata?.requested_date && heatmapResult.date !== heatmapResult.metadata.requested_date) {
+          setDateMismatch({ requested: heatmapResult.metadata.requested_date, actual: heatmapResult.date });
+        }
+
         setData(result);
       } else {
         const results = new Map<VegetationIndexType, HeatmapDataResponse>();
+        let foundMismatch: {requested: string; actual: string} | null = null;
 
         for (const index of selectedIndices) {
           try {
@@ -297,9 +315,18 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               parcelId
             ) as HeatmapDataResponse;
             results.set(index, result);
+
+            // Check for date mismatch (only report the first one found)
+            if (!foundMismatch && result.metadata?.requested_date && result.date !== result.metadata.requested_date) {
+              foundMismatch = { requested: result.metadata.requested_date, actual: result.date };
+            }
           } catch (err) {
             console.error(`Failed to fetch ${index}:`, err);
           }
+        }
+
+        if (foundMismatch) {
+          setDateMismatch(foundMismatch);
         }
 
         setMultiData(results);
@@ -329,7 +356,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelName, selectedDate, compareDate, selectedIndex, selectedIndices, visualizationType, viewMode]);
+  }, [boundary, parcelName, selectedDate, compareDate, selectedIndex, selectedIndices, visualizationType, viewMode, parcelId, indexColorPalettes]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -851,6 +878,20 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Date Fallback Warning */}
+      {dateMismatch && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-800 font-medium text-sm">Date de données différente</p>
+            <p className="text-amber-700 text-sm mt-1">
+              Aucune image satellite disponible pour le <strong>{dateMismatch.requested}</strong>.
+              Données du <strong>{dateMismatch.actual}</strong> affichées à la place.
+            </p>
+          </div>
         </div>
       )}
 

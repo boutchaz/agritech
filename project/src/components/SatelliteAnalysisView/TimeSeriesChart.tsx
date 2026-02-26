@@ -8,7 +8,8 @@ import {
   TIME_SERIES_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
   convertBoundaryToGeoJSON,
-  getDateRangeLastNDays
+  getDateRangeLastNDays,
+  DEFAULT_CLOUD_COVERAGE
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
@@ -61,7 +62,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const organizationId = currentOrganization?.id;
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
-  const cloudCoverage = 10;
+  const cloudCoverage = DEFAULT_CLOUD_COVERAGE;
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showIndexSelector, setShowIndexSelector] = useState(false);

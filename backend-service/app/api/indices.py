@@ -172,6 +172,7 @@ async def calculate_indices(
                         geometry=aoi,
                         scale=request.scale,
                         maxPixels=1e13,
+                        # Use native projection to avoid "geometry outside projection validity" errors
                     )
                     .get(index_name)
                     .getInfo()

@@ -594,6 +594,8 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=scale,
                 maxPixels=settings.MAX_PIXELS,
+                # Use native projection to avoid "geometry outside projection validity" errors
+                # when AOI crosses UTM zone boundaries
             ).get(index_name)
 
             return ee.Feature(
@@ -705,6 +707,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=scale,
                 maxPixels=settings.MAX_PIXELS,
+                # Use native projection to avoid "geometry outside projection validity" errors
             ).get(index)
 
             return ee.Feature(
@@ -772,6 +775,7 @@ class EarthEngineService:
                     geometry=aoi,
                     scale=scale,
                     maxPixels=settings.MAX_PIXELS,
+                    # Use native projection to avoid "geometry outside projection validity" errors
                 ).get(index)
                 value = stats.getInfo()
                 if value is not None:
@@ -855,6 +859,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
                 maxPixels=settings.MAX_PIXELS,
+                # Use native projection to avoid "geometry outside projection validity" errors
             ).getInfo()
 
             # Create enhanced image
@@ -1657,6 +1662,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
                 maxPixels=settings.MAX_PIXELS,
+                # Use native projection to avoid "geometry outside projection validity" errors
             )
 
             statistics[index_name] = stats.getInfo()

@@ -2,6 +2,10 @@ import { apiClient } from './api-client';
 
 const SATELLITE_PROXY_PREFIX = '/api/v1/satellite-proxy';
 
+// Default cloud coverage threshold for satellite data filtering
+// Used consistently across timeseries and heatmap views to ensure data consistency
+export const DEFAULT_CLOUD_COVERAGE = 10;
+
 export interface VegetationIndex {
   NIRv: "NIRv";
   EVI: "EVI";
@@ -348,7 +352,7 @@ export interface InteractiveDataResponse {
 }
 
 export interface HeatmapDataResponse {
-  date: string;
+  date: string; // Actual date used (may differ from requested date if fallback occurred)
   index: string;
   bounds: VisualizationBounds;
   pixel_data: PixelData[]; // Real satellite pixel data with lat/lon
@@ -368,6 +372,7 @@ export interface HeatmapDataResponse {
     sample_scale: number;
     total_pixels: number;
     data_source: string;
+    requested_date?: string; // Original requested date (if different from actual date)
   };
 }
 

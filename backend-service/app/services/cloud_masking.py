@@ -102,6 +102,7 @@ class CloudMaskingService:
                 geometry=region,
                 scale=10,  # Use 10m resolution for accurate calculation
                 maxPixels=1e9,
+                # Use native projection to avoid "geometry outside projection validity" errors
             )
 
             # Count total pixels
@@ -191,6 +192,7 @@ class CloudMaskingService:
                 geometry=region,
                 scale=10,  # Use 10m resolution
                 maxPixels=1e9,
+                # Use native projection to avoid "geometry outside projection validity" errors
             ).get("QA60")
 
             # Count total pixels

@@ -213,6 +213,7 @@ class AutomatedProcessingService:
                             geometry=aoi,
                             scale=10,
                             maxPixels=1e13,
+                            # Use native projection to avoid "geometry outside projection validity" errors
                         )
 
                         stats_result = stats.getInfo()

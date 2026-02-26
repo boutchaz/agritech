@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw } from 'lucide-react';
+import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -9,7 +9,8 @@ import {
   VEGETATION_INDICES,
   VEGETATION_INDEX_DESCRIPTIONS,
   HeatmapDataResponse,
-  convertBoundaryToGeoJSON
+  convertBoundaryToGeoJSON,
+  DEFAULT_CLOUD_COVERAGE
 } from '../../lib/satellite-api';
 import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 
@@ -182,6 +183,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [isCheckingDates, setIsCheckingDates] = useState(false);
   const [recommendedDate, setRecommendedDate] = useState<string | null>(null);
+  const [dateMismatch, setDateMismatch] = useState<{requested: string; actual: string} | null>(null);
 
 
 
@@ -222,7 +224,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           start_date: startDateStr,
           end_date: endDate
         },
-        max_cloud_coverage: 20
+        max_cloud_coverage: DEFAULT_CLOUD_COVERAGE
       });
 
       if (result.recommended_date) {
@@ -252,6 +254,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
     setIsLoading(true);
     setError(null);
+    setDateMismatch(null);
 
     try {
       const aoi = {
@@ -269,13 +272,21 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
       const result = await satelliteApi.getHeatmapData(requestParams);
 
+      // Check if the actual date differs from the requested date (fallback occurred)
+      if (result.metadata?.requested_date && result.date !== result.metadata.requested_date) {
+        setDateMismatch({
+          requested: result.metadata.requested_date,
+          actual: result.date
+        });
+      }
+
       setData(result as HeatmapDataResponse);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate heatmap visualization');
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelName, selectedDate, selectedIndex, samplePoints]);
+  }, [boundary, parcelName, selectedDate, selectedIndex, samplePoints, parcelId]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -500,6 +511,20 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Date Fallback Warning */}
+      {dateMismatch && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-amber-800 font-medium text-sm">Date de données différente</p>
+            <p className="text-amber-700 text-sm mt-1">
+              Aucune image satellite disponible pour le <strong>{dateMismatch.requested}</strong>.
+              Données du <strong>{dateMismatch.actual}</strong> affichées à la place.
+            </p>
+          </div>
         </div>
       )}
 
