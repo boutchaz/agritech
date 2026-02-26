@@ -457,6 +457,7 @@ class EarthEngineService:
         index: str,
         interval: str = "month",
         max_cloud_coverage: float = None,
+        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
     ) -> List[Dict]:
         """Get time series using real per-observation values (no composites).
 
@@ -482,6 +483,7 @@ class EarthEngineService:
                 index,
                 scale,
                 max_cloud,
+                use_aoi_cloud_filter=use_aoi_cloud_filter,
             )
         except Exception as e:
             logger.warning(
@@ -518,11 +520,12 @@ class EarthEngineService:
         index: str,
         scale: int,
         max_cloud: float,
+        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
     ) -> List[Dict]:
         """Compute mean index value per real Sentinel-2 image (no composites).
 
         Batches into 6-month chunks to avoid GEE timeouts on multi-year ranges.
-        Uses tile-level cloud filtering only (AOI filtering is overkill for means).
+        Uses AOI-level cloud filtering by default for consistency with available dates.
         """
         CHUNK_DAYS = 180
 
@@ -546,6 +549,7 @@ class EarthEngineService:
                     index,
                     scale,
                     max_cloud,
+                    use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
                 for obs in chunk_results:
                     d = obs["date"]
@@ -575,6 +579,7 @@ class EarthEngineService:
         index: str,
         scale: int,
         max_cloud: float,
+        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
     ) -> List[Dict]:
         """Process a single time chunk: get collection, map index, return observations."""
         collection = self.get_sentinel2_collection(
@@ -582,7 +587,7 @@ class EarthEngineService:
             start_date,
             end_date,
             max_cloud,
-            use_aoi_cloud_filter=False,
+            use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
 
         index_name = index

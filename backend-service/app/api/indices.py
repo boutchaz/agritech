@@ -609,7 +609,7 @@ async def get_available_dates(
             # Get Sentinel-2 collection
             aoi = ee.Geometry(aoi_geometry)
 
-            # Try with AOI-based cloud filtering first
+            # Use AOI-based cloud filtering for accuracy (matches heatmap behavior)
             collection = earth_engine_service.get_sentinel2_collection(
                 aoi_geometry,
                 start_date,
@@ -622,23 +622,6 @@ async def get_available_dates(
             # Check collection size first
             collection_size = collection.size().getInfo()
             logger.info(f"Collection size with AOI cloud filter: {collection_size}")
-
-            # If no images found with AOI filtering, try without it (fallback)
-            if collection_size == 0:
-                logger.info(
-                    "No images with AOI cloud filter, trying tile-based filtering..."
-                )
-                collection = earth_engine_service.get_sentinel2_collection(
-                    aoi_geometry,
-                    start_date,
-                    end_date,
-                    max_cloud_coverage,
-                    use_aoi_cloud_filter=False,  # Disable AOI-based filtering
-                )
-                collection_size = collection.size().getInfo()
-                logger.info(
-                    f"Collection size with tile-based filter: {collection_size}"
-                )
 
             if collection_size == 0:
                 logger.warning(
