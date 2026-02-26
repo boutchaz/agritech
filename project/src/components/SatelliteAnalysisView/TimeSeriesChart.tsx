@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer, AlertTriangle } from 'lucide-react';
 import {
   satelliteApi,
   TimeSeriesIndexType,
@@ -74,12 +74,44 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   } | null>(null);
   const [showTemperature, setShowTemperature] = useState(false);
 
-  // Initialize with last 2 years for calibration across crop cycles
+  // LocalStorage key for persisting date range
+  const DATE_RANGE_STORAGE_KEY = `timeseries-date-range-${parcelId}`;
+
+  // Initialize with persisted date range or default to last 2 years
   useEffect(() => {
+    try {
+      const persisted = localStorage.getItem(DATE_RANGE_STORAGE_KEY);
+      if (persisted) {
+        const { start, end } = JSON.parse(persisted);
+        // Validate the dates are reasonable (within last 5 years)
+        const parsedStart = new Date(start);
+        const fiveYearsAgo = new Date();
+        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+        if (parsedStart >= fiveYearsAgo) {
+          setStartDate(start);
+          setEndDate(end);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore date range from localStorage:', e);
+    }
+    // Fallback to default 2 years
     const defaultRange = getDateRangeLastNDays(730);
     setStartDate(defaultRange.start_date);
     setEndDate(defaultRange.end_date);
-  }, []);
+  }, [DATE_RANGE_STORAGE_KEY]);
+
+  // Persist date range changes to localStorage
+  useEffect(() => {
+    if (startDate && endDate) {
+      try {
+        localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate, end: endDate }));
+      } catch (e) {
+        console.warn('Failed to persist date range:', e);
+      }
+    }
+  }, [startDate, endDate, DATE_RANGE_STORAGE_KEY]);
 
   const getIndexColor = (index: TimeSeriesIndexType): string => {
     const colors: Record<string, string> = {
@@ -146,6 +178,14 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     },
     enabled: !!organizationId && !!parcelId && selectedIndices.length > 0 && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
+    // Retry on 401 errors (token refresh scenarios)
+    retry: (failureCount, error: any) => {
+      if (error?.status === 401 && failureCount < 2) {
+        return true; // Retry up to 2 times on 401
+      }
+      return failureCount < 1; // Default: 1 retry for other errors
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
 
 
@@ -404,18 +444,39 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     }
   };
 
-  const getCacheStats = () => {
-    if (!cachedData) return { total: 0, indices: 0 };
-    let total = 0;
-    let indices = 0;
+  // Get post-validation stats (Issue 3: fix counter to show actual chart points)
+  const getChartStats = useCallback(() => {
+    const chartDataArray = chartData();
+    const perIndexCount: Record<string, number> = {};
+    let totalPoints = 0;
+
     for (const index of selectedIndices) {
-      const count = cachedData[index]?.length || 0;
-      if (count > 0) {
-        total += count;
-        indices++;
-      }
+      const count = chartDataArray.filter(d => typeof d[index] === 'number' && !isNaN(d[index] as number)).length;
+      perIndexCount[index] = count;
+      totalPoints += count;
     }
-    return { total, indices };
+
+    return { total: totalPoints, perIndexCount };
+  }, [chartData, selectedIndices]);
+
+  // Get indices with no data (Issue 1: detect empty indices)
+  const getEmptyIndices = useCallback(() => {
+    const { perIndexCount } = getChartStats();
+    return selectedIndices.filter(index => perIndexCount[index] === 0);
+  }, [getChartStats, selectedIndices]);
+
+  // Check if data is sparse (Issue 2: warn about sparse data)
+  const isDataSparse = useCallback(() => {
+    const { total } = getChartStats();
+    // Warn if fewer than 10 data points across all selected indices
+    return total > 0 && total < 10;
+  }, [getChartStats]);
+
+  const getCacheStats = () => {
+    // Now uses post-validation count (Issue 3 fix)
+    const { total, perIndexCount } = getChartStats();
+    const indicesWithData = selectedIndices.filter(i => perIndexCount[i] > 0).length;
+    return { total, indices: indicesWithData, perIndexCount };
   };
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -458,6 +519,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const isLoading = isLoadingCache || isSyncing;
   const data = chartData();
   const cacheStats = getCacheStats();
+  const emptyIndices = getEmptyIndices();
+  const dataIsSparse = isDataSparse();
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -467,7 +530,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           <h2 className="text-xl font-semibold">Vegetation Index Time Series</h2>
         </div>
 
-        {/* Cache indicator (subtle) */}
+        {/* Cache indicator (subtle) - now shows post-validation count */}
         {cacheStats.total > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Database className="w-3 h-3" />
@@ -479,6 +542,17 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       <p className="text-gray-600 mb-4">
         Tendances historiques pour {parcelName || `Parcelle ${parcelId}`}
       </p>
+
+      {/* Warning: Sparse data (Issue 2) */}
+      {dataIsSparse && !isLoading && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <span className="font-medium">Données limitées.</span>{' '}
+            Seulement {cacheStats.total} points disponibles pour cette période en raison de la couverture nuageuse ou satellite.
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {([
@@ -621,6 +695,28 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         ))}
       </div>
 
+      {/* Warning: Indices with no data (Issue 1) */}
+      {emptyIndices.length > 0 && !isLoading && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-red-800">
+            <span className="font-medium">Pas de données disponibles pour :</span>{' '}
+            {emptyIndices.map(index => (
+              <span key={index} className="inline-flex items-center mr-2">
+                <span
+                  className="w-2 h-2 rounded-full mr-1"
+                  style={{ backgroundColor: getIndexColor(index) }}
+                />
+                {index}
+              </span>
+            ))}
+            <span className="block mt-1 text-red-600">
+              Cliquez sur "Récupérer depuis satellite" pour synchroniser ces indices.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Statistics Table */}
       {data.length > 0 && (
         <div className="mb-6 overflow-x-auto">
@@ -638,7 +734,22 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             <tbody>
               {selectedIndices.map(index => {
                 const stats = calculateStatistics(index);
-                if (!stats) return null;
+                // Show row with "no data" message instead of hiding (Issue 1 fix)
+                if (!stats) {
+                  return (
+                    <tr key={index} className="border-b hover:bg-gray-50 bg-gray-50/50">
+                      <td className="py-2 px-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full opacity-50" style={{ backgroundColor: getIndexColor(index) }} />
+                          <span className="font-medium text-gray-400">{index}</span>
+                        </div>
+                      </td>
+                      <td colSpan={5} className="text-center py-2 px-2 text-gray-400 italic text-xs">
+                        Pas de données disponibles
+                      </td>
+                    </tr>
+                  );
+                }
                 return (
                   <tr key={index} className="border-b hover:bg-gray-50">
                     <td className="py-2 px-2">
