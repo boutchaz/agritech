@@ -223,11 +223,15 @@ class EarthEngineService:
         aoi = ee.Geometry(geometry)
         max_cloud = max_cloud_coverage or settings.MAX_CLOUD_COVERAGE
 
+        # Earth Engine's filterDate(start, end) is EXCLUSIVE on the end date
+        # (includes dates >= start and < end). Add 1 day to end_date to make it inclusive.
+        end_dt_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+
         # First, get initial collection with loose tile-based filtering
         collection = (
             ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
             .filterBounds(aoi)
-            .filterDate(start_date, end_date)
+            .filterDate(start_date, end_dt_inclusive)
             .filter(
                 ee.Filter.lte(
                     "CLOUDY_PIXEL_PERCENTAGE",
@@ -594,8 +598,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=scale,
                 maxPixels=settings.MAX_PIXELS,
-                # Use native projection to avoid "geometry outside projection validity" errors
-                # when AOI crosses UTM zone boundaries
+                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).get(index_name)
 
             return ee.Feature(
@@ -639,10 +642,13 @@ class EarthEngineService:
         """Batch all windows into a single GEE server-side computation."""
         max_cloud = settings.MAX_CLOUD_COVERAGE
 
+        # Earth Engine's filterDate is exclusive on end date, add 1 day to make inclusive
+        end_dt_inclusive = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+
         base_collection = (
             ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
             .filterBounds(aoi)
-            .filterDate(start_date, end_date)
+            .filterDate(start_date, end_dt_inclusive)
             .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", max_cloud))
         )
 
@@ -660,9 +666,10 @@ class EarthEngineService:
                     {
                         "idx": i,
                         "date": w_start.strftime("%Y-%m-%d"),
+                        # Add 1 day to window end for inclusive filterDate
                         "count": base_collection.filterDate(
                             w_start.strftime("%Y-%m-%d"),
-                            w_end.strftime("%Y-%m-%d"),
+                            (w_end + timedelta(days=1)).strftime("%Y-%m-%d"),
                         ).size(),
                     },
                 )
@@ -688,7 +695,8 @@ class EarthEngineService:
         def make_window_feature(window_tuple):
             w_start, w_end = window_tuple
             w_start_str = w_start.strftime("%Y-%m-%d")
-            w_end_str = w_end.strftime("%Y-%m-%d")
+            # Add 1 day to end date for inclusive filterDate
+            w_end_str = (w_end + timedelta(days=1)).strftime("%Y-%m-%d")
 
             sub = base_collection.filterDate(w_start_str, w_end_str)
             composite = sub.median()
@@ -707,7 +715,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=scale,
                 maxPixels=settings.MAX_PIXELS,
-                # Use native projection to avoid "geometry outside projection validity" errors
+                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).get(index)
 
             return ee.Feature(
@@ -775,7 +783,7 @@ class EarthEngineService:
                     geometry=aoi,
                     scale=scale,
                     maxPixels=settings.MAX_PIXELS,
-                    # Use native projection to avoid "geometry outside projection validity" errors
+                    bestEffort=True,  # Handle AOI crossing UTM zone boundaries
                 ).get(index)
                 value = stats.getInfo()
                 if value is not None:
@@ -859,7 +867,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
                 maxPixels=settings.MAX_PIXELS,
-                # Use native projection to avoid "geometry outside projection validity" errors
+                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).getInfo()
 
             # Create enhanced image
@@ -1662,7 +1670,7 @@ class EarthEngineService:
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
                 maxPixels=settings.MAX_PIXELS,
-                # Use native projection to avoid "geometry outside projection validity" errors
+                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             )
 
             statistics[index_name] = stats.getInfo()
@@ -1683,10 +1691,13 @@ class EarthEngineService:
             aoi = ee.Geometry(geometry)
 
             # Get all available images (without cloud filter)
+            # Earth Engine's filterDate is exclusive on end date, add 1 day to make inclusive
+            end_date_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+
             collection = (
                 ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
                 .filterBounds(aoi)
-                .filterDate(start_date, end_date)
+                .filterDate(start_date, end_date_inclusive)
             )
 
             # Check if collection has any images at all

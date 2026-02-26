@@ -444,9 +444,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     }
   };
 
-  // Get post-validation stats (Issue 3: fix counter to show actual chart points)
-  const getChartStats = useCallback(() => {
-    const chartDataArray = chartData();
+  // Get post-validation stats from already computed chart data
+  // This avoids calling chartData() multiple times
+  const getChartStatsFromData = useCallback((chartDataArray: MultiIndexData[]) => {
     const perIndexCount: Record<string, number> = {};
     let totalPoints = 0;
 
@@ -457,27 +457,13 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     }
 
     return { total: totalPoints, perIndexCount };
-  }, [chartData, selectedIndices]);
-
-  // Get indices with no data (Issue 1: detect empty indices)
-  const getEmptyIndices = useCallback(() => {
-    const { perIndexCount } = getChartStats();
-    return selectedIndices.filter(index => perIndexCount[index] === 0);
-  }, [getChartStats, selectedIndices]);
+  }, [selectedIndices]);
 
   // Check if data is sparse (Issue 2: warn about sparse data)
-  const isDataSparse = useCallback(() => {
-    const { total } = getChartStats();
+  const isDataSparseFromStats = useCallback((total: number) => {
     // Warn if fewer than 10 data points across all selected indices
     return total > 0 && total < 10;
-  }, [getChartStats]);
-
-  const getCacheStats = () => {
-    // Now uses post-validation count (Issue 3 fix)
-    const { total, perIndexCount } = getChartStats();
-    const indicesWithData = selectedIndices.filter(i => perIndexCount[i] > 0).length;
-    return { total, indices: indicesWithData, perIndexCount };
-  };
+  }, []);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -518,9 +504,20 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   const isLoading = isLoadingCache || isSyncing;
   const data = chartData();
-  const cacheStats = getCacheStats();
-  const emptyIndices = getEmptyIndices();
-  const dataIsSparse = isDataSparse();
+  const chartStats = getChartStatsFromData(data);
+  const cacheStats = {
+    total: chartStats.total,
+    indices: selectedIndices.filter(i => chartStats.perIndexCount[i] > 0).length,
+    perIndexCount: chartStats.perIndexCount
+  };
+  const emptyIndices = selectedIndices.filter(index => chartStats.perIndexCount[index] === 0);
+  const dataIsSparse = isDataSparseFromStats(chartStats.total);
+
+  // Only show "no data" warning if:
+  // 1. Not loading
+  // 2. We have actually fetched data (cachedData is defined)
+  // 3. Some indices have no data
+  const showNoDataWarning = !isLoading && cachedData !== undefined && emptyIndices.length > 0 && emptyIndices.length === selectedIndices.length;
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -695,12 +692,25 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         ))}
       </div>
 
-      {/* Warning: Indices with no data (Issue 1) */}
-      {emptyIndices.length > 0 && !isLoading && (
+      {/* Warning: All indices have no data (Issue 1) */}
+      {showNoDataWarning && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-red-800">
-            <span className="font-medium">Pas de données disponibles pour :</span>{' '}
+            <span className="font-medium">Pas de données disponibles pour cette période.</span>{' '}
+            <span className="block mt-1 text-red-600">
+              Essayez d'élargir la plage de dates ou cliquez sur "Récupérer depuis satellite" pour synchroniser les données.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Warning: Some indices have no data (partial) */}
+      {emptyIndices.length > 0 && !isLoading && cachedData !== undefined && emptyIndices.length < selectedIndices.length && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <span className="font-medium">Données non disponibles pour :</span>{' '}
             {emptyIndices.map(index => (
               <span key={index} className="inline-flex items-center mr-2">
                 <span
@@ -710,9 +720,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                 {index}
               </span>
             ))}
-            <span className="block mt-1 text-red-600">
-              Cliquez sur "Récupérer depuis satellite" pour synchroniser ces indices.
-            </span>
           </div>
         </div>
       )}
