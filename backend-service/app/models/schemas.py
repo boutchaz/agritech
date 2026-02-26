@@ -94,6 +94,8 @@ class TimeSeriesRequest(BaseModel):
     index: TimeSeriesIndex
     interval: Optional[TimeInterval] = TimeInterval.MONTH
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100)
+    use_aoi_cloud_filter: Optional[bool] = Field(True, description="Calculate cloud coverage within AOI only (default True for consistency with heatmap)")
+    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
 
 class ExportRequest(BaseModel):
     aoi: AOIRequest

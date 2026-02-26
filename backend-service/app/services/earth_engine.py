@@ -502,13 +502,17 @@ class EarthEngineService:
                     scale,
                     start_dt,
                     end_dt,
+                    max_cloud=max_cloud,
+                    use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
             except Exception as e2:
                 logger.warning(
                     f"Batched time series also failed ({e2}), falling back to sequential"
                 )
                 return self._get_time_series_sequential(
-                    geometry, aoi, index, step, scale, start_dt, end_dt
+                    geometry, aoi, index, step, scale, start_dt, end_dt,
+                    max_cloud=max_cloud,
+                    use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
 
     def _get_time_series_per_observation(
@@ -643,18 +647,22 @@ class EarthEngineService:
         scale: int,
         start_dt: datetime,
         end_dt: datetime,
+        max_cloud: float = None,
+        use_aoi_cloud_filter: bool = True,
     ) -> List[Dict]:
-        """Batch all windows into a single GEE server-side computation."""
-        max_cloud = settings.MAX_CLOUD_COVERAGE
+        """Batch all windows into a single GEE server-side computation.
 
-        # Earth Engine's filterDate is exclusive on end date, add 1 day to make inclusive
-        end_dt_inclusive = (end_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+        Uses AOI-level cloud filtering by default for consistency with
+        available dates and heatmap views."""
+        max_cloud = max_cloud or settings.MAX_CLOUD_COVERAGE
 
-        base_collection = (
-            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-            .filterBounds(aoi)
-            .filterDate(start_date, end_dt_inclusive)
-            .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", max_cloud))
+        # Use get_sentinel2_collection for consistent AOI-level cloud filtering
+        base_collection = self.get_sentinel2_collection(
+            geometry,
+            start_date,
+            end_date,
+            max_cloud,
+            use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
 
         windows = []
@@ -757,8 +765,14 @@ class EarthEngineService:
         scale: int,
         start_dt: datetime,
         end_dt: datetime,
+        max_cloud: float = None,
+        use_aoi_cloud_filter: bool = True,
     ) -> List[Dict]:
-        """Fallback: per-window sequential getInfo() calls."""
+        """Fallback: per-window sequential getInfo() calls.
+
+        Uses AOI-level cloud filtering by default for consistency with
+        available dates and heatmap views."""
+        max_cloud = max_cloud or settings.MAX_CLOUD_COVERAGE
         time_series: List[Dict] = []
         current = start_dt
         while current < end_dt:
@@ -768,6 +782,8 @@ class EarthEngineService:
                     geometry,
                     current.strftime("%Y-%m-%d"),
                     window_end.strftime("%Y-%m-%d"),
+                    max_cloud,
+                    use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
 
                 count = sub_collection.size().getInfo()

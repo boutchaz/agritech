@@ -278,6 +278,7 @@ async def get_time_series(
                 base_index,
                 request.interval.value,
                 max_cloud_coverage=request.cloud_coverage,
+                use_aoi_cloud_filter=request.use_aoi_cloud_filter,
             )
         else:
             # Use the provider interface
