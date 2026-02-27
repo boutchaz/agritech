@@ -196,6 +196,21 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     setSyncProgress(null);
 
     try {
+      // Filter out derived indices that cannot be synced directly
+      // NIRvP = NIRv × PAR (calculated on-demand, sync NIRv instead)
+      // TCARI_OSAVI = TCARI / OSAVI (calculated on-demand, sync TCARI and OSAVI instead)
+      const indicesToSync = new Set<string>();
+      for (const index of selectedIndices) {
+        if (index === 'NIRvP') {
+          indicesToSync.add('NIRv'); // NIRvP depends on NIRv
+        } else if (index === 'TCARI_OSAVI') {
+          indicesToSync.add('TCARI');
+          indicesToSync.add('OSAVI');
+        } else {
+          indicesToSync.add(index);
+        }
+      }
+
       const syncResponse = await satelliteApi.startTimeSeriesSync({
         parcel_id: parcelId,
         farm_id: farmId,
@@ -205,7 +220,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         },
         date_range: { start_date: startDate, end_date: endDate },
         cloud_coverage: cloudCoverage,
-        indices: selectedIndices,
+        indices: Array.from(indicesToSync),
       });
 
       if (syncResponse.status === 'failed') {

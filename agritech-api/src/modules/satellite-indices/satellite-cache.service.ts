@@ -548,6 +548,7 @@ export class SatelliteCacheService {
     const parcelId = body.parcel_id as string | undefined;
     const startDate = (body.start_date as string) || '';
     const endDate = (body.end_date as string) || '';
+    const forceRefresh = body.force_refresh as boolean | undefined;
 
     if (!parcelId) {
       return this.proxy.post('/indices/available-dates', body, organizationId);
@@ -559,32 +560,38 @@ export class SatelliteCacheService {
 
     const memKey = `ad:${parcelId}:${startDate}:${endDate}`;
 
-    const memCached = this.availDatesCache.get(memKey);
-    if (memCached && memCached.expiresAt > Date.now()) {
-      this.logger.log(`[Cache L1 HIT] available-dates ${memKey}`);
-      return memCached.data;
+    // Skip memory cache if force_refresh is true
+    if (!forceRefresh) {
+      const memCached = this.availDatesCache.get(memKey);
+      if (memCached && memCached.expiresAt > Date.now()) {
+        this.logger.log(`[Cache L1 HIT] available-dates ${memKey}`);
+        return memCached.data;
+      }
     }
 
-    const derived = await this.deriveAvailableDatesFromTimeSeries(
-      parcelId,
-      startDate,
-      endDate,
-      organizationId,
-    );
-
-    if (derived) {
-      this.logger.log(
-        `[available-dates] Derived ${derived.available_dates.length} dates from timeseries cache for parcel ${parcelId}`,
+    // Skip derived cache if force_refresh is true - always get fresh data from satellite service
+    if (!forceRefresh) {
+      const derived = await this.deriveAvailableDatesFromTimeSeries(
+        parcelId,
+        startDate,
+        endDate,
+        organizationId,
       );
-      this.availDatesCache.set(memKey, {
-        data: derived,
-        expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
-      });
-      return derived;
+
+      if (derived) {
+        this.logger.log(
+          `[available-dates] Derived ${derived.available_dates.length} dates from timeseries cache for parcel ${parcelId}`,
+        );
+        this.availDatesCache.set(memKey, {
+          data: derived,
+          expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
+        });
+        return derived;
+      }
     }
 
     this.logger.log(
-      `[available-dates] No timeseries data — falling back to satellite service for ${parcelId} ${startDate}→${endDate}`,
+      `[available-dates] ${forceRefresh ? 'Force refresh' : 'No timeseries data'} — fetching from satellite service for ${parcelId} ${startDate}→${endDate}`,
     );
     const start = Date.now();
     const fresh = await this.proxy.post('/indices/available-dates', body, organizationId);

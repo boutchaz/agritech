@@ -178,7 +178,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         monthStart.toISOString().split('T')[0],
         monthEnd.toISOString().split('T')[0],
         DEFAULT_CLOUD_COVERAGE,
-        parcelId
+        parcelId,
+        true // force_refresh - always get fresh data from satellite service
       );
 
       const dates = result.available_dates
@@ -217,7 +218,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         monthStart.toISOString().split('T')[0],
         monthEnd.toISOString().split('T')[0],
         DEFAULT_CLOUD_COVERAGE,
-        parcelId
+        parcelId,
+        true // force_refresh - always get fresh data from satellite service
       );
 
       const dates = result.available_dates
