@@ -96,19 +96,21 @@ class CloudMaskingService:
             cloud_mask = add_scl_mask(cloud_mask, image)
 
             # Calculate statistics within AOI
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             # Count cloudy pixels
             cloud_pixels = cloud_mask.reduceRegion(
                 reducer=ee.Reducer.sum(),
                 geometry=region,
                 scale=10,  # Use 10m resolution for accurate calculation
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=1e9,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             )
 
             # Count total pixels
             total_pixels = cloud_mask.gt(-1).reduceRegion(
-                reducer=ee.Reducer.count(), geometry=region, scale=10, maxPixels=1e9,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
+                reducer=ee.Reducer.count(), geometry=region, scale=10,
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                maxPixels=1e9,
             )
 
             # Get the values
@@ -187,21 +189,23 @@ class CloudMaskingService:
                 pass
 
             # Calculate statistics within AOI - all server-side
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             # Count cloudy pixels
             cloud_pixels = cloud_mask.reduceRegion(
                 reducer=ee.Reducer.sum(),
                 geometry=region,
                 scale=10,  # Use 10m resolution
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=1e9,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).get("QA60")
 
             # Count total pixels
             total_pixels = (
                 cloud_mask.gt(-1)
                 .reduceRegion(
-                    reducer=ee.Reducer.count(), geometry=region, scale=10, maxPixels=1e9,
-                    bestEffort=True,  # Handle AOI crossing UTM zone boundaries
+                    reducer=ee.Reducer.count(), geometry=region, scale=10,
+                    crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                    maxPixels=1e9,
                 )
                 .get("QA60")
             )

@@ -602,12 +602,13 @@ class EarthEngineService:
             if idx_image is None:
                 return ee.Feature(None, {"date": None, "value": None, "cloud": None})
 
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             mean_val = idx_image.reduceRegion(
                 reducer=ee.Reducer.mean(),
                 geometry=aoi,
                 scale=scale,
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).get(index_name)
 
             return ee.Feature(
@@ -723,12 +724,13 @@ class EarthEngineService:
                     None, {"date": w_start_str, "value": None, "count": 0}
                 )
 
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             mean_val = index_image.reduceRegion(
                 reducer=ee.Reducer.mean(),
                 geometry=aoi,
                 scale=scale,
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).get(index)
 
             return ee.Feature(
@@ -799,12 +801,13 @@ class EarthEngineService:
                     current = window_end
                     continue
 
+                # Use CRS parameter to handle AOI crossing UTM zone boundaries
                 stats = index_image.reduceRegion(
                     reducer=ee.Reducer.mean(),
                     geometry=aoi,
                     scale=scale,
+                    crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                     maxPixels=settings.MAX_PIXELS,
-                    bestEffort=True,  # Handle AOI crossing UTM zone boundaries
                 ).get(index)
                 value = stats.getInfo()
                 if value is not None:
@@ -880,6 +883,7 @@ class EarthEngineService:
             base_image = Image.open(io.BytesIO(response.content))
 
             # Calculate statistics
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             stats = image.reduceRegion(
                 reducer=ee.Reducer.percentile([10, 90])
                 .combine(ee.Reducer.mean(), "", True)
@@ -887,8 +891,8 @@ class EarthEngineService:
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             ).getInfo()
 
             # Create enhanced image
@@ -1684,14 +1688,15 @@ class EarthEngineService:
 
         statistics = {}
         for index_name, index_image in index_images.items():
+            # Use CRS parameter to handle AOI crossing UTM zone boundaries
             stats = index_image.reduceRegion(
                 reducer=ee.Reducer.percentile([2, 25, 50, 75, 98])
                 .combine(ee.Reducer.mean(), "", True)
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
+                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
-                bestEffort=True,  # Handle AOI crossing UTM zone boundaries
             )
 
             statistics[index_name] = stats.getInfo()

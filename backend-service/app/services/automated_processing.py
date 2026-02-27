@@ -205,6 +205,7 @@ class AutomatedProcessingService:
 
                 for index_name, index_image in index_results.items():
                     try:
+                        # Use CRS parameter to handle AOI crossing UTM zone boundaries
                         stats = index_image.reduceRegion(
                             reducer=ee.Reducer.percentile([2, 25, 50, 75, 98])
                             .combine(ee.Reducer.mean(), "", True)
@@ -212,8 +213,8 @@ class AutomatedProcessingService:
                             .combine(ee.Reducer.count(), "", True),
                             geometry=aoi,
                             scale=10,
+                            crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                             maxPixels=1e13,
-                            bestEffort=True,  # Handle AOI crossing UTM zone boundaries
                         )
 
                         stats_result = stats.getInfo()
