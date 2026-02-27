@@ -156,7 +156,13 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
       const result: Record<string, any[]> = {};
 
-      for (const index of selectedIndices) {
+      // Derived indices that are calculated on-demand (not cached)
+      const derivedIndices = ['NIRvP', 'TCARI_OSAVI'];
+      const cachedIndices = selectedIndices.filter(i => !derivedIndices.includes(i));
+      const onDemandIndices = selectedIndices.filter(i => derivedIndices.includes(i));
+
+      // Fetch cached indices from the database
+      for (const index of cachedIndices) {
         try {
           const response = await satelliteIndicesApi.getAll(
             {
@@ -171,6 +177,37 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         } catch (err) {
           console.warn(`Failed to fetch cached data for ${index}:`, err);
           result[index] = [];
+        }
+      }
+
+      // Fetch derived indices from the timeseries API (calculated on-demand)
+      if (onDemandIndices.length > 0 && boundary) {
+        const aoi = {
+          geometry: convertBoundaryToGeoJSON(boundary),
+          name: parcelName || 'Parcel',
+        };
+
+        for (const index of onDemandIndices) {
+          try {
+            const response = await satelliteApi.getTimeSeries({
+              aoi,
+              date_range: { start_date: startDate, end_date: endDate },
+              index: index as TimeSeriesIndexType,
+              interval: 'month',
+              parcel_id: parcelId,
+              farm_id: farmId,
+            });
+
+            // Convert timeseries response to same format as cached data
+            result[index] = (response.data || []).map((point) => ({
+              date: point.date,
+              index_value: point.value,
+              mean_value: point.value,
+            }));
+          } catch (err) {
+            console.warn(`Failed to fetch on-demand data for ${index}:`, err);
+            result[index] = [];
+          }
         }
       }
 
