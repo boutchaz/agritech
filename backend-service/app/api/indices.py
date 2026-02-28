@@ -58,20 +58,40 @@ async def _fetch_daily_par(
     """
     Fetch daily PAR approximation from Open-Meteo archive.
     PAR ≈ 0.48 * shortwave_radiation_sum.
+
+    Note: The archive API typically has a 2-5 day delay, so we cap the end date
+    to 5 days ago to avoid requesting data that isn't available yet.
     """
+    # Cap end date to 5 days ago (archive API delay)
+    today = datetime.utcnow().date()
+    max_available_date = today - timedelta(days=5)
+    capped_end_date = min(
+        datetime.strptime(end_date[:10], "%Y-%m-%d").date(),
+        max_available_date
+    )
+
+    # Don't request if start_date is after capped_end_date
+    start_dt = datetime.strptime(start_date[:10], "%Y-%m-%d").date()
+    if start_dt > capped_end_date:
+        logger.info(
+            f"PAR data not available yet for {start_date} to {end_date} "
+            f"(archive delay: max available is {max_available_date})"
+        )
+        return {}
+
     url = "https://archive-api.open-meteo.com/v1/archive"
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "start_date": start_date,
-        "end_date": end_date,
+        "start_date": start_date[:10],
+        "end_date": capped_end_date.strftime("%Y-%m-%d"),
         "daily": "shortwave_radiation_sum",
         "timezone": "UTC",
     }
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, params=params, timeout=15)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(url, params=params)
             response.raise_for_status()
             payload = response.json()
 
@@ -85,6 +105,10 @@ async def _fetch_daily_par(
                 continue
             par_by_date[date_str] = float(sw) * 0.48
 
+        logger.info(
+            f"Fetched PAR data for {len(par_by_date)} days "
+            f"({start_date[:10]} to {capped_end_date})"
+        )
         return par_by_date
     except Exception as exc:
         logger.warning(f"Failed to fetch PAR data from Open-Meteo: {exc}")

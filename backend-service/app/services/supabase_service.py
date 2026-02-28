@@ -32,7 +32,7 @@ class SupabaseService:
     ) -> List[Dict[str, Any]]:
         """Get all farms for an organization"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_organization_farms",
                     headers=self.headers,
@@ -47,7 +47,7 @@ class SupabaseService:
     async def get_farm_parcels(self, farm_id: str) -> List[Dict[str, Any]]:
         """Get all parcels for a farm"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_farm_parcels",
                     headers=self.headers,
@@ -64,7 +64,7 @@ class SupabaseService:
     ) -> List[Dict[str, Any]]:
         """Get farm hierarchy tree"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 params = {"org_uuid": organization_id}
                 if root_farm_id:
                     params["root_farm_id"] = root_farm_id
@@ -83,7 +83,7 @@ class SupabaseService:
     async def get_parcel_details(self, parcel_id: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a parcel"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/parcels",
                     headers=self.headers,
@@ -99,7 +99,7 @@ class SupabaseService:
     async def get_farm_details(self, farm_id: str) -> Optional[Dict[str, Any]]:
         """Get detailed information about a farm"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/farms",
                     headers=self.headers,
@@ -115,7 +115,7 @@ class SupabaseService:
     async def save_processing_job(self, job_data: Dict[str, Any]) -> Optional[str]:
         """Save a processing job to the database"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
                     headers=self.headers,
@@ -131,7 +131,7 @@ class SupabaseService:
     async def get_processing_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get a processing job by ID"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
                     headers=self.headers,
@@ -147,7 +147,7 @@ class SupabaseService:
     async def update_processing_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
         """Update a processing job"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.patch(
                     f"{self.supabase_url}/rest/v1/satellite_processing_jobs",
                     headers=self.headers,
@@ -163,7 +163,7 @@ class SupabaseService:
     async def save_satellite_data(self, data: Dict[str, Any]) -> Optional[str]:
         """Save satellite indices data"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_indices_data",
                     headers=self.headers,
@@ -181,7 +181,7 @@ class SupabaseService:
     ) -> List[Dict[str, Any]]:
         """Get satellite indices data for a parcel"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 # Use list-of-tuples so httpx emits duplicate 'date' keys
                 # for PostgREST range filtering on the same column
                 query_params: list[tuple[str, str]] = [("parcel_id", f"eq.{parcel_id}")]
@@ -219,7 +219,7 @@ class SupabaseService:
         lon = self._round_weather_coordinate(longitude)
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 query_params: list[tuple[str, str]] = [
                     ("select", "date,par_value"),
                     ("latitude", f"eq.{lat:.2f}"),
@@ -279,7 +279,7 @@ class SupabaseService:
             return False
 
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_par_data",
                     headers={**self.headers, "Prefer": "resolution=merge-duplicates"},
@@ -333,7 +333,7 @@ class SupabaseService:
     async def get_organization_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         """Get organizations for a user"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/rpc/get_user_organizations",
                     headers=self.headers,
@@ -361,7 +361,7 @@ class SupabaseService:
             file_path = f"{folder_path}/{filename}"
 
             # Upload file to Supabase Storage
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
                     headers={
@@ -401,7 +401,7 @@ class SupabaseService:
     async def save_file_metadata(self, metadata: Dict[str, Any]) -> Optional[str]:
         """Save file metadata to database"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
@@ -422,7 +422,7 @@ class SupabaseService:
     ) -> List[Dict[str, Any]]:
         """Get satellite files for an organization"""
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 query_params: list[tuple[str, str]] = [
                     ("organization_id", f"eq.{organization_id}")
                 ]
@@ -451,7 +451,7 @@ class SupabaseService:
         """Delete satellite file and its metadata"""
         try:
             # First get file metadata
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/satellite_files",
                     headers=self.headers,
@@ -495,7 +495,7 @@ class SupabaseService:
         self,
     ) -> List[Dict[str, Any]]:
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/subscriptions",
                     headers={**self.headers, "Accept": "application/json"},
