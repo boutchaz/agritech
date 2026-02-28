@@ -23,9 +23,9 @@ export const SUBSCRIPTION_CONFIG = {
 
   /**
    * Allow access for X days after subscription expires (grace period)
-   * Set to 0 to block immediately after expiration
+   * Set to 3 for B2B — covers weekend payment failures
    */
-  GRACE_PERIOD_DAYS: 0,
+  GRACE_PERIOD_DAYS: 3,
 
   /**
    * Whether to show legacy user banner for grandfathered organizations

@@ -1,18 +1,11 @@
-import { Polar } from '@polar-sh/sdk';
 import { SUBSCRIPTION_CONFIG } from '../config/subscription';
 
-// Initialize Polar SDK with sandbox support
-const polarAccessToken = import.meta.env?.VITE_POLAR_ACCESS_TOKEN;
-const polarServer = import.meta.env?.VITE_POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production';
-
-export const polar = polarAccessToken
-  ? new Polar({
-      accessToken: polarAccessToken,
-      server: polarServer,
-    })
-  : null;
+// NOTE: Polar SDK client removed from frontend — access tokens must NEVER be exposed in browser code.
+// All Polar API calls go through the NestJS backend (agritech-api/src/modules/subscriptions/).
+// The frontend only constructs checkout URLs using product IDs (public, non-secret).
 
 export type PlanType = 'essential' | 'professional' | 'enterprise';
+export type BillingInterval = 'month' | 'year';
 
 // Backend may return 'starter' which maps to 'essential'
 type BackendPlanType = PlanType | 'starter';
@@ -64,6 +57,8 @@ export interface PlanDetails {
   name: string;
   price: string;
   priceAmount: number;
+  priceYearly: number;
+  priceYearlyAmount: number;
   description: string;
   features: string[];
   limits: {
@@ -106,6 +101,8 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
     name: 'Essential Plan',
     price: '$25',
     priceAmount: 25,
+    priceYearly: 250,
+    priceYearlyAmount: 250,
     description: 'Perfect for small commercial farms digitizing their operations',
     features: [
       'Core Farm Management Module',
@@ -141,6 +138,8 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
     name: 'Professional Plan',
     price: '$75',
     priceAmount: 75,
+    priceYearly: 750,
+    priceYearlyAmount: 750,
     description: 'For data-driven farms leveraging analytics and precision agriculture',
     features: [
       'All Essential Modules Plus: Inventory, Sales, Procurement',
@@ -181,6 +180,8 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
     name: 'Agri-Business Plan',
     price: 'Contact Us',
     priceAmount: 0,
+    priceYearly: 0,
+    priceYearlyAmount: 0,
     description: 'For large enterprises with complex agricultural operations',
     features: [
       'All Modules Unlocked',
@@ -301,8 +302,11 @@ export function isPlanHigherTier(currentPlan: BackendPlanType, requiredPlan: Bac
   return PLAN_HIERARCHY[normalizedCurrent] >= PLAN_HIERARCHY[normalizedRequired];
 }
 
-export function getCheckoutUrl(planType: PlanType, organizationId?: string): string {
-  return getProductCheckoutUrl(getPlanProductId(planType), organizationId, planType);
+export function getCheckoutUrl(planType: PlanType, organizationId?: string, billingInterval: BillingInterval = 'month'): string {
+  const productId = billingInterval === 'year'
+    ? getYearlyPlanProductId(planType) || getPlanProductId(planType)
+    : getPlanProductId(planType);
+  return getProductCheckoutUrl(productId, organizationId, planType, billingInterval);
 }
 
 function getEnvValue(key: string): string | undefined {
@@ -317,6 +321,15 @@ function getPlanProductId(planType: PlanType): string | undefined {
     enterprise: getEnvValue('VITE_POLAR_ENTERPRISE_PRODUCT_ID') || 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
   };
 
+  return productIds[planType];
+}
+
+function getYearlyPlanProductId(planType: PlanType): string | undefined {
+  const productIds: Record<PlanType, string | undefined> = {
+    essential: getEnvValue('VITE_POLAR_ESSENTIAL_YEARLY_PRODUCT_ID'),
+    professional: getEnvValue('VITE_POLAR_PROFESSIONAL_YEARLY_PRODUCT_ID'),
+    enterprise: getEnvValue('VITE_POLAR_ENTERPRISE_YEARLY_PRODUCT_ID'),
+  };
   return productIds[planType];
 }
 
@@ -339,7 +352,8 @@ function getProductCheckoutUrl(
   productId: string | undefined,
   organizationId?: string,
   planOrModule?: string,
-): string {
+  billingInterval: BillingInterval = 'month',
+  ): string {
   // Use the configured checkout URL from environment
   const checkoutUrl = getEnvValue('VITE_POLAR_CHECKOUT_URL');
 
@@ -354,10 +368,8 @@ function getProductCheckoutUrl(
   // Construct checkout URL with parameters
   const url = new URL(checkoutUrl);
 
-  // Add product ID if available
-  if (productId) {
-    url.searchParams.set('product_id', productId);
-  }
+  // Add product ID
+  url.searchParams.set('product_id', productId);
 
   // Add success redirect URL
   const successUrl = `${window.location.origin}/checkout-success`;
@@ -369,6 +381,7 @@ function getProductCheckoutUrl(
     if (planOrModule) {
       url.searchParams.set('metadata[plan_type]', planOrModule);
     }
+    url.searchParams.set('metadata[billing_interval]', billingInterval);
   }
 
   return url.toString();

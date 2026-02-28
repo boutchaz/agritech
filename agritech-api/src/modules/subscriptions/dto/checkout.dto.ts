@@ -8,6 +8,11 @@ export enum PlanType {
   ENTERPRISE = 'enterprise',
 }
 
+export enum BillingInterval {
+  MONTH = 'month',
+  YEAR = 'year',
+}
+
 export class CheckoutDto {
   @ApiProperty({
     description: 'Plan type to purchase',
@@ -16,6 +21,15 @@ export class CheckoutDto {
   })
   @IsEnum(PlanType)
   planType: PlanType;
+
+  @ApiPropertyOptional({
+    description: 'Billing interval (month or year). Defaults to month.',
+    enum: BillingInterval,
+    example: BillingInterval.MONTH,
+  })
+  @IsEnum(BillingInterval)
+  @IsOptional()
+  billingInterval?: BillingInterval;
 
   @ApiPropertyOptional({
     description: 'Organization ID (from header)',

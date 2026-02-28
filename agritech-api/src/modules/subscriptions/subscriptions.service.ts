@@ -11,10 +11,9 @@ import {
   CreateTrialSubscriptionDto,
   PlanType as TrialPlanType,
 } from './dto/create-trial-subscription.dto';
-import { PlanType as CheckoutPlanType } from './dto/checkout.dto';
+import { PlanType as CheckoutPlanType, BillingInterval } from './dto/checkout.dto';
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
 import {
-  PolarWebhookDto,
   PolarWebhookEventType,
   PolarSubscriptionData,
 } from './dto/webhook.dto';
@@ -47,6 +46,7 @@ export class SubscriptionsService {
     userId: string,
     organizationId: string,
     planType: CheckoutPlanType,
+    billingInterval: BillingInterval = BillingInterval.MONTH,
   ): Promise<{ checkoutUrl: string }> {
     // Verify user belongs to the organization
     const { data: orgUser, error: orgUserError } = await this.supabaseAdmin
@@ -69,7 +69,7 @@ export class SubscriptionsService {
       throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
     }
 
-    const productId = this.getCheckoutProductId(planType);
+    const productId = this.getCheckoutProductId(planType, billingInterval);
     if (!productId) {
       throw new BadRequestException('Polar product ID is not configured');
     }
@@ -91,7 +91,7 @@ export class SubscriptionsService {
     // Bind organization server-side to prevent tampering
     checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
     checkoutUrl.searchParams.set('metadata[plan_type]', planType);
-
+    checkoutUrl.searchParams.set('metadata[billing_interval]', billingInterval);
     return { checkoutUrl: checkoutUrl.toString() };
   }
 
@@ -175,8 +175,8 @@ export class SubscriptionsService {
 
     const plan_id = planIdMap[plan_type] || planIdMap[TrialPlanType.PROFESSIONAL];
 
-    let subscription;
-    let upsertError;
+    let subscription: { id: string } | null = null;
+    let upsertError: { message?: string } | null = null;
 
     if (existingSubscription) {
       // Update existing subscription
@@ -241,7 +241,7 @@ export class SubscriptionsService {
       );
     }
 
-    this.logger.log(`Trial subscription created: ${subscription.id}`);
+    this.logger.log(`Trial subscription created: ${subscription?.id}`);
 
     return { success: true, subscription };
   }
@@ -394,6 +394,12 @@ export class SubscriptionsService {
   }
 
   /**
+   * Grace period in days — matches frontend SUBSCRIPTION_CONFIG.GRACE_PERIOD_DAYS
+   * Allows access for N days after subscription expires to cover weekend payment failures
+   */
+  private readonly GRACE_PERIOD_DAYS = 3;
+
+  /**
    * Check if organization has a valid subscription
    * Migrated from has_valid_subscription SQL function
    */
@@ -414,7 +420,15 @@ export class SubscriptionsService {
     }
 
     const isValidStatus = ['active', 'trialing'].includes(subscription.status);
-    const isNotExpired = !subscription.current_period_end || new Date(subscription.current_period_end) >= new Date();
+
+    // Apply grace period: allow access for GRACE_PERIOD_DAYS after expiration
+    let isNotExpired = true;
+    if (subscription.current_period_end) {
+      const endDate = new Date(subscription.current_period_end);
+      const endDateWithGrace = new Date(endDate);
+      endDateWithGrace.setDate(endDateWithGrace.getDate() + this.GRACE_PERIOD_DAYS);
+      isNotExpired = endDateWithGrace >= new Date();
+    }
 
     return isValidStatus && isNotExpired;
   }
@@ -458,7 +472,7 @@ export class SubscriptionsService {
     // Get subscription details
     const { data: subscription, error: subscriptionError } = await this.supabaseAdmin
       .from('subscriptions')
-      .select('id, organization_id, status, plan_id, plan_type, current_period_start, current_period_end, cancel_at_period_end, created_at, updated_at')
+      .select('id, organization_id, status, plan_id, plan_type, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, billing_interval, created_at, updated_at')
       .eq('organization_id', organizationId)
       .maybeSingle();
 
@@ -539,26 +553,35 @@ export class SubscriptionsService {
    * Handle Polar.sh webhook events
    * Updates subscription status based on events from Polar.sh
    */
-  async handlePolarWebhook(webhookDto: PolarWebhookDto) {
-    this.logger.log(
-      `Processing Polar webhook: ${webhookDto.type} (ID: ${webhookDto.id})`,
-    );
+  async handlePolarWebhook(eventType: string, eventData: any) {
+    this.logger.log(`Processing Polar webhook: ${eventType}`);
+
+    const webhookPayload = {
+      type: eventType,
+      data: eventData,
+    };
 
     // Extract subscription data from webhook payload
-    const subscriptionData = this.extractSubscriptionData(webhookDto);
+    const subscriptionData = this.extractSubscriptionData(webhookPayload);
     if (!subscriptionData) {
       this.logger.warn(
-        `Webhook ${webhookDto.id} has no valid subscription data, skipping`,
+        `Webhook event ${eventType} has no valid subscription data, skipping`,
       );
       return { success: true, processed: false };
     }
+
+    const eventId = [
+      eventType,
+      subscriptionData.id,
+      subscriptionData.updated_at || subscriptionData.current_period_end || subscriptionData.created_at,
+    ].join(':');
 
     // Find organization by Polar subscription metadata or organization_id
     const organizationId = subscriptionData.organization_id;
 
     if (!organizationId) {
       this.logger.error(
-        `Webhook ${webhookDto.id} missing organization_id in metadata`,
+        `Webhook event ${eventType} missing organization_id in metadata`,
       );
       throw new BadRequestException('Missing organization_id in subscription metadata');
     }
@@ -567,32 +590,32 @@ export class SubscriptionsService {
     const existingWebhook = await this.supabaseAdmin
       .from('polar_webhooks')
       .select('id, processed')
-      .eq('event_id', webhookDto.id)
+      .eq('event_id', eventId)
       .maybeSingle();
 
     if (existingWebhook.data) {
-      this.logger.log(`Webhook ${webhookDto.id} already processed, skipping`);
+      this.logger.log(`Webhook ${eventId} already processed, skipping`);
       return { success: true, processed: false, duplicate: true };
     }
 
     // Process the webhook based on event type
     const result = await this.processSubscriptionEvent(
-      webhookDto.type,
+      eventType as PolarWebhookEventType,
       organizationId,
       subscriptionData,
     );
 
     // Log webhook as processed
     await this.supabaseAdmin.from('polar_webhooks').insert({
-      event_id: webhookDto.id,
-      event_type: webhookDto.type,
-      payload: webhookDto as any,
+      event_id: eventId,
+      event_type: eventType,
+      payload: webhookPayload,
       processed: true,
       processed_at: new Date().toISOString(),
     });
 
     this.logger.log(
-      `Webhook ${webhookDto.id} processed successfully: ${JSON.stringify(result)}`,
+      `Webhook ${eventId} processed successfully: ${JSON.stringify(result)}`,
     );
 
     return { success: true, processed: true, result };
@@ -602,45 +625,64 @@ export class SubscriptionsService {
    * Extract subscription data from Polar webhook payload
    */
   private extractSubscriptionData(
-    webhookDto: PolarWebhookDto,
+    webhookPayload: { type: string; data: any },
   ): PolarSubscriptionData | null {
     try {
-      // Polar webhooks have a specific structure: data.attributes contains the subscription info
-      const attributes = webhookDto.data?.data?.attributes || webhookDto.data?.attributes;
+      const subscriptionData = webhookPayload.data;
 
-      if (!attributes) {
-        this.logger.error('Webhook payload missing attributes');
+      if (!subscriptionData) {
+        this.logger.error('Webhook payload missing data');
         return null;
       }
 
+      const normalizeDate = (value: unknown): string | undefined => {
+        if (!value) return undefined;
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number') {
+          const timestamp = value > 1_000_000_000_000 ? value : value * 1000;
+          return new Date(timestamp).toISOString();
+        }
+        return undefined;
+      };
+
       // Extract organization_id from metadata (should be set during checkout creation)
       const organizationId =
-        attributes.metadata?.organization_id || attributes.organization_id;
+        subscriptionData.metadata?.organization_id || subscriptionData.organization_id;
 
-      // Plan type and product id reconciliation
-      const metadataPlanType = attributes.metadata?.plan_type as string | undefined;
-      const productId = attributes.product_id || attributes.product?.id;
-      const priceId = attributes.price_id || attributes.price?.id;
+      // Plan type, product id, and billing interval reconciliation
+      const metadataPlanType = subscriptionData.metadata?.plan_type as string | undefined;
+      const productId = subscriptionData.product?.id || subscriptionData.product_id;
+      const priceId = subscriptionData.price_id || subscriptionData.price?.id;
+      // Polar sends recurring_interval on subscription objects (month | year)
+      const billingInterval =
+        subscriptionData.recurring_interval ||
+        subscriptionData.metadata?.billing_interval ||
+        'month';
 
       return {
-        id: attributes.id || webhookDto.data?.data?.id,
+        id: subscriptionData.id,
         organization_id: organizationId,
-        status: attributes.status,
+        status: subscriptionData.status,
         product_id: productId,
         price_id: priceId,
-        current_period_start: attributes.current_period_start,
-        current_period_end: attributes.current_period_end,
-        cancel_at_period_end: attributes.cancel_at_period_end ?? false,
-        created_at: attributes.created_at || webhookDto.created_at,
-        updated_at: attributes.updated_at,
-        user_id: attributes.user_id,
-        customer_id: attributes.customer_id,
-        amount: attributes.amount,
-        currency: attributes.currency,
-        recurring: attributes.recurring,
-        trial_end: attributes.trial_end,
+        current_period_start:
+          normalizeDate(subscriptionData.current_period_start) ||
+          new Date().toISOString(),
+        current_period_end:
+          normalizeDate(subscriptionData.current_period_end) ||
+          new Date().toISOString(),
+        cancel_at_period_end: subscriptionData.cancel_at_period_end ?? false,
+        created_at: normalizeDate(subscriptionData.created_at) || new Date().toISOString(),
+        updated_at: normalizeDate(subscriptionData.updated_at),
+        user_id: subscriptionData.user_id,
+        customer_id: subscriptionData.customer_id,
+        amount: subscriptionData.amount,
+        currency: subscriptionData.currency,
+        recurring: subscriptionData.recurring,
+        trial_end: normalizeDate(subscriptionData.trial_end),
         plan_type: metadataPlanType,
-        metadata: attributes.metadata,
+        billing_interval: billingInterval,
+        metadata: subscriptionData.metadata,
       };
     } catch (error) {
       this.logger.error('Error extracting subscription data from webhook', error);
@@ -667,6 +709,7 @@ export class SubscriptionsService {
       current_period_start: subscriptionData.current_period_start,
       current_period_end: subscriptionData.current_period_end,
       cancel_at_period_end: subscriptionData.cancel_at_period_end,
+      billing_interval: subscriptionData.billing_interval || 'month',
       metadata: {
         price_id: subscriptionData.price_id,
         user_id: subscriptionData.user_id,
@@ -675,6 +718,7 @@ export class SubscriptionsService {
         recurring: subscriptionData.recurring,
         trial_end: subscriptionData.trial_end,
         plan_type: subscriptionData.plan_type,
+        billing_interval: subscriptionData.billing_interval,
         raw: subscriptionData.metadata,
       },
     };
@@ -720,6 +764,7 @@ export class SubscriptionsService {
           current_period_start: subscriptionData.current_period_start,
           current_period_end: subscriptionData.current_period_end,
           cancel_at_period_end: subscriptionData.cancel_at_period_end,
+          billing_interval: subscriptionData.billing_interval || 'month',
           updated_at: new Date().toISOString(),
         };
 
@@ -753,6 +798,7 @@ export class SubscriptionsService {
           current_period_start: subscriptionData.current_period_start,
           current_period_end: subscriptionData.current_period_end,
           cancel_at_period_end: subscriptionData.cancel_at_period_end,
+          billing_interval: subscriptionData.billing_interval || 'month',
           updated_at: new Date().toISOString(),
         };
 
@@ -799,7 +845,14 @@ export class SubscriptionsService {
         };
         break;
 
-      case PolarWebhookEventType.SUBSCRIPTION_TRIING_ENDING:
+      case PolarWebhookEventType.SUBSCRIPTION_PAST_DUE:
+        subscriptionUpdateData = {
+          status: 'past_due',
+          updated_at: new Date().toISOString(),
+        };
+        break;
+
+      case PolarWebhookEventType.SUBSCRIPTION_TRIAL_ENDING:
         // Trial is ending soon, notification only
         this.logger.log(
           `Trial ending for organization ${organizationId} at ${subscriptionData.trial_end}`,
@@ -817,7 +870,7 @@ export class SubscriptionsService {
     }
 
     // Apply the update or insert to subscriptions table
-    let mainSubscriptionResult;
+    let mainSubscriptionResult: unknown;
     if (shouldInsertSubscription) {
       const { data, error } = await this.supabaseAdmin
         .from('subscriptions')
@@ -913,14 +966,25 @@ export class SubscriptionsService {
     }
   }
 
-  private getCheckoutProductId(planType: CheckoutPlanType): string | undefined {
+  private getCheckoutProductId(
+    planType: CheckoutPlanType,
+    billingInterval: BillingInterval = BillingInterval.MONTH,
+  ): string | undefined {
+    const isYearly = billingInterval === BillingInterval.YEAR;
+
     switch (planType) {
       case CheckoutPlanType.ESSENTIAL:
-        return this.configService.get<string>('POLAR_ESSENTIAL_PRODUCT_ID');
+        return this.configService.get<string>(
+          isYearly ? 'POLAR_ESSENTIAL_YEARLY_PRODUCT_ID' : 'POLAR_ESSENTIAL_PRODUCT_ID',
+        );
       case CheckoutPlanType.PROFESSIONAL:
-        return this.configService.get<string>('POLAR_PROFESSIONAL_PRODUCT_ID');
+        return this.configService.get<string>(
+          isYearly ? 'POLAR_PROFESSIONAL_YEARLY_PRODUCT_ID' : 'POLAR_PROFESSIONAL_PRODUCT_ID',
+        );
       case CheckoutPlanType.ENTERPRISE:
-        return this.configService.get<string>('POLAR_ENTERPRISE_PRODUCT_ID');
+        return this.configService.get<string>(
+          isYearly ? 'POLAR_ENTERPRISE_YEARLY_PRODUCT_ID' : 'POLAR_ENTERPRISE_PRODUCT_ID',
+        );
       case CheckoutPlanType.CORE:
         return this.configService.get<string>('POLAR_BASE_PRODUCT_ID');
       default:

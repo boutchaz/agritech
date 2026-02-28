@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException, Headers, HttpCode, HttpStatus, Logger, UnauthorizedException, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Get, BadRequestException, HttpCode, HttpStatus, Logger, UnauthorizedException, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -16,7 +16,8 @@ import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
 } from './dto/check-subscription.dto';
-import { PolarWebhookDto } from './dto/webhook.dto';
+const polarWebhookModulePath = '@polar-sh/sdk/webhooks';
+const { validateEvent, WebhookVerificationError } = require(polarWebhookModulePath);
 // PoliciesGuard removed - subscription endpoints validate org membership in service layer
 // This allows the trial setup flow to work before full CASL permissions are established
 
@@ -109,6 +110,7 @@ export class SubscriptionsController {
       req.user.id,
       organizationId,
       checkoutDto.planType,
+      checkoutDto.billingInterval,
     );
   }
 
@@ -183,40 +185,52 @@ export class WebhooksController {
   })
   @ApiResponse({ status: 400, description: 'Invalid webhook payload' })
   @ApiResponse({ status: 401, description: 'Invalid webhook signature' })
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: false, forbidNonWhitelisted: false }))
   async handlePolarWebhook(
-    @Body() webhookDto: PolarWebhookDto,
-    @Headers('x-polar-signature-256') signature: string,
-    @Headers('x-polar-event-id') eventId: string,
-    @Req() req: any,
+    @Req()
+    req: {
+      rawBody?: string;
+      headers: Record<string, string | string[] | undefined>;
+    },
   ) {
-    this.logger.log(
-      `Received Polar webhook: ${webhookDto.type} (Event ID: ${eventId || webhookDto.id})`,
-    );
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      throw new UnauthorizedException('Missing raw body');
+    }
 
-    // Verify webhook signature if secret is configured
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      if (!signature) {
-        this.logger.warn('Webhook signature missing but secret is configured');
-        throw new UnauthorizedException('Missing webhook signature');
-      }
+    if (!webhookSecret) {
+      this.logger.error('POLAR_WEBHOOK_SECRET is not configured');
+      throw new UnauthorizedException('Invalid webhook signature');
+    }
 
-      const rawBody = req?.rawBody || JSON.stringify(webhookDto);
-      const isValid = this.subscriptionsService.verifyWebhookSignature(
-        rawBody,
-        signature,
-        webhookSecret,
-      );
-
-      if (!isValid) {
-        this.logger.warn('Invalid webhook signature');
-        throw new UnauthorizedException('Invalid webhook signature');
+    const normalizedHeaders: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers || {})) {
+      if (typeof value === 'string') {
+        normalizedHeaders[key] = value;
+      } else if (Array.isArray(value) && value.length > 0) {
+        normalizedHeaders[key] = value[0];
       }
     }
 
-    // Process the webhook
+    let event: { type: string; data: unknown };
     try {
-      const result = await this.subscriptionsService.handlePolarWebhook(webhookDto);
+      event = validateEvent(rawBody, normalizedHeaders, webhookSecret);
+    } catch (error) {
+      if (error instanceof WebhookVerificationError) {
+        this.logger.warn('Invalid webhook signature');
+        throw new UnauthorizedException('Invalid webhook signature');
+      }
+      throw error;
+    }
+
+    this.logger.log(`Received Polar webhook: ${event.type}`);
+
+    try {
+      const result = await this.subscriptionsService.handlePolarWebhook(
+        event.type,
+        event.data,
+      );
       return {
         success: true,
         message: 'Webhook processed successfully',
@@ -224,12 +238,16 @@ export class WebhooksController {
       };
     } catch (error) {
       this.logger.error('Error processing webhook', error);
-      // Return 200 anyway to avoid Polar retrying indefinitely
-      // The error has been logged for investigation
-      return {
-        success: false,
-        message: error.message,
-      };
+      if (error instanceof BadRequestException) {
+        const message = error instanceof Error ? error.message : 'Invalid webhook payload';
+        return {
+          success: false,
+          message,
+        };
+      }
+
+      // Transient failures should propagate so Polar retries.
+      throw error;
     }
   }
 }

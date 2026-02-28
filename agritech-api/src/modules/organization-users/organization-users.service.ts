@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { EmailService } from '../email/email.service';
 import {
@@ -207,6 +207,26 @@ export class OrganizationUsersService {
     const client = this.databaseService.getAdminClient();
 
     try {
+      const { data: sub } = await client
+        .from('subscriptions')
+        .select('max_users')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (sub?.max_users != null) {
+        const { count: userCount } = await client
+          .from('organization_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        if ((userCount ?? 0) >= sub.max_users) {
+          throw new ForbiddenException(
+            `Subscription limit reached: maximum ${sub.max_users} users for your plan`,
+          );
+        }
+      }
+
       const { data, error } = await client
         .from('organization_users')
         .insert({

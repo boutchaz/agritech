@@ -406,6 +406,32 @@ export class ParcelsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
+    const hasValidSubscription =
+      await this.subscriptionsService.hasValidSubscription(organizationId);
+    if (!hasValidSubscription) {
+      throw new ForbiddenException('Active subscription required to create parcels');
+    }
+
+    // Enforce subscription parcel limit
+    const { data: sub } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('max_parcels')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (sub?.max_parcels != null) {
+      const { count: parcelCount } = await this.supabaseAdmin
+        .from('parcels')
+        .select('id, farms!inner(organization_id)', { count: 'exact', head: true })
+        .eq('farms.organization_id', organizationId);
+
+      if ((parcelCount ?? 0) >= sub.max_parcels) {
+        throw new ForbiddenException(
+          `Subscription limit reached: maximum ${sub.max_parcels} parcels for your plan`,
+        );
+      }
+    }
+
     // Verify farm belongs to organization
     const { data: farm, error: farmError } = await this.supabaseAdmin
       .from('farms')

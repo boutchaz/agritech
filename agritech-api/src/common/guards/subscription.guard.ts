@@ -59,10 +59,10 @@ export class SubscriptionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const organizationId = request.organizationId;
 
-    // If no organizationId is present, allow (organization guard will handle auth)
+    // If no organizationId is present, DENY — subscription check requires org context
     if (!organizationId) {
-      this.logger.warn('No organizationId in request, allowing access');
-      return true;
+      this.logger.warn('No organizationId in request, denying access');
+      return false;
     }
 
     // Check subscription validity

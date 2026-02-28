@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, Zap, Building2, TrendingUp } from 'lucide-react';
-import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType } from '../lib/polar';
+import { SUBSCRIPTION_PLANS, type PlanType, type BillingInterval, normalizePlanType } from '../lib/polar';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
 
 interface SubscriptionPlansProps {
-  onSelectPlan: (planType: PlanType) => void;
+  onSelectPlan: (planType: PlanType, billingInterval: BillingInterval) => void;
 }
 
 const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) => {
   const { data: subscription } = useSubscription();
   const normalizedPlanType = normalizePlanType(subscription?.plan_type ?? null);
   const { t } = useTranslation();
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
+
+  const isYearly = billingInterval === 'year';
 
   const getPlanIcon = (planType: PlanType) => {
     switch (planType) {
@@ -35,15 +38,57 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
     }
   };
 
+  const getDisplayPrice = (plan: (typeof SUBSCRIPTION_PLANS)[PlanType]) => {
+    if (plan.priceAmount === 0) return plan.price;
+    if (isYearly) {
+      const monthlyEquiv = Math.round(plan.priceYearlyAmount / 12);
+      return `$${monthlyEquiv}`;
+    }
+    return plan.price;
+  };
+
+  const getSavingsPercent = (plan: (typeof SUBSCRIPTION_PLANS)[PlanType]) => {
+    if (plan.priceAmount === 0 || plan.priceYearlyAmount === 0) return 0;
+    const monthlyTotal = plan.priceAmount * 12;
+    return Math.round(((monthlyTotal - plan.priceYearlyAmount) / monthlyTotal) * 100);
+  };
+
   return (
     <div className="py-12">
       <div className="text-center mb-12">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
           {t('subscription.plans.title')}
         </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-400">
+        <p className="text-lg text-gray-600 dark:text-gray-400 mb-8">
           {t('subscription.plans.subtitle')}
         </p>
+
+        {/* Billing interval toggle */}
+        <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1">
+          <button
+            onClick={() => setBillingInterval('month')}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              !isYearly
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            {t('subscription.billing.monthly', 'Monthly')}
+          </button>
+          <button
+            onClick={() => setBillingInterval('year')}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+              isYearly
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            {t('subscription.billing.yearly', 'Yearly')}
+            <span className="ml-1.5 inline-block rounded-full bg-green-100 dark:bg-green-900 px-2 py-0.5 text-xs font-semibold text-green-700 dark:text-green-300">
+              {t('subscription.billing.save', 'Save {{percent}}%', { percent: 17 })}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
@@ -51,6 +96,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
           const color = getPlanColor(plan.id);
           const isCurrentPlan = normalizedPlanType === plan.id;
           const isHighlighted = plan.highlighted;
+          const savings = getSavingsPercent(plan);
 
           return (
             <div
@@ -85,15 +131,29 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
 
                 <div className="mb-6">
                   <span className="text-4xl font-bold text-gray-900 dark:text-white">
-                    {plan.price}
+                    {getDisplayPrice(plan)}
                   </span>
                   {plan.priceAmount > 0 && (
-                    <span className="text-gray-600 dark:text-gray-400 ml-2">{t('subscription.perMonth')}</span>
+                    <span className="text-gray-600 dark:text-gray-400 ml-2">
+                      {t('subscription.perMonth')}
+                    </span>
+                  )}
+                  {isYearly && plan.priceYearlyAmount > 0 && (
+                    <div className="mt-1">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        ${plan.priceYearlyAmount}{t('subscription.billing.perYear', '/year')}
+                      </span>
+                      {savings > 0 && (
+                        <span className="ml-2 text-sm font-medium text-green-600 dark:text-green-400">
+                          {t('subscription.billing.save', 'Save {{percent}}%', { percent: savings })}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
                 <button
-                  onClick={() => onSelectPlan(plan.id)}
+                  onClick={() => onSelectPlan(plan.id, billingInterval)}
                   disabled={isCurrentPlan}
                   className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
                     isCurrentPlan

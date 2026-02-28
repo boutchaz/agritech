@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEnum, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsEnum, IsObject } from 'class-validator';
 
 /**
  * Polar.sh webhook event types
@@ -11,7 +11,8 @@ export enum PolarWebhookEventType {
   SUBSCRIPTION_ACTIVE = 'subscription.active',
   SUBSCRIPTION_CANCELLED = 'subscription.cancelled',
   SUBSCRIPTION_REVOKED = 'subscription.revoked',
-  SUBSCRIPTION_TRIING_ENDING = 'subscription.trial_ending',
+  SUBSCRIPTION_PAST_DUE = 'subscription.past_due',
+  SUBSCRIPTION_TRIAL_ENDING = 'subscription.trial_ending',
 }
 
 /**
@@ -68,6 +69,9 @@ export class PolarSubscriptionData {
 
   @ApiProperty({ description: 'Plan type sent in checkout metadata', required: false })
   plan_type?: string;
+
+  @ApiProperty({ description: 'Billing interval: month or year', required: false })
+  billing_interval?: string;
 
   @ApiProperty({ description: 'Raw metadata payload from Polar', required: false })
   metadata?: Record<string, any>;

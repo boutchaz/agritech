@@ -489,6 +489,26 @@ export class FarmsService {
       throw new ForbiddenException('Active subscription required to create farms');
     }
 
+    // Enforce subscription farm limit
+    const { data: sub } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('max_farms')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (sub?.max_farms != null) {
+      const { count: farmCount } = await this.supabaseAdmin
+        .from('farms')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId);
+
+      if ((farmCount ?? 0) >= sub.max_farms) {
+        throw new ForbiddenException(
+          `Subscription limit reached: maximum ${sub.max_farms} farms for your plan`,
+        );
+      }
+    }
+
     // Prepare farm data
     // Note: farms table schema has: size_unit (not area_unit), status, manager_name (not manager_id)
     // Does NOT have: farm_type, parent_farm_id, hierarchy_level, manager_id

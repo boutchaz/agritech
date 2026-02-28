@@ -26,6 +26,10 @@ const POLAR_PRODUCT_IDS = {
   essential: '3b03769f-9a47-47bc-8f07-bd1f3a580dee',
   professional: 'db925c1e-d64d-4d95-9907-dc90da5bcbe6',
   enterprise: 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
+  // Yearly product IDs — replace with production IDs from Polar dashboard
+  essentialYearly: '',
+  professionalYearly: '',
+  enterpriseYearly: '',
 } as const;
 
 // ============================================================================
@@ -86,6 +90,8 @@ const MODULE_NAME_TO_SLUG_MAP: Record<string, string> = {
 // ============================================================================
 // TYPES
 // ============================================================================
+export type BillingInterval = 'month' | 'year';
+
 export interface ModuleSubscriptionConfig {
   slug: string;
   name: string;
@@ -106,6 +112,7 @@ export interface PlanBundle {
   description: string;
   descriptionKey: string;
   priceMonthly: number;
+  priceYearly: number;
   price: string;
   priceAmount: number;
   includedModules: string[];
@@ -127,6 +134,7 @@ export interface PlanBundle {
   includedAddonSlots: number;
   addonSlotPrice: number;
   polarProductId: string;
+  polarProductIdYearly: string;
   features: string[];
 }
 
@@ -141,8 +149,9 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     nameKey: 'subscription.plans.essential.name',
     description: 'Perfect for small farms getting started with digital management',
     descriptionKey: 'subscription.plans.essential.description',
-    // Price aligned with Polar ($25/month)
+    // Price aligned with Polar ($25/month, $250/year — 2 months free)
     priceMonthly: 25,
+    priceYearly: 250,
     price: '$25',
     priceAmount: 25,
     // Core farming modules from Polar metadata
@@ -165,6 +174,7 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     includedAddonSlots: 0,
     addonSlotPrice: 5,
     polarProductId: POLAR_PRODUCT_IDS.essential,
+    polarProductIdYearly: POLAR_PRODUCT_IDS.essentialYearly,
     features: [
       'Fruit Trees Management',
       'Cereals Tracking',
@@ -180,8 +190,9 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     nameKey: 'subscription.plans.professional.name',
     description: 'For data-driven farms leveraging analytics and precision agriculture',
     descriptionKey: 'subscription.plans.professional.description',
-    // Price aligned with Polar ($75/month)
+    // Price aligned with Polar ($75/month, $750/year — 2 months free)
     priceMonthly: 75,
+    priceYearly: 750,
     price: '$75',
     priceAmount: 75,
     // Includes Essential + Mushrooms + Livestock (from Polar metadata)
@@ -204,6 +215,7 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     includedAddonSlots: 2,
     addonSlotPrice: 4,
     polarProductId: POLAR_PRODUCT_IDS.professional,
+    polarProductIdYearly: POLAR_PRODUCT_IDS.professionalYearly,
     features: [
       'All Essential modules',
       'Mushrooms Management',
@@ -225,6 +237,7 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     descriptionKey: 'subscription.plans.enterprise.description',
     // Custom pricing from Polar (minimum $50)
     priceMonthly: 50,
+    priceYearly: 500,
     price: 'Custom',
     priceAmount: 50,
     // All modules included
@@ -247,6 +260,7 @@ export const PLAN_BUNDLES: Record<PlanType, PlanBundle> = {
     includedAddonSlots: 999,
     addonSlotPrice: 0,
     polarProductId: POLAR_PRODUCT_IDS.enterprise,
+    polarProductIdYearly: POLAR_PRODUCT_IDS.enterpriseYearly,
     features: [
       'All modules included',
       'Unlimited farms & parcels',
@@ -444,6 +458,10 @@ export function getPlanTypeFromPolarId(polarProductId: string): PlanType | null 
     if (plan.polarProductId === polarProductId) {
       return planType as PlanType;
     }
+    // Also check yearly product IDs
+    if (plan.polarProductIdYearly && plan.polarProductIdYearly === polarProductId) {
+      return planType as PlanType;
+    }
   }
   return null;
 }
@@ -454,13 +472,17 @@ export function getPlanTypeFromPolarId(polarProductId: string): PlanType | null 
 export function getPolarCheckoutUrl(
   planType: PlanType,
   organizationId?: string,
-  successUrl?: string
+  successUrl?: string,
+  billingInterval: BillingInterval = 'month',
 ): string {
   const plan = PLAN_BUNDLES[planType];
   const checkoutUrl = import.meta.env.VITE_POLAR_CHECKOUT_URL || 'https://polar.sh/checkout';
+  const productId = billingInterval === 'year' && plan.polarProductIdYearly
+    ? plan.polarProductIdYearly
+    : plan.polarProductId;
 
   const url = new URL(checkoutUrl);
-  url.searchParams.set('product_id', plan.polarProductId);
+  url.searchParams.set('product_id', productId);
 
   if (successUrl) {
     url.searchParams.set('success_url', successUrl);
@@ -469,6 +491,7 @@ export function getPolarCheckoutUrl(
   if (organizationId) {
     url.searchParams.set('metadata[organization_id]', organizationId);
     url.searchParams.set('metadata[plan_type]', planType);
+    url.searchParams.set('metadata[billing_interval]', billingInterval);
   }
 
   return url.toString();

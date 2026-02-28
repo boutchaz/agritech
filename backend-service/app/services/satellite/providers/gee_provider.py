@@ -324,12 +324,14 @@ class GEEProvider(ISatelliteProvider):
         """
         self._ensure_initialized()
 
-        # Use the collection to get available dates
+        # For available-dates use tile-level cloud metadata only (no AOI
+        # per-pixel filtering) to keep the query fast.
         collection = earth_engine_service.get_sentinel2_collection(
             geometry=geometry,
             start_date=start_date,
             end_date=end_date,
             max_cloud_coverage=max_cloud_coverage,
+            use_aoi_cloud_filter=False,
         )
 
         # Get image dates and metadata

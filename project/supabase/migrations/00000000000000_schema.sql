@@ -12064,6 +12064,22 @@ EXECUTE FUNCTION update_updated_at_column();
 
 
 -- =====================================================
+-- Migration: Add billing_interval to subscriptions
+-- =====================================================
+-- Supports monthly and yearly billing for Polar.sh products
+
+-- Add billing_interval to main subscriptions table
+ALTER TABLE subscriptions
+ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'month';
+
+COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval: month or year. Matches Polar recurring_interval.';
+
+-- Add billing_interval to polar_subscriptions table
+ALTER TABLE polar_subscriptions
+ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'month';
+
+COMMENT ON COLUMN polar_subscriptions.billing_interval IS 'Billing interval from Polar subscription: month or year.';
+-- =====================================================
 -- Migration: 20260129000001_fix_rls_issues.sql
 -- =====================================================
 -- Fix RLS Issues

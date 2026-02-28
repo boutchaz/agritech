@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   Logger,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
@@ -477,6 +478,26 @@ export class AuthService {
         const roleId =
           signupDto.invitedWithRole ||
           (await this.getOrgAdminRoleId(adminClient));
+
+        const { data: sub } = await adminClient
+          .from('subscriptions')
+          .select('max_users')
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+
+        if (sub?.max_users != null) {
+          const { count: userCount } = await adminClient
+            .from('organization_users')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .eq('is_active', true);
+
+          if ((userCount ?? 0) >= sub.max_users) {
+            throw new ForbiddenException(
+              `Subscription limit reached: maximum ${sub.max_users} users for your plan`,
+            );
+          }
+        }
 
         // Add user to organization
         this.logger.log(`Creating organization_users record (invited): user_id=${userId}, organization_id=${organizationId}, role_id=${roleId}`);

@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authSupabase } from '../lib/auth-supabase';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import type { PlanType } from '../lib/polar';
 import { subscriptionsService } from '../services/subscriptionsService';
 
 export interface Subscription {
@@ -14,22 +12,20 @@ export interface Subscription {
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  max_farms: number | null;
+  max_parcels: number | null;
+  max_users: number | null;
+  max_satellite_reports: number | null;
+  billing_interval: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface SubscriptionUsage {
-  id: string;
-  subscription_id: string;
-  organization_id: string;
   farms_count: number;
   parcels_count: number;
   users_count: number;
   satellite_reports_count: number;
-  period_start: string;
-  period_end: string;
-  created_at: string;
-  updated_at: string;
 }
 
 export const useSubscription = (organizationOverride?: { id: string; name: string } | null) => {
@@ -118,64 +114,14 @@ export const useSubscriptionUsage = () => {
     queryFn: async (): Promise<SubscriptionUsage | null> => {
       if (!currentOrganization?.id) return null;
 
-      const { data, error } = await authSupabase
-        .from('subscription_usage')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
+      try {
+        return await subscriptionsService.getUsage(currentOrganization.id);
+      } catch (error) {
         console.error('Error fetching subscription usage:', error);
         return null;
       }
-
-      return data as SubscriptionUsage | null;
     },
     enabled: !!currentOrganization?.id,
     staleTime: 1 * 60 * 1000, // 1 minute
-  });
-};
-
-export const useUpdateSubscription = () => {
-  const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
-
-  return useMutation({
-    mutationFn: async ({
-      planType,
-      polarSubscriptionId,
-    }: {
-      planType: PlanType;
-      polarSubscriptionId?: string;
-    }) => {
-      if (!currentOrganization?.id) {
-        throw new Error('No organization selected');
-      }
-
-      const updateData: any = {
-        plan_type: planType,
-        status: 'active',
-        updated_at: new Date().toISOString(),
-      };
-
-      if (polarSubscriptionId) {
-        updateData.polar_subscription_id = polarSubscriptionId;
-      }
-
-      const { data, error } = await authSupabase
-        .from('subscriptions')
-        .update(updateData)
-        .eq('organization_id', currentOrganization.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscription', currentOrganization?.id] });
-    },
   });
 };

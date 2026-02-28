@@ -23,7 +23,7 @@ export interface ParcelSyncProgress {
 }
 
 const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;            // 5 min in-memory
-const HEATMAP_DB_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days in DB
+const HEATMAP_DB_TTL_MS = 5 * 24 * 60 * 60 * 1000;  // 5 days in DB (Copernicus/Sentinel-2 revisit period)
 const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
 
 const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];

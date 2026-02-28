@@ -11,11 +11,24 @@ export interface Subscription {
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  max_farms: number | null;
+  max_parcels: number | null;
+  max_users: number | null;
+  max_satellite_reports: number | null;
+  billing_interval: string | null;
   created_at: string;
   updated_at: string;
 }
 
+export interface SubscriptionUsage {
+  farms_count: number;
+  parcels_count: number;
+  users_count: number;
+  satellite_reports_count: number;
+}
+
 export type CheckoutPlanType = 'core' | 'essential' | 'professional' | 'enterprise';
+export type BillingInterval = 'month' | 'year';
 
 /**
  * Get the current organization ID from Zustand store
@@ -70,7 +83,11 @@ class SubscriptionsService {
     }
   }
 
-  async createCheckout(planType: CheckoutPlanType, organizationId?: string): Promise<{ checkoutUrl: string }> {
+  async createCheckout(
+    planType: CheckoutPlanType,
+    organizationId?: string,
+    billingInterval?: BillingInterval,
+  ): Promise<{ checkoutUrl: string }> {
     const orgId = organizationId || getCurrentOrganizationId();
 
     if (!orgId) {
@@ -79,10 +96,20 @@ class SubscriptionsService {
 
     return apiClient.post<{ checkoutUrl: string }>(
       '/api/v1/subscriptions/checkout',
-      { planType },
+      { planType, billingInterval },
       {},
       orgId,
     );
+  }
+
+  async getUsage(organizationId?: string): Promise<SubscriptionUsage> {
+    const orgId = organizationId || getCurrentOrganizationId();
+
+    if (!orgId) {
+      throw new OrganizationRequiredError();
+    }
+
+    return apiClient.get<SubscriptionUsage>('/api/v1/subscriptions/usage', {}, orgId);
   }
 }
 
