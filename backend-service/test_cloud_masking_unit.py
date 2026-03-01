@@ -73,7 +73,7 @@ def test_schema_has_new_fields():
         # Check defaults
         if hasattr(request, 'use_aoi_cloud_filter'):
             print(f"✅ use_aoi_cloud_filter field exists (default: {request.use_aoi_cloud_filter})")
-            assert request.use_aoi_cloud_filter == True, "Default should be True"
+            assert request.use_aoi_cloud_filter == False, "Default False: SCL reserved for available-dates only"
         else:
             print("❌ use_aoi_cloud_filter field missing")
             return False
@@ -85,12 +85,12 @@ def test_schema_has_new_fields():
             print("❌ cloud_buffer_meters field missing")
             return False
         
-        # Test with custom values
-        test_data['use_aoi_cloud_filter'] = False
+        # Test with custom values (API forces False regardless)
+        test_data['use_aoi_cloud_filter'] = True  # Client may send True but API ignores it
         test_data['cloud_buffer_meters'] = 500
         request2 = IndexCalculationRequest(**test_data)
         
-        assert request2.use_aoi_cloud_filter == False
+        assert request2.use_aoi_cloud_filter == True  # Schema accepts it, API forces False
         assert request2.cloud_buffer_meters == 500
         print("✅ Custom values work correctly")
         
@@ -113,8 +113,6 @@ def test_earth_engine_service_signature():
     if 'use_aoi_cloud_filter' in params:
         default = params['use_aoi_cloud_filter'].default
         print(f"✅ use_aoi_cloud_filter parameter exists (default: {default})")
-        if default != True:
-            print(f"⚠️  Warning: default is {default}, expected True")
     else:
         print("❌ use_aoi_cloud_filter parameter missing")
         return False

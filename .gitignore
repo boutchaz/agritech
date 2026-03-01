@@ -61,3 +61,8 @@ playwright-report/
 # Supabase local
 supabase/.branches/
 supabase/.temp/
+
+
+
+# 
+debug_gee.py

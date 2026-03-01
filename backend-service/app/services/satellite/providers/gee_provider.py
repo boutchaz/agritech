@@ -331,7 +331,6 @@ class GEEProvider(ISatelliteProvider):
             start_date=start_date,
             end_date=end_date,
             max_cloud_coverage=max_cloud_coverage,
-            use_aoi_cloud_filter=False,
         )
 
         # Get image dates and metadata

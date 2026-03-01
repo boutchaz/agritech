@@ -1,6 +1,11 @@
 """
-Cloud masking and coverage calculation utilities for Earth Engine
-Calculates cloud coverage specifically within AOI boundaries
+Cloud masking and coverage calculation utilities for Earth Engine.
+Calculates cloud coverage specifically within AOI boundaries.
+
+NOTE: SCL-based AOI cloud filtering is ONLY used for available-dates (indices.py).
+Heatmap, timeseries, calculate, and export use tile-level CLOUDY_PIXEL_PERCENTAGE
+with 10m bands (B2,B3,B4,B8). This module is used when get_sentinel2_collection
+is called with use_aoi_cloud_filter=True (currently unused by API endpoints).
 """
 
 import ee

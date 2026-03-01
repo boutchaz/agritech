@@ -94,7 +94,7 @@ def test_schema_changes():
         checks = [
             ('use_aoi_cloud_filter', 'AOI cloud filter flag'),
             ('cloud_buffer_meters', 'Cloud buffer meters parameter'),
-            ('Field(True', 'Default True for use_aoi_cloud_filter'),
+            ('Field(False', 'Default False for use_aoi_cloud_filter (SCL reserved for available-dates)'),
             ('Field(300', 'Default 300 for cloud_buffer_meters'),
         ]
         
@@ -171,7 +171,7 @@ def test_api_changes():
         
         # Check for parameter passing
         checks = [
-            ('use_aoi_cloud_filter=request.use_aoi_cloud_filter', 'Passing use_aoi_cloud_filter'),
+            ('use_aoi_cloud_filter=False', 'Forcing tile-level only (SCL reserved for available-dates)'),
             ('cloud_buffer_meters=request.cloud_buffer_meters', 'Passing cloud_buffer_meters'),
         ]
         

@@ -188,7 +188,8 @@ class EarthEngineService:
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
             max_cloud_coverage: Maximum cloud coverage percentage
-            use_aoi_cloud_filter: If True, calculate cloud coverage within AOI only
+            use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter (CloudMaskingService).
+                Only available-dates uses this; heatmap/timeseries use tile-level only.
             cloud_buffer_meters: Buffer around AOI for cloud calculation (default 300m)
         """
         self.initialize()
@@ -1170,13 +1171,16 @@ class EarthEngineService:
         """Export interactive pixel data for ECharts visualization"""
         self.initialize()
 
-        # Get the image for the specific date
+        # Get the image for the specific date.
+        # Interactive/scatter uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
         collection = self.get_sentinel2_collection(
             geometry,
             date,
             (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)).strftime(
                 "%Y-%m-%d"
             ),
+            max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+            use_aoi_cloud_filter=False,
         )
 
         try:
@@ -1302,8 +1306,12 @@ class EarthEngineService:
                 search_end = (search_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
                 try:
+                    # Heatmap uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
+                    # SCL is reserved for available-dates AOI-level cloud filtering.
                     collection = self.get_sentinel2_collection(
-                        geometry, search_start, search_end
+                        geometry, search_start, search_end,
+                        max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+                        use_aoi_cloud_filter=False,
                     )
                     collection_size = collection.size().getInfo()
                     if collection_size > 0:
@@ -1562,13 +1570,16 @@ class EarthEngineService:
 
         self.initialize()
 
-        # Get the image for the specific date
+        # Get the image for the specific date.
+        # Export uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
         collection = self.get_sentinel2_collection(
             geometry,
             date,
             (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)).strftime(
                 "%Y-%m-%d"
             ),
+            max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+            use_aoi_cloud_filter=False,
         )
 
         try:
@@ -1677,7 +1688,12 @@ class EarthEngineService:
         """Calculate statistics for multiple indices over a date range"""
         self.initialize()
 
-        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
+        # Statistics use B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
+        collection = self.get_sentinel2_collection(
+            geometry, start_date, end_date,
+            max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+            use_aoi_cloud_filter=False,
+        )
         aoi = ee.Geometry(geometry)
 
         # Get the median composite
