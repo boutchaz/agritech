@@ -2,11 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { SUBSCRIPTION_PLANS, type PlanType } from '@/lib/polar'
-import { authSupabase } from '@/lib/auth-supabase'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useOnboardingStore } from '@/stores/onboardingStore'
 import {
   trackOnboardingStart,
   trackTrialPlanView,
@@ -58,6 +58,7 @@ function SelectTrialPage() {
   const [setupStep, setSetupStep] = useState<SetupStepId>('auth')
   const setupAttempted = useRef(false)
   const queryClient = useQueryClient()
+  const setSelectedPlanType = useOnboardingStore((state) => state.setSelectedPlanType)
 
   // Track page view on mount
   useEffect(() => {
@@ -137,21 +138,11 @@ function SelectTrialPage() {
           setSetupStep('subscription')
           const orgResult = await pollUntil(
             async () => {
-              const { data: orgUsers, error: checkError } = await authSupabase
-                .from('organization_users')
-                .select('organization_id, organizations(id, name, slug)')
-                .eq('user_id', user.id)
-                .eq('is_active', true)
-                .limit(1)
-                .maybeSingle()
-
-              if (checkError) {
-                console.error('❌ Error checking organization:', checkError)
-                return null
-              }
-              return orgUsers?.organization_id ? orgUsers : null
+              await refreshUserData()
+              const orgs = useAuthStore.getState().organizations
+              return orgs && orgs.length > 0 ? orgs[0] : null
             },
-            { interval: 200, maxAttempts: 25, label: 'organization creation' }
+            { interval: 300, maxAttempts: 20, label: 'organization creation' }
           )
 
           if (orgResult) {
@@ -338,6 +329,7 @@ function SelectTrialPage() {
       return
     }
 
+    setSelectedPlanType(selectedPlan)
     setIsCreating(true)
     setError(null)
 

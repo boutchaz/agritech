@@ -12,16 +12,16 @@ import {
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { authSupabase } from '../lib/auth-supabase';
+
 import { useSubscription } from '../hooks/useSubscription';
-import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType } from '../lib/polar';
+import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType, type BillingInterval, PLAN_HIERARCHY } from '../lib/polar';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
 import { subscriptionsService } from '@/services/subscriptionsService';
 
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
@@ -30,30 +30,14 @@ const SubscriptionSettings: React.FC = () => {
   const [showPlans, setShowPlans] = React.useState(false);
   const { data: moduleConfig } = useModuleConfig();
   const [selectedPlan, setSelectedPlan] = React.useState<PlanType | 'core' | null>(null);
+  const [billingInterval, setBillingInterval] = React.useState<BillingInterval>('month');
 
   // Query actual usage counts from NestJS API
   const { data: usage } = useQuery({
     queryKey: ['usage-counts', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return null;
-
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) return null;
-
-      const response = await fetch(`${apiUrl}/api/v1/subscriptions/usage`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'x-organization-id': currentOrganization.id,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch usage counts');
-      }
-
-      return response.json();
+      return subscriptionsService.getUsage(currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 30 * 1000, // 30 seconds
@@ -80,7 +64,7 @@ const SubscriptionSettings: React.FC = () => {
         throw new Error(t('subscription.errors.noOrganization'));
       }
       setSelectedPlan(planType);
-      const { checkoutUrl } = await subscriptionsService.createCheckout(planType, currentOrganization.id);
+      const { checkoutUrl } = await subscriptionsService.createCheckout(planType, currentOrganization.id, billingInterval);
       return checkoutUrl;
     },
     onSuccess: (checkoutUrl) => {
@@ -144,39 +128,127 @@ const SubscriptionSettings: React.FC = () => {
           </button>
         )}
         <div className="space-y-6">
+          <div className="flex justify-center mb-8">
+            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg inline-flex relative">
+              <button
+                onClick={() => setBillingInterval('month')}
+                className={`relative z-10 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  billingInterval === 'month'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingInterval('year')}
+                className={`relative z-10 px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-2 ${
+                  billingInterval === 'year'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Yearly</span>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full">
+                  Save ~17%
+                </span>
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.values(SUBSCRIPTION_PLANS).map((plan) => (
-              <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+            {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
+              const isCurrentPlan = normalizedPlanType === plan.id;
+              const currentTier = normalizedPlanType ? PLAN_HIERARCHY[normalizedPlanType as keyof typeof PLAN_HIERARCHY] || 0 : 0;
+              const planTier = PLAN_HIERARCHY[plan.id as keyof typeof PLAN_HIERARCHY] || 0;
+              const isUpgrade = planTier > currentTier;
+              const isDowngrade = planTier < currentTier;
+              
+              return (
+              <div key={plan.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border ${plan.highlighted ? 'border-green-500 dark:border-green-500 ring-1 ring-green-500' : 'border-gray-200 dark:border-gray-700'} relative flex flex-col`}>
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-full">
+                    Current Plan
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h4>
-                  {plan.highlighted && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">Popular</span>
+                  {plan.highlighted && !isCurrentPlan && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Popular</span>
                   )}
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">{plan.description}</p>
-                <div className="flex items-baseline space-x-2 mb-4">
-                  <span className="text-3xl font-bold text-green-600">{plan.price}</span>
-                  {plan.priceAmount > 0 && (
-                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 min-h-[40px]">{plan.description}</p>
+                <div className="flex items-baseline space-x-2 mb-6">
+                  {plan.priceAmount === 0 ? (
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">Contact Us</span>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                        ${billingInterval === 'year' ? plan.priceYearly : plan.priceAmount}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        /{billingInterval === 'year' ? 'year' : 'month'}
+                      </span>
+                    </>
                   )}
                 </div>
+                
                 <button
                   onClick={() => purchasePlan.mutate(plan.id)}
-                  disabled={purchasePlan.isPending && selectedPlan === plan.id}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-60"
+                  disabled={(purchasePlan.isPending && selectedPlan === plan.id) || isCurrentPlan}
+                  className={`w-full px-4 py-2.5 rounded-lg font-medium transition-colors mb-6 ${
+                    isCurrentPlan
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                      : plan.highlighted
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+                  }`}
                 >
-                  {purchasePlan.isPending && selectedPlan === plan.id ? t('subscription.processing') : t('subscription.plans.getStarted')}
+                  {purchasePlan.isPending && selectedPlan === plan.id 
+                    ? t('subscription.processing') 
+                    : isCurrentPlan 
+                    ? 'Current Plan' 
+                    : plan.priceAmount === 0
+                    ? 'Contact Sales'
+                    : isUpgrade
+                    ? 'Upgrade'
+                    : isDowngrade
+                    ? 'Downgrade'
+                    : t('subscription.plans.getStarted')}
                 </button>
-                <ul className="mt-4 space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                  {plan.features.slice(0, 4).map((feature) => (
-                    <li key={feature} className="flex items-start space-x-2">
-                      <span className="mt-1 h-2 w-2 rounded-full bg-green-600" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+
+                <div className="space-y-4 flex-grow">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">Limits</p>
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      <li className="flex items-center justify-between">
+                        <span>Farms</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.farms >= 999999 ? 'Unlimited' : plan.limits.farms}</span>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Parcels</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.parcels >= 999999 ? 'Unlimited' : plan.limits.parcels}</span>
+                      </li>
+                      <li className="flex items-center justify-between">
+                        <span>Users</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.users >= 999999 ? 'Unlimited' : plan.limits.users}</span>
+                      </li>
+                    </ul>
+                  </div>
+                  
+                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">Features</p>
+                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start space-x-2">
+                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
-            ))}
+            )})}
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
@@ -328,11 +400,18 @@ const SubscriptionSettings: React.FC = () => {
 
               <div className="flex items-baseline space-x-2">
                 <span className="text-3xl font-bold text-green-600">
-                  {moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'}
+                  {plan ? (
+                    subscription?.billing_interval === 'year' 
+                      ? `$${Math.round((SUBSCRIPTION_PLANS[plan.name as keyof typeof SUBSCRIPTION_PLANS]?.priceYearly || 0) / 12)}`
+                      : `$${SUBSCRIPTION_PLANS[plan.name as keyof typeof SUBSCRIPTION_PLANS]?.priceAmount || 0}`
+                  ) : (
+                    moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'
+                  )}
                 </span>
-                {moduleConfig?.pricing && moduleConfig.pricing.basePriceMonthly > 0 && (
-                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
-                )}
+                <span className="text-gray-600 dark:text-gray-400">
+                  {t('subscription.perMonth')}
+                  {subscription?.billing_interval === 'year' && ' (Billed yearly)'}
+                </span>
               </div>
 
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -386,12 +465,12 @@ const SubscriptionSettings: React.FC = () => {
               limit={subscription?.max_users || 0}
             />
 
-            {subscription && subscription.max_satellite_reports > 0 && (
+            {subscription && (subscription.max_satellite_reports ?? 0) > 0 && (
               <UsageBar
                 icon={<Satellite className="h-5 w-5 text-gray-500" />}
                 label={t('subscription.usage.satelliteReports')}
                 current={usage?.satellite_reports_count || 0}
-                limit={subscription.max_satellite_reports}
+                limit={subscription.max_satellite_reports ?? 0}
               />
             )}
           </div>
@@ -454,6 +533,7 @@ const SubscriptionSettings: React.FC = () => {
         </div>
 
         {/* Billing Portal */}
+        {subscription && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {t('subscription.billingManagement')}
@@ -468,10 +548,11 @@ const SubscriptionSettings: React.FC = () => {
             className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
             disabled={purchasePlan.isPending}
           >
-            <span>{purchasePlan.isPending ? t('subscription.processing') : t('subscription.openBillingPortal')}</span>
+            <span>{purchasePlan.isPending ? t('subscription.processing') : 'Manage Billing'}</span>
             <ExternalLink className="h-4 w-4" />
           </button>
           </div>
+        )}
       </div>
     </div>
   );

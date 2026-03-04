@@ -8873,19 +8873,21 @@ COMMENT ON TABLE marketplace_reviews IS 'Reviews between buyers and sellers afte
 -- STORAGE BUCKETS
 -- =====================================================
 
+-- Ensure storage.buckets has the "public" column (required for older Supabase setups)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'storage' AND table_name = 'buckets' AND column_name = 'public'
+  ) THEN
+    ALTER TABLE storage.buckets ADD COLUMN "public" boolean DEFAULT false;
+  END IF;
+END $$;
+
 -- Create products storage bucket for marketplace images
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'products',
-  'products',
-  true,
-  5242880,  -- 5MB limit
-  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-)
-ON CONFLICT (id) DO UPDATE SET
-  public = true,
-  file_size_limit = 5242880,
-  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+INSERT INTO storage.buckets (id, name, "public")
+VALUES ('products', 'products', true)
+ON CONFLICT (id) DO UPDATE SET "public" = true;
 
 -- Drop existing policies if they exist (cleanup for idempotency)
 DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
@@ -8918,18 +8920,9 @@ USING (bucket_id = 'products' AND auth.role() = 'authenticated');
 -- =====================================================
 
 -- Create avatars storage bucket for user profile images
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'avatars',
-  'avatars',
-  true,
-  2097152,  -- 2MB limit
-  ARRAY['image/jpeg', 'image/png']
-)
-ON CONFLICT (id) DO UPDATE SET
-  public = true,
-  file_size_limit = 2097152,
-  allowed_mime_types = ARRAY['image/jpeg', 'image/png'];
+INSERT INTO storage.buckets (id, name, "public")
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET "public" = true;
 
 -- Drop existing policies if they exist (cleanup for idempotency)
 DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects;
@@ -12232,12 +12225,9 @@ USING (
 
 -- Create storage bucket if it doesn't exist (for local development)
 -- In production, this should be configured via Supabase dashboard
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('products', 'products', false, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'])
-ON CONFLICT (id) DO UPDATE SET
-  public = false,
-  file_size_limit = EXCLUDED.file_size_limit,
-  allowed_mime_types = EXCLUDED.allowed_mime_types;
+INSERT INTO storage.buckets (id, name, "public")
+VALUES ('products', 'products', false)
+ON CONFLICT (id) DO UPDATE SET "public" = false;
 
 -- Policy: Allow anyone to view products (images) but not list the bucket
 DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects;
@@ -14170,40 +14160,9 @@ WITH CHECK (true);
 -- COMPLIANCE DOCUMENTS STORAGE BUCKET
 -- ============================================================================
 
-INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES (
-  'compliance-documents',
-  'compliance-documents',
-  false,
-  10485760,
-  ARRAY[
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'image/jpeg',
-    'image/png',
-    'image/tiff',
-    'text/plain',
-    'text/csv'
-  ]
-)
-ON CONFLICT (id) DO UPDATE SET
-  public = false,
-  file_size_limit = 10485760,
-  allowed_mime_types = ARRAY[
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'image/jpeg',
-    'image/png',
-    'image/tiff',
-    'text/plain',
-    'text/csv'
-  ];
+INSERT INTO storage.buckets (id, name, "public")
+VALUES ('compliance-documents', 'compliance-documents', false)
+ON CONFLICT (id) DO UPDATE SET "public" = false;
 
 DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects;
 CREATE POLICY "Org members can read compliance documents"

@@ -28,6 +28,30 @@ const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
 
 const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];
 
+/** Convert a single coordinate pair from Web Mercator (EPSG:3857) to WGS84 if needed. */
+function toWgs84(x: number, y: number): [number, number] {
+  if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+    const lon = (x / 20037508.34) * 180;
+    const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360) / Math.PI - 90;
+    return [lon, lat];
+  }
+  return [x, y];
+}
+
+/** Convert a parcel boundary (number[][]) to a GeoJSON Polygon geometry in WGS84. */
+function boundaryToGeoJSON(boundary: number[][]): { type: 'Polygon'; coordinates: number[][][] } {
+  const ring = boundary.map(([x, y]) => toWgs84(x, y));
+  // Close the ring if not already closed
+  if (ring.length > 0) {
+    const [fx, fy] = ring[0];
+    const [lx, ly] = ring[ring.length - 1];
+    if (fx !== lx || fy !== ly) {
+      ring.push([fx, fy]);
+    }
+  }
+  return { type: 'Polygon', coordinates: [ring] };
+}
+
 @Injectable()
 export class SatelliteCacheService {
   private readonly logger = new Logger(SatelliteCacheService.name);
@@ -39,6 +63,68 @@ export class SatelliteCacheService {
     private readonly db: DatabaseService,
     private readonly proxy: SatelliteProxyService,
   ) {}
+
+  // ── AOI Resolution ─────────────────────────────────────
+
+  /**
+   * Resolve a parcel's boundary from the DB and build a proper GeoJSON AOI.
+   * This is the authoritative source — avoids coordinate bugs in the frontend.
+   */
+  async resolveAoiFromParcel(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<{ geometry: { type: 'Polygon'; coordinates: number[][][] }; name: string } | null> {
+    try {
+      const client = this.db.getAdminClient();
+
+      let query = client
+        .from('parcels')
+        .select('boundary, name')
+        .eq('id', parcelId);
+
+      const { data, error } = await query.limit(1).single();
+
+      if (error || !data?.boundary) {
+        this.logger.warn(
+          `[resolveAoi] No boundary for parcel ${parcelId}: ${error?.message ?? 'null boundary'}`,
+        );
+        return null;
+      }
+
+      const boundary = data.boundary as number[][];
+      if (!Array.isArray(boundary) || boundary.length < 3) {
+        this.logger.warn(`[resolveAoi] Boundary too short for parcel ${parcelId}: ${boundary.length} points`);
+        return null;
+      }
+
+      const geometry = boundaryToGeoJSON(boundary);
+      this.logger.debug(
+        `[resolveAoi] Resolved AOI for parcel ${parcelId}: ${boundary.length} vertices`,
+      );
+
+      return { geometry, name: data.name ?? `Parcel ${parcelId}` };
+    } catch (err) {
+      this.logger.error(`[resolveAoi] Failed for parcel ${parcelId}: ${err}`);
+      return null;
+    }
+  }
+
+  /**
+   * If body contains parcel_id, resolve the AOI from DB and inject it,
+   * replacing whatever the frontend sent.
+   */
+  private async enrichBodyWithAoi(
+    body: Record<string, unknown>,
+    organizationId?: string,
+  ): Promise<Record<string, unknown>> {
+    const parcelId = body.parcel_id as string | undefined;
+    if (!parcelId) return body;
+
+    const resolved = await this.resolveAoiFromParcel(parcelId, organizationId);
+    if (!resolved) return body;
+
+    return { ...body, aoi: resolved };
+  }
 
   // ── Per-Parcel Async Sync ─────────────────────────────
 
@@ -120,6 +206,8 @@ export class SatelliteCacheService {
   ): Promise<void> {
     const progress = this.parcelSyncProgress.get(parcelId)!;
 
+    const enrichedBody = await this.enrichBodyWithAoi(originalBody, organizationId);
+
     try {
       for (const index of indices) {
         progress.currentIndex = index;
@@ -127,7 +215,7 @@ export class SatelliteCacheService {
 
         try {
           const requestBody = {
-            ...originalBody,
+            ...enrichedBody,
             index,
             force_refresh: true,
             date_range: { start_date: startDate, end_date: endDate },
@@ -237,13 +325,14 @@ export class SatelliteCacheService {
     body: Record<string, unknown>,
     organizationId?: string,
   ): Promise<unknown> {
-    const parcelId = body.parcel_id as string | undefined;
-    const indexName = (body.index as string) || '';
-    const dateRange = body.date_range as { start_date?: string; end_date?: string } | undefined;
-    const forceRefresh = body.force_refresh as boolean | undefined;
+    const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
+    const parcelId = enrichedBody.parcel_id as string | undefined;
+    const indexName = (enrichedBody.index as string) || '';
+    const dateRange = enrichedBody.date_range as { start_date?: string; end_date?: string } | undefined;
+    const forceRefresh = enrichedBody.force_refresh as boolean | undefined;
 
     if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {
-      return this.proxy.post('/indices/timeseries', body, organizationId);
+      return this.proxy.post('/indices/timeseries', enrichedBody, organizationId);
     }
 
     if (!forceRefresh) {
@@ -287,7 +376,7 @@ export class SatelliteCacheService {
     );
 
     const start = Date.now();
-    const fresh = await this.proxy.post('/indices/timeseries', body, organizationId) as Record<string, unknown>;
+    const fresh = await this.proxy.post('/indices/timeseries', enrichedBody, organizationId) as Record<string, unknown>;
     this.logger.log(`[Proxy] timeseries response in ${Date.now() - start}ms`);
 
     this.persistTimeSeriesInBackground(
@@ -295,7 +384,7 @@ export class SatelliteCacheService {
       indexName,
       (fresh.data as TimeSeriesPoint[]) || [],
       organizationId,
-      body.farm_id as string | undefined,
+      enrichedBody.farm_id as string | undefined,
     );
 
     return fresh;
@@ -395,13 +484,14 @@ export class SatelliteCacheService {
     body: Record<string, unknown>,
     organizationId?: string,
   ): Promise<unknown> {
-    const parcelId = body.parcel_id as string | undefined;
-    const indexName = (body.index as string) || '';
-    const date = (body.date as string) || '';
-    const gridSize = (body.grid_size as number) || 1000;
+    const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
+    const parcelId = enrichedBody.parcel_id as string | undefined;
+    const indexName = (enrichedBody.index as string) || '';
+    const date = (enrichedBody.date as string) || '';
+    const gridSize = (enrichedBody.grid_size as number) || 1000;
 
     // L1: in-memory (short TTL for hot requests within same session)
-    const memKey = this.heatmapMemKey(body);
+    const memKey = this.heatmapMemKey(enrichedBody);
     const memCached = this.heatmapCache.get(memKey);
     if (memCached && memCached.expiresAt > Date.now()) {
       this.logger.debug(`[Cache L1 HIT] heatmap mem key=${memKey.slice(0, 40)}…`);
@@ -437,7 +527,7 @@ export class SatelliteCacheService {
     this.logger.debug(
       `[Cache MISS] heatmap ${indexName}/${date} → forwarding to satellite service`,
     );
-    const fresh = await this.proxy.post('/indices/heatmap', body, organizationId);
+    const fresh = await this.proxy.post('/indices/heatmap', enrichedBody, organizationId);
 
     // Store in L1
     this.heatmapCache.set(memKey, {
@@ -545,17 +635,18 @@ export class SatelliteCacheService {
     body: Record<string, unknown>,
     organizationId?: string,
   ): Promise<unknown> {
-    const parcelId = body.parcel_id as string | undefined;
-    const startDate = (body.start_date as string) || '';
-    const endDate = (body.end_date as string) || '';
-    const forceRefresh = body.force_refresh as boolean | undefined;
+    const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
+    const parcelId = enrichedBody.parcel_id as string | undefined;
+    const startDate = (enrichedBody.start_date as string) || '';
+    const endDate = (enrichedBody.end_date as string) || '';
+    const forceRefresh = enrichedBody.force_refresh as boolean | undefined;
 
     if (!parcelId) {
-      return this.proxy.post('/indices/available-dates', body, organizationId);
+      return this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
     }
 
     if (!startDate || !endDate) {
-      return this.proxy.post('/indices/available-dates', body, organizationId);
+      return this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
     }
 
     const memKey = `ad:${parcelId}:${startDate}:${endDate}`;
@@ -594,7 +685,7 @@ export class SatelliteCacheService {
       `[available-dates] ${forceRefresh ? 'Force refresh' : 'No timeseries data'} — fetching from satellite service for ${parcelId} ${startDate}→${endDate}`,
     );
     const start = Date.now();
-    const fresh = await this.proxy.post('/indices/available-dates', body, organizationId);
+    const fresh = await this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
     this.logger.log(`[Proxy] available-dates response in ${Date.now() - start}ms`);
 
     this.availDatesCache.set(memKey, {

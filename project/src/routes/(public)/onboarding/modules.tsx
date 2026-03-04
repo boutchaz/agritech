@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ModulesStep } from '@/components/onboarding/steps/ModulesStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback, useRef } from 'react';
 
@@ -10,9 +9,9 @@ export const Route = createFileRoute('/(public)/onboarding/modules')({
 });
 
 function ModulesStepComponent() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const moduleSelection = useOnboardingStore((state) => state.moduleSelection);
+  const selectedPlanType = useOnboardingStore((state) => state.selectedPlanType);
   const updateModuleSelection = useOnboardingStore((state) => state.updateModuleSelection);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const persistState = useOnboardingStore((state) => state.persistState);
@@ -44,7 +43,7 @@ function ModulesStepComponent() {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [navigate, setCurrentStep, persistState]);
+  }, [moduleSelection, navigate, persistState, setCurrentStep]);
 
   return (
     <>
@@ -55,6 +54,7 @@ function ModulesStepComponent() {
       )}
       <ModulesStep
         moduleSelection={moduleSelection}
+        selectedPlanType={selectedPlanType}
         onUpdate={updateModuleSelection}
         onNext={handleNext}
         isLoading={isSubmitting}

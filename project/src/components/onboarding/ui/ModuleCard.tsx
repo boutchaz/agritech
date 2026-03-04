@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Sparkles } from 'lucide-react';
+import { Check, Lock, Sparkles } from 'lucide-react';
 
 interface ModuleCardProps {
   id: string;
@@ -10,6 +10,8 @@ interface ModuleCardProps {
   selected: boolean;
   onToggle: () => void;
   recommended?: boolean;
+  locked?: boolean;
+  requiredPlan?: string | null;
 }
 
 export const ModuleCard: React.FC<ModuleCardProps> = ({
@@ -20,6 +22,8 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   selected,
   onToggle,
   recommended,
+  locked = false,
+  requiredPlan,
 }) => {
   const colorMap: Record<string, { bg: string; border: string; iconBg: string; check: string }> = {
     emerald: { bg: 'bg-emerald-50', border: 'border-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600', check: 'bg-emerald-500' },
@@ -37,15 +41,21 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={() => {
+        if (locked) {
+          return;
+        }
+        onToggle();
+      }}
       className={`
         relative group p-4 rounded-2xl border-2 text-left
         transition-all duration-300 ease-out
+        ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
         ${selected 
           ? `${colors.bg} ${colors.border} shadow-lg` 
           : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
         }
-        ${selected ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
+        ${locked ? '' : selected ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
       `}
     >
       {/* Recommended badge */}
@@ -67,15 +77,23 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <h3 className={`
-            font-semibold text-sm transition-colors duration-200
-            ${selected ? 'text-gray-900' : 'text-gray-700'}
-          `}>
-            {name}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className={`
+              font-semibold text-sm transition-colors duration-200
+              ${selected ? 'text-gray-900' : 'text-gray-700'}
+            `}>
+              {name}
+            </h3>
+            {locked && <Lock className="w-3.5 h-3.5 text-amber-600" />}
+          </div>
           <p className="mt-0.5 text-xs text-gray-500 line-clamp-2">
             {description}
           </p>
+          {locked && requiredPlan && (
+            <span className="mt-2 inline-flex rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Requires {requiredPlan} plan
+            </span>
+          )}
         </div>
 
         {/* Toggle indicator */}

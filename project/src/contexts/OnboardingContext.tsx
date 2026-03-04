@@ -41,6 +41,7 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     accounting: false,
     hr: false,
     analytics: false,
+    compliance: false,
     marketplace: false
   },
   preferences: {
@@ -49,7 +50,8 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     use_demo_data: false,
     enable_notifications: true
   },
-  existingOrgId: null
+  existingOrgId: null,
+  selectedPlanType: null
 });
 
 interface OnboardingContextValue {

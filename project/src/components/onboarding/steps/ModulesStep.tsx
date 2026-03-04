@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ModuleCard } from '../ui/ModuleCard';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
-import type { ModuleConfig } from '@/lib/api/module-config';
+import { isModuleAvailableForPlan, PLAN_HIERARCHY, type PlanType } from '@/lib/polar';
 
 // Icon mapping from database icon names to Lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -46,6 +46,7 @@ interface ModuleSelection {
 
 interface ModulesStepProps {
   moduleSelection: ModuleSelection;
+  selectedPlanType?: PlanType | null;
   onUpdate: (data: Partial<ModuleSelection>) => void;
   onNext: () => void;
   isLoading?: boolean;
@@ -69,6 +70,7 @@ const getColorFromName = (colorName: string): string => {
 
 export const ModulesStep: React.FC<ModulesStepProps> = ({
   moduleSelection,
+  selectedPlanType,
   onUpdate,
   onNext,
   isLoading: isSubmitting = false,
@@ -76,7 +78,37 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
   const { data: config, isLoading: isLoadingConfig, error } = useModuleConfig();
   const modules = config?.modules || [];
 
-  const selectedCount = Object.values(moduleSelection).filter(Boolean).length;
+  const getRequiredPlan = (requiredPlan?: string | null): PlanType | null => {
+    if (!requiredPlan) {
+      return null;
+    }
+
+    const normalizedPlan = requiredPlan.toLowerCase();
+    if (!(normalizedPlan in PLAN_HIERARCHY)) {
+      return null;
+    }
+
+    return normalizedPlan as PlanType;
+  };
+
+  const isModuleAvailable = (requiredPlan?: string | null) => {
+    const normalizedRequiredPlan = getRequiredPlan(requiredPlan);
+
+    if (!normalizedRequiredPlan || !selectedPlanType) {
+      return true;
+    }
+
+    return isModuleAvailableForPlan(
+      { required_plan: normalizedRequiredPlan },
+      { plan_type: selectedPlanType }
+    );
+  };
+
+  const availableModules = modules.filter((module) => isModuleAvailable(module.requiredPlan));
+  const availableModuleSlugs = new Set(availableModules.map((module) => module.slug));
+  const selectedCount = Object.entries(moduleSelection).filter(
+    ([slug, isSelected]) => isSelected && availableModuleSlugs.has(slug)
+  ).length;
 
   const toggleModule = (moduleId: string) => {
     onUpdate({ [moduleId]: !moduleSelection[moduleId as keyof ModuleSelection] });
@@ -92,6 +124,14 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
   };
 
   if (isSubmitting) {
+    return (
+      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  if (isLoadingConfig) {
     return (
       <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
@@ -131,7 +171,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-emerald-600">{selectedCount}</span>
-            <span className="text-sm text-gray-500">/ {modules.length}</span>
+            <span className="text-sm text-gray-500">/ {availableModules.length}</span>
           </div>
         </div>
 
@@ -139,7 +179,13 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
         <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-500 rounded-full"
-            style={{ width: `${(selectedCount / modules.length) * 100}%` }}
+            style={{
+              width: `${
+                availableModules.length === 0
+                  ? 0
+                  : (selectedCount / availableModules.length) * 100
+              }%`
+            }}
           />
         </div>
       </div>
@@ -148,6 +194,8 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {modules.map((module) => {
           const IconComponent = ICON_MAP[module.icon] || Package;
+          const isAvailable = isModuleAvailable(module.requiredPlan);
+
           return (
             <ModuleCard
               key={module.slug}
@@ -157,8 +205,15 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
               icon={<IconComponent className="w-5 h-5" />}
               color={getColorFromName(module.color)}
               selected={moduleSelection[module.slug as keyof ModuleSelection] || false}
-              onToggle={() => toggleModule(module.slug)}
+              onToggle={() => {
+                if (!isAvailable) {
+                  return;
+                }
+                toggleModule(module.slug);
+              }}
               recommended={module.isRecommended}
+              locked={!isAvailable}
+              requiredPlan={module.requiredPlan}
             />
           );
         })}
@@ -170,7 +225,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           type="button"
           onClick={() => {
             const allSelected: Partial<ModuleSelection> = {};
-            modules.forEach(m => {
+            availableModules.forEach(m => {
               allSelected[m.slug as keyof ModuleSelection] = true;
             });
             onUpdate(allSelected);
@@ -183,7 +238,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           type="button"
           onClick={() => {
             const recommended: Partial<ModuleSelection> = {};
-            modules.forEach(m => {
+            availableModules.forEach(m => {
               recommended[m.slug as keyof ModuleSelection] = m.isRecommended;
             });
             onUpdate(recommended);
@@ -202,6 +257,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
       </div>
 
       <button
+        type="button"
         onClick={onNext}
         disabled={selectedCount === 0 || isSubmitting}
         className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold

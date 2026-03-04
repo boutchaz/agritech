@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { PlanType } from '@/lib/polar';
 
 const BASE_URL = '/api/v1/onboarding';
 
@@ -56,6 +57,7 @@ export interface OnboardingState {
   version: number;
   userId: string;
   currentStep: number;
+  selectedPlanType: PlanType | null;
   profileData: {
     first_name: string;
     last_name: string;

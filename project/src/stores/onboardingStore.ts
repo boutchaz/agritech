@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { onboardingApi, type OnboardingState } from '@/lib/api/onboarding';
+import type { PlanType } from '@/lib/polar';
 
 const STORAGE_VERSION = 2;
 
@@ -49,7 +50,8 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     enable_notifications: true
   },
   existingOrgId: null,
-  existingFarmId: null
+  existingFarmId: null,
+  selectedPlanType: null
 });
 
 interface OnboardingStore extends OnboardingState {
@@ -67,6 +69,7 @@ interface OnboardingStore extends OnboardingState {
   setCurrentStep: (step: number) => void;
   setExistingOrgId: (orgId: string | null) => void;
   setExistingFarmId: (farmId: string | null) => void;
+  setSelectedPlanType: (planType: PlanType) => void;
   reset: () => void;
 }
 
@@ -118,6 +121,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
             currentStep: savedState?.currentStep ?? defaultState.currentStep,
             existingOrgId: savedState?.existingOrgId ?? defaultState.existingOrgId,
             existingFarmId: savedState?.existingFarmId ?? defaultState.existingFarmId,
+            selectedPlanType: savedState?.selectedPlanType ?? defaultState.selectedPlanType,
             // Merge user profile data if available (from AuthContext)
             profileData: {
               first_name: userProfile?.first_name || savedState?.profileData?.first_name || defaultState.profileData.first_name,
@@ -194,6 +198,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
             preferences: state.preferences,
             existingOrgId: overrides?.existingOrgId ?? state.existingOrgId,
             existingFarmId: overrides?.existingFarmId ?? state.existingFarmId,
+            selectedPlanType: state.selectedPlanType,
           };
           await onboardingApi.saveState(backendState);
 
@@ -273,6 +278,10 @@ export const useOnboardingStore = create<OnboardingStore>()(
       // Set existing farm ID
       setExistingFarmId: (farmId) => {
         set({ existingFarmId: farmId });
+      },
+
+      setSelectedPlanType: (planType) => {
+        set({ selectedPlanType: planType });
       },
 
       // Reset store
