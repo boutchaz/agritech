@@ -315,16 +315,18 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   // Fetch weather data
   const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
-    queryKey: ['weather-history', parcelId, startDate, endDate],
+    queryKey: ['weather-history', organizationId, parcelId, startDate, endDate],
     queryFn: async () => {
       if (!parcelId || !startDate || !endDate) return [];
 
       const json = await apiRequest<{ data: WeatherPoint[] }>(
         `/api/v1/satellite-proxy/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
+        {},
+        organizationId,
       );
       return json.data || [];
     },
-    enabled: showTemperature && !!parcelId && !!startDate && !!endDate,
+    enabled: showTemperature && !!organizationId && !!parcelId && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -355,7 +357,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         .map(item => {
           const date = item.date?.split('T')[0];
           const value = item.mean_value ?? item.index_value;
-          if (!date || !isValidIndexValue(index, value)) {
+          if (!date || date < startDate || date > endDate || !isValidIndexValue(index, value)) {
             return null;
           }
           return { date, value: Number(value) };
@@ -405,7 +407,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     if (showTemperature && weatherData) {
       for (const point of weatherData) {
         const date = point.date?.split('T')[0];
-        if (date) {
+        if (date && date >= startDate && date <= endDate) {
           const existing: MultiIndexData = dateMap.get(date) || { date };
           existing.temperature_mean = point.temperature_mean;
           existing.temperature_min = point.temperature_min;
@@ -418,7 +420,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return Array.from(dateMap.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue]);
+  }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue, startDate, endDate]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
     setSelectedIndices(prev => {

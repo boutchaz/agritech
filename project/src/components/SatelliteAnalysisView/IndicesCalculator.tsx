@@ -8,7 +8,8 @@ import {
   VEGETATION_INDEX_DESCRIPTIONS,
   IndexCalculationRequest,
   IndexCalculationResponse,
-  convertBoundaryToGeoJSON
+  convertBoundaryToGeoJSON,
+  formatDateForAPI
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
@@ -46,6 +47,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   const [isCalculating, setIsCalculating] = useState(false);
   const [results, setResults] = useState<IndexCalculationResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const todayDate = formatDateForAPI(new Date());
 
   // Initialize with reasonable default dates (last 30 days)
   useEffect(() => {
@@ -53,8 +55,8 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 30);
 
-    setEndDate(endDate.toISOString().split('T')[0]);
-    setStartDate(startDate.toISOString().split('T')[0]);
+    setEndDate(formatDateForAPI(endDate));
+    setStartDate(formatDateForAPI(startDate));
   }, []);
 
   // Query cached indices from database
@@ -280,7 +282,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               <input
                 type="date"
                 value={startDate}
-                max={new Date().toISOString().split('T')[0]}
+                max={todayDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -290,7 +292,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               <input
                 type="date"
                 value={endDate}
-                max={new Date().toISOString().split('T')[0]}
+                max={todayDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />

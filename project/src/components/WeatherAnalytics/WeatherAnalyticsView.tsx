@@ -16,6 +16,13 @@ interface WeatherAnalyticsViewProps {
   variety?: string | null;
 }
 
+const formatDateInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   parcelBoundary,
   parcelName,
@@ -47,8 +54,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
       
-      setCustomStartDate(threeMonthsAgo.toISOString().split('T')[0]);
-      setCustomEndDate(yesterday.toISOString().split('T')[0]);
+      setCustomStartDate(formatDateInput(threeMonthsAgo));
+      setCustomEndDate(formatDateInput(yesterday));
     }
   };
 

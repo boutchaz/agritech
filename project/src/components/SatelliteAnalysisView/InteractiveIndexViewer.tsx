@@ -12,7 +12,8 @@ import {
    HeatmapDataResponse,
    InteractiveDataResponse,
    convertBoundaryToGeoJSON,
-   DEFAULT_CLOUD_COVERAGE
+   DEFAULT_CLOUD_COVERAGE,
+   formatDateForAPI
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { DatePicker } from '../ui/DatePicker';
@@ -175,8 +176,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
       const result = await satelliteApi.getAvailableDates(
         aoi,
-        monthStart.toISOString().split('T')[0],
-        monthEnd.toISOString().split('T')[0],
+        formatDateForAPI(monthStart),
+        formatDateForAPI(monthEnd),
         DEFAULT_CLOUD_COVERAGE,
         parcelId,
         true // force_refresh - always get fresh data from satellite service
@@ -215,8 +216,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
       const result = await satelliteApi.getAvailableDates(
         aoi,
-        monthStart.toISOString().split('T')[0],
-        monthEnd.toISOString().split('T')[0],
+        formatDateForAPI(monthStart),
+        formatDateForAPI(monthEnd),
         DEFAULT_CLOUD_COVERAGE,
         parcelId,
         true // force_refresh - always get fresh data from satellite service

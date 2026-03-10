@@ -25,7 +25,7 @@ import { tasksApi } from '@/lib/api/tasks';
 import { useCropsForTask, type Crop } from '@/hooks/useCrops';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '@/types/tasks';
+import type { CompleteHarvestTaskRequest } from '@/types/tasks';
 import { useParcelById } from '@/hooks/useParcelsQuery';
 import {
   getTaskStatusLabel,
@@ -161,14 +161,21 @@ function TaskDetailPage() {
   const canPause = task.status === 'in_progress';
   const canResume = task.status === 'paused';
   const canComplete = task.status === 'in_progress' || task.status === 'paused';
+  const getTaskOrganizationId = () => task.organization_id || currentOrganization?.id || '';
 
   const handleStartTask = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) {
+      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
+      return;
+    }
+
     try {
       setIsActionLoading(true);
       setError(null);
       await updateTask.mutateAsync({
         taskId: task.id,
-        organizationId,
+        organizationId: taskOrganizationId,
         updates: { status: 'in_progress', actual_start: new Date().toISOString() },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -180,12 +187,18 @@ function TaskDetailPage() {
   };
 
   const handlePauseTask = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) {
+      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
+      return;
+    }
+
     try {
       setIsActionLoading(true);
       setError(null);
       await updateTask.mutateAsync({
         taskId: task.id,
-        organizationId,
+        organizationId: taskOrganizationId,
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -197,12 +210,18 @@ function TaskDetailPage() {
   };
 
   const handleResumeTask = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) {
+      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
+      return;
+    }
+
     try {
       setIsActionLoading(true);
       setError(null);
       await updateTask.mutateAsync({
         taskId: task.id,
-        organizationId,
+        organizationId: taskOrganizationId,
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -214,6 +233,12 @@ function TaskDetailPage() {
   };
 
   const handleCompleteTask = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) {
+      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
+      return;
+    }
+
     if (isHarvestingTask) {
       setShowHarvestForm(true);
       return;
@@ -221,9 +246,9 @@ function TaskDetailPage() {
     try {
       setIsActionLoading(true);
       setError(null);
-      await tasksApi.complete(organizationId, task.id, {});
+      await tasksApi.complete(taskOrganizationId, task.id, {});
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task', organizationId, task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
     } catch (err: any) {
       setError(err.message || t('tasks.detail.errors.complete', 'Failed to complete task'));
     } finally {
@@ -232,6 +257,12 @@ function TaskDetailPage() {
   };
 
   const handleCompleteWithHarvest = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) {
+      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
+      return;
+    }
+
     if (!harvestData.crop_id) {
       setError('Veuillez sélectionner une culture');
       return;
@@ -281,9 +312,9 @@ function TaskDetailPage() {
         requestPayload.crop_id = cropIdToSend;
       }
 
-      await tasksApi.completeWithHarvest(organizationId, task.id, requestPayload);
+      await tasksApi.completeWithHarvest(taskOrganizationId, task.id, requestPayload);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['task', organizationId, task.id] });
+      queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
       queryClient.invalidateQueries({ queryKey: ['harvests'] });
 
       if (completionType === 'partial') {

@@ -10,7 +10,8 @@ import {
   VEGETATION_INDEX_DESCRIPTIONS,
   HeatmapDataResponse,
   convertBoundaryToGeoJSON,
-  DEFAULT_CLOUD_COVERAGE
+  DEFAULT_CLOUD_COVERAGE,
+  formatDateForAPI
 } from '../../lib/satellite-api';
 import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 
@@ -208,10 +209,10 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     setError(null);
 
     try {
-      const endDate = new Date().toISOString().split('T')[0];
+      const endDate = formatDateForAPI(new Date());
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - 6);
-      const startDateStr = startDate.toISOString().split('T')[0];
+      const startDateStr = formatDateForAPI(startDate);
 
       const aoi = {
         geometry: convertBoundaryToGeoJSON(boundary),

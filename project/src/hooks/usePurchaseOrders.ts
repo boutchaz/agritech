@@ -182,7 +182,7 @@ export function useCreatePurchaseOrder() {
         notes: poData.notes,
         terms_and_conditions: `Payment Terms: ${poData.payment_terms || 'N/A'}\nDelivery Terms: ${poData.delivery_terms || 'N/A'}\nSupplier Quote Ref: ${poData.supplier_quote_ref || 'N/A'}`,
         items: apiItems,
-      });
+      }, currentOrganization.id);
 
       return po;
     },

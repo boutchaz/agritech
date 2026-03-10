@@ -612,6 +612,27 @@ export class TasksService {
       throw new NotFoundException("Task not found");
     }
 
+    const { data: workerToAssign, error: workerError } = await client
+      .from("workers")
+      .select("id, user_id, first_name, last_name, is_active")
+      .eq("id", assignTaskDto.worker_id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (workerError) {
+      throw new Error(`Failed to validate worker: ${workerError.message}`);
+    }
+
+    if (!workerToAssign) {
+      throw new NotFoundException("Worker not found in this organization");
+    }
+
+    if (!workerToAssign.is_active) {
+      throw new BadRequestException(
+        "Cannot assign task to an inactive worker",
+      );
+    }
+
     const { data: task, error } = await client
       .from("tasks")
       .update({
@@ -635,13 +656,7 @@ export class TasksService {
 
     // Send notification to assigned worker if they have a linked user account
     try {
-      const { data: worker } = await client
-        .from("workers")
-        .select("user_id, first_name, last_name")
-        .eq("id", assignTaskDto.worker_id)
-        .single();
-
-      if (worker?.user_id) {
+      if (workerToAssign.user_id) {
         // Get assigner name
         const { data: assignerProfile } = await client
           .from("user_profiles")
@@ -655,14 +670,14 @@ export class TasksService {
           : "Someone";
 
         await this.notificationsService.notifyTaskAssignment(
-          worker.user_id,
+          workerToAssign.user_id,
           organizationId,
           task.title || "Untitled task",
           taskId,
           assignerName,
         );
         this.logger.log(
-          `Task assignment notification sent to user ${worker.user_id}`,
+          `Task assignment notification sent to user ${workerToAssign.user_id}`,
         );
       }
     } catch (notifError) {
