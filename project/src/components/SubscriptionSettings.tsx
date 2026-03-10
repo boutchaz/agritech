@@ -5,34 +5,65 @@ import {
   Users,
   MapPin,
   Building2,
-  Satellite,
   AlertCircle,
   ExternalLink,
   Loader2,
+  LandPlot,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { useSubscription } from '../hooks/useSubscription';
-import { SUBSCRIPTION_PLANS, type PlanType, normalizePlanType, type BillingInterval, PLAN_HIERARCHY } from '../lib/polar';
+import {
+  SUBSCRIPTION_PLANS,
+  type PlanType,
+  normalizePlanType,
+  type BillingInterval,
+  PLAN_HIERARCHY,
+  normalizeBillingInterval,
+  getEstimatedPricing,
+  getDefaultHectaresForPlan,
+} from '../lib/polar';
 import { useAuth } from '../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
 import { subscriptionsService } from '@/services/subscriptionsService';
 
-
-
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
   const { currentOrganization } = useAuth();
   const { t } = useTranslation();
   const [showPlans, setShowPlans] = React.useState(false);
+  const [selectedFormula, setSelectedFormula] = React.useState<PlanType | null>(
+    null,
+  );
+  const [billingInterval, setBillingInterval] = React.useState<BillingInterval>(
+    normalizeBillingInterval(subscription?.billing_cycle || subscription?.billing_interval),
+  );
+  const [contractedHectares, setContractedHectares] = React.useState<number>(
+    subscription?.contracted_hectares || 50,
+  );
   const { data: moduleConfig } = useModuleConfig();
-  const [selectedPlan, setSelectedPlan] = React.useState<PlanType | 'core' | null>(null);
-  const [billingInterval, setBillingInterval] = React.useState<BillingInterval>('month');
 
-  // Query actual usage counts from NestJS API
+  const normalizedPlanType = normalizePlanType(
+    subscription?.formula || subscription?.plan_type || null,
+  );
+
+  React.useEffect(() => {
+    if (subscription?.contracted_hectares) {
+      setContractedHectares(subscription.contracted_hectares);
+    }
+
+    if (subscription?.billing_cycle || subscription?.billing_interval) {
+      setBillingInterval(
+        normalizeBillingInterval(
+          subscription.billing_cycle || subscription.billing_interval,
+        ),
+      );
+    }
+  }, [subscription?.billing_cycle, subscription?.billing_interval, subscription?.contracted_hectares]);
+
   const { data: usage } = useQuery({
     queryKey: ['usage-counts', currentOrganization?.id],
     queryFn: async () => {
@@ -40,7 +71,7 @@ const SubscriptionSettings: React.FC = () => {
       return subscriptionsService.getUsage(currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000,
   });
 
   const purchaseAddon = useMutation({
@@ -59,12 +90,18 @@ const SubscriptionSettings: React.FC = () => {
   });
 
   const purchasePlan = useMutation({
-    mutationFn: async (planType: PlanType | 'core') => {
+    mutationFn: async (formula: PlanType) => {
       if (!currentOrganization?.id) {
         throw new Error(t('subscription.errors.noOrganization'));
       }
-      setSelectedPlan(planType);
-      const { checkoutUrl } = await subscriptionsService.createCheckout(planType, currentOrganization.id, billingInterval);
+
+      setSelectedFormula(formula);
+      const { checkoutUrl } = await subscriptionsService.createCheckout(
+        formula,
+        contractedHectares,
+        currentOrganization.id,
+        billingInterval,
+      );
       return checkoutUrl;
     },
     onSuccess: (checkoutUrl) => {
@@ -72,37 +109,14 @@ const SubscriptionSettings: React.FC = () => {
     },
     onError: (error: Error) => {
       toast.error(error.message || t('subscription.errors.checkoutFailed'));
-      setSelectedPlan(null);
+      setSelectedFormula(null);
     },
   });
 
-  const handlePurchaseCore = async () => {
-    if (!currentOrganization?.id) {
-      toast.error(t('subscription.errors.noOrganization'));
-      return;
-    }
-
-    try {
-      const { checkoutUrl } = await subscriptionsService.createCheckout('core', currentOrganization.id);
-      window.location.href = checkoutUrl;
-    } catch (error) {
-      console.error('Failed to get checkout URL:', error);
-      toast.error(t('subscription.errors.checkoutFailed'));
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-      </div>
-    );
-  }
-
-  const normalizedPlanType = normalizePlanType(subscription?.plan_type ?? null);
-  const shouldShowPlans = showPlans || !normalizedPlanType;
-  const coreModules = moduleConfig?.modules.filter((module) => module.isRequired) || [];
-  const addonModules = moduleConfig?.modules.filter((module) => module.isAddonEligible) || [];
+  const coreModules =
+    moduleConfig?.modules.filter((module) => module.isRequired) || [];
+  const addonModules =
+    moduleConfig?.modules.filter((module) => module.isAddonEligible) || [];
 
   const addonsOverviewQuery = useQuery({
     queryKey: ['addons-overview', currentOrganization?.id],
@@ -116,229 +130,171 @@ const SubscriptionSettings: React.FC = () => {
 
   const activeAddons = addonsOverviewQuery.data?.active_addons || [];
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  const shouldShowPlans = showPlans || !normalizedPlanType;
+
   if (shouldShowPlans) {
     return (
-      <div className="p-6">
+      <div className="p-6 space-y-6">
         {showPlans && (
           <button
             onClick={() => setShowPlans(false)}
-            className="mb-6 text-green-600 hover:text-green-700 font-medium"
+            className="text-green-600 hover:text-green-700 font-medium"
           >
-            ← {t('subscription.backToDetails')}
+            ← {t('subscription.backToDetails', 'Back to details')}
           </button>
         )}
-        <div className="space-y-6">
-          <div className="flex justify-center mb-8">
-            <div className="bg-gray-100 dark:bg-gray-800 p-1 rounded-lg inline-flex relative">
-              <button
-                onClick={() => setBillingInterval('month')}
-                className={`relative z-10 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  billingInterval === 'month'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                }`}
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Contract Inputs
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                Contracted hectares
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={contractedHectares}
+                onChange={(event) =>
+                  setContractedHectares(Math.max(1, Number(event.target.value || 1)))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                Billing cycle
+              </label>
+              <select
+                value={billingInterval}
+                onChange={(event) =>
+                  setBillingInterval(event.target.value as BillingInterval)
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingInterval('year')}
-                className={`relative z-10 px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-2 ${
-                  billingInterval === 'year'
-                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                <span>Yearly</span>
-                <span className="px-2 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 rounded-full">
-                  Save ~17%
-                </span>
-              </button>
+                <option value="monthly">Monthly</option>
+                <option value="semiannual">Semiannual</option>
+                <option value="annual">Annual</option>
+              </select>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
-              const isCurrentPlan = normalizedPlanType === plan.id;
-              const currentTier = normalizedPlanType ? PLAN_HIERARCHY[normalizedPlanType as keyof typeof PLAN_HIERARCHY] || 0 : 0;
-              const planTier = PLAN_HIERARCHY[plan.id as keyof typeof PLAN_HIERARCHY] || 0;
-              const isUpgrade = planTier > currentTier;
-              const isDowngrade = planTier < currentTier;
-              
-              return (
-              <div key={plan.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border ${plan.highlighted ? 'border-green-500 dark:border-green-500 ring-1 ring-green-500' : 'border-gray-200 dark:border-gray-700'} relative flex flex-col`}>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          {Object.values(SUBSCRIPTION_PLANS).map((plan) => {
+            const isCurrentPlan = normalizedPlanType === plan.id;
+            const currentTier = normalizedPlanType
+              ? PLAN_HIERARCHY[normalizedPlanType]
+              : 0;
+            const planTier = PLAN_HIERARCHY[plan.id];
+            const isUpgrade = planTier > currentTier;
+            const isDowngrade = planTier < currentTier;
+            const estimate = getEstimatedPricing(
+              plan.id,
+              contractedHectares || getDefaultHectaresForPlan(plan.id),
+              billingInterval,
+            );
+
+            return (
+              <div
+                key={plan.id}
+                className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border relative flex flex-col ${
+                  plan.highlighted
+                    ? 'border-green-500 ring-1 ring-green-500'
+                    : 'border-gray-200 dark:border-gray-700'
+                }`}
+              >
                 {isCurrentPlan && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-full">
                     Current Plan
                   </div>
                 )}
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{plan.name}</h4>
-                  {plan.highlighted && !isCurrentPlan && (
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">Popular</span>
-                  )}
+
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {plan.name}
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 min-h-[40px]">
+                  {plan.description}
+                </p>
+
+                <div className="mt-4">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {estimate.cycleTtc.toLocaleString()} MAD
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {estimate.cycleHt.toLocaleString()} HT + {estimate.cycleTva.toLocaleString()} TVA
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {plan.pricePerHaYearHt} MAD/ha/year (HT)
+                  </p>
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 min-h-[40px]">{plan.description}</p>
-                <div className="flex items-baseline space-x-2 mb-6">
-                  {plan.priceAmount === 0 ? (
-                    <span className="text-3xl font-bold text-gray-900 dark:text-white">Contact Us</span>
-                  ) : (
-                    <>
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        ${billingInterval === 'year' ? plan.priceYearly : plan.priceAmount}
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400 text-sm">
-                        /{billingInterval === 'year' ? 'year' : 'month'}
-                      </span>
-                    </>
-                  )}
-                </div>
-                
+
                 <button
                   onClick={() => purchasePlan.mutate(plan.id)}
-                  disabled={(purchasePlan.isPending && selectedPlan === plan.id) || isCurrentPlan}
-                  className={`w-full px-4 py-2.5 rounded-lg font-medium transition-colors mb-6 ${
+                  disabled={(purchasePlan.isPending && selectedFormula === plan.id) || isCurrentPlan}
+                  className={`w-full mt-5 px-4 py-2.5 rounded-lg font-medium transition-colors ${
                     isCurrentPlan
                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                       : plan.highlighted
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100'
                   }`}
                 >
-                  {purchasePlan.isPending && selectedPlan === plan.id 
-                    ? t('subscription.processing') 
-                    : isCurrentPlan 
-                    ? 'Current Plan' 
-                    : plan.priceAmount === 0
-                    ? 'Contact Sales'
-                    : isUpgrade
-                    ? 'Upgrade'
-                    : isDowngrade
-                    ? 'Downgrade'
-                    : t('subscription.plans.getStarted')}
+                  {purchasePlan.isPending && selectedFormula === plan.id
+                    ? t('subscription.processing', 'Processing...')
+                    : isCurrentPlan
+                      ? 'Current Plan'
+                      : isUpgrade
+                        ? 'Upgrade'
+                        : isDowngrade
+                          ? 'Downgrade'
+                          : t('subscription.plans.getStarted', 'Get Started')}
                 </button>
 
-                <div className="space-y-4 flex-grow">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">Limits</p>
-                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <li className="flex items-center justify-between">
-                        <span>Farms</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.farms >= 999999 ? 'Unlimited' : plan.limits.farms}</span>
-                      </li>
-                      <li className="flex items-center justify-between">
-                        <span>Parcels</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.parcels >= 999999 ? 'Unlimited' : plan.limits.parcels}</span>
-                      </li>
-                      <li className="flex items-center justify-between">
-                        <span>Users</span>
-                        <span className="font-medium text-gray-900 dark:text-white">{plan.limits.users >= 999999 ? 'Unlimited' : plan.limits.users}</span>
-                      </li>
-                    </ul>
-                  </div>
-                  
-                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-3">Features</p>
-                    <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start space-x-2">
-                          <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="mt-5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <p>
+                    Hectares:{' '}
+                    {plan.limits.maxHectaresInclusive
+                      ? `up to ${plan.limits.maxHectaresInclusive}`
+                      : `>${plan.limits.minHectaresExclusive || 0}`}
+                  </p>
+                  <p>
+                    Users:{' '}
+                    {plan.limits.includedUsers === null
+                      ? 'Unlimited'
+                      : plan.limits.includedUsers}
+                  </p>
+                  <p>Support: {plan.supportLevel}</p>
+                  <p>SLA: {plan.slaAvailable ? 'Included' : 'Not included'}</p>
                 </div>
               </div>
-            )})}
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Core Plan</h3>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Base subscription for required modules.
-            </p>
-            <div className="mt-4 flex items-baseline space-x-2">
-              <span className="text-3xl font-bold text-green-600">
-                {moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'}
-              </span>
-              <span className="text-gray-600 dark:text-gray-400">{t('subscription.perMonth')}</span>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Included modules:</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {coreModules.length === 0 && (
-                  <span className="text-sm text-gray-500">No core modules configured.</span>
-                )}
-                {coreModules.map((module) => (
-                  <span
-                    key={module.slug}
-                    className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700"
-                  >
-                    {module.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {!subscription && (
-              <button
-                onClick={handlePurchaseCore}
-                className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-              >
-                {t('subscription.plans.getStarted')}
-              </button>
-            )}
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add-on Modules</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Purchase additional modules whenever you need more capabilities.
-            </p>
-
-            <div className="mt-4 space-y-3">
-              {addonModules.map((module) => {
-                const isActive = activeAddons.some((addon) => addon.module_id === module.id);
-                const price = module.priceMonthly || 0;
-                return (
-                  <div
-                    key={module.id}
-                    className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
-                  >
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{module.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{module.description}</p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        ${price}/mo
-                      </span>
-                      {isActive ? (
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                          Active
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => purchaseAddon.mutate(module.id)}
-                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                        >
-                          Buy
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              {addonModules.length === 0 && (
-                <p className="text-sm text-gray-500">No addon modules configured.</p>
-              )}
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
     );
   }
 
-  const plan = normalizedPlanType ? { name: normalizedPlanType } : null;
+  const plan = normalizedPlanType ? SUBSCRIPTION_PLANS[normalizedPlanType] : null;
+  const effectiveHectares = subscription?.contracted_hectares || contractedHectares;
+  const effectiveCycle = normalizeBillingInterval(
+    subscription?.billing_cycle || subscription?.billing_interval,
+  );
+  const pricingPreview = plan
+    ? getEstimatedPricing(plan.id, effectiveHectares || getDefaultHectaresForPlan(plan.id), effectiveCycle)
+    : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -346,7 +302,7 @@ const SubscriptionSettings: React.FC = () => {
         <div className="flex items-center space-x-3">
           <CreditCard className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('subscription.title')}
+            {t('subscription.title', 'Subscription')}
           </h2>
         </div>
 
@@ -354,7 +310,7 @@ const SubscriptionSettings: React.FC = () => {
           onClick={() => setShowPlans(true)}
           className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
-          {t('subscription.changePlan')}
+          {t('subscription.changePlan', 'Change plan')}
         </button>
       </div>
 
@@ -364,13 +320,13 @@ const SubscriptionSettings: React.FC = () => {
             <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
               <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                {t('subscription.trial.active')}
+                {t('subscription.trial.active', 'Trial active')}
               </h3>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                 {t('subscription.trial.description', {
                   endDate: subscription.current_period_end
                     ? new Date(subscription.current_period_end).toLocaleDateString()
-                    : 'N/A'
+                    : 'N/A',
                 })}
               </p>
             </div>
@@ -379,56 +335,70 @@ const SubscriptionSettings: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Current Plan */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.currentPlan')}
+            Current Contract
           </h3>
 
-          {(plan || moduleConfig) && (
+          {plan && (
             <div className="space-y-4">
               <div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {plan?.name ? `${plan.name} Plan` : 'Core Plan'}
+                  {plan.name}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                  {moduleConfig?.pricing
-                    ? `Base subscription for ${coreModules.length} required modules.`
-                    : 'Base subscription for required modules.'}
+                  {plan.description}
                 </p>
               </div>
 
-              <div className="flex items-baseline space-x-2">
-                <span className="text-3xl font-bold text-green-600">
-                  {plan ? (
-                    subscription?.billing_interval === 'year' 
-                      ? `$${Math.round((SUBSCRIPTION_PLANS[plan.name as keyof typeof SUBSCRIPTION_PLANS]?.priceYearly || 0) / 12)}`
-                      : `$${SUBSCRIPTION_PLANS[plan.name as keyof typeof SUBSCRIPTION_PLANS]?.priceAmount || 0}`
-                  ) : (
-                    moduleConfig?.pricing ? `$${moduleConfig.pricing.basePriceMonthly}` : '$0'
-                  )}
-                </span>
-                <span className="text-gray-600 dark:text-gray-400">
-                  {t('subscription.perMonth')}
-                  {subscription?.billing_interval === 'year' && ' (Billed yearly)'}
-                </span>
-              </div>
+              {pricingPreview && (
+                <div className="space-y-1">
+                  <div className="text-3xl font-bold text-green-600">
+                    {pricingPreview.cycleTtc.toLocaleString()} MAD
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    HT: {pricingPreview.cycleHt.toLocaleString()} + TVA: {pricingPreview.cycleTva.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                    Billed {effectiveCycle}
+                  </p>
+                </div>
+              )}
 
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center space-x-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {t('subscription.status')}:{' '}
-                    <span className="font-medium capitalize">{t(`subscription.statuses.${subscription?.status || 'unknown'}`)}</span>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Status</span>
+                  <span className="font-medium capitalize text-gray-900 dark:text-white">
+                    {subscription?.status}
                   </span>
                 </div>
-
-                {subscription?.current_period_end && (
-                  <div className="flex items-center space-x-2 text-sm mt-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {t('subscription.renewsOn')}:{' '}
-                      {new Date(subscription.current_period_end).toLocaleDateString()}
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Contracted hectares</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {subscription?.contracted_hectares ?? '-'} ha
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Included users</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {subscription?.included_users === null
+                      ? 'Unlimited'
+                      : subscription?.included_users ?? '-'}
+                  </span>
+                </div>
+                {subscription?.contract_end_at && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Contract end</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {new Date(subscription.contract_end_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                {subscription?.next_billing_at && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Next billing</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {new Date(subscription.next_billing_at).toLocaleDateString()}
                     </span>
                   </div>
                 )}
@@ -437,64 +407,124 @@ const SubscriptionSettings: React.FC = () => {
           )}
         </div>
 
-        {/* Usage Limits */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.usageAndLimits')}
+            Usage and Limits
           </h3>
 
           <div className="space-y-4">
             <UsageBar
+              icon={<LandPlot className="h-5 w-5 text-gray-500" />}
+              label="Hectares"
+              current={usage?.hectares_count || 0}
+              limit={subscription?.contracted_hectares || 0}
+            />
+
+            <UsageBar
+              icon={<Users className="h-5 w-5 text-gray-500" />}
+              label={t('subscription.usage.users', 'Users')}
+              current={usage?.users_count || 0}
+              limit={subscription?.included_users || 0}
+              unlimited={subscription?.included_users === null}
+            />
+
+            <UsageBar
               icon={<Building2 className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.farms')}
+              label={t('subscription.usage.farms', 'Farms')}
               current={usage?.farms_count || 0}
               limit={subscription?.max_farms || 0}
             />
 
             <UsageBar
               icon={<MapPin className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.parcels')}
+              label={t('subscription.usage.parcels', 'Parcels')}
               current={usage?.parcels_count || 0}
               limit={subscription?.max_parcels || 0}
             />
-
-            <UsageBar
-              icon={<Users className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.users')}
-              current={usage?.users_count || 0}
-              limit={subscription?.max_users || 0}
-            />
-
-            {subscription && (subscription.max_satellite_reports ?? 0) > 0 && (
-              <UsageBar
-                icon={<Satellite className="h-5 w-5 text-gray-500" />}
-                label={t('subscription.usage.satelliteReports')}
-                current={usage?.satellite_reports_count || 0}
-                limit={subscription.max_satellite_reports ?? 0}
-              />
-            )}
           </div>
         </div>
 
-        {/* Addons */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Contract Timeline
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <TimelineItem
+              icon={<Calendar className="h-4 w-4" />}
+              label="Start"
+              value={
+                subscription?.contract_start_at
+                  ? new Date(subscription.contract_start_at).toLocaleDateString()
+                  : 'N/A'
+              }
+            />
+            <TimelineItem
+              icon={<Calendar className="h-4 w-4" />}
+              label="End"
+              value={
+                subscription?.contract_end_at
+                  ? new Date(subscription.contract_end_at).toLocaleDateString()
+                  : 'N/A'
+              }
+            />
+            <TimelineItem
+              icon={<Calendar className="h-4 w-4" />}
+              label="Renewal notice"
+              value={`${subscription?.renewal_notice_days || 60} days before end`}
+            />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Billing Management
+          </h3>
+
+          <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
+            Open checkout with your current contract context to update payment and invoice settings.
+          </p>
+
+          <button
+            onClick={() => {
+              const targetPlan = normalizedPlanType || 'standard';
+              purchasePlan.mutate(targetPlan);
+            }}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            disabled={purchasePlan.isPending}
+          >
+            <span>
+              {purchasePlan.isPending
+                ? t('subscription.processing', 'Processing...')
+                : 'Manage Billing'}
+            </span>
+            <ExternalLink className="h-4 w-4" />
+          </button>
+        </div>
+
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Add-ons
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {addonModules.map((module) => {
-              const isActive = activeAddons.some((addon) => addon.module_id === module.id);
+              const isActive = activeAddons.some(
+                (addon) => addon.module_id === module.id,
+              );
               return (
                 <div
                   key={module.id}
                   className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{module.name}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {module.name}
+                    </p>
                     <p className="text-xs text-gray-500">${module.priceMonthly || 0}/mo</p>
                   </div>
                   {isActive ? (
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Active</span>
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                      Active
+                    </span>
                   ) : (
                     <button
                       onClick={() => purchaseAddon.mutate(module.id)}
@@ -510,49 +540,25 @@ const SubscriptionSettings: React.FC = () => {
               <p className="text-sm text-gray-500">No addon modules configured.</p>
             )}
           </div>
-        </div>
 
-        {/* Features */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.features')}
-          </h3>
-
-          {(moduleConfig || plan) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {(coreModules.length > 0 ? coreModules.map((module) => module.name) : []).map((feature, index) => (
-                <div key={index} className="flex items-start space-x-2">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-green-600 flex-shrink-0" />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                    {feature}
+          {coreModules.length > 0 && (
+            <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                Included core modules
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {coreModules.map((module) => (
+                  <span
+                    key={module.slug}
+                    className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700"
+                  >
+                    {module.name}
                   </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
-
-        {/* Billing Portal */}
-        {subscription && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.billingManagement')}
-            </h3>
-
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('subscription.billingDescription')}
-            </p>
-
-          <button
-            onClick={() => purchasePlan.mutate(normalizedPlanType || 'professional')}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
-            disabled={purchasePlan.isPending}
-          >
-            <span>{purchasePlan.isPending ? t('subscription.processing') : 'Manage Billing'}</span>
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -563,11 +569,18 @@ interface UsageBarProps {
   label: string;
   current: number;
   limit: number;
+  unlimited?: boolean;
 }
 
-const UsageBar: React.FC<UsageBarProps> = ({ icon, label, current, limit }) => {
-  const percentage = limit > 0 ? (current / limit) * 100 : 0;
-  const isUnlimited = limit >= 999999;
+const UsageBar: React.FC<UsageBarProps> = ({
+  icon,
+  label,
+  current,
+  limit,
+  unlimited = false,
+}) => {
+  const hasLimit = !unlimited && limit > 0;
+  const percentage = hasLimit ? (current / limit) * 100 : 0;
 
   return (
     <div>
@@ -579,19 +592,19 @@ const UsageBar: React.FC<UsageBarProps> = ({ icon, label, current, limit }) => {
           </span>
         </div>
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          {current} / {isUnlimited ? '∞' : limit}
+          {current} / {unlimited ? '∞' : limit}
         </span>
       </div>
 
-      {!isUnlimited && (
+      {hasLimit && (
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
           <div
             className={`h-2 rounded-full ${
               percentage >= 90
                 ? 'bg-red-600'
                 : percentage >= 70
-                ? 'bg-yellow-600'
-                : 'bg-green-600'
+                  ? 'bg-yellow-600'
+                  : 'bg-green-600'
             }`}
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
@@ -600,5 +613,16 @@ const UsageBar: React.FC<UsageBarProps> = ({ icon, label, current, limit }) => {
     </div>
   );
 };
+
+const TimelineItem: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
+  icon,
+  label,
+  value,
+}) => (
+  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+    <div className="flex items-center gap-2 text-gray-500 mb-1">{icon}<span>{label}</span></div>
+    <div className="font-medium text-gray-900 dark:text-white">{value}</div>
+  </div>
+);
 
 export default SubscriptionSettings;

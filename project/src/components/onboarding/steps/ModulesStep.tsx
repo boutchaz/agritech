@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { ModuleCard } from '../ui/ModuleCard';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
-import { isModuleAvailableForPlan, PLAN_HIERARCHY, type PlanType } from '@/lib/polar';
+import {
+  isModuleAvailableForPlan,
+  normalizePlanType,
+  type PlanType,
+} from '@/lib/polar';
 
 // Icon mapping from database icon names to Lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -83,12 +87,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
       return null;
     }
 
-    const normalizedPlan = requiredPlan.toLowerCase();
-    if (!(normalizedPlan in PLAN_HIERARCHY)) {
-      return null;
-    }
-
-    return normalizedPlan as PlanType;
+    return normalizePlanType(requiredPlan as PlanType);
   };
 
   const isModuleAvailable = (requiredPlan?: string | null) => {

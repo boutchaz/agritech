@@ -474,6 +474,9 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const orgSize = getOrganizationSize(organizations.length, farms.length);
 
       const planTypeMap: Record<string, AnalyticsUserProperties['subscriptionTier']> = {
+        starter: 'starter',
+        standard: 'standard',
+        premium: 'premium',
         essential: 'starter',
         professional: 'professional',
         enterprise: 'enterprise',
@@ -481,14 +484,15 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const subscriptionTier: AnalyticsUserProperties['subscriptionTier'] = subscription
         ? subscription.status === 'trialing'
           ? 'trial'
-          : planTypeMap[subscription.plan_type ?? ''] ?? 'free'
+          : planTypeMap[(subscription.formula || subscription.plan_type) ?? ''] ?? 'free'
         : 'free';
 
       const trialStatus: AnalyticsUserProperties['trialStatus'] = !subscription
         ? 'none'
         : subscription.status === 'trialing'
           ? 'active'
-          : subscription.status === 'active' && subscription.plan_type
+          : subscription.status === 'active' &&
+              (subscription.formula || subscription.plan_type)
             ? 'converted'
             : 'expired';
 

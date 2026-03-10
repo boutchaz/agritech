@@ -776,12 +776,12 @@ const LandingPage: React.FC = () => {
                       {plan.description}
                     </CardDescription>
                     <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-bold text-foreground">{plan.price}</span>
-                      {plan.priceAmount > 0 && (
-                        <span className="text-sm sm:text-base text-muted-foreground">
-                          {t('landing.pricing.perMonth')}
-                        </span>
-                      )}
+                      <span className="text-3xl sm:text-4xl font-bold text-foreground">
+                        {plan.pricePerHaYearHt} MAD
+                      </span>
+                      <span className="text-sm sm:text-base text-muted-foreground">
+                        /ha/year HT
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">

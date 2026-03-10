@@ -103,11 +103,11 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
   return (
     <div className="space-y-4">
       {/* Active Plan Info */}
-      {subscription?.plan_type && (
+      {(subscription?.formula || subscription?.plan_type) && (
         <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm">
           <div className="flex items-center justify-between">
             <span className="font-medium text-blue-900 dark:text-blue-100">
-              {getPlanDetails(subscription.plan_type).name}
+              {getPlanDetails((subscription.formula || subscription.plan_type)!).name}
             </span>
             <Button
               variant="ghost"

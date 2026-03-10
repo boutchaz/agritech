@@ -162,16 +162,16 @@ const ModulesSettings: React.FC = () => {
       </div>
 
       {/* Subscription banner */}
-      {subscription && subscription.plan_type && (
+      {subscription && (subscription.formula || subscription.plan_type) && (
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-center justify-between">
           <div>
             <p className="font-medium text-blue-900 dark:text-blue-100">
-              Plan actuel: {getPlanDetails(subscription.plan_type).name}
+              Plan actuel: {getPlanDetails((subscription.formula || subscription.plan_type)!).name}
             </p>
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              {getPlanDetails(subscription.plan_type).availableModules.includes('*')
+              {getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.includes('*')
                 ? 'Tous les modules sont disponibles'
-                : `${getPlanDetails(subscription.plan_type).availableModules.length} modules disponibles`}
+                : `${getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length} modules disponibles`}
             </p>
           </div>
           <button

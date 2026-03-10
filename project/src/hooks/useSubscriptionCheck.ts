@@ -6,18 +6,21 @@ export interface SubscriptionCheckResponse {
   isValid: boolean;
   subscription: Record<string, unknown> | null;
   hasFeature?: boolean;
-  reason?: 'no_subscription' | 'canceled' | 'past_due' | 'expired';
+  reason?:
+    | 'no_subscription'
+    | 'canceled'
+    | 'past_due'
+    | 'expired'
+    | 'suspended'
+    | 'terminated';
   usage?: {
-    farms: { current: number; max: number; canCreate: boolean };
-    parcels: { current: number; max: number; canCreate: boolean };
-    users: { current: number; max: number; canAdd: boolean };
+    hectares: { current: number; max: number | null; allowed: boolean };
+    users: { current: number; max: number | null; allowed: boolean };
+    farms: { current: number; max: number | null; allowed: boolean };
+    parcels: { current: number; max: number | null; allowed: boolean };
   };
 }
 
-/**
- * Hook to check subscription status using NestJS API
- * This offloads all validation logic to the backend
- */
 export const useSubscriptionCheck = (feature?: string) => {
   const { currentOrganization } = useAuth();
 
@@ -33,10 +36,10 @@ export const useSubscriptionCheck = (feature?: string) => {
       }
 
       try {
-        // Get the access token from the current session
-        const { data: { session } } = await authSupabase.auth.getSession();
+        const {
+          data: { session },
+        } = await authSupabase.auth.getSession();
         if (!session?.access_token) {
-          console.error('❌ Not authenticated');
           return {
             isValid: false,
             subscription: null,
@@ -49,7 +52,7 @@ export const useSubscriptionCheck = (feature?: string) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${session.access_token}`,
             'X-Organization-Id': currentOrganization.id,
           },
           body: JSON.stringify({
@@ -59,9 +62,6 @@ export const useSubscriptionCheck = (feature?: string) => {
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Subscription check error:', errorData);
-          // On error, block access (fail closed)
           return {
             isValid: false,
             subscription: null,
@@ -70,10 +70,7 @@ export const useSubscriptionCheck = (feature?: string) => {
         }
 
         const data = await response.json();
-
-        // Ensure we have a valid response
         if (!data || typeof data.isValid !== 'boolean') {
-          console.error('❌ Invalid response from subscription check:', data);
           return {
             isValid: false,
             subscription: null,
@@ -84,7 +81,6 @@ export const useSubscriptionCheck = (feature?: string) => {
         return data as SubscriptionCheckResponse;
       } catch (error) {
         console.error('❌ Failed to check subscription:', error);
-        // On exception, block access (fail closed)
         return {
           isValid: false,
           subscription: null,
@@ -93,23 +89,20 @@ export const useSubscriptionCheck = (feature?: string) => {
       }
     },
     enabled: !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
-/**
- * Hook to check if organization can create a specific resource
- */
 export const useCanCreateResource = (resourceType: 'farm' | 'parcel' | 'user') => {
   const { data: subscriptionCheck, isLoading } = useSubscriptionCheck();
 
   const canCreate = subscriptionCheck?.usage
     ? resourceType === 'farm'
-      ? subscriptionCheck.usage.farms.canCreate
+      ? subscriptionCheck.usage.farms.allowed
       : resourceType === 'parcel'
-      ? subscriptionCheck.usage.parcels.canCreate
-      : subscriptionCheck.usage.users.canAdd
+        ? subscriptionCheck.usage.parcels.allowed
+        : subscriptionCheck.usage.users.allowed
     : false;
 
   return {
@@ -119,9 +112,6 @@ export const useCanCreateResource = (resourceType: 'farm' | 'parcel' | 'user') =
   };
 };
 
-/**
- * Hook to check if organization has access to a feature
- */
 export const useHasFeature = (feature: string) => {
   const { data: subscriptionCheck, isLoading } = useSubscriptionCheck(feature);
 

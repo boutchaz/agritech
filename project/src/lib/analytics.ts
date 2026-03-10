@@ -1459,7 +1459,14 @@ export interface AnalyticsUserProperties {
   signUpDate: string;
   organizationId: string;
   organizationSize: 'solo' | 'small' | 'medium' | 'large';
-  subscriptionTier: 'free' | 'trial' | 'starter' | 'professional' | 'enterprise';
+  subscriptionTier:
+    | 'free'
+    | 'trial'
+    | 'starter'
+    | 'standard'
+    | 'premium'
+    | 'professional'
+    | 'enterprise';
   trialStatus: 'none' | 'active' | 'expired' | 'converted';
   role: 'system_admin' | 'organization_admin' | 'farm_manager' | 'farm_worker' | 'day_laborer' | 'viewer';
   farmCount: number;

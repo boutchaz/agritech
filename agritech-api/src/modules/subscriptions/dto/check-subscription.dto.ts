@@ -19,14 +19,14 @@ export class CheckSubscriptionDto {
 }
 
 export class UsageStatsDto {
-  @ApiProperty({ description: 'Current count' })
+  @ApiProperty({ description: 'Current value' })
   current: number;
 
-  @ApiProperty({ description: 'Maximum allowed' })
-  max: number;
+  @ApiProperty({ description: 'Maximum allowed value. Null means unlimited.' })
+  max: number | null;
 
-  @ApiProperty({ description: 'Whether more can be created' })
-  canCreate: boolean;
+  @ApiProperty({ description: 'Whether operation is still allowed under the current entitlement' })
+  allowed: boolean;
 }
 
 export class SubscriptionCheckResponseDto {
@@ -44,8 +44,9 @@ export class SubscriptionCheckResponseDto {
 
   @ApiPropertyOptional({ description: 'Usage statistics' })
   usage?: {
+    hectares: UsageStatsDto;
+    users: UsageStatsDto;
     farms: UsageStatsDto;
     parcels: UsageStatsDto;
-    users: UsageStatsDto;
   };
 }

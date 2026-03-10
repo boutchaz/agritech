@@ -3,6 +3,7 @@ import { CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { normalizePlanType } from '@/lib/polar';
 
 export const Route = createFileRoute('/(public)/checkout-success')({
   component: CheckoutSuccess,
@@ -91,7 +92,7 @@ function CheckoutSuccess() {
               <>
                 Thank you for subscribing to {' '}
                 <span className="font-semibold text-green-600 capitalize">
-                  {subscription.plan_type} Plan
+                  {normalizePlanType(subscription.formula || subscription.plan_type || null) || subscription.formula || subscription.plan_type} Plan
                 </span>
                 !<br />
                 Your account has been upgraded and all features are now available.
@@ -118,7 +119,7 @@ function CheckoutSuccess() {
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Plan:</span>
                   <span className="font-medium text-gray-900 dark:text-white capitalize">
-                    {subscription.plan_type}
+                    {normalizePlanType(subscription.formula || subscription.plan_type || null) || subscription.formula || subscription.plan_type}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -145,10 +146,10 @@ function CheckoutSuccess() {
                   <span className="text-gray-600 dark:text-gray-400">Limits:</span>
                   <div className="text-right">
                     <div className="font-medium text-gray-900 dark:text-white">
-                      {subscription.max_farms} farms • {subscription.max_parcels} parcels
+                      {subscription.contracted_hectares ?? '-'} ha • {subscription.included_users === null ? '∞' : subscription.included_users} users
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {subscription.max_users} team members
+                      {subscription.max_farms} farms • {subscription.max_parcels} parcels
                     </div>
                   </div>
                 </div>

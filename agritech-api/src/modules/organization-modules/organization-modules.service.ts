@@ -1,6 +1,10 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { UpdateModuleDto } from './dto/update-module.dto';
+import {
+  isFormulaAtLeast,
+  normalizeFormula,
+} from '../subscriptions/subscription-domain';
 
 @Injectable()
 export class OrganizationModulesService {
@@ -124,16 +128,21 @@ export class OrganizationModulesService {
     if (updateDto.is_active && module.required_plan) {
       const { data: subscription } = await client
         .from('subscriptions')
-        .select('plan_type, status')
+        .select('plan_type, formula, status')
         .eq('organization_id', organizationId)
         .maybeSingle();
 
-      // Check if organization has required plan
-      const planHierarchy = { 'essential': 1, 'professional': 2, 'enterprise': 3 };
-      const requiredLevel = planHierarchy[module.required_plan] || 0;
-      const currentLevel = subscription?.plan_type ? planHierarchy[subscription.plan_type] || 0 : 0;
+      const requiredFormula = normalizeFormula(module.required_plan);
+      const currentFormula = normalizeFormula(
+        subscription?.formula || subscription?.plan_type,
+      );
 
-      if (!subscription || subscription.status !== 'active' || currentLevel < requiredLevel) {
+      if (
+        !subscription ||
+        subscription.status !== 'active' ||
+        (requiredFormula &&
+          (!currentFormula || !isFormulaAtLeast(currentFormula, requiredFormula)))
+      ) {
         throw new ForbiddenException(
           `This module requires ${module.required_plan} plan or higher. Please upgrade your subscription.`
         );

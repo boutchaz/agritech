@@ -1,38 +1,24 @@
 import { SUBSCRIPTION_CONFIG } from '../config/subscription';
 
-// NOTE: Polar SDK client removed from frontend — access tokens must NEVER be exposed in browser code.
-// All Polar API calls go through the NestJS backend (agritech-api/src/modules/subscriptions/).
-// The frontend only constructs checkout URLs using product IDs (public, non-secret).
+export type PlanType = 'starter' | 'standard' | 'premium' | 'enterprise';
+export type LegacyPlanType = 'core' | 'essential' | 'professional' | 'enterprise';
+export type BillingInterval = 'monthly' | 'semiannual' | 'annual';
 
-export type PlanType = 'essential' | 'professional' | 'enterprise';
-export type BillingInterval = 'month' | 'year';
+export type BackendPlanType = PlanType | LegacyPlanType;
+export type BackendBillingInterval =
+  | BillingInterval
+  | 'month'
+  | 'year'
+  | 'yearly'
+  | 'semestrial';
 
-// Backend may return 'starter' which maps to 'essential'
-type BackendPlanType = PlanType | 'starter';
-
-/**
- * Normalize backend plan type to frontend plan type
- */
-export function normalizePlanType(planType: BackendPlanType | null | undefined): PlanType | null {
-  if (!planType) return null;
-  // Map 'starter' to 'essential' for backward compatibility
-  return planType === 'starter' ? 'essential' : planType as PlanType;
-}
-
-/**
- * Plan hierarchy for determining feature/module access
- * Higher number = higher tier plan
- */
 export const PLAN_HIERARCHY: Record<PlanType, number> = {
-  essential: 1,
-  professional: 2,
-  enterprise: 3,
+  starter: 1,
+  standard: 2,
+  premium: 3,
+  enterprise: 4,
 } as const;
 
-/**
- * Module category labels for display
- * Matches database module categories
- */
 export const CATEGORY_LABELS: Record<string, string> = {
   core: 'Core',
   operations: 'Operations',
@@ -40,7 +26,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   analytics: 'Analytics',
   compliance: 'Compliance',
   marketplace: 'Marketplace',
-  // Legacy labels for backwards compatibility
   production: 'Production',
   hr: 'HR & Personnel',
   inventory: 'Inventory',
@@ -55,17 +40,13 @@ export const CATEGORY_LABELS: Record<string, string> = {
 export interface PlanDetails {
   id: PlanType;
   name: string;
-  price: string;
-  priceAmount: number;
-  priceYearly: number;
-  priceYearlyAmount: number;
   description: string;
+  pricePerHaYearHt: number;
   features: string[];
   limits: {
-    farms: number;
-    parcels: number;
-    users: number;
-    satelliteReports: number;
+    minHectaresExclusive: number | null;
+    maxHectaresInclusive: number | null;
+    includedUsers: number | null;
   };
   capabilities: {
     analytics: boolean;
@@ -75,14 +56,14 @@ export interface PlanDetails {
     apiAccess: boolean;
     prioritySupport: boolean;
   };
-  availableModules: string[]; // Module slugs from database (farm_management, inventory, etc.)
+  supportLevel: string;
+  marketplaceMode: string;
+  slaAvailable: boolean;
+  agromindIaLevel: string;
+  availableModules: string[];
   highlighted?: boolean;
 }
 
-/**
- * Module slugs that match the database modules table
- * These are the canonical module identifiers used throughout the system
- */
 export const MODULE_SLUGS = {
   FARM_MANAGEMENT: 'farm_management',
   INVENTORY: 'inventory',
@@ -96,29 +77,22 @@ export const MODULE_SLUGS = {
 } as const;
 
 export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
-  essential: {
-    id: 'essential',
-    name: 'Essential Plan',
-    price: '$25',
-    priceAmount: 25,
-    priceYearly: 250,
-    priceYearlyAmount: 250,
-    description: 'Perfect for small commercial farms digitizing their operations',
+  starter: {
+    id: 'starter',
+    name: 'Starter',
+    description: 'For small farms beginning digital management.',
+    pricePerHaYearHt: 110,
     features: [
-      'Core Farm Management Module',
-      '2 Farms, 25 Parcels',
-      '5 User Accounts',
-      'Full Dashboard & Parcel Management',
-      'Employee & Day Laborer Management',
-      'Product Application Tracking',
-      'Weather Forecast',
-      'Unlimited Manual Analyses (Soil, Plant, Water)',
+      'Up to 50 hectares',
+      '3 included users',
+      'Core operations module set',
+      'Email support',
+      'AgromindIA basic insights',
     ],
     limits: {
-      farms: 2,
-      parcels: 25,
-      users: 5,
-      satelliteReports: 0,
+      minHectaresExclusive: null,
+      maxHectaresInclusive: 50,
+      includedUsers: 3,
     },
     capabilities: {
       analytics: false,
@@ -128,34 +102,66 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       apiAccess: false,
       prioritySupport: false,
     },
+    supportLevel: 'Email support',
+    marketplaceMode: 'Read-only',
+    slaAvailable: false,
+    agromindIaLevel: 'Basic',
+    availableModules: [MODULE_SLUGS.FARM_MANAGEMENT, MODULE_SLUGS.HR],
+  },
+  standard: {
+    id: 'standard',
+    name: 'Standard',
+    description: 'For growing organizations operating at scale.',
+    pricePerHaYearHt: 95,
+    features: [
+      '50 to 200 hectares',
+      '10 included users',
+      'Operations + inventory + sales',
+      'Priority email support',
+      'AgromindIA advanced insights',
+    ],
+    limits: {
+      minHectaresExclusive: 50,
+      maxHectaresInclusive: 200,
+      includedUsers: 10,
+    },
+    capabilities: {
+      analytics: true,
+      sensorIntegration: true,
+      aiRecommendations: true,
+      advancedReporting: false,
+      apiAccess: false,
+      prioritySupport: false,
+    },
+    supportLevel: 'Priority email support',
+    marketplaceMode: 'Buyer + seller access',
+    slaAvailable: false,
+    agromindIaLevel: 'Advanced',
     availableModules: [
       MODULE_SLUGS.FARM_MANAGEMENT,
       MODULE_SLUGS.HR,
+      MODULE_SLUGS.INVENTORY,
+      MODULE_SLUGS.SALES,
+      MODULE_SLUGS.PROCUREMENT,
     ],
+    highlighted: true,
   },
-  professional: {
-    id: 'professional',
-    name: 'Professional Plan',
-    price: '$75',
-    priceAmount: 75,
-    priceYearly: 750,
-    priceYearlyAmount: 750,
-    description: 'For data-driven farms leveraging analytics and precision agriculture',
+  premium: {
+    id: 'premium',
+    name: 'Premium',
+    description: 'For advanced operators requiring SLA-backed service.',
+    pricePerHaYearHt: 80,
     features: [
-      'All Essential Modules Plus: Inventory, Sales, Procurement',
-      '10 Farms, 200 Parcels',
-      '25 User Accounts',
-      'Satellite Indices Analysis (10/month)',
-      'Sensor Chart Integration',
-      'AI Recommendations Engine',
-      'Advanced Reporting Module',
-      'Task Management & Scheduling',
+      '200 to 500 hectares',
+      '25 included users',
+      'Full production + analytics stack',
+      'Phone priority support',
+      'SLA-backed service',
     ],
     limits: {
-      farms: 10,
-      parcels: 200,
-      users: 25,
-      satelliteReports: 10,
+      minHectaresExclusive: 200,
+      maxHectaresInclusive: 500,
+      includedUsers: 25,
     },
     capabilities: {
       analytics: true,
@@ -163,44 +169,38 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       aiRecommendations: true,
       advancedReporting: true,
       apiAccess: false,
-      prioritySupport: false,
+      prioritySupport: true,
     },
+    supportLevel: 'Phone priority support',
+    marketplaceMode: 'Full mode',
+    slaAvailable: true,
+    agromindIaLevel: 'Expert',
     availableModules: [
       MODULE_SLUGS.FARM_MANAGEMENT,
+      MODULE_SLUGS.HR,
       MODULE_SLUGS.INVENTORY,
       MODULE_SLUGS.SALES,
       MODULE_SLUGS.PROCUREMENT,
-      MODULE_SLUGS.HR,
       MODULE_SLUGS.ANALYTICS,
+      MODULE_SLUGS.COMPLIANCE,
     ],
-    highlighted: true,
   },
   enterprise: {
     id: 'enterprise',
-    name: 'Agri-Business Plan',
-    price: 'Contact Us',
-    priceAmount: 0,
-    priceYearly: 0,
-    priceYearlyAmount: 0,
-    description: 'For large enterprises with complex agricultural operations',
+    name: 'Enterprise',
+    description: 'For large agri-businesses with custom governance and support.',
+    pricePerHaYearHt: 65,
     features: [
-      'All Modules Unlocked',
-      'Unlimited Farms, Parcels & Users',
-      'Unlimited Satellite Reports',
-      'Full Financial Suite (Accounting)',
-      'Compliance & Certifications Management',
-      'Online Marketplace Integration',
-      'Predictive Analytics',
-      'Yield & Disease Forecasting',
-      'Equipment Management',
-      'API Access for Integrations',
-      'Priority Support & Onboarding',
+      'More than 500 hectares',
+      'Unlimited users',
+      'All modules unlocked',
+      'Dedicated customer success manager',
+      'Enterprise SLA',
     ],
     limits: {
-      farms: 999999,
-      parcels: 999999,
-      users: 999999,
-      satelliteReports: 999999,
+      minHectaresExclusive: 500,
+      maxHectaresInclusive: null,
+      includedUsers: null,
     },
     capabilities: {
       analytics: true,
@@ -210,90 +210,161 @@ export const SUBSCRIPTION_PLANS: Record<PlanType, PlanDetails> = {
       apiAccess: true,
       prioritySupport: true,
     },
-    availableModules: ['*'], // All modules available
+    supportLevel: 'Dedicated CSM',
+    marketplaceMode: 'Full mode',
+    slaAvailable: true,
+    agromindIaLevel: 'Enterprise',
+    availableModules: ['*'],
   },
 };
+
+export function normalizePlanType(
+  planType: BackendPlanType | null | undefined,
+): PlanType | null {
+  if (!planType) {
+    return null;
+  }
+
+  if (['starter', 'standard', 'premium', 'enterprise'].includes(planType)) {
+    return planType as PlanType;
+  }
+
+  if (planType === 'core' || planType === 'essential') {
+    return 'starter';
+  }
+
+  if (planType === 'professional') {
+    return 'standard';
+  }
+
+  return null;
+}
+
+export function normalizeBillingInterval(
+  billingInterval: BackendBillingInterval | null | undefined,
+): BillingInterval {
+  if (!billingInterval) {
+    return 'monthly';
+  }
+
+  if (billingInterval === 'monthly' || billingInterval === 'month') {
+    return 'monthly';
+  }
+
+  if (
+    billingInterval === 'annual' ||
+    billingInterval === 'year' ||
+    billingInterval === 'yearly'
+  ) {
+    return 'annual';
+  }
+
+  if (billingInterval === 'semiannual' || billingInterval === 'semestrial') {
+    return 'semiannual';
+  }
+
+  return 'monthly';
+}
 
 export function getPlanDetails(planType: BackendPlanType): PlanDetails {
   const normalized = normalizePlanType(planType);
   if (!normalized) {
-    // Return a default/empty plan if planType is invalid
-    return SUBSCRIPTION_PLANS.professional; // Default to professional
+    return SUBSCRIPTION_PLANS.standard;
   }
   return SUBSCRIPTION_PLANS[normalized];
 }
 
-export function canAccessFeature(
-  subscription: { plan_type: BackendPlanType | null } | null,
-  feature: keyof PlanDetails['capabilities']
-): boolean {
-  if (!subscription || !subscription.plan_type) return false;
-  const plan = getPlanDetails(subscription.plan_type);
-  return plan.capabilities[feature];
+export function getDefaultHectaresForPlan(planType: PlanType): number {
+  if (planType === 'starter') return 50;
+  if (planType === 'standard') return 200;
+  if (planType === 'premium') return 500;
+  return 501;
 }
 
-export function hasReachedLimit(
-  subscription: { plan_type: BackendPlanType | null } | null,
-  usage: number,
-  limitType: keyof PlanDetails['limits']
+function getCycleDivisor(billingInterval: BillingInterval): number {
+  if (billingInterval === 'monthly') {
+    return 12;
+  }
+
+  if (billingInterval === 'semiannual') {
+    return 2;
+  }
+
+  return 1;
+}
+
+export function getEstimatedPricing(
+  planType: PlanType,
+  contractedHectares: number,
+  billingInterval: BillingInterval,
+  vatRate = 0.2,
+) {
+  const plan = SUBSCRIPTION_PLANS[planType];
+  const annualHt = contractedHectares * plan.pricePerHaYearHt;
+  const cycleHt = annualHt / getCycleDivisor(billingInterval);
+  const cycleTva = cycleHt * vatRate;
+  const cycleTtc = cycleHt + cycleTva;
+
+  return {
+    annualHt: Math.round(annualHt * 100) / 100,
+    cycleHt: Math.round(cycleHt * 100) / 100,
+    cycleTva: Math.round(cycleTva * 100) / 100,
+    cycleTtc: Math.round(cycleTtc * 100) / 100,
+  };
+}
+
+export function canAccessFeature(
+  subscription: { formula?: BackendPlanType | null; plan_type?: BackendPlanType | null } | null,
+  feature: keyof PlanDetails['capabilities'],
 ): boolean {
-  if (!subscription || !subscription.plan_type) return true;
-  const plan = getPlanDetails(subscription.plan_type);
-  return usage >= plan.limits[limitType];
+  const formula = normalizePlanType(
+    subscription?.formula || subscription?.plan_type || null,
+  );
+
+  if (!formula) return false;
+  return SUBSCRIPTION_PLANS[formula].capabilities[feature];
 }
 
 export function isModuleAvailable(
-  subscription: { plan_type: BackendPlanType | null } | null,
-  moduleId: string
+  subscription: { formula?: BackendPlanType | null; plan_type?: BackendPlanType | null } | null,
+  moduleId: string,
 ): boolean {
-  if (!subscription || !subscription.plan_type) return false;
-  const plan = getPlanDetails(subscription.plan_type);
+  const formula = normalizePlanType(
+    subscription?.formula || subscription?.plan_type || null,
+  );
 
-  // Check if plan has all modules
-  if (plan.availableModules.includes('*')) return true;
+  if (!formula) return false;
+  const plan = SUBSCRIPTION_PLANS[formula];
 
-  // Check if module is in the available modules list
+  if (plan.availableModules.includes('*')) {
+    return true;
+  }
+
   return plan.availableModules.includes(moduleId);
 }
 
-/**
- * Check if a module is available for a given plan based on required_plan field.
- * This is used for modules from the database API that have a required_plan property.
- *
- * @param module - Module object with optional required_plan property
- * @param subscription - Current subscription with plan_type
- * @returns true if module is available (no required_plan OR current plan meets requirement)
- */
 export function isModuleAvailableForPlan(
   module: { required_plan?: BackendPlanType | null },
-  subscription: { plan_type: BackendPlanType | null } | null
+  subscription: { plan_type?: BackendPlanType | null; formula?: BackendPlanType | null },
 ): boolean {
-  // If no required_plan, module is available to everyone
   if (!module.required_plan) return true;
 
-  // If no subscription, module is not available
-  if (!subscription || !subscription.plan_type) return false;
+  const currentPlan = normalizePlanType(
+    subscription.formula || subscription.plan_type || null,
+  );
+  const requiredPlan = normalizePlanType(module.required_plan);
 
-  // Normalize plan types
-  const normalizedCurrent = normalizePlanType(subscription.plan_type);
-  const normalizedRequired = normalizePlanType(module.required_plan);
+  if (!currentPlan || !requiredPlan) return false;
 
-  if (!normalizedCurrent || !normalizedRequired) return false;
+  if (currentPlan === 'enterprise') return true;
 
-  // Enterprise plan has access to everything
-  if (normalizedCurrent === 'enterprise') return true;
-
-  // Check plan hierarchy
-  const requiredLevel = PLAN_HIERARCHY[normalizedRequired] || 0;
-  const currentLevel = PLAN_HIERARCHY[normalizedCurrent] || 0;
-
-  return currentLevel >= requiredLevel;
+  return PLAN_HIERARCHY[currentPlan] >= PLAN_HIERARCHY[requiredPlan];
 }
 
-/**
- * Check if a plan tier is higher than another
- */
-export function isPlanHigherTier(currentPlan: BackendPlanType, requiredPlan: BackendPlanType): boolean {
+export function isPlanHigherTier(
+  currentPlan: BackendPlanType,
+  requiredPlan: BackendPlanType,
+): boolean {
   const normalizedCurrent = normalizePlanType(currentPlan);
   const normalizedRequired = normalizePlanType(requiredPlan);
 
@@ -302,119 +373,33 @@ export function isPlanHigherTier(currentPlan: BackendPlanType, requiredPlan: Bac
   return PLAN_HIERARCHY[normalizedCurrent] >= PLAN_HIERARCHY[normalizedRequired];
 }
 
-export function getCheckoutUrl(planType: PlanType, organizationId?: string, billingInterval: BillingInterval = 'month'): string {
-  const productId = billingInterval === 'year'
-    ? getYearlyPlanProductId(planType) || getPlanProductId(planType)
-    : getPlanProductId(planType);
-  return getProductCheckoutUrl(productId, organizationId, planType, billingInterval);
-}
-
-function getEnvValue(key: string): string | undefined {
-  const env = import.meta.env as Record<string, string | undefined> | undefined;
-  return env?.[key];
-}
-
-function getPlanProductId(planType: PlanType): string | undefined {
-  const productIds: Record<PlanType, string | undefined> = {
-    essential: getEnvValue('VITE_POLAR_ESSENTIAL_PRODUCT_ID') || '3b03769f-9a47-47bc-8f07-bd1f3a580dee',
-    professional: getEnvValue('VITE_POLAR_PROFESSIONAL_PRODUCT_ID') || 'db925c1e-d64d-4d95-9907-dc90da5bcbe6',
-    enterprise: getEnvValue('VITE_POLAR_ENTERPRISE_PRODUCT_ID') || 'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9',
-  };
-
-  return productIds[planType];
-}
-
-function getYearlyPlanProductId(planType: PlanType): string | undefined {
-  const productIds: Record<PlanType, string | undefined> = {
-    essential: getEnvValue('VITE_POLAR_ESSENTIAL_YEARLY_PRODUCT_ID'),
-    professional: getEnvValue('VITE_POLAR_PROFESSIONAL_YEARLY_PRODUCT_ID'),
-    enterprise: getEnvValue('VITE_POLAR_ENTERPRISE_YEARLY_PRODUCT_ID'),
-  };
-  return productIds[planType];
-}
-
-function slugToEnvKey(slug: string) {
-  return slug.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
-}
-
-export function getCoreCheckoutUrl(organizationId?: string): string {
-  const productId = getEnvValue('VITE_POLAR_BASE_PRODUCT_ID');
-  return getProductCheckoutUrl(productId, organizationId, 'core');
-}
-
-export function getAddonCheckoutUrl(moduleSlug: string, organizationId?: string): string {
-  const key = `VITE_POLAR_ADDON_${slugToEnvKey(moduleSlug)}_PRODUCT_ID`;
-  const productId = getEnvValue(key);
-  return getProductCheckoutUrl(productId, organizationId, moduleSlug);
-}
-
-function getProductCheckoutUrl(
-  productId: string | undefined,
-  organizationId?: string,
-  planOrModule?: string,
-  billingInterval: BillingInterval = 'month',
-  ): string {
-  // Use the configured checkout URL from environment
-  const checkoutUrl = getEnvValue('VITE_POLAR_CHECKOUT_URL');
-
-  if (!checkoutUrl) {
-    throw new Error('VITE_POLAR_CHECKOUT_URL is not configured');
-  }
-
-  if (!productId) {
-    throw new Error('Polar product ID is not configured');
-  }
-
-  // Construct checkout URL with parameters
-  const url = new URL(checkoutUrl);
-
-  // Add product ID
-  url.searchParams.set('product_id', productId);
-
-  // Add success redirect URL
-  const successUrl = `${window.location.origin}/checkout-success`;
-  url.searchParams.set('success_url', successUrl);
-
-  // Add organization ID to metadata if provided
-  if (organizationId) {
-    url.searchParams.set('metadata[organization_id]', organizationId);
-    if (planOrModule) {
-      url.searchParams.set('metadata[plan_type]', planOrModule);
-    }
-    url.searchParams.set('metadata[billing_interval]', billingInterval);
-  }
-
-  return url.toString();
-}
-
 export function isSubscriptionValid(
   subscription: {
     status: string;
     current_period_end: string | null;
-    created_at?: string;
-  } | null | undefined
+    grace_period_ends_at?: string | null;
+  } | null | undefined,
 ): boolean {
-  // IMPORTANT: ALL organizations require a valid subscription
-  // No grandfathering - both old and new organizations must have active subscriptions
   if (!subscription) {
-    return false; // No subscription = blocked
-  }
-
-  // Check if subscription status is active or trialing
-  if (!['active', 'trialing'].includes(subscription.status)) {
     return false;
   }
 
-  // Check if subscription hasn't expired (with grace period)
+  if (!['active', 'trialing', 'pending_renewal'].includes(subscription.status)) {
+    return false;
+  }
+
+  if (subscription.grace_period_ends_at) {
+    return new Date(subscription.grace_period_ends_at) >= new Date();
+  }
+
   if (subscription.current_period_end) {
     const endDate = new Date(subscription.current_period_end);
-    const now = new Date();
-
-    // Add grace period days
     const endDateWithGrace = new Date(endDate);
-    endDateWithGrace.setDate(endDateWithGrace.getDate() + SUBSCRIPTION_CONFIG.GRACE_PERIOD_DAYS);
+    endDateWithGrace.setDate(
+      endDateWithGrace.getDate() + SUBSCRIPTION_CONFIG.GRACE_PERIOD_DAYS,
+    );
 
-    if (endDateWithGrace < now) {
+    if (endDateWithGrace < new Date()) {
       return false;
     }
   }

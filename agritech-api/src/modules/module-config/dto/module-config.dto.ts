@@ -34,7 +34,20 @@ export class ModuleConfigDto {
   @ApiProperty({ description: 'Whether this module is currently available' })
   isAvailable: boolean;
 
-  @ApiProperty({ description: 'Minimum plan tier required (essential, professional, enterprise, or null for all)', required: false, enum: ['essential', 'professional', 'enterprise', null] })
+  @ApiProperty({
+    description:
+      'Minimum formula required (starter, standard, premium, enterprise). Legacy aliases may still appear during migration.',
+    required: false,
+    enum: [
+      'starter',
+      'standard',
+      'premium',
+      'enterprise',
+      'essential',
+      'professional',
+      null,
+    ],
+  })
   requiredPlan?: string | null;
 
   @ApiProperty({ description: 'Widget IDs this module enables on dashboard', type: [String] })

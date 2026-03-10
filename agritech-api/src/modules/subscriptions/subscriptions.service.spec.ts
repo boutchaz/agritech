@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SubscriptionsService } from './subscriptions.service';
-import { PlanType } from './dto/create-trial-subscription.dto';
+import { TrialPlanInput } from './dto/create-trial-subscription.dto';
+import { SubscriptionPricingService } from './subscription-pricing.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -46,6 +47,7 @@ describe('SubscriptionsService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SubscriptionsService,
+        SubscriptionPricingService,
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
@@ -61,7 +63,7 @@ describe('SubscriptionsService', () => {
     it('should create a trial subscription for user in organization', async () => {
       const dto = {
         organization_id: TEST_IDS.organization,
-        plan_type: PlanType.PROFESSIONAL,
+        plan_type: TrialPlanInput.PROFESSIONAL,
       };
 
       mockClient.from.mockImplementation((table: string) => {
@@ -76,7 +78,7 @@ describe('SubscriptionsService', () => {
             mockQueryResult({
               id: 'new-sub-id',
               organization_id: dto.organization_id,
-              plan_id: 'professional-trial',
+              plan_id: 'standard-trial',
               status: 'trialing',
             }),
           );
@@ -93,7 +95,7 @@ describe('SubscriptionsService', () => {
     it('should reject if user does not belong to organization', async () => {
       const dto = {
         organization_id: 'other-org-id',
-        plan_type: PlanType.PROFESSIONAL,
+        plan_type: TrialPlanInput.PROFESSIONAL,
       };
 
       mockClient.from.mockImplementation((table: string) => {
@@ -114,7 +116,7 @@ describe('SubscriptionsService', () => {
     it('should reject if organization already has active subscription', async () => {
       const dto = {
         organization_id: TEST_IDS.organization,
-        plan_type: PlanType.PROFESSIONAL,
+        plan_type: TrialPlanInput.PROFESSIONAL,
       };
 
       mockClient.from.mockImplementation((table: string) => {
@@ -139,7 +141,7 @@ describe('SubscriptionsService', () => {
     it('should update existing inactive subscription', async () => {
       const dto = {
         organization_id: TEST_IDS.organization,
-        plan_type: PlanType.STARTER,
+        plan_type: TrialPlanInput.STARTER,
       };
 
       const existingCancelledSub = { id: 'cancelled-sub', status: 'canceled' };
@@ -206,7 +208,7 @@ describe('SubscriptionsService', () => {
       queryBuilder.maybeSingle.mockResolvedValue(
         mockQueryResult({
           status: 'active',
-          current_period_end: new Date(Date.now() - 86400000).toISOString(),
+          current_period_end: new Date(Date.now() - 5 * 86400000).toISOString(),
         }),
       );
       mockClient.from.mockReturnValue(queryBuilder);
@@ -267,6 +269,9 @@ describe('SubscriptionsService', () => {
           qb.single.mockResolvedValue(
             mockQueryResult(mockOrganizationUsers.adminMembership),
           );
+          qb.maybeSingle.mockResolvedValue(
+            mockQueryResult(mockOrganizationUsers.adminMembership),
+          );
         } else if (table === 'subscriptions') {
           qb.maybeSingle.mockResolvedValue(
             mockQueryResult({
@@ -276,12 +281,12 @@ describe('SubscriptionsService', () => {
             }),
           );
         } else if (table === 'farms') {
-          qb.select.mockImplementation(() => {
-            return { count: 2, error: null };
-          });
+          qb.eq.mockResolvedValue({ count: 2, error: null });
         } else if (table === 'parcels') {
-          qb.select.mockImplementation(() => {
-            return { count: 10, error: null };
+          qb.eq.mockResolvedValue({
+            count: 10,
+            data: [{ area: 12 }, { area: 8 }],
+            error: null,
           });
         }
         return qb;
@@ -320,6 +325,9 @@ describe('SubscriptionsService', () => {
         const qb = createMockQueryBuilder();
         if (table === 'organization_users') {
           qb.single.mockResolvedValue(
+            mockQueryResult(mockOrganizationUsers.adminMembership),
+          );
+          qb.maybeSingle.mockResolvedValue(
             mockQueryResult(mockOrganizationUsers.adminMembership),
           );
         } else if (table === 'subscriptions') {

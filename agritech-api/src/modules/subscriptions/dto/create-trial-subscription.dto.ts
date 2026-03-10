@@ -1,10 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsUUID } from 'class-validator';
 
-export enum PlanType {
+export enum TrialPlanInput {
   STARTER = 'starter',
-  PROFESSIONAL = 'professional',
+  STANDARD = 'standard',
+  PREMIUM = 'premium',
   ENTERPRISE = 'enterprise',
+  CORE = 'core',
+  ESSENTIAL = 'essential',
+  PROFESSIONAL = 'professional',
 }
 
 export class CreateTrialSubscriptionDto {
@@ -16,12 +20,12 @@ export class CreateTrialSubscriptionDto {
   organization_id: string;
 
   @ApiProperty({
-    description: 'Plan type for the trial subscription',
-    enum: PlanType,
-    example: PlanType.PROFESSIONAL,
+    description: 'Formula used for the trial subscription (legacy aliases supported)',
+    enum: TrialPlanInput,
+    example: TrialPlanInput.STANDARD,
   })
-  @IsEnum(PlanType)
-  plan_type: PlanType;
+  @IsEnum(TrialPlanInput)
+  plan_type: TrialPlanInput;
 }
 
 export class SubscriptionResponseDto {
@@ -33,6 +37,7 @@ export class SubscriptionResponseDto {
     id: string;
     organization_id: string;
     plan_id: string;
+    formula: string;
     status: string;
     current_period_start: string;
     current_period_end: string;

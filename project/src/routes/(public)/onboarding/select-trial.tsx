@@ -52,7 +52,7 @@ const pollUntil = async <T,>(
 function SelectTrialPage() {
   const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('professional')
+  const [selectedPlan, setSelectedPlan] = useState<PlanType>('standard')
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [setupStep, setSetupStep] = useState<SetupStepId>('auth')
@@ -112,7 +112,8 @@ function SelectTrialPage() {
 
           // Step 2: Create organization via API
           setSetupStep('organization')
-          const orgName = (user as any).user_metadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
+          const userMetadata = user.user_metadata as { organization_name?: string } | undefined
+          const orgName = userMetadata?.organization_name || `${user.email?.split('@')[0] || 'User'}'s Organization`
 
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
           const response = await fetch(`${apiUrl}/api/v1/auth/setup-organization`, {
@@ -334,7 +335,7 @@ function SelectTrialPage() {
     setError(null)
 
     trackTrialStartAttempt(selectedPlan)
-    trackTrialPlanSelect(selectedPlan, SUBSCRIPTION_PLANS[selectedPlan].priceAmount)
+    trackTrialPlanSelect(selectedPlan, SUBSCRIPTION_PLANS[selectedPlan].pricePerHaYearHt)
 
     try {
       // Get the access token from authStore (this is where loginViaApi stores it)
@@ -427,13 +428,7 @@ function SelectTrialPage() {
           {(Object.keys(SUBSCRIPTION_PLANS) as PlanType[]).map((planType) => {
             const plan = SUBSCRIPTION_PLANS[planType]
             const isSelected = selectedPlan === planType
-            const isEnterprise = planType === 'enterprise'
-
-            const handlePlanClick = () => {
-              if (!isEnterprise) {
-                setSelectedPlan(planType)
-              }
-            }
+            const handlePlanClick = () => setSelectedPlan(planType)
 
             return (
               <div
@@ -444,7 +439,7 @@ function SelectTrialPage() {
                   isSelected
                     ? 'ring-2 ring-green-500 shadow-green-500/20'
                     : 'hover:shadow-xl'
-                } ${isEnterprise ? 'opacity-60' : ''}`}
+                }`}
                 onClick={handlePlanClick}
               >
                 {plan.highlighted && (
@@ -469,22 +464,14 @@ function SelectTrialPage() {
                   </h3>
                   <div className="flex items-baseline mb-2">
                     <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                      {plan.price}
+                      {plan.pricePerHaYearHt} MAD
                     </span>
-                    {plan.priceAmount > 0 && (
-                      <span className="text-gray-600 dark:text-gray-400 ml-2">/month</span>
-                    )}
+                    <span className="text-gray-600 dark:text-gray-400 ml-2">/ha/year HT</span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {plan.description}
                   </p>
                 </div>
-
-                {isEnterprise && (
-                  <div className="mb-4 text-sm text-amber-600 dark:text-amber-400">
-                    Trial not available. Contact sales to get started.
-                  </div>
-                )}
 
                 <div className="space-y-2 mb-6">
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -506,9 +493,18 @@ function SelectTrialPage() {
                 </div>
 
                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p>• {plan.limits.farms === 999999 ? '∞' : plan.limits.farms} Farms</p>
-                  <p>• {plan.limits.parcels === 999999 ? '∞' : plan.limits.parcels} Parcels</p>
-                  <p>• {plan.limits.users === 999999 ? '∞' : plan.limits.users} Users</p>
+                  <p>
+                    • Hectares:{' '}
+                    {plan.limits.maxHectaresInclusive
+                      ? `up to ${plan.limits.maxHectaresInclusive}`
+                      : `>${plan.limits.minHectaresExclusive || 0}`}
+                  </p>
+                  <p>
+                    • Users:{' '}
+                    {plan.limits.includedUsers === null
+                      ? 'Unlimited'
+                      : plan.limits.includedUsers}
+                  </p>
                 </div>
               </div>
             )
@@ -518,7 +514,7 @@ function SelectTrialPage() {
         <div className="text-center">
           <button
             onClick={handleStartTrial}
-            disabled={isCreating || selectedPlan === 'enterprise'}
+            disabled={isCreating}
             data-testid="start-trial-button"
             className="px-8 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/30 hover:from-green-700 hover:to-lime-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
