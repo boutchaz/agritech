@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
+import math
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -27,7 +28,14 @@ class ParcelSyncResponse(BaseModel):
 
 
 def _boundary_to_geojson(boundary: List[List[float]]) -> Dict[str, Any]:
-    coords = [coord[:] for coord in boundary]
+    def _to_wgs84(x: float, y: float) -> List[float]:
+        if abs(x) > 180 or abs(y) > 90:
+            lon = (x / 20037508.34) * 180
+            lat = (math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi) - 90
+            return [lon, lat]
+        return [x, y]
+
+    coords = [_to_wgs84(coord[0], coord[1]) for coord in boundary]
     if coords and coords[0] != coords[-1]:
         coords.append(coords[0])
     return {"type": "Polygon", "coordinates": [coords]}
@@ -60,7 +68,12 @@ async def _run_parcel_sync(
     for index in indices:
         try:
             time_series = earth_engine_service.get_time_series(
-                geometry, start_date, end_date, index, "week"
+                geometry,
+                start_date,
+                end_date,
+                index,
+                "week",
+                use_aoi_cloud_filter=False,
             )
 
             for point in time_series:

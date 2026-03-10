@@ -5,7 +5,7 @@ services:
     build: .
     container_name: satellite-indices-service
     environment:
-      - DEBUG=false
+      - DEBUG=${DEBUG:-false}
 
       # Satellite Provider Configuration
       - SATELLITE_PROVIDER=${SATELLITE_PROVIDER:-auto}
@@ -14,8 +14,8 @@ services:
       # Google Earth Engine (GEE) Configuration
       - GEE_SERVICE_ACCOUNT=${GEE_SERVICE_ACCOUNT}
       - GEE_PRIVATE_KEY=${GEE_PRIVATE_KEY}
-      - GEE_PROJECT_ID=${GEE_PROJECT_ID:-sublime-seat-428722-n5}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-AIzaSyDSsY61Uj4QEgrJU9d0xKpq401-vGU8VbI}
+      - GEE_PROJECT_ID=${GEE_PROJECT_ID}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
 
       # Copernicus Data Space Ecosystem (CDSE) Configuration
       - CDSE_CLIENT_ID=${CDSE_CLIENT_ID}
@@ -23,8 +23,8 @@ services:
       - CDSE_OPENEO_URL=${CDSE_OPENEO_URL:-https://openeo.dataspace.copernicus.eu}
 
       # Supabase Configuration
-      - SUPABASE_URL=${SUPABASE_URL:-https://agritech-supabase-652186-5-75-154-125.traefik.me}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTc1ODQ0NzksImV4cCI6MTg5MzQ1NjAwMCwiaXNzIjoiZG9rcGxveSJ9.fLPJqpGkPZDoJGQEp31ivplmoMF1mD2sSaeSAc_mscQ}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_KEY}}
     volumes:
@@ -38,7 +38,7 @@ services:
       - "traefik.docker.network=dokploy-network"
 
       # Router configuration for domain
-      - "traefik.http.routers.satellite.rule=Host(`agritech-sattelite-mwlyas-415549-5-75-154-125.traefik.me`)"
+      - "traefik.http.routers.satellite.rule=Host(`${SATELLITE_PUBLIC_HOST}`)"
       - "traefik.http.routers.satellite.entrypoints=websecure"
       - "traefik.http.routers.satellite.tls=true"
       - "traefik.http.routers.satellite.tls.certresolver=letsencrypt"

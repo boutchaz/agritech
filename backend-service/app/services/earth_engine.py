@@ -177,7 +177,7 @@ class EarthEngineService:
         start_date: str,
         end_date: str,
         max_cloud_coverage: float = None,
-        use_aoi_cloud_filter: bool = True,
+        use_aoi_cloud_filter: bool = False,
         cloud_buffer_meters: float = 300,
     ) -> ee.ImageCollection:
         """
@@ -189,7 +189,7 @@ class EarthEngineService:
             end_date: End date (YYYY-MM-DD)
             max_cloud_coverage: Maximum cloud coverage percentage
             use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter (CloudMaskingService).
-                Only available-dates uses this; heatmap/timeseries use tile-level only.
+                Default is False. Available-dates can opt-in explicitly.
             cloud_buffer_meters: Buffer around AOI for cloud calculation (default 300m)
         """
         self.initialize()
@@ -458,7 +458,7 @@ class EarthEngineService:
         index: str,
         interval: str = "month",
         max_cloud_coverage: float = None,
-        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
+        use_aoi_cloud_filter: bool = False,
     ) -> List[Dict]:
         """Get time series using real per-observation values (no composites).
 
@@ -525,12 +525,12 @@ class EarthEngineService:
         index: str,
         scale: int,
         max_cloud: float,
-        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
+        use_aoi_cloud_filter: bool = False,
     ) -> List[Dict]:
         """Compute mean index value per real Sentinel-2 image (no composites).
 
         Batches into 6-month chunks to avoid GEE timeouts on multi-year ranges.
-        Uses AOI-level cloud filtering by default for consistency with available dates.
+        Uses tile-level cloud filtering by default. AOI-level filtering can be enabled explicitly.
         """
         CHUNK_DAYS = 180
 
@@ -584,7 +584,7 @@ class EarthEngineService:
         index: str,
         scale: int,
         max_cloud: float,
-        use_aoi_cloud_filter: bool = True,  # Default to True for consistency with available dates
+        use_aoi_cloud_filter: bool = False,
     ) -> List[Dict]:
         """Process a single time chunk: get collection, map index, return observations."""
         collection = self.get_sentinel2_collection(
@@ -610,6 +610,8 @@ class EarthEngineService:
                 scale=scale,
                 crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
+                bestEffort=True,
+                tileScale=4,
             ).get(index_name)
 
             return ee.Feature(
@@ -650,12 +652,12 @@ class EarthEngineService:
         start_dt: datetime,
         end_dt: datetime,
         max_cloud: float = None,
-        use_aoi_cloud_filter: bool = True,
+        use_aoi_cloud_filter: bool = False,
     ) -> List[Dict]:
         """Batch all windows into a single GEE server-side computation.
 
-        Uses AOI-level cloud filtering by default for consistency with
-        available dates and heatmap views."""
+        Uses tile-level cloud filtering by default. AOI-level cloud
+        filtering can be enabled explicitly."""
         max_cloud = max_cloud or settings.MAX_CLOUD_COVERAGE
 
         # Use get_sentinel2_collection for consistent AOI-level cloud filtering
@@ -732,6 +734,8 @@ class EarthEngineService:
                 scale=scale,
                 crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
+                bestEffort=True,
+                tileScale=4,
             ).get(index)
 
             return ee.Feature(
@@ -769,12 +773,12 @@ class EarthEngineService:
         start_dt: datetime,
         end_dt: datetime,
         max_cloud: float = None,
-        use_aoi_cloud_filter: bool = True,
+        use_aoi_cloud_filter: bool = False,
     ) -> List[Dict]:
         """Fallback: per-window sequential getInfo() calls.
 
-        Uses AOI-level cloud filtering by default for consistency with
-        available dates and heatmap views."""
+        Uses tile-level cloud filtering by default. AOI-level cloud
+        filtering can be enabled explicitly."""
         max_cloud = max_cloud or settings.MAX_CLOUD_COVERAGE
         time_series: List[Dict] = []
         current = start_dt
@@ -809,6 +813,8 @@ class EarthEngineService:
                     scale=scale,
                     crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
                     maxPixels=settings.MAX_PIXELS,
+                    bestEffort=True,
+                    tileScale=4,
                 ).get(index)
                 value = stats.getInfo()
                 if value is not None:

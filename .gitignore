@@ -8,6 +8,8 @@
 .env.*.local
 .env.backup
 .env.temp
+.env.dokploy
+.env.dokploy.satellite
 .satellite-env
 !.env.example
 !.env.*.example

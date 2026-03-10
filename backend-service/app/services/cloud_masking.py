@@ -11,6 +11,7 @@ is called with use_aoi_cloud_filter=True (currently unused by API endpoints).
 import ee
 from typing import Dict, Optional, Tuple
 import logging
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -106,16 +107,20 @@ class CloudMaskingService:
             cloud_pixels = cloud_mask.reduceRegion(
                 reducer=ee.Reducer.sum(),
                 geometry=region,
-                scale=10,  # Use 10m resolution for accurate calculation
+                scale=60,  # QA60 is native 60m; reduces pixel pressure on large AOIs
                 crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                maxPixels=1e9,
+                maxPixels=settings.MAX_PIXELS,
+                bestEffort=True,
+                tileScale=4,
             )
 
             # Count total pixels
             total_pixels = cloud_mask.gt(-1).reduceRegion(
-                reducer=ee.Reducer.count(), geometry=region, scale=10,
+                reducer=ee.Reducer.count(), geometry=region, scale=60,
                 crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                maxPixels=1e9,
+                maxPixels=settings.MAX_PIXELS,
+                bestEffort=True,
+                tileScale=4,
             )
 
             # Get the values
@@ -199,18 +204,22 @@ class CloudMaskingService:
             cloud_pixels = cloud_mask.reduceRegion(
                 reducer=ee.Reducer.sum(),
                 geometry=region,
-                scale=10,  # Use 10m resolution
+                scale=60,  # QA60 is native 60m; reduces pixel pressure on large AOIs
                 crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                maxPixels=1e9,
+                maxPixels=settings.MAX_PIXELS,
+                bestEffort=True,
+                tileScale=4,
             ).get("QA60")
 
             # Count total pixels
             total_pixels = (
                 cloud_mask.gt(-1)
                 .reduceRegion(
-                    reducer=ee.Reducer.count(), geometry=region, scale=10,
+                    reducer=ee.Reducer.count(), geometry=region, scale=60,
                     crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                    maxPixels=1e9,
+                    maxPixels=settings.MAX_PIXELS,
+                    bestEffort=True,
+                    tileScale=4,
                 )
                 .get("QA60")
             )

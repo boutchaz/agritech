@@ -1538,14 +1538,18 @@ async def get_available_dates(
                     reducer=ee.Reducer.sum(),
                     geometry=aoi,
                     scale=20,  # SCL is at 20m resolution
-                    maxPixels=1e8
+                    maxPixels=1e13,
+                    bestEffort=True,
+                    tileScale=4,
                 ).get('SCL')
 
                 total_pixels = scl.mask().reduceRegion(
                     reducer=ee.Reducer.count(),
                     geometry=aoi,
                     scale=20,
-                    maxPixels=1e8
+                    maxPixels=1e13,
+                    bestEffort=True,
+                    tileScale=4,
                 ).get('SCL')
 
                 # Calculate percentage

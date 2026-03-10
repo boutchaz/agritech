@@ -122,6 +122,7 @@ class GEEProvider(ISatelliteProvider):
             end_date=end_date,
             index=index,
             interval=interval,
+            use_aoi_cloud_filter=False,
         )
 
         # Convert to TimeSeries model

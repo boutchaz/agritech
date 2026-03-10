@@ -1,5 +1,7 @@
 services:
   agritech-api:
+    # Requires env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, JWT_SECRET,
+    # DATABASE_URL, CORS_ORIGIN, SUPABASE_NETWORK_NAME, EXTERNAL_NETWORK_NAME, API_PUBLIC_HOST, etc.
     build:
       context: ..
       dockerfile: agritech-api/Dockerfile
@@ -17,7 +19,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1d}
       - DATABASE_URL=${DATABASE_URL}
-      - CORS_ORIGIN=${CORS_ORIGIN:-https://agritech-dashboard.thebzlab.online,https://agritech.thebzlab.online,https://marketplace.thebzlab.online}
+      - CORS_ORIGIN=${CORS_ORIGIN}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - RATE_LIMIT_TTL=${RATE_LIMIT_TTL:-60}
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-100}
@@ -31,7 +33,7 @@ services:
       - SMTP_PASS=${SMTP_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
       - FRONTEND_URL=${FRONTEND_URL}
-      - SATELLITE_SERVICE_URL=${SATELLITE_SERVICE_URL:-http://satellite-indices-service:8000}
+      - SATELLITE_SERVICE_URL=${SATELLITE_SERVICE_URL}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/v1/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -45,7 +47,7 @@ services:
       # Dokploy creates: agritech-nestjs-041g0r-6-web and agritech-nestjs-041g0r-6-websecure
       - "traefik.http.services.agritech-api.loadbalancer.server.port=3001"
       # Ensure Traefik passes through all headers from the application
-      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.X-Forwarded-Host=agritech-api.thebzlab.online"
+      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.X-Forwarded-Host=${API_PUBLIC_HOST}"
       # WebSocket support - required for Socket.IO connections
       - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Connection=upgrade"
       - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Upgrade=websocket"
@@ -56,7 +58,7 @@ services:
 networks:
   agritech-network:
     external: true
-    name: dokploy-network
+    name: ${EXTERNAL_NETWORK_NAME:-dokploy-network}
   supabase-network:
     external: true
-    name: agritech-supabase-5gdghc_default
+    name: ${SUPABASE_NETWORK_NAME}
