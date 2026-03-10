@@ -26,6 +26,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
   currentUserId,
   onManageRoles
 }) => {
+  const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const queryClient = useQueryClient();
   const [expandedFarms, setExpandedFarms] = useState<Set<string>>(new Set());
   const [showCreateFarm, setShowCreateFarm] = useState(false);
@@ -147,7 +148,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
                   <MapPin className="w-4 h-4 mr-1" />
                   <span>{farm.farm_location}</span>
                   <span className="mx-2">•</span>
-                  <span>{farm.farm_size} {farm.farm_type === 'main' ? 'hectares' : 'hectares'}</span>
+                  <span>{typeof farm.farm_size === 'number' ? farm.farm_size.toFixed(2) : farm.farm_size} hectares</span>
                   {farm.sub_farms_count > 0 && (
                     <>
                       <span className="mx-2">•</span>
@@ -344,9 +345,9 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
                   </label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.01"
                     value={newFarm.size}
-                    onChange={(e) => setNewFarm(prev => ({ ...prev, size: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => setNewFarm(prev => ({ ...prev, size: roundToTwoDecimals(parseFloat(e.target.value) || 0) }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />

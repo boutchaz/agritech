@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "AgriProfy",
+    "name": "AGROGINA",
     "loading": "Chargement...",
     "error": "Erreur",
     "success": "Succès",
@@ -5292,9 +5292,9 @@
     },
     "testimonials": {
       "title": "La confiance des agriculteurs marocains",
-      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AgriProfy",
+      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AGROGINA",
       "farmer1": {
-        "quote": "AgriProfy a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
+        "quote": "AGROGINA a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
         "author": "Hassan B.",
         "role": "Producteur d'agrumes, Souss-Massa"
       },

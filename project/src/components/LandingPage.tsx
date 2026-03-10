@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -44,6 +44,8 @@ import { Badge } from '@/components/ui/badge';
 
 import { cn } from '@/lib/utils';
 import { appConfig } from '@/config/app';
+
+const DEFAULT_SIAM_DATES = ['2026-04-21', '2026-04-22', '2026-04-23', '2026-04-24'];
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -112,7 +114,7 @@ const LandingPage: React.FC = () => {
 
     // Primary meta tags
     ensureMeta('description', description);
-    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agriprofy, agritech');
+    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agrogina, agritech');
 
     // Open Graph meta tags
     ensureMeta('og:type', 'website', true);
@@ -284,50 +286,58 @@ const LandingPage: React.FC = () => {
     t('landing.trusted.labs', { defaultValue: 'Laboratoires' }),
   ];
 
-  // Social proof statistics
-  const stats = [
-    {
-      value: t('landing.stats.farmsValue', { defaultValue: '500+' }),
-      label: t('landing.stats.farms', { defaultValue: 'Farms Managed' }),
-    },
-    {
-      value: t('landing.stats.parcelsValue', { defaultValue: '10,000+' }),
-      label: t('landing.stats.parcels', { defaultValue: 'Parcels Tracked' }),
-    },
-    {
-      value: t('landing.stats.hectaresValue', { defaultValue: '50,000+' }),
-      label: t('landing.stats.hectares', { defaultValue: 'Hectares Monitored' }),
-    },
-    {
-      value: t('landing.stats.satisfactionValue', { defaultValue: '98%' }),
-      label: t('landing.stats.satisfaction', { defaultValue: 'Customer Satisfaction' }),
-    },
-  ];
+  const siamAvailableDates = useMemo(() => {
+    if (typeof window === 'undefined') return DEFAULT_SIAM_DATES;
+    const cached = localStorage.getItem('agrogina:siam:available-dates');
+    if (!cached) return DEFAULT_SIAM_DATES;
 
-  // Testimonials from farmers, coops, and exporters
-  const testimonials = [
-    {
-      quote: t('landing.testimonials.farmer1.quote', {
-        defaultValue: 'AgriProfy transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.',
-      }),
-      author: t('landing.testimonials.farmer1.author', { defaultValue: 'Hassan B.' }),
-      role: t('landing.testimonials.farmer1.role', { defaultValue: 'Citrus Grower, Souss-Massa' }),
-    },
-    {
-      quote: t('landing.testimonials.coop1.quote', {
-        defaultValue: 'Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.',
-      }),
-      author: t('landing.testimonials.coop1.author', { defaultValue: 'Fatima Z.' }),
-      role: t('landing.testimonials.coop1.role', { defaultValue: 'Director, Olive Cooperative, Meknès' }),
-    },
-    {
-      quote: t('landing.testimonials.exporter1.quote', {
-        defaultValue: 'The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.',
-      }),
-      author: t('landing.testimonials.exporter1.author', { defaultValue: 'Karim M.' }),
-      role: t('landing.testimonials.exporter1.role', { defaultValue: 'Export Director, AgriExport Maroc' }),
-    },
-  ];
+    try {
+      const parsed = JSON.parse(cached);
+      if (!Array.isArray(parsed)) return DEFAULT_SIAM_DATES;
+      const normalized = parsed
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+      return normalized.length > 0 ? normalized : DEFAULT_SIAM_DATES;
+    } catch {
+      return DEFAULT_SIAM_DATES;
+    }
+  }, []);
+
+  const [siamForm, setSiamForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    preferredDate: siamAvailableDates[0] || '',
+  });
+  const [siamSuccessMessage, setSiamSuccessMessage] = useState<string | null>(null);
+
+  const handleSiamFieldChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = event.target;
+    setSiamForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+    if (siamSuccessMessage) setSiamSuccessMessage(null);
+  };
+
+  const handleSiamSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!siamForm.fullName || !siamForm.email || !siamForm.phone || !siamForm.preferredDate) {
+      return;
+    }
+
+    setSiamSuccessMessage(
+      'Demande enregistrée. Notre équipe vous confirme le créneau RDV sous 24h.',
+    );
+    setSiamForm((previous) => ({
+      ...previous,
+      fullName: '',
+      email: '',
+      phone: '',
+    }));
+  };
 
   const solutionModules = [
     {
@@ -521,62 +531,100 @@ const LandingPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Statistics Section */}
-        <section className="py-12 sm:py-16 bg-gradient-to-r from-green-600 to-lime-500">
+        {/* SIAM Rendezvous */}
+        <section className="py-12 sm:py-16 bg-gradient-to-r from-green-700 via-green-600 to-lime-500">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-2">
-                    {stat.value}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-0 bg-white/95 backdrop-blur">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-2xl text-gray-900">
+                    SIAM 2026 • Rencontrez AGROGINA
+                  </CardTitle>
+                  <CardDescription className="text-sm text-gray-600">
+                    Réservez un créneau de démonstration produit sur le stand AGROGINA.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Démonstration en direct de la plateforme.
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Focus satellite, tâches, stock et comptabilité.
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Créneaux disponibles depuis le cache local.
+                    </li>
+                  </ul>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {siamAvailableDates.map((date) => (
+                      <Badge key={date} variant="secondary" className="bg-green-100 text-green-800">
+                        {date}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="text-sm sm:text-base text-green-100">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+                </CardContent>
+              </Card>
 
-        {/* Testimonials Section */}
-        <section className="py-12 sm:py-16 lg:py-20 bg-gray-50 dark:bg-gray-900">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-10 sm:mb-12">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-                {t('landing.testimonials.title', { defaultValue: 'Trusted by Moroccan Farmers' })}
-              </h2>
-              <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                {t('landing.testimonials.subtitle', { defaultValue: 'See what agricultural professionals say about AgriProfy' })}
-              </p>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="h-full flex flex-col">
-                  <CardContent className="flex-1 pt-6">
-                    <div className="flex gap-1 mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <svg key={i} className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
-                        </svg>
+              <Card className="border-0 bg-white/95 backdrop-blur">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl text-gray-900">Demande de rendez-vous</CardTitle>
+                  <CardDescription className="text-sm text-gray-600">
+                    Nous revenons vers vous rapidement avec confirmation du créneau.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form className="space-y-3" onSubmit={handleSiamSubmit}>
+                    <input
+                      name="fullName"
+                      value={siamForm.fullName}
+                      onChange={handleSiamFieldChange}
+                      placeholder="Nom complet"
+                      required
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="email"
+                      type="email"
+                      value={siamForm.email}
+                      onChange={handleSiamFieldChange}
+                      placeholder="Email professionnel"
+                      required
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <input
+                      name="phone"
+                      value={siamForm.phone}
+                      onChange={handleSiamFieldChange}
+                      placeholder="Téléphone"
+                      required
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                    <select
+                      name="preferredDate"
+                      value={siamForm.preferredDate}
+                      onChange={handleSiamFieldChange}
+                      required
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      {siamAvailableDates.map((date) => (
+                        <option key={date} value={date}>
+                          {date}
+                        </option>
                       ))}
-                    </div>
-                    <blockquote className="text-gray-700 dark:text-gray-300 text-sm sm:text-base mb-4">
-                      &ldquo;{testimonial.quote}&rdquo;
-                    </blockquote>
-                  </CardContent>
-                  <CardFooter className="border-t pt-4">
-                    <div>
-                      <div className="font-semibold text-gray-900 dark:text-white text-sm">
-                        {testimonial.author}
-                      </div>
-                      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                        {testimonial.role}
-                      </div>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
+                    </select>
+                    <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
+                      Réserver un RDV SIAM
+                    </Button>
+                    {siamSuccessMessage && (
+                      <p className="text-xs text-green-700">{siamSuccessMessage}</p>
+                    )}
+                  </form>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>

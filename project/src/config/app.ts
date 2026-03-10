@@ -1,13 +1,13 @@
 export const appConfig = {
-    name: "AgriProfy",
+    name: "AGROGINA",
     description: "Modern Farm Management & Analytics Platform",
     logo: {
-        alt: "AgriProfy Logo",
+        alt: "AGROGINA Logo",
         // We will assume the logo will be placed here
         src: "/logo.png"
     },
     company: {
-        name: "AgriProfy Inc.",
+        name: "AGROGINA Inc.",
         link: "https://agriprofy.com"
     }
 } as const;

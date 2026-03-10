@@ -156,7 +156,7 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
           },
           index,
           interval: params.interval,
-          cloud_coverage: params.cloudCoverage || 20,
+          cloud_coverage: params.cloudCoverage || 10,
           parcel_id: params.parcelId,
           farm_id: params.farmId,
         };

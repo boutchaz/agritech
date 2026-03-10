@@ -44,6 +44,7 @@ interface FarmData {
 }
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
+  const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [seedingData, setSeedingData] = useState(false);
@@ -561,9 +562,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                     <Input
                       id="onb_farm_size"
                       type="number"
-                      step="1"
+                      step="0.01"
                       value={farmData.size}
-                      onChange={(e) => setFarmData(prev => ({ ...prev, size: parseFloat(e.target.value) || 0 }))}
+                      onChange={(e) => setFarmData(prev => ({ ...prev, size: roundToTwoDecimals(parseFloat(e.target.value) || 0) }))}
                       disabled={hasExistingFarms}
                       placeholder="0"
                       data-testid="onboarding-farm-size"

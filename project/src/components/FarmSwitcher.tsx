@@ -43,7 +43,11 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
     const richFarm = richFarms.find(f => f.id === farm.id);
     return {
       ...farm,
-      size: richFarm?.size ?? farm.size,
+      size:
+        richFarm?.size ??
+        (richFarm as { total_area?: number } | undefined)?.total_area ??
+        farm.size ??
+        (farm as { total_area?: number }).total_area,
     };
   });
 
@@ -89,7 +93,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {farm.location && <span>{farm.location}</span>}
                         {farm.location && farm.size && <span> • </span>}
-                        {farm.size && <span>{farm.size} ha</span>}
+                        {farm.size && <span>{Number(farm.size).toFixed(2)} ha</span>}
                       </div>
                     )}
                   </div>

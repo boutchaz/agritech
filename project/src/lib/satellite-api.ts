@@ -624,7 +624,7 @@ class SatelliteAPIClient {
     aoi: AOIRequest,
     startDate: string,
     endDate: string,
-    cloudCoverage: number = 30,
+    cloudCoverage: number = 10,
     parcelId?: string,
     forceRefresh: boolean = false,
   ): Promise<{

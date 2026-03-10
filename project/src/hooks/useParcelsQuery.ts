@@ -64,7 +64,7 @@ export const useFarms = (organizationId: string | undefined) => {
       return farms.map((farm: any) => ({
         id: farm.farm_id || farm.id,
         name: farm.farm_name || farm.name,
-        location: farm.location ?? null,
+        location: farm.farm_location ?? farm.location ?? null,
         size: farm.farm_size ?? farm.size ?? null,
         manager_name: farm.manager_name ?? null,
       }));

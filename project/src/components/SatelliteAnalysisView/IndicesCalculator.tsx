@@ -34,6 +34,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   boundary,
   onResultsUpdate
 }) => {
+  const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
@@ -41,7 +42,6 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [cloudCoverage, setCloudCoverage] = useState(10);
   const [scale, setScale] = useState(10);
   const [isCalculating, setIsCalculating] = useState(false);
   const [results, setResults] = useState<IndexCalculationResponse | null>(null);
@@ -185,7 +185,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
           end_date: endDate
         },
         indices: selectedIndices,
-        cloud_coverage: cloudCoverage,
+        cloud_coverage: CLOUD_COVERAGE_FIXED,
         scale: scale
       };
 
@@ -193,7 +193,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
 
       // Validate response
       if (!response || !response.indices || response.indices.length === 0) {
-        throw new Error('No satellite imagery data available for the selected date range and location. Try adjusting the date range or cloud coverage threshold.');
+        throw new Error('No satellite imagery data available for the selected date range and location. Try another nearby date range.');
       }
 
       // Save results to database cache
@@ -206,7 +206,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               index_name: indexResult.index,
               date: endDate,
               mean_value: indexResult.value,
-              cloud_coverage_percentage: cloudCoverage,
+              cloud_coverage_percentage: CLOUD_COVERAGE_FIXED,
               metadata: { scale, source: 'indices_calculator' },
             },
             organizationId
@@ -327,17 +327,11 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="text-sm font-medium mb-2 block">
-              Cloud Coverage Threshold: {cloudCoverage}%
+              Cloud Coverage Threshold
             </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={cloudCoverage}
-              onChange={(e) => setCloudCoverage(Number(e.target.value))}
-              className="w-full"
-            />
+            <p className="text-sm text-gray-600">
+              Fixed at {CLOUD_COVERAGE_FIXED}% for consistent date quality.
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">

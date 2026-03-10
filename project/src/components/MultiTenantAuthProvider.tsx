@@ -96,14 +96,15 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // Calculate onboarding state - check profile, organizations, and onboarding completion
   // IMPORTANT: Only calculate needsOnboarding if the session is actually valid
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
+  const hasCompletedOnboarding = profile?.onboarding_completed === true;
   const needsOnboarding = isSessionValid && !!(
     user && !loading && (
       // No profile yet (missing required fields)
       !profile || !profile.full_name ||
-      // No organizations yet
-      organizations.length === 0 ||
       // Onboarding not marked as completed in user_profiles
-      (profile && profile.onboarding_completed === false)
+      (profile && profile.onboarding_completed === false) ||
+      // Only force onboarding on missing organizations when onboarding was not already completed
+      (!hasCompletedOnboarding && organizations.length === 0)
     )
   );
 

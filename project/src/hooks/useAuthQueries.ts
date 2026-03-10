@@ -214,6 +214,14 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           useAuthStore.getState().clearAuth();
           return [];
         }
+        // Re-throw network errors to trigger retry and keep previous cache
+        if (error instanceof Error && (
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('NetworkError') ||
+          error.message?.includes('Network request failed')
+        )) {
+          throw error;
+        }
         console.error('Error fetching farms:', error);
         return [];
       }

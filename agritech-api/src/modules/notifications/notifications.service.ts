@@ -1865,14 +1865,14 @@ export class NotificationsService {
     <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
       ${isSales 
         ? `Merci pour votre confiance. Pour toute question concernant cette facture, n'hésitez pas à nous contacter.`
-        : `Cette facture a été envoyée automatiquement depuis AgriProfy.`}
+        : `Cette facture a été envoyée automatiquement depuis AGROGINA.`}
     </p>
   </div>
 
   <div class="footer">
     <p>
       ${data.organizationName}<br>
-      Envoyé via AgriProfy
+      Envoyé via AGROGINA
     </p>
   </div>
 </body>
@@ -1918,7 +1918,7 @@ export class NotificationsService {
     }
 
     text += `${data.organizationName}\n`;
-    text += `Envoyé via AgriProfy\n`;
+    text += `Envoyé via AGROGINA\n`;
 
     return text;
   }

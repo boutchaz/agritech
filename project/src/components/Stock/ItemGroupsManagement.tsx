@@ -226,7 +226,7 @@ export default function ItemGroupsManagement() {
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
-                          {group.is_active ? t('common.active') : t('common.inactive')}
+                          {group.is_active ? t('common.active', { defaultValue: 'Active' }) : t('common.inactive', { defaultValue: 'Inactive' })}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -314,7 +314,7 @@ export default function ItemGroupsManagement() {
                  className="rounded border-gray-300"
                />
                <Label htmlFor="is_active" className="font-normal">
-                 {t('common.active')}
+                 {t('common.active', { defaultValue: 'Active' })}
                </Label>
              </div>
              <div className="flex justify-end space-x-3 pt-4">

@@ -148,7 +148,7 @@ export class SatelliteCacheService {
     const parcelId = body.parcel_id as string;
     const farmId = body.farm_id as string | undefined;
     const dateRange = body.date_range as { start_date?: string; end_date?: string } | undefined;
-    const cloudCoverage = (body.cloud_coverage as number) || 20;
+    const cloudCoverage = (body.cloud_coverage as number) || 10;
     const indices = (body.indices as string[]) || CORE_INDICES;
 
     if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {

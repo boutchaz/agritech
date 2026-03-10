@@ -115,6 +115,7 @@ const MapComponent: React.FC<MapProps> = ({
   editingParcelId,
   onBoundaryUpdated
 }) => {
+  const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const { t } = useTranslation();
   const tileProvider = useMapProvider();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -365,13 +366,13 @@ const MapComponent: React.FC<MapProps> = ({
         setParcelName(parcel.name);
         if (parcel.boundary && parcel.boundary.length > 0) {
           setTempBoundary(parcel.boundary);
-          setCalculatedArea(parcel.calculated_area || parcel.area || 0);
-          setCalculatedPerimeter(parcel.perimeter || 0);
+          setCalculatedArea(roundToTwoDecimals(parcel.calculated_area || parcel.area || 0));
+          setCalculatedPerimeter(roundToTwoDecimals(parcel.perimeter || 0));
         }
         // Load other parcel details
         setParcelDetails({
           soil_type: parcel.soil_type || '',
-          area: parcel.area || 0,
+          area: roundToTwoDecimals(parcel.area || 0),
           planting_density: parcel.density_per_hectare || 0,
           irrigation_type: parcel.irrigation_type || '',
           crop_category: parcel.crop_category || '',
@@ -819,8 +820,8 @@ const MapComponent: React.FC<MapProps> = ({
           const feature = event.feature;
           const geometry = feature.getGeometry();
           if (geometry instanceof Polygon) {
-            const area = ParcelAutomation.calculateArea(geometry);
-            const perimeter = ParcelAutomation.calculatePerimeter(geometry);
+            const area = roundToTwoDecimals(ParcelAutomation.calculateArea(geometry));
+            const perimeter = roundToTwoDecimals(ParcelAutomation.calculatePerimeter(geometry));
 
 
             setCalculatedArea(area);
@@ -1450,21 +1451,21 @@ const MapComponent: React.FC<MapProps> = ({
                     <div className="flex items-center space-x-2">
                       <input
                         type="number"
-                        value={parcelDetails.area}
+                        value={roundToTwoDecimals(parcelDetails.area || 0)}
                         onChange={(e) => setParcelDetails(prev => ({
                           ...prev,
-                          area: Number(e.target.value)
+                          area: roundToTwoDecimals(Number(e.target.value))
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 dark:text-white"
                         min="0"
-                        step="0.1"
+                        step="0.01"
                         readOnly
                       />
                       <span className="text-sm text-green-600 font-medium">{t('map.autoCalculated')}</span>
                     </div>
                     {calculatedPerimeter > 0 && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {t('map.perimeter')}: {calculatedPerimeter} m
+                        {t('map.perimeter')}: {roundToTwoDecimals(calculatedPerimeter)} m
                       </p>
                     )}
                   </div>
@@ -1947,10 +1948,10 @@ const MapComponent: React.FC<MapProps> = ({
                 {calculatedArea > 0 && (
                   <div className="text-xs space-y-1 pt-2 border-t border-gray-200 dark:border-gray-600">
                     <p className="text-gray-600 dark:text-gray-400">
-                      {t('map.area')}: <span className="font-semibold text-gray-900 dark:text-white">{calculatedArea} ha</span>
+                      {t('map.area')}: <span className="font-semibold text-gray-900 dark:text-white">{roundToTwoDecimals(calculatedArea)} ha</span>
                     </p>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {t('map.perimeter')}: <span className="font-semibold text-gray-900 dark:text-white">{calculatedPerimeter} m</span>
+                      {t('map.perimeter')}: <span className="font-semibold text-gray-900 dark:text-white">{roundToTwoDecimals(calculatedPerimeter)} m</span>
                     </p>
                   </div>
                 )}

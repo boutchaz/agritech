@@ -38,7 +38,7 @@ export const Route = createFileRoute('/_authenticated')({
 
 function AuthenticatedLayout() {
   const { currentOrganization } = useAuth()
-  const { data: subscription, isLoading: subscriptionLoading, isFetched: subscriptionFetched, isError: subscriptionError } = useSubscription()
+  const { data: subscription, isLoading: subscriptionLoading, isFetched: subscriptionFetched } = useSubscription()
   const { i18n } = useTranslation()
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [activeModule, setActiveModule] = useState('dashboard')
@@ -73,18 +73,6 @@ function AuthenticatedLayout() {
 
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
-    // Only redirect to onboarding if we're CERTAIN there's no subscription
-    // (query completed successfully, not an error)
-    if (!subscription && subscriptionFetched && !subscriptionError) {
-      // Use window.location.href for full navigation to ensure clean state
-      window.location.href = '/onboarding/select-trial'
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-        </div>
-      )
-    }
-
     // Determine reason for blocking
     const reason = !subscription
       ? 'no_subscription'

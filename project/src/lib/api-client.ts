@@ -223,10 +223,14 @@ export async function apiRequest<T>(
       );
     }
 
-    if (
+    const lowerErrorMessage = errorMessage.toLowerCase();
+    const shouldAddOrganizationHint =
       response.status === 404 &&
-      errorMessage.toLowerCase().includes("not found")
-    ) {
+      lowerErrorMessage.includes("not found") &&
+      (lowerErrorMessage.includes("organization") ||
+        lowerErrorMessage.includes("in this organization"));
+
+    if (shouldAddOrganizationHint) {
       const orgId = organizationId || getCurrentOrganizationId();
       const orgName = useOrganizationStore.getState().currentOrganization?.name;
       ErrorHandlers.log(

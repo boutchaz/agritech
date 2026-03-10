@@ -16,6 +16,9 @@ export class FarmDto {
   @ApiProperty({ description: 'Farm size in hectares' })
   farm_size: number | null;
 
+  @ApiProperty({ description: 'Farm location' })
+  farm_location: string | null;
+
   @ApiProperty({ description: 'Manager name' })
   manager_name: string | null;
 

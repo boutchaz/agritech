@@ -140,9 +140,9 @@ export class FarmsService {
     // Fetch all farms for the organization with parcel counts
     const { data: farms, error: farmsError } = await this.supabaseAdmin
       .from('farms')
-      .select('id, name, size, manager_name, is_active')
+      .select('id, name, location, size, manager_name, is_active, created_at')
       .eq('organization_id', organizationId)
-      .order('name');
+      .order('created_at', { ascending: false });
 
     if (farmsError) {
       this.logger.error('Error fetching farms', farmsError);
@@ -186,6 +186,7 @@ export class FarmsService {
       parent_farm_id: null, // farms table doesn't support hierarchy
       farm_type: 'main', // farms table doesn't have farm_type
       farm_size: farm.size,
+      farm_location: farm.location || null,
       manager_name: farm.manager_name || 'N/A',
       is_active: farm.is_active ?? true,
       hierarchy_level: 1, // farms table doesn't support hierarchy

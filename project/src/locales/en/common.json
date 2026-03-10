@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "AgriProfy",
+    "name": "AGROGINA",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
@@ -5474,9 +5474,9 @@
     },
     "testimonials": {
       "title": "Trusted by Moroccan Farmers",
-      "subtitle": "See what agricultural professionals say about AgriProfy",
+      "subtitle": "See what agricultural professionals say about AGROGINA",
       "farmer1": {
-        "quote": "AgriProfy transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
+        "quote": "AGROGINA transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
         "author": "Hassan B.",
         "role": "Citrus Grower, Souss-Massa"
       },

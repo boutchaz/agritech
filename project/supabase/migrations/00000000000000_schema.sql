@@ -14471,3 +14471,547 @@ ALTER TABLE IF EXISTS audit_reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS crop_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS crop_cycle_stages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS harvest_events ENABLE ROW LEVEL SECURITY;
+
+
+-- ============================================================================
+-- CONSOLIDATED MIGRATIONS APPENDED FOR PRE-PRODUCTION BASELINE
+-- Date: 2026-03-10
+
+
+-- ============================================================================
+-- Migration: 20260220230000_satellite_heatmap_cache.sql
+-- ============================================================================
+
+-- Persistent cache for satellite heatmap responses.
+-- Stores the full JSON response (pixel_data, statistics, bounds, etc.)
+-- keyed by parcel + index + date + grid_size.
+
+CREATE TABLE IF NOT EXISTS satellite_heatmap_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  index_name TEXT NOT NULL,
+  date DATE NOT NULL,
+  grid_size INTEGER NOT NULL DEFAULT 1000,
+  response_data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days')
+);
+
+-- Fast lookups by the cache key
+CREATE UNIQUE INDEX IF NOT EXISTS idx_heatmap_cache_unique
+  ON satellite_heatmap_cache(parcel_id, index_name, date, grid_size);
+
+CREATE INDEX IF NOT EXISTS idx_heatmap_cache_org
+  ON satellite_heatmap_cache(organization_id);
+
+CREATE INDEX IF NOT EXISTS idx_heatmap_cache_expires
+  ON satellite_heatmap_cache(expires_at);
+
+-- RLS
+ALTER TABLE satellite_heatmap_cache ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_read_satellite_heatmap_cache" ON satellite_heatmap_cache
+  FOR SELECT USING (is_organization_member(organization_id));
+
+CREATE POLICY "org_write_satellite_heatmap_cache" ON satellite_heatmap_cache
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND is_organization_member(organization_id)
+  );
+
+CREATE POLICY "org_update_satellite_heatmap_cache" ON satellite_heatmap_cache
+  FOR UPDATE USING (is_organization_member(organization_id));
+
+CREATE POLICY "org_delete_satellite_heatmap_cache" ON satellite_heatmap_cache
+  FOR DELETE USING (is_organization_member(organization_id));
+
+
+-- ============================================================================
+-- Migration: 20260224000000_add_updated_at_to_stock_tables.sql
+-- ============================================================================
+
+-- Add missing updated_at columns to stock_movements and stock_valuation tables
+-- These tables had BEFORE UPDATE triggers (trg_stock_movements_updated_at, trg_stock_valuation_updated_at)
+-- that call update_updated_at_column() which sets NEW.updated_at = NOW(),
+-- but the tables were missing the updated_at column, causing:
+--   'record "new" has no field "updated_at"'
+-- on any UPDATE (e.g., stock transfers, material issues, reconciliation).
+
+-- Add updated_at to stock_movements
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'stock_movements'
+      AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE stock_movements ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+END $$;
+
+-- Add updated_at to stock_valuation
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'stock_valuation'
+      AND column_name = 'updated_at'
+  ) THEN
+    ALTER TABLE stock_valuation ADD COLUMN updated_at TIMESTAMPTZ DEFAULT NOW();
+  END IF;
+END $$;
+
+-- Backfill existing rows: set updated_at = created_at for rows that had NULL
+UPDATE stock_movements SET updated_at = created_at WHERE updated_at IS NULL;
+UPDATE stock_valuation SET updated_at = created_at WHERE updated_at IS NULL;
+
+-- ============================================================================
+-- Migration: 20260224100000_add_agriculture_elevage_modules.sql
+-- ============================================================================
+
+-- Add Agriculture and Élevage activity-type modules
+-- These represent the types of farming activities available to organizations
+
+INSERT INTO modules (name, icon, category, description, required_plan, is_available) VALUES
+  -- Agriculture modules
+  ('arbres_fruitiers', 'TreeDeciduous', 'agriculture', 'Gestion des arbres fruitiers (pommiers, agrumes, grenadiers, avocatiers...)', NULL, true),
+  ('aeroponie', 'Droplets', 'agriculture', 'Culture aéroponique', NULL, true),
+  ('hydroponie', 'Waves', 'agriculture', 'Culture hydroponique', NULL, true),
+  ('maraichage', 'Sprout', 'agriculture', 'Maraîchage et cultures légumières', NULL, true),
+  ('myciculture', 'Flower2', 'agriculture', 'Myciculture - culture de champignons', NULL, true),
+  ('pisciculture', 'Fish', 'agriculture', 'Pisciculture - élevage de poissons', NULL, true),
+  -- Élevage modules
+  ('bovin', 'Beef', 'elevage', 'Élevage bovin', NULL, true),
+  ('ovin', 'CircleDot', 'elevage', 'Élevage ovin', NULL, true),
+  ('camelin', 'CircleDot', 'elevage', 'Élevage camelin', NULL, true),
+  ('caprin', 'CircleDot', 'elevage', 'Élevage caprin', NULL, true),
+  ('aviculture', 'Bird', 'elevage', 'Aviculture - élevage de volailles', NULL, true),
+  ('couveuses', 'Egg', 'elevage', 'Gestion des couveuses (poussins, poulet de chair, poules pondeuses)', NULL, true)
+ON CONFLICT (name) DO NOTHING;
+
+
+-- ============================================================================
+-- Migration: 20260224200000_add_parcel_irrigation_fields.sql
+-- ============================================================================
+
+-- Add irrigation frequency and water quantity fields to parcels
+ALTER TABLE IF EXISTS parcels ADD COLUMN IF NOT EXISTS irrigation_frequency TEXT;
+ALTER TABLE IF EXISTS parcels ADD COLUMN IF NOT EXISTS water_quantity_per_session NUMERIC;
+ALTER TABLE IF EXISTS parcels ADD COLUMN IF NOT EXISTS water_quantity_unit TEXT DEFAULT 'm3';
+
+COMMENT ON COLUMN parcels.irrigation_frequency IS 'Irrigation frequency, e.g. 1x/week, 2x/week, 1x/month';
+COMMENT ON COLUMN parcels.water_quantity_per_session IS 'Water quantity per irrigation session';
+COMMENT ON COLUMN parcels.water_quantity_unit IS 'Unit for water quantity: m3, liters, etc.';
+
+
+-- ============================================================================
+-- Migration: 20260301000000_add_billing_interval_to_subscriptions.sql
+-- ============================================================================
+
+-- Add billing_interval column to subscriptions table
+-- This column stores the billing interval (monthly, yearly) for the subscription
+
+ALTER TABLE subscriptions
+ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'monthly';
+
+-- Add comment for documentation
+COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval for the subscription: monthly or yearly';
+
+
+-- ============================================================================
+-- Migration: 20260310100000_subscription_contract_alignment.sql
+-- ============================================================================
+
+-- Subscription alignment with AGROGINA SaaS contract v1
+-- Canonical formulas: starter, standard, premium, enterprise
+-- Canonical billing cycles: monthly, semiannual, annual
+
+-- Normalize and extend subscriptions table
+ALTER TABLE subscriptions
+  ADD COLUMN IF NOT EXISTS formula VARCHAR(30),
+  ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS contracted_hectares NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS included_users INTEGER,
+  ADD COLUMN IF NOT EXISTS price_ht_per_ha_year NUMERIC(12,2),
+  ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5,4) DEFAULT 0.20,
+  ADD COLUMN IF NOT EXISTS amount_ht NUMERIC(14,2),
+  ADD COLUMN IF NOT EXISTS amount_tva NUMERIC(14,2),
+  ADD COLUMN IF NOT EXISTS amount_ttc NUMERIC(14,2),
+  ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'MAD',
+  ADD COLUMN IF NOT EXISTS contract_start_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS contract_end_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS renewal_notice_days INTEGER DEFAULT 60,
+  ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS next_billing_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS grace_period_ends_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS terminated_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS pending_formula VARCHAR(30),
+  ADD COLUMN IF NOT EXISTS pending_billing_cycle VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS pending_pricing_snapshot JSONB,
+  ADD COLUMN IF NOT EXISTS migration_effective_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS last_payment_notice_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS overdue_grace_days INTEGER DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS suspension_notice_days INTEGER DEFAULT 7,
+  ADD COLUMN IF NOT EXISTS export_window_days INTEGER DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS late_penalty_rate NUMERIC(8,6) DEFAULT 0.10,
+  ADD COLUMN IF NOT EXISTS fixed_recovery_fee NUMERIC(12,2) DEFAULT 40.00;
+
+-- Canonical formula backfill from legacy plan_type values
+UPDATE subscriptions
+SET formula = CASE
+  WHEN COALESCE(formula, '') <> '' THEN formula
+  WHEN plan_type IN ('core', 'essential', 'starter') THEN 'starter'
+  WHEN plan_type IN ('professional', 'standard') THEN 'standard'
+  WHEN plan_type = 'premium' THEN 'premium'
+  WHEN plan_type = 'enterprise' THEN 'enterprise'
+  ELSE 'standard'
+END;
+
+-- Canonical billing cycle backfill from legacy billing_interval values
+UPDATE subscriptions
+SET billing_cycle = CASE
+  WHEN COALESCE(billing_cycle, '') <> '' THEN billing_cycle
+  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
+  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
+  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
+  ELSE 'monthly'
+END;
+
+-- Normalize legacy billing_interval textual values for compatibility reads
+UPDATE subscriptions
+SET billing_interval = CASE
+  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
+  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
+  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
+  ELSE COALESCE(billing_interval, 'monthly')
+END;
+
+UPDATE polar_subscriptions
+SET billing_interval = CASE
+  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
+  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
+  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
+  ELSE COALESCE(billing_interval, 'monthly')
+END
+WHERE billing_interval IS DISTINCT FROM CASE
+  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
+  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
+  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
+  ELSE COALESCE(billing_interval, 'monthly')
+END;
+
+-- Included users default by formula when missing
+UPDATE subscriptions
+SET included_users = CASE
+  WHEN formula = 'starter' THEN 3
+  WHEN formula = 'standard' THEN 10
+  WHEN formula = 'premium' THEN 25
+  WHEN formula = 'enterprise' THEN NULL
+  ELSE 10
+END
+WHERE included_users IS NULL;
+
+-- Default contracted hectares by formula when missing
+UPDATE subscriptions
+SET contracted_hectares = CASE
+  WHEN formula = 'starter' THEN 50
+  WHEN formula = 'standard' THEN 200
+  WHEN formula = 'premium' THEN 500
+  WHEN formula = 'enterprise' THEN 501
+  ELSE 200
+END
+WHERE contracted_hectares IS NULL;
+
+-- Keep legacy plan_type synchronized during transition
+UPDATE subscriptions
+SET plan_type = CASE
+  WHEN formula = 'starter' THEN 'essential'
+  WHEN formula = 'standard' THEN 'professional'
+  WHEN formula = 'premium' THEN 'enterprise'
+  WHEN formula = 'enterprise' THEN 'enterprise'
+  ELSE plan_type
+END
+WHERE formula IS NOT NULL;
+
+-- Queue migration switch at renewal date for currently active subscribers.
+UPDATE subscriptions
+SET pending_formula = COALESCE(pending_formula, formula),
+    pending_billing_cycle = COALESCE(pending_billing_cycle, billing_cycle),
+    migration_effective_at = COALESCE(migration_effective_at, current_period_end)
+WHERE status = 'active'
+  AND current_period_end IS NOT NULL;
+
+-- Constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_formula_check'
+  ) THEN
+    ALTER TABLE subscriptions
+      ADD CONSTRAINT subscriptions_formula_check
+      CHECK (formula IN ('starter', 'standard', 'premium', 'enterprise'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_billing_cycle_check'
+  ) THEN
+    ALTER TABLE subscriptions
+      ADD CONSTRAINT subscriptions_billing_cycle_check
+      CHECK (billing_cycle IN ('monthly', 'semiannual', 'annual'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_pending_formula_check'
+  ) THEN
+    ALTER TABLE subscriptions
+      ADD CONSTRAINT subscriptions_pending_formula_check
+      CHECK (pending_formula IS NULL OR pending_formula IN ('starter', 'standard', 'premium', 'enterprise'));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_pending_billing_cycle_check'
+  ) THEN
+    ALTER TABLE subscriptions
+      ADD CONSTRAINT subscriptions_pending_billing_cycle_check
+      CHECK (pending_billing_cycle IS NULL OR pending_billing_cycle IN ('monthly', 'semiannual', 'annual'));
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_formula ON subscriptions(formula);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_cycle ON subscriptions(billing_cycle);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_contract_end ON subscriptions(contract_end_at);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_migration_effective ON subscriptions(migration_effective_at);
+
+-- Subscription contracts
+CREATE TABLE IF NOT EXISTS subscription_contracts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+  contract_reference VARCHAR(120),
+  signed_at TIMESTAMPTZ,
+  effective_at TIMESTAMPTZ,
+  term_months INTEGER DEFAULT 12,
+  notice_period_days INTEGER DEFAULT 60,
+  auto_renew BOOLEAN DEFAULT true,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscription_contracts_org ON subscription_contracts(organization_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_contracts_subscription ON subscription_contracts(subscription_id);
+
+-- Subscription lifecycle events
+CREATE TABLE IF NOT EXISTS subscription_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+  event_type VARCHAR(80) NOT NULL,
+  actor_type VARCHAR(50),
+  actor_id VARCHAR(120),
+  payload JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscription_events_org ON subscription_events(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_subscription_events_type ON subscription_events(event_type);
+
+-- Billing documents (invoice/credit-note like records)
+CREATE TABLE IF NOT EXISTS billing_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  subscription_id UUID REFERENCES subscriptions(id) ON DELETE SET NULL,
+  invoice_number VARCHAR(80),
+  period_start TIMESTAMPTZ,
+  period_end TIMESTAMPTZ,
+  due_at TIMESTAMPTZ,
+  amount_ht NUMERIC(14,2) NOT NULL DEFAULT 0,
+  amount_tva NUMERIC(14,2) NOT NULL DEFAULT 0,
+  amount_ttc NUMERIC(14,2) NOT NULL DEFAULT 0,
+  currency VARCHAR(10) NOT NULL DEFAULT 'MAD',
+  status VARCHAR(30) NOT NULL DEFAULT 'issued',
+  paid_at TIMESTAMPTZ,
+  late_fee_amount NUMERIC(14,2) DEFAULT 0,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_billing_documents_org ON billing_documents(organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_billing_documents_due ON billing_documents(due_at);
+CREATE INDEX IF NOT EXISTS idx_billing_documents_status ON billing_documents(status);
+
+-- Enable RLS
+ALTER TABLE subscription_contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE billing_documents ENABLE ROW LEVEL SECURITY;
+
+-- Organization read policies
+DROP POLICY IF EXISTS "org_read_subscription_contracts" ON subscription_contracts;
+CREATE POLICY "org_read_subscription_contracts" ON subscription_contracts
+  FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+DROP POLICY IF EXISTS "org_read_subscription_events" ON subscription_events;
+CREATE POLICY "org_read_subscription_events" ON subscription_events
+  FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+DROP POLICY IF EXISTS "org_read_billing_documents" ON billing_documents;
+CREATE POLICY "org_read_billing_documents" ON billing_documents
+  FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id
+      FROM organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Admin write policies
+DROP POLICY IF EXISTS "admin_write_subscription_contracts" ON subscription_contracts;
+CREATE POLICY "admin_write_subscription_contracts" ON subscription_contracts
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = subscription_contracts.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = subscription_contracts.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_subscription_events" ON subscription_events;
+CREATE POLICY "admin_write_subscription_events" ON subscription_events
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = subscription_events.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = subscription_events.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_billing_documents" ON billing_documents;
+CREATE POLICY "admin_write_billing_documents" ON billing_documents
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = billing_documents.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.organization_id = billing_documents.organization_id
+        AND ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name IN ('system_admin', 'organization_admin')
+    )
+  );
+
+-- Compatibility view exposing canonical + legacy pointers
+CREATE OR REPLACE VIEW subscription_legacy_compat AS
+SELECT
+  s.id,
+  s.organization_id,
+  s.formula,
+  CASE
+    WHEN s.formula = 'starter' THEN 'essential'
+    WHEN s.formula = 'standard' THEN 'professional'
+    WHEN s.formula = 'premium' THEN 'enterprise'
+    WHEN s.formula = 'enterprise' THEN 'enterprise'
+    ELSE s.plan_type
+  END AS legacy_plan_type,
+  s.billing_cycle,
+  s.billing_interval,
+  s.status,
+  s.current_period_start,
+  s.current_period_end,
+  s.migration_effective_at,
+  s.pending_formula,
+  s.pending_billing_cycle
+FROM subscriptions s;
+
+
+-- ============================================================================
+-- Migration: 20260310113000_fix_missing_updated_at_columns.sql
+-- ============================================================================
+
+-- Fix trigger failures ("record NEW has no field updated_at") on tables
+-- that already use update_updated_at_column() triggers.
+
+ALTER TABLE public.journal_entries
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+UPDATE public.journal_entries
+SET updated_at = COALESCE(updated_at, created_at, NOW())
+WHERE updated_at IS NULL;
+
+ALTER TABLE public.metayage_settlements
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+UPDATE public.metayage_settlements
+SET updated_at = COALESCE(updated_at, created_at, NOW())
+WHERE updated_at IS NULL;
+
+ALTER TABLE public.biological_asset_valuations
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+UPDATE public.biological_asset_valuations
+SET updated_at = COALESCE(updated_at, created_at, NOW())
+WHERE updated_at IS NULL;
+

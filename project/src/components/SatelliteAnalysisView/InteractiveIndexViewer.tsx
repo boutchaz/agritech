@@ -230,7 +230,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       setCompareDatesLoaded(true);
 
       if (dates.length > 0) {
-        setCompareDate(dates[dates.length - 1]);
+        const latestDifferentDate = [...dates].reverse().find((date) => date !== selectedDate);
+        setCompareDate(latestDifferentDate || dates[dates.length - 1]);
       }
     } catch (err) {
       console.error('Failed to fetch compare available dates:', err);
@@ -238,7 +239,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
     } finally {
       setCompareIsLoadingDates(false);
     }
-  }, [boundary, parcelName, compareIsLoadingDates, compareNavYear, compareNavMonth, parcelId]);
+  }, [boundary, parcelName, compareIsLoadingDates, compareNavYear, compareNavMonth, parcelId, selectedDate]);
 
   useEffect(() => {
     if (boundary && !datesLoaded && !isLoadingDates) {
@@ -252,6 +253,22 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       fetchCompareAvailableDates();
     }
   }, [viewMode, boundary, compareDatesLoaded, compareIsLoadingDates, fetchCompareAvailableDates]);
+
+  useEffect(() => {
+    if (viewMode !== 'temporal-compare' || !selectedDate) return;
+
+    const selected = new Date(`${selectedDate}T00:00:00`);
+    if (Number.isNaN(selected.getTime())) return;
+
+    const selectedYear = selected.getFullYear();
+    const selectedMonth = selected.getMonth();
+
+    setCompareNavYear(selectedYear);
+    setCompareNavMonth(selectedMonth);
+
+    setCompareDatesLoaded(false);
+    setCompareAvailableDates([]);
+  }, [viewMode, selectedDate]);
 
   const generateVisualization = useCallback(async () => {
     if (!boundary || !selectedDate) return;

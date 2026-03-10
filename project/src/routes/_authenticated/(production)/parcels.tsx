@@ -37,7 +37,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const deleteParcelMutation = useDeleteParcel();
 
   // Determine which parcels query to use
-  const targetFarmId = selectedFarmId === "" ? undefined : (selectedFarmId || currentFarm?.id);
+  const isAllFarmsView = selectedFarmId === "";
+  const targetFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
   const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading } = useParcelsByFarm(targetFarmId);
   const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading } = useParcelsByFarms(
     !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
@@ -153,10 +154,10 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           ]}
           title={t('parcels.title')}
           subtitle={(() => {
-            const targetFarmId = selectedFarmId || currentFarm?.id;
-            const farm = farms?.find(f => f.id === targetFarmId);
-            const farmName = farm?.name || currentFarm?.name;
-            return farmName
+            const activeFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
+            const farm = activeFarmId ? farms?.find(f => f.id === activeFarmId) : null;
+            const farmName = farm?.name || (!isAllFarmsView ? currentFarm?.name : undefined);
+            return activeFarmId && farmName
               ? t('parcels.subtitle', { count: parcels.length, farmName })
               : t('parcels.subtitleAllFarms', { count: parcels.length });
           })()}
@@ -217,7 +218,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           ) : parcels.length === 0 && !showAddParcelMap ? (
             <div data-testid="parcels-empty-state" className="space-y-6">
               {/* Show farms overview when no specific farm is selected */}
-              {selectedFarmId === "" && !currentFarm && farms.length > 0 && (
+              {isAllFarmsView && farms.length > 0 && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     {t('parcels.farmsIn', { orgName: currentOrganization?.name })}
@@ -260,7 +261,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               {/* No parcels message */}
               <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {currentFarm || selectedFarmId !== ""
+                  {!isAllFarmsView
                     ? t('parcels.noParcelsForFarm', { farmName: (() => {
                       const targetFarmId = selectedFarmId || currentFarm?.id;
                       const farm = farms?.find(f => f.id === targetFarmId);
@@ -268,7 +269,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                     })() })
                     : t('parcels.selectFarmToAdd')}
                 </p>
-                  {(currentFarm || selectedFarmId) && (
+                  {!isAllFarmsView && (currentFarm || selectedFarmId) && (
                     <div className="space-x-3" data-tour="parcel-actions">
                       <button
                         data-testid="create-parcel-button"
@@ -385,7 +386,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         </div>
 
                         {/* Show farm name when viewing all farms */}
-                        {selectedFarmId === "" && !currentFarm && farm && (
+                        {isAllFarmsView && farm && (
                           <div className="mb-2">
                             <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
                               <TreePine className="h-3 w-3" />

@@ -27,6 +27,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
   farmId,
   boundary
 }) => {
+  const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
@@ -34,7 +35,6 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE', 'NDMI']);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [cloudCoverage, setCloudCoverage] = useState(10);
   const [scale, setScale] = useState(10);
   const [saveTiff, setSaveTiff] = useState(true);
 
@@ -113,7 +113,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
       parcel_id: parcelId,
       statistics,
       cloud_coverage_info: {
-        threshold_used: cloudCoverage,
+        threshold_used: CLOUD_COVERAGE_FIXED,
         images_found: cachedStats.length,
         avg_cloud_coverage: cachedStats[0]?.cloud_coverage_percentage || 0,
         best_date: mostRecentDate?.split('T')[0] || startDate,
@@ -124,7 +124,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         scale,
       },
     };
-  }, [cachedStats, parcelId, cloudCoverage, startDate, endDate, scale]);
+  }, [cachedStats, parcelId, startDate, endDate, scale]);
 
   // Get display statistics: prefer cached, fall back to API result
   const getDisplayStats = useCallback((): ParcelStatisticsResponse | null => {
@@ -159,7 +159,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
       const result = await satelliteApi.checkCloudCoverage({
         geometry: convertBoundaryToGeoJSON(boundary),
         date_range: { start_date: startDate, end_date: endDate },
-        max_cloud_coverage: cloudCoverage,
+        max_cloud_coverage: CLOUD_COVERAGE_FIXED,
       });
 
       setCloudCoverageInfo(result);
@@ -168,7 +168,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
     } finally {
       setIsCheckingCloud(false);
     }
-  }, [boundary, startDate, endDate, cloudCoverage]);
+  }, [boundary, startDate, endDate]);
 
   const calculateStatistics = useCallback(async () => {
     if (!boundary || !startDate || !endDate || selectedIndices.length === 0 || !organizationId) return;
@@ -185,7 +185,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         },
         date_range: { start_date: startDate, end_date: endDate },
         indices: selectedIndices,
-        cloud_coverage: cloudCoverage,
+        cloud_coverage: CLOUD_COVERAGE_FIXED,
         scale
       };
 
@@ -199,9 +199,9 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         parcel_id: parcelId,
         statistics: {},
         cloud_coverage_info: {
-          threshold_used: cloudCoverage,
+          threshold_used: CLOUD_COVERAGE_FIXED,
           images_found: 1,
-          avg_cloud_coverage: cloudCoverage,
+          avg_cloud_coverage: CLOUD_COVERAGE_FIXED,
           best_date: startDate
         },
         metadata: {
@@ -243,7 +243,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
               percentile_75: typedStats.p75 || 0,
               percentile_90: typedStats.p98 || 0,
               pixel_count: typedStats.pixel_count || 1000,
-              cloud_coverage_percentage: cloudCoverage,
+              cloud_coverage_percentage: CLOUD_COVERAGE_FIXED,
               metadata: { scale, source: 'statistics_calculator' },
             },
             organizationId
@@ -263,7 +263,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelId, parcelName, farmId, startDate, endDate, selectedIndices, cloudCoverage, scale, organizationId, refetchCache, queryClient]);
+  }, [boundary, parcelId, parcelName, farmId, startDate, endDate, selectedIndices, scale, organizationId, refetchCache, queryClient]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -325,14 +325,9 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="text-sm font-medium mb-2 block">Max Cloud Coverage (%)</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={cloudCoverage}
-              onChange={(e) => setCloudCoverage(Number(e.target.value))}
-              className="w-full p-2 border border-gray-300 rounded-md"
-            />
+            <p className="w-full p-2 border border-gray-300 rounded-md bg-gray-100 text-sm text-gray-700">
+              {CLOUD_COVERAGE_FIXED}% (fixed)
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-2 block">Scale (meters/pixel)</label>
@@ -457,7 +452,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
 
           {!cloudCoverageInfo.has_suitable_images && (
             <div className="mt-3 p-3 bg-yellow-100 rounded text-sm">
-              <strong>Recommendation:</strong> Try increasing the cloud coverage threshold or expanding the date range.
+              <strong>Recommendation:</strong> Expand the date range or try nearby dates (cloud threshold is fixed at 10%).
             </div>
           )}
         </div>
@@ -588,7 +583,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
           <span className="font-medium text-blue-800">Processing Information</span>
         </div>
         <div className="text-sm text-blue-700 space-y-1">
-          <p>• Lower cloud coverage thresholds improve data quality but may reduce available images</p>
+          <p>• Cloud coverage threshold is fixed at 10% to avoid noisy imagery</p>
           <p>• Higher scale values process faster but with less spatial detail</p>
           <p>• TIFF files are stored securely and can be downloaded for GIS analysis</p>
           <p>• Statistics are calculated using only cloud-free pixels for accuracy</p>

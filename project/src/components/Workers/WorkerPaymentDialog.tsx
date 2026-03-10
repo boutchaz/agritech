@@ -178,6 +178,16 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   };
 
   const handleCreatePayment = async () => {
+    if (!hasChartOfAccounts) {
+      setError(
+        t(
+          "dialogs.workerPayment.noChartOfAccountsBlocking",
+          "Aucun plan comptable n'est configuré. Veuillez configurer le plan comptable avant de créer un paiement.",
+        ),
+      );
+      return;
+    }
+
     if (requiresCustomAmount) {
       if (customAmount <= 0) {
         setError(t("dialogs.workerPayment.amountRequired"));
@@ -286,7 +296,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
             <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-700 dark:text-amber-400">
-                {t("dialogs.workerPayment.noChartOfAccounts", "Aucun plan comptable n'est configuré. Le paiement sera créé mais aucune écriture comptable ne sera générée. Veuillez configurer le plan comptable dans Comptabilité > Plan comptable.")}
+                {t("dialogs.workerPayment.noChartOfAccounts", "Aucun plan comptable n'est configuré. La création de paiement est bloquée tant que le plan comptable n'est pas configuré dans Comptabilité > Plan comptable.")}
               </AlertDescription>
             </Alert>
           )}
@@ -476,7 +486,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
 
               <Button
                 onClick={handleCreatePayment}
-                disabled={isLoading || customAmount <= 0}
+                disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 {createPayment.isPending ? (
@@ -608,7 +618,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 </Button>
                 <Button
                   onClick={handleCreatePayment}
-                  disabled={isLoading}
+                  disabled={isLoading || !hasChartOfAccounts}
                   className="flex-1 bg-green-600 hover:bg-green-700"
                 >
                   {createPayment.isPending ? (
