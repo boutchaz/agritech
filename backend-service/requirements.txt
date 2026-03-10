@@ -1,6 +1,6 @@
 # Core dependencies first
 numpy>=1.24.0,<2.0.0
-pandas>=2.0.0,<3.0.0
+pandas>=2.0.0,<4.0.0
 
 # Satellite Data Providers
 openeo>=0.28.0
