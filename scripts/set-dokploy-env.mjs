@@ -215,7 +215,9 @@ async function main() {
     SUPABASE_SERVICE_KEY: SERVICE_ROLE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: SERVICE_ROLE_KEY,
     SATELLITE_DOMAIN: SATELLITE_URL.replace(/^https?:\/\//, ''),
-    SATELLITE_PUBLIC_HOST: SATELLITE_URL.replace(/^https?:\/\//, '').split('/')[0],
+    SATELLITE_TRAEFIK_HOST: env.SATELLITE_TRAEFIK_HOST || SATELLITE_URL.replace(/^https?:\/\//, '').split('/')[0],
+    SATELLITE_PUBLIC_HOST: env.SATELLITE_PUBLIC_HOST || SATELLITE_URL.replace(/^https?:\/\//, '').split('/')[0],
+    TRAEFIK_NETWORK: env.TRAEFIK_NETWORK || 'dokploy-network',
     PORT: '8000',
     HOST: '0.0.0.0',
     MAX_CLOUD_COVERAGE: '10.0',
@@ -277,7 +279,9 @@ async function main() {
     STRAPI_DB_USER: env.STRAPI_DB_USER || 'strapi',
     STRAPI_DB_PASSWORD: env.STRAPI_DB_PASSWORD || '',
     STRAPI_DB_NAME: env.STRAPI_DB_NAME || 'agritech_strapi',
-    CMS_PUBLIC_HOST: CMS_URL.replace(/^https?:\/\//, '').split('/')[0],
+    CMS_TRAEFIK_HOST: env.CMS_TRAEFIK_HOST || CMS_URL.replace(/^https?:\/\//, '').split('/')[0],
+    CMS_PUBLIC_HOST: env.CMS_PUBLIC_HOST || CMS_URL.replace(/^https?:\/\//, '').split('/')[0],
+    TRAEFIK_NETWORK: env.TRAEFIK_NETWORK || 'dokploy-network',
   };
   await composeUpdate(COMPOSE_IDS.cms, envToString(cmsEnv));
   console.log('✓ cms');

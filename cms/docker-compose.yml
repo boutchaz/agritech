@@ -30,6 +30,7 @@ services:
       - "1337:1337"
     networks:
       - strapi-network
+      - dokploy-network
     depends_on:
       strapi-db:
         condition: service_healthy
@@ -80,6 +81,8 @@ services:
 networks:
   strapi-network:
     driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
   strapi-db-data:
