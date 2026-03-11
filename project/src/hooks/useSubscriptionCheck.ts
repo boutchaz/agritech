@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { authSupabase } from '../lib/auth-supabase';
+import { apiClient } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
 
 export interface SubscriptionCheckResponse {
@@ -36,40 +36,16 @@ export const useSubscriptionCheck = (feature?: string) => {
       }
 
       try {
-        const {
-          data: { session },
-        } = await authSupabase.auth.getSession();
-        if (!session?.access_token) {
-          return {
-            isValid: false,
-            subscription: null,
-            reason: 'no_subscription',
-          };
-        }
-
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-        const response = await fetch(`${apiUrl}/api/v1/subscriptions/check`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-            'X-Organization-Id': currentOrganization.id,
-          },
-          body: JSON.stringify({
+        const data = await apiClient.post<SubscriptionCheckResponse>(
+          '/api/v1/subscriptions/check',
+          {
             organizationId: currentOrganization.id,
             feature,
-          }),
-        });
+          },
+          {},
+          currentOrganization.id,
+        );
 
-        if (!response.ok) {
-          return {
-            isValid: false,
-            subscription: null,
-            reason: 'no_subscription',
-          };
-        }
-
-        const data = await response.json();
         if (!data || typeof data.isValid !== 'boolean') {
           return {
             isValid: false,
@@ -78,9 +54,9 @@ export const useSubscriptionCheck = (feature?: string) => {
           };
         }
 
-        return data as SubscriptionCheckResponse;
+        return data;
       } catch (error) {
-        console.error('❌ Failed to check subscription:', error);
+        console.error('Failed to check subscription:', error);
         return {
           isValid: false,
           subscription: null,

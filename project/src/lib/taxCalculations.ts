@@ -10,7 +10,7 @@
  * 5. Grand total = subtotal + tax total (rounded to 2 decimals)
  */
 
-import { supabase } from './supabase';
+import { taxesApi, type Tax as ApiTax } from './api/taxes';
 
 /**
  * Round to specified decimal places (default 2 for currency)
@@ -20,20 +20,26 @@ export function roundToDecimals(value: number, decimals: number = 2): number {
   return Math.round(value * multiplier) / multiplier;
 }
 
-/**
- * Tax record from database
- */
 export interface Tax {
   id: string;
   organization_id: string;
-  code: string;
   name: string;
   tax_type: 'sales' | 'purchase' | 'both';
-  rate: number; // Percentage (e.g., 20 for 20%)
-  sales_account_id: string | null;
-  purchase_account_id: string | null;
+  rate: number;
+  account_id: string | null;
   is_active: boolean;
-  description: string | null;
+}
+
+function toTax(apiTax: ApiTax): Tax {
+  return {
+    id: apiTax.id,
+    organization_id: apiTax.organization_id,
+    name: apiTax.name,
+    tax_type: apiTax.tax_type ?? 'both',
+    rate: apiTax.rate,
+    account_id: apiTax.account_id,
+    is_active: apiTax.is_active ?? true,
+  };
 }
 
 /**
@@ -65,11 +71,10 @@ export interface InvoiceItemWithTax extends InvoiceItemInput {
  */
 export interface TaxBreakdownItem {
   tax_id: string;
-  tax_code: string;
   tax_name: string;
   tax_rate: number;
-  taxable_amount: number; // Sum of all line amounts with this tax
-  tax_amount: number; // Sum of all line tax amounts for this tax
+  taxable_amount: number;
+  tax_amount: number;
 }
 
 /**
@@ -87,41 +92,28 @@ export interface InvoiceTotals {
  * Fetch tax details from database
  */
 export async function getTaxDetails(taxId: string): Promise<Tax | null> {
-  const { data, error } = await supabase
-    .from('taxes')
-    .select('*')
-    .eq('id', taxId)
-    .eq('is_active', true)
-    .single();
-
-  if (error || !data) {
+  try {
+    const apiTax = await taxesApi.getOne(taxId);
+    if (!apiTax || !apiTax.is_active) return null;
+    return toTax(apiTax);
+  } catch (error) {
     console.error('Failed to fetch tax details:', error);
     return null;
   }
-
-  return data as Tax;
 }
 
-/**
- * Fetch multiple taxes by IDs
- */
 export async function getTaxesByIds(taxIds: string[]): Promise<Tax[]> {
   if (taxIds.length === 0) {
     return [];
   }
 
-  const { data, error } = await supabase
-    .from('taxes')
-    .select('*')
-    .in('id', taxIds)
-    .eq('is_active', true);
-
-  if (error || !data) {
+  try {
+    const allTaxes = await taxesApi.getAll({ is_active: true });
+    return allTaxes.filter(t => taxIds.includes(t.id)).map(toTax);
+  } catch (error) {
     console.error('Failed to fetch taxes:', error);
     return [];
   }
-
-  return data as Tax[];
 }
 
 /**
@@ -164,7 +156,9 @@ export async function calculateInvoiceTotals(
 
   // Create a map for quick tax lookup
   const taxMap = new Map<string, Tax>();
-  taxesData.forEach(tax => taxMap.set(tax.id, tax));
+  for (const tax of taxesData) {
+    taxMap.set(tax.id, tax);
+  }
 
   // Calculate each line item with tax
   const items_with_tax: InvoiceItemWithTax[] = [];
@@ -174,7 +168,6 @@ export async function calculateInvoiceTotals(
   const taxAggregation = new Map<
     string,
     {
-      tax_code: string;
       tax_name: string;
       tax_rate: number;
       taxable_amount: number;
@@ -209,7 +202,6 @@ export async function calculateInvoiceTotals(
           existing.tax_amount += lineTaxAmount;
         } else {
           taxAggregation.set(item.tax_id, {
-            tax_code: tax.code,
             tax_name: tax.name,
             tax_rate: tax.rate,
             taxable_amount: lineAmount,

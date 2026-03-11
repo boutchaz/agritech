@@ -1,11 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { authSupabase } from '@/lib/auth-supabase';
+import { apiClient } from '@/lib/api-client';
+import { useAuthStore } from '@/stores/authStore';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 
 type AuthFlowType = 'signup' | 'invite' | 'recovery' | 'magiclink' | 'email_change' | 'unknown';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+type OAuthCallbackResponse = {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  user?: {
+    id: string;
+    email?: string;
+  };
+};
 
 export const Route = createFileRoute('/(auth)/auth/callback')({
   component: AuthCallbackPage,
@@ -48,12 +60,12 @@ function AuthCallbackPage() {
     let redirectTimer: number | undefined;
 
     const exchangeSession = async () => {
-      const { error: exchangeError } = await authSupabase.auth.exchangeCodeForSession({ code });
+      const exchangeResult = await exchangeCodeForSessionViaApi(code);
 
       if (isCancelled) return;
 
-      if (exchangeError) {
-        setError(exchangeError.message || 'Unable to verify the authentication link.');
+      if (!exchangeResult.ok) {
+        setError(exchangeResult.message);
         setStatus('error');
         return;
       }
@@ -106,10 +118,25 @@ function AuthCallbackPage() {
     setIsUpdatingPassword(true);
 
     try {
-      const { error: updateError } = await authSupabase.auth.updateUser({ password });
+      const { getAccessToken } = await import('@/stores/authStore');
+      const token = getAccessToken();
 
-      if (updateError) {
-        throw updateError;
+      if (!token) {
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
+
+      const response = await fetch(`${API_URL}/api/v1/auth/reset-password`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword: password }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message);
       }
 
       setPasswordUpdated(true);
@@ -273,6 +300,83 @@ function AuthCallbackPage() {
       </div>
     </div>
   );
+}
+
+async function exchangeCodeForSessionViaApi(code: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const data = await apiClient.post<OAuthCallbackResponse>('/api/v1/auth/oauth/callback', { code });
+
+    if (!data?.access_token || !data?.refresh_token || !data?.expires_in) {
+      return {
+        ok: false,
+        message: 'Réponse OAuth invalide. Veuillez réessayer depuis la page de connexion.',
+      };
+    }
+
+    useAuthStore.getState().setTokens({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_in: data.expires_in,
+    });
+
+    if (data.user?.id) {
+      useAuthStore.getState().setUser({
+        id: data.user.id,
+        email: data.user.email ?? '',
+      });
+    }
+
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to verify the authentication link.';
+    const fallbackMessage =
+      message.includes('404') || message.includes('Not Found')
+        ? 'Le point d\'authentification OAuth NestJS est indisponible. Veuillez contacter le support ou réessayer plus tard.'
+        : message;
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/auth/oauth/callback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+
+      if (response.ok) {
+        const data = (await response.json()) as OAuthCallbackResponse;
+
+        if (!data?.access_token || !data?.refresh_token || !data?.expires_in) {
+          return {
+            ok: false,
+            message: 'Réponse OAuth invalide. Veuillez réessayer depuis la page de connexion.',
+          };
+        }
+
+        useAuthStore.getState().setTokens({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: data.expires_in,
+        });
+
+        if (data.user?.id) {
+          useAuthStore.getState().setUser({
+            id: data.user.id,
+            email: data.user.email ?? '',
+          });
+        }
+
+        return { ok: true };
+      }
+    } catch {
+      /* oauth code exchange failed — fall through to error return */
+    }
+
+    return {
+      ok: false,
+      message: fallbackMessage || 'Unable to verify the authentication link.',
+    };
+  }
 }
 
 function mapAuthType(typeParam: string | null): AuthFlowType {

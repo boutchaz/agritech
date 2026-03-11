@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
+import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 
 const LanguageSwitcher: React.FC = () => {
@@ -43,20 +43,10 @@ const LanguageSwitcher: React.FC = () => {
       document.documentElement.lang = lng;
     }
 
-    // Save language preference to backend if user is logged in
     if (user) {
       try {
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({ language: lng })
-          .eq('id', user.id);
-
-        if (error) {
-          console.error('Failed to save language preference:', error);
-        } else {
-          // Invalidate auth profile query to refresh data
-          queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
-        }
+        await usersApi.updateMe({ language: lng });
+        queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
       } catch (error) {
         console.error('Error saving language preference:', error);
       }

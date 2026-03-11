@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { authSupabase } from '../../lib/auth-supabase';
+import { apiClient } from '../../lib/api-client';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,6 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
   organizationId,
   onSuccess,
 }) => {
-  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,34 +66,21 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
         console.warn('Version non spécifiée dans le fichier d\'export');
       }
 
-      // Get the access token from the current session
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Non authentifié');
-      }
-
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-      const response = await fetch(`${apiUrl}/api/v1/farms/import`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'X-Organization-Id': organizationId,
-        },
-        body: JSON.stringify({
+      const data = await apiClient.post<{
+        success?: boolean;
+        imported?: { farms?: number; parcels?: number; satellite_aois?: number };
+        warnings?: string[];
+        errors?: string[];
+      }>(
+        '/api/v1/farms/import',
+        {
           organization_id: organizationId,
           export_data: exportData,
           skip_duplicates: skipDuplicates,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erreur lors de l'import (${response.status})`);
-      }
-
-      const data = await response.json();
+        },
+        {},
+        organizationId,
+      );
 
       if (data?.success) {
         const imported = data.imported;

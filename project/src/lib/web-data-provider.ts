@@ -1,5 +1,4 @@
 import type { DataProvider } from './data-provider';
-import { authSupabase } from './auth-supabase';
 import { usersApi } from './api/users';
 import { farmsApi } from './api/farms';
 import { parcelsApi } from './api/parcels';
@@ -21,8 +20,6 @@ export function createWebDataProvider(): DataProvider {
 
       async logout() {
         useAuthStore.getState().clearAuth();
-        // Also clear Supabase for backward compatibility during migration
-        await authSupabase.auth.signOut();
       },
 
       async getCurrentUser() {

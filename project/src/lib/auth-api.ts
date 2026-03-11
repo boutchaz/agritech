@@ -1,5 +1,4 @@
 import { useAuthStore } from '../stores/authStore';
-import { authSupabase } from './auth-supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -100,20 +99,27 @@ export async function loginAfterSignup(email: string, password: string): Promise
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  // TODO: Migrate to NestJS OAuth endpoints when available
-  // Currently uses Supabase OAuth - requires backend implementation
-  const { error } = await authSupabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
+  const response = await fetch(`${API_URL}/api/v1/auth/oauth/url`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      provider: 'google',
+      redirectTo: `${window.location.origin}/auth/callback`,
+    }),
   });
 
-  if (error) {
-    throw new Error(error.message);
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Google sign-in failed' }));
+    throw new Error(error.message || 'Google sign-in failed');
   }
+
+  const data = (await response.json()) as { url?: string };
+
+  if (!data.url) {
+    throw new Error('Google sign-in URL is missing');
+  }
+
+  window.location.href = data.url;
 }

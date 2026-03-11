@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { supabase } from './supabase';
+import { getAccessToken } from '@/stores/authStore';
 import { useOrganizationStore } from '@/stores/organizationStore';
 
 /**
@@ -160,15 +160,13 @@ function createApiClient(): AxiosInstance {
   // Request interceptor: Add auth token and organization ID
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // Get auth token
-      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = getAccessToken();
 
-      if (!session?.access_token) {
+      if (!accessToken) {
         throw new Error('No active session');
       }
 
-      // Add authorization header
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+      config.headers.Authorization = `Bearer ${accessToken}`;
 
       // Add organization ID header
       const organizationId = getCurrentOrganizationId();

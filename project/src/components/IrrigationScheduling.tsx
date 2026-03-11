@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Droplets, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
-import { supabase } from '../lib/supabase';
+import { cropsApi } from '../lib/api/crops';
+import { useAuth } from '../hooks/useAuth';
 
 interface IrrigationSchedulingProps {
   parcelId: string;
@@ -13,23 +14,19 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
   parcelId,
   parcelName
 }) => {
+  const { currentOrganization } = useAuth();
   const [soilMoisture, setSoilMoisture] = useState<number>(50);
   const [growthStage, setGrowthStage] = useState<string>('vegetative');
 
-  // Fetch current crop for the parcel
   const { data: currentCrop } = useQuery({
-    queryKey: ['current-crop', parcelId],
+    queryKey: ['current-crop', parcelId, currentOrganization?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('crops')
-        .select('id, name, planting_date, expected_harvest_date, crop_varieties(name, water_requirements)')
-        .eq('parcel_id', parcelId)
-        .eq('status', 'growing')
-        .single();
-
-      if (error) throw error;
-      return data;
+      if (!currentOrganization?.id) throw new Error('No organization selected');
+      const crops = await cropsApi.getAll(currentOrganization.id, undefined, parcelId);
+      const growing = crops.find(c => c.status === 'growing');
+      return growing || null;
     },
+    enabled: !!currentOrganization?.id && !!parcelId,
   });
 
   // Mutation to get irrigation schedule

@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { storageApi } from '../lib/api/storage';
+import { apiClient } from '../lib/api-client';
 import { toast } from 'sonner';
-import { supabase } from '../supabase';
+
+interface ParcelTifData {
+  tif_image_url: string | null;
+}
 
 interface UseTifUploadOptions {
   parcelId: string;
   parcelName: string;
-  onSuccess?: (imageUrl: string) => void;
+  onSuccess?: (imageUrl: string | null) => void;
 }
 
 interface TifMetadata {
@@ -65,18 +69,11 @@ export function useTifUpload({ parcelId, parcelName, onSuccess }: UseTifUploadOp
           mimeType: file.type,
         };
 
-        const { error: updateError } = await supabase
-          .from('parcels')
-          .update({
-            tif_image_url: result.publicUrl,
-            tif_image_uploaded_at: new Date().toISOString(),
-            tif_image_metadata: metadata,
-          })
-          .eq('id', parcelId);
-
-        if (updateError) {
-          throw new Error(`Erreur lors de la mise à jour de la parcelle: ${updateError.message}`);
-        }
+        await apiClient.patch(`/api/v1/parcels/${parcelId}`, {
+          tif_image_url: result.publicUrl,
+          tif_image_uploaded_at: new Date().toISOString(),
+          tif_image_metadata: metadata,
+        });
 
         setUploadProgress(100);
 
@@ -107,36 +104,21 @@ export function useTifUpload({ parcelId, parcelName, onSuccess }: UseTifUploadOp
       setIsUploading(true);
 
       try {
-        // Get current parcel data to find the image URL
-        const { data: parcel } = await supabase
-          .from('parcels')
-          .select('tif_image_url')
-          .eq('id', parcelId)
-          .single();
+        const parcel = await apiClient.get<ParcelTifData>(`/api/v1/parcels/${parcelId}`);
 
         if (parcel?.tif_image_url) {
-          // Extract file path from URL
           const url = new URL(parcel.tif_image_url);
           const pathParts = url.pathname.split('/');
           const filePath = pathParts.slice(pathParts.indexOf('agritech-documents') + 1).join('/');
 
-          // Remove from storage
           await storageApi.remove('agritech-documents', [filePath]);
         }
 
-        // Update parcel record to remove image reference
-        const { error: updateError } = await supabase
-          .from('parcels')
-          .update({
-            tif_image_url: null,
-            tif_image_uploaded_at: null,
-            tif_image_metadata: null,
-          })
-          .eq('id', parcelId);
-
-        if (updateError) {
-          throw new Error(`Erreur lors de la mise à jour de la parcelle: ${updateError.message}`);
-        }
+        await apiClient.patch(`/api/v1/parcels/${parcelId}`, {
+          tif_image_url: null,
+          tif_image_uploaded_at: null,
+          tif_image_metadata: null,
+        });
 
         queryClient.invalidateQueries({ queryKey: ['parcels'] });
       } finally {

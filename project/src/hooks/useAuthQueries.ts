@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { authSupabase } from '../lib/auth-supabase';
 import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
 import { parcelsApi } from '../lib/api/parcels';
-import type { UserProfile, Farm } from '../lib/supabase';
+import type { Database } from '../types/database.types';
+
+type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
+type Farm = Database['public']['Tables']['farms']['Row'];
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { trackLogout } from '../lib/analytics';
@@ -279,13 +281,8 @@ export const useSignOut = () => {
         }
       }
 
-      // Clear auth store (tokens and user)
       useAuthStore.getState().clearAuth();
-      // Clear organization store
       useOrganizationStore.getState().clearOrganization();
-      // Also clear from Supabase for backward compatibility during migration
-      const { error } = await authSupabase.auth.signOut();
-      if (error) console.error('Supabase sign out error:', error);
     },
     onSuccess: () => {
       // Clear all auth-related queries

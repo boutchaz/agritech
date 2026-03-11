@@ -69,21 +69,19 @@ const AppContent: React.FC = () => {
 
   const handleDownloadPDF = async (quote: Quote) => {
     try {
-      const { supabase } = await import('../../../../lib/supabase');
+      const { getAccessToken } = await import('../../../../stores/authStore');
 
-      // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error(t('quotes.pdf.signInRequired'));
         return;
       }
 
-      // Call backend service
       const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
       const response = await fetch(`${backendUrl}/api/billing/quotes/${quote.id}/pdf`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 

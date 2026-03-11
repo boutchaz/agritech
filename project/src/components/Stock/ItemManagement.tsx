@@ -272,21 +272,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
 
-      // Using direct Supabase call for work_units (reference data)
-      // This should be migrated to NestJS API when endpoint is available
-      // Use the shared Supabase client to avoid multiple GoTrueClient instances
-      const { supabase } = await import('../../lib/supabase');
-
-      const { data, error } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('unit_category', { ascending: true })
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      return data as WorkUnit[];
+      const { apiClient } = await import('../../lib/api-client');
+      const data = await apiClient.get<WorkUnit[]>(
+        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+        {},
+        currentOrganization.id,
+      );
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -896,16 +888,13 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     queryKey: ['work-units', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-      const { supabase } = await import('../../lib/supabase');
-      const { data, error } = await supabase
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-        .order('unit_category', { ascending: true })
-        .order('name', { ascending: true });
-      if (error) throw error;
-      return data as WorkUnit[];
+      const { apiClient } = await import('../../lib/api-client');
+      const data = await apiClient.get<WorkUnit[]>(
+        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+        {},
+        currentOrganization.id,
+      );
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!currentOrganization?.id,
   });

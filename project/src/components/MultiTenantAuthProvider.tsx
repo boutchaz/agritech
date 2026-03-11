@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { authSupabase } from '../lib/auth-supabase';
-import type { User } from '@supabase/supabase-js';
 import type { UserRole } from '../types/auth';
+
+interface User {
+  id: string;
+  email: string;
+}
 
 import {
   useUserProfile,
@@ -561,33 +564,8 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
     initAuth();
 
-    // For backward compatibility during migration, also listen to Supabase
-    authSupabase.auth.getSession().then(({ data: { session } }) => {
-      const isAuthenticated = useAuthStore.getState().isAuthenticated;
-      if (session?.user && !isAuthenticated) {
-        useAuthStore.getState().setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-        });
-      }
-    });
-
-    // Listen for Supabase sign-out only (for backwards compatibility)
-    // Don't clear auth on missing session - we use NestJS auth, not Supabase
-    const { data: { subscription: supabaseSubscription } } = authSupabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_OUT') {
-        setCurrentOrganization(null);
-        setCurrentFarm(null);
-        setShowAuth(true);
-        useOrganizationStore.getState().clearOrganization();
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
-      }
-    });
-
     return () => {
       unsubscribe();
-      supabaseSubscription.unsubscribe();
     };
   }, []);
 

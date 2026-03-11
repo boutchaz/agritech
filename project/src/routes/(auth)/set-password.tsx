@@ -2,8 +2,9 @@ import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, Leaf, Shield } from 'lucide-react';
-import { authSupabase } from '@/lib/auth-supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { usersApi } from '@/lib/api/users';
+import { getAccessToken } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -79,23 +80,25 @@ function SetPasswordPage() {
     setLoading(true);
 
     try {
-      // Update user password
-      const { error: updateError } = await authSupabase.auth.updateUser({
-        password: password,
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const accessToken = getAccessToken();
+
+      const response = await fetch(`${API_URL}/api/v1/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword: password }),
       });
 
-      if (updateError) throw updateError;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Password update failed' }));
+        throw new Error(errorData.message || 'Password update failed');
+      }
 
-      // Mark password as set in user profile
-      await authSupabase
-        .from('user_profiles')
-        .upsert({
-          id: user!.id,
-          password_set: true,
-          updated_at: new Date().toISOString(),
-        });
+      await usersApi.updateMe({ password_set: true });
 
-      // Refresh user data to update the profile in the auth context
       await refreshUserData();
 
       // Redirect to dashboard

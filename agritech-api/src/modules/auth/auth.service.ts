@@ -93,6 +93,41 @@ export class AuthService {
     }
   }
 
+  async getOAuthUrl(provider: string, redirectTo: string): Promise<{ url: string }> {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+
+    if (!supabaseUrl) {
+      throw new BadRequestException('Supabase URL is not configured');
+    }
+
+    const url = `${supabaseUrl}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}&access_type=offline&prompt=consent`;
+
+    return { url };
+  }
+
+  async exchangeOAuthCode(code: string) {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error || !data.session) {
+      this.logger.error(`Failed to exchange OAuth code: ${error?.message}`);
+      throw new UnauthorizedException('Invalid OAuth code');
+    }
+
+    const user = data.user ?? data.session.user;
+
+    return {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+      expires_in: data.session.expires_in,
+      user: {
+        id: user?.id,
+        email: user?.email,
+        fullName: user?.user_metadata?.full_name || '',
+      },
+    };
+  }
+
   /**
    * Validate a Supabase JWT token
    */

@@ -56,6 +56,25 @@ export class ResetPasswordDto {
   newPassword: string;
 }
 
+export class OAuthUrlDto {
+  @ApiProperty({ example: 'google' })
+  @IsString()
+  @IsNotEmpty()
+  provider: string;
+
+  @ApiProperty({ example: 'http://localhost:5173/auth/callback' })
+  @IsString()
+  @IsNotEmpty()
+  redirectTo: string;
+}
+
+export class OAuthCallbackDto {
+  @ApiProperty({ example: 'abcd1234oauthcode' })
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+}
+
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
@@ -75,6 +94,24 @@ export class AuthController {
       loginDto.password,
       loginDto.rememberMe !== false,
     );
+  }
+
+  @Post('oauth/url')
+  @Public()
+  @ApiOperation({ summary: 'Generate OAuth URL for provider login' })
+  @ApiResponse({ status: 200, description: 'OAuth URL generated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async getOAuthUrl(@Body() dto: OAuthUrlDto) {
+    return this.authService.getOAuthUrl(dto.provider, dto.redirectTo);
+  }
+
+  @Post('oauth/callback')
+  @Public()
+  @ApiOperation({ summary: 'Exchange OAuth code for session tokens' })
+  @ApiResponse({ status: 200, description: 'OAuth code exchanged successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid OAuth code' })
+  async exchangeOAuthCode(@Body() dto: OAuthCallbackDto) {
+    return this.authService.exchangeOAuthCode(dto.code);
   }
 
   @Post('signup')

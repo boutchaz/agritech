@@ -26,6 +26,11 @@ export interface UpdateUserProfileInput {
   avatar_url?: string | null;
   timezone?: string;
   language?: string;
+  experience_level?: string;
+  dismissed_hints?: string[];
+  feature_usage?: Record<string, unknown>;
+  onboarding_completed?: boolean;
+  password_set?: boolean;
 }
 
 export interface OrganizationWithRole {

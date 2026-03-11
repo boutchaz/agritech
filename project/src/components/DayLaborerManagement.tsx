@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { workersApi, type Worker } from '../lib/api/workers';
+import { tasksApi } from '../lib/api/tasks';
 import { useAuth } from '../hooks/useAuth';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -30,13 +32,13 @@ interface DayLaborer {
 
 const DayLaborerManagement: React.FC = () => {
   const { currentFarm, currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const farmId = currentFarm?.id;
+  const organizationId = currentOrganization?.id;
   const currency = currentOrganization?.currency || 'EUR';
-  const [laborers, setLaborers] = useState<DayLaborer[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingLaborer, setEditingLaborer] = useState<DayLaborer | null>(null);
-  const [taskCategories, setTaskCategories] = useState<TaskCategory[]>([]);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
 
   const [newLaborer, setNewLaborer] = useState<Partial<DayLaborer>>({
@@ -48,78 +50,92 @@ const DayLaborerManagement: React.FC = () => {
     daily_rate: 0,
     payment_type: 'daily',
     task_rate: null,
-    unit_rate: null,
-    unit_type: null
+      unit_rate: null,
+      unit_type: null
   });
 
-  useEffect(() => {
-    fetchLaborers();
-    fetchTaskCategories();
-  }, [currentFarm?.id]);
+  const mapWorkerToDayLaborer = (worker: Worker): DayLaborer => {
+    const paymentFrequency = String(worker.payment_frequency || '');
+    const paymentType: DayLaborer['payment_type'] =
+      paymentFrequency === 'per_task' ? 'task' : paymentFrequency === 'per_unit' ? 'unit' : 'daily';
 
-  const fetchTaskCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('task_categories')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      setTaskCategories(data || []);
-    } catch (error) {
-      console.error('Error fetching task categories:', error);
-      setError('Failed to fetch task categories');
-    }
+    return {
+      id: worker.id,
+      first_name: worker.first_name,
+      last_name: worker.last_name,
+      cin: worker.cin || '',
+      phone: worker.phone || '',
+      address: worker.notes || '',
+      daily_rate: worker.daily_rate ?? 0,
+      task_rate: paymentType === 'task' ? (worker.daily_rate ?? 0) : null,
+      unit_rate: paymentType === 'unit' ? (worker.daily_rate ?? 0) : null,
+      unit_type: null,
+      payment_type: paymentType,
+      specialties: worker.specialties || [],
+      farm_id: worker.farm_id || farmId || '',
+    };
   };
 
-  const fetchLaborers = async () => {
-    try {
-      setLoading(true);
-      if (!currentFarm?.id) {
-        setLaborers([]);
-        return;
+  const laborersQuery = useQuery({
+    queryKey: ['day-laborers', organizationId, farmId],
+    queryFn: async (): Promise<DayLaborer[]> => {
+      if (!organizationId || !farmId) return [];
+      const workers = await workersApi.getAll({ farmId }, organizationId);
+      return workers
+        .filter((worker) => worker.worker_type === 'daily_worker')
+        .map(mapWorkerToDayLaborer)
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
+    },
+    enabled: !!organizationId && !!farmId,
+  });
+
+  const taskCategoriesQuery = useQuery({
+    queryKey: ['task-categories', organizationId],
+    queryFn: async (): Promise<TaskCategory[]> => {
+      if (!organizationId) return [];
+      const categories = await tasksApi.getCategories(organizationId);
+      return categories.map((category) => ({
+        id: String(category.id),
+        name: String(category.name || ''),
+        description: String(category.description || ''),
+      }));
+    },
+    enabled: !!organizationId,
+  });
+
+  const addLaborerMutation = useMutation({
+    mutationFn: async ({ laborer, specialties }: { laborer: Partial<DayLaborer>; specialties: string[] }) => {
+      if (!organizationId || !farmId) {
+        throw new Error('Sélectionnez une ferme pour ajouter un ouvrier.');
       }
-      const { data, error } = await supabase
-        .from('day_laborers')
-        .select('*')
-        .eq('farm_id', currentFarm.id)
-        .order('last_name');
 
-      if (error) throw error;
-      setLaborers(data || []);
-    } catch (error) {
-      console.error('Error fetching laborers:', error);
-      setError('Failed to fetch laborers');
-    } finally {
-      setLoading(false);
-    }
-  };
+      const paymentFrequency = laborer.payment_type === 'task' || laborer.payment_type === 'unit'
+        ? 'per_task'
+        : 'daily';
 
-  const handleAddLaborer = async () => {
-    try {
-      if (!currentFarm?.id) {
-        setError('Sélectionnez une ferme pour ajouter un ouvrier.');
-        return;
-      }
+      const effectiveRate = laborer.payment_type === 'task'
+        ? laborer.task_rate ?? 0
+        : laborer.payment_type === 'unit'
+          ? laborer.unit_rate ?? 0
+          : laborer.daily_rate ?? 0;
 
-      const payload: any = {
-        first_name: newLaborer.first_name,
-        last_name: newLaborer.last_name,
-        phone: newLaborer.phone ?? null,
-        daily_rate: newLaborer.daily_rate ?? 0,
-        specialties: selectedSpecialties,
-        notes: newLaborer.address ?? null,
-        farm_id: currentFarm.id,
-      };
-
-      const { error: laborerError } = await supabase
-        .from('day_laborers')
-        .insert([payload]);
-
-      if (laborerError) throw laborerError;
-
-      await fetchLaborers();
-
+      await workersApi.create({
+        first_name: laborer.first_name || '',
+        last_name: laborer.last_name || '',
+        cin: laborer.cin || undefined,
+        phone: laborer.phone || undefined,
+        hire_date: new Date().toISOString().split('T')[0],
+        farm_id: farmId,
+        worker_type: 'daily_worker',
+        is_cnss_declared: false,
+        daily_rate: effectiveRate,
+        payment_frequency: paymentFrequency,
+        specialties,
+        notes: laborer.address || undefined,
+      }, organizationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['day-laborers', organizationId, farmId] });
       setShowAddModal(false);
       setNewLaborer({
         first_name: '',
@@ -131,62 +147,103 @@ const DayLaborerManagement: React.FC = () => {
         payment_type: 'daily',
         task_rate: null,
         unit_rate: null,
-        unit_type: null
+        unit_type: null,
       });
       setSelectedSpecialties([]);
-    } catch (error) {
-      console.error('Error adding day laborer:', error);
+      setError(null);
+    },
+    onError: (mutationError) => {
+      console.error('Error adding day laborer:', mutationError);
       setError('Failed to add day laborer');
+    },
+  });
+
+  const updateLaborerMutation = useMutation({
+    mutationFn: async (laborer: DayLaborer) => {
+      if (!organizationId || !farmId) {
+        throw new Error('Sélectionnez une ferme pour modifier un ouvrier.');
+      }
+
+      const paymentFrequency = laborer.payment_type === 'task' || laborer.payment_type === 'unit'
+        ? 'per_task'
+        : 'daily';
+
+      const effectiveRate = laborer.payment_type === 'task'
+        ? laborer.task_rate ?? 0
+        : laborer.payment_type === 'unit'
+          ? laborer.unit_rate ?? 0
+          : laborer.daily_rate ?? 0;
+
+      await workersApi.update(laborer.id, {
+        first_name: laborer.first_name,
+        last_name: laborer.last_name,
+        cin: laborer.cin || undefined,
+        phone: laborer.phone || undefined,
+        farm_id: farmId,
+        worker_type: 'daily_worker',
+        daily_rate: effectiveRate,
+        payment_frequency: paymentFrequency,
+        specialties: laborer.specialties || [],
+        notes: laborer.address || undefined,
+      }, organizationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['day-laborers', organizationId, farmId] });
+      setEditingLaborer(null);
+      setError(null);
+    },
+    onError: (mutationError) => {
+      console.error('Error updating laborer:', mutationError);
+      setError('Failed to update laborer');
+    },
+  });
+
+  const deleteLaborerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!organizationId || !farmId) {
+        throw new Error('Sélectionnez une ferme pour supprimer un ouvrier.');
+      }
+      await workersApi.delete(id, organizationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['day-laborers', organizationId, farmId] });
+      setError(null);
+    },
+    onError: (mutationError) => {
+      console.error('Error deleting laborer:', mutationError);
+      setError('Failed to delete laborer');
+    },
+  });
+
+  const laborers = laborersQuery.data || [];
+  const taskCategories = taskCategoriesQuery.data || [];
+  const loading = laborersQuery.isLoading || taskCategoriesQuery.isLoading;
+  const displayError = error
+    || (laborersQuery.isError ? 'Failed to fetch laborers' : null)
+    || (taskCategoriesQuery.isError ? 'Failed to fetch task categories' : null);
+
+  const handleAddLaborer = async () => {
+    if (!farmId) {
+      setError('Sélectionnez une ferme pour ajouter un ouvrier.');
+      return;
     }
+
+    addLaborerMutation.mutate({ laborer: newLaborer, specialties: selectedSpecialties });
   };
 
   const handleUpdateLaborer = async (laborer: DayLaborer) => {
-    try {
-      if (!currentFarm?.id) {
-        setError('Sélectionnez une ferme pour modifier un ouvrier.');
-        return;
-      }
-      const payload: any = {
-        first_name: laborer.first_name,
-        last_name: laborer.last_name,
-        phone: laborer.phone ?? null,
-        daily_rate: laborer.daily_rate ?? 0,
-        specialties: laborer.specialties ?? [],
-        notes: laborer.address ?? null,
-      };
-      const { error } = await supabase
-        .from('day_laborers')
-        .update(payload)
-        .eq('id', laborer.id)
-        .eq('farm_id', currentFarm.id);
-
-      if (error) throw error;
-
-      setLaborers(laborers.map(l => l.id === laborer.id ? laborer : l));
-      setEditingLaborer(null);
-    } catch (error) {
-      console.error('Error updating laborer:', error);
-      setError('Failed to update laborer');
-    }
+    updateLaborerMutation.mutate(laborer);
   };
 
   const handleDeleteLaborer = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')) return;
 
     try {
-      if (!currentFarm?.id) {
+      if (!farmId) {
         setError('Sélectionnez une ferme pour supprimer un ouvrier.');
         return;
       }
-      const { error } = await supabase
-        .from('day_laborers')
-        .delete()
-        .eq('id', id)
-        .eq('farm_id', currentFarm.id);
-
-      if (error) throw error;
-
-      setLaborers(laborers.filter(l => l.id !== id));
+      deleteLaborerMutation.mutate(id);
     } catch (error) {
       console.error('Error deleting laborer:', error);
       setError('Failed to delete laborer');
@@ -252,6 +309,7 @@ const DayLaborerManagement: React.FC = () => {
           Gestion des Ouvriers Journaliers
         </h2>
         <button
+          type="button"
           onClick={() => setShowAddModal(true)}
           disabled={!currentFarm?.id}
           className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
@@ -262,13 +320,13 @@ const DayLaborerManagement: React.FC = () => {
         </button>
       </div>
 
-      {error && (
+      {displayError && (
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-red-600 dark:text-red-400">{displayError}</p>
         </div>
       )}
 
-      {!currentFarm?.id && (
+      {!farmId && (
         <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
           Sélectionnez une ferme pour gérer les ouvriers journaliers.
         </div>
@@ -279,6 +337,7 @@ const DayLaborerManagement: React.FC = () => {
           <User className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun ouvrier pour l’instant.</p>
           <button
+            type="button"
             onClick={() => setShowAddModal(true)}
             className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
@@ -307,12 +366,14 @@ const DayLaborerManagement: React.FC = () => {
               </div>
               <div className="flex space-x-2">
                 <button
+                  type="button"
                   onClick={() => setEditingLaborer(laborer)}
                   className="text-gray-400 hover:text-gray-500"
                 >
                   <Edit2 className="h-5 w-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleDeleteLaborer(laborer.id)}
                   className="text-gray-400 hover:text-red-500"
                 >
@@ -358,6 +419,7 @@ const DayLaborerManagement: React.FC = () => {
                 Nouvel Ouvrier
               </h3>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
@@ -494,12 +556,14 @@ const DayLaborerManagement: React.FC = () => {
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
               </button>
               <button
+                type="button"
                 onClick={handleAddLaborer}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
               >
@@ -518,6 +582,7 @@ const DayLaborerManagement: React.FC = () => {
                 Modifier l'Ouvrier
               </h3>
               <button
+                type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="text-gray-400 hover:text-gray-500"
               >
@@ -681,12 +746,14 @@ const DayLaborerManagement: React.FC = () => {
 
             <div className="mt-6 flex justify-end space-x-3">
               <button
+                type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
               </button>
               <button
+                type="button"
                 onClick={() => handleUpdateLaborer(editingLaborer)}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
               >

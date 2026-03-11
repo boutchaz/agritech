@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { usersApi } from '@/lib/api/users';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   ExperienceLevel,
   ExperienceLevelConfig,
-  ContextualHint,
   FeatureUsage,
 } from '@/types/experience-level';
 import { EXPERIENCE_LEVELS, hasFeature, suggestLevelUpgrade } from '@/types/experience-level';
@@ -68,13 +67,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
   const updateLevelMutation = useMutation({
     mutationFn: async (newLevel: ExperienceLevel) => {
       if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ experience_level: newLevel })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await usersApi.updateMe({ experience_level: newLevel } as Record<string, unknown>);
     },
     onSuccess: (_, newLevel) => {
       setLevelState(newLevel);
@@ -95,13 +88,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
       if (!user) throw new Error('User not authenticated');
 
       const updatedHints = [...dismissedHints, hintId];
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ dismissed_hints: updatedHints })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await usersApi.updateMe({ dismissed_hints: updatedHints } as Record<string, unknown>);
       return updatedHints;
     },
     onSuccess: (updatedHints) => {
@@ -141,12 +128,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
         },
       };
 
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ feature_usage: updatedUsage })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      await usersApi.updateMe({ feature_usage: updatedUsage } as Record<string, unknown>);
       return updatedUsage;
     },
     onSuccess: (updatedUsage) => {

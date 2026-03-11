@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { authSupabase } from '../lib/auth-supabase';
 import { aiReportsApi, type GenerateAIReportDto, type AIReportResponse, type AIProviderInfo, type DataAvailabilityResponse, type CalibrationStatus, type CalibrateRequest, type FetchDataRequest, type AIReportJob, type AIReportJobStatus } from '../lib/api/ai-reports';
 
 /**
@@ -76,65 +75,25 @@ export function useAIReportJob(jobId: string | null) {
 
     fetchJobStatus();
 
-    const channel = authSupabase
-      .channel(`ai_report_job_${jobId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'ai_report_jobs',
-          filter: `id=eq.${jobId}`,
-        },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>;
-          const updatedJob: AIReportJob = {
-            job_id: (row.id as string) || jobId,
-            status: row.status as AIReportJobStatus,
-            progress: (row.progress as number) || 0,
-            error_message: row.error_message as string | undefined,
-            report_id: row.report_id as string | undefined,
-            result: row.result as AIReportJob['result'],
-            created_at: row.created_at as string,
-            started_at: row.started_at as string | undefined,
-            completed_at: row.completed_at as string | undefined,
-          };
-          setJob(updatedJob);
-
-          if (updatedJob.status === 'completed') {
+    const pollInterval = setInterval(async () => {
+      try {
+        const jobData = await aiReportsApi.getJobStatus(jobId, currentOrganization?.id);
+        setJob(jobData);
+        
+        if (jobData.status === 'completed' || jobData.status === 'failed') {
+          clearInterval(pollInterval);
+          if (jobData.status === 'completed') {
             queryClient.invalidateQueries({ queryKey: ['parcel-reports'] });
             queryClient.invalidateQueries({ queryKey: ['ai-report-jobs'] });
           }
         }
-      )
-      .subscribe();
-
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-    
-    const startPolling = () => {
-      pollInterval = setInterval(async () => {
-        try {
-          const jobData = await aiReportsApi.getJobStatus(jobId, currentOrganization?.id);
-          setJob(jobData);
-          
-          if (jobData.status === 'completed' || jobData.status === 'failed') {
-            if (pollInterval) clearInterval(pollInterval);
-            if (jobData.status === 'completed') {
-              queryClient.invalidateQueries({ queryKey: ['parcel-reports'] });
-              queryClient.invalidateQueries({ queryKey: ['ai-report-jobs'] });
-            }
-          }
-        } catch {
-          // Fallback polling - realtime subscription handles primary updates
-        }
-      }, 3000);
-    };
-    
-    startPolling();
+      } catch {
+        // empty — retries on next interval
+      }
+    }, 3000);
 
     return () => {
-      authSupabase.removeChannel(channel);
-      if (pollInterval) clearInterval(pollInterval);
+      clearInterval(pollInterval);
     };
   }, [jobId, currentOrganization?.id, queryClient]);
 

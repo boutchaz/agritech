@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "dokploy-codelovers-mcp": {
+      "command": "npx",
+      "args": ["-y", "@ahdev/dokploy-mcp"],
+      "env": {
+        "DOKPLOY_URL": "http://37.27.217.1:3000/api",
+        "DOKPLOY_API_KEY": "HwHajxaOCfNYwodYQzDIOHDdEwxBnCpVHJDEjcmXTkYRiRHIzowXlxcwowFohEuK"
+      }
+    },
+    "dokploy-thebzlab-mcp": {
+      "command": "npx",
+      "args": ["-y", "@ahdev/dokploy-mcp"],
+      "env": {
+        "DOKPLOY_URL": "https://REPLACE_WITH_THEBZLAB_DOKPLOY_URL/api",
+        "DOKPLOY_API_KEY": "anzSFfjSTRqVoRiwWFugqpEPBBIRmAfrmyIWEvzSqiGLzKXYWtjnkQaLOxQZAHQX"
+      }
+    }
+  }
+}

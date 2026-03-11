@@ -1,6 +1,6 @@
 import React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { authSupabase } from '@/lib/supabase';
+import { getAccessToken } from '@/stores/authStore';
 import { quotesApi } from '@/lib/api/quotes';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -275,10 +275,9 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
     try {
       setIsDownloading(true);
-      const { data } = await authSupabase.auth.getSession();
-      const session = data.session;
+      const accessToken = getAccessToken();
 
-      if (!session) {
+      if (!accessToken) {
         toast.error(t('quotes.detail.messages.signInRequired'));
         return;
       }
@@ -290,7 +289,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
       const response = await fetch(`${backendUrl}/api/billing/quotes/${resolvedQuote.id}/pdf`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 

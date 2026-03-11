@@ -84,15 +84,9 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
 
   const fetchReports = async () => {
     try {
-      const { supabase } = await import('../lib/supabase');
-      const { data, error } = await supabase
-        .from('parcel_reports')
-        .select('*')
-        .eq('parcel_id', parcelId)
-        .order('generated_at', { ascending: false });
-
-      if (error) throw error;
-      setReports(data || []);
+      const { apiClient } = await import('../lib/api-client');
+      const data = await apiClient.get(`/api/v1/parcel-reports?parcel_id=${parcelId}&orderBy=generated_at&order=desc`);
+      setReports(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching reports:', err);
     }

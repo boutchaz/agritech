@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { apiClient } from '../api-client';
 import type {
   FiscalYear,
   FiscalPeriod,
@@ -27,163 +27,128 @@ import type {
   UpdateHarvestEventInput,
 } from '@/types/agricultural-accounting';
 
+interface PaginatedApiResponse<T> {
+  data?: T[];
+}
+
+function toQueryString(params?: Record<string, string | number | boolean | undefined>): string {
+  if (!params) return '';
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      search.append(key, String(value));
+    }
+  }
+
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
+function unwrapListResponse<T>(response: T[] | PaginatedApiResponse<T>): T[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+  return response.data || [];
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Error && error.message.toLowerCase().includes('not found');
+}
+
 export const fiscalYearsApi = {
   async getAll(organizationId: string): Promise<FiscalYear[]> {
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('start_date', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<FiscalYear[]>(
+      '/api/v1/fiscal-years?sortBy=start_date&sortDir=desc',
+      {},
+      organizationId
+    );
+    return response || [];
   },
 
   async getCurrent(organizationId: string): Promise<FiscalYear | null> {
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_current', true)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    try {
+      return await apiClient.get<FiscalYear>('/api/v1/fiscal-years/active', {}, organizationId);
+    } catch (error) {
+      if (isNotFoundError(error)) return null;
+      throw error;
+    }
   },
 
   async getForDate(organizationId: string, date: string): Promise<FiscalYear | null> {
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .lte('start_date', date)
-      .gte('end_date', date)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    const fiscalYears = await this.getAll(organizationId);
+    return (
+      fiscalYears.find((fiscalYear) => fiscalYear.start_date <= date && fiscalYear.end_date >= date) ||
+      null
+    );
   },
 
   async create(organizationId: string, input: CreateFiscalYearInput): Promise<FiscalYear> {
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .insert({ ...input, organization_id: organizationId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<FiscalYear>('/api/v1/fiscal-years', input, {}, organizationId);
   },
 
   async update(input: UpdateFiscalYearInput): Promise<FiscalYear> {
     const { id, ...updates } = input;
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.patch<FiscalYear>(`/api/v1/fiscal-years/${id}`, updates);
   },
 
   async close(id: string, closingNotes?: string): Promise<FiscalYear> {
-    const { data, error } = await supabase
-      .from('fiscal_years')
-      .update({
-        status: 'closed',
-        closed_at: new Date().toISOString(),
-        closing_notes: closingNotes,
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<FiscalYear>(`/api/v1/fiscal-years/${id}/close`, { closing_notes: closingNotes });
   },
 
   async getPeriods(fiscalYearId: string): Promise<FiscalPeriod[]> {
-    const { data, error } = await supabase
-      .from('fiscal_periods')
-      .select('*')
-      .eq('fiscal_year_id', fiscalYearId)
-      .order('period_number');
+    const query = toQueryString({
+      fiscal_year_id: fiscalYearId,
+      sortBy: 'period_number',
+      sortDir: 'asc',
+    });
 
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<FiscalPeriod[] | PaginatedApiResponse<FiscalPeriod>>(
+      `/api/v1/fiscal-periods${query}`
+    );
+    return unwrapListResponse(response);
   },
 };
 
 export const campaignsApi = {
   async getAll(organizationId: string): Promise<AgriculturalCampaign[]> {
-    const { data, error } = await supabase
-      .from('agricultural_campaigns')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('start_date', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<PaginatedApiResponse<AgriculturalCampaign>>(
+      '/api/v1/campaigns?sortBy=start_date&sortDir=desc',
+      {},
+      organizationId
+    );
+    return response.data || [];
   },
 
   async getCurrent(organizationId: string): Promise<AgriculturalCampaign | null> {
-    const { data, error } = await supabase
-      .from('agricultural_campaigns')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .eq('is_current', true)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    const response = await apiClient.get<PaginatedApiResponse<AgriculturalCampaign>>(
+      '/api/v1/campaigns?status=active&page=1&pageSize=1&sortBy=start_date&sortDir=desc',
+      {},
+      organizationId
+    );
+    return response.data?.[0] || null;
   },
 
   async getById(id: string): Promise<AgriculturalCampaign> {
-    const { data, error } = await supabase
-      .from('agricultural_campaigns')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.get<AgriculturalCampaign>(`/api/v1/campaigns/${id}`);
   },
 
   async create(organizationId: string, input: CreateCampaignInput): Promise<AgriculturalCampaign> {
-    const { data, error } = await supabase
-      .from('agricultural_campaigns')
-      .insert({ ...input, organization_id: organizationId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<AgriculturalCampaign>('/api/v1/campaigns', input, {}, organizationId);
   },
 
   async update(input: UpdateCampaignInput): Promise<AgriculturalCampaign> {
     const { id, ...updates } = input;
-    const { data, error } = await supabase
-      .from('agricultural_campaigns')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.patch<AgriculturalCampaign>(`/api/v1/campaigns/${id}`, updates);
   },
 
   async getSummary(organizationId: string): Promise<CampaignSummary[]> {
-    const { data, error } = await supabase
-      .from('campaign_summary')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('start_date', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<CampaignSummary[] | PaginatedApiResponse<CampaignSummary>>(
+      '/api/v1/campaign-summary?sortBy=start_date&sortDir=desc',
+      {},
+      organizationId
+    );
+    return unwrapListResponse(response);
   },
 };
 
@@ -199,33 +164,22 @@ export const cropCyclesApi = {
       crop_type?: string;
     }
   ): Promise<CropCycle[]> {
-    let query = supabase
-      .from('crop_cycles')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const query = toQueryString({
+      ...filters,
+      sortBy: 'created_at',
+      sortDir: 'desc',
+    });
 
-    if (filters?.campaign_id) query = query.eq('campaign_id', filters.campaign_id);
-    if (filters?.fiscal_year_id) query = query.eq('fiscal_year_id', filters.fiscal_year_id);
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
-    if (filters?.status) query = query.eq('status', filters.status);
-    if (filters?.crop_type) query = query.eq('crop_type', filters.crop_type);
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<PaginatedApiResponse<CropCycle>>(
+      `/api/v1/crop-cycles${query}`,
+      {},
+      organizationId
+    );
+    return response.data || [];
   },
 
   async getById(id: string): Promise<CropCycle> {
-    const { data, error } = await supabase
-      .from('crop_cycles')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.get<CropCycle>(`/api/v1/crop-cycles/${id}`);
   },
 
   async getPnL(
@@ -236,149 +190,77 @@ export const cropCyclesApi = {
       farm_id?: string;
     }
   ): Promise<CropCyclePnL[]> {
-    let query = supabase
-      .from('crop_cycle_pnl')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const query = toQueryString({
+      ...filters,
+      sortBy: 'net_profit',
+      sortDir: 'desc',
+    });
 
-    if (filters?.campaign_id) query = query.eq('campaign_id', filters.campaign_id);
-    if (filters?.fiscal_year_id) query = query.eq('fiscal_year_id', filters.fiscal_year_id);
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-
-    const { data, error } = await query.order('net_profit', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<CropCyclePnL[] | PaginatedApiResponse<CropCyclePnL>>(
+      `/api/v1/crop-cycles/pnl${query}`,
+      {},
+      organizationId
+    );
+    return unwrapListResponse(response);
   },
 
   async create(organizationId: string, input: CreateCropCycleInput): Promise<CropCycle> {
-    const { data, error } = await supabase
-      .from('crop_cycles')
-      .insert({ ...input, organization_id: organizationId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<CropCycle>('/api/v1/crop-cycles', input, {}, organizationId);
   },
 
   async update(input: UpdateCropCycleInput): Promise<CropCycle> {
     const { id, ...updates } = input;
-    const { data, error } = await supabase
-      .from('crop_cycles')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.patch<CropCycle>(`/api/v1/crop-cycles/${id}`, updates);
   },
 
   async complete(id: string): Promise<CropCycle> {
-    const { data, error } = await supabase
-      .from('crop_cycles')
-      .update({
-        status: 'completed',
-        cycle_closed_date: new Date().toISOString().split('T')[0],
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.patch<CropCycle>(`/api/v1/crop-cycles/${id}`, {
+      status: 'completed',
+      cycle_closed_date: new Date().toISOString().split('T')[0],
+    });
   },
 
   async getAllocations(cropCycleId: string): Promise<CropCycleAllocation[]> {
-    const { data, error } = await supabase
-      .from('crop_cycle_allocations')
-      .select('*')
-      .eq('crop_cycle_id', cropCycleId);
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<CropCycleAllocation[] | PaginatedApiResponse<CropCycleAllocation>>(
+      `/api/v1/crop-cycle-allocations${toQueryString({ crop_cycle_id: cropCycleId })}`
+    );
+    return unwrapListResponse(response);
   },
 
   async createAllocation(
     organizationId: string,
     input: CreateCropCycleAllocationInput
   ): Promise<CropCycleAllocation> {
-    const { data, error } = await supabase
-      .from('crop_cycle_allocations')
-      .insert({ ...input, organization_id: organizationId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<CropCycleAllocation>('/api/v1/crop-cycle-allocations', input, {}, organizationId);
   },
 
   async deleteAllocation(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('crop_cycle_allocations')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await apiClient.delete<void>(`/api/v1/crop-cycle-allocations/${id}`);
   },
 };
 
 export const cropCycleStagesApi = {
   async getByCropCycle(cropCycleId: string): Promise<CropCycleStage[]> {
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .select('*')
-      .eq('crop_cycle_id', cropCycleId)
-      .order('stage_order', { ascending: true });
-
-    if (error) throw error;
-    return (data || []) as CropCycleStage[];
+    const response = await apiClient.get<CropCycleStage[]>(`/api/v1/crop-cycle-stages/cycle/${cropCycleId}`);
+    return response || [];
   },
 
   async getById(id: string): Promise<CropCycleStage> {
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as CropCycleStage;
+    return apiClient.get<CropCycleStage>(`/api/v1/crop-cycle-stages/${id}`);
   },
 
   async create(input: CreateCropCycleStageInput): Promise<CropCycleStage> {
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .insert(input)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as CropCycleStage;
+    return apiClient.post<CropCycleStage>('/api/v1/crop-cycle-stages', input);
   },
 
   async createBulk(stages: CreateCropCycleStageInput[]): Promise<CropCycleStage[]> {
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .insert(stages)
-      .select();
-
-    if (error) throw error;
-    return (data || []) as CropCycleStage[];
+    const created = await Promise.all(stages.map((stage) => this.create(stage)));
+    return created;
   },
 
   async update(input: UpdateCropCycleStageInput): Promise<CropCycleStage> {
     const { id, ...updates } = input;
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as CropCycleStage;
+    return apiClient.patch<CropCycleStage>(`/api/v1/crop-cycle-stages/${id}`, updates);
   },
 
   async updateStatus(id: string, status: CropCycleStage['status']): Promise<CropCycleStage> {
@@ -391,24 +273,11 @@ export const cropCycleStagesApi = {
       updates.actual_end_date = now;
     }
 
-    const { data, error } = await supabase
-      .from('crop_cycle_stages')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as CropCycleStage;
+    return apiClient.patch<CropCycleStage>(`/api/v1/crop-cycle-stages/${id}`, updates);
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('crop_cycle_stages')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await apiClient.delete<void>(`/api/v1/crop-cycle-stages/${id}`);
   },
 
   async generateFromTemplate(
@@ -416,116 +285,38 @@ export const cropCycleStagesApi = {
     templateStages: { name: string; order: number; duration_days: number }[],
     plantingDate: string
   ): Promise<CropCycleStage[]> {
-    const stages: CreateCropCycleStageInput[] = [];
-    let currentDate = new Date(plantingDate);
-
-    for (const tmpl of templateStages.sort((a, b) => a.order - b.order)) {
-      const startDate = new Date(currentDate);
-      const endDate = new Date(currentDate);
-      endDate.setDate(endDate.getDate() + tmpl.duration_days);
-
-      stages.push({
-        crop_cycle_id: cropCycleId,
-        stage_name: tmpl.name,
-        stage_order: tmpl.order,
-        expected_start_date: startDate.toISOString().split('T')[0],
-        expected_end_date: endDate.toISOString().split('T')[0],
-        status: 'pending',
-      });
-
-      currentDate = endDate;
-    }
-
-    return this.createBulk(stages);
+    return apiClient.post<CropCycleStage[]>(`/api/v1/crop-cycle-stages/generate/${cropCycleId}`, {
+      template_stages: templateStages,
+      planting_date: plantingDate,
+    });
   },
 };
 
 export const harvestEventsApi = {
   async getByCropCycle(cropCycleId: string): Promise<HarvestEvent[]> {
-    const { data, error } = await supabase
-      .from('harvest_events')
-      .select('*')
-      .eq('crop_cycle_id', cropCycleId)
-      .order('harvest_number', { ascending: true });
-
-    if (error) throw error;
-    return (data || []) as HarvestEvent[];
+    const response = await apiClient.get<HarvestEvent[]>(`/api/v1/harvest-events/cycle/${cropCycleId}`);
+    return response || [];
   },
 
   async getById(id: string): Promise<HarvestEvent> {
-    const { data, error } = await supabase
-      .from('harvest_events')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as HarvestEvent;
+    return apiClient.get<HarvestEvent>(`/api/v1/harvest-events/${id}`);
   },
 
   async create(input: CreateHarvestEventInput): Promise<HarvestEvent> {
-    // Auto-set harvest_number if not provided
-    let harvestNumber = input.harvest_number;
-    if (!harvestNumber) {
-      const { count, error: countError } = await supabase
-        .from('harvest_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('crop_cycle_id', input.crop_cycle_id);
-
-      if (countError) throw countError;
-      harvestNumber = (count || 0) + 1;
-    }
-
-    const { data, error } = await supabase
-      .from('harvest_events')
-      .insert({ ...input, harvest_number: harvestNumber })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as HarvestEvent;
+    return apiClient.post<HarvestEvent>('/api/v1/harvest-events', input);
   },
 
   async update(input: UpdateHarvestEventInput): Promise<HarvestEvent> {
     const { id, ...updates } = input;
-    const { data, error } = await supabase
-      .from('harvest_events')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as HarvestEvent;
+    return apiClient.patch<HarvestEvent>(`/api/v1/harvest-events/${id}`, updates);
   },
 
   async remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('harvest_events')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    await apiClient.delete<void>(`/api/v1/harvest-events/${id}`);
   },
 
   async getStatsByCropCycle(cropCycleId: string): Promise<HarvestEventStats> {
-    const { data, error } = await supabase
-      .from('harvest_events')
-      .select('*')
-      .eq('crop_cycle_id', cropCycleId);
-
-    if (error) throw error;
-
-    const events = data || [];
-    const totalQuantity = events.reduce((sum, e) => sum + (e.quantity || 0), 0);
-    const dates = events.map(e => e.harvest_date).sort();
-
-    return {
-      total_harvests: events.length,
-      total_quantity: totalQuantity,
-      average_quantity: events.length > 0 ? totalQuantity / events.length : 0,
-      last_harvest_date: dates.length > 0 ? dates[dates.length - 1] : null,
-    };
+    return apiClient.get<HarvestEventStats>(`/api/v1/harvest-events/cycle/${cropCycleId}/stats`);
   },
 };
 
@@ -539,65 +330,37 @@ export const biologicalAssetsApi = {
       status?: string;
     }
   ): Promise<BiologicalAsset[]> {
-    let query = supabase
-      .from('biological_assets')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const query = toQueryString({
+      ...filters,
+      sortBy: 'asset_name',
+      sortDir: 'asc',
+    });
 
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
-    if (filters?.asset_type) query = query.eq('asset_type', filters.asset_type);
-    if (filters?.status) query = query.eq('status', filters.status);
-
-    const { data, error } = await query.order('asset_name');
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<PaginatedApiResponse<BiologicalAsset>>(
+      `/api/v1/biological-assets${query}`,
+      {},
+      organizationId
+    );
+    return response.data || [];
   },
 
   async getById(id: string): Promise<BiologicalAsset> {
-    const { data, error } = await supabase
-      .from('biological_assets')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.get<BiologicalAsset>(`/api/v1/biological-assets/${id}`);
   },
 
   async create(organizationId: string, input: CreateBiologicalAssetInput): Promise<BiologicalAsset> {
-    const { data, error } = await supabase
-      .from('biological_assets')
-      .insert({ ...input, organization_id: organizationId })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.post<BiologicalAsset>('/api/v1/biological-assets', input, {}, organizationId);
   },
 
   async update(id: string, updates: Partial<BiologicalAsset>): Promise<BiologicalAsset> {
-    const { data, error } = await supabase
-      .from('biological_assets')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    return apiClient.patch<BiologicalAsset>(`/api/v1/biological-assets/${id}`, updates);
   },
 
   async getValuations(biologicalAssetId: string): Promise<BiologicalAssetValuation[]> {
-    const { data, error } = await supabase
-      .from('biological_asset_valuations')
-      .select('*')
-      .eq('biological_asset_id', biologicalAssetId)
-      .order('valuation_date', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<
+      BiologicalAssetValuation[] | PaginatedApiResponse<BiologicalAssetValuation>
+    >(`/api/v1/biological-assets/${biologicalAssetId}/valuations?sortBy=valuation_date&sortDir=desc`);
+    return unwrapListResponse(response);
   },
 
   async createValuation(
@@ -607,18 +370,16 @@ export const biologicalAssetsApi = {
     const asset = await this.getById(input.biological_asset_id);
     const previousValue = asset.fair_value || asset.initial_cost;
 
-    const { data, error } = await supabase
-      .from('biological_asset_valuations')
-      .insert({
+    const valuation = await apiClient.post<BiologicalAssetValuation>(
+      `/api/v1/biological-assets/${input.biological_asset_id}/valuations`,
+      {
         ...input,
-        organization_id: organizationId,
         previous_fair_value: previousValue,
         fair_value_change: input.current_fair_value - previousValue,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+      },
+      {},
+      organizationId
+    );
 
     await this.update(input.biological_asset_id, {
       fair_value: input.current_fair_value,
@@ -627,7 +388,7 @@ export const biologicalAssetsApi = {
       fair_value_level: input.fair_value_level,
     });
 
-    return data;
+    return valuation;
   },
 };
 
@@ -702,13 +463,12 @@ export const reportingApi = {
   },
 
   async getFiscalCampaignReconciliation(organizationId: string) {
-    const { data, error } = await supabase
-      .from('fiscal_campaign_reconciliation')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (error) throw error;
-    return data || [];
+    const response = await apiClient.get<unknown[]>(
+      '/api/v1/fiscal-campaign-reconciliation',
+      {},
+      organizationId
+    );
+    return response || [];
   },
 
   async getWIPValuationReport(organizationId: string): Promise<{
@@ -717,15 +477,17 @@ export const reportingApi = {
     total_inventory: number;
     by_farm: Record<string, { wip: number; inventory: number; cycle_count: number }>;
   }> {
-    const { data: cycles, error } = await supabase
-      .from('crop_cycles')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .in('status', ['land_prep', 'growing', 'harvesting']);
+    const activeCycles = await cropCyclesApi.getAll(organizationId, {
+      status: 'land_prep',
+    });
+    const growingCycles = await cropCyclesApi.getAll(organizationId, {
+      status: 'growing',
+    });
+    const harvestingCycles = await cropCyclesApi.getAll(organizationId, {
+      status: 'harvesting',
+    });
 
-    if (error) throw error;
-
-    const active_cycles = cycles || [];
+    const active_cycles = [...activeCycles, ...growingCycles, ...harvestingCycles];
     let total_wip = 0;
     let total_inventory = 0;
     const by_farm: Record<string, { wip: number; inventory: number; cycle_count: number }> = {};
@@ -762,15 +524,9 @@ export const reportingApi = {
       fair_value: number;
     }>;
   }> {
-    const { data: assets, error } = await supabase
-      .from('biological_assets')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .neq('status', 'disposed');
+    const allAssets = await biologicalAssetsApi.getAll(organizationId);
+    const assets = allAssets.filter((asset) => asset.status !== 'disposed');
 
-    if (error) throw error;
-
-    const allAssets = assets || [];
     const totals = {
       total_initial_cost: 0,
       total_carrying_amount: 0,
@@ -787,7 +543,7 @@ export const reportingApi = {
       fair_value: number;
     }> = {};
 
-    for (const asset of allAssets) {
+    for (const asset of assets) {
       totals.total_initial_cost += asset.initial_cost || 0;
       totals.total_carrying_amount += asset.carrying_amount || asset.initial_cost || 0;
       totals.total_fair_value += asset.fair_value || 0;
@@ -811,6 +567,6 @@ export const reportingApi = {
 
     totals.unrealized_gain_loss = totals.total_fair_value - totals.total_carrying_amount;
 
-    return { assets: allAssets, totals, by_type };
+    return { assets, totals, by_type };
   },
 };

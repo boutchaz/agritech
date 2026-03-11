@@ -1,22 +1,14 @@
-import { authSupabase } from './auth-supabase';
-
-// Use the shared Supabase client to avoid multiple GoTrueClient instances
-const supabase = authSupabase;
+import { getAccessToken } from '../stores/authStore';
 
 const EDGE_FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-/**
- * Generic function to call Supabase Edge Functions
- * Requires authentication - throws error if user is not authenticated
- */
 async function callEdgeFunction<T>(
   functionName: string,
   payload: Record<string, unknown>
 ): Promise<T> {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const accessToken = getAccessToken();
 
-  // Require authentication - no fallback to anon key
-  if (sessionError || !session?.access_token) {
+  if (!accessToken) {
     throw new Error('Authentication required. Please sign in to use this feature.');
   }
 
@@ -24,7 +16,7 @@ async function callEdgeFunction<T>(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
+      'Authorization': `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
   });

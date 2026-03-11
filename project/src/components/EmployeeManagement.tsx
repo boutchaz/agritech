@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { workersApi } from '../lib/api/workers';
 import { useAuth } from '../hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm, type FieldErrors, type Resolver, type SubmitHandler } from 'react-hook-form';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 
 interface Employee {
   id: string;
@@ -44,9 +43,10 @@ const EmployeeManagement: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const farmId = currentFarm?.id;
+  const organizationId = currentOrganization?.id;
   const currency = currentOrganization?.currency || 'MAD';
 
-  const emptyDefaults: EmployeeFormValues = {
+  const emptyDefaults: EmployeeFormValues = useMemo(() => ({
     first_name: '',
     last_name: '',
     cin: '',
@@ -56,10 +56,37 @@ const EmployeeManagement: React.FC = () => {
     position: '',
     salary: 0,
     status: 'active',
+  }), []);
+
+  const employeeResolver: Resolver<EmployeeFormValues> = async (values) => {
+    const parsed = employeeSchema.safeParse(values);
+
+    if (parsed.success) {
+      return {
+        values: parsed.data,
+        errors: {},
+      };
+    }
+
+    const zodFieldErrors: Record<string, { type: string; message: string }> = {};
+    parsed.error.issues.forEach((issue) => {
+      const field = issue.path[0];
+      if (typeof field === 'string' && !zodFieldErrors[field]) {
+        zodFieldErrors[field] = {
+          type: issue.code,
+          message: issue.message,
+        };
+      }
+    });
+
+    return {
+      values: {},
+      errors: zodFieldErrors as unknown as FieldErrors<EmployeeFormValues>,
+    };
   };
 
   const form = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema) as any,
+    resolver: employeeResolver,
     defaultValues: emptyDefaults,
   });
 
@@ -88,97 +115,97 @@ const EmployeeManagement: React.FC = () => {
     } else if (showAddModal) {
       form.reset(emptyDefaults);
     }
-  }, [editingEmployee, showAddModal]);
+  }, [editingEmployee, showAddModal, form, emptyDefaults]);
 
   const employeesQuery = useQuery({
-    queryKey: ['employees', farmId],
+    queryKey: ['employees', organizationId, farmId],
     queryFn: async (): Promise<Employee[]> => {
-      if (!farmId) return [];
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, phone, position, hire_date, salary, status, cin:employee_id, address:notes, farm_id')
-        .eq('farm_id', farmId)
-        .order('last_name');
-      if (error) throw error;
-      return data || [];
+      if (!organizationId || !farmId) return [];
+      const workers = await workersApi.getAll({ farmId }, organizationId);
+
+      return workers
+        .filter((worker) => worker.worker_type === 'fixed_salary')
+        .map((worker) => ({
+          id: worker.id,
+          first_name: worker.first_name,
+          last_name: worker.last_name,
+          cin: worker.cin || '',
+          phone: worker.phone || '',
+          address: worker.notes || '',
+          hire_date: worker.hire_date,
+          position: worker.position || '',
+          salary: worker.monthly_salary ?? 0,
+          status: worker.is_active ? 'active' as const : 'inactive' as const,
+        }))
+        .sort((a, b) => a.last_name.localeCompare(b.last_name));
     },
-    enabled: !!farmId,
+    enabled: !!organizationId && !!farmId,
   });
 
   const addEmployeeMutation = useMutation({
     mutationFn: async (values: EmployeeFormValues) => {
-      if (!farmId) {
+      if (!farmId || !organizationId) {
         throw new Error('Aucune ferme sélectionnée. Veuillez sélectionner une ferme.');
       }
-      const payload = {
+
+      return workersApi.create({
         first_name: values.first_name,
         last_name: values.last_name,
-        employee_id: values.cin,
-        phone: values.phone || null,
+        cin: values.cin,
+        phone: values.phone || undefined,
         position: values.position,
         hire_date: values.hire_date,
-        salary: values.salary,
-        status: values.status,
-        notes: values.address || null,
+        monthly_salary: values.salary,
+        is_active: values.status === 'active',
+        notes: values.address || undefined,
         farm_id: farmId,
-      };
-      const { data, error } = await supabase
-        .from('employees')
-        .insert([payload])
-        .select()
-        .single();
-      if (error) throw error;
-      return data as Employee;
+        worker_type: 'fixed_salary',
+        payment_frequency: 'monthly',
+        is_cnss_declared: false,
+      }, organizationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
+      queryClient.invalidateQueries({ queryKey: ['employees', organizationId, farmId] });
       setShowAddModal(false);
     },
   });
 
   const updateEmployeeMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: EmployeeFormValues }) => {
-      if (!farmId) {
+      if (!farmId || !organizationId) {
         throw new Error('Aucune ferme sélectionnée. Veuillez sélectionner une ferme.');
       }
-      const payload = {
+
+      await workersApi.update(id, {
         first_name: values.first_name,
         last_name: values.last_name,
-        employee_id: values.cin,
-        phone: values.phone || null,
+        cin: values.cin,
+        phone: values.phone || undefined,
         position: values.position,
         hire_date: values.hire_date,
-        salary: values.salary,
-        status: values.status,
-        notes: values.address || null,
-      };
-      const { error } = await supabase
-        .from('employees')
-        .update(payload)
-        .eq('id', id)
-        .eq('farm_id', farmId);
-      if (error) throw error;
+        monthly_salary: values.salary,
+        is_active: values.status === 'active',
+        notes: values.address || undefined,
+        farm_id: farmId,
+        worker_type: 'fixed_salary',
+        payment_frequency: 'monthly',
+      }, organizationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
+      queryClient.invalidateQueries({ queryKey: ['employees', organizationId, farmId] });
       setEditingEmployee(null);
     },
   });
 
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
-      if (!farmId) {
+      if (!farmId || !organizationId) {
         throw new Error('Aucune ferme sélectionnée.');
       }
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .eq('id', id)
-        .eq('farm_id', farmId);
-      if (error) throw error;
+      await workersApi.delete(id, organizationId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees', farmId] });
+      queryClient.invalidateQueries({ queryKey: ['employees', organizationId, farmId] });
     },
   });
 
@@ -198,6 +225,7 @@ const EmployeeManagement: React.FC = () => {
           Gestion des Salariés
         </h2>
         <button
+          type="button"
           onClick={() => { if (!farmId) return; setEditingEmployee(null); setShowAddModal(true); form.reset(emptyDefaults); }}
           disabled={!farmId}
           className={`flex items-center space-x-2 px-4 py-2 rounded-md ${farmId ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
@@ -224,6 +252,7 @@ const EmployeeManagement: React.FC = () => {
           <Calendar className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun salarié pour l’instant.</p>
           <button
+            type="button"
             onClick={() => setShowAddModal(true)}
             className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
@@ -248,12 +277,14 @@ const EmployeeManagement: React.FC = () => {
               </div>
               <div className="flex space-x-2">
                  <button
-                  onClick={() => { setShowAddModal(true); setEditingEmployee(employee); }}
+                  type="button"
+                   onClick={() => { setShowAddModal(true); setEditingEmployee(employee); }}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <Edit2 className="h-5 w-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     if (confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
                       deleteEmployeeMutation.mutate(employee.id);
@@ -307,6 +338,7 @@ const EmployeeManagement: React.FC = () => {
                 {editingEmployee ? 'Modifier le Salarié' : 'Nouveau Salarié'}
               </h3>
               <button
+                type="button"
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingEmployee(null);

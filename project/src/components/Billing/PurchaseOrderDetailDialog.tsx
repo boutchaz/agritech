@@ -1,7 +1,6 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { authSupabase } from '@/lib/supabase';
+import { getAccessToken } from '@/stores/authStore';
 import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { useAuth } from '@/hooks/useAuth';
@@ -367,20 +366,18 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
     try {
       setIsDownloading(true);
-      const { data } = await authSupabase.auth.getSession();
-      const session = data.session;
+      const accessToken = getAccessToken();
 
-      if (!session) {
+      if (!accessToken) {
         toast.error('Please sign in to download the purchase order.');
         return;
       }
 
-      // Call backend service
       const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
       const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${po.id}/pdf`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 

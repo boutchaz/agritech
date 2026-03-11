@@ -22,7 +22,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { usePurchaseOrders, usePaginatedPurchaseOrders, type PurchaseOrder, type PurchaseOrderWithItems } from '@/hooks/usePurchaseOrders';
 import { PurchaseOrderForm } from '@/components/Billing/PurchaseOrderForm';
 import { PurchaseOrderDetailDialog } from '@/components/Billing/PurchaseOrderDetailDialog';
-import { authSupabase } from '@/lib/supabase';
+import { getAccessToken } from '@/stores/authStore';
 import { toast } from 'sonner';
 import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { Loader2 } from 'lucide-react';
@@ -50,18 +50,17 @@ const AppContent: React.FC = () => {
 
   const handleDownloadPDF = async (order: PurchaseOrder) => {
     try {
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session) {
+      const accessToken = getAccessToken();
+      if (!accessToken) {
         toast.error('Please sign in to download PDF');
         return;
       }
 
-      // Call backend service
       const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
       const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${order.id}/pdf`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 

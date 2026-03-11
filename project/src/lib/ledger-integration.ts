@@ -5,7 +5,7 @@
  * business transactions (invoices, payments, stock movements, etc.)
  */
 
-import { supabase } from './supabase';
+import { apiClient } from './api-client';
 import { accountingApi } from './accounting-api';
 import { OrganizationRequiredError } from './errors';
 
@@ -68,6 +68,16 @@ export interface PaymentData {
 
 const accountCache = new Map<string, string>();
 
+interface AccountApiRecord {
+  id: string;
+  code?: string;
+  name?: string;
+  account_type?: string;
+  account_subtype?: string | null;
+  is_active?: boolean;
+  is_group?: boolean;
+}
+
 /**
  * Get account ID by type and subtype with caching
  */
@@ -83,25 +93,45 @@ async function getAccountByType(
     return accountCache.get(cacheKey)!;
   }
 
-  let query = supabase
-    .from('accounts')
-    .select('id, code, name')
-    .eq('organization_id', organizationId)
-    .eq('account_type', accountType)
-    .eq('is_active', true)
-    .eq('is_group', false);
+  const params = new URLSearchParams({
+    is_active: 'true',
+    account_type: accountType,
+    is_group: 'false',
+  });
 
   if (accountSubtype) {
-    query = query.eq('account_subtype', accountSubtype);
+    params.append('account_subtype', accountSubtype);
   }
 
-  const { data, error } = await query.maybeSingle();
+  let accounts: AccountApiRecord[] = [];
 
-  if (error) {
-    throw new Error(`Error fetching account: ${error.message}`);
+  try {
+    accounts = await apiClient.get<AccountApiRecord[]>(
+      `/api/v1/accounts?${params.toString()}`,
+      {},
+      organizationId
+    );
+  } catch (error) {
+    throw new Error(`Error fetching account: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  if (!data?.id) {
+  const account = accounts.find(acc => {
+    if (!acc.id || acc.is_active === false || acc.is_group === true) {
+      return false;
+    }
+
+    if (acc.account_type !== accountType) {
+      return false;
+    }
+
+    if (accountSubtype && acc.account_subtype !== accountSubtype) {
+      return false;
+    }
+
+    return true;
+  });
+
+  if (!account?.id) {
     const subtypeMsg = accountSubtype ? ` (${accountSubtype})` : '';
     throw new Error(
       `Account of type "${accountType}"${subtypeMsg} not found. ` +
@@ -110,8 +140,8 @@ async function getAccountByType(
   }
 
   // Cache the result
-  accountCache.set(cacheKey, data.id);
-  return data.id;
+  accountCache.set(cacheKey, account.id);
+  return account.id;
 }
 
 /**
@@ -122,25 +152,39 @@ async function getAccountByName(
   namePattern: string,
   accountType?: string
 ): Promise<string | null> {
-  let query = supabase
-    .from('accounts')
-    .select('id')
-    .eq('organization_id', organizationId)
-    .eq('is_active', true)
-    .eq('is_group', false)
-    .ilike('name', `%${namePattern}%`);
+  const params = new URLSearchParams({
+    is_active: 'true',
+    is_group: 'false',
+  });
 
   if (accountType) {
-    query = query.eq('account_type', accountType);
+    params.append('account_type', accountType);
   }
 
-  const { data, error } = await query.maybeSingle();
+  try {
+    const accounts = await apiClient.get<AccountApiRecord[]>(
+      `/api/v1/accounts?${params.toString()}`,
+      {},
+      organizationId
+    );
 
-  if (error || !data) {
+    const normalizedPattern = namePattern.toLowerCase();
+    const account = accounts.find(acc => {
+      if (!acc.id || acc.is_active === false || acc.is_group === true || !acc.name) {
+        return false;
+      }
+
+      if (accountType && acc.account_type !== accountType) {
+        return false;
+      }
+
+      return acc.name.toLowerCase().includes(normalizedPattern);
+    });
+
+    return account?.id || null;
+  } catch {
     return null;
   }
-
-  return data.id;
 }
 
 // =====================================================
@@ -582,12 +626,22 @@ export async function linkJournalEntry(
   recordId: string,
   journalEntryId: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from(tableName)
-    .update({ journal_entry_id: journalEntryId })
-    .eq('id', recordId);
+  const tableEndpointMap: Record<string, string> = {
+    invoices: '/api/v1/invoices',
+    accounting_payments: '/api/v1/payments',
+  };
 
-  if (error) {
+  const endpoint = tableEndpointMap[tableName];
+
+  if (!endpoint) {
+    throw new Error(`No API endpoint mapping configured for table: ${tableName}`);
+  }
+
+  try {
+    await apiClient.patch(`${endpoint}/${recordId}`, {
+      journal_entry_id: journalEntryId,
+    });
+  } catch (error) {
     console.error(`Error linking journal entry to ${tableName}:`, error);
     throw error;
   }

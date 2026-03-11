@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { authSupabase } from '../lib/auth-supabase';
+import { apiClient } from '../lib/api-client';
 import { useAuth } from '../hooks/useAuth';
 import type { UserRole, UserPermission, ResourceType, ActionType } from '../types/auth';
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface RoleBasedAccess {
   userRole: UserRole | null;
@@ -37,34 +35,11 @@ export const useRoleBasedAccess = (): RoleBasedAccess => {
       setLoading(true);
       setError(null);
 
-      // Get session token for API authentication
-      const { data: { session } } = await authSupabase.auth.getSession();
-      if (!session?.access_token) {
-        setLoading(false);
-        return;
-      }
-
-      // Call NestJS API to get role and permissions
-      const response = await fetch(`${apiUrl}/api/v1/auth/me/role`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'x-organization-id': currentOrganization.id,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          setLoading(false);
-          return;
-        }
-        throw new Error('Failed to fetch role and permissions');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ role: UserRole | null; permissions: UserPermission[] }>(
+        '/api/v1/auth/me/role',
+        {},
+        currentOrganization.id,
+      );
 
       // If no role found, user is not part of this organization
       if (!data.role) {

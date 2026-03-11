@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase';
 import { farmsService } from '../services/farmsService';
+import { parcelsApi } from '../lib/api/parcels';
 import type { Database } from '../types/database.types';
 import {
   Building2,
@@ -78,18 +78,11 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
     mode: 'onSubmit'
   });
 
-  // Fetch organization name
   const { data: organizationName } = useQuery({
     queryKey: ['organization', organizationId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', organizationId)
-        .single();
-
-      if (error) throw error;
-      return data.name;
+      const org = await farmsService.getOrganization(organizationId);
+      return org.name;
     },
     enabled: !!organizationId
   });
@@ -139,17 +132,14 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
         }
       });
 
-      // Fetch parcels for each farm
       const farmIds = Array.from(farmMap.keys());
       if (farmIds.length > 0) {
-        const { data: parcelsData, error: parcelsError } = await supabase
-          .from('parcels')
-          .select('id, name, farm_id, area, area_unit, description')
-          .in('farm_id', farmIds);
+        const farmIdSet = new Set(farmIds);
+        const allParcels = await parcelsApi.getAll({}, organizationId);
+        const parcelsData = allParcels.filter(p => p.farm_id && farmIdSet.has(p.farm_id));
 
-        if (!parcelsError && parcelsData) {
-          // Group parcels by farm_id
-          const parcelsByFarm = parcelsData.reduce((acc, parcel) => {
+        if (parcelsData.length > 0) {
+          const parcelsByFarm = parcelsData.reduce((acc: Record<string, ParcelInfo[]>, parcel) => {
             if (parcel.farm_id) {
               if (!acc[parcel.farm_id]) acc[parcel.farm_id] = [];
               acc[parcel.farm_id].push({
