@@ -28,9 +28,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
 import { usersApi } from '@/lib/api/users';
-import { storageApi } from '@/lib/api/storage';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -225,11 +223,7 @@ const AccountSettings: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword,
-      });
-
-      if (error) throw error;
+      await usersApi.changePassword(passwordData.newPassword);
 
       setPasswordData({
         currentPassword: '',
@@ -238,9 +232,9 @@ const AccountSettings: React.FC = () => {
       });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error changing password:', err);
-      setError(err.message || t('profile.errors.passwordChangeError'));
+      setError(err instanceof Error ? err.message : t('profile.errors.passwordChangeError'));
     } finally {
       setChangingPassword(false);
     }
@@ -272,19 +266,9 @@ const AccountSettings: React.FC = () => {
     setAvatarError(null);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const { avatar_url } = await usersApi.uploadAvatar(file);
 
-      const { publicUrl } = await storageApi.upload('avatars', filePath, file, {
-        upsert: true,
-      });
-
-      const updatedProfile = await usersApi.updateMe({
-        avatar_url: publicUrl,
-      });
-
-      setProfile(updatedProfile);
+      setProfile((prev) => prev ? { ...prev, avatar_url } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
       setSuccess(true);
@@ -308,17 +292,9 @@ const AccountSettings: React.FC = () => {
     setAvatarError(null);
 
     try {
-      const urlParts = profile.avatar_url.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const filePath = `${user.id}/${fileName}`;
+      await usersApi.removeAvatar();
 
-      await storageApi.remove('avatars', [filePath]);
-
-      const updatedProfile = await usersApi.updateMe({
-        avatar_url: null,
-      });
-
-      setProfile(updatedProfile);
+      setProfile((prev) => prev ? { ...prev, avatar_url: undefined } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
       setSuccess(true);
@@ -676,7 +652,7 @@ const AccountSettings: React.FC = () => {
                   { key: 'push', icon: Bell },
                   { key: 'alerts', icon: AlertCircle },
                   { key: 'reports', icon: ShieldCheck },
-                ].map(({ key, icon: Icon }) => (
+                ].map(({ key, icon: _Icon }) => (
                   <div key={key} className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium text-gray-900 dark:text-white">

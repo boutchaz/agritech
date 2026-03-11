@@ -1,7 +1,8 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param, Delete, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param, Delete, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { UpdateUserProfileDto, UpdateUserRoleDto, UpdateUserStatusDto } from './dto';
 
 @ApiTags('users')
@@ -119,7 +120,27 @@ export class UsersController {
         return this.usersService.resetAllTours(req.user.id);
     }
 
-    // Organization Users Management Endpoints
+    @Post('me/avatar')
+    @UseInterceptors(FileInterceptor('file'))
+    @ApiOperation({ summary: 'Upload user avatar' })
+    @ApiConsumes('multipart/form-data')
+    @ApiResponse({ status: 200, description: 'Avatar uploaded successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid file' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async uploadAvatar(@Request() req, @UploadedFile() file: Express.Multer.File) {
+        if (!file) {
+            throw new BadRequestException('No file provided');
+        }
+        return this.usersService.uploadAvatar(req.user.id, file);
+    }
+
+    @Delete('me/avatar')
+    @ApiOperation({ summary: 'Remove user avatar' })
+    @ApiResponse({ status: 200, description: 'Avatar removed successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async removeAvatar(@Request() req) {
+        return this.usersService.removeAvatar(req.user.id);
+    }
 
     @Get('organizations/:organizationId/users')
     @ApiOperation({ summary: 'Get all users in an organization' })

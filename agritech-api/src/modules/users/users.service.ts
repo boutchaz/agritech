@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
 export interface CreateUserProfileDto {
@@ -680,6 +680,133 @@ export class UsersService {
             }
             this.logger.error(`Failed to reset all tours: ${error.message}`);
             throw new InternalServerErrorException('Failed to reset all tours');
+        }
+    }
+
+    // =====================================================
+    // Avatar Methods
+    // =====================================================
+
+    /**
+     * Upload user avatar to Supabase storage and update profile
+     */
+    async uploadAvatar(userId: string, file: Express.Multer.File): Promise<{ avatar_url: string }> {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            const allowedTypes = ['image/jpeg', 'image/png'];
+            if (!allowedTypes.includes(file.mimetype)) {
+                throw new BadRequestException('Invalid file type. Only JPEG and PNG are allowed.');
+            }
+
+            const maxSize = 2 * 1024 * 1024; // 2MB
+            if (file.size > maxSize) {
+                throw new BadRequestException('File too large. Maximum size is 2MB.');
+            }
+
+            const fileExt = file.originalname.split('.').pop() || 'jpg';
+            const fileName = `${userId}.${fileExt}`;
+            const filePath = `${userId}/${fileName}`;
+
+            const { error: uploadError } = await client.storage
+                .from('avatars')
+                .upload(filePath, file.buffer, {
+                    contentType: file.mimetype,
+                    cacheControl: '3600',
+                    upsert: true,
+                });
+
+            if (uploadError) {
+                this.logger.error(`Failed to upload avatar: ${uploadError.message}`);
+                throw new InternalServerErrorException(`Failed to upload avatar: ${uploadError.message}`);
+            }
+
+            const { data: { publicUrl } } = client.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            const { data, error: updateError } = await client
+                .from('user_profiles')
+                .update({
+                    avatar_url: publicUrl,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId)
+                .select()
+                .single();
+
+            if (updateError) {
+                this.logger.error(`Failed to update avatar URL in profile: ${updateError.message}`);
+                throw new InternalServerErrorException('Failed to update profile with avatar URL');
+            }
+
+            this.logger.log(`Avatar uploaded for user ${userId}`);
+            return { avatar_url: publicUrl };
+        } catch (error) {
+            if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+                throw error;
+            }
+            this.logger.error(`Failed to upload avatar: ${error.message}`);
+            throw new InternalServerErrorException('Failed to upload avatar');
+        }
+    }
+
+    /**
+     * Remove user avatar from Supabase storage and clear profile URL
+     */
+    async removeAvatar(userId: string): Promise<{ success: boolean }> {
+        const client = this.databaseService.getAdminClient();
+
+        try {
+            // Get current avatar URL to extract file path
+            const { data: profile, error: fetchError } = await client
+                .from('user_profiles')
+                .select('avatar_url')
+                .eq('id', userId)
+                .single();
+
+            if (fetchError) {
+                this.logger.error(`Failed to fetch profile for avatar removal: ${fetchError.message}`);
+                throw new NotFoundException('User profile not found');
+            }
+
+            if (profile?.avatar_url) {
+                // Extract file path from URL
+                const urlParts = profile.avatar_url.split('/');
+                const fileName = urlParts[urlParts.length - 1];
+                const filePath = `${userId}/${fileName}`;
+
+                const { error: removeError } = await client.storage
+                    .from('avatars')
+                    .remove([filePath]);
+
+                if (removeError) {
+                    this.logger.warn(`Failed to remove avatar file from storage: ${removeError.message}`);
+                    // Continue to clear URL even if storage removal fails
+                }
+            }
+
+            const { error: updateError } = await client
+                .from('user_profiles')
+                .update({
+                    avatar_url: null,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', userId);
+
+            if (updateError) {
+                this.logger.error(`Failed to clear avatar URL in profile: ${updateError.message}`);
+                throw new InternalServerErrorException('Failed to update profile');
+            }
+
+            this.logger.log(`Avatar removed for user ${userId}`);
+            return { success: true };
+        } catch (error) {
+            if (error instanceof NotFoundException || error instanceof InternalServerErrorException) {
+                throw error;
+            }
+            this.logger.error(`Failed to remove avatar: ${error.message}`);
+            throw new InternalServerErrorException('Failed to remove avatar');
         }
     }
 }

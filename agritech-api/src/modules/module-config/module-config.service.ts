@@ -44,6 +44,7 @@ export class ModuleConfigService {
         navigation_items,
         module_translations(name, description, features, locale)
       `)
+      .not('slug', 'is', null)
       .order('display_order');
 
     if (error) {
