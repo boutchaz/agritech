@@ -216,6 +216,8 @@ async function main() {
   console.log('✓ satellite');
 
   // 3. Dashboard (VITE_* are build-time; use same values for consistency)
+  const dashboardTraefikHost = env.DASHBOARD_TRAEFIK_HOST || (DASHBOARD_URL ? DASHBOARD_URL.replace(/^https?:\/\//, '').split('/')[0] : '');
+  const dashboardPublicHost = env.DASHBOARD_PUBLIC_HOST || dashboardTraefikHost;
   const dashboardEnv = {
     VITE_SUPABASE_URL: SUPABASE_URL,
     VITE_SUPABASE_ANON_KEY: ANON_KEY,
@@ -225,6 +227,9 @@ async function main() {
     VITE_BACKEND_SERVICE_URL: SATELLITE_URL,
     VITE_SATELLITE_SERVICE_URL: SATELLITE_URL,
     VITE_APP_URL: DASHBOARD_URL,
+    DASHBOARD_TRAEFIK_HOST: dashboardTraefikHost,
+    DASHBOARD_PUBLIC_HOST: dashboardPublicHost,
+    TRAEFIK_NETWORK: env.TRAEFIK_NETWORK || 'dokploy-network',
     VITE_OPENWEATHER_API_KEY: env.VITE_OPENWEATHER_API_KEY || '',
     VITE_GA_MEASUREMENT_ID: env.VITE_GA_MEASUREMENT_ID || '',
     VITE_CLARITY_ENABLED: env.VITE_CLARITY_ENABLED || 'true',
