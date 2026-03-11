@@ -1147,14 +1147,6 @@
       "sustainable": "Agriculture durable",
       "sustainableDesc": "Réduisez votre impact environnemental avec une gestion précise."
     },
-    "pricing": {
-      "title": "Tarifs simples et transparents",
-      "subtitle": "Choisissez le plan adapté à vos besoins",
-      "mostPopular": "Le plus populaire",
-      "perMonth": "/mois",
-      "getStarted": "Commencer",
-      "contactUs": "Nous contacter"
-    },
     "cta": {
       "title": "Prêt à moderniser votre agriculture ?",
       "subtitle": "Rejoignez des équipes agricoles qui optimisent déjà leur exploitation.",
@@ -1246,6 +1238,31 @@
       "perHaYear": "/ha/an HT",
       "getStarted": "Commencer",
       "contactUs": "Nous contacter"
+    },
+    "stats": {
+      "farms": "Fermes gérées",
+      "parcels": "Parcelles suivies",
+      "hectares": "Hectares surveillés",
+      "satisfaction": "Satisfaction client"
+    },
+    "testimonials": {
+      "title": "La confiance des agriculteurs marocains",
+      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AGROGINA",
+      "farmer1": {
+        "quote": "AGROGINA a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
+        "author": "Hassan B.",
+        "role": "Producteur d'agrumes, Souss-Massa"
+      },
+      "coop1": {
+        "quote": "La gestion de plus de 50 fermes membres était un cauchemar auparavant. Nous avons maintenant une visibilité complète sur les coûts, les rendements et la rentabilité de chaque parcelle.",
+        "author": "Fatima Z.",
+        "role": "Directrice, Coopérative oléicole, Meknès"
+      },
+      "exporter1": {
+        "quote": "Les fonctionnalités d'analyse satellite et de suivi qualité nous ont aidés à obtenir la certification GlobalGAP pour toutes nos fermes fournisseurs.",
+        "author": "Karim M.",
+        "role": "Directeur Export, AgriExport Maroc"
+      }
     }
   },
   "suppliers": {
@@ -5352,33 +5369,6 @@
       "creatingOrg": "Création de l'organisation...",
       "activatingTrial": "Activation de l'essai...",
       "complete": "Terminé!"
-    }
-  },
-  "landing": {
-    "stats": {
-      "farms": "Fermes gérées",
-      "parcels": "Parcelles suivies",
-      "hectares": "Hectares surveillés",
-      "satisfaction": "Satisfaction client"
-    },
-    "testimonials": {
-      "title": "La confiance des agriculteurs marocains",
-      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
-        "author": "Hassan B.",
-        "role": "Producteur d'agrumes, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "La gestion de plus de 50 fermes membres était un cauchemar auparavant. Nous avons maintenant une visibilité complète sur les coûts, les rendements et la rentabilité de chaque parcelle.",
-        "author": "Fatima Z.",
-        "role": "Directrice, Coopérative oléicole, Meknès"
-      },
-      "exporter1": {
-        "quote": "Les fonctionnalités d'analyse satellite et de suivi qualité nous ont aidés à obtenir la certification GlobalGAP pour toutes nos fermes fournisseurs.",
-        "author": "Karim M.",
-        "role": "Directeur Export, AgriExport Maroc"
-      }
     }
   }
 }

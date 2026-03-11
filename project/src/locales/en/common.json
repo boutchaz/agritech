@@ -1147,14 +1147,6 @@
       "sustainable": "Sustainable agriculture",
       "sustainableDesc": "Reduce your environmental impact with precise management."
     },
-    "pricing": {
-      "title": "Simple and transparent pricing",
-      "subtitle": "Choose the plan that fits your needs",
-      "mostPopular": "Most popular",
-      "perMonth": "/month",
-      "getStarted": "Get started",
-      "contactUs": "Contact us"
-    },
     "cta": {
       "title": "Ready to modernize your agriculture?",
       "subtitle": "Join agricultural teams already optimizing their operations.",
@@ -1246,6 +1238,31 @@
       "perHaYear": "/ha/year HT",
       "getStarted": "Get started",
       "contactUs": "Contact us"
+    },
+    "stats": {
+      "farms": "Farms Managed",
+      "parcels": "Parcels Tracked",
+      "hectares": "Hectares Monitored",
+      "satisfaction": "Customer Satisfaction"
+    },
+    "testimonials": {
+      "title": "Trusted by Moroccan Farmers",
+      "subtitle": "See what agricultural professionals say about AGROGINA",
+      "farmer1": {
+        "quote": "AGROGINA transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
+        "author": "Hassan B.",
+        "role": "Citrus Grower, Souss-Massa"
+      },
+      "coop1": {
+        "quote": "Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.",
+        "author": "Fatima Z.",
+        "role": "Director, Olive Cooperative, Meknès"
+      },
+      "exporter1": {
+        "quote": "The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.",
+        "author": "Karim M.",
+        "role": "Export Director, AgriExport Maroc"
+      }
     }
   },
   "suppliers": {
@@ -5534,33 +5551,6 @@
       "creatingOrg": "Creating organization...",
       "activatingTrial": "Activating trial...",
       "complete": "Complete!"
-    }
-  },
-  "landing": {
-    "stats": {
-      "farms": "Farms Managed",
-      "parcels": "Parcels Tracked",
-      "hectares": "Hectares Monitored",
-      "satisfaction": "Customer Satisfaction"
-    },
-    "testimonials": {
-      "title": "Trusted by Moroccan Farmers",
-      "subtitle": "See what agricultural professionals say about AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
-        "author": "Hassan B.",
-        "role": "Citrus Grower, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.",
-        "author": "Fatima Z.",
-        "role": "Director, Olive Cooperative, Meknès"
-      },
-      "exporter1": {
-        "quote": "The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.",
-        "author": "Karim M.",
-        "role": "Export Director, AgriExport Maroc"
-      }
     }
   }
 }
