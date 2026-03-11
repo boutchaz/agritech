@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,9 +10,7 @@ import {
   AlertCircle,
   TreeDeciduous,
   Beef,
-  DollarSign,
-  Calendar,
-  MapPin,
+
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +38,8 @@ import {
   useCreateBiologicalAssetValuation,
   useBiologicalAssetsSummary,
 } from '@/hooks/useAgriculturalAccounting';
-import { useFarms } from '@/hooks/useMultiTenantData';
+import { farmsApi } from '@/lib/api/farms';
+import { useQuery } from '@tanstack/react-query';
 import type {
   BiologicalAsset,
   BiologicalAssetType,
@@ -113,7 +112,11 @@ const STATUS_COLORS: Record<BiologicalAssetStatus, string> = {
 export function BiologicalAssetsManagement() {
   const { hasRole } = useAuth();
   const { t } = useTranslation();
-  const { data: farms = [] } = useFarms();
+  const { data: farms = [] } = useQuery({
+    queryKey: ['farms'],
+    queryFn: () => farmsApi.getAll(),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isValuationDialogOpen, setIsValuationDialogOpen] = useState(false);
@@ -130,7 +133,7 @@ export function BiologicalAssetsManagement() {
     asset_type: selectedAssetType || undefined,
   });
   const { data: summary } = useBiologicalAssetsSummary();
-  const { data: valuations = [] } = useBiologicalAssetValuations(selectedAssetForValuation?.id || null);
+  const { data: _valuations = [] } = useBiologicalAssetValuations(selectedAssetForValuation?.id || null);
 
   const createMutation = useCreateBiologicalAsset();
   const updateMutation = useUpdateBiologicalAsset();

@@ -56,7 +56,8 @@ import {
   useDeleteCostCenter,
   type CostCenter,
 } from '@/hooks/useCostCenters';
-import { useFarms } from '@/hooks/useMultiTenantData';
+import { farmsApi } from '@/lib/api/farms';
+import { useQuery } from '@tanstack/react-query';
 import { useParcelsByFarm } from '@/hooks/useParcelsQuery';
 
 // Validation schema
@@ -73,7 +74,7 @@ const costCenterSchema = z.object({
 type CostCenterFormData = z.infer<typeof costCenterSchema>;
 
 export function CostCenterManagement() {
-  const { currentOrganization, hasRole } = useAuth();
+  const { hasRole } = useAuth();
   const { t } = useTranslation();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,7 +90,11 @@ export function CostCenterManagement() {
   const { data: costCenters = [], isLoading } = useCostCenters({
     is_active: filterActive === 'all' ? undefined : filterActive === 'active',
   });
-  const { data: farms = [] } = useFarms();
+  const { data: farms = [] } = useQuery({
+    queryKey: ['farms'],
+    queryFn: () => farmsApi.getAll(),
+    staleTime: 5 * 60 * 1000,
+  });
   const { data: parcels = [] } = useParcelsByFarm(selectedFarmId || undefined);
 
   const createMutation = useCreateCostCenter();
@@ -176,7 +181,7 @@ export function CostCenterManagement() {
         toast.success(t('costCenters.create.success', 'Cost center created successfully'));
       }
       handleCloseDialog();
-    } catch (error) {
+    } catch (_error) {
       toast.error(
         editingCostCenter
           ? t('costCenters.update.failed', 'Failed to update cost center')
@@ -192,7 +197,7 @@ export function CostCenterManagement() {
       await deleteMutation.mutateAsync(deletingCostCenter.id);
       toast.success(t('costCenters.delete.success', 'Cost center deleted successfully'));
       setDeletingCostCenter(null);
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('costCenters.delete.failed', 'Failed to delete cost center. It may have associated journal entries.'));
     }
   };
@@ -208,7 +213,7 @@ export function CostCenterManagement() {
           ? t('costCenters.deactivated', 'Cost center deactivated')
           : t('costCenters.activated', 'Cost center activated')
       );
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('costCenters.toggleFailed', 'Failed to update cost center status'));
     }
   };

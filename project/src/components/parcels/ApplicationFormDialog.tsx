@@ -6,9 +6,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
-import { supabase } from '@/lib/supabase';
+import { storageApi } from '@/lib/api/storage';
 import { tasksApi } from '@/lib/api/tasks';
-import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X, Loader2 } from 'lucide-react';
+import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -137,26 +137,15 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
         return null;
       }
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${currentOrganization?.id || 'default'}/product-applications/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+       const fileName = `${currentOrganization?.id || 'default'}/product-applications/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      const { error } = await supabase.storage
-        .from('products')
-        .upload(fileName, file, {
-          cacheControl: '31536000',
-          upsert: false
-        });
+       const { publicUrl } = await storageApi.upload('products', fileName, file, {
+         cacheControl: '31536000',
+         upsert: false
+       });
 
-      if (error) {
-        console.error('Upload error:', error);
-        throw error;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('products')
-        .getPublicUrl(fileName);
-
-      return publicUrl;
+       return publicUrl;
     } catch (error: any) {
       console.error('Failed to upload image:', error);
       toast.error('Failed to upload image');
@@ -237,7 +226,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
           } else if (Array.isArray(errorData.details) && errorData.details.length > 0) {
             errorMessage = errorData.details.map((d: any) => d.message).join(', ');
           }
-        } catch (e) {
+        } catch (_e) {
           // If parsing fails, use status text
           errorMessage = `Error ${response.status}: ${response.statusText}`;
         }
@@ -281,7 +270,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
   });
 
   // Fetch available products
-  const { data: products = [], isLoading, error, isError } = useQuery({
+  const { data: products = [], isLoading, isError } = useQuery({
     queryKey: ['available-products'],
     queryFn: async () => {
       const token = getAccessToken();

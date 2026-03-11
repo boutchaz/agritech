@@ -7,7 +7,7 @@ import type { DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
 import { useKBar } from 'kbar'
 import { useQuery } from '@tanstack/react-query'
-import { authSupabase } from '@/lib/auth-supabase'
+import { dashboardSettingsApi } from '@/lib/api/dashboard-settings'
 import { withRouteProtection } from '@/components/authorization/withRouteProtection'
 import { useTranslation } from 'react-i18next'
 import { useAutoStartTour } from '@/contexts/TourContext'
@@ -76,33 +76,28 @@ const AppContent: React.FC = () => {
     queryFn: async () => {
       if (!user || !currentOrganization) return defaultDashboardSettings;
 
-      const { data, error } = await authSupabase
-        .from('dashboard_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('organization_id', currentOrganization.id)
-        .maybeSingle();
+      try {
+        const data = await dashboardSettingsApi.getSettings(currentOrganization.id);
 
-      if (error) {
+        if (data) {
+          return {
+            showSoilData: data.show_soil_data,
+            showClimateData: data.show_climate_data,
+            showIrrigationData: data.show_irrigation_data,
+            showMaintenanceData: data.show_maintenance_data,
+            showProductionData: data.show_production_data,
+            showFinancialData: data.show_financial_data,
+            showStockAlerts: data.show_stock_alerts,
+            showTaskAlerts: data.show_task_alerts,
+            layout: data.layout
+          };
+        }
+
+        return defaultDashboardSettings;
+      } catch (error) {
         console.error('Error fetching dashboard settings:', error);
         return defaultDashboardSettings;
       }
-
-      if (data) {
-        return {
-          showSoilData: data.show_soil_data,
-          showClimateData: data.show_climate_data,
-          showIrrigationData: data.show_irrigation_data,
-          showMaintenanceData: data.show_maintenance_data,
-          showProductionData: data.show_production_data,
-          showFinancialData: data.show_financial_data,
-          showStockAlerts: data.show_stock_alerts,
-          showTaskAlerts: data.show_task_alerts,
-          layout: data.layout
-        };
-      }
-
-      return defaultDashboardSettings;
     },
     enabled: !!user && !!currentOrganization,
     staleTime: 60000,

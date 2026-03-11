@@ -13,6 +13,8 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,8 +24,10 @@ import {
   ApiHeader,
   ApiQuery,
   ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FilesService } from './files.service';
 import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
@@ -35,6 +39,30 @@ import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
+
+  private getContentTypeFromPath(filePath: string): string {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+
+    const contentTypeByExtension: Record<string, string> = {
+      pdf: 'application/pdf',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      txt: 'text/plain',
+      csv: 'text/csv',
+      json: 'application/json',
+      zip: 'application/zip',
+    };
+
+    if (!extension) {
+      return 'application/octet-stream';
+    }
+
+    return contentTypeByExtension[extension] ?? 'application/octet-stream';
+  }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
@@ -52,6 +80,93 @@ export class FilesController {
       throw new BadRequestException('No file provided');
     }
     return this.filesService.uploadFile(file, folder, organizationId);
+  }
+
+  @Post('storage/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload a file to any Supabase storage bucket' })
+  @ApiConsumes('multipart/form-data')
+  @ApiQuery({ name: 'bucket', required: true, description: 'Target storage bucket name' })
+  @ApiQuery({ name: 'path', required: true, description: 'Target file path in the bucket' })
+  @ApiQuery({ name: 'upsert', required: false, type: Boolean, description: 'Overwrite existing file if true' })
+  @ApiQuery({ name: 'cacheControl', required: false, description: 'Cache-Control max-age in seconds' })
+  @ApiResponse({
+    status: 201,
+    description: 'File uploaded successfully',
+    schema: { example: { path: 'avatars/user-1.png', publicUrl: 'https://...' } },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async uploadToStorage(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('bucket') bucket: string,
+    @Query('path') filePath: string,
+    @Query('upsert') upsert?: string,
+    @Query('cacheControl') cacheControl?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    if (!bucket || !filePath) {
+      throw new BadRequestException('bucket and path query parameters are required');
+    }
+
+    return this.filesService.uploadToStorage(file, bucket, filePath, {
+      upsert: upsert === 'true',
+      cacheControl,
+    });
+  }
+
+  @Post('storage/remove')
+  @ApiOperation({ summary: 'Remove files from any Supabase storage bucket' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['bucket', 'paths'],
+      properties: {
+        bucket: { type: 'string', example: 'files' },
+        paths: { type: 'array', items: { type: 'string' }, example: ['avatars/user-1.png'] },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Files removed successfully', schema: { example: { success: true } } })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async removeFromStorage(
+    @Body() body: { bucket: string; paths: string[] },
+  ) {
+    const { bucket, paths } = body;
+
+    if (!bucket || !Array.isArray(paths) || paths.length === 0) {
+      throw new BadRequestException('bucket and non-empty paths are required');
+    }
+
+    await this.filesService.removeFromStorage(bucket, paths);
+    return { success: true };
+  }
+
+  @Get('storage/download')
+  @ApiOperation({ summary: 'Download a file from any Supabase storage bucket (proxy)' })
+  @ApiQuery({ name: 'bucket', required: true, description: 'Storage bucket name' })
+  @ApiQuery({ name: 'path', required: true, description: 'File path in the bucket' })
+  @ApiResponse({ status: 200, description: 'File downloaded successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  async downloadFromStorage(
+    @Query('bucket') bucket: string,
+    @Query('path') filePath: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    if (!bucket || !filePath) {
+      throw new BadRequestException('bucket and path query parameters are required');
+    }
+
+    const fileBuffer = await this.filesService.downloadFromStorage(bucket, filePath);
+    const contentType = this.getContentTypeFromPath(filePath);
+    const fileName = filePath.split('/').pop() || 'download';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+
+    return new StreamableFile(fileBuffer);
   }
 
   @Post('register')

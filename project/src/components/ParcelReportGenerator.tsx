@@ -15,6 +15,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { generateParcelReport } from '../lib/edge-functions-api';
+import { storageApi } from '../lib/api/storage';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
 import { AIReportGenerator, AIReportPreview, AIReportExport } from './AIReportSection';
 
@@ -137,27 +138,22 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
     }
   };
 
-  const downloadReport = async (reportId: string) => {
-    try {
-      const report = reports.find(r => r.id === reportId);
-      if (!report) throw new Error('Report not found');
+   const downloadReport = async (reportId: string) => {
+     try {
+       const report = reports.find(r => r.id === reportId);
+       if (!report) throw new Error('Report not found');
 
-      if (report.file_url) {
-        const { supabase } = await import('../lib/supabase');
-        const { data, error } = await supabase.storage
-          .from('reports')
-          .download(report.file_url);
+       if (report.file_url) {
+         const data = await storageApi.download('reports', report.file_url);
 
-        if (error) throw error;
-
-        const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${report.title}.pdf`;
-        a.click();
-        URL.revokeObjectURL(url);
-        return;
-      }
+         const url = URL.createObjectURL(data);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `${report.title}.pdf`;
+         a.click();
+         URL.revokeObjectURL(url);
+         return;
+       }
 
       if (report.metadata?.html_content) {
         const blob = new Blob([report.metadata.html_content], { type: 'text/html' });

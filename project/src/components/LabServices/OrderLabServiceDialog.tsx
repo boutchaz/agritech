@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
 import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Textarea } from '@/components/ui/Textarea';
-import { useFarms } from '@/hooks/useMultiTenantData';
+import { farmsApi } from '@/lib/api/farms';
+import { useQuery } from '@tanstack/react-query';
 import { useParcels } from '@/hooks/useParcels';
 import { useCreateLabServiceOrder } from '@/hooks/useLabServices';
 import { toast } from 'sonner';
@@ -31,7 +32,11 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
   const { t } = useTranslation();
   const [selectedFarmId, setSelectedFarmId] = useState<string>('');
 
-  const { data: farms } = useFarms();
+  const { data: farms } = useQuery({
+    queryKey: ['farms'],
+    queryFn: () => farmsApi.getAll(),
+    staleTime: 5 * 60 * 1000,
+  });
   const { data: parcels } = useParcels(selectedFarmId);
   const createOrder = useCreateLabServiceOrder();
 

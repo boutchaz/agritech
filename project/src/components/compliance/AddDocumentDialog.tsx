@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,7 +26,7 @@ import { cn } from '@/lib/utils';
 
 import { useUpdateCertification } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
+import { storageApi } from '@/lib/api/storage';
 import { type CertificationResponseDto, type DocumentDto } from '@/lib/api/compliance';
 
 const documentTypes = [
@@ -150,37 +150,26 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
     setUploading(true);
 
     try {
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(2, 8);
-      const sanitizedName = selectedFile.name
-        .replace(/[^a-zA-Z0-9.-]/g, '_')
-        .substring(0, 50);
-      const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
+       const timestamp = Date.now();
+       const randomId = Math.random().toString(36).substring(2, 8);
+       const sanitizedName = selectedFile.name
+         .replace(/[^a-zA-Z0-9.-]/g, '_')
+         .substring(0, 50);
+       const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('compliance-documents')
-        .upload(filePath, selectedFile, {
-          cacheControl: '31536000',
-          upsert: false,
-        });
+       const { publicUrl } = await storageApi.upload('compliance-documents', filePath, selectedFile, {
+         cacheControl: '31536000',
+         upsert: false,
+       });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error("Échec de l'upload du fichier");
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('compliance-documents')
-        .getPublicUrl(filePath);
-
-      const newDocument: DocumentDto = {
-        type: values.type,
-        url: publicUrl,
-        uploaded_at: new Date().toISOString(),
-        name: selectedFile.name,
-        size: selectedFile.size,
-        mime_type: selectedFile.type,
-      };
+       const newDocument: DocumentDto = {
+         type: values.type,
+         url: publicUrl,
+         uploaded_at: new Date().toISOString(),
+         name: selectedFile.name,
+         size: selectedFile.size,
+         mime_type: selectedFile.type,
+       };
 
       const existingDocuments = certification.documents || [];
 

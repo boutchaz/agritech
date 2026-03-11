@@ -91,6 +91,62 @@ export class FilesService {
     return { url: publicUrl };
   }
 
+  async uploadToStorage(
+    file: Express.Multer.File,
+    bucket: string,
+    filePath: string,
+    options?: { upsert?: boolean; cacheControl?: string },
+  ): Promise<{ path: string; publicUrl: string }> {
+    const client = this.databaseService.getAdminClient();
+
+    const { error } = await client.storage
+      .from(bucket)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: options?.upsert ?? false,
+        cacheControl: options?.cacheControl,
+      });
+
+    if (error) {
+      this.logger.error(`Failed to upload file to storage: ${error.message}`);
+      throw new BadRequestException(`Failed to upload file to storage: ${error.message}`);
+    }
+
+    const {
+      data: { publicUrl },
+    } = client.storage.from(bucket).getPublicUrl(filePath);
+
+    return {
+      path: filePath,
+      publicUrl,
+    };
+  }
+
+  async removeFromStorage(bucket: string, filePaths: string[]): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+
+    const { error } = await client.storage.from(bucket).remove(filePaths);
+
+    if (error) {
+      this.logger.error(`Failed to remove files from storage: ${error.message}`);
+      throw new BadRequestException(`Failed to remove files from storage: ${error.message}`);
+    }
+  }
+
+  async downloadFromStorage(bucket: string, filePath: string): Promise<Buffer> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client.storage.from(bucket).download(filePath);
+
+    if (error || !data) {
+      this.logger.error(`Failed to download file from storage: ${error?.message ?? 'Unknown error'}`);
+      throw new NotFoundException(`Failed to download file from storage: ${error?.message ?? 'File not found'}`);
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
   /**
    * Get all files for an organization
    */

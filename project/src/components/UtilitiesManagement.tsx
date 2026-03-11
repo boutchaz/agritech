@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, BookOpen, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { storageApi } from '../lib/api/storage';
 
 // Lazy load heavy dashboard component with charts
 const UtilitiesDashboard = lazy(() => import('./UtilitiesDashboard'));
@@ -153,33 +153,25 @@ const UtilitiesManagement: React.FC = () => {
     return CONSUMPTION_UNITS[type] || CONSUMPTION_UNITS.other;
   };
 
-  // Helper function to upload invoice file
-  const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
-    try {
-      if (!currentFarm?.id) return null;
+   // Helper function to upload invoice file
+   const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
+     try {
+       if (!currentFarm?.id) return null;
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+       const fileExt = file.name.split('.').pop();
+       const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-      const { data: _data, error } = await supabase.storage
-        .from('invoices')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+       const { publicUrl } = await storageApi.upload('invoices', fileName, file, {
+         cacheControl: '3600',
+         upsert: false
+       });
 
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('invoices')
-        .getPublicUrl(fileName);
-
-      return { url: publicUrl, path: fileName };
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      return null;
-    }
-  };
+       return { url: publicUrl, path: fileName };
+     } catch (error) {
+       console.error('Error uploading file:', error);
+       return null;
+     }
+   };
 
   // Helper function to download invoice file
   const downloadInvoice = async (url: string, filename?: string) => {

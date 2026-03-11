@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, User, Mail, Phone, Globe, Camera, AlertCircle, Loader2, Lock, Eye, EyeOff, Shield, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { supabase } from '../lib/supabase';
 import { usersApi } from '../lib/api/users';
-import { storageApi } from '../lib/api/storage';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -142,11 +140,7 @@ const ProfileSettings: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      });
-
-      if (error) throw error;
+      await usersApi.changePassword(passwordData.newPassword);
 
       setPasswordData({
         currentPassword: '',
@@ -171,7 +165,7 @@ const ProfileSettings: React.FC = () => {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
 
     // Validate file type
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
@@ -190,21 +184,12 @@ const ProfileSettings: React.FC = () => {
     setAvatarError(null);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
+      const { avatar_url } = await usersApi.uploadAvatar(file);
 
-      // Upload to avatars bucket
-      const { publicUrl } = await storageApi.upload('avatars', filePath, file, {
-        upsert: true,
-      });
+      if (profile) {
+        setProfile({ ...profile, avatar_url });
+      }
 
-      // Update user profile with new avatar URL
-      const updatedProfile = await usersApi.updateMe({
-        avatar_url: publicUrl,
-      });
-
-      setProfile(updatedProfile);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -219,26 +204,18 @@ const ProfileSettings: React.FC = () => {
   };
 
   const handleRemoveAvatar = async () => {
-    if (!profile?.avatar_url || !user) return;
+    if (!profile?.avatar_url) return;
 
     setUploadingAvatar(true);
     setAvatarError(null);
 
     try {
-      // Extract file path from URL
-      const urlParts = profile.avatar_url.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const filePath = `${user.id}/${fileName}`;
+      await usersApi.removeAvatar();
 
-      // Delete from storage
-      await storageApi.remove('avatars', [filePath]);
+      if (profile) {
+        setProfile({ ...profile, avatar_url: undefined });
+      }
 
-      // Update user profile to remove avatar URL
-      const updatedProfile = await usersApi.updateMe({
-        avatar_url: null,
-      });
-
-      setProfile(updatedProfile);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
