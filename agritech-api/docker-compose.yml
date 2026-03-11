@@ -70,6 +70,7 @@ services:
     networks:
       - agritech-network
       - supabase-network
+      - dokploy-network
 
 networks:
   agritech-network:
@@ -79,3 +80,5 @@ networks:
   supabase-network:
     external: true
     name: ${SUPABASE_NETWORK_NAME:-dokploy-network}
+  dokploy-network:
+    external: true

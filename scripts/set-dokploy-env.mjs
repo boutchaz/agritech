@@ -106,6 +106,7 @@ async function main() {
   const SATELLITE_URL = env.SATELLITE_URL || '';
   const CMS_URL = env.CMS_URL || env.STRAPI_URL || '';
   const API_PUBLIC_HOST = env.API_PUBLIC_HOST || env.API_URL || '';
+  const API_TRAEFIK_HOST = env.API_TRAEFIK_HOST || (API_URL ? API_URL.replace(/^https?:\/\//, '').split('/')[0] : '');
 
   const required = [
     ['SUPABASE_URL', SUPABASE_URL],
@@ -156,6 +157,13 @@ async function main() {
 
   console.log('Pushing env to Codelovers Dokploy...\n');
 
+  // Build CORS: base URLs + optional custom domains (DASHBOARD_PUBLIC_HOST, API_PUBLIC_HOST)
+  const corsBase = env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map((s) => s.trim()) : [DASHBOARD_URL, API_URL, CMS_URL].filter(Boolean);
+  const corsExtra = [];
+  if (env.DASHBOARD_PUBLIC_HOST) corsExtra.push(`https://${env.DASHBOARD_PUBLIC_HOST.replace(/^https?:\/\//, '')}`);
+  if (env.API_PUBLIC_HOST) corsExtra.push(`https://${env.API_PUBLIC_HOST.replace(/^https?:\/\//, '')}`);
+  const CORS_ORIGIN = [...new Set([...corsBase, ...corsExtra])].filter(Boolean).join(',');
+
   // 1. API
   const apiEnv = {
     NODE_ENV: 'production',
@@ -168,7 +176,7 @@ async function main() {
     JWT_SECRET,
     JWT_EXPIRES_IN: env.JWT_EXPIRES_IN || '1h',
     DATABASE_URL: `postgresql://postgres:${POSTGRES_PASSWORD}@${SUPABASE_DB_HOST}:5432/postgres`,
-    CORS_ORIGIN: env.CORS_ORIGIN || `${DASHBOARD_URL},${API_URL},${CMS_URL}`,
+    CORS_ORIGIN,
     LOG_LEVEL: 'info',
     RATE_LIMIT_TTL: '60',
     RATE_LIMIT_MAX: '100',
@@ -176,7 +184,9 @@ async function main() {
     SATELLITE_SERVICE_URL: SATELLITE_URL,
     STRAPI_API_URL: CMS_URL,
     EXTERNAL_NETWORK_NAME,
+    API_TRAEFIK_HOST: API_TRAEFIK_HOST,
     API_PUBLIC_HOST: (API_PUBLIC_HOST || API_URL).replace(/^https?:\/\//, '').split('/')[0],
+    TRAEFIK_NETWORK: env.TRAEFIK_NETWORK || 'dokploy-network',
     STRAPI_API_TOKEN: env.STRAPI_API_TOKEN || '',
     ZAI_API_KEY: env.ZAI_API_KEY || '',
     SMTP_HOST: env.SMTP_HOST || '',
