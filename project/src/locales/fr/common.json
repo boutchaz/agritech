@@ -1166,6 +1166,7 @@
       "features": "Fonctionnalités",
       "pricing": "Tarifs",
       "freeTrial": "Essai gratuit",
+      "blog": "Blog",
       "support": "Support",
       "documentation": "Documentation",
       "contact": "Contact",
@@ -1175,6 +1176,76 @@
       "terms": "CGU",
       "legalNotice": "Mentions légales",
       "copyright": "Tous droits réservés."
+    },
+    "trustedBy": "Ils nous font confiance",
+    "trusted": {
+      "agronomists": "Agronomes",
+      "coops": "Coopératives",
+      "exporters": "Exportateurs",
+      "labs": "Laboratoires"
+    },
+    "nav": {
+      "blog": "Blog"
+    },
+    "seo": {
+      "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
+      "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
+      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina, agritech"
+    },
+    "modules": {
+      "title": "Les modules qui orchestrent vos opérations",
+      "subtitle": "Une suite intégrée reliant la planification des parcelles, le travail des équipes, la comptabilité et l'analyse agronomique.",
+      "cta": "Découvrir le module",
+      "parcels": {
+        "title": "Gestion des parcelles",
+        "desc": "Cartographiez vos parcelles, suivez les cultures et reliez-les aux analyses de sol."
+      },
+      "tasks": {
+        "title": "Planification des tâches",
+        "desc": "Assignez vos équipes, mesurez le temps passé et suivez la progression en direct."
+      },
+      "accounting": {
+        "title": "Comptabilité intégrée",
+        "desc": "Automatisez factures, paiements et suivi des coûts par ferme ou parcelle."
+      },
+      "analytics": {
+        "title": "Analyses & services",
+        "desc": "Exploitez les images satellite et commandez vos analyses laboratoire en quelques clics."
+      }
+    },
+    "siam": {
+      "title": "SIAM 2026 • Rencontrez AGROGINA",
+      "description": "Réservez un créneau de démonstration produit sur le stand AGROGINA.",
+      "features": {
+        "demo": "Démonstration en direct de la plateforme.",
+        "focus": "Focus satellite, tâches, stock et comptabilité.",
+        "slots": "Créneaux disponibles depuis le cache local."
+      },
+      "form": {
+        "title": "Demande de rendez-vous",
+        "description": "Nous revenons vers vous rapidement avec confirmation du créneau.",
+        "fullName": "Nom complet",
+        "email": "Email professionnel",
+        "phone": "Téléphone",
+        "submit": "Réserver un RDV SIAM",
+        "success": "Demande enregistrée. Notre équipe vous confirme le créneau RDV sous 24h."
+      }
+    },
+    "blog": {
+      "label": "Blog",
+      "title": "Dernières actualités",
+      "subtitle": "Restez informé des dernières tendances et bonnes pratiques en technologie agricole.",
+      "viewAll": "Voir tous les articles",
+      "readingTime": "min"
+    },
+    "pricing": {
+      "title": "Tarifs simples et transparents",
+      "subtitle": "Choisissez le plan adapté à vos besoins",
+      "mostPopular": "Le plus populaire",
+      "perMonth": "/mois",
+      "perHaYear": "/ha/an HT",
+      "getStarted": "Commencer",
+      "contactUs": "Nous contacter"
     }
   },
   "suppliers": {

@@ -48,7 +48,7 @@ import { appConfig } from '@/config/app';
 const DEFAULT_SIAM_DATES = ['2026-04-21', '2026-04-22', '2026-04-23', '2026-04-24'];
 
 const LandingPage: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
 
   // Fetch latest blog posts for the landing page
@@ -114,7 +114,7 @@ const LandingPage: React.FC = () => {
 
     // Primary meta tags
     ensureMeta('description', description);
-    ensureMeta('keywords', 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agrogina, agritech');
+    ensureMeta('keywords', t('landing.seo.keywords', { defaultValue: 'gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d\'oeuvre agricole, agrogina, agritech' }));
 
     // Open Graph meta tags
     ensureMeta('og:type', 'website', true);
@@ -280,10 +280,10 @@ const LandingPage: React.FC = () => {
   ];
 
   const trustedSectors = [
-    t('landing.trusted.agronomists', { defaultValue: 'Agronomes' }),
-    t('landing.trusted.coops', { defaultValue: 'Coopératives' }),
-    t('landing.trusted.exporters', { defaultValue: 'Exportateurs' }),
-    t('landing.trusted.labs', { defaultValue: 'Laboratoires' }),
+    t('landing.trusted.agronomists'),
+    t('landing.trusted.coops'),
+    t('landing.trusted.exporters'),
+    t('landing.trusted.labs'),
   ];
 
   const siamAvailableDates = useMemo(() => {
@@ -329,7 +329,7 @@ const LandingPage: React.FC = () => {
     }
 
     setSiamSuccessMessage(
-      'Demande enregistrée. Notre équipe vous confirme le créneau RDV sous 24h.',
+      t('landing.siam.form.success'),
     );
     setSiamForm((previous) => ({
       ...previous,
@@ -342,37 +342,29 @@ const LandingPage: React.FC = () => {
   const solutionModules = [
     {
       icon: MapPin,
-      title: t('landing.modules.parcels.title', { defaultValue: 'Gestion des parcelles' }),
-      description: t('landing.modules.parcels.desc', {
-        defaultValue: 'Cartographiez vos parcelles, suivez les cultures et reliez-les aux analyses de sol.',
-      }),
+      title: t('landing.modules.parcels.title'),
+      description: t('landing.modules.parcels.desc'),
       to: '/parcels',
       color: 'text-green-600',
     },
     {
       icon: CheckCircle,
-      title: t('landing.modules.tasks.title', { defaultValue: 'Planification des tâches' }),
-      description: t('landing.modules.tasks.desc', {
-        defaultValue: 'Assignez vos équipes, mesurez le temps passé et suivez la progression en direct.',
-      }),
+      title: t('landing.modules.tasks.title'),
+      description: t('landing.modules.tasks.desc'),
       to: '/tasks',
       color: 'text-blue-600',
     },
     {
       icon: DollarSign,
-      title: t('landing.modules.accounting.title', { defaultValue: 'Comptabilité intégrée' }),
-      description: t('landing.modules.accounting.desc', {
-        defaultValue: 'Automatisez factures, paiements et suivi des coûts par ferme ou parcelle.',
-      }),
+      title: t('landing.modules.accounting.title'),
+      description: t('landing.modules.accounting.desc'),
       to: '/accounting',
       color: 'text-emerald-600',
     },
     {
       icon: Satellite,
-      title: t('landing.modules.analytics.title', { defaultValue: 'Analyses & services' }),
-      description: t('landing.modules.analytics.desc', {
-        defaultValue: 'Exploitez les images satellite et commandez vos analyses laboratoire en quelques clics.',
-      }),
+      title: t('landing.modules.analytics.title'),
+      description: t('landing.modules.analytics.desc'),
       to: '/analyses',
       color: 'text-purple-600',
     },
@@ -394,7 +386,7 @@ const LandingPage: React.FC = () => {
                 to="/blog"
                 className="hidden sm:inline text-gray-700 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400 transition-colors text-sm"
               >
-                {t('landing.nav.blog', { defaultValue: 'Blog' })}
+                {t('landing.nav.blog')}
               </Link>
               <Link
                 to="/login"
@@ -538,25 +530,25 @@ const LandingPage: React.FC = () => {
               <Card className="border-0 bg-white/95 backdrop-blur">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-2xl text-gray-900">
-                    SIAM 2026 • Rencontrez AGROGINA
+                    {t('landing.siam.title')}
                   </CardTitle>
                   <CardDescription className="text-sm text-gray-600">
-                    Réservez un créneau de démonstration produit sur le stand AGROGINA.
+                    {t('landing.siam.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      Démonstration en direct de la plateforme.
+                      {t('landing.siam.features.demo')}
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      Focus satellite, tâches, stock et comptabilité.
+                      {t('landing.siam.features.focus')}
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
-                      Créneaux disponibles depuis le cache local.
+                      {t('landing.siam.features.slots')}
                     </li>
                   </ul>
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -571,9 +563,9 @@ const LandingPage: React.FC = () => {
 
               <Card className="border-0 bg-white/95 backdrop-blur">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-xl text-gray-900">Demande de rendez-vous</CardTitle>
+                  <CardTitle className="text-xl text-gray-900">{t('landing.siam.form.title')}</CardTitle>
                   <CardDescription className="text-sm text-gray-600">
-                    Nous revenons vers vous rapidement avec confirmation du créneau.
+                    {t('landing.siam.form.description')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -582,7 +574,7 @@ const LandingPage: React.FC = () => {
                       name="fullName"
                       value={siamForm.fullName}
                       onChange={handleSiamFieldChange}
-                      placeholder="Nom complet"
+                      placeholder={t('landing.siam.form.fullName')}
                       required
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                     />
@@ -591,7 +583,7 @@ const LandingPage: React.FC = () => {
                       type="email"
                       value={siamForm.email}
                       onChange={handleSiamFieldChange}
-                      placeholder="Email professionnel"
+                      placeholder={t('landing.siam.form.email')}
                       required
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                     />
@@ -599,7 +591,7 @@ const LandingPage: React.FC = () => {
                       name="phone"
                       value={siamForm.phone}
                       onChange={handleSiamFieldChange}
-                      placeholder="Téléphone"
+                      placeholder={t('landing.siam.form.phone')}
                       required
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                     />
@@ -617,7 +609,7 @@ const LandingPage: React.FC = () => {
                       ))}
                     </select>
                     <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">
-                      Réserver un RDV SIAM
+                      {t('landing.siam.form.submit')}
                     </Button>
                     {siamSuccessMessage && (
                       <p className="text-xs text-green-700">{siamSuccessMessage}</p>
@@ -640,13 +632,10 @@ const LandingPage: React.FC = () => {
                 id="landing-modules-title"
                 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
               >
-                {t('landing.modules.title', { defaultValue: 'Les modules qui orchestrent vos opérations' })}
+                {t('landing.modules.title')}
               </h2>
               <p className="mt-3 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-                {t('landing.modules.subtitle', {
-                  defaultValue:
-                    'Une suite intégrée reliant la planification des parcelles, le travail des équipes, la comptabilité et l’analyse agronomique.',
-                })}
+                {t('landing.modules.subtitle')}
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -673,7 +662,7 @@ const LandingPage: React.FC = () => {
                         className="px-0 text-green-700 hover:text-green-800 dark:text-green-300 dark:hover:text-green-200"
                       >
                         <Link to={module.to}>
-                          {t('landing.modules.cta', { defaultValue: 'Découvrir le module' })}
+                          {t('landing.modules.cta')}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
@@ -828,7 +817,7 @@ const LandingPage: React.FC = () => {
                         {plan.pricePerHaYearHt} MAD
                       </span>
                       <span className="text-sm sm:text-base text-muted-foreground">
-                        /ha/year HT
+                        {t('landing.pricing.perHaYear')}
                       </span>
                     </div>
                   </CardHeader>
@@ -875,24 +864,22 @@ const LandingPage: React.FC = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen className="h-5 w-5 text-green-600" />
                     <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                      {t('landing.blog.label', { defaultValue: 'Blog' })}
+                      {t('landing.blog.label')}
                     </span>
                   </div>
                   <h2
                     id="landing-blog-title"
                     className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white"
                   >
-                    {t('landing.blog.title', { defaultValue: 'Latest Insights' })}
+                    {t('landing.blog.title')}
                   </h2>
                   <p className="mt-2 text-base sm:text-lg text-gray-600 dark:text-gray-400 max-w-2xl">
-                    {t('landing.blog.subtitle', {
-                      defaultValue: 'Stay updated with the latest trends and best practices in agricultural technology.',
-                    })}
+                    {t('landing.blog.subtitle')}
                   </p>
                 </div>
                 <Button asChild variant="outline" className="self-start sm:self-center">
                   <Link to="/blog">
-                    {t('landing.blog.viewAll', { defaultValue: 'View all articles' })}
+                    {t('landing.blog.viewAll')}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
@@ -902,7 +889,7 @@ const LandingPage: React.FC = () => {
                   // Image URL should already be a full URL from the NestJS API
                   const imageUrl = post.featured_image?.url || null;
                   const formattedDate = post.publishedAt
-                    ? new Date(post.publishedAt).toLocaleDateString('en-US', {
+                    ? new Date(post.publishedAt).toLocaleDateString(i18n.language || 'fr', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',
@@ -949,7 +936,7 @@ const LandingPage: React.FC = () => {
                             )}
                             <span className="flex items-center gap-1">
                               <Clock className="h-3.5 w-3.5" />
-                              {post.reading_time} min
+                              {post.reading_time} {t('landing.blog.readingTime')}
                             </span>
                           </div>
                         </CardFooter>
@@ -1011,7 +998,7 @@ const LandingPage: React.FC = () => {
               <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
                 <li><a href="#features" className="hover:text-green-500 transition-colors">{t('landing.footer.features')}</a></li>
                 <li><a href="#pricing" className="hover:text-green-500 transition-colors">{t('landing.footer.pricing')}</a></li>
-                <li><Link to="/blog" className="hover:text-green-500 transition-colors">{t('landing.footer.blog', { defaultValue: 'Blog' })}</Link></li>
+                <li><Link to="/blog" className="hover:text-green-500 transition-colors">{t('landing.footer.blog')}</Link></li>
                 <li><Link to="/register" className="hover:text-green-500 transition-colors">{t('landing.footer.freeTrial')}</Link></li>
               </ul>
             </div>
@@ -1033,7 +1020,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center text-xs sm:text-sm">
-            <p>&copy; 2025 {t('app.name')}. {t('landing.footer.copyright')}</p>
+            <p>&copy; {new Date().getFullYear()} {t('app.name')}. {t('landing.footer.copyright')}</p>
           </div>
         </div>
       </footer>

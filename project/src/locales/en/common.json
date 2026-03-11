@@ -1166,6 +1166,7 @@
       "features": "Features",
       "pricing": "Pricing",
       "freeTrial": "Free trial",
+      "blog": "Blog",
       "support": "Support",
       "documentation": "Documentation",
       "contact": "Contact",
@@ -1175,6 +1176,76 @@
       "terms": "Terms of Service",
       "legalNotice": "Legal Notice",
       "copyright": "All rights reserved."
+    },
+    "trustedBy": "Trusted by agricultural professionals",
+    "trusted": {
+      "agronomists": "Agronomists",
+      "coops": "Cooperatives",
+      "exporters": "Exporters",
+      "labs": "Laboratories"
+    },
+    "nav": {
+      "blog": "Blog"
+    },
+    "seo": {
+      "title": "AGROGINA - The All-in-One Agricultural Management Suite | Morocco",
+      "description": "AGROGINA revolutionizes agriculture in Morocco. A unique platform to manage production, finance, HR, inventory and marketing. Precision agriculture and simplified farm management.",
+      "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina, agritech"
+    },
+    "modules": {
+      "title": "The modules that orchestrate your operations",
+      "subtitle": "An integrated suite connecting parcel planning, team work, accounting and agronomic analysis.",
+      "cta": "Discover the module",
+      "parcels": {
+        "title": "Parcel Management",
+        "desc": "Map your parcels, track crops and link them to soil analyses."
+      },
+      "tasks": {
+        "title": "Task Planning",
+        "desc": "Assign your teams, measure time spent and track progress in real time."
+      },
+      "accounting": {
+        "title": "Integrated Accounting",
+        "desc": "Automate invoices, payments and cost tracking per farm or parcel."
+      },
+      "analytics": {
+        "title": "Analyses & Services",
+        "desc": "Leverage satellite imagery and order your laboratory analyses in a few clicks."
+      }
+    },
+    "siam": {
+      "title": "SIAM 2026 • Meet AGROGINA",
+      "description": "Book a product demonstration slot at the AGROGINA booth.",
+      "features": {
+        "demo": "Live platform demonstration.",
+        "focus": "Focus on satellite, tasks, stock and accounting.",
+        "slots": "Available slots from local cache."
+      },
+      "form": {
+        "title": "Meeting Request",
+        "description": "We will get back to you quickly with confirmation of the time slot.",
+        "fullName": "Full name",
+        "email": "Professional email",
+        "phone": "Phone",
+        "submit": "Book a SIAM Meeting",
+        "success": "Request registered. Our team confirms the meeting slot within 24h."
+      }
+    },
+    "blog": {
+      "label": "Blog",
+      "title": "Latest Insights",
+      "subtitle": "Stay updated with the latest trends and best practices in agricultural technology.",
+      "viewAll": "View all articles",
+      "readingTime": "min"
+    },
+    "pricing": {
+      "title": "Simple and transparent pricing",
+      "subtitle": "Choose the plan that fits your needs",
+      "mostPopular": "Most popular",
+      "perMonth": "/month",
+      "perHaYear": "/ha/year HT",
+      "getStarted": "Get started",
+      "contactUs": "Contact us"
     }
   },
   "suppliers": {
