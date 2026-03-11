@@ -59,8 +59,8 @@ networks:
   agritech-network:
     external: true
     name: ${EXTERNAL_NETWORK_NAME:-dokploy-network}
+  # Use dokploy-network when no local Supabase stack (no separate Supabase network on host).
+  # Set SUPABASE_NETWORK_NAME in env only if you have a dedicated Supabase network (docker network ls).
   supabase-network:
     external: true
-    # When no local Supabase stack: use same as EXTERNAL_NETWORK_NAME (e.g. dokploy-network) so API can start.
-    # When local Supabase exists: set SUPABASE_NETWORK_NAME to its network (docker network ls).
-    name: ${SUPABASE_NETWORK_NAME:-dokploy-network}
+    name: dokploy-network
