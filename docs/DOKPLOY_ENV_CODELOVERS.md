@@ -147,18 +147,17 @@ Replace any `*.thebzlab.online` or `*.traefik.me` (thebzlab) with your Codelover
 1. **Deploy Supabase first**  
    In Dokploy, deploy/start the **Supabase** compose stack before the API. That creates the network.
 
-2. **Use the real network name**  
-   The name might not be `agritech-supabase-8pqkna_default`.  
-   On the **Dokploy host** (SSH or Dokploy server shell), run:
+2. **Use the exact network name (no `_default` suffix)**  
+   On the **Dokploy host**, run:
    ```bash
    docker network ls | grep -i supabase
    ```
-   Use the exact name you see (e.g. `supabase_default` if the compose has `name: supabase`).
+   Use the **exact** name shown (e.g. `agritech-supabase-8pqkna`). Do **not** append `_default` — Dokploy may create the network without that suffix.
 
 3. **Set it in env and push**  
    In `.env.dokploy` set:
    ```bash
-   SUPABASE_NETWORK_NAME=supabase_default
+   SUPABASE_NETWORK_NAME=agritech-supabase-8pqkna
    ```
    (or the name from step 2). Then:
    ```bash
