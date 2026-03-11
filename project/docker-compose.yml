@@ -31,6 +31,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}
+      # Loadbalancer: nginx serves on port 80 (ports 3002:80)
+      - traefik.http.services.frontend.loadbalancer.server.port=80
+      # Traefik.me domain (set DASHBOARD_TRAEFIK_HOST in compose env)
+      - traefik.http.routers.frontend-traefik-web.rule=Host(`${DASHBOARD_TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.frontend-traefik-web.entrypoints=web
+      - traefik.http.routers.frontend-traefik-web.service=frontend
+      - traefik.http.routers.frontend-traefik-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.frontend-traefik-websecure.rule=Host(`${DASHBOARD_TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.frontend-traefik-websecure.entrypoints=websecure
+      - traefik.http.routers.frontend-traefik-websecure.service=frontend
+      - traefik.http.routers.frontend-traefik-websecure.tls.certresolver=letsencrypt
+      # Custom domain (set DASHBOARD_PUBLIC_HOST in compose env, e.g. agriprofy.wearecodelovers.com)
+      - traefik.http.routers.frontend-custom-web.rule=Host(`${DASHBOARD_PUBLIC_HOST:-custom-domain-placeholder.invalid}`)
+      - traefik.http.routers.frontend-custom-web.entrypoints=web
+      - traefik.http.routers.frontend-custom-web.service=frontend
+      - traefik.http.routers.frontend-custom-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.frontend-custom-websecure.rule=Host(`${DASHBOARD_PUBLIC_HOST:-custom-domain-placeholder.invalid}`)
+      - traefik.http.routers.frontend-custom-websecure.entrypoints=websecure
+      - traefik.http.routers.frontend-custom-websecure.service=frontend
+      - traefik.http.routers.frontend-custom-websecure.tls.certresolver=letsencrypt
 
 networks:
   agritech-network:

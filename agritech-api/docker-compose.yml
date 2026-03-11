@@ -43,12 +43,28 @@ services:
       start_period: 10s
     labels:
       - "traefik.enable=true"
-      # Note: Router rule removed to avoid conflict with Dokploy auto-generated routers
-      # Dokploy creates: agritech-nestjs-041g0r-6-web and agritech-nestjs-041g0r-6-websecure
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}"
       - "traefik.http.services.agritech-api.loadbalancer.server.port=3001"
-      # Ensure Traefik passes through all headers from the application
-      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.X-Forwarded-Host=${API_PUBLIC_HOST}"
-      # WebSocket support - required for Socket.IO connections
+      # Traefik.me domain (set API_TRAEFIK_HOST in compose env)
+      - "traefik.http.routers.agritech-api-traefik-web.rule=Host(`${API_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.agritech-api-traefik-web.entrypoints=web"
+      - "traefik.http.routers.agritech-api-traefik-web.service=agritech-api"
+      - "traefik.http.routers.agritech-api-traefik-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.agritech-api-traefik-websecure.rule=Host(`${API_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.agritech-api-traefik-websecure.entrypoints=websecure"
+      - "traefik.http.routers.agritech-api-traefik-websecure.service=agritech-api"
+      - "traefik.http.routers.agritech-api-traefik-websecure.tls.certresolver=letsencrypt"
+      # Custom domain (set API_PUBLIC_HOST in compose env, e.g. api.wearecodelovers.com)
+      - "traefik.http.routers.agritech-api-custom-web.rule=Host(`${API_PUBLIC_HOST:-api-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.agritech-api-custom-web.entrypoints=web"
+      - "traefik.http.routers.agritech-api-custom-web.service=agritech-api"
+      - "traefik.http.routers.agritech-api-custom-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.agritech-api-custom-websecure.rule=Host(`${API_PUBLIC_HOST:-api-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.agritech-api-custom-websecure.entrypoints=websecure"
+      - "traefik.http.routers.agritech-api-custom-websecure.service=agritech-api"
+      - "traefik.http.routers.agritech-api-custom-websecure.tls.certresolver=letsencrypt"
+      # Headers / WebSocket
+      - "traefik.http.middlewares.agritech-api-headers.headers.customrequestheaders.X-Forwarded-Host=${API_PUBLIC_HOST:-${API_TRAEFIK_HOST}}"
       - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Connection=upgrade"
       - "traefik.http.middlewares.agritech-api-websocket.headers.customrequestheaders.Upgrade=websocket"
     networks:

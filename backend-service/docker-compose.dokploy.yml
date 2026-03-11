@@ -33,20 +33,27 @@ services:
     networks:
       - dokploy-network
     labels:
-      # Basic Traefik configuration
       - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-
-      # Router configuration for domain
-      - "traefik.http.routers.satellite.rule=Host(`${SATELLITE_PUBLIC_HOST}`)"
-      - "traefik.http.routers.satellite.entrypoints=websecure"
-      - "traefik.http.routers.satellite.tls=true"
-      - "traefik.http.routers.satellite.tls.certresolver=letsencrypt"
-
-      # Service configuration
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}"
       - "traefik.http.services.satellite.loadbalancer.server.port=8000"
-
-      # Dokploy labels
+      # Traefik.me domain (set SATELLITE_TRAEFIK_HOST in compose env)
+      - "traefik.http.routers.satellite-traefik-web.rule=Host(`${SATELLITE_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.satellite-traefik-web.entrypoints=web"
+      - "traefik.http.routers.satellite-traefik-web.service=satellite"
+      - "traefik.http.routers.satellite-traefik-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.satellite-traefik-websecure.rule=Host(`${SATELLITE_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.satellite-traefik-websecure.entrypoints=websecure"
+      - "traefik.http.routers.satellite-traefik-websecure.service=satellite"
+      - "traefik.http.routers.satellite-traefik-websecure.tls.certresolver=letsencrypt"
+      # Custom domain (set SATELLITE_PUBLIC_HOST in compose env, e.g. satellite.wearecodelovers.com)
+      - "traefik.http.routers.satellite-custom-web.rule=Host(`${SATELLITE_PUBLIC_HOST:-satellite-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.satellite-custom-web.entrypoints=web"
+      - "traefik.http.routers.satellite-custom-web.service=satellite"
+      - "traefik.http.routers.satellite-custom-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.satellite-custom-websecure.rule=Host(`${SATELLITE_PUBLIC_HOST:-satellite-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.satellite-custom-websecure.entrypoints=websecure"
+      - "traefik.http.routers.satellite-custom-websecure.service=satellite"
+      - "traefik.http.routers.satellite-custom-websecure.tls.certresolver=letsencrypt"
       - "dokploy=true"
 
     healthcheck:

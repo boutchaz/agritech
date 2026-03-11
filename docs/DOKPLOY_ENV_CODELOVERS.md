@@ -52,6 +52,14 @@ After deploy, note your **Supabase base URL** (e.g. `https://agritech-supabase-x
 
 NestJS agritech-api. Point to Codelovers Supabase and dashboard URL.
 
+**Traefik routing (compose labels):** Set these in the compose stack env so routing works:
+
+| Variable | Purpose |
+|----------|--------|
+| `API_TRAEFIK_HOST` | Traefik.me host for this stack (e.g. `agritech-api-xxx.traefik.me`). |
+| `API_PUBLIC_HOST` | Custom domain (e.g. `api.wearecodelovers.com`). Also used for X-Forwarded-Host. |
+| `TRAEFIK_NETWORK` | Network Traefik uses (default `dokploy-network`). |
+
 | Variable | Copy from thebzlab? | Set in Codelovers |
 |----------|---------------------|-------------------|
 | `NODE_ENV` | ✅ | `production` |
@@ -74,6 +82,14 @@ NestJS agritech-api. Point to Codelovers Supabase and dashboard URL.
 
 Python backend-service (GEE, indices, CDSE). Point to Codelovers Supabase.
 
+**Traefik routing (compose labels):** Set these in the compose stack env:
+
+| Variable | Purpose |
+|----------|--------|
+| `SATELLITE_TRAEFIK_HOST` | Traefik.me host for this stack (e.g. `agritech-satellite-xxx.traefik.me`). |
+| `SATELLITE_PUBLIC_HOST` | Custom domain (e.g. `satellite.wearecodelovers.com`). |
+| `TRAEFIK_NETWORK` | Network Traefik uses (default `dokploy-network`). |
+
 | Variable | Copy from thebzlab? | Set in Codelovers |
 |----------|---------------------|-------------------|
 | `SATELLITE_PROVIDER` | ✅ | `gee` or `auto` |
@@ -95,6 +111,14 @@ Python backend-service (GEE, indices, CDSE). Point to Codelovers Supabase.
 
 Vite/React frontend. All `VITE_*` vars are baked in at build time.
 
+**Traefik routing (compose labels):** The dashboard compose includes Traefik labels. Set these in the **compose stack env** in Dokploy so routing works:
+
+| Variable | Purpose |
+|----------|--------|
+| `DASHBOARD_TRAEFIK_HOST` | Traefik.me host for this stack (e.g. `agritech-dashboard-pu6ujw-aade68-37-27-217-1.traefik.me`). Used for HTTP/HTTPS routers. |
+| `DASHBOARD_PUBLIC_HOST` | Custom domain (e.g. `agriprofy.wearecodelovers.com`). Omit or set to a non-matching value to disable custom-domain routing. |
+| `TRAEFIK_NETWORK` | Network Traefik uses to reach the container (default `dokploy-network`). Ensure the stack is attached to this network in Dokploy. |
+
 | Variable | Copy from thebzlab? | Set in Codelovers |
 |----------|---------------------|-------------------|
 | `VITE_SUPABASE_URL` | ✅ → replace | Codelovers Supabase URL |
@@ -113,6 +137,14 @@ Vite/React frontend. All `VITE_*` vars are baked in at build time.
 ## 5. CMS (compose: `cms`)
 
 Strapi. Database and admin URL.
+
+**Traefik routing (compose labels):** Set these in the compose stack env:
+
+| Variable | Purpose |
+|----------|--------|
+| `CMS_TRAEFIK_HOST` | Traefik.me host for this stack (e.g. `agritech-cms-xxx.traefik.me`). |
+| `CMS_PUBLIC_HOST` | Custom domain (e.g. `cms.wearecodelovers.com`). |
+| `TRAEFIK_NETWORK` | Network Traefik uses (default `dokploy-network`). |
 
 | Variable | Copy from thebzlab? | Set in Codelovers |
 |----------|---------------------|-------------------|

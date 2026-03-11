@@ -35,8 +35,26 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.strapi.rule=Host(`${CMS_PUBLIC_HOST}`)"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}"
       - "traefik.http.services.strapi.loadbalancer.server.port=1337"
+      # Traefik.me domain (set CMS_TRAEFIK_HOST in compose env)
+      - "traefik.http.routers.strapi-traefik-web.rule=Host(`${CMS_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.strapi-traefik-web.entrypoints=web"
+      - "traefik.http.routers.strapi-traefik-web.service=strapi"
+      - "traefik.http.routers.strapi-traefik-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.strapi-traefik-websecure.rule=Host(`${CMS_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.strapi-traefik-websecure.entrypoints=websecure"
+      - "traefik.http.routers.strapi-traefik-websecure.service=strapi"
+      - "traefik.http.routers.strapi-traefik-websecure.tls.certresolver=letsencrypt"
+      # Custom domain (set CMS_PUBLIC_HOST in compose env, e.g. cms.wearecodelovers.com)
+      - "traefik.http.routers.strapi-custom-web.rule=Host(`${CMS_PUBLIC_HOST:-cms-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.strapi-custom-web.entrypoints=web"
+      - "traefik.http.routers.strapi-custom-web.service=strapi"
+      - "traefik.http.routers.strapi-custom-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.strapi-custom-websecure.rule=Host(`${CMS_PUBLIC_HOST:-cms-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.strapi-custom-websecure.entrypoints=websecure"
+      - "traefik.http.routers.strapi-custom-websecure.service=strapi"
+      - "traefik.http.routers.strapi-custom-websecure.tls.certresolver=letsencrypt"
 
   # Strapi PostgreSQL Database
   strapi-db:

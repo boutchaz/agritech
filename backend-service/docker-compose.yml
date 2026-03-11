@@ -23,17 +23,27 @@ services:
       - agritech-network
       - dokploy-network
     labels:
-      # Traefik configuration - minimal setup for Dokploy
       - "traefik.enable=true"
-      - "traefik.http.routers.satellite-indices-service.rule=Host(`${SATELLITE_PUBLIC_HOST}`)"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}"
       - "traefik.http.services.satellite-indices-service.loadbalancer.server.port=8000"
-
-      # Enable HTTPS
-      - "traefik.http.routers.satellite-indices-service.entrypoints=websecure"
-      - "traefik.http.routers.satellite-indices-service.tls=true"
-      - "traefik.http.routers.satellite-indices-service.tls.certresolver=letsencrypt"
-
-      # Dokploy labels
+      # Traefik.me domain (set SATELLITE_TRAEFIK_HOST in compose env)
+      - "traefik.http.routers.satellite-traefik-web.rule=Host(`${SATELLITE_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.satellite-traefik-web.entrypoints=web"
+      - "traefik.http.routers.satellite-traefik-web.service=satellite-indices-service"
+      - "traefik.http.routers.satellite-traefik-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.satellite-traefik-websecure.rule=Host(`${SATELLITE_TRAEFIK_HOST:-localhost}`)"
+      - "traefik.http.routers.satellite-traefik-websecure.entrypoints=websecure"
+      - "traefik.http.routers.satellite-traefik-websecure.service=satellite-indices-service"
+      - "traefik.http.routers.satellite-traefik-websecure.tls.certresolver=letsencrypt"
+      # Custom domain (set SATELLITE_PUBLIC_HOST in compose env, e.g. satellite.wearecodelovers.com)
+      - "traefik.http.routers.satellite-custom-web.rule=Host(`${SATELLITE_PUBLIC_HOST:-satellite-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.satellite-custom-web.entrypoints=web"
+      - "traefik.http.routers.satellite-custom-web.service=satellite-indices-service"
+      - "traefik.http.routers.satellite-custom-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.satellite-custom-websecure.rule=Host(`${SATELLITE_PUBLIC_HOST:-satellite-custom-placeholder.invalid}`)"
+      - "traefik.http.routers.satellite-custom-websecure.entrypoints=websecure"
+      - "traefik.http.routers.satellite-custom-websecure.service=satellite-indices-service"
+      - "traefik.http.routers.satellite-custom-websecure.tls.certresolver=letsencrypt"
       - "dokploy=true"
 
     healthcheck:
