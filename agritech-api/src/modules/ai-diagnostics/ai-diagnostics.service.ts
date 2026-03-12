@@ -153,13 +153,14 @@ export class AiDiagnosticsService {
     }
 
     const currentReading = satelliteReadings[satelliteReadings.length - 1];
+    const firstReading = satelliteReadings[0];
     const thresholds = this.extractThresholds(
-      calibration.calibration_data,
-      this.toNumber(calibration.baseline_ndvi) ?? currentReading.ndvi,
+      calibration?.calibration_data ?? null,
+      (calibration ? this.toNumber(calibration.baseline_ndvi) : null) ?? firstReading.ndvi,
     );
-    const baselineNdvi = this.toNumber(calibration.baseline_ndvi) ?? currentReading.ndvi;
-    const baselineNdre = this.toNumber(calibration.baseline_ndre);
-    const baselineNdmi = this.toNumber(calibration.baseline_ndmi);
+    const baselineNdvi = (calibration ? this.toNumber(calibration.baseline_ndvi) : null) ?? firstReading.ndvi;
+    const baselineNdre = calibration ? this.toNumber(calibration.baseline_ndre) : (firstReading.ndre ?? null);
+    const baselineNdmi = calibration ? this.toNumber(calibration.baseline_ndmi) : (firstReading.ndmi ?? null);
     const ndviRegression = this.calculateRegression(satelliteReadings.map((reading) => reading.ndvi));
     const ndreRegression = this.calculateRegression(
       satelliteReadings
@@ -350,7 +351,7 @@ export class AiDiagnosticsService {
   private async getLatestCalibration(
     parcelId: string,
     organizationId: string,
-  ): Promise<CalibrationRow> {
+  ): Promise<CalibrationRow | null> {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from('calibrations')
@@ -368,11 +369,7 @@ export class AiDiagnosticsService {
       throw new BadRequestException(`Failed to fetch calibration: ${error.message}`);
     }
 
-    if (!data) {
-      throw new NotFoundException('Calibration not found');
-    }
-
-    return data as CalibrationRow;
+    return (data as CalibrationRow) ?? null;
   }
 
   private async fetchSatelliteReadings(
