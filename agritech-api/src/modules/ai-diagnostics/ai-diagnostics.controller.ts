@@ -75,13 +75,27 @@ export class AiDiagnosticsController {
   }
 
   private getOrganizationId(req: Request): string {
+    const requestOrganizationId = (req as Request & { organizationId?: unknown }).organizationId;
     const headerValue = req.headers['x-organization-id'];
-    const organizationId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    const headerOrganizationId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
 
-    if (!organizationId) {
+    const organizationId =
+      typeof requestOrganizationId === 'string' && requestOrganizationId.trim().length > 0
+        ? requestOrganizationId
+        : typeof headerOrganizationId === 'string'
+          ? headerOrganizationId
+          : undefined;
+
+    const normalizedOrganizationId = organizationId?.trim();
+
+    if (
+      !normalizedOrganizationId ||
+      normalizedOrganizationId === 'undefined' ||
+      normalizedOrganizationId === 'null'
+    ) {
       throw new BadRequestException('Organization ID is required');
     }
 
-    return organizationId;
+    return normalizedOrganizationId;
   }
 }

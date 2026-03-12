@@ -223,6 +223,24 @@ export class AnnualPlanService {
     };
   }
 
+  async getPlanOrNull(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<AnnualPlanWithInterventions | null> {
+    const plan = await this.findLatestPlan(parcelId, organizationId);
+
+    if (!plan) {
+      return null;
+    }
+
+    const interventions = await this.findPlanInterventions(plan.id, organizationId);
+
+    return {
+      ...plan,
+      interventions,
+    };
+  }
+
   async getCalendar(
     parcelId: string,
     organizationId: string,
@@ -308,7 +326,12 @@ export class AnnualPlanService {
     parcelId: string,
     organizationId: string,
   ): Promise<PlanInterventionRecord[]> {
-    const plan = await this.findLatestPlanOrThrow(parcelId, organizationId);
+    const plan = await this.findLatestPlan(parcelId, organizationId);
+
+    if (!plan) {
+      return [];
+    }
+
     return this.findPlanInterventions(plan.id, organizationId);
   }
 
@@ -440,10 +463,10 @@ export class AnnualPlanService {
     return data.reference_data;
   }
 
-  private async findLatestPlanOrThrow(
+  private async findLatestPlan(
     parcelId: string,
     organizationId: string,
-  ): Promise<AnnualPlanRecord> {
+  ): Promise<AnnualPlanRecord | null> {
     const { data, error } = await this.databaseService
       .getAdminClient()
       .from('annual_plans')
@@ -461,11 +484,20 @@ export class AnnualPlanService {
       );
     }
 
-    if (!data) {
+    return (data as AnnualPlanRecord | null) ?? null;
+  }
+
+  private async findLatestPlanOrThrow(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<AnnualPlanRecord> {
+    const plan = await this.findLatestPlan(parcelId, organizationId);
+
+    if (!plan) {
       throw new NotFoundException('Annual plan not found for parcel');
     }
 
-    return data as AnnualPlanRecord;
+    return plan;
   }
 
   private async findPlanByIdOrThrow(

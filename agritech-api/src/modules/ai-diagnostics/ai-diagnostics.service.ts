@@ -316,7 +316,7 @@ export class AiDiagnosticsService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, farms!inner(organization_id)')
+      .select('id, crop_type, organization_id, farms(organization_id)')
       .eq('id', parcelId)
       .single();
 
@@ -324,8 +324,14 @@ export class AiDiagnosticsService {
       throw new NotFoundException('Parcel not found');
     }
 
-    const farmOrganizationId = this.extractFarmOrganizationId(parcel.farms);
-    if (farmOrganizationId !== organizationId) {
+    const belongsToOrganization =
+      this.matchesOrganization(parcel.organization_id, organizationId) ||
+      this.matchesOrganization(
+        this.extractFarmOrganizationId(parcel.farms),
+        organizationId,
+      );
+
+    if (!belongsToOrganization) {
       throw new NotFoundException('Parcel not found');
     }
 
@@ -764,6 +770,17 @@ export class AiDiagnosticsService {
     }
 
     return null;
+  }
+
+  private matchesOrganization(
+    candidateOrganizationId: string | null,
+    organizationId: string,
+  ): boolean {
+    return (
+      typeof candidateOrganizationId === 'string' &&
+      candidateOrganizationId.trim().toLowerCase() ===
+        organizationId.trim().toLowerCase()
+    );
   }
 
   private isJsonObject(value: unknown): value is Record<string, unknown> {

@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -39,10 +40,10 @@ export class AnnualPlanController {
   async getPlan(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AnnualPlanWithInterventions> {
+  ): Promise<AnnualPlanWithInterventions | null> {
     const organizationId = this.getOrganizationId(req);
 
-    return this.annualPlanService.getPlan(parcelId, organizationId);
+    return this.annualPlanService.getPlanOrNull(parcelId, organizationId);
   }
 
   @Get('parcels/:parcelId/ai/plan/calendar')
@@ -84,6 +85,11 @@ export class AnnualPlanController {
   ): Promise<AnnualPlanWithInterventions> {
     const organizationId = this.getOrganizationId(req);
     const plan = await this.annualPlanService.getPlan(parcelId, organizationId);
+
+    if (!plan) {
+      throw new NotFoundException('Annual plan not found for parcel');
+    }
+
     const validatedPlan = await this.annualPlanService.validatePlan(
       plan.id,
       organizationId,
@@ -143,16 +149,30 @@ export class AnnualPlanController {
   }
 
   private getOrganizationId(req: Request): string {
+    const requestOrganizationId = (req as Request & { organizationId?: unknown }).organizationId;
     const headerValue = req.headers['x-organization-id'];
-    const organizationId = Array.isArray(headerValue)
+    const headerOrganizationId = Array.isArray(headerValue)
       ? headerValue[0]
       : headerValue;
 
-    if (!organizationId) {
+    const organizationId =
+      typeof requestOrganizationId === 'string' && requestOrganizationId.trim().length > 0
+        ? requestOrganizationId
+        : typeof headerOrganizationId === 'string'
+          ? headerOrganizationId
+          : undefined;
+
+    const normalizedOrganizationId = organizationId?.trim();
+
+    if (
+      !normalizedOrganizationId ||
+      normalizedOrganizationId === 'undefined' ||
+      normalizedOrganizationId === 'null'
+    ) {
       throw new BadRequestException('Organization ID is required');
     }
 
-    return organizationId;
+    return normalizedOrganizationId;
   }
 
   private resolveYear(year?: number): number {
