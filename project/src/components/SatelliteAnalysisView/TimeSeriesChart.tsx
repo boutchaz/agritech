@@ -881,6 +881,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                     stroke={getIndexColor(selectedIndices[0])}
                     strokeWidth={1}
                     dot={false}
+                    connectNulls
                   />
                 </LineChart>
               </Brush>
@@ -934,6 +935,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   strokeWidth={2}
                   dot={{ fill: getIndexColor(index), r: 3 }}
                   activeDot={{ r: 5 }}
+                  connectNulls
                 />
               ))}
             </LineChart>

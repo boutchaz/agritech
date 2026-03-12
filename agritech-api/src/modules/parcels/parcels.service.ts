@@ -13,6 +13,7 @@ import { CreateParcelDto } from './dto/create-parcel.dto';
 import { UpdateParcelDto } from './dto/update-parcel.dto';
 import { ListParcelsResponseDto } from './dto/list-parcels.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { CalibrationService } from '../calibration/calibration.service';
 
 @Injectable()
 export class ParcelsService {
@@ -22,6 +23,7 @@ export class ParcelsService {
   constructor(
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
+    private calibrationService: CalibrationService,
   ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseServiceKey = this.configService.get<string>(
@@ -486,35 +488,37 @@ export class ParcelsService {
     this.logger.log(`Parcel created successfully: ${newParcel.id}`);
 
     if (newParcel.boundary && Array.isArray(newParcel.boundary) && newParcel.boundary.length >= 3) {
-      this.triggerSatelliteSync(newParcel.id, organizationId, newParcel.boundary, dto.farm_id, dto.name);
+      this.triggerAutoCalibration(newParcel.id, organizationId, newParcel.crop_type);
     }
 
     return newParcel;
   }
 
-  private triggerSatelliteSync(
+  private triggerAutoCalibration(
     parcelId: string,
     organizationId: string,
-    boundary: number[][],
-    farmId?: string,
-    parcelName?: string,
+    cropType: string | null,
   ) {
-    const satelliteApiUrl = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
-    const url = `${satelliteApiUrl.replace(/\/+$/, '')}/api/sync/parcel`;
+    if (!cropType) {
+      this.logger.log(
+        `Skipping auto-calibration for parcel ${parcelId}: no crop type set`,
+      );
+      return;
+    }
 
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        parcel_id: parcelId,
-        organization_id: organizationId,
-        boundary,
-        farm_id: farmId || null,
-        parcel_name: parcelName || null,
-      }),
-    }).catch((err) => {
-      this.logger.warn(`Failed to trigger satellite sync for parcel ${parcelId}: ${err.message}`);
-    });
+    this.calibrationService
+      .startCalibration(parcelId, organizationId, {})
+      .then((calibration) => {
+        this.logger.log(
+          `Auto-calibration triggered for parcel ${parcelId}: ${calibration.id} (${calibration.status})`,
+        );
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'unknown error';
+        this.logger.warn(
+          `Auto-calibration failed for parcel ${parcelId}: ${message}`,
+        );
+      });
   }
 
   async updateParcel(
