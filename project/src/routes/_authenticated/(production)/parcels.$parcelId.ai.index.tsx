@@ -14,7 +14,7 @@ const AIDashboard = () => {
     (!calibration ||
       calibration.status === 'pending' ||
       calibration.status === 'failed' ||
-      calibration.status === 'provisioning');
+      calibration.status === 'in_progress');
 
   useEffect(() => {
     if (shouldRedirectToCalibration) {

@@ -158,7 +158,7 @@ export class CalibrationService {
       .insert({
         parcel_id: parcelId,
         organization_id: organizationId,
-        status: 'provisioning',
+        status: 'in_progress',
         started_at: startedAt,
         calibration_data: {
           request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },

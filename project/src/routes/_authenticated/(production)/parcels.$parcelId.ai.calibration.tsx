@@ -10,9 +10,8 @@ const AICalibrationPage = () => {
   const { data: diagnostics } = useAIDiagnostics(parcelId);
   const { mutate: startCalibration, isPending: isStarting } = useStartAICalibration();
 
-  const isProvisioning = calibration?.status === 'provisioning';
-  const isInProgress = calibration?.status === 'in_progress';
-  const isBusy = isProvisioning || isInProgress || isStarting;
+  const isInProgress = calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
+  const isBusy = isInProgress || isStarting;
   const isCompleted = calibration?.status === 'completed';
 
   if (isCalibrationLoading) {
@@ -42,12 +41,12 @@ const AICalibrationPage = () => {
             ) : (
               <Play className="w-4 h-4" />
             )}
-            <span>{isProvisioning ? 'Provisioning...' : isInProgress ? 'Calibrating...' : 'Re-calibrate'}</span>
+            <span>{isInProgress ? 'Calibrating...' : 'Re-calibrate'}</span>
           </button>
         )}
       </div>
 
-      {isProvisioning && (
+      {isInProgress && (
         <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
