@@ -9,11 +9,11 @@ import { DatabaseService } from '../database/database.service';
 import { WeatherProvider } from '../chat/providers/weather.provider';
 import { StartCalibrationDto } from './dto/start-calibration.dto';
 
-const CALIBRATION_LOOKBACK_DAYS = 90;
+const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 const PROVISION_POLL_INTERVAL_MS = 10_000;
 const PROVISION_MAX_ATTEMPTS = 60;
-const WEATHER_LOOKBACK_DAYS = 90;
+const WEATHER_LOOKBACK_DAYS = 730;
 const SATELLITE_SYNC_INDICES = ['NDVI', 'NDRE', 'NDMI', 'GCI', 'EVI', 'SAVI'];
 
 type ZoneClassification = 'optimal' | 'normal' | 'stressed';

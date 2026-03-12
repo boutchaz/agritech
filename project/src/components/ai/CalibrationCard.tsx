@@ -34,18 +34,24 @@ export const CalibrationCard: React.FC<CalibrationCardProps> = ({ calibration })
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Zone Classification</div>
-          <div className="space-y-2">
-            {Object.entries(calibration.zone_classification || {}).map(([zone, value]) => (
-              <div key={zone} className="flex justify-between items-center text-sm">
-                <span className="text-gray-700 dark:text-gray-300 capitalize">{zone}</span>
-                <span className="font-medium text-gray-900 dark:text-white">{String(value)}</span>
-              </div>
-            ))}
-            {Object.keys(calibration.zone_classification || {}).length === 0 && (
-              <div className="text-sm text-gray-500 dark:text-gray-400 italic">No zones classified yet</div>
-            )}
-          </div>
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Zone Classification</div>
+          {calibration.zone_classification ? (
+            <div className="mt-2">
+              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold ${
+                calibration.zone_classification === 'optimal'
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : calibration.zone_classification === 'normal'
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+              }`}>
+                {calibration.zone_classification === 'optimal' && '✓ '}
+                {calibration.zone_classification === 'stressed' && '⚠ '}
+                <span className="capitalize">{String(calibration.zone_classification)}</span>
+              </span>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500 dark:text-gray-400 italic mt-2">No zones classified yet</div>
+          )}
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ export interface AICalibration {
   parcel_id: string;
   status: 'pending' | 'provisioning' | 'in_progress' | 'completed' | 'failed';
   confidence_score: number;
-  zone_classification: Record<string, unknown>;
+  zone_classification: 'optimal' | 'normal' | 'stressed' | null;
   created_at: string;
   updated_at: string;
 }
