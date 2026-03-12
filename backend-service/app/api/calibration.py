@@ -408,17 +408,16 @@ async def run_calibration(request: CalibrationRunRequest):
 
     satellite_dates = {reading.date for reading in request.satellite_readings}
     weather_dates = {reading.date for reading in request.weather_readings}
-    overlap_ratio = len(satellite_dates & weather_dates) / max(
-        len(satellite_dates | weather_dates), 1
-    )
+    satellite_covered = len(satellite_dates & weather_dates)
+    coverage_ratio = satellite_covered / max(len(satellite_dates), 1)
     count_ratio = (
         min(len(request.satellite_readings) / 30.0, 1.0) * 0.5
-        + min(len(request.weather_readings) / 30.0, 1.0) * 0.5
+        + min(len(request.weather_readings) / 90.0, 1.0) * 0.5
     )
-    completeness_ratio = count_ratio * overlap_ratio
+    completeness_ratio = count_ratio * (0.5 + 0.5 * coverage_ratio)
     ndvi_std = float(np.std(np.array(ndvi_values, dtype=float)))
     coefficient_of_variation = ndvi_std / baseline_ndvi if baseline_ndvi else 1.0
-    stability_score = max(0.0, 1.0 - (coefficient_of_variation * 5.0))
+    stability_score = max(0.1, 1.0 - (coefficient_of_variation * 1.5))
     confidence_score = round(min(1.0, completeness_ratio * stability_score), 2)
 
     zone_classification = _classify_ndvi_value(baseline_ndvi, request.ndvi_thresholds)

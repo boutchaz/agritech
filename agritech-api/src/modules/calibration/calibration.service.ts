@@ -125,8 +125,12 @@ export class CalibrationService {
       this.fetchWeatherReadings(parcel),
     ]);
 
-    const needsSatelliteProvisioning = !satelliteReadings.length;
-    const needsWeatherProvisioning = !weatherReadings.length;
+    const needsSatelliteProvisioning =
+      !satelliteReadings.length ||
+      this.hasInsufficientCoverage(satelliteReadings, CALIBRATION_LOOKBACK_DAYS);
+    const needsWeatherProvisioning =
+      !weatherReadings.length ||
+      this.hasInsufficientCoverage(weatherReadings, WEATHER_LOOKBACK_DAYS);
 
     if (needsSatelliteProvisioning || needsWeatherProvisioning) {
       return this.startProvisioningCalibration(
@@ -442,6 +446,35 @@ export class CalibrationService {
     }
 
     this.logger.log(`Provisioned ${rows.length} weather data points for parcel`);
+  }
+
+  private hasInsufficientCoverage(
+    readings: { date: string }[],
+    lookbackDays: number,
+  ): boolean {
+    if (!readings.length) {
+      return true;
+    }
+
+    const sorted = [...readings].sort((a, b) => a.date.localeCompare(b.date));
+    const earliestDate = new Date(sorted[0].date);
+    const requiredStart = new Date();
+    requiredStart.setDate(requiredStart.getDate() - lookbackDays);
+
+    const coverageThreshold = new Date(
+      requiredStart.getTime() + lookbackDays * 0.3 * 86_400_000,
+    );
+
+    if (earliestDate > coverageThreshold) {
+      this.logger.log(
+        `Insufficient data coverage: earliest=${sorted[0].date}, ` +
+          `required=${requiredStart.toISOString().split('T')[0]}, ` +
+          `threshold=${coverageThreshold.toISOString().split('T')[0]}`,
+      );
+      return true;
+    }
+
+    return false;
   }
 
   private delay(ms: number): Promise<void> {
