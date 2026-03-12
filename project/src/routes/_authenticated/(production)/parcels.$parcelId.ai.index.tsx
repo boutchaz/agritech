@@ -9,11 +9,18 @@ const AIDashboard = () => {
   const navigate = useNavigate();
   const { data: calibration, isLoading } = useAICalibration(parcelId);
 
+  const shouldRedirectToCalibration =
+    !isLoading &&
+    (!calibration ||
+      calibration.status === 'pending' ||
+      calibration.status === 'failed' ||
+      calibration.status === 'provisioning');
+
   useEffect(() => {
-    if (!isLoading && (!calibration || calibration.status === 'pending' || calibration.status === 'failed')) {
+    if (shouldRedirectToCalibration) {
       navigate({ to: `/parcels/${parcelId}/ai/calibration` });
     }
-  }, [calibration, isLoading, navigate, parcelId]);
+  }, [shouldRedirectToCalibration, navigate, parcelId]);
 
   if (isLoading) {
     return (
@@ -23,7 +30,7 @@ const AIDashboard = () => {
     );
   }
 
-  if (!calibration || calibration.status === 'pending' || calibration.status === 'failed') {
+  if (shouldRedirectToCalibration || !calibration) {
     return null; // Will redirect
   }
 

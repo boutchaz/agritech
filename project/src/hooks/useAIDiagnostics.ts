@@ -11,9 +11,28 @@ export function useAIDiagnostics(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return aiCalibrationApi.getAIDiagnostics(parcelId, currentOrganization.id);
+      try {
+        return await aiCalibrationApi.getAIDiagnostics(parcelId, currentOrganization.id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        if (
+          message.includes('not found') ||
+          message.includes('No satellite readings') ||
+          message.includes('resource was not found')
+        ) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    retry: (failureCount, error) => {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('not found') || message.includes('No satellite readings')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 }

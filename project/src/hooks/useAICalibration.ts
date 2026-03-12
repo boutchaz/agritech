@@ -2,6 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { aiCalibrationApi, type AICalibration } from '../lib/api/ai-calibration';
 
+const POLLING_INTERVAL_MS = 5000;
+
+function isCalibrationInProgress(data: AICalibration | null | undefined): boolean {
+  return data?.status === 'provisioning' || data?.status === 'in_progress';
+}
+
 export function useAICalibration(parcelId: string) {
   const { currentOrganization } = useAuth();
 
@@ -11,10 +17,24 @@ export function useAICalibration(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return aiCalibrationApi.getCalibration(parcelId, currentOrganization.id);
+      try {
+        return await aiCalibrationApi.getCalibration(parcelId, currentOrganization.id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        if (message.includes('not found') || message.includes('resource was not found')) {
+          return null;
+        }
+        throw error;
+      }
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: (query) => {
+      if (isCalibrationInProgress(query.state.data)) {
+        return POLLING_INTERVAL_MS;
+      }
+      return false;
+    },
   });
 }
 
@@ -31,6 +51,7 @@ export function useStartAICalibration() {
     },
     onSuccess: (_, parcelId) => {
       queryClient.invalidateQueries({ queryKey: ['ai-calibration', parcelId] });
+      queryClient.invalidateQueries({ queryKey: ['ai-diagnostics', parcelId] });
     },
   });
 }

@@ -11,6 +11,10 @@ import { StartCalibrationDto } from './dto/start-calibration.dto';
 
 const CALIBRATION_LOOKBACK_DAYS = 90;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
+const PROVISION_POLL_INTERVAL_MS = 10_000;
+const PROVISION_MAX_ATTEMPTS = 60;
+const WEATHER_LOOKBACK_DAYS = 90;
+const SATELLITE_SYNC_INDICES = ['NDVI', 'NDRE', 'NDMI', 'GCI', 'EVI', 'SAVI'];
 
 type ZoneClassification = 'optimal' | 'normal' | 'stressed';
 type JsonObject = Record<string, unknown>;
@@ -114,18 +118,348 @@ export class CalibrationService {
     organizationId: string,
     dto: StartCalibrationDto,
   ): Promise<CalibrationRecord> {
-    const supabase = this.databaseService.getAdminClient();
     const parcel = await this.getParcelContext(parcelId, organizationId);
 
-    const [satelliteReadings, weatherReadings, ndviThresholds] = await Promise.all([
+    const [satelliteReadings, weatherReadings] = await Promise.all([
       this.fetchSatelliteReadings(parcelId, organizationId),
       this.fetchWeatherReadings(parcel),
-      this.fetchNdviThresholds(parcel.cropType, parcel.system),
     ]);
 
-    if (!satelliteReadings.length || !weatherReadings.length) {
-      throw new BadRequestException('Satellite and weather readings are required');
+    const needsSatelliteProvisioning = !satelliteReadings.length;
+    const needsWeatherProvisioning = !weatherReadings.length;
+
+    if (needsSatelliteProvisioning || needsWeatherProvisioning) {
+      return this.startProvisioningCalibration(
+        parcelId,
+        organizationId,
+        parcel,
+        dto,
+        needsSatelliteProvisioning,
+        needsWeatherProvisioning,
+      );
     }
+
+    return this.runCalibrationComputation(parcelId, organizationId, parcel, dto, satelliteReadings, weatherReadings);
+  }
+
+  private async startProvisioningCalibration(
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+    needsSatellite: boolean,
+    needsWeather: boolean,
+  ): Promise<CalibrationRecord> {
+    const supabase = this.databaseService.getAdminClient();
+    const startedAt = new Date().toISOString();
+
+    const { data: calibration, error: insertError } = await supabase
+      .from('calibrations')
+      .insert({
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        status: 'provisioning',
+        started_at: startedAt,
+        calibration_data: {
+          request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          parcel: { id: parcel.id, crop_type: parcel.cropType, system: parcel.system },
+          provisioning: {
+            satellite: needsSatellite,
+            weather: needsWeather,
+            started_at: startedAt,
+          },
+        },
+      })
+      .select('*')
+      .single();
+
+    if (insertError || !calibration) {
+      this.logger.error(
+        `Failed to create provisioning calibration for parcel ${parcelId}: ${insertError?.message}`,
+      );
+      throw new BadRequestException(
+        `Failed to create calibration: ${insertError?.message ?? 'unknown error'}`,
+      );
+    }
+
+    this.provisionAndCalibrateInBackground(
+      calibration.id as string,
+      parcelId,
+      organizationId,
+      parcel,
+      dto,
+      needsSatellite,
+      needsWeather,
+    ).catch((error) => {
+      this.logger.error(
+        `Background provisioning failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    });
+
+    return calibration as CalibrationRecord;
+  }
+
+  private async provisionAndCalibrateInBackground(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+    needsSatellite: boolean,
+    needsWeather: boolean,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    try {
+      if (needsSatellite) {
+        this.logger.log(`Provisioning satellite data for parcel ${parcelId}`);
+        await this.triggerSatelliteSync(parcelId, organizationId, parcel.boundary);
+        await this.waitForSatelliteSync(parcelId, organizationId);
+      }
+
+      if (needsWeather) {
+        this.logger.log(`Provisioning weather data for parcel ${parcelId}`);
+        await this.provisionWeatherData(parcel, organizationId);
+      }
+
+      const [satelliteReadings, weatherReadings] = await Promise.all([
+        this.fetchSatelliteReadings(parcelId, organizationId),
+        this.fetchWeatherReadings(parcel),
+      ]);
+
+      if (!satelliteReadings.length || !weatherReadings.length) {
+        const missing = !satelliteReadings.length ? 'satellite' : 'weather';
+        throw new Error(`${missing} data still unavailable after provisioning`);
+      }
+
+      const ndviThresholds = await this.fetchNdviThresholds(parcel.cropType, parcel.system);
+      const computation = await this.postCalibrationApi<CalibrationComputationResponse>(
+        '/api/calibration/run',
+        {
+          parcel_id: parcelId,
+          crop_type: parcel.cropType,
+          system: parcel.system,
+          satellite_readings: satelliteReadings,
+          weather_readings: weatherReadings,
+          ndvi_thresholds: ndviThresholds,
+        },
+        organizationId,
+      );
+
+      const completedAt = new Date().toISOString();
+      const calibrationData = {
+        request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+        parcel: { id: parcel.id, crop_type: parcel.cropType, system: parcel.system },
+        thresholds: ndviThresholds,
+        inputs: { satellite_readings: satelliteReadings, weather_readings: weatherReadings },
+        computation,
+        validation: { validated: false, validated_at: null },
+      };
+
+      const { error: updateError } = await supabase
+        .from('calibrations')
+        .update({
+          status: 'completed',
+          completed_at: completedAt,
+          baseline_ndvi: computation.baseline_ndvi,
+          baseline_ndre: computation.baseline_ndre,
+          baseline_ndmi: computation.baseline_ndmi,
+          confidence_score: computation.confidence_score,
+          zone_classification: computation.zone_classification,
+          phenology_stage: computation.phenology_stage,
+          calibration_data: calibrationData,
+        })
+        .eq('id', calibrationId);
+
+      if (updateError) {
+        throw new Error(`Failed to update calibration: ${updateError.message}`);
+      }
+
+      const { error: updateParcelError } = await supabase
+        .from('parcels')
+        .update({ ai_calibration_id: calibrationId })
+        .eq('id', parcelId);
+
+      if (updateParcelError) {
+        this.logger.error(
+          `Failed to link calibration ${calibrationId} to parcel ${parcelId}: ${updateParcelError.message}`,
+        );
+      }
+
+      this.logger.log(`Calibration ${calibrationId} completed successfully for parcel ${parcelId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      this.logger.error(`Provisioning calibration ${calibrationId} failed: ${message}`);
+
+      await supabase
+        .from('calibrations')
+        .update({
+          status: 'failed',
+          error_message: message,
+        })
+        .eq('id', calibrationId);
+    }
+  }
+
+  private async triggerSatelliteSync(
+    parcelId: string,
+    organizationId: string,
+    boundary: number[][],
+  ): Promise<void> {
+    const url = `${this.getSatelliteServiceUrl()}/api/sync/parcel`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-organization-id': organizationId,
+      },
+      body: JSON.stringify({
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        boundary,
+        indices: SATELLITE_SYNC_INDICES,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to trigger satellite sync: ${errorText || response.statusText}`);
+    }
+  }
+
+  private async waitForSatelliteSync(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    for (let attempt = 0; attempt < PROVISION_MAX_ATTEMPTS; attempt += 1) {
+      await this.delay(PROVISION_POLL_INTERVAL_MS);
+
+      const status = await this.getSatelliteSyncStatus(parcelId, organizationId);
+      if (status === 'synced' || status === 'partial') {
+        this.logger.log(`Satellite sync completed for parcel ${parcelId}: ${status}`);
+        return;
+      }
+    }
+
+    throw new Error('Satellite data provisioning timed out');
+  }
+
+  private async getSatelliteSyncStatus(
+    parcelId: string,
+    _organizationId: string,
+  ): Promise<string> {
+    const url = `${this.getSatelliteServiceUrl()}/api/sync/parcel/${parcelId}/status`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      return 'no_data';
+    }
+
+    const data = await response.json() as { status: string };
+    return data.status;
+  }
+
+  private async provisionWeatherData(
+    parcel: ParcelContext,
+    organizationId: string,
+  ): Promise<void> {
+    if (!parcel.boundary.length) {
+      throw new Error('Parcel boundary is required to provision weather data');
+    }
+
+    const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
+    const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
+    const roundedLat = this.roundCoordinate(latitude, 2);
+    const roundedLon = this.roundCoordinate(longitude, 2);
+
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = this.getLookbackDate(WEATHER_LOOKBACK_DAYS);
+
+    const params = new URLSearchParams({
+      latitude: String(roundedLat),
+      longitude: String(roundedLon),
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    const url = `${this.getSatelliteServiceUrl()}/api/weather/historical?${params.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'x-organization-id': organizationId },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch weather data: ${errorText || response.statusText}`);
+    }
+
+    const weatherResponse = await response.json() as {
+      latitude: number;
+      longitude: number;
+      source?: string;
+      data: Array<Record<string, unknown>>;
+    };
+
+    if (!weatherResponse.data?.length) {
+      this.logger.warn(`No weather data returned for parcel at ${roundedLat},${roundedLon}`);
+      return;
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const rows = weatherResponse.data.map((entry) => ({
+      latitude: this.roundCoordinate(weatherResponse.latitude, 2),
+      longitude: this.roundCoordinate(weatherResponse.longitude, 2),
+      date: entry.date as string,
+      temperature_min: entry.temperature_min ?? null,
+      temperature_max: entry.temperature_max ?? null,
+      temperature_mean: entry.temperature_mean ?? null,
+      relative_humidity_mean: entry.relative_humidity_mean ?? null,
+      relative_humidity_max: entry.relative_humidity_max ?? null,
+      relative_humidity_min: entry.relative_humidity_min ?? null,
+      precipitation_sum: entry.precipitation_sum ?? null,
+      wind_speed_max: entry.wind_speed_max ?? null,
+      wind_gusts_max: entry.wind_gusts_max ?? null,
+      shortwave_radiation_sum: entry.shortwave_radiation_sum ?? null,
+      et0_fao_evapotranspiration: entry.et0_fao_evapotranspiration ?? null,
+      soil_temperature_0_7cm: entry.soil_temperature_0_7cm ?? null,
+      soil_temperature_7_28cm: entry.soil_temperature_7_28cm ?? null,
+      soil_moisture_0_7cm: entry.soil_moisture_0_7cm ?? null,
+      soil_moisture_7_28cm: entry.soil_moisture_7_28cm ?? null,
+      source: weatherResponse.source ?? 'open-meteo-archive',
+    }));
+
+    const { error } = await supabase
+      .from('weather_daily_data')
+      .upsert(rows, { onConflict: 'latitude,longitude,date' });
+
+    if (error) {
+      throw new Error(`Failed to persist weather data: ${error.message}`);
+    }
+
+    this.logger.log(`Provisioned ${rows.length} weather data points for parcel`);
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  private async runCalibrationComputation(
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+    satelliteReadings: CalibrationSatelliteReading[],
+    weatherReadings: CalibrationWeatherReading[],
+  ): Promise<CalibrationRecord> {
+    const supabase = this.databaseService.getAdminClient();
+    const ndviThresholds = await this.fetchNdviThresholds(parcel.cropType, parcel.system);
 
     const startedAt = new Date().toISOString();
     const computation = await this.postCalibrationApi<CalibrationComputationResponse>(

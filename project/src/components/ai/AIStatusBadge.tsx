@@ -2,7 +2,7 @@ import React from 'react';
 import { BrainCircuit, CheckCircle2, AlertTriangle, Clock, XCircle } from 'lucide-react';
 
 interface AIStatusBadgeProps {
-  status: 'disabled' | 'calibration' | 'active' | 'paused' | 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: 'disabled' | 'calibration' | 'active' | 'paused' | 'pending' | 'provisioning' | 'in_progress' | 'completed' | 'failed';
   className?: string;
 }
 
@@ -15,6 +15,12 @@ export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className 
           color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
           icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />,
           label: status === 'active' ? 'Active' : 'Completed',
+        };
+      case 'provisioning':
+        return {
+          color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
+          icon: <BrainCircuit className="w-4 h-4 mr-1.5 animate-pulse" />,
+          label: 'Provisioning Data',
         };
       case 'calibration':
       case 'in_progress':
