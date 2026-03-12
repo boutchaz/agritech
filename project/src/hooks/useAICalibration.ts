@@ -18,7 +18,12 @@ export function useAICalibration(parcelId: string) {
         throw new Error('No organization selected');
       }
       try {
-        return await aiCalibrationApi.getCalibration(parcelId, currentOrganization.id);
+        const result = await aiCalibrationApi.getCalibration(parcelId, currentOrganization.id);
+        // apiRequest returns {} for null/empty responses — normalize to null
+        if (!result || !result.id) {
+          return null;
+        }
+        return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : '';
         if (message.includes('not found') || message.includes('resource was not found')) {
