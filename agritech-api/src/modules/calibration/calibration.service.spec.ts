@@ -57,20 +57,29 @@ describe('CalibrationService', () => {
       mockQueryResult({
         id: parcelId,
         crop_type: agromindCalibrationFixture.parcel.crop_type,
-        system: agromindCalibrationFixture.parcel.system,
+        planting_system: agromindCalibrationFixture.parcel.system,
         boundary: parcelBoundary,
         farms: { organization_id: organizationId },
       }),
     );
 
-    const satelliteRows = agromindCalibrationFixture.satellite_readings.flatMap((reading) => [
-      { date: reading.date, index_name: 'NDVI', mean_value: reading.ndvi },
-      { date: reading.date, index_name: 'NDRE', mean_value: reading.ndre },
-      { date: reading.date, index_name: 'NDMI', mean_value: reading.ndmi },
-      { date: reading.date, index_name: 'GCI', mean_value: reading.gci },
-      { date: reading.date, index_name: 'EVI', mean_value: reading.evi },
-      { date: reading.date, index_name: 'SAVI', mean_value: reading.savi },
-    ]);
+    const lookbackBase = new Date();
+    lookbackBase.setDate(lookbackBase.getDate() - 730);
+    const toIsoDate = (d: Date) => d.toISOString().split('T')[0];
+
+    const satelliteRows = agromindCalibrationFixture.satellite_readings.flatMap((reading, index) => {
+      const readingDate = new Date(lookbackBase);
+      readingDate.setDate(readingDate.getDate() + index);
+      const date = toIsoDate(readingDate);
+      return [
+        { date, index_name: 'NDVI', mean_value: reading.ndvi },
+        { date, index_name: 'NDRE', mean_value: reading.ndre },
+        { date, index_name: 'NDMI', mean_value: reading.ndmi },
+        { date, index_name: 'GCI', mean_value: reading.gci },
+        { date, index_name: 'EVI', mean_value: reading.evi },
+        { date, index_name: 'SAVI', mean_value: reading.savi },
+      ];
+    });
     const satelliteQuery = createMockQueryBuilder();
     satelliteQuery.select.mockReturnValue(satelliteQuery);
     satelliteQuery.eq.mockReturnValue(satelliteQuery);
@@ -86,13 +95,17 @@ describe('CalibrationService', () => {
     weatherQuery.order.mockReturnValue(weatherQuery);
     setupThenableMock(
       weatherQuery,
-      agromindCalibrationFixture.weather_readings.map((reading) => ({
-        date: reading.date,
-        temperature_min: reading.temp_min,
-        temperature_max: reading.temp_max,
-        precipitation_sum: reading.precip,
-        et0_fao_evapotranspiration: reading.et0,
-      })),
+      agromindCalibrationFixture.weather_readings.map((reading, index) => {
+        const readingDate = new Date(lookbackBase);
+        readingDate.setDate(readingDate.getDate() + index);
+        return {
+          date: toIsoDate(readingDate),
+          temperature_min: reading.temp_min,
+          temperature_max: reading.temp_max,
+          precipitation_sum: reading.precip,
+          et0_fao_evapotranspiration: reading.et0,
+        };
+      }),
     );
 
     const cropReferenceQuery = createMockQueryBuilder();
@@ -202,6 +215,8 @@ describe('CalibrationService', () => {
     );
     expect(parcelUpdateQuery.update).toHaveBeenCalledWith({
       ai_calibration_id: insertedCalibration.id,
+      ai_enabled: true,
+      ai_phase: 'active',
     });
   });
 

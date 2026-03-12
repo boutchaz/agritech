@@ -284,7 +284,7 @@ export class CalibrationService {
 
       const { error: updateParcelError } = await supabase
         .from('parcels')
-        .update({ ai_calibration_id: calibrationId })
+        .update({ ai_calibration_id: calibrationId, ai_enabled: true, ai_phase: 'active' })
         .eq('id', parcelId);
 
       if (updateParcelError) {
@@ -564,7 +564,7 @@ export class CalibrationService {
 
     const { error: updateParcelError } = await supabase
       .from('parcels')
-      .update({ ai_calibration_id: calibration.id })
+      .update({ ai_calibration_id: calibration.id, ai_enabled: true, ai_phase: 'active' })
       .eq('id', parcelId);
 
     if (updateParcelError) {

@@ -215,6 +215,78 @@ describe('AiJobsService', () => {
     );
   });
 
+  it('runDailyAiPipelineTrigger skips alert creation when unresolved alert already exists', async () => {
+    const parcelsQuery = createThenableQuery([
+      {
+        id: 'parcel-1',
+        organization_id: 'org-1',
+        crop_type: 'olive',
+        boundary: [[-7.5, 33.6], [-7.51, 33.6], [-7.5, 33.61]],
+      },
+    ]);
+    const satelliteQuery = createMockQueryBuilder();
+    satelliteQuery.select.mockReturnValue(satelliteQuery);
+    satelliteQuery.eq.mockReturnValue(satelliteQuery);
+    satelliteQuery.gte.mockReturnValue(satelliteQuery);
+    satelliteQuery.order.mockReturnValue(satelliteQuery);
+    satelliteQuery.limit.mockReturnValue(satelliteQuery);
+    satelliteQuery.maybeSingle.mockResolvedValueOnce(
+      mockQueryResult({ date: '2026-03-11' }),
+    );
+
+    const alertsQuery = createMockQueryBuilder();
+    alertsQuery.select.mockReturnValue(alertsQuery);
+    alertsQuery.eq.mockReturnValue(alertsQuery);
+    alertsQuery.is.mockReturnValue(alertsQuery);
+    alertsQuery.limit.mockReturnValue(alertsQuery);
+    alertsQuery.maybeSingle.mockResolvedValueOnce(
+      mockQueryResult({ id: 'existing-alert-1' }),
+    );
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelsQuery;
+      if (table === 'satellite_indices_data') return satelliteQuery;
+      if (table === 'performance_alerts') return alertsQuery;
+      return createMockQueryBuilder();
+    });
+
+    diagnosticsService.getDiagnostics.mockResolvedValueOnce({
+      scenario: 'Severe stress detected',
+      scenario_code: 'D',
+      confidence: 0.9,
+      description: 'Strong vegetation stress detected.',
+      indicators: {
+        reading_date: '2026-03-12',
+        baseline_ndvi: 0.5,
+        current_ndvi: 0.2,
+        ndvi_delta: -0.3,
+        ndvi_band: 'alert',
+        ndvi_trend: 'declining',
+        baseline_ndre: 0.3,
+        current_ndre: 0.1,
+        ndre_delta: -0.2,
+        ndre_status: 'low',
+        ndre_trend: 'declining',
+        baseline_ndmi: 0.2,
+        current_ndmi: 0.1,
+        ndmi_delta: -0.1,
+        ndmi_trend: 'declining',
+        water_balance: -25,
+        weather_anomaly: true,
+      },
+    });
+
+    const result = await service.runDailyAiPipelineTrigger();
+
+    expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0, skipped: 0 });
+    expect(alertsService.createAiAlert).not.toHaveBeenCalled();
+    expect(alertsQuery.eq).toHaveBeenCalledWith('parcel_id', 'parcel-1');
+    expect(alertsQuery.eq).toHaveBeenCalledWith('organization_id', 'org-1');
+    expect(alertsQuery.eq).toHaveBeenCalledWith('alert_code', 'AI-SCENARIO-D');
+    expect(alertsQuery.eq).toHaveBeenCalledWith('is_ai_generated', true);
+    expect(alertsQuery.is).toHaveBeenCalledWith('resolved_at', null);
+  });
+
   it('runMonthlyPlanReminder checks planned interventions for the current month', async () => {
     const planInterventionsQuery = createThenableQuery([
       {

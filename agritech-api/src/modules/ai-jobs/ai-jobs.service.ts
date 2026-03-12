@@ -10,7 +10,7 @@ import { DatabaseService } from '../database/database.service';
 import { WeatherProvider } from '../chat/providers/weather.provider';
 
 const WEATHER_FETCH_LOOKBACK_DAYS = 7;
-const RECENT_SATELLITE_LOOKBACK_DAYS = 7;
+const RECENT_SATELLITE_LOOKBACK_DAYS = 14;
 const FORECAST_DAYS = 7;
 const STRESS_SCENARIO_CODES: AiScenarioCode[] = ['C', 'D', 'E', 'F'];
 
@@ -170,7 +170,14 @@ export class AiJobsService {
         const alertInput = this.buildStressAlert(parcel, diagnostics);
 
         if (alertInput) {
-          await this.aiAlertsService.createAiAlert(alertInput);
+          const alertExists = await this.hasUnresolvedAlert(
+            parcel.id,
+            parcel.organization_id,
+            alertInput.alert_code!,
+          );
+          if (!alertExists) {
+            await this.aiAlertsService.createAiAlert(alertInput);
+          }
         }
 
         summary.succeeded += 1;
@@ -464,6 +471,30 @@ export class AiJobsService {
 
     if (error) {
       throw new Error(`Failed to fetch recent satellite data: ${error.message}`);
+    }
+
+    return !!data;
+  }
+
+  private async hasUnresolvedAlert(
+    parcelId: string,
+    organizationId: string,
+    alertCode: string,
+  ): Promise<boolean> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('performance_alerts')
+      .select('id')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('alert_code', alertCode)
+      .eq('is_ai_generated', true)
+      .is('resolved_at', null)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to check existing alerts: ${error.message}`);
     }
 
     return !!data;
