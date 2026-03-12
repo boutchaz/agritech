@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { WeatherProvider } from '../chat/providers/weather.provider';
 
 const DEFAULT_LOOKBACK_DAYS = 30;
 const TRENDS_LOOKBACK_DAYS = 90;
@@ -80,13 +81,13 @@ interface CalibrationRow {
 interface AiParcelContext {
   id: string;
   cropType: string;
+  boundary: unknown;
 }
 
 interface AiSatelliteReadingRow {
   date: string;
-  ndvi: number | string | null;
-  ndre: number | string | null;
-  ndmi: number | string | null;
+  index_name: string;
+  mean_value: number | string | null;
 }
 
 interface AiSatelliteReading {
@@ -139,12 +140,12 @@ export class AiDiagnosticsService {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async getDiagnostics(parcelId: string, organizationId: string): Promise<AiDiagnosticsResponse> {
-    await this.getParcelContext(parcelId, organizationId);
+    const parcelContext = await this.getParcelContext(parcelId, organizationId);
 
     const [calibration, satelliteReadings, weatherReadings] = await Promise.all([
       this.getLatestCalibration(parcelId, organizationId),
       this.fetchSatelliteReadings(parcelId, organizationId, DEFAULT_LOOKBACK_DAYS),
-      this.fetchWeatherReadings(parcelId, DEFAULT_LOOKBACK_DAYS),
+      this.fetchWeatherReadings(parcelContext, DEFAULT_LOOKBACK_DAYS),
     ]);
 
     if (!satelliteReadings.length) {
@@ -277,8 +278,8 @@ export class AiDiagnosticsService {
     parcelId: string,
     organizationId: string,
   ): Promise<AiWaterBalanceResponse> {
-    await this.getParcelContext(parcelId, organizationId);
-    const weatherReadings = await this.fetchWeatherReadings(parcelId, DEFAULT_LOOKBACK_DAYS);
+    const parcelContext = await this.getParcelContext(parcelId, organizationId);
+    const weatherReadings = await this.fetchWeatherReadings(parcelContext, DEFAULT_LOOKBACK_DAYS);
 
     if (!weatherReadings.length) {
       throw new NotFoundException('No weather readings found for parcel');
@@ -316,7 +317,7 @@ export class AiDiagnosticsService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, organization_id, farms(organization_id)')
+      .select('id, crop_type, boundary, organization_id, farms(organization_id)')
       .eq('id', parcelId)
       .single();
 
@@ -342,6 +343,7 @@ export class AiDiagnosticsService {
     return {
       id: parcel.id,
       cropType: parcel.crop_type,
+      boundary: parcel.boundary,
     };
   }
 
@@ -382,11 +384,13 @@ export class AiDiagnosticsService {
     const sinceDate = this.getLookbackDate(lookbackDays);
     const { data, error } = await supabase
       .from('satellite_indices_data')
-      .select('date, ndvi, ndre, ndmi')
+      .select('date, index_name, mean_value')
       .eq('organization_id', organizationId)
       .eq('parcel_id', parcelId)
+      .in('index_name', ['NDVI', 'NDRE', 'NDMI'])
       .gte('date', sinceDate)
-      .order('date', { ascending: true });
+      .order('date', { ascending: true })
+      .order('index_name', { ascending: true });
 
     if (error) {
       this.logger.error(
@@ -395,35 +399,36 @@ export class AiDiagnosticsService {
       throw new BadRequestException(`Failed to fetch satellite readings: ${error.message}`);
     }
 
-    return (data as AiSatelliteReadingRow[])
-      .map((row) => ({
-        date: row.date,
-        ndvi: this.toNumber(row.ndvi),
-        ndre: this.toNumber(row.ndre),
-        ndmi: this.toNumber(row.ndmi),
-      }))
-      .filter(
-        (reading): reading is AiSatelliteReading =>
-          typeof reading.date === 'string' && typeof reading.ndvi === 'number',
-      );
+    return this.pivotSatelliteReadings(data as AiSatelliteReadingRow[]);
   }
 
   private async fetchWeatherReadings(
-    parcelId: string,
+    parcel: AiParcelContext,
     lookbackDays: number,
   ): Promise<AiWeatherReading[]> {
+    const boundary = this.parseBoundary(parcel.boundary);
+    if (!boundary.length) {
+      return [];
+    }
+
     const supabase = this.databaseService.getAdminClient();
+    const { latitude, longitude } = WeatherProvider.calculateCentroid(
+      WeatherProvider.ensureWGS84(boundary),
+    );
+    const roundedLat = Math.round(latitude * 100) / 100;
+    const roundedLon = Math.round(longitude * 100) / 100;
     const sinceDate = this.getLookbackDate(lookbackDays);
     const { data, error } = await supabase
       .from('weather_daily_data')
       .select('date, precipitation_sum, et0_fao_evapotranspiration')
-      .eq('parcel_id', parcelId)
+      .eq('latitude', roundedLat)
+      .eq('longitude', roundedLon)
       .gte('date', sinceDate)
       .order('date', { ascending: true });
 
     if (error) {
       this.logger.error(
-        `Failed to fetch weather diagnostics data for parcel ${parcelId}: ${error.message}`,
+        `Failed to fetch weather diagnostics data for parcel ${parcel.id}: ${error.message}`,
       );
       throw new BadRequestException(`Failed to fetch weather readings: ${error.message}`);
     }
@@ -440,6 +445,48 @@ export class AiDiagnosticsService {
           typeof reading.precipitation_sum === 'number' &&
           typeof reading.et0_fao_evapotranspiration === 'number',
       );
+  }
+
+  private pivotSatelliteReadings(rows: AiSatelliteReadingRow[]): AiSatelliteReading[] {
+    const readingsByDate = new Map<
+      string,
+      { date: string; ndvi: number | null; ndre: number | null; ndmi: number | null }
+    >();
+
+    for (const row of rows) {
+      const reading = readingsByDate.get(row.date) ?? {
+        date: row.date,
+        ndvi: null,
+        ndre: null,
+        ndmi: null,
+      };
+
+      const value = this.toNumber(row.mean_value);
+      const indexName = row.index_name.toUpperCase();
+      if (indexName === 'NDVI') {
+        reading.ndvi = value;
+      } else if (indexName === 'NDRE') {
+        reading.ndre = value;
+      } else if (indexName === 'NDMI') {
+        reading.ndmi = value;
+      }
+
+      readingsByDate.set(row.date, reading);
+    }
+
+    return Array.from(readingsByDate.values())
+      .filter(
+        (
+          reading,
+        ): reading is { date: string; ndvi: number; ndre: number | null; ndmi: number | null } =>
+          typeof reading.date === 'string' && typeof reading.ndvi === 'number',
+      )
+      .map((reading) => ({
+        date: reading.date,
+        ndvi: reading.ndvi,
+        ndre: reading.ndre,
+        ndmi: reading.ndmi,
+      }));
   }
 
   private computeWaterBalance(weatherReadings: AiWeatherReading[]): AiWaterBalanceResponse {
@@ -781,6 +828,14 @@ export class AiDiagnosticsService {
       candidateOrganizationId.trim().toLowerCase() ===
         organizationId.trim().toLowerCase()
     );
+  }
+
+  private parseBoundary(boundary: unknown): number[][] {
+    if (!Array.isArray(boundary)) {
+      return [];
+    }
+
+    return boundary;
   }
 
   private isJsonObject(value: unknown): value is Record<string, unknown> {

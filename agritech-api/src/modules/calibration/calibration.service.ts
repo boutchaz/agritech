@@ -358,7 +358,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, system, boundary, organization_id, farms(organization_id)')
+      .select('id, crop_type, planting_system, boundary, organization_id, farms(organization_id)')
       .eq('id', parcelId)
       .single();
 
@@ -377,14 +377,14 @@ export class CalibrationService {
       throw new NotFoundException('Parcel not found');
     }
 
-    if (!parcel.crop_type || !parcel.system) {
-      throw new BadRequestException('Parcel crop type and system are required');
+    if (!parcel.crop_type) {
+      throw new BadRequestException('Parcel crop type is required for calibration');
     }
 
     return {
       id: parcel.id,
       cropType: parcel.crop_type,
-      system: parcel.system,
+      system: parcel.planting_system ?? 'unknown',
       boundary: this.parseBoundary(parcel.boundary),
     };
   }
