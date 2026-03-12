@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AiAlertsService } from '../ai-alerts/ai-alerts.service';
 import { AiDiagnosticsService } from '../ai-diagnostics/ai-diagnostics.service';
+import { AiRecommendationsService } from '../ai-recommendations/ai-recommendations.service';
 import { DatabaseService } from '../database/database.service';
 import {
   createMockDatabaseService,
@@ -20,6 +21,9 @@ describe('AiJobsService', () => {
   let mockDatabaseService: MockDatabaseService;
   let diagnosticsService: jest.Mocked<Pick<AiDiagnosticsService, 'getDiagnostics'>>;
   let alertsService: jest.Mocked<Pick<AiAlertsService, 'createAiAlert'>>;
+  let recommendationsService: jest.Mocked<
+    Pick<AiRecommendationsService, 'createRecommendation'>
+  >;
   let fetchMock: jest.MockedFunction<typeof fetch>;
   const originalFetch = global.fetch;
 
@@ -31,6 +35,9 @@ describe('AiJobsService', () => {
     };
     alertsService = {
       createAiAlert: jest.fn(),
+    };
+    recommendationsService = {
+      createRecommendation: jest.fn(),
     };
     fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
     Object.defineProperty(global, 'fetch', {
@@ -45,6 +52,7 @@ describe('AiJobsService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: AiDiagnosticsService, useValue: diagnosticsService },
         { provide: AiAlertsService, useValue: alertsService },
+        { provide: AiRecommendationsService, useValue: recommendationsService },
       ],
     }).compile();
 
@@ -285,6 +293,219 @@ describe('AiJobsService', () => {
     expect(alertsQuery.eq).toHaveBeenCalledWith('alert_code', 'AI-SCENARIO-D');
     expect(alertsQuery.eq).toHaveBeenCalledWith('is_ai_generated', true);
     expect(alertsQuery.is).toHaveBeenCalledWith('resolved_at', null);
+  });
+
+  it('runDailyAiPipelineTrigger creates alert and recommendation for stress scenarios', async () => {
+    const parcel = {
+      id: 'parcel-1',
+      organization_id: 'org-1',
+      crop_type: 'olive',
+      boundary: [[-7.5, 33.6], [-7.51, 33.6], [-7.5, 33.61]],
+    };
+    const parcelsQuery = createThenableQuery([parcel]);
+    const satelliteQuery = createMockQueryBuilder();
+    satelliteQuery.select.mockReturnValue(satelliteQuery);
+    satelliteQuery.eq.mockReturnValue(satelliteQuery);
+    satelliteQuery.gte.mockReturnValue(satelliteQuery);
+    satelliteQuery.order.mockReturnValue(satelliteQuery);
+    satelliteQuery.limit.mockReturnValue(satelliteQuery);
+    satelliteQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult({ date: '2026-03-11' }));
+
+    const alertsQuery = createMockQueryBuilder();
+    alertsQuery.select.mockReturnValue(alertsQuery);
+    alertsQuery.eq.mockReturnValue(alertsQuery);
+    alertsQuery.is.mockReturnValue(alertsQuery);
+    alertsQuery.limit.mockReturnValue(alertsQuery);
+    alertsQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult(null));
+
+    const recommendationQuery = createMockQueryBuilder();
+    recommendationQuery.select.mockReturnValue(recommendationQuery);
+    recommendationQuery.eq.mockReturnValue(recommendationQuery);
+    recommendationQuery.limit.mockReturnValue(recommendationQuery);
+    recommendationQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult(null));
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelsQuery;
+      if (table === 'satellite_indices_data') return satelliteQuery;
+      if (table === 'performance_alerts') return alertsQuery;
+      if (table === 'ai_recommendations') return recommendationQuery;
+      return createMockQueryBuilder();
+    });
+
+    diagnosticsService.getDiagnostics.mockResolvedValueOnce({
+      scenario: 'Moderate stress detected',
+      scenario_code: 'C',
+      confidence: 0.82,
+      description: 'NDVI is showing moderate decline over the last week.',
+      indicators: {
+        reading_date: '2026-03-12',
+        baseline_ndvi: 0.62,
+        current_ndvi: 0.48,
+        ndvi_delta: -0.14,
+        ndvi_band: 'vigilance',
+        ndvi_trend: 'declining',
+        baseline_ndre: 0.31,
+        current_ndre: 0.24,
+        ndre_delta: -0.07,
+        ndre_status: 'normal',
+        ndre_trend: 'declining',
+        baseline_ndmi: 0.22,
+        current_ndmi: 0.17,
+        ndmi_delta: -0.05,
+        ndmi_trend: 'declining',
+        water_balance: -12,
+        weather_anomaly: false,
+      },
+    });
+    recommendationsService.createRecommendation.mockResolvedValue({
+      id: 'reco-1',
+      parcel_id: parcel.id,
+      organization_id: parcel.organization_id,
+      status: 'pending',
+    } as any);
+
+    const result = await service.runDailyAiPipelineTrigger();
+
+    expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0, skipped: 0 });
+    expect(alertsService.createAiAlert).toHaveBeenCalledTimes(1);
+    expect(recommendationsService.createRecommendation).toHaveBeenCalledTimes(1);
+    expect(recommendationsService.createRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parcel_id: parcel.id,
+        alert_code: 'AI-SCENARIO-C',
+        priority: 'medium',
+      }),
+      parcel.organization_id,
+    );
+  });
+
+  it('runDailyAiPipelineTrigger does not create alert or recommendation for non-stress scenarios', async () => {
+    const parcelsQuery = createThenableQuery([
+      {
+        id: 'parcel-1',
+        organization_id: 'org-1',
+        crop_type: 'olive',
+        boundary: [[-7.5, 33.6], [-7.51, 33.6], [-7.5, 33.61]],
+      },
+    ]);
+    const satelliteQuery = createMockQueryBuilder();
+    satelliteQuery.select.mockReturnValue(satelliteQuery);
+    satelliteQuery.eq.mockReturnValue(satelliteQuery);
+    satelliteQuery.gte.mockReturnValue(satelliteQuery);
+    satelliteQuery.order.mockReturnValue(satelliteQuery);
+    satelliteQuery.limit.mockReturnValue(satelliteQuery);
+    satelliteQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult({ date: '2026-03-11' }));
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelsQuery;
+      if (table === 'satellite_indices_data') return satelliteQuery;
+      return createMockQueryBuilder();
+    });
+
+    diagnosticsService.getDiagnostics.mockResolvedValueOnce({
+      scenario: 'Healthy vegetation state',
+      scenario_code: 'A',
+      confidence: 0.96,
+      description: 'Vegetation indices are stable and within expected ranges.',
+      indicators: {
+        reading_date: '2026-03-12',
+        baseline_ndvi: 0.6,
+        current_ndvi: 0.61,
+        ndvi_delta: 0.01,
+        ndvi_band: 'optimal',
+        ndvi_trend: 'stable',
+        baseline_ndre: 0.3,
+        current_ndre: 0.31,
+        ndre_delta: 0.01,
+        ndre_status: 'normal',
+        ndre_trend: 'stable',
+        baseline_ndmi: 0.2,
+        current_ndmi: 0.21,
+        ndmi_delta: 0.01,
+        ndmi_trend: 'stable',
+        water_balance: 4,
+        weather_anomaly: false,
+      },
+    });
+
+    const result = await service.runDailyAiPipelineTrigger();
+
+    expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0, skipped: 0 });
+    expect(alertsService.createAiAlert).not.toHaveBeenCalled();
+    expect(recommendationsService.createRecommendation).not.toHaveBeenCalled();
+  });
+
+  it('runDailyAiPipelineTrigger skips recommendation creation when pending recommendation exists', async () => {
+    const parcelsQuery = createThenableQuery([
+      {
+        id: 'parcel-1',
+        organization_id: 'org-1',
+        crop_type: 'olive',
+        boundary: [[-7.5, 33.6], [-7.51, 33.6], [-7.5, 33.61]],
+      },
+    ]);
+    const satelliteQuery = createMockQueryBuilder();
+    satelliteQuery.select.mockReturnValue(satelliteQuery);
+    satelliteQuery.eq.mockReturnValue(satelliteQuery);
+    satelliteQuery.gte.mockReturnValue(satelliteQuery);
+    satelliteQuery.order.mockReturnValue(satelliteQuery);
+    satelliteQuery.limit.mockReturnValue(satelliteQuery);
+    satelliteQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult({ date: '2026-03-11' }));
+
+    const alertsQuery = createMockQueryBuilder();
+    alertsQuery.select.mockReturnValue(alertsQuery);
+    alertsQuery.eq.mockReturnValue(alertsQuery);
+    alertsQuery.is.mockReturnValue(alertsQuery);
+    alertsQuery.limit.mockReturnValue(alertsQuery);
+    alertsQuery.maybeSingle.mockResolvedValueOnce(mockQueryResult(null));
+
+    const recommendationQuery = createMockQueryBuilder();
+    recommendationQuery.select.mockReturnValue(recommendationQuery);
+    recommendationQuery.eq.mockReturnValue(recommendationQuery);
+    recommendationQuery.limit.mockReturnValue(recommendationQuery);
+    recommendationQuery.maybeSingle.mockResolvedValueOnce(
+      mockQueryResult({ id: 'existing-reco-1' }),
+    );
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelsQuery;
+      if (table === 'satellite_indices_data') return satelliteQuery;
+      if (table === 'performance_alerts') return alertsQuery;
+      if (table === 'ai_recommendations') return recommendationQuery;
+      return createMockQueryBuilder();
+    });
+
+    diagnosticsService.getDiagnostics.mockResolvedValueOnce({
+      scenario: 'Moderate stress detected',
+      scenario_code: 'C',
+      confidence: 0.84,
+      description: 'NDVI and NDMI trends indicate stress conditions.',
+      indicators: {
+        reading_date: '2026-03-12',
+        baseline_ndvi: 0.58,
+        current_ndvi: 0.44,
+        ndvi_delta: -0.14,
+        ndvi_band: 'vigilance',
+        ndvi_trend: 'declining',
+        baseline_ndre: 0.29,
+        current_ndre: 0.23,
+        ndre_delta: -0.06,
+        ndre_status: 'normal',
+        ndre_trend: 'declining',
+        baseline_ndmi: 0.21,
+        current_ndmi: 0.15,
+        ndmi_delta: -0.06,
+        ndmi_trend: 'declining',
+        water_balance: -10,
+        weather_anomaly: false,
+      },
+    });
+
+    const result = await service.runDailyAiPipelineTrigger();
+
+    expect(result).toEqual({ processed: 1, succeeded: 1, failed: 0, skipped: 0 });
+    expect(alertsService.createAiAlert).toHaveBeenCalledTimes(1);
+    expect(recommendationsService.createRecommendation).not.toHaveBeenCalled();
   });
 
   it('runMonthlyPlanReminder checks planned interventions for the current month', async () => {

@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { CreateAiAlertInput, AiAlertsService } from '../ai-alerts/ai-alerts.service';
+import { CreateRecommendationDto } from '../ai-recommendations/dto/create-recommendation.dto';
+import { AiRecommendationsService } from '../ai-recommendations/ai-recommendations.service';
 import {
   AiDiagnosticsResponse,
   AiDiagnosticsService,
@@ -13,6 +15,37 @@ const WEATHER_FETCH_LOOKBACK_DAYS = 7;
 const RECENT_SATELLITE_LOOKBACK_DAYS = 14;
 const FORECAST_DAYS = 7;
 const STRESS_SCENARIO_CODES: AiScenarioCode[] = ['C', 'D', 'E', 'F'];
+const SCENARIO_RECOMMENDATION_MAP: Record<string, {
+  constat: string;
+  diagnostic: string;
+  action: string;
+  priority: string;
+}> = {
+  C: {
+    constat: 'Moderate vegetation stress detected - NDVI declining below vigilance threshold',
+    diagnostic: 'Possible water deficit or nutrient deficiency causing reduced chlorophyll activity',
+    action: 'Increase irrigation frequency and monitor vegetation indices over the next 7 days. Check soil moisture levels.',
+    priority: 'medium',
+  },
+  D: {
+    constat: 'Critical vegetation decline detected - NDVI below alert threshold with rapid deterioration',
+    diagnostic: 'Severe stress condition indicating potential crop damage from prolonged water deficit, disease, or pest attack',
+    action: 'Immediate irrigation intervention required. Inspect parcel for disease or pest damage. Consider emergency foliar treatment.',
+    priority: 'high',
+  },
+  E: {
+    constat: 'Water stress indicators abnormal - NDMI declining with negative water balance',
+    diagnostic: 'Soil moisture deficit detected from evapotranspiration exceeding precipitation over sustained period',
+    action: 'Assess soil moisture levels. Increase irrigation volume and reduce intervals between waterings. Monitor NDMI recovery.',
+    priority: 'medium',
+  },
+  F: {
+    constat: 'Heat and climate stress detected - weather anomaly combined with vegetation decline',
+    diagnostic: 'Extreme temperature event causing thermal stress on vegetation, potentially reducing photosynthetic efficiency',
+    action: 'Apply anti-stress treatments if available. Adjust irrigation to early morning and late evening. Consider shade measures for sensitive crops.',
+    priority: 'high',
+  },
+};
 
 export interface AiEnabledParcelJobRecord {
   id: string;
@@ -96,6 +129,7 @@ export class AiJobsService {
     private readonly databaseService: DatabaseService,
     private readonly aiDiagnosticsService: AiDiagnosticsService,
     private readonly aiAlertsService: AiAlertsService,
+    private readonly aiRecommendationsService: AiRecommendationsService,
   ) {}
 
   @Cron('0 6 * * *', { name: 'ai-jobs-daily-weather-fetch', timeZone: 'UTC' })
@@ -177,6 +211,21 @@ export class AiJobsService {
           );
           if (!alertExists) {
             await this.aiAlertsService.createAiAlert(alertInput);
+          }
+        }
+
+        const recommendationInput = this.buildStressRecommendation(parcel, diagnostics);
+        if (recommendationInput) {
+          const recoExists = await this.hasPendingRecommendation(
+            parcel.id,
+            parcel.organization_id,
+            recommendationInput.alert_code!,
+          );
+          if (!recoExists) {
+            await this.aiRecommendationsService.createRecommendation(
+              recommendationInput,
+              parcel.organization_id,
+            );
           }
         }
 
@@ -500,6 +549,29 @@ export class AiJobsService {
     return !!data;
   }
 
+  private async hasPendingRecommendation(
+    parcelId: string,
+    organizationId: string,
+    alertCode: string,
+  ): Promise<boolean> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('ai_recommendations')
+      .select('id')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('alert_code', alertCode)
+      .eq('status', 'pending')
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to check existing recommendations: ${error.message}`);
+    }
+
+    return !!data;
+  }
+
   private buildStressAlert(
     parcel: AiEnabledParcelJobRecord,
     diagnostics: AiDiagnosticsResponse,
@@ -524,6 +596,32 @@ export class AiJobsService {
       category: 'ai_pipeline',
       priority: severity === 'critical' ? 'high' : 'medium',
       trigger_data: diagnostics,
+    };
+  }
+
+  private buildStressRecommendation(
+    parcel: AiEnabledParcelJobRecord,
+    diagnostics: AiDiagnosticsResponse,
+  ): CreateRecommendationDto | null {
+    const mapping = SCENARIO_RECOMMENDATION_MAP[diagnostics.scenario_code];
+    if (!mapping) {
+      return null;
+    }
+
+    const now = new Date();
+    const validUntil = new Date(now);
+    validUntil.setUTCDate(validUntil.getUTCDate() + 14);
+
+    return {
+      parcel_id: parcel.id,
+      constat: mapping.constat,
+      diagnostic: `${mapping.diagnostic}. ${diagnostics.description}`,
+      action: mapping.action,
+      alert_code: `AI-SCENARIO-${diagnostics.scenario_code}`,
+      priority: mapping.priority,
+      crop_type: parcel.crop_type ?? undefined,
+      valid_from: this.toIsoDate(now),
+      valid_until: this.toIsoDate(validUntil),
     };
   }
 
