@@ -1,0 +1,448 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "palmier_dattier",
+    "nom_scientifique": "Phoenix dactylifera L.",
+    "famille": "Arecaceae",
+    "pays": "Maroc"
+  },
+  "caracteristiques_generales": {
+    "type": "monocotyledone_arborescente",
+    "origine": "Mesopotamie_Golfe_Persique",
+    "duree_vie_ans": [
+      100,
+      150
+    ],
+    "production_economique_ans": [
+      60,
+      80
+    ],
+    "hauteur_adulte_m": [
+      15,
+      25
+    ],
+    "systeme_racinaire": "fascicule_profond_6m",
+    "sexualite": "dioique",
+    "pollinisation": "manuelle_en_culture"
+  },
+  "exigences_climatiques": {
+    "temperature_optimale_C": [
+      32,
+      38
+    ],
+    "temperature_max_toleree_C": 50,
+    "temperature_min_vegetative_C": 7,
+    "gel_palmes_C": [
+      -5,
+      -7
+    ],
+    "gel_mortel_C": [
+      -10,
+      -12
+    ],
+    "GDD_floraison_recolte": 5000,
+    "HR_optimale_pct": 40,
+    "HR_critique_maturation_pct": 70
+  },
+  "tolerance_salinite": {
+    "CE_eau_sans_perte_dS_m": 4,
+    "CE_eau_perte_10pct_dS_m": 6,
+    "CE_eau_perte_25pct_dS_m": 10,
+    "CE_eau_perte_50pct_dS_m": 15,
+    "note": "PLUS TOLERANT salinité de toutes cultures fruitières - 8x plus que avocatier"
+  },
+  "varietes": [
+    {
+      "code": "MEJHOUL",
+      "nom": "Mejhoul",
+      "type": "molle",
+      "poids_g": [
+        15,
+        25
+      ],
+      "qualite": "premium_export",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        80,
+        120
+      ]
+    },
+    {
+      "code": "BOUFEGGOUS",
+      "nom": "Boufeggous",
+      "type": "molle",
+      "poids_g": [
+        8,
+        12
+      ],
+      "qualite": "excellente",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        60,
+        100
+      ]
+    },
+    {
+      "code": "JIHEL",
+      "nom": "Jihel",
+      "type": "semi_molle",
+      "poids_g": [
+        6,
+        10
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        70,
+        100
+      ]
+    },
+    {
+      "code": "BOUSKRI",
+      "nom": "Bouskri",
+      "type": "semi_molle",
+      "poids_g": [
+        5,
+        8
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        50,
+        80
+      ]
+    },
+    {
+      "code": "BOUSLIKHENE",
+      "nom": "Bouslikhène",
+      "type": "seche",
+      "poids_g": [
+        4,
+        7
+      ],
+      "qualite": "moyenne",
+      "bayoud": "resistante",
+      "productivite_kg": [
+        60,
+        90
+      ]
+    }
+  ],
+  "pollinisation": {
+    "type": "manuelle_obligatoire",
+    "ratio_males_pct": [
+      1,
+      2
+    ],
+    "fenetre_jours": [
+      1,
+      3
+    ],
+    "methode": "insertion_brins_ou_pulverisation",
+    "passages": [
+      2,
+      3
+    ],
+    "conservation_pollen": {
+      "frais": "1-2 jours",
+      "refrigere_4C": "2-4 semaines",
+      "congele": "6-12 mois"
+    }
+  },
+  "systemes": {
+    "traditionnel_oasien": {
+      "densite": [
+        80,
+        120
+      ],
+      "irrigation": "khettara_seguia",
+      "rendement_t_ha": [
+        3,
+        6
+      ]
+    },
+    "semi_intensif": {
+      "densite": [
+        120,
+        150
+      ],
+      "irrigation": "gravitaire_ameliore",
+      "rendement_t_ha": [
+        6,
+        10
+      ]
+    },
+    "intensif": {
+      "densite": [
+        150,
+        200
+      ],
+      "irrigation": "goutte_a_goutte",
+      "rendement_t_ha": [
+        10,
+        15
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI_optimal": [
+        0.35,
+        0.55
+      ],
+      "NDVI_alerte": 0.25,
+      "NDMI_optimal": [
+        0.05,
+        0.2
+      ]
+    },
+    "intensif": {
+      "NDVI_optimal": [
+        0.45,
+        0.65
+      ],
+      "NDVI_alerte": 0.35,
+      "NDMI_optimal": [
+        0.1,
+        0.28
+      ]
+    }
+  },
+  "nutrition": {
+    "export_kg_100kg_dattes": {
+      "N": [
+        0.8,
+        1.2
+      ],
+      "P2O5": [
+        0.2,
+        0.4
+      ],
+      "K2O": [
+        1.5,
+        2.5
+      ]
+    },
+    "besoins_intensif_Mejhoul_kg_arbre": {
+      "N": [
+        1.5,
+        2.5
+      ],
+      "P2O5": [
+        0.5,
+        0.8
+      ],
+      "K2O": [
+        2.5,
+        4.0
+      ]
+    },
+    "fractionnement": {
+      "jan_fev": {
+        "N": 20,
+        "P": 40,
+        "K": 10
+      },
+      "mar_avr": {
+        "N": 25,
+        "P": 30,
+        "K": 15
+      },
+      "mai_juin": {
+        "N": 25,
+        "P": 20,
+        "K": 25
+      },
+      "juil_aout": {
+        "N": 15,
+        "P": 10,
+        "K": 30
+      },
+      "sept_oct": {
+        "N": 5,
+        "P": 0,
+        "K": 15
+      },
+      "nov_dec": {
+        "N": 10,
+        "P": 0,
+        "K": 5
+      }
+    },
+    "note_K": "Potassium CRITIQUE pour qualité dattes"
+  },
+  "seuils_foliaires": {
+    "N_pct": {
+      "carence": 1.8,
+      "optimal": [
+        2.2,
+        2.8
+      ]
+    },
+    "P_pct": {
+      "carence": 0.1,
+      "optimal": [
+        0.14,
+        0.2
+      ]
+    },
+    "K_pct": {
+      "carence": 0.8,
+      "optimal": [
+        1.2,
+        1.8
+      ]
+    },
+    "Mg_pct": {
+      "carence": 0.15,
+      "optimal": [
+        0.25,
+        0.5
+      ]
+    }
+  },
+  "irrigation": {
+    "besoins_m3_arbre_an": {
+      "traditionnel": [
+        15,
+        25
+      ],
+      "intensif": [
+        12,
+        20
+      ]
+    },
+    "Kc": {
+      "hiver": 0.75,
+      "printemps": 0.8,
+      "ete": 1.0,
+      "automne": 0.85
+    },
+    "frequence_ete_gag": "3-4x/sem ou quotidien"
+  },
+  "phytosanitaire": {
+    "bayoud": {
+      "agent": "Fusarium oxysporum f. sp. albedinis",
+      "gravite": "MORTELLE_INCURABLE",
+      "traitement": "AUCUN",
+      "prevention": [
+        "plants_certifies",
+        "varietes_tolerantes",
+        "destruction_arbres_atteints"
+      ]
+    },
+    "autres_maladies": [
+      "Khamedj",
+      "Graphiola",
+      "Pourriture_coeur"
+    ],
+    "ravageurs": [
+      "Cochenille_blanche",
+      "Boufaroua",
+      "Pyrale_dattes",
+      "Charancon_rouge_MENACE"
+    ]
+  },
+  "stades_maturite": {
+    "Hababouk": "Fruit noué",
+    "Kimri": "Vert croissance",
+    "Khalal": "Jaune/rouge dur",
+    "Rutab": "Ramollissement partiel",
+    "Tamr": "Maturité complète"
+  },
+  "alertes": [
+    {
+      "code": "PAL-01",
+      "nom": "Stress hydrique",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-05",
+      "nom": "Pluie maturation",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-08",
+      "nom": "Suspicion Bayoud",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-09",
+      "nom": "Bayoud confirmé",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-13",
+      "nom": "Pollinisation requise",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-16",
+      "nom": "Maturité récolte",
+      "priorite": "info"
+    }
+  ],
+  "modele_predictif": {
+    "precision_intensif": {
+      "R2": [
+        0.5,
+        0.65
+      ],
+      "MAE_pct": [
+        25,
+        35
+      ]
+    },
+    "limite_majeure": "Pluie maturation imprévisible - peut détruire 30-80% récolte"
+  },
+  "plan_annuel_Mejhoul": {
+    "jan": {
+      "NPK": "N0.3+P0.3+K0.3",
+      "travaux": "Taille"
+    },
+    "fev": {
+      "NPK": "N0.4+P0.2+K0.2",
+      "phyto": "Cuivre spathes"
+    },
+    "mar": {
+      "NPK": "N0.4+K0.4",
+      "travaux": "POLLINISATION"
+    },
+    "avr": {
+      "NPK": "N0.3+P0.1+K0.5",
+      "travaux": "Attachage"
+    },
+    "mai": {
+      "NPK": "N0.3+K0.6",
+      "travaux": "Éclaircissage"
+    },
+    "juin": {
+      "NPK": "K0.8",
+      "phyto": "Soufre Boufaroua"
+    },
+    "juil": {
+      "NPK": "K0.8",
+      "travaux": "Protection régimes"
+    },
+    "aout": {
+      "NPK": "K0.5",
+      "travaux": "Surveillance"
+    },
+    "sept": {
+      "NPK": "K0.3",
+      "travaux": "Début récolte"
+    },
+    "oct": {
+      "travaux": "Récolte principale"
+    },
+    "nov": {
+      "NPK": "N0.2",
+      "phyto": "Huile cochenilles"
+    },
+    "dec": {
+      "amendement": "Fumier 40kg",
+      "travaux": "Entretien"
+    }
+  }
+}

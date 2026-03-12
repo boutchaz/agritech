@@ -1,0 +1,1491 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "avocatier",
+    "nom_scientifique": "Persea americana Mill.",
+    "pays": "Maroc"
+  },
+  "varietes": [
+    {
+      "code": "HASS",
+      "nom": "Hass",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_noire",
+      "poids_g": [
+        170,
+        300
+      ],
+      "huile_pct": [
+        18,
+        25
+      ],
+      "maturite_mois": [
+        "Fev",
+        "Mar",
+        "Avr",
+        "Mai",
+        "Juin",
+        "Juil",
+        "Aout",
+        "Sept"
+      ],
+      "alternance": "moderee",
+      "vigueur": "moyenne",
+      "port": "etale",
+      "froid_min_C": -3,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          5,
+          15
+        ],
+        "5-7_ans": [
+          30,
+          60
+        ],
+        "8-12_ans": [
+          80,
+          150
+        ],
+        "13-20_ans": [
+          120,
+          200
+        ],
+        "plus_20_ans": [
+          100,
+          180
+        ]
+      }
+    },
+    {
+      "code": "FUERTE",
+      "nom": "Fuerte",
+      "race": "hybride_GM",
+      "type_floral": "B",
+      "peau": "lisse_verte",
+      "poids_g": [
+        200,
+        400
+      ],
+      "huile_pct": [
+        15,
+        20
+      ],
+      "maturite_mois": [
+        "Nov",
+        "Dec",
+        "Jan",
+        "Fev",
+        "Mar"
+      ],
+      "alternance": "forte",
+      "vigueur": "forte",
+      "port": "etale_large",
+      "froid_min_C": -4,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          5,
+          10
+        ],
+        "5-7_ans": [
+          25,
+          50
+        ],
+        "8-12_ans": [
+          60,
+          120
+        ],
+        "13-20_ans": [
+          100,
+          180
+        ],
+        "plus_20_ans": [
+          80,
+          150
+        ]
+      }
+    },
+    {
+      "code": "BACON",
+      "nom": "Bacon",
+      "race": "mexicaine",
+      "type_floral": "B",
+      "peau": "lisse_verte",
+      "poids_g": [
+        200,
+        350
+      ],
+      "huile_pct": [
+        12,
+        15
+      ],
+      "maturite_mois": [
+        "Nov",
+        "Dec",
+        "Jan"
+      ],
+      "alternance": "moderee",
+      "vigueur": "forte",
+      "port": "dresse",
+      "froid_min_C": -5,
+      "salinite": "moyenne",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          3,
+          8
+        ],
+        "5-7_ans": [
+          20,
+          40
+        ],
+        "8-12_ans": [
+          50,
+          100
+        ],
+        "13-20_ans": [
+          80,
+          140
+        ],
+        "plus_20_ans": [
+          70,
+          120
+        ]
+      }
+    },
+    {
+      "code": "ZUTANO",
+      "nom": "Zutano",
+      "race": "mexicaine",
+      "type_floral": "B",
+      "peau": "lisse_vert_clair",
+      "poids_g": [
+        200,
+        400
+      ],
+      "huile_pct": [
+        10,
+        15
+      ],
+      "maturite_mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "alternance": "faible",
+      "vigueur": "tres_forte",
+      "port": "dresse",
+      "froid_min_C": -6,
+      "salinite": "moyenne",
+      "pollinisateur": true
+    },
+    {
+      "code": "PINKERTON",
+      "nom": "Pinkerton",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_verte",
+      "poids_g": [
+        250,
+        450
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Avr"
+      ],
+      "alternance": "faible",
+      "vigueur": "faible",
+      "port": "compact",
+      "froid_min_C": -2,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          8,
+          20
+        ],
+        "5-7_ans": [
+          40,
+          80
+        ],
+        "8-12_ans": [
+          100,
+          180
+        ],
+        "13-20_ans": [
+          150,
+          250
+        ],
+        "plus_20_ans": [
+          130,
+          220
+        ]
+      }
+    },
+    {
+      "code": "REED",
+      "nom": "Reed",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "epaisse_verte",
+      "poids_g": [
+        300,
+        500
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Juil",
+        "Aout",
+        "Sept",
+        "Oct"
+      ],
+      "alternance": "moderee",
+      "vigueur": "moyenne",
+      "port": "dresse",
+      "froid_min_C": -2,
+      "salinite": "sensible"
+    },
+    {
+      "code": "ETTINGER",
+      "nom": "Ettinger",
+      "race": "hybride_GM",
+      "type_floral": "B",
+      "peau": "lisse_vert_brillant",
+      "poids_g": [
+        250,
+        400
+      ],
+      "huile_pct": [
+        15,
+        18
+      ],
+      "maturite_mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "alternance": "moderee",
+      "vigueur": "forte",
+      "port": "etale",
+      "froid_min_C": -4,
+      "salinite": "moyenne",
+      "pollinisateur": true
+    },
+    {
+      "code": "LAMB_HASS",
+      "nom": "Lamb Hass",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_noire",
+      "poids_g": [
+        250,
+        400
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Avr",
+        "Mai",
+        "Juin",
+        "Juil",
+        "Aout"
+      ],
+      "alternance": "faible",
+      "vigueur": "moyenne",
+      "port": "compact",
+      "froid_min_C": -3,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          8,
+          18
+        ],
+        "5-7_ans": [
+          40,
+          75
+        ],
+        "8-12_ans": [
+          90,
+          170
+        ],
+        "13-20_ans": [
+          140,
+          230
+        ],
+        "plus_20_ans": [
+          120,
+          200
+        ]
+      }
+    }
+  ],
+  "types_floraux": {
+    "description": "Dichogamie protogyne synchrone",
+    "type_A": {
+      "jour_1_matin": "femelle_receptif",
+      "jour_1_apres_midi": "ferme",
+      "jour_2_matin": "ferme",
+      "jour_2_apres_midi": "male_pollen",
+      "varietes": [
+        "Hass",
+        "Pinkerton",
+        "Reed",
+        "Gwen",
+        "Lamb Hass"
+      ]
+    },
+    "type_B": {
+      "jour_1_matin": "ferme",
+      "jour_1_apres_midi": "femelle_receptif",
+      "jour_2_matin": "male_pollen",
+      "jour_2_apres_midi": "ferme",
+      "varietes": [
+        "Fuerte",
+        "Bacon",
+        "Zutano",
+        "Ettinger",
+        "Edranol"
+      ]
+    },
+    "ratio_pollinisateur": "1 type B pour 8-10 type A",
+    "ruches_ha": [
+      4,
+      6
+    ]
+  },
+  "systemes": {
+    "traditionnel": {
+      "densite_arbres_ha": [
+        100,
+        150
+      ],
+      "ecartement_m": "10×8 à 12×10",
+      "irrigation": "gravitaire_ou_gag",
+      "entree_production_annee": [
+        5,
+        6
+      ],
+      "pleine_production_annee": [
+        10,
+        12
+      ],
+      "duree_vie_ans": [
+        40,
+        50
+      ],
+      "rendement_pleine_prod_t_ha": [
+        8,
+        12
+      ]
+    },
+    "intensif": {
+      "densite_arbres_ha": [
+        200,
+        400
+      ],
+      "ecartement_m": "6×4 à 8×5",
+      "irrigation": "goutte_a_goutte",
+      "entree_production_annee": [
+        3,
+        4
+      ],
+      "pleine_production_annee": [
+        6,
+        8
+      ],
+      "duree_vie_ans": [
+        25,
+        35
+      ],
+      "rendement_pleine_prod_t_ha": [
+        12,
+        20
+      ]
+    },
+    "super_intensif": {
+      "densite_arbres_ha": [
+        800,
+        1200
+      ],
+      "ecartement_m": "4×2 à 5×2.5",
+      "irrigation": "gag_haute_frequence",
+      "entree_production_annee": [
+        2,
+        3
+      ],
+      "pleine_production_annee": [
+        4,
+        5
+      ],
+      "duree_vie_ans": [
+        15,
+        20
+      ],
+      "rendement_pleine_prod_t_ha": [
+        18,
+        30
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI": {
+        "optimal": [
+          0.55,
+          0.75
+        ],
+        "vigilance": 0.5,
+        "alerte": 0.45
+      },
+      "NIRv": {
+        "optimal": [
+          0.15,
+          0.3
+        ],
+        "vigilance": 0.12,
+        "alerte": 0.1
+      },
+      "NDMI": {
+        "optimal": [
+          0.2,
+          0.4
+        ],
+        "vigilance": 0.15,
+        "alerte": 0.12
+      },
+      "NDRE": {
+        "optimal": [
+          0.2,
+          0.35
+        ],
+        "vigilance": 0.17,
+        "alerte": 0.15
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.65,
+          0.82
+        ],
+        "vigilance": 0.6,
+        "alerte": 0.55
+      },
+      "NIRv": {
+        "optimal": [
+          0.2,
+          0.38
+        ],
+        "vigilance": 0.17,
+        "alerte": 0.15
+      },
+      "NDMI": {
+        "optimal": [
+          0.25,
+          0.45
+        ],
+        "vigilance": 0.2,
+        "alerte": 0.17
+      },
+      "NDRE": {
+        "optimal": [
+          0.25,
+          0.4
+        ],
+        "vigilance": 0.22,
+        "alerte": 0.2
+      }
+    },
+    "super_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.7,
+          0.88
+        ],
+        "vigilance": 0.65,
+        "alerte": 0.6
+      },
+      "NIRv": {
+        "optimal": [
+          0.25,
+          0.45
+        ],
+        "vigilance": 0.22,
+        "alerte": 0.2
+      },
+      "NDMI": {
+        "optimal": [
+          0.3,
+          0.5
+        ],
+        "vigilance": 0.25,
+        "alerte": 0.22
+      },
+      "NDRE": {
+        "optimal": [
+          0.28,
+          0.45
+        ],
+        "vigilance": 0.25,
+        "alerte": 0.23
+      }
+    }
+  },
+  "stades_phenologiques": [
+    {
+      "nom": "Repos relatif",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "duree_sem": [
+        6,
+        8
+      ],
+      "coef_nirvp": 0.7
+    },
+    {
+      "nom": "Flush végétatif 1",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Induction florale",
+      "mois": [
+        "Jan",
+        "Fev"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 0.8
+    },
+    {
+      "nom": "Boutons floraux",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "duree_sem": [
+        2,
+        4
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Floraison",
+      "mois": [
+        "Mar",
+        "Avr",
+        "Mai"
+      ],
+      "duree_sem": [
+        4,
+        8
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Nouaison",
+      "mois": [
+        "Avr",
+        "Mai"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Chute physiologique",
+      "mois": [
+        "Mai",
+        "Juin",
+        "Juil"
+      ],
+      "duree_sem": [
+        8,
+        12
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Grossissement",
+      "mois": [
+        "Juin",
+        "Dec"
+      ],
+      "duree_mois": [
+        5,
+        8
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Flush végétatif 2",
+      "mois": [
+        "Juil",
+        "Aout"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Maturation",
+      "mois": "variable_variete",
+      "coef_nirvp": 0.85
+    }
+  ],
+  "exigences_climatiques": {
+    "temperature_optimale_C": [
+      20,
+      25
+    ],
+    "temperature_croissance_C": [
+      15,
+      30
+    ],
+    "temperature_stress_chaleur_C": 35,
+    "temperature_stress_froid_C": 10,
+    "gel_feuilles_hass_C": [
+      -2,
+      -3
+    ],
+    "gel_mortel_hass_C": [
+      -4,
+      -6
+    ],
+    "gel_race_mexicaine_C": [
+      -6,
+      -8
+    ],
+    "gel_race_antillaise_C": [
+      0,
+      -2
+    ],
+    "humidite_relative_optimale_pct": [
+      60,
+      80
+    ],
+    "humidite_relative_min_pct": 40,
+    "pluviometrie_optimale_mm": [
+      1200,
+      1800
+    ]
+  },
+  "exigences_sol": {
+    "pH_optimal": [
+      5.5,
+      6.5
+    ],
+    "pH_tolerance": [
+      5.0,
+      7.5
+    ],
+    "calcaire_actif_max_pct": 5,
+    "CE_sol_optimal_dS_m": 1.5,
+    "CE_sol_max_dS_m": 2.5,
+    "texture": "sablo_limoneux",
+    "drainage": "excellent_obligatoire",
+    "profondeur_utile_min_cm": 60,
+    "matiere_organique_min_pct": 2,
+    "nappe_phreatique_min_cm": 100,
+    "note": "TRÈS sensible asphyxie - Phytophthora si mal drainé"
+  },
+  "options_nutrition": {
+    "A": {
+      "nom": "Nutrition équilibrée",
+      "condition": "analyse_sol < 2 ans ET analyse_eau",
+      "description": "Programme complet sol + plante"
+    },
+    "B": {
+      "nom": "Nutrition foliaire prioritaire",
+      "condition": "PAS analyse_sol OU > 3 ans",
+      "description": "Foliaire renforcé"
+    },
+    "C": {
+      "nom": "Gestion salinité",
+      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m",
+      "seuil_plus_bas_que_olivier": true,
+      "description": "Lessivage + engrais faible index salin"
+    }
+  },
+  "export_kg_tonne": {
+    "N": [
+      2.5,
+      3.5
+    ],
+    "P2O5": [
+      0.5,
+      0.8
+    ],
+    "K2O": [
+      4.0,
+      5.5
+    ],
+    "CaO": [
+      0.3,
+      0.5
+    ],
+    "MgO": [
+      0.4,
+      0.6
+    ],
+    "S": [
+      0.2,
+      0.3
+    ]
+  },
+  "entretien_kg_ha": {
+    "jeune_1-3_ans": {
+      "N": [
+        30,
+        60
+      ],
+      "P2O5": [
+        15,
+        30
+      ],
+      "K2O": [
+        20,
+        40
+      ]
+    },
+    "entree_prod_4-6_ans": {
+      "N": [
+        80,
+        120
+      ],
+      "P2O5": [
+        30,
+        50
+      ],
+      "K2O": [
+        60,
+        100
+      ]
+    },
+    "intensif_pleine_prod": {
+      "N": [
+        150,
+        250
+      ],
+      "P2O5": [
+        50,
+        80
+      ],
+      "K2O": [
+        150,
+        250
+      ]
+    },
+    "super_intensif": {
+      "N": [
+        200,
+        350
+      ],
+      "P2O5": [
+        60,
+        100
+      ],
+      "K2O": [
+        200,
+        350
+      ]
+    }
+  },
+  "fractionnement_pct": {
+    "jan_fev": {
+      "N": 15,
+      "P2O5": 30,
+      "K2O": 10,
+      "objectif": "Préparer floraison"
+    },
+    "mar_avr": {
+      "N": 20,
+      "P2O5": 30,
+      "K2O": 15,
+      "objectif": "Floraison-nouaison"
+    },
+    "mai_juin": {
+      "N": 20,
+      "P2O5": 20,
+      "K2O": 20,
+      "objectif": "Post-chute"
+    },
+    "juil_aout": {
+      "N": 20,
+      "P2O5": 10,
+      "K2O": 25,
+      "objectif": "Grossissement, flush 2"
+    },
+    "sept_oct": {
+      "N": 15,
+      "P2O5": 10,
+      "K2O": 20,
+      "objectif": "Maturation"
+    },
+    "nov_dec": {
+      "N": 10,
+      "P2O5": 0,
+      "K2O": 10,
+      "objectif": "Reconstitution"
+    }
+  },
+  "formes_engrais": {
+    "N_recommande": [
+      "nitrate_calcium",
+      "nitrate_ammonium",
+      "uree_si_pH<7"
+    ],
+    "N_eviter": [
+      "uree_si_pH>7"
+    ],
+    "P_recommande": [
+      "MAP",
+      "acide_phosphorique"
+    ],
+    "P_eviter": [
+      "DAP_haute_dose"
+    ],
+    "K_recommande": [
+      "sulfate_potasse"
+    ],
+    "K_interdit": [
+      "chlorure_potasse"
+    ],
+    "note_KCl": "STRICTEMENT INTERDIT - très sensible au chlore"
+  },
+  "seuils_foliaires": {
+    "periode_prelevement": "Août-Septembre, feuilles 5-7 mois",
+    "N": {
+      "unite": "%",
+      "carence": 1.6,
+      "suffisant": [
+        1.6,
+        1.8
+      ],
+      "optimal": [
+        1.8,
+        2.2
+      ],
+      "exces": 2.5
+    },
+    "P": {
+      "unite": "%",
+      "carence": 0.08,
+      "suffisant": [
+        0.08,
+        0.1
+      ],
+      "optimal": [
+        0.1,
+        0.25
+      ],
+      "exces": 0.3
+    },
+    "K": {
+      "unite": "%",
+      "carence": 0.75,
+      "suffisant": [
+        0.75,
+        1.0
+      ],
+      "optimal": [
+        1.0,
+        2.0
+      ],
+      "exces": 3.0
+    },
+    "Ca": {
+      "unite": "%",
+      "carence": 1.0,
+      "suffisant": [
+        1.0,
+        1.5
+      ],
+      "optimal": [
+        1.5,
+        3.0
+      ],
+      "exces": 4.0
+    },
+    "Mg": {
+      "unite": "%",
+      "carence": 0.25,
+      "suffisant": [
+        0.25,
+        0.4
+      ],
+      "optimal": [
+        0.4,
+        0.8
+      ],
+      "exces": 1.0
+    },
+    "Fe": {
+      "unite": "ppm",
+      "carence": 50,
+      "suffisant": [
+        50,
+        80
+      ],
+      "optimal": [
+        80,
+        200
+      ],
+      "exces": 300
+    },
+    "Zn": {
+      "unite": "ppm",
+      "carence": 30,
+      "suffisant": [
+        30,
+        50
+      ],
+      "optimal": [
+        50,
+        100
+      ],
+      "exces": 200
+    },
+    "Mn": {
+      "unite": "ppm",
+      "carence": 25,
+      "suffisant": [
+        25,
+        50
+      ],
+      "optimal": [
+        50,
+        200
+      ],
+      "exces": 500
+    },
+    "B": {
+      "unite": "ppm",
+      "carence": 30,
+      "suffisant": [
+        30,
+        50
+      ],
+      "optimal": [
+        50,
+        100
+      ],
+      "exces": 150
+    },
+    "Cu": {
+      "unite": "ppm",
+      "carence": 5,
+      "suffisant": [
+        5,
+        10
+      ],
+      "optimal": [
+        10,
+        25
+      ],
+      "exces": 40
+    },
+    "Cl": {
+      "unite": "%",
+      "toxique": 0.25
+    },
+    "Na": {
+      "unite": "%",
+      "toxique": 0.25
+    }
+  },
+  "seuils_eau_salinite": {
+    "CE_tolerance_dS_m": 1.0,
+    "CE_problematique_dS_m": 1.5,
+    "CE_deconseille_dS_m": 2.0,
+    "Cl_tolerance_mg_L": 50,
+    "Cl_toxique_mg_L": 100,
+    "Na_tolerance_mg_L": 50,
+    "Na_toxique_mg_L": 100,
+    "B_tolerance_mg_L": 0.5,
+    "B_toxique_mg_L": 1.0,
+    "SAR_max": 5,
+    "note": "2-3× plus sensible que olivier"
+  },
+  "kc": {
+    "jeune_1-3_ans": {
+      "jan_fev": 0.5,
+      "mar_avr": 0.55,
+      "mai_juin": 0.6,
+      "juil_aout": 0.65,
+      "sept_oct": 0.6,
+      "nov_dec": 0.55
+    },
+    "adulte_plus_6_ans": {
+      "jan_fev": 0.7,
+      "mar_avr": 0.75,
+      "mai_juin": 0.8,
+      "juil_aout": 0.85,
+      "sept_oct": 0.8,
+      "nov_dec": 0.75
+    }
+  },
+  "irrigation": {
+    "sensibilite": "elevee_stress_et_exces",
+    "note": "Ne tolère ni stress hydrique ni excès eau (Phytophthora)",
+    "frequence": "frequente_petites_doses",
+    "tensiometre_seuil_sol_leger_cbar": [
+      25,
+      30
+    ],
+    "tensiometre_seuil_sol_limoneux_cbar": [
+      35,
+      40
+    ]
+  },
+  "phytosanitaire": {
+    "maladies": [
+      {
+        "nom": "Phytophthora",
+        "agent": "Phytophthora cinnamomi",
+        "gravite": "maladie_n1_devastatrice",
+        "conditions": "sol_mal_draine_exces_eau_T_20-30",
+        "prevention": [
+          "drainage_excellent",
+          "porte_greffe_tolerant",
+          "jamais_saturer_sol"
+        ],
+        "traitement": {
+          "phosphonate_injection": {
+            "dose": "20-30 mL/L",
+            "frequence": "2-3x/an"
+          },
+          "phosphonate_foliaire": {
+            "dose": "5 mL/L",
+            "frequence": "4-6x/an"
+          },
+          "metalaxyl_sol": {
+            "dose": "2-3 g/m²",
+            "condition": "infection_active"
+          }
+        }
+      },
+      {
+        "nom": "Anthracnose",
+        "agent": "Colletotrichum gloeosporioides",
+        "conditions": "HR_elevee_pluie_T_20-25",
+        "traitement": {
+          "cuivre": {
+            "dose_kg_ha": 2,
+            "DAR_jours": 14
+          }
+        }
+      },
+      {
+        "nom": "Cercospora",
+        "agent": "Cercospora purpurea",
+        "traitement": {
+          "cuivre": {
+            "dose_kg_ha": [
+              2,
+              3
+            ],
+            "applications": [
+              2,
+              3
+            ]
+          }
+        }
+      }
+    ],
+    "ravageurs": [
+      {
+        "nom": "Thrips",
+        "periode": "floraison",
+        "traitement": "Spinosad 0.2 L/ha"
+      },
+      {
+        "nom": "Acariens",
+        "periode": "ete_sec",
+        "traitement": "Abamectine 0.5 L/ha"
+      },
+      {
+        "nom": "Cochenilles",
+        "periode": "toute_annee",
+        "traitement": "Huile blanche 15 L/ha"
+      },
+      {
+        "nom": "Scolytes",
+        "condition": "arbres_stresses",
+        "traitement": "eliminer_branches"
+      }
+    ]
+  },
+  "calendrier_phyto_preventif": {
+    "jan_fev": {
+      "cible": "Phosphonate préventif",
+      "produit": "Phosphonate K",
+      "dose": "5 mL/L foliaire"
+    },
+    "mars": {
+      "cible": "Anthracnose floraison",
+      "produit": "Cuivre",
+      "dose": "2 kg/ha",
+      "condition": "si_HR_elevee"
+    },
+    "avr_mai": {
+      "cible": "Thrips",
+      "produit": "Spinosad",
+      "dose": "0.2 L/ha",
+      "condition": "si_presence"
+    },
+    "juin": {
+      "cible": "Phosphonate",
+      "produit": "Phosphonate K",
+      "mode": "injection_tronc"
+    },
+    "aout_sept": {
+      "cible": "Anthracnose pré-récolte",
+      "produit": "Cuivre",
+      "dose": "2 kg/ha",
+      "DAR": "21j"
+    },
+    "nov": {
+      "cible": "Phosphonate",
+      "produit": "Phosphonate K",
+      "dose": "5 mL/L foliaire"
+    }
+  },
+  "maturite_recolte": {
+    "critere_principal": "matiere_seche_ou_huile",
+    "note": "Avocat ne mûrit PAS sur arbre - maturité physiologique",
+    "seuils_hass": {
+      "matiere_seche_min_pct": 21,
+      "huile_min_pct": 8
+    },
+    "seuils_fuerte": {
+      "matiere_seche_min_pct": 19,
+      "huile_min_pct": 8
+    },
+    "methodes": [
+      "sechage_etuve",
+      "extraction_soxhlet",
+      "flottaison",
+      "jours_floraison"
+    ],
+    "conservation_hass": {
+      "temperature_C": [
+        5,
+        7
+      ],
+      "duree_semaines": [
+        2,
+        4
+      ]
+    }
+  },
+  "alertes": [
+    {
+      "code": "AVO-01",
+      "nom": "Stress hydrique",
+      "seuil": "NDMI < P15 (2 passages) + T > 30",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-02",
+      "nom": "Excès eau / Phytophthora",
+      "seuil": "NDMI > P95 + pluie > 50mm/sem",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-03",
+      "nom": "Risque gel",
+      "seuil": "Tmin prévue < 2°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-04",
+      "nom": "Gel avéré",
+      "seuil": "Tmin mesurée < 0°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-05",
+      "nom": "Canicule",
+      "seuil": "Tmax > 38°C (3j) + HR < 30%",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-06",
+      "nom": "Vent chaud sec",
+      "seuil": "T > 35 + HR < 25% + vent > 25 km/h",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-07",
+      "nom": "Conditions Phytophthora",
+      "seuil": "Sol saturé > 48h + T 20-28",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-08",
+      "nom": "Symptômes Phytophthora",
+      "seuil": "NIRv ↘ progressif + feuilles pâles",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-09",
+      "nom": "Risque anthracnose",
+      "seuil": "HR > 85% + pluie + T 20-25 (floraison)",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-10",
+      "nom": "Pression thrips",
+      "seuil": "Floraison + T 20-28 + captures",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-11",
+      "nom": "Carence Zn probable",
+      "seuil": "NDRE < P10 + feuilles petites rondes",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AVO-12",
+      "nom": "Carence Fe",
+      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AVO-13",
+      "nom": "Toxicité Cl/Na",
+      "seuil": "Brûlures foliaires + CE sol > 2.5",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-14",
+      "nom": "Floraison faible",
+      "seuil": "Floraison < 50% attendue",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-15",
+      "nom": "Chute excessive",
+      "seuil": "Charge < 30% post-nouaison",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-16",
+      "nom": "Maturité récolte",
+      "seuil": "MS ≥ 21% (Hass)",
+      "priorite": "info"
+    },
+    {
+      "code": "AVO-17",
+      "nom": "Année OFF probable",
+      "seuil": "N-1 très productif + flush faible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-18",
+      "nom": "Dépérissement",
+      "seuil": "NIRv ↘ > 20% (4 passages)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-19",
+      "nom": "Arbre mort",
+      "seuil": "NDVI < 0.30 persistant 3 mois",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-20",
+      "nom": "Croissance excessive",
+      "seuil": "NDVI ↗ > 15% + pas de fruits",
+      "priorite": "vigilance"
+    }
+  ],
+  "modele_predictif": {
+    "difficulte": "plus_difficile_que_olivier",
+    "raisons": [
+      "Floraison difficile à détecter par satellite",
+      "Chute physiologique très variable (80-99%)",
+      "Fruit reste longtemps sur arbre"
+    ],
+    "precision_attendue": {
+      "traditionnel": {
+        "R2": [
+          0.3,
+          0.5
+        ],
+        "MAE_pct": [
+          35,
+          50
+        ]
+      },
+      "intensif": {
+        "R2": [
+          0.4,
+          0.6
+        ],
+        "MAE_pct": [
+          25,
+          40
+        ]
+      },
+      "super_intensif": {
+        "R2": [
+          0.5,
+          0.7
+        ],
+        "MAE_pct": [
+          20,
+          35
+        ]
+      }
+    },
+    "recommandation": "Comptage fruits sur échantillon reste méthode la plus fiable"
+  },
+  "biostimulants": {
+    "calendrier": {
+      "jan": {
+        "algues": "3 L/ha",
+        "objectif": "Préparer floraison"
+      },
+      "fev_mar": {
+        "algues": "3 L/ha",
+        "amines": "4 L/ha foliaire",
+        "objectif": "Nouaison critique"
+      },
+      "avr_mai": {
+        "humiques": "4 L/ha",
+        "amines": "4 L/ha",
+        "objectif": "Limiter chute"
+      },
+      "juin_juil": {
+        "algues": "3 L/ha",
+        "objectif": "Stress chaleur"
+      },
+      "aout_sept": {
+        "humiques": "4 L/ha",
+        "amines": "4 L/ha",
+        "objectif": "Flush 2"
+      },
+      "nov_dec": {
+        "humiques_granule": "20 kg/ha",
+        "amines_fertig": "5 L/ha",
+        "objectif": "Reconstitution"
+      }
+    },
+    "focus_nouaison": "Période Mars-Mai critique - concentrer biostimulants"
+  },
+  "plan_annuel_type_intensif_hass_15T": {
+    "jan": {
+      "NPK": "N25+P15+K15",
+      "micro": "Zn foliaire",
+      "biostim": "Algues",
+      "phyto": "Phosphonate",
+      "irrigation_L_sem": 80
+    },
+    "fev": {
+      "NPK": "N25+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 100
+    },
+    "mar": {
+      "NPK": "N30+P15+K20",
+      "micro": "B floraison",
+      "biostim": "Algues+Aminés",
+      "phyto": "Cuivre si pluie",
+      "irrigation_L_sem": 120
+    },
+    "avr": {
+      "NPK": "N25+K20",
+      "micro": "Zn foliaire",
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 150
+    },
+    "mai": {
+      "NPK": "N25+P10+K25",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Spinosad si thrips",
+      "irrigation_L_sem": 170
+    },
+    "juin": {
+      "NPK": "N25+K30",
+      "micro": "Fe-EDDHA",
+      "biostim": "Humiques",
+      "phyto": "Phosphonate injection",
+      "irrigation_L_sem": 200
+    },
+    "juil": {
+      "NPK": "N20+K30",
+      "micro": "Zn foliaire",
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 200
+    },
+    "aout": {
+      "NPK": "N20+P10+K25",
+      "micro": null,
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 180
+    },
+    "sept": {
+      "NPK": "N15+K20",
+      "micro": "Zn+Mn",
+      "biostim": "Aminés",
+      "phyto": "Cuivre pré-récolte",
+      "irrigation_L_sem": 150
+    },
+    "oct": {
+      "NPK": "N15+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 120
+    },
+    "nov": {
+      "NPK": "N10+K10",
+      "micro": null,
+      "biostim": "Humiques",
+      "phyto": "Phosphonate foliaire",
+      "irrigation_L_sem": 80
+    },
+    "dec": {
+      "NPK": "N10",
+      "micro": null,
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 60
+    }
+  }
+}

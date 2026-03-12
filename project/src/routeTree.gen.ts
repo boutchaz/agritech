@@ -133,11 +133,20 @@ import { Route as AuthenticatedproductionParcelsParcelIdReportsRouteImport } fro
 import { Route as AuthenticatedproductionParcelsParcelIdProfitabilityRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.profitability'
 import { Route as AuthenticatedproductionParcelsParcelIdProductionRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.production'
 import { Route as AuthenticatedproductionParcelsParcelIdAnalyseRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.analyse'
+import { Route as AuthenticatedproductionParcelsParcelIdAiRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.sent'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.received'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.index'
+import { Route as AuthenticatedproductionParcelsParcelIdAiIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.index'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.timeseries'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.heatmap'
+import { Route as AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.weather'
+import { Route as AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.recommendations'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan'
+import { Route as AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.calibration'
+import { Route as AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.alerts'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.index'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.summary'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -863,6 +872,12 @@ const AuthenticatedproductionParcelsParcelIdAnalyseRoute =
     path: '/analyse',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
   } as any)
+const AuthenticatedproductionParcelsParcelIdAiRoute =
+  AuthenticatedproductionParcelsParcelIdAiRouteImport.update({
+    id: '/ai',
+    path: '/ai',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
+  } as any)
 const AuthenticatedmiscMarketplaceQuoteRequestsSentRoute =
   AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport.update({
     id: '/quote-requests/sent',
@@ -881,6 +896,12 @@ const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
   } as any)
+const AuthenticatedproductionParcelsParcelIdAiIndexRoute =
+  AuthenticatedproductionParcelsParcelIdAiIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport.update({
     id: '/timeseries',
@@ -892,6 +913,48 @@ const AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute =
     id: '/heatmap',
     path: '/heatmap',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiWeatherRoute =
+  AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport.update({
+    id: '/weather',
+    path: '/weather',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute =
+  AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport.update({
+    id: '/recommendations',
+    path: '/recommendations',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanRouteImport.update({
+    id: '/plan',
+    path: '/plan',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiCalibrationRoute =
+  AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport.update({
+    id: '/calibration',
+    path: '/calibration',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiAlertsRoute =
+  AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport.update({
+    id: '/alerts',
+    path: '/alerts',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiPlanRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport.update({
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiPlanRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -1010,6 +1073,7 @@ export interface FileRoutesByFullPath {
   '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
+  '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -1020,9 +1084,17 @@ export interface FileRoutesByFullPath {
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/ai/': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/parcels/$parcelId/ai/plan/': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1143,9 +1215,16 @@ export interface FileRoutesByTo {
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1265,6 +1344,7 @@ export interface FileRoutesById {
   '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   '/_authenticated/(production)/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   '/_authenticated/(production)/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/_authenticated/(production)/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -1275,9 +1355,17 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  '/_authenticated/(production)/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan/': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1397,6 +1485,7 @@ export interface FileRouteTypes {
     | '/compliance/corrective-actions/'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
+    | '/parcels/$parcelId/ai'
     | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
@@ -1407,9 +1496,17 @@ export interface FileRouteTypes {
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
+    | '/parcels/$parcelId/ai/alerts'
+    | '/parcels/$parcelId/ai/calibration'
+    | '/parcels/$parcelId/ai/plan'
+    | '/parcels/$parcelId/ai/recommendations'
+    | '/parcels/$parcelId/ai/weather'
     | '/parcels/$parcelId/satellite/heatmap'
     | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/ai/'
     | '/parcels/$parcelId/satellite/'
+    | '/parcels/$parcelId/ai/plan/summary'
+    | '/parcels/$parcelId/ai/plan/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1530,9 +1627,16 @@ export interface FileRouteTypes {
     | '/workforce/workers/piece-work'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
+    | '/parcels/$parcelId/ai/alerts'
+    | '/parcels/$parcelId/ai/calibration'
+    | '/parcels/$parcelId/ai/recommendations'
+    | '/parcels/$parcelId/ai/weather'
     | '/parcels/$parcelId/satellite/heatmap'
     | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/ai'
     | '/parcels/$parcelId/satellite'
+    | '/parcels/$parcelId/ai/plan/summary'
+    | '/parcels/$parcelId/ai/plan'
   id:
     | '__root__'
     | '/'
@@ -1651,6 +1755,7 @@ export interface FileRouteTypes {
     | '/_authenticated/compliance/corrective-actions/'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
+    | '/_authenticated/(production)/parcels/$parcelId/ai'
     | '/_authenticated/(production)/parcels/$parcelId/analyse'
     | '/_authenticated/(production)/parcels/$parcelId/production'
     | '/_authenticated/(production)/parcels/$parcelId/profitability'
@@ -1661,9 +1766,17 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/recommendations'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/weather'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2553,6 +2666,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAnalyseRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
     }
+    '/_authenticated/(production)/parcels/$parcelId/ai': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai'
+      path: '/ai'
+      fullPath: '/parcels/$parcelId/ai'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
+    }
     '/_authenticated/(misc)/marketplace/quote-requests/sent': {
       id: '/_authenticated/(misc)/marketplace/quote-requests/sent'
       path: '/quote-requests/sent'
@@ -2574,6 +2694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
     }
+    '/_authenticated/(production)/parcels/$parcelId/ai/': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/ai/'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiIndexRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
       path: '/timeseries'
@@ -2587,6 +2714,55 @@ declare module '@tanstack/react-router' {
       fullPath: '/parcels/$parcelId/satellite/heatmap'
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/weather': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/weather'
+      path: '/weather'
+      fullPath: '/parcels/$parcelId/ai/weather'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/recommendations': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/recommendations'
+      path: '/recommendations'
+      fullPath: '/parcels/$parcelId/ai/recommendations'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan'
+      path: '/plan'
+      fullPath: '/parcels/$parcelId/ai/plan'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/calibration': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
+      path: '/calibration'
+      fullPath: '/parcels/$parcelId/ai/calibration'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/alerts': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
+      path: '/alerts'
+      fullPath: '/parcels/$parcelId/ai/alerts'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan/': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/ai/plan/'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary'
+      path: '/summary'
+      fullPath: '/parcels/$parcelId/ai/plan/summary'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRoute
     }
   }
 }
@@ -2747,6 +2923,54 @@ const AuthenticatedproductionCropCyclesRouteWithChildren =
     AuthenticatedproductionCropCyclesRouteChildren,
   )
 
+interface AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
+}
+
+const AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren: AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren =
+  {
+    AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute,
+    AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute,
+  }
+
+const AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren =
+  AuthenticatedproductionParcelsParcelIdAiPlanRoute._addFileChildren(
+    AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren,
+  )
+
+interface AuthenticatedproductionParcelsParcelIdAiRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiAlertsRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  AuthenticatedproductionParcelsParcelIdAiCalibrationRoute: typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  AuthenticatedproductionParcelsParcelIdAiPlanRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute: typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  AuthenticatedproductionParcelsParcelIdAiWeatherRoute: typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
+  AuthenticatedproductionParcelsParcelIdAiIndexRoute: typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
+}
+
+const AuthenticatedproductionParcelsParcelIdAiRouteChildren: AuthenticatedproductionParcelsParcelIdAiRouteChildren =
+  {
+    AuthenticatedproductionParcelsParcelIdAiAlertsRoute:
+      AuthenticatedproductionParcelsParcelIdAiAlertsRoute,
+    AuthenticatedproductionParcelsParcelIdAiCalibrationRoute:
+      AuthenticatedproductionParcelsParcelIdAiCalibrationRoute,
+    AuthenticatedproductionParcelsParcelIdAiPlanRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren,
+    AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute:
+      AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute,
+    AuthenticatedproductionParcelsParcelIdAiWeatherRoute:
+      AuthenticatedproductionParcelsParcelIdAiWeatherRoute,
+    AuthenticatedproductionParcelsParcelIdAiIndexRoute:
+      AuthenticatedproductionParcelsParcelIdAiIndexRoute,
+  }
+
+const AuthenticatedproductionParcelsParcelIdAiRouteWithChildren =
+  AuthenticatedproductionParcelsParcelIdAiRoute._addFileChildren(
+    AuthenticatedproductionParcelsParcelIdAiRouteChildren,
+  )
+
 interface AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren {
   AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
@@ -2769,6 +2993,7 @@ const AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren =
   )
 
 interface AuthenticatedproductionParcelsParcelIdRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiRoute: typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   AuthenticatedproductionParcelsParcelIdAnalyseRoute: typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   AuthenticatedproductionParcelsParcelIdProductionRoute: typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   AuthenticatedproductionParcelsParcelIdProfitabilityRoute: typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -2780,6 +3005,8 @@ interface AuthenticatedproductionParcelsParcelIdRouteChildren {
 
 const AuthenticatedproductionParcelsParcelIdRouteChildren: AuthenticatedproductionParcelsParcelIdRouteChildren =
   {
+    AuthenticatedproductionParcelsParcelIdAiRoute:
+      AuthenticatedproductionParcelsParcelIdAiRouteWithChildren,
     AuthenticatedproductionParcelsParcelIdAnalyseRoute:
       AuthenticatedproductionParcelsParcelIdAnalyseRoute,
     AuthenticatedproductionParcelsParcelIdProductionRoute:

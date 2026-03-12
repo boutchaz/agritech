@@ -1,15 +1,35 @@
 import re
+from collections.abc import Awaitable, Callable
+from typing import cast
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.api import health, indices, analysis, supabase, billing, weather, sync
-from app.core.config import settings
+from starlette.responses import Response
+from typing_extensions import override
+
+from .api import (
+    health,
+    indices,
+    analysis,
+    supabase,
+    billing,
+    weather,
+    sync,
+    calibration,
+)
 
 
 class NormalizePathMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
+    @override
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         if "//" in request.scope["path"]:
-            request.scope["path"] = re.sub(r"/+", "/", request.scope["path"])
+            path = cast(str, request.scope["path"])
+            request.scope["path"] = re.sub(r"/+", "/", path)
         return await call_next(request)
 
 
@@ -39,6 +59,7 @@ app.include_router(supabase.router, prefix="/api/supabase", tags=["supabase"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
+app.include_router(calibration.router, prefix="/api/calibration", tags=["calibration"])
 
 
 @app.get("/")
@@ -52,5 +73,6 @@ async def root():
             "pdf-generation",
             "data-processing",
             "weather-data",
+            "calibration",
         ],
     }

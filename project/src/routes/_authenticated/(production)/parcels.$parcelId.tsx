@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useParcelById, useFarms } from '@/hooks/useParcelsQuery'
 import ModernPageHeader from '@/components/ModernPageHeader'
-import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp } from 'lucide-react'
+import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp, BrainCircuit } from 'lucide-react'
 
 const ParcelLayout = () => {
   const { t } = useTranslation();
@@ -16,6 +16,7 @@ const ParcelLayout = () => {
 
   const tabs = [
     { id: 'overview', name: t('parcels.detail.tabs.overview'), icon: ChartBar, path: `/parcels/${parcelId}` },
+    { id: 'ai', name: 'Agromind IA', icon: BrainCircuit, path: `/parcels/${parcelId}/ai` },
     { id: 'analyse', name: t('parcels.detail.tabs.soil'), icon: Flask, path: `/parcels/${parcelId}/analyse` },
     { id: 'satellite', name: t('parcels.detail.tabs.satellite'), icon: Satellite, path: `/parcels/${parcelId}/satellite` },
     { id: 'weather', name: t('parcels.detail.tabs.weather'), icon: Cloud, path: `/parcels/${parcelId}/weather` },
@@ -41,6 +42,7 @@ const ParcelLayout = () => {
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">{t('parcels.detail.notFound')}</p>
           <button
+            type="button"
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
             className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
@@ -76,6 +78,7 @@ const ParcelLayout = () => {
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => navigate({ to: tab.path })}
                   className={`
                     flex items-center space-x-3 px-6 py-4 rounded-lg font-medium text-base shadow-md transition-all transform hover:scale-105
@@ -102,6 +105,7 @@ const ParcelLayout = () => {
       {/* Back Button */}
       <div className="px-6 pb-6">
         <button
+          type="button"
           onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
           className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
         >

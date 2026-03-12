@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD, Reflector } from '@nestjs/core';
+import { Reflector } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -65,6 +65,7 @@ import { FilesModule } from './modules/files/files.module';
 import { DocumentTemplatesModule } from './modules/document-templates/document-templates.module';
 import { LabServicesModule } from './modules/lab-services/lab-services.module';
 import { TreeManagementModule } from './modules/tree-management/tree-management.module';
+import { AiReferencesModule } from './modules/ai-references/ai-references.module';
 import { AIReportsModule } from './modules/ai-reports/ai-reports.module';
 import { OrganizationAISettingsModule } from './modules/organization-ai-settings/organization-ai-settings.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -89,6 +90,12 @@ import { OrgSetupModule } from './modules/org-setup/org-setup.module';
 import { TaskTemplatesModule } from './modules/task-templates/task-templates.module';
 import { PolarModule } from './modules/polar/polar.module';
 import { EntitiesModule } from './modules/entities/entities.module';
+import { CalibrationModule } from './modules/calibration/calibration.module';
+import { AiDiagnosticsModule } from './modules/ai-diagnostics/ai-diagnostics.module';
+import { AiAlertsModule } from './modules/ai-alerts/ai-alerts.module';
+import { AiRecommendationsModule } from './modules/ai-recommendations/ai-recommendations.module';
+import { AnnualPlanModule } from './modules/annual-plan/annual-plan.module';
+import { AiJobsModule } from './modules/ai-jobs/ai-jobs.module';
 
 @Module({
   imports: [
@@ -182,6 +189,7 @@ import { EntitiesModule } from './modules/entities/entities.module';
     StrapiModule,
     DemoDataModule,
     FilesModule,
+    AiReferencesModule,
     AIReportsModule,
     OrganizationAISettingsModule,
     ChatModule,
@@ -195,6 +203,12 @@ import { EntitiesModule } from './modules/entities/entities.module';
     TaskTemplatesModule,
     PolarModule,
     EntitiesModule,
+    CalibrationModule,
+    AiDiagnosticsModule,
+    AiAlertsModule,
+    AiRecommendationsModule,
+    AnnualPlanModule,
+    AiJobsModule,
   ],
   controllers: [AppController],
   providers: [

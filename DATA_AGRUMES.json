@@ -1,0 +1,1839 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "agrumes",
+    "famille": "Rutaceae",
+    "genre": "Citrus",
+    "pays": "Maroc"
+  },
+  "especes": {
+    "orange": {
+      "nom_scientifique": "Citrus sinensis",
+      "part_production_maroc": "60%",
+      "types": [
+        "Navel",
+        "Blonde",
+        "Sanguine"
+      ]
+    },
+    "petits_agrumes": {
+      "nom_scientifique": "Citrus reticulata",
+      "part_production_maroc": "25%",
+      "types": [
+        "Clémentine",
+        "Mandarine",
+        "Tangor"
+      ]
+    },
+    "citron": {
+      "nom_scientifique": "Citrus limon",
+      "part_production_maroc": "8%",
+      "types": [
+        "Eureka",
+        "Lisbon",
+        "Verna"
+      ]
+    },
+    "pomelo": {
+      "nom_scientifique": "Citrus paradisi",
+      "part_production_maroc": "3%",
+      "types": [
+        "Star Ruby",
+        "Marsh"
+      ]
+    }
+  },
+  "varietes": {
+    "oranges": [
+      {
+        "code": "NAVELINE",
+        "nom": "Naveline",
+        "type": "Navel",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan"
+        ],
+        "calibre": "gros",
+        "qualite": "excellente",
+        "export": true
+      },
+      {
+        "code": "WASH_NAVEL",
+        "nom": "Washington Navel",
+        "type": "Navel",
+        "maturite": [
+          "Dec",
+          "Jan",
+          "Fev"
+        ],
+        "calibre": "tres_gros",
+        "qualite": "excellente"
+      },
+      {
+        "code": "NAVELATE",
+        "nom": "Navelate",
+        "type": "Navel",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "calibre": "gros",
+        "qualite": "tres_bonne",
+        "tardive": true
+      },
+      {
+        "code": "SALUSTIANA",
+        "nom": "Salustiana",
+        "type": "Blonde",
+        "maturite": [
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "usage": "jus",
+        "qualite": "tres_bonne"
+      },
+      {
+        "code": "VALENCIA",
+        "nom": "Valencia Late",
+        "type": "Blonde",
+        "maturite": [
+          "Avr",
+          "Mai",
+          "Juin"
+        ],
+        "qualite": "excellente",
+        "tres_tardive": true
+      },
+      {
+        "code": "MAROC_LATE",
+        "nom": "Maroc Late",
+        "type": "Blonde",
+        "maturite": [
+          "Mar",
+          "Avr",
+          "Mai",
+          "Juin"
+        ],
+        "qualite": "excellente",
+        "specialite_maroc": true
+      },
+      {
+        "code": "SANGUINELLI",
+        "nom": "Sanguinelli",
+        "type": "Sanguine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "niche": true
+      }
+    ],
+    "petits_agrumes": [
+      {
+        "code": "CLEM_COMMUNE",
+        "nom": "Clémentine Commune",
+        "type": "Clementine",
+        "maturite": [
+          "Oct",
+          "Nov",
+          "Dec"
+        ],
+        "pepins": [
+          0,
+          2
+        ],
+        "conservation": "moyenne"
+      },
+      {
+        "code": "NULES",
+        "nom": "Nules",
+        "type": "Clementine",
+        "maturite": [
+          "Nov",
+          "Dec"
+        ],
+        "pepins": [
+          0,
+          1
+        ],
+        "conservation": "bonne",
+        "export": true
+      },
+      {
+        "code": "MARISOL",
+        "nom": "Marisol",
+        "type": "Clementine",
+        "maturite": [
+          "Sept",
+          "Oct"
+        ],
+        "tres_precoce": true,
+        "conservation": "faible"
+      },
+      {
+        "code": "NOUR",
+        "nom": "Nour",
+        "type": "Clementine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "tardive": true,
+        "origine": "Maroc"
+      },
+      {
+        "code": "NADORCOTT",
+        "nom": "Nadorcott/Afourer",
+        "type": "Mandarine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "premium": true,
+        "conservation": "excellente"
+      },
+      {
+        "code": "ORTANIQUE",
+        "nom": "Ortanique",
+        "type": "Tangor",
+        "maturite": [
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "pepins": [
+          5,
+          15
+        ],
+        "hybride": "Orange x Tangerine"
+      },
+      {
+        "code": "NOVA",
+        "nom": "Nova",
+        "type": "Mandarine",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan"
+        ],
+        "arome": "intense"
+      }
+    ],
+    "citrons": [
+      {
+        "code": "EUREKA",
+        "nom": "Eureka",
+        "maturite": "toute_annee",
+        "acidite": "elevee",
+        "standard": true
+      },
+      {
+        "code": "LISBON",
+        "nom": "Lisbon",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr",
+          "Mai"
+        ],
+        "acidite": "elevee",
+        "rustique": true
+      },
+      {
+        "code": "VERNA",
+        "nom": "Verna",
+        "maturite": [
+          "Fev",
+          "Mar",
+          "Avr",
+          "Mai",
+          "Juin",
+          "Juil"
+        ],
+        "acidite": "moyenne",
+        "peu_pepins": true
+      },
+      {
+        "code": "MEYER",
+        "nom": "Meyer",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "acidite": "faible",
+        "hybride": true
+      }
+    ],
+    "pomelos": [
+      {
+        "code": "STAR_RUBY",
+        "nom": "Star Ruby",
+        "chair": "rouge",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "gout": "peu_amer",
+        "principal": true
+      },
+      {
+        "code": "RIO_RED",
+        "nom": "Rio Red",
+        "chair": "rouge",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "gout": "peu_amer"
+      },
+      {
+        "code": "MARSH",
+        "nom": "Marsh",
+        "chair": "blonde",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "gout": "legerement_amer"
+      }
+    ]
+  },
+  "porte_greffes": [
+    {
+      "code": "BIGARADIER",
+      "nom": "Bigaradier",
+      "vigueur": "forte",
+      "calcaire": "excellente",
+      "salinite": "bonne",
+      "phytophthora": "sensible",
+      "tristeza": "TRES_SENSIBLE",
+      "qualite_fruit": "excellente",
+      "exclusion_Cl": "bonne",
+      "note": "RISQUE Tristeza - éviter nouvelles plantations"
+    },
+    {
+      "code": "CARRIZO",
+      "nom": "Citrange Carrizo",
+      "vigueur": "moyenne_forte",
+      "calcaire": "moyenne",
+      "salinite": "faible",
+      "phytophthora": "tolerante",
+      "tristeza": "tolerante",
+      "qualite_fruit": "bonne",
+      "exclusion_Cl": "faible",
+      "recommande_si_tristeza": true
+    },
+    {
+      "code": "VOLKAMERIANA",
+      "nom": "Volkameriana",
+      "vigueur": "tres_forte",
+      "calcaire": "bonne",
+      "salinite": "bonne",
+      "phytophthora": "moyenne",
+      "tristeza": "tolerante",
+      "qualite_fruit": "moyenne",
+      "exclusion_Cl": "bonne",
+      "recommande_si_salin": true
+    },
+    {
+      "code": "MACROPHYLLA",
+      "nom": "Macrophylla",
+      "vigueur": "tres_forte",
+      "calcaire": "bonne",
+      "salinite": "bonne",
+      "phytophthora": "moyenne",
+      "tristeza": "tolerante",
+      "qualite_fruit": "faible",
+      "exclusion_Cl": "bonne"
+    },
+    {
+      "code": "CLEOPATRE",
+      "nom": "Mandarinier Cléopâtre",
+      "vigueur": "moyenne",
+      "calcaire": "excellente",
+      "salinite": "bonne",
+      "phytophthora": "sensible",
+      "tristeza": "tolerante",
+      "qualite_fruit": "excellente",
+      "exclusion_Cl": "bonne"
+    },
+    {
+      "code": "PONCIRUS",
+      "nom": "Poncirus trifoliata",
+      "vigueur": "nanisante",
+      "calcaire": "tres_faible",
+      "salinite": "faible",
+      "phytophthora": "tres_tolerante",
+      "tristeza": "tolerante",
+      "qualite_fruit": "excellente",
+      "note": "Éviter sol calcaire"
+    }
+  ],
+  "guide_choix_pg": {
+    "sol_calcaire_pH>7.5": {
+      "recommande": [
+        "Bigaradier",
+        "Mandarinier Cléopâtre"
+      ],
+      "eviter": [
+        "Poncirus",
+        "Citrange"
+      ]
+    },
+    "sol_salin_CE>2": {
+      "recommande": [
+        "Volkameriana",
+        "Macrophylla",
+        "Bigaradier"
+      ],
+      "eviter": [
+        "Citrange Carrizo"
+      ]
+    },
+    "sol_lourd_mal_draine": {
+      "recommande": [
+        "Citrange Carrizo",
+        "Poncirus"
+      ],
+      "eviter": [
+        "Bigaradier",
+        "Volkameriana"
+      ]
+    },
+    "presence_tristeza": {
+      "recommande": [
+        "Citrange",
+        "Volkameriana",
+        "Citrumelo"
+      ],
+      "interdit": [
+        "Bigaradier"
+      ]
+    }
+  },
+  "exigences_climatiques": {
+    "orange": {
+      "T_optimale": [
+        22,
+        28
+      ],
+      "T_min_croissance": 13,
+      "gel_feuilles": [
+        -3,
+        -5
+      ],
+      "gel_fruits": [
+        -2,
+        -3
+      ],
+      "gel_mortel": [
+        -8,
+        -10
+      ],
+      "heures_froid": [
+        200,
+        400
+      ]
+    },
+    "clementine": {
+      "T_optimale": [
+        20,
+        26
+      ],
+      "T_min_croissance": 13,
+      "gel_feuilles": [
+        -3,
+        -5
+      ],
+      "gel_fruits": -2,
+      "gel_mortel": -8,
+      "heures_froid": [
+        100,
+        200
+      ]
+    },
+    "citron": {
+      "T_optimale": [
+        20,
+        30
+      ],
+      "T_min_croissance": 15,
+      "gel_feuilles": [
+        -2,
+        -3
+      ],
+      "gel_fruits": [
+        -1,
+        -2
+      ],
+      "gel_mortel": [
+        -5,
+        -6
+      ],
+      "heures_froid": 0
+    },
+    "pomelo": {
+      "T_optimale": [
+        23,
+        30
+      ],
+      "T_min_croissance": 15,
+      "gel_feuilles": -2,
+      "gel_fruits": -1,
+      "gel_mortel": -4,
+      "heures_froid": 0
+    }
+  },
+  "exigences_sol": {
+    "pH_optimal": [
+      6.0,
+      7.0
+    ],
+    "pH_tolerance": [
+      5.5,
+      8.0
+    ],
+    "calcaire_actif_max_pct": 8,
+    "CE_sol_optimal_dS_m": 1.5,
+    "CE_sol_max_dS_m": 3.0,
+    "texture": "sablo_limoneux",
+    "drainage": "bon_a_excellent",
+    "profondeur_utile_min_cm": 60,
+    "nappe_phreatique_min_cm": 100
+  },
+  "systemes": {
+    "traditionnel": {
+      "densite_arbres_ha": [
+        200,
+        300
+      ],
+      "ecartement_m": "7×5 à 8×6",
+      "irrigation": "gravitaire",
+      "entree_production_annee": [
+        5,
+        6
+      ],
+      "pleine_production_annee": [
+        10,
+        12
+      ],
+      "duree_vie_ans": [
+        40,
+        50
+      ],
+      "rendement_pleine_prod_t_ha": [
+        20,
+        35
+      ]
+    },
+    "intensif": {
+      "densite_arbres_ha": [
+        400,
+        600
+      ],
+      "ecartement_m": "5×3 à 6×4",
+      "irrigation": "goutte_a_goutte",
+      "entree_production_annee": [
+        3,
+        4
+      ],
+      "pleine_production_annee": [
+        6,
+        8
+      ],
+      "duree_vie_ans": [
+        25,
+        35
+      ],
+      "rendement_pleine_prod_t_ha": [
+        40,
+        60
+      ]
+    },
+    "super_intensif": {
+      "densite_arbres_ha": [
+        800,
+        1200
+      ],
+      "ecartement_m": "4×2 à 5×2.5",
+      "irrigation": "gag_haute_frequence",
+      "entree_production_annee": [
+        2,
+        3
+      ],
+      "pleine_production_annee": [
+        5,
+        6
+      ],
+      "duree_vie_ans": [
+        15,
+        20
+      ],
+      "rendement_pleine_prod_t_ha": [
+        50,
+        80
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI": {
+        "optimal": [
+          0.5,
+          0.7
+        ],
+        "vigilance": 0.45,
+        "alerte": 0.4
+      },
+      "NIRv": {
+        "optimal": [
+          0.12,
+          0.28
+        ],
+        "vigilance": 0.1,
+        "alerte": 0.08
+      },
+      "NDMI": {
+        "optimal": [
+          0.18,
+          0.38
+        ],
+        "vigilance": 0.14,
+        "alerte": 0.1
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.6,
+          0.78
+        ],
+        "vigilance": 0.55,
+        "alerte": 0.5
+      },
+      "NIRv": {
+        "optimal": [
+          0.18,
+          0.35
+        ],
+        "vigilance": 0.15,
+        "alerte": 0.12
+      },
+      "NDMI": {
+        "optimal": [
+          0.22,
+          0.42
+        ],
+        "vigilance": 0.18,
+        "alerte": 0.14
+      }
+    },
+    "super_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.68,
+          0.85
+        ],
+        "vigilance": 0.63,
+        "alerte": 0.58
+      },
+      "NIRv": {
+        "optimal": [
+          0.22,
+          0.42
+        ],
+        "vigilance": 0.2,
+        "alerte": 0.17
+      },
+      "NDMI": {
+        "optimal": [
+          0.28,
+          0.48
+        ],
+        "vigilance": 0.24,
+        "alerte": 0.2
+      }
+    }
+  },
+  "rendement_t_ha": {
+    "orange_navel": {
+      "3-4_ans": [
+        5,
+        15
+      ],
+      "5-7_ans": [
+        20,
+        35
+      ],
+      "8-12_ans": [
+        35,
+        50
+      ],
+      "13-20_ans": [
+        45,
+        60
+      ],
+      "plus_20_ans": [
+        40,
+        55
+      ]
+    },
+    "orange_valencia": {
+      "3-4_ans": [
+        5,
+        15
+      ],
+      "5-7_ans": [
+        25,
+        40
+      ],
+      "8-12_ans": [
+        40,
+        60
+      ],
+      "13-20_ans": [
+        55,
+        80
+      ],
+      "plus_20_ans": [
+        50,
+        70
+      ]
+    },
+    "clementine": {
+      "3-4_ans": [
+        5,
+        12
+      ],
+      "5-7_ans": [
+        18,
+        30
+      ],
+      "8-12_ans": [
+        30,
+        45
+      ],
+      "13-20_ans": [
+        40,
+        55
+      ],
+      "plus_20_ans": [
+        35,
+        50
+      ]
+    },
+    "citron": {
+      "3-4_ans": [
+        5,
+        10
+      ],
+      "5-7_ans": [
+        15,
+        30
+      ],
+      "8-12_ans": [
+        30,
+        50
+      ],
+      "13-20_ans": [
+        45,
+        70
+      ],
+      "plus_20_ans": [
+        40,
+        60
+      ]
+    },
+    "pomelo": {
+      "3-4_ans": [
+        5,
+        12
+      ],
+      "5-7_ans": [
+        20,
+        35
+      ],
+      "8-12_ans": [
+        40,
+        60
+      ],
+      "13-20_ans": [
+        55,
+        80
+      ],
+      "plus_20_ans": [
+        50,
+        70
+      ]
+    }
+  },
+  "stades_phenologiques": [
+    {
+      "nom": "Repos hivernal",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "coef_nirvp": 0.7
+    },
+    {
+      "nom": "Flush printemps",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Floraison",
+      "mois": [
+        "Mar",
+        "Avr"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Nouaison",
+      "mois": [
+        "Avr",
+        "Mai"
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Chute juin",
+      "mois": [
+        "Mai",
+        "Juin"
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Grossissement I",
+      "mois": [
+        "Juin",
+        "Juil"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Flush été",
+      "mois": [
+        "Juil",
+        "Aout"
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Grossissement II",
+      "mois": [
+        "Aout",
+        "Sept"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Véraison",
+      "mois": [
+        "Sept",
+        "Oct"
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Maturation",
+      "mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Flush automne",
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "coef_nirvp": 0.9
+    }
+  ],
+  "options_nutrition": {
+    "A": {
+      "nom": "Nutrition équilibrée",
+      "condition": "analyse_sol < 2 ans ET analyse_eau"
+    },
+    "B": {
+      "nom": "Nutrition foliaire prioritaire",
+      "condition": "PAS analyse_sol OU > 3 ans"
+    },
+    "C": {
+      "nom": "Gestion salinité",
+      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m"
+    }
+  },
+  "export_kg_tonne": {
+    "orange": {
+      "N": [
+        1.8,
+        2.2
+      ],
+      "P2O5": [
+        0.4,
+        0.6
+      ],
+      "K2O": [
+        2.5,
+        3.5
+      ],
+      "CaO": [
+        0.8,
+        1.2
+      ],
+      "MgO": [
+        0.3,
+        0.5
+      ]
+    },
+    "clementine": {
+      "N": [
+        1.5,
+        2.0
+      ],
+      "P2O5": [
+        0.3,
+        0.5
+      ],
+      "K2O": [
+        2.0,
+        3.0
+      ],
+      "CaO": [
+        0.6,
+        1.0
+      ],
+      "MgO": [
+        0.2,
+        0.4
+      ]
+    },
+    "citron": {
+      "N": [
+        2.0,
+        2.5
+      ],
+      "P2O5": [
+        0.4,
+        0.6
+      ],
+      "K2O": [
+        3.0,
+        4.0
+      ],
+      "CaO": [
+        0.8,
+        1.2
+      ],
+      "MgO": [
+        0.3,
+        0.5
+      ]
+    },
+    "pomelo": {
+      "N": [
+        1.5,
+        2.0
+      ],
+      "P2O5": [
+        0.3,
+        0.5
+      ],
+      "K2O": [
+        2.5,
+        3.5
+      ],
+      "CaO": [
+        0.6,
+        1.0
+      ],
+      "MgO": [
+        0.2,
+        0.4
+      ]
+    }
+  },
+  "entretien_kg_ha": {
+    "jeune_1-3_ans": {
+      "N": [
+        40,
+        80
+      ],
+      "P2O5": [
+        20,
+        40
+      ],
+      "K2O": [
+        30,
+        60
+      ]
+    },
+    "entree_prod_4-6_ans": {
+      "N": [
+        100,
+        150
+      ],
+      "P2O5": [
+        40,
+        60
+      ],
+      "K2O": [
+        80,
+        120
+      ]
+    },
+    "intensif_pleine_prod": {
+      "N": [
+        180,
+        280
+      ],
+      "P2O5": [
+        60,
+        100
+      ],
+      "K2O": [
+        150,
+        250
+      ]
+    },
+    "super_intensif": {
+      "N": [
+        250,
+        400
+      ],
+      "P2O5": [
+        80,
+        120
+      ],
+      "K2O": [
+        200,
+        350
+      ]
+    }
+  },
+  "fractionnement_pct": {
+    "fev": {
+      "N": 15,
+      "P2O5": 40,
+      "K2O": 10,
+      "objectif": "Pré-floraison"
+    },
+    "mar_avr": {
+      "N": 25,
+      "P2O5": 30,
+      "K2O": 15,
+      "objectif": "Floraison-nouaison"
+    },
+    "mai_juin": {
+      "N": 20,
+      "P2O5": 15,
+      "K2O": 20,
+      "objectif": "Grossissement I"
+    },
+    "juil_aout": {
+      "N": 20,
+      "P2O5": 10,
+      "K2O": 25,
+      "objectif": "Grossissement II"
+    },
+    "sept_oct": {
+      "N": 10,
+      "P2O5": 5,
+      "K2O": 20,
+      "objectif": "Maturation"
+    },
+    "nov": {
+      "N": 10,
+      "P2O5": 0,
+      "K2O": 10,
+      "objectif": "Post-récolte"
+    }
+  },
+  "ajustement_espece": {
+    "orange_navel": {
+      "N": 1.0,
+      "K": 1.0,
+      "note": "Éviter excès N (éclatement)"
+    },
+    "orange_valencia": {
+      "N": 1.1,
+      "K": 1.0,
+      "note": "Production élevée"
+    },
+    "clementine": {
+      "N": 0.9,
+      "K": 1.0,
+      "note": "Éviter calibre excessif"
+    },
+    "citron": {
+      "N": 1.15,
+      "K": 1.1,
+      "note": "Remontant, besoins continus"
+    },
+    "pomelo": {
+      "N": 1.0,
+      "K": 1.1,
+      "note": "Gros fruits"
+    }
+  },
+  "formes_engrais": {
+    "N_recommande": [
+      "nitrate_calcium",
+      "nitrate_ammonium",
+      "uree_si_pH<7"
+    ],
+    "P_recommande": [
+      "MAP",
+      "acide_phosphorique"
+    ],
+    "K_recommande": [
+      "sulfate_potasse",
+      "nitrate_potasse"
+    ],
+    "K_conditionnel": "KCl acceptable si CE_eau < 1.0 ET Cl_eau < 100 mg/L",
+    "note": "Agrumes sensibles Cl mais moins que avocatier"
+  },
+  "seuils_foliaires": {
+    "periode_prelevement": "Août-Septembre, feuilles 4-6 mois",
+    "N": {
+      "unite": "%",
+      "carence": 2.2,
+      "suffisant": [
+        2.2,
+        2.4
+      ],
+      "optimal": [
+        2.4,
+        2.7
+      ],
+      "exces": 3.0
+    },
+    "P": {
+      "unite": "%",
+      "carence": 0.09,
+      "suffisant": [
+        0.09,
+        0.11
+      ],
+      "optimal": [
+        0.12,
+        0.17
+      ],
+      "exces": 0.2
+    },
+    "K": {
+      "unite": "%",
+      "carence": 0.7,
+      "suffisant": [
+        0.7,
+        1.0
+      ],
+      "optimal": [
+        1.0,
+        1.5
+      ],
+      "exces": 2.0
+    },
+    "Ca": {
+      "unite": "%",
+      "carence": 2.0,
+      "suffisant": [
+        2.0,
+        3.0
+      ],
+      "optimal": [
+        3.0,
+        5.0
+      ],
+      "exces": 6.0
+    },
+    "Mg": {
+      "unite": "%",
+      "carence": 0.2,
+      "suffisant": [
+        0.2,
+        0.3
+      ],
+      "optimal": [
+        0.3,
+        0.5
+      ],
+      "exces": 0.7
+    },
+    "Fe": {
+      "unite": "ppm",
+      "carence": 35,
+      "suffisant": [
+        35,
+        60
+      ],
+      "optimal": [
+        60,
+        120
+      ],
+      "exces": 200
+    },
+    "Zn": {
+      "unite": "ppm",
+      "carence": 18,
+      "suffisant": [
+        18,
+        25
+      ],
+      "optimal": [
+        25,
+        100
+      ],
+      "exces": 200
+    },
+    "Mn": {
+      "unite": "ppm",
+      "carence": 18,
+      "suffisant": [
+        18,
+        25
+      ],
+      "optimal": [
+        25,
+        100
+      ],
+      "exces": 500
+    },
+    "B": {
+      "unite": "ppm",
+      "carence": 20,
+      "suffisant": [
+        20,
+        35
+      ],
+      "optimal": [
+        35,
+        100
+      ],
+      "exces": 150
+    },
+    "Cu": {
+      "unite": "ppm",
+      "carence": 3,
+      "suffisant": [
+        3,
+        5
+      ],
+      "optimal": [
+        5,
+        15
+      ],
+      "exces": 20
+    },
+    "Cl": {
+      "unite": "%",
+      "toxique": 0.7
+    },
+    "Na": {
+      "unite": "%",
+      "toxique": 0.25
+    }
+  },
+  "salinite": {
+    "orange_mandarine": {
+      "CE_eau_optimal": 1.0,
+      "CE_eau_limite": 2.0,
+      "CE_sol_limite": 2.5,
+      "Cl_eau_limite_mg_L": 150,
+      "Cl_foliaire_toxique_pct": 0.7
+    },
+    "citron": {
+      "CE_eau_optimal": 0.8,
+      "CE_eau_limite": 1.5,
+      "CE_sol_limite": 2.0,
+      "Cl_eau_limite_mg_L": 100,
+      "Cl_foliaire_toxique_pct": 0.5
+    },
+    "pomelo": {
+      "CE_eau_optimal": 1.2,
+      "CE_eau_limite": 2.5,
+      "CE_sol_limite": 3.0,
+      "Cl_eau_limite_mg_L": 200,
+      "Cl_foliaire_toxique_pct": 0.8
+    }
+  },
+  "kc": {
+    "jeune": {
+      "jan_fev": 0.45,
+      "mar_avr": 0.55,
+      "mai_juin": 0.65,
+      "juil_aout": 0.7,
+      "sept_oct": 0.6,
+      "nov_dec": 0.5
+    },
+    "adulte": {
+      "jan_fev": 0.65,
+      "mar_avr": 0.75,
+      "mai_juin": 0.85,
+      "juil_aout": 0.9,
+      "sept_oct": 0.8,
+      "nov_dec": 0.7
+    }
+  },
+  "rdi": {
+    "floraison": {
+      "sensibilite": "tres_haute",
+      "rdi_possible": false,
+      "reduction": 0
+    },
+    "nouaison": {
+      "sensibilite": "haute",
+      "rdi_possible": false,
+      "reduction": 0
+    },
+    "grossissement_I": {
+      "sensibilite": "haute",
+      "rdi_possible": "prudence",
+      "reduction": [
+        0,
+        10
+      ]
+    },
+    "grossissement_II": {
+      "sensibilite": "moderee",
+      "rdi_possible": true,
+      "reduction": [
+        15,
+        25
+      ]
+    },
+    "maturation": {
+      "sensibilite": "faible",
+      "rdi_possible": true,
+      "reduction": [
+        25,
+        35
+      ]
+    },
+    "note": "RDI pré-récolte augmente °Brix +0.5-1.0 mais réduit calibre"
+  },
+  "phytosanitaire": {
+    "maladies": [
+      {
+        "nom": "Gommose",
+        "agent": "Phytophthora citrophthora, P. nicotianae",
+        "conditions": "sol_mal_draine_exces_eau",
+        "prevention": [
+          "drainage",
+          "PG_tolerant",
+          "point_greffe_haut"
+        ],
+        "traitement": [
+          "Phosphonate",
+          "Métalaxyl"
+        ]
+      },
+      {
+        "nom": "Tristeza",
+        "agent": "Citrus Tristeza Virus (CTV)",
+        "vecteur": "pucerons",
+        "prevention": "PG_tolerant_obligatoire",
+        "traitement": null,
+        "note": "AUCUN curatif - arrachage si sévère"
+      },
+      {
+        "nom": "Alternariose",
+        "agent": "Alternaria alternata",
+        "conditions": "HR > 80%, pluie",
+        "varietes_sensibles": [
+          "Minneola",
+          "Nova",
+          "Fortune"
+        ],
+        "traitement": [
+          "Cuivre",
+          "Mancozèbe",
+          "Difénoconazole"
+        ]
+      }
+    ],
+    "ravageurs": [
+      {
+        "nom": "Cératite",
+        "degats": "piqures_fruits",
+        "periode": "veraison_recolte",
+        "seuil": "2% fruits piqués",
+        "traitement": "Spinosad + piégeage"
+      },
+      {
+        "nom": "Cochenilles",
+        "degats": "fumagine",
+        "periode": "toute_annee",
+        "traitement": "Huile blanche, Spirotetramat"
+      },
+      {
+        "nom": "Pucerons",
+        "degats": "deformation_pousses_virus",
+        "periode": "printemps",
+        "traitement": "Imidaclopride, Spirotetramat"
+      },
+      {
+        "nom": "Mineuse",
+        "degats": "galeries_feuilles",
+        "periode": "flush",
+        "traitement": "Abamectine, Imidaclopride"
+      },
+      {
+        "nom": "Acariens",
+        "degats": "feuilles_bronze",
+        "periode": "ete_sec",
+        "traitement": "Abamectine, soufre"
+      },
+      {
+        "nom": "Thrips",
+        "degats": "cicatrices_fruits",
+        "periode": "floraison",
+        "traitement": "Spinosad"
+      }
+    ]
+  },
+  "calendrier_phyto_preventif": {
+    "jan": {
+      "cible": "Cochenilles",
+      "produit": "Huile blanche",
+      "dose": "15-20 L/ha"
+    },
+    "fev_mar": {
+      "cible": "Gommose",
+      "produit": "Phosphonate",
+      "dose": "5 mL/L foliaire",
+      "condition": "sol_humide"
+    },
+    "avr": {
+      "cible": "Pucerons",
+      "produit": "Imidaclopride",
+      "condition": "si_colonies"
+    },
+    "mai": {
+      "cible": "Mineuse",
+      "produit": "Abamectine",
+      "dose": "0.5 L/ha",
+      "condition": "si_presence"
+    },
+    "aout_oct": {
+      "cible": "Cératite",
+      "produit": "Spinosad + attractif",
+      "dose": "0.2 L/ha",
+      "condition": "piegeage + seuil"
+    },
+    "nov": {
+      "cible": "Cuivre hivernal",
+      "produit": "Cuivre",
+      "dose": "3 kg/ha"
+    }
+  },
+  "maturite_recolte": {
+    "orange_navel": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 8,
+      "optimal": [
+        10,
+        14
+      ],
+      "autre": "couleur_80%"
+    },
+    "orange_valencia": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 8,
+      "optimal": [
+        10,
+        16
+      ],
+      "autre": "Brix >= 10"
+    },
+    "clementine": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 7,
+      "optimal": [
+        10,
+        14
+      ],
+      "autre": "couleur_100%"
+    },
+    "citron": {
+      "indice": "acidite_titrable",
+      "min_pct": 5,
+      "optimal_pct": [
+        5,
+        7
+      ],
+      "autre": "jus >= 25%"
+    },
+    "pomelo": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 5.5,
+      "optimal": [
+        6,
+        8
+      ],
+      "autre": "Brix >= 9"
+    }
+  },
+  "defauts_qualite": {
+    "granulation": {
+      "cause": "recolte_tardive_K_faible",
+      "prevention": "recolter_a_temps_K_suffisant"
+    },
+    "eclatement": {
+      "cause": "exces_N_stress_hydrique",
+      "prevention": "equilibre_N_K_irrigation_reguliere"
+    },
+    "petit_calibre": {
+      "cause": "charge_excessive_stress_eau",
+      "prevention": "eclaircissage_irrigation"
+    },
+    "peau_epaisse": {
+      "cause": "exces_N",
+      "prevention": "reduire_N"
+    },
+    "reverdissement": {
+      "cause": "recolte_tardive_Valencia",
+      "prevention": "ethylene_si_necessaire"
+    },
+    "oleocellose": {
+      "cause": "recolte_humide_blessures",
+      "prevention": "recolter_sec_manipulation_douce"
+    }
+  },
+  "alertes": [
+    {
+      "code": "AGR-01",
+      "nom": "Stress hydrique",
+      "seuil": "NDMI < P15 (2 passages) + T > 30",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-02",
+      "nom": "Excès eau / Gommose",
+      "seuil": "NDMI > P95 + pluie > 40mm/sem",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-03",
+      "nom": "Risque gel",
+      "seuil": "Tmin prévue < 0°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-04",
+      "nom": "Gel avéré",
+      "seuil": "Tmin < -2°C (orange) ou < 0°C (citron)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-05",
+      "nom": "Canicule",
+      "seuil": "Tmax > 40°C (3j) + HR < 30%",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-06",
+      "nom": "Vent chaud",
+      "seuil": "T > 38 + HR < 25% + vent > 30 km/h",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-07",
+      "nom": "Conditions Gommose",
+      "seuil": "Sol saturé > 48h + T 18-28",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-08",
+      "nom": "Risque Cératite",
+      "seuil": "Véraison + T 20-30 + piège positif",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-09",
+      "nom": "Pression pucerons",
+      "seuil": "Flush + T 18-28 + colonies",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-10",
+      "nom": "Risque Alternaria",
+      "seuil": "HR > 85% + pluie + variété sensible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-11",
+      "nom": "Chlorose ferrique",
+      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AGR-12",
+      "nom": "Carence Zn",
+      "seuil": "Feuilles petites mouchetées + flush",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AGR-13",
+      "nom": "Toxicité Cl",
+      "seuil": "Brûlures foliaires + CE eau > 2.5",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-14",
+      "nom": "Floraison faible",
+      "seuil": "Floraison < 50% attendue",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-15",
+      "nom": "Chute excessive",
+      "seuil": "Charge < 40% post-nouaison",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-16",
+      "nom": "Maturité récolte",
+      "seuil": "Ratio Brix/Acidité atteint + couleur",
+      "priorite": "info"
+    },
+    {
+      "code": "AGR-17",
+      "nom": "Année OFF probable",
+      "seuil": "N-1 très productif + flush faible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-18",
+      "nom": "Risque granulation",
+      "seuil": "Récolte tardive + K foliaire bas",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-19",
+      "nom": "Dépérissement",
+      "seuil": "NIRv ↘ > 20% (4 passages)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-20",
+      "nom": "Tristeza suspectée",
+      "seuil": "NDVI ↘ + PG bigaradier + déclin rapide",
+      "priorite": "urgente"
+    }
+  ],
+  "modele_predictif": {
+    "variables": [
+      {
+        "nom": "floraison",
+        "source": "satellite_terrain",
+        "poids": [
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "nom": "alternance_N-1_N-2",
+        "source": "historique",
+        "poids": [
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "nom": "conditions_floraison",
+        "source": "meteo",
+        "poids": [
+          0.15,
+          0.25
+        ]
+      },
+      {
+        "nom": "NIRv_cumule",
+        "source": "satellite",
+        "poids": [
+          0.15,
+          0.25
+        ]
+      },
+      {
+        "nom": "stress_hydrique",
+        "source": "bilan_hydrique",
+        "poids": [
+          0.1,
+          0.2
+        ]
+      },
+      {
+        "nom": "gel",
+        "source": "meteo",
+        "poids": "fort_si_1"
+      },
+      {
+        "nom": "age_verger",
+        "source": "profil",
+        "type": "ajustement"
+      }
+    ],
+    "precision_attendue": {
+      "traditionnel": {
+        "R2": [
+          0.4,
+          0.55
+        ],
+        "MAE_pct": [
+          30,
+          45
+        ]
+      },
+      "intensif": {
+        "R2": [
+          0.5,
+          0.65
+        ],
+        "MAE_pct": [
+          20,
+          35
+        ]
+      },
+      "super_intensif": {
+        "R2": [
+          0.55,
+          0.7
+        ],
+        "MAE_pct": [
+          15,
+          30
+        ]
+      }
+    },
+    "previsibilite_espece": {
+      "orange_navel": "moyenne",
+      "orange_valencia": "bonne",
+      "clementine": "moyenne",
+      "citron": "difficile_remontant",
+      "pomelo": "bonne"
+    }
+  },
+  "plan_annuel_type_orange_intensif_50T": {
+    "jan": {
+      "NPK": "N15+P20+K10",
+      "micro": "Fe-EDDHA",
+      "biostim": null,
+      "phyto": "Huile blanche",
+      "irrigation_L_sem": 50
+    },
+    "fev": {
+      "NPK": "N25+P15+K15",
+      "micro": null,
+      "biostim": "Humiques+Algues",
+      "phyto": "Phosphonate",
+      "irrigation_L_sem": 60
+    },
+    "mar": {
+      "NPK": "N30+K20",
+      "micro": "Zn+Mn foliaire",
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 80
+    },
+    "avr": {
+      "NPK": "N25+P10+K15",
+      "micro": "B floraison",
+      "biostim": "Aminés",
+      "phyto": "Pucerons si présence",
+      "irrigation_L_sem": 100
+    },
+    "mai": {
+      "NPK": "N20+K25",
+      "micro": "Zn foliaire",
+      "biostim": "Humiques+Aminés",
+      "phyto": "Mineuse si présence",
+      "irrigation_L_sem": 130
+    },
+    "juin": {
+      "NPK": "N20+K30",
+      "micro": "Fe-EDDHA",
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 160
+    },
+    "juil": {
+      "NPK": "N15+K30",
+      "micro": "Zn+Mn foliaire",
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 180
+    },
+    "aout": {
+      "NPK": "N15+K25",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Cératite début",
+      "irrigation_L_sem": 180
+    },
+    "sept": {
+      "NPK": "N10+K20",
+      "micro": null,
+      "biostim": "Humiques",
+      "phyto": "Cératite",
+      "irrigation_L_sem": 140
+    },
+    "oct": {
+      "NPK": "N10+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Cératite",
+      "irrigation_L_sem": 100
+    },
+    "nov": {
+      "NPK": "N15",
+      "micro": null,
+      "biostim": "Humiques granulé",
+      "phyto": "Cuivre",
+      "irrigation_L_sem": 70
+    },
+    "dec": {
+      "NPK": null,
+      "micro": null,
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 50
+    }
+  }
+}
