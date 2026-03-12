@@ -44,14 +44,6 @@ export interface AiAlertRecord {
   updated_at: string | null;
 }
 
-export interface AiAlertsResponse {
-  data: AiAlertRecord[];
-}
-
-export interface AiAlertResponse {
-  data: AiAlertRecord;
-}
-
 export interface CreateAiAlertInput {
   parcel_id: string;
   organization_id: string;

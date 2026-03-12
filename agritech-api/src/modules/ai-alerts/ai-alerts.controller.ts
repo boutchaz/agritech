@@ -17,8 +17,7 @@ import { Request } from 'express';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
-  AiAlertResponse,
-  AiAlertsResponse,
+  AiAlertRecord,
   AiAlertsService,
 } from './ai-alerts.service';
 
@@ -35,12 +34,10 @@ export class AiAlertsController {
   async getAlerts(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AiAlertsResponse> {
+  ): Promise<AiAlertRecord[]> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiAlertsService.getAlerts(parcelId, organizationId),
-    };
+    return this.aiAlertsService.getAlerts(parcelId, organizationId);
   }
 
   @Get('parcels/:parcelId/ai/alerts/active')
@@ -49,12 +46,10 @@ export class AiAlertsController {
   async getActiveAlerts(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AiAlertsResponse> {
+  ): Promise<AiAlertRecord[]> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiAlertsService.getActiveAlerts(parcelId, organizationId),
-    };
+    return this.aiAlertsService.getActiveAlerts(parcelId, organizationId);
   }
 
   @Patch('ai/alerts/:alertId/acknowledge')
@@ -63,12 +58,10 @@ export class AiAlertsController {
   async acknowledgeAlert(
     @Param('alertId') alertId: string,
     @Req() req: Request,
-  ): Promise<AiAlertResponse> {
+  ): Promise<AiAlertRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiAlertsService.acknowledgeAlert(alertId, organizationId),
-    };
+    return this.aiAlertsService.acknowledgeAlert(alertId, organizationId);
   }
 
   @Patch('ai/alerts/:alertId/resolve')
@@ -77,12 +70,10 @@ export class AiAlertsController {
   async resolveAlert(
     @Param('alertId') alertId: string,
     @Req() req: Request,
-  ): Promise<AiAlertResponse> {
+  ): Promise<AiAlertRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiAlertsService.resolveAlert(alertId, organizationId),
-    };
+    return this.aiAlertsService.resolveAlert(alertId, organizationId);
   }
 
   private getOrganizationId(req: Request): string {

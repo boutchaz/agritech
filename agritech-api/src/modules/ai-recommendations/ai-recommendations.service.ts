@@ -71,21 +71,9 @@ export interface AiRecommendationExecutionRecord extends AiRecommendationRecord 
   product_application: RecommendationProductApplicationRecord;
 }
 
-export interface AiRecommendationsResponse {
-  data: AiRecommendationRecord[];
-}
-
-export interface AiRecommendationResponse {
-  data: AiRecommendationRecord;
-}
-
 export interface AiRecommendationEvaluation {
   recommendation: AiRecommendationRecord;
   product_applications: RecommendationProductApplicationRecord[];
-}
-
-export interface AiRecommendationEvaluationResponse {
-  data: AiRecommendationEvaluation;
 }
 
 @Injectable()

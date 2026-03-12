@@ -14,34 +14,34 @@ export class AiReferencesController {
   @ApiOperation({ summary: 'Get full AI reference data for a crop type' })
   @ApiResponse({ status: 200, description: 'AI reference data retrieved successfully' })
   async findByCropType(@Param('cropType') cropType: string) {
-    return { data: await this.aiReferencesService.findByCropType(cropType) };
+    return this.aiReferencesService.findByCropType(cropType);
   }
 
   @Get(':cropType/varieties')
   @ApiOperation({ summary: 'Get crop varieties reference data' })
   @ApiResponse({ status: 200, description: 'Crop varieties retrieved successfully' })
   async findVarieties(@Param('cropType') cropType: string) {
-    return { data: await this.aiReferencesService.findVarieties(cropType) };
+    return this.aiReferencesService.findVarieties(cropType);
   }
 
   @Get(':cropType/bbch')
   @ApiOperation({ summary: 'Get BBCH stages reference data' })
   @ApiResponse({ status: 200, description: 'BBCH stages retrieved successfully' })
   async findBbchStages(@Param('cropType') cropType: string) {
-    return { data: await this.aiReferencesService.findBbchStages(cropType) };
+    return this.aiReferencesService.findBbchStages(cropType);
   }
 
   @Get(':cropType/alerts')
   @ApiOperation({ summary: 'Get crop alert thresholds reference data' })
   @ApiResponse({ status: 200, description: 'Alert thresholds retrieved successfully' })
   async findAlerts(@Param('cropType') cropType: string) {
-    return { data: await this.aiReferencesService.findAlerts(cropType) };
+    return this.aiReferencesService.findAlerts(cropType);
   }
 
   @Get(':cropType/npk-formulas')
   @ApiOperation({ summary: 'Get crop fertilisation and NPK reference data' })
   @ApiResponse({ status: 200, description: 'Fertilisation data retrieved successfully' })
   async findNpkFormulas(@Param('cropType') cropType: string) {
-    return { data: await this.aiReferencesService.findNpkFormulas(cropType) };
+    return this.aiReferencesService.findNpkFormulas(cropType);
   }
 }

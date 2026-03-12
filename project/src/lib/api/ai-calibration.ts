@@ -23,7 +23,7 @@ export interface AIDiagnostic {
 
 export const aiCalibrationApi = {
   async startCalibration(parcelId: string, organizationId?: string): Promise<AICalibration> {
-    return apiClient.post(`${BASE_URL}/${parcelId}/calibration`, {}, {}, organizationId);
+    return apiClient.post(`${BASE_URL}/${parcelId}/calibration/start`, {}, {}, organizationId);
   },
 
   async getCalibration(parcelId: string, organizationId?: string): Promise<AICalibration> {

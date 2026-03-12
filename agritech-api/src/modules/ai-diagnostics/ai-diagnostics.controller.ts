@@ -36,11 +36,9 @@ export class AiDiagnosticsController {
   async getDiagnostics(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: AiDiagnosticsResponse }> {
+  ): Promise<AiDiagnosticsResponse> {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.aiDiagnosticsService.getDiagnostics(parcelId, organizationId),
-    };
+    return this.aiDiagnosticsService.getDiagnostics(parcelId, organizationId);
   }
 
   @Get('phenology')
@@ -49,11 +47,9 @@ export class AiDiagnosticsController {
   async getPhenology(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: AiPhenologyResponse }> {
+  ): Promise<AiPhenologyResponse> {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.aiDiagnosticsService.getPhenology(parcelId, organizationId),
-    };
+    return this.aiDiagnosticsService.getPhenology(parcelId, organizationId);
   }
 
   @Get('water-balance')
@@ -62,11 +58,9 @@ export class AiDiagnosticsController {
   async getWaterBalance(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: AiWaterBalanceResponse }> {
+  ): Promise<AiWaterBalanceResponse> {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.aiDiagnosticsService.getWaterBalance(parcelId, organizationId),
-    };
+    return this.aiDiagnosticsService.getWaterBalance(parcelId, organizationId);
   }
 
   @Get('trends')
@@ -75,11 +69,9 @@ export class AiDiagnosticsController {
   async getTrends(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: AiTrendsResponse }> {
+  ): Promise<AiTrendsResponse> {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.aiDiagnosticsService.getTrends(parcelId, organizationId),
-    };
+    return this.aiDiagnosticsService.getTrends(parcelId, organizationId);
   }
 
   private getOrganizationId(req: Request): string {

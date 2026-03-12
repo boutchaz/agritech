@@ -35,11 +35,9 @@ export class CalibrationController {
     @Param('parcelId') parcelId: string,
     @Body() dto: StartCalibrationDto,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.calibrationService.startCalibration(parcelId, organizationId, dto),
-    };
+    return this.calibrationService.startCalibration(parcelId, organizationId, dto);
   }
 
   @Get()
@@ -48,11 +46,9 @@ export class CalibrationController {
   async getLatestCalibration(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.calibrationService.getLatestCalibration(parcelId, organizationId),
-    };
+    return this.calibrationService.getLatestCalibration(parcelId, organizationId);
   }
 
   @Get('report')
@@ -61,11 +57,9 @@ export class CalibrationController {
   async getCalibrationReport(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.calibrationService.getCalibrationReport(parcelId, organizationId),
-    };
+    return this.calibrationService.getCalibrationReport(parcelId, organizationId);
   }
 
   @Post('validate')
@@ -74,7 +68,7 @@ export class CalibrationController {
   async validateCalibration(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
     const latestCalibration = await this.calibrationService.getLatestCalibration(
       parcelId,
@@ -85,12 +79,10 @@ export class CalibrationController {
       throw new NotFoundException('Calibration not found');
     }
 
-    return {
-      data: await this.calibrationService.validateCalibration(
-        latestCalibration.id,
-        organizationId,
-      ),
-    };
+    return this.calibrationService.validateCalibration(
+      latestCalibration.id,
+      organizationId,
+    );
   }
 
   @Get('percentiles')
@@ -99,11 +91,9 @@ export class CalibrationController {
   async getPercentiles(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.calibrationService.getPercentiles(parcelId, organizationId),
-    };
+    return this.calibrationService.getPercentiles(parcelId, organizationId);
   }
 
   @Get('zones')
@@ -112,11 +102,9 @@ export class CalibrationController {
   async getZones(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<{ data: unknown }> {
+  ) {
     const organizationId = this.getOrganizationId(req);
-    return {
-      data: await this.calibrationService.getZones(parcelId, organizationId),
-    };
+    return this.calibrationService.getZones(parcelId, organizationId);
   }
 
   private getOrganizationId(req: Request): string {

@@ -59,7 +59,7 @@ describe('CalibrationController', () => {
         organizationId,
         dto,
       );
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
 
     it('throws BadRequestException when organization ID header is missing', async () => {
@@ -97,16 +97,16 @@ describe('CalibrationController', () => {
         parcelId,
         organizationId,
       );
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
 
-    it('returns null data when no calibration exists', async () => {
+    it('returns null when no calibration exists', async () => {
       mockCalibrationService.getLatestCalibration.mockResolvedValue(null);
 
       const req = makeRequest(parcelId, organizationId);
       const result = await controller.getLatestCalibration(parcelId, req);
 
-      expect(result).toEqual({ data: null });
+      expect(result).toEqual(null);
     });
 
     it('throws BadRequestException when organization ID header is missing', async () => {
@@ -130,16 +130,16 @@ describe('CalibrationController', () => {
         parcelId,
         organizationId,
       );
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
 
-    it('returns null data when no calibration report exists', async () => {
+    it('returns null when no calibration report exists', async () => {
       mockCalibrationService.getCalibrationReport.mockResolvedValue(null);
 
       const req = makeRequest(parcelId, organizationId);
       const result = await controller.getCalibrationReport(parcelId, req);
 
-      expect(result).toEqual({ data: null });
+      expect(result).toEqual(null);
     });
 
     it('throws BadRequestException when organization ID header is missing', async () => {
@@ -180,7 +180,7 @@ describe('CalibrationController', () => {
         'cal-001',
         organizationId,
       );
-      expect(result).toEqual({ data: validatedCalibration });
+      expect(result).toEqual(validatedCalibration);
     });
 
     it('throws NotFoundException when no calibration exists for the parcel', async () => {
@@ -224,7 +224,7 @@ describe('CalibrationController', () => {
       const result = await controller.getPercentiles(parcelId, req);
 
       expect(mockCalibrationService.getPercentiles).toHaveBeenCalledWith(parcelId, organizationId);
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
 
     it('throws BadRequestException when organization ID header is missing', async () => {
@@ -255,7 +255,7 @@ describe('CalibrationController', () => {
       const result = await controller.getZones(parcelId, req);
 
       expect(mockCalibrationService.getZones).toHaveBeenCalledWith(parcelId, organizationId);
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
 
     it('throws BadRequestException when organization ID header is missing', async () => {
@@ -290,7 +290,7 @@ describe('CalibrationController', () => {
         parcelId,
         'org-001',
       );
-      expect(result).toEqual({ data: serviceResult });
+      expect(result).toEqual(serviceResult);
     });
   });
 });

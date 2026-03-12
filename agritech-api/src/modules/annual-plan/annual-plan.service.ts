@@ -61,18 +61,6 @@ export interface AnnualPlanWithInterventions extends AnnualPlanRecord {
   interventions: PlanInterventionRecord[];
 }
 
-export interface AnnualPlanResponse {
-  data: AnnualPlanWithInterventions;
-}
-
-export interface PlanInterventionResponse {
-  data: PlanInterventionRecord;
-}
-
-export interface PlanInterventionsResponse {
-  data: PlanInterventionRecord[];
-}
-
 export interface AnnualPlanSummary {
   plan_id: string;
   parcel_id: string;
@@ -82,10 +70,6 @@ export interface AnnualPlanSummary {
   executed: number;
   planned: number;
   skipped: number;
-}
-
-export interface AnnualPlanSummaryResponse {
-  data: AnnualPlanSummary;
 }
 
 export interface AnnualPlanCalendarMonth {
@@ -100,10 +84,6 @@ export interface AnnualPlanCalendar {
   year: number;
   status: AnnualPlanStatus;
   months: AnnualPlanCalendarMonth[];
-}
-
-export interface AnnualPlanCalendarResponse {
-  data: AnnualPlanCalendar;
 }
 
 interface ParcelPlanSource {

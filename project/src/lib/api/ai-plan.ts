@@ -43,7 +43,7 @@ export const aiPlanApi = {
   },
 
   async executeAIPlanIntervention(id: string, organizationId?: string): Promise<AIPlanIntervention> {
-    return apiClient.post(`/api/v1/ai/plan/interventions/${id}/execute`, {}, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/plan/interventions/${id}/execute`, {}, {}, organizationId);
   },
 
   async regenerateAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan> {

@@ -24,15 +24,15 @@ export const aiRecommendationsApi = {
   },
 
   async validateAIRecommendation(id: string, organizationId?: string): Promise<AIRecommendation> {
-    return apiClient.post(`/api/v1/ai/recommendations/${id}/validate`, {}, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/recommendations/${id}/validate`, {}, {}, organizationId);
   },
 
   async rejectAIRecommendation(id: string, organizationId?: string): Promise<AIRecommendation> {
-    return apiClient.post(`/api/v1/ai/recommendations/${id}/reject`, {}, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/recommendations/${id}/reject`, {}, {}, organizationId);
   },
 
   async executeAIRecommendation(id: string, notes?: string, organizationId?: string): Promise<AIRecommendation> {
-    return apiClient.post(`/api/v1/ai/recommendations/${id}/execute`, { notes }, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/recommendations/${id}/execute`, { notes }, {}, organizationId);
   },
 
   async getAIRecommendationEvaluation(id: string, organizationId?: string): Promise<any> {

@@ -23,10 +23,10 @@ export const aiAlertsApi = {
   },
 
   async acknowledgeAIAlert(alertId: string, organizationId?: string): Promise<AIAlert> {
-    return apiClient.post(`/api/v1/ai/alerts/${alertId}/acknowledge`, {}, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/alerts/${alertId}/acknowledge`, {}, {}, organizationId);
   },
 
   async resolveAIAlert(alertId: string, organizationId?: string): Promise<AIAlert> {
-    return apiClient.post(`/api/v1/ai/alerts/${alertId}/resolve`, {}, {}, organizationId);
+    return apiClient.patch(`/api/v1/ai/alerts/${alertId}/resolve`, {}, {}, organizationId);
   },
 };

@@ -23,9 +23,8 @@ import {
   ExecuteRecommendationDto,
 } from './dto/create-recommendation.dto';
 import {
-  AiRecommendationEvaluationResponse,
-  AiRecommendationResponse,
-  AiRecommendationsResponse,
+  AiRecommendationEvaluation,
+  AiRecommendationRecord,
   AiRecommendationsService,
 } from './ai-recommendations.service';
 
@@ -47,15 +46,13 @@ export class AiRecommendationsController {
   async getRecommendations(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AiRecommendationsResponse> {
+  ): Promise<AiRecommendationRecord[]> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.getRecommendations(
-        parcelId,
-        organizationId,
-      ),
-    };
+    return this.aiRecommendationsService.getRecommendations(
+      parcelId,
+      organizationId,
+    );
   }
 
   @Get('ai/recommendations/:id')
@@ -67,15 +64,13 @@ export class AiRecommendationsController {
   async getRecommendation(
     @Param('id') id: string,
     @Req() req: Request,
-  ): Promise<AiRecommendationResponse> {
+  ): Promise<AiRecommendationRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.getRecommendation(
-        id,
-        organizationId,
-      ),
-    };
+    return this.aiRecommendationsService.getRecommendation(
+      id,
+      organizationId,
+    );
   }
 
   @Post('ai/recommendations')
@@ -84,15 +79,13 @@ export class AiRecommendationsController {
   async createRecommendation(
     @Body() body: CreateRecommendationDto,
     @Req() req: Request,
-  ): Promise<AiRecommendationResponse> {
+  ): Promise<AiRecommendationRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.createRecommendation(
-        body,
-        organizationId,
-      ),
-    };
+    return this.aiRecommendationsService.createRecommendation(
+      body,
+      organizationId,
+    );
   }
 
   @Patch('ai/recommendations/:id/validate')
@@ -104,15 +97,13 @@ export class AiRecommendationsController {
   async validateRecommendation(
     @Param('id') id: string,
     @Req() req: Request,
-  ): Promise<AiRecommendationResponse> {
+  ): Promise<AiRecommendationRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.validateRecommendation(
-        id,
-        organizationId,
-      ),
-    };
+    return this.aiRecommendationsService.validateRecommendation(
+      id,
+      organizationId,
+    );
   }
 
   @Patch('ai/recommendations/:id/reject')
@@ -124,15 +115,13 @@ export class AiRecommendationsController {
   async rejectRecommendation(
     @Param('id') id: string,
     @Req() req: Request,
-  ): Promise<AiRecommendationResponse> {
+  ): Promise<AiRecommendationRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.rejectRecommendation(
-        id,
-        organizationId,
-      ),
-    };
+    return this.aiRecommendationsService.rejectRecommendation(
+      id,
+      organizationId,
+    );
   }
 
   @Patch('ai/recommendations/:id/execute')
@@ -145,16 +134,14 @@ export class AiRecommendationsController {
     @Param('id') id: string,
     @Body() body: ExecuteRecommendationDto,
     @Req() req: Request,
-  ): Promise<AiRecommendationResponse> {
+  ): Promise<AiRecommendationRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.executeRecommendation(
-        id,
-        organizationId,
-        body?.notes,
-      ),
-    };
+    return this.aiRecommendationsService.executeRecommendation(
+      id,
+      organizationId,
+      body?.notes,
+    );
   }
 
   @Get('ai/recommendations/:id/evaluation')
@@ -166,12 +153,10 @@ export class AiRecommendationsController {
   async getEvaluation(
     @Param('id') id: string,
     @Req() req: Request,
-  ): Promise<AiRecommendationEvaluationResponse> {
+  ): Promise<AiRecommendationEvaluation> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.aiRecommendationsService.getEvaluation(id, organizationId),
-    };
+    return this.aiRecommendationsService.getEvaluation(id, organizationId);
   }
 
   private getOrganizationId(req: Request): string {

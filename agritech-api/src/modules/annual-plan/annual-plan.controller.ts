@@ -19,12 +19,11 @@ import { Request } from 'express';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
-  AnnualPlanCalendarResponse,
-  AnnualPlanResponse,
+  AnnualPlanCalendar,
   AnnualPlanService,
-  AnnualPlanSummaryResponse,
-  PlanInterventionResponse,
-  PlanInterventionsResponse,
+  AnnualPlanSummary,
+  AnnualPlanWithInterventions,
+  PlanInterventionRecord,
 } from './annual-plan.service';
 
 @ApiTags('annual-plan')
@@ -40,12 +39,10 @@ export class AnnualPlanController {
   async getPlan(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AnnualPlanResponse> {
+  ): Promise<AnnualPlanWithInterventions> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.getPlan(parcelId, organizationId),
-    };
+    return this.annualPlanService.getPlan(parcelId, organizationId);
   }
 
   @Get('parcels/:parcelId/ai/plan/calendar')
@@ -57,12 +54,10 @@ export class AnnualPlanController {
   async getCalendar(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AnnualPlanCalendarResponse> {
+  ): Promise<AnnualPlanCalendar> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.getCalendar(parcelId, organizationId),
-    };
+    return this.annualPlanService.getCalendar(parcelId, organizationId);
   }
 
   @Get('parcels/:parcelId/ai/plan/summary')
@@ -74,12 +69,10 @@ export class AnnualPlanController {
   async getSummary(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AnnualPlanSummaryResponse> {
+  ): Promise<AnnualPlanSummary> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.getSummary(parcelId, organizationId),
-    };
+    return this.annualPlanService.getSummary(parcelId, organizationId);
   }
 
   @Post('parcels/:parcelId/ai/plan/validate')
@@ -88,7 +81,7 @@ export class AnnualPlanController {
   async validatePlan(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<AnnualPlanResponse> {
+  ): Promise<AnnualPlanWithInterventions> {
     const organizationId = this.getOrganizationId(req);
     const plan = await this.annualPlanService.getPlan(parcelId, organizationId);
     const validatedPlan = await this.annualPlanService.validatePlan(
@@ -97,10 +90,8 @@ export class AnnualPlanController {
     );
 
     return {
-      data: {
-        ...validatedPlan,
-        interventions: plan.interventions,
-      },
+      ...validatedPlan,
+      interventions: plan.interventions,
     };
   }
 
@@ -113,12 +104,10 @@ export class AnnualPlanController {
   async getInterventions(
     @Param('parcelId') parcelId: string,
     @Req() req: Request,
-  ): Promise<PlanInterventionsResponse> {
+  ): Promise<PlanInterventionRecord[]> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.getInterventions(parcelId, organizationId),
-    };
+    return this.annualPlanService.getInterventions(parcelId, organizationId);
   }
 
   @Patch('ai/plan/interventions/:id/execute')
@@ -130,12 +119,10 @@ export class AnnualPlanController {
   async executeIntervention(
     @Param('id') id: string,
     @Req() req: Request,
-  ): Promise<PlanInterventionResponse> {
+  ): Promise<PlanInterventionRecord> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.executeIntervention(id, organizationId),
-    };
+    return this.annualPlanService.executeIntervention(id, organizationId);
   }
 
   @Post('parcels/:parcelId/ai/plan/regenerate')
@@ -145,16 +132,14 @@ export class AnnualPlanController {
     @Param('parcelId') parcelId: string,
     @Body() body: { year?: number } | undefined,
     @Req() req: Request,
-  ): Promise<AnnualPlanResponse> {
+  ): Promise<AnnualPlanWithInterventions> {
     const organizationId = this.getOrganizationId(req);
 
-    return {
-      data: await this.annualPlanService.regeneratePlan(
-        parcelId,
-        organizationId,
-        this.resolveYear(body?.year),
-      ),
-    };
+    return this.annualPlanService.regeneratePlan(
+      parcelId,
+      organizationId,
+      this.resolveYear(body?.year),
+    );
   }
 
   private getOrganizationId(req: Request): string {
