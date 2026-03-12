@@ -14,7 +14,10 @@ const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 const PROVISION_POLL_INTERVAL_MS = 10_000;
 const PROVISION_MAX_ATTEMPTS = 60;
 const WEATHER_LOOKBACK_DAYS = 730;
-const SATELLITE_SYNC_INDICES = ['NDVI', 'NDRE', 'NDMI', 'GCI', 'EVI', 'SAVI'];
+const SATELLITE_SYNC_INDICES = [
+  'NIRv', 'EVI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI',
+  'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI',
+];
 
 type ZoneClassification = 'optimal' | 'normal' | 'stressed';
 type JsonObject = Record<string, unknown>;
