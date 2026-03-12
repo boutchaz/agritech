@@ -798,9 +798,6 @@ export class CalibrationService {
       this.logger.error(
         `Failed to fetch crop AI references for ${cropType}: ${error.message}`,
       );
-      throw new BadRequestException(
-        `Failed to fetch crop AI references: ${error.message}`,
-      );
     }
 
     const referenceData = this.toJsonObject((data as CropReferenceRow | null)?.reference_data);
@@ -809,32 +806,29 @@ export class CalibrationService {
     const ndviThresholds = this.toJsonObject(systemThresholds.NDVI);
     const optimal = ndviThresholds.optimal;
 
-    if (!Array.isArray(optimal) || optimal.length !== 2) {
-      throw new NotFoundException(
-        `NDVI thresholds not found for crop type ${cropType} and system ${system}`,
-      );
+    if (Array.isArray(optimal) && optimal.length === 2) {
+      const optimalMin = this.toNumber(optimal[0]);
+      const optimalMax = this.toNumber(optimal[1]);
+      const vigilance = this.toNumber(ndviThresholds.vigilance);
+      const alerte = this.toNumber(ndviThresholds.alerte);
+
+      if (
+        optimalMin !== null &&
+        optimalMax !== null &&
+        vigilance !== null &&
+        alerte !== null
+      ) {
+        return { optimal: [optimalMin, optimalMax], vigilance, alerte };
+      }
     }
 
-    const optimalMin = this.toNumber(optimal[0]);
-    const optimalMax = this.toNumber(optimal[1]);
-    const vigilance = this.toNumber(ndviThresholds.vigilance);
-    const alerte = this.toNumber(ndviThresholds.alerte);
-
-    if (
-      optimalMin === null ||
-      optimalMax === null ||
-      vigilance === null ||
-      alerte === null
-    ) {
-      throw new NotFoundException(
-        `NDVI thresholds not found for crop type ${cropType} and system ${system}`,
-      );
-    }
-
+    this.logger.warn(
+      `No NDVI thresholds for crop "${cropType}" system "${system}", using generic defaults`,
+    );
     return {
-      optimal: [optimalMin, optimalMax],
-      vigilance,
-      alerte,
+      optimal: [0.6, 0.8],
+      vigilance: 0.5,
+      alerte: 0.4,
     };
   }
 
