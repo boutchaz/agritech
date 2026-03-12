@@ -31,7 +31,9 @@ def _boundary_to_geojson(boundary: List[List[float]]) -> Dict[str, Any]:
     def _to_wgs84(x: float, y: float) -> List[float]:
         if abs(x) > 180 or abs(y) > 90:
             lon = (x / 20037508.34) * 180
-            lat = (math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi) - 90
+            lat = (
+                math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi
+            ) - 90
             return [lon, lat]
         return [x, y]
 
@@ -49,7 +51,7 @@ async def _run_parcel_sync(
     parcel_name: Optional[str],
     indices: List[str],
 ):
-    from app.services import earth_engine_service
+    from app.services.satellite.factory import get_satellite_provider
     from app.services.supabase_service import supabase_service
 
     geometry = _boundary_to_geojson(boundary)
@@ -63,21 +65,29 @@ async def _run_parcel_sync(
         f"{start_date} to {end_date}"
     )
 
+    try:
+        satellite_provider = get_satellite_provider()
+        provider_name = satellite_provider.provider_name
+    except Exception as e:
+        logger.error(f"Failed to initialize satellite provider for sync: {e}")
+        return
+
+    logger.info(f"Using satellite provider: {provider_name}")
+
     total_saved = 0
 
     for index in indices:
         try:
-            time_series = earth_engine_service.get_time_series(
+            ts_result = satellite_provider.get_time_series(
                 geometry,
                 start_date,
                 end_date,
                 index,
                 "week",
-                use_aoi_cloud_filter=False,
             )
 
-            for point in time_series:
-                if point.get("value") is None:
+            for point in ts_result.data:
+                if point.value is None:
                     continue
                 try:
                     await supabase_service.save_satellite_data(
@@ -86,8 +96,8 @@ async def _run_parcel_sync(
                             "organization_id": organization_id,
                             "farm_id": farm_id,
                             "index_name": index,
-                            "date": str(point["date"])[:10],
-                            "mean_value": float(point["value"]),
+                            "date": str(point.date)[:10],
+                            "mean_value": float(point.value),
                             "image_source": "sentinel-2",
                         }
                     )
@@ -96,7 +106,8 @@ async def _run_parcel_sync(
                     pass
 
             logger.info(
-                f"Synced {index} for parcel {parcel_id}: {len(time_series)} points"
+                f"Synced {index} for parcel {parcel_id} via {provider_name}: "
+                f"{len(ts_result.data)} points"
             )
         except Exception as e:
             logger.error(f"Failed to sync {index} for parcel {parcel_id}: {e}")
