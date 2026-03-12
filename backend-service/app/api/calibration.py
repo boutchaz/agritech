@@ -36,6 +36,45 @@ VALID_SYSTEM_TYPES = {
     "super_intensif",
 }
 
+GENERIC_PHENOLOGY: list[PhenologyDefinition] = [
+    {
+        "months": {1, 2},
+        "stage": "repos_hivernal",
+        "stage_code": "RH",
+        "description": "Periode de repos hivernal.",
+    },
+    {
+        "months": {3, 4},
+        "stage": "reprise_vegetative",
+        "stage_code": "RV",
+        "description": "Reprise vegetative printaniere.",
+    },
+    {
+        "months": {5, 6},
+        "stage": "croissance_active",
+        "stage_code": "CA",
+        "description": "Phase de croissance active.",
+    },
+    {
+        "months": {7, 8},
+        "stage": "developpement",
+        "stage_code": "DV",
+        "description": "Developpement et production estivale.",
+    },
+    {
+        "months": {9, 10},
+        "stage": "maturation",
+        "stage_code": "MT",
+        "description": "Maturation progressive.",
+    },
+    {
+        "months": {11, 12},
+        "stage": "fin_cycle",
+        "stage_code": "FC",
+        "description": "Fin de cycle et preparation hivernale.",
+    },
+]
+
 PHENOLOGY_CONFIG: dict[str, list[PhenologyDefinition]] = {
     "olivier": [
         {
@@ -275,13 +314,13 @@ class PhenologyResponse(BaseModel):
 
 
 def _validate_crop_type(crop_type: str) -> None:
-    if crop_type not in VALID_CROP_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid crop_type")
+    if not crop_type or not crop_type.strip():
+        raise HTTPException(status_code=400, detail="crop_type is required")
 
 
 def _validate_system_type(system: str) -> None:
-    if system not in VALID_SYSTEM_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid system")
+    if not system or not system.strip():
+        raise HTTPException(status_code=400, detail="system is required")
 
 
 def _parse_thresholds(thresholds: NdviThresholds) -> tuple[float, float, float, float]:
@@ -327,7 +366,9 @@ def _detect_anomalies(
 def _get_phenology_stage(crop_type: str, month: int) -> PhenologyResponse:
     _validate_crop_type(crop_type)
 
-    for stage_config in PHENOLOGY_CONFIG[crop_type]:
+    stages = PHENOLOGY_CONFIG.get(crop_type, GENERIC_PHENOLOGY)
+
+    for stage_config in stages:
         if month in stage_config["months"]:
             return PhenologyResponse(
                 stage=stage_config["stage"],
