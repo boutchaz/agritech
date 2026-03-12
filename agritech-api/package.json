@@ -16,6 +16,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:integration": "jest --config ./test/jest-e2e.json",
+    "db:migrate": "./scripts/db-push-selfhosted.sh",
+    "db:migrate:dry-run": "DRY_RUN=1 ./scripts/db-push-selfhosted.sh",
     "migrate:reference-data": "ts-node scripts/migrate-reference-data.ts",
     "seed:strapi": "ts-node scripts/seed-strapi.ts"
   },

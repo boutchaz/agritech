@@ -8024,13 +8024,18 @@ CREATE POLICY "users_read_own_internal_admin" ON internal_admins
 
 -- Function to check if current user is internal_admin
 CREATE OR REPLACE FUNCTION is_internal_admin()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM internal_admins
     WHERE user_id = auth.uid()
       AND is_active = true
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
 
@@ -8631,18 +8636,20 @@ CREATE POLICY "Public can view active published listings" ON marketplace_listing
   FOR SELECT USING (is_public = true AND status = 'active');
 
 CREATE POLICY "Organizations can manage own listings" ON marketplace_listings
-  FOR ALL USING (organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()));
+  FOR ALL
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
 
 -- Orders Policies
 CREATE POLICY "Participants can view orders" ON marketplace_orders
   FOR SELECT USING (
-    buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()) OR
-    seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(buyer_organization_id) OR
+    public.is_organization_member(seller_organization_id)
   );
 
 CREATE POLICY "Buyers can create orders" ON marketplace_orders
   FOR INSERT WITH CHECK (
-    buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(buyer_organization_id)
   );
 
 -- Order Items Policies
@@ -8652,8 +8659,8 @@ CREATE POLICY "Participants can view order items" ON marketplace_order_items
       SELECT 1 FROM marketplace_orders o
       WHERE o.id = marketplace_order_items.order_id
       AND (
-        o.buyer_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid()) OR
-        o.seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+        public.is_organization_member(o.buyer_organization_id) OR
+        public.is_organization_member(o.seller_organization_id)
       )
     )
   );
@@ -8821,10 +8828,8 @@ CREATE POLICY "Anyone can read reviews" ON marketplace_reviews
 -- Only order participants can create reviews (after order is delivered)
 CREATE POLICY "Order participants can create reviews" ON marketplace_reviews
   FOR INSERT WITH CHECK (
-    -- Reviewer must be from the user's organization
-    reviewer_organization_id = (
-      SELECT organization_id FROM auth_users_view WHERE id = auth.uid()
-    )
+    -- Reviewer must belong to one of the caller's organizations
+    public.is_organization_member(reviewer_organization_id)
     -- And the order must exist and be delivered
     AND EXISTS (
       SELECT 1 FROM marketplace_orders o
@@ -8849,18 +8854,17 @@ CREATE POLICY "Order participants can create reviews" ON marketplace_reviews
 -- Reviewers can update their own reviews (within 7 days)
 CREATE POLICY "Reviewers can update own reviews" ON marketplace_reviews
   FOR UPDATE USING (
-    reviewer_organization_id = (
-      SELECT organization_id FROM auth_users_view WHERE id = auth.uid()
-    )
+    public.is_organization_member(reviewer_organization_id)
     AND created_at > NOW() - INTERVAL '7 days'
+  )
+  WITH CHECK (
+    public.is_organization_member(reviewer_organization_id)
   );
 
 -- Reviewers can delete their own reviews
 CREATE POLICY "Reviewers can delete own reviews" ON marketplace_reviews
   FOR DELETE USING (
-    reviewer_organization_id = (
-      SELECT organization_id FROM auth_users_view WHERE id = auth.uid()
-    )
+    public.is_organization_member(reviewer_organization_id)
   );
 
 -- Grant permissions for reviews
@@ -8908,12 +8912,22 @@ WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated');
 -- Policy: Users can update their own product images
 CREATE POLICY "Users can update own product images"
 ON storage.objects FOR UPDATE
-USING (bucket_id = 'products' AND auth.role() = 'authenticated');
+USING (
+  bucket_id = 'products'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+)
+WITH CHECK (
+  bucket_id = 'products'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 
 -- Policy: Users can delete their own product images
 CREATE POLICY "Users can delete own product images"
 ON storage.objects FOR DELETE
-USING (bucket_id = 'products' AND auth.role() = 'authenticated');
+USING (
+  bucket_id = 'products'
+  AND auth.uid()::text = (storage.foldername(name))[1]
+);
 
 -- =====================================================
 -- AVATARS STORAGE BUCKET
@@ -9028,25 +9042,28 @@ DROP POLICY IF EXISTS "Organizations can delete own files" ON file_registry;
 -- Organizations can view their own files
 CREATE POLICY "Organizations can view own files" ON file_registry
   FOR SELECT USING (
-    organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(organization_id)
   );
 
 -- Organizations can insert their own files
 CREATE POLICY "Organizations can insert own files" ON file_registry
   FOR INSERT WITH CHECK (
-    organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(organization_id)
   );
 
 -- Organizations can update their own files
 CREATE POLICY "Organizations can update own files" ON file_registry
   FOR UPDATE USING (
-    organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(organization_id)
+  )
+  WITH CHECK (
+    public.is_organization_member(organization_id)
   );
 
 -- Organizations can delete their own files
 CREATE POLICY "Organizations can delete own files" ON file_registry
   FOR DELETE USING (
-    organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(organization_id)
   );
 
 -- Grant permissions
@@ -9160,7 +9177,7 @@ CREATE POLICY "Users can view their own quote requests"
   ON marketplace_quote_requests
   FOR SELECT
   USING (
-    requester_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(requester_organization_id)
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -9171,7 +9188,7 @@ CREATE POLICY "Sellers can view requests sent to them"
   ON marketplace_quote_requests
   FOR SELECT
   USING (
-    seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(seller_organization_id)
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -9182,7 +9199,7 @@ CREATE POLICY "Authenticated users can create quote requests"
   ON marketplace_quote_requests
   FOR INSERT
   WITH CHECK (
-    requester_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(requester_organization_id)
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -9193,7 +9210,10 @@ CREATE POLICY "Sellers can update their received requests"
   ON marketplace_quote_requests
   FOR UPDATE
   USING (
-    seller_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(seller_organization_id)
+  )
+  WITH CHECK (
+    public.is_organization_member(seller_organization_id)
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -9204,7 +9224,10 @@ CREATE POLICY "Buyers can update their own requests"
   ON marketplace_quote_requests
   FOR UPDATE
   USING (
-    requester_organization_id = (SELECT organization_id FROM auth_users_view WHERE id = auth.uid())
+    public.is_organization_member(requester_organization_id)
+  )
+  WITH CHECK (
+    public.is_organization_member(requester_organization_id)
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -11113,7 +11136,17 @@ CREATE POLICY "org_read_audit_logs" ON audit_logs
 -- Only authenticated users can insert audit logs (done via triggers)
 DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
 CREATE POLICY "org_write_audit_logs" ON audit_logs
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR (
+      auth.uid() IS NOT NULL
+      AND user_id = auth.uid()
+      AND (
+        organization_id IS NULL
+        OR public.is_organization_member(organization_id)
+      )
+    )
+  );
 
 GRANT SELECT ON audit_logs TO authenticated;
 GRANT INSERT ON audit_logs TO authenticated;
@@ -11417,7 +11450,11 @@ COMMENT ON COLUMN work_records.payment_status IS 'Payment status: pending, paid,
 
 -- Function to check if user has permission to access organization data
 CREATE OR REPLACE FUNCTION check_organization_access(p_user_id UUID, p_organization_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM organization_users
@@ -11426,11 +11463,15 @@ BEGIN
     AND is_active = true
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Function to get user's role in organization
 CREATE OR REPLACE FUNCTION get_user_org_role(p_user_id UUID, p_organization_id UUID)
-RETURNS UUID AS $$
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   v_role_id UUID;
 BEGIN
@@ -11442,7 +11483,7 @@ BEGIN
 
   RETURN v_role_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- =====================================================
 -- VIEWS FOR COMMON QUERIES
@@ -12230,6 +12271,10 @@ VALUES ('products', 'products', false)
 ON CONFLICT (id) DO UPDATE SET "public" = false;
 
 -- Policy: Allow anyone to view products (images) but not list the bucket
+DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects;
 DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects;
 CREATE POLICY "allow_public_view_products"
 ON storage.objects FOR SELECT
@@ -15014,4 +15059,3 @@ ALTER TABLE public.biological_asset_valuations
 UPDATE public.biological_asset_valuations
 SET updated_at = COALESCE(updated_at, created_at, NOW())
 WHERE updated_at IS NULL;
-

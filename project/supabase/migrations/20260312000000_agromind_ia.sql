@@ -31,42 +31,65 @@ BEGIN
     FROM pg_constraint c
     JOIN pg_class t ON c.conrelid = t.oid
     JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY (c.conkey)
     WHERE n.nspname = 'public'
       AND t.relname = 'performance_alerts'
       AND c.contype = 'c'
-      AND pg_get_constraintdef(c.oid) ILIKE '%alert_type%'
+    GROUP BY c.oid, c.conname
+    HAVING bool_or(a.attname = 'alert_type')
   LOOP
     EXECUTE format('ALTER TABLE public.performance_alerts DROP CONSTRAINT IF EXISTS %I', constraint_name);
   END LOOP;
 
-  ALTER TABLE public.performance_alerts
-    ADD CONSTRAINT performance_alerts_alert_type_check
-    CHECK (
-      alert_type IN (
-        'yield_underperformance',
-        'forecast_variance',
-        'quality_issue',
-        'cost_overrun',
-        'revenue_shortfall',
-        'benchmark_deviation',
-        'ai_drought_stress',
-        'ai_frost_risk',
-        'ai_heat_stress',
-        'ai_pest_risk',
-        'ai_nutrient_deficiency',
-        'ai_yield_warning',
-        'ai_phenology_alert',
-        'ai_salinity_alert'
-      )
-    );
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'performance_alerts_alert_type_check'
+      AND conrelid = 'public.performance_alerts'::regclass
+  ) THEN
+    ALTER TABLE public.performance_alerts
+      ADD CONSTRAINT performance_alerts_alert_type_check
+      CHECK (
+        alert_type IN (
+          'yield_underperformance',
+          'forecast_variance',
+          'quality_issue',
+          'cost_overrun',
+          'revenue_shortfall',
+          'benchmark_deviation',
+          'ai_drought_stress',
+          'ai_frost_risk',
+          'ai_heat_stress',
+          'ai_pest_risk',
+          'ai_nutrient_deficiency',
+          'ai_yield_warning',
+          'ai_phenology_alert',
+          'ai_salinity_alert'
+        )
+      );
+  END IF;
 END $$;
 
 ALTER TABLE IF EXISTS public.product_applications
   ADD COLUMN IF NOT EXISTS ai_recommendation_id UUID;
 
+DO $$
+BEGIN
+  IF to_regclass('public.parcels') IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1
+       FROM pg_constraint
+       WHERE conname = 'parcels_id_organization_id_key'
+         AND conrelid = 'public.parcels'::regclass
+     ) THEN
+    ALTER TABLE public.parcels
+      ADD CONSTRAINT parcels_id_organization_id_key UNIQUE (id, organization_id);
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.calibrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
   started_at TIMESTAMPTZ,
@@ -80,12 +103,16 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
   calibration_data JSONB,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_calibrations_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.ai_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validated', 'rejected', 'executed', 'expired')),
@@ -102,12 +129,16 @@ CREATE TABLE IF NOT EXISTS public.ai_recommendations (
   executed_at TIMESTAMPTZ,
   execution_notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_ai_recommendations_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.annual_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
   year INTEGER NOT NULL,
@@ -118,13 +149,17 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
   validated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (parcel_id, year)
+  UNIQUE (parcel_id, year),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_annual_plans_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.plan_interventions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  annual_plan_id UUID NOT NULL REFERENCES public.annual_plans(id) ON DELETE CASCADE,
-  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  annual_plan_id UUID NOT NULL,
+  parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),
   week INTEGER CHECK (week >= 1 AND week <= 5),
@@ -137,7 +172,13 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
   executed_at TIMESTAMPTZ,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_plan_interventions_plan_org
+    FOREIGN KEY (annual_plan_id, organization_id)
+    REFERENCES public.annual_plans(id, organization_id) ON DELETE CASCADE,
+  CONSTRAINT fk_plan_interventions_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS public.crop_ai_references (
@@ -168,12 +209,88 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint
+    WHERE conname = 'fk_ai_recommendations_calibration_org'
+      AND conrelid = 'public.ai_recommendations'::regclass
+  ) THEN
+    ALTER TABLE public.ai_recommendations
+      ADD CONSTRAINT fk_ai_recommendations_calibration_org
+      FOREIGN KEY (calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_annual_plans_calibration_org'
+      AND conrelid = 'public.annual_plans'::regclass
+  ) THEN
+    ALTER TABLE public.annual_plans
+      ADD CONSTRAINT fk_annual_plans_calibration_org
+      FOREIGN KEY (calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'parcels'
+      AND column_name = 'organization_id'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_parcels_ai_calibration_org'
+      AND conrelid = 'public.parcels'::regclass
+  ) THEN
+    ALTER TABLE public.parcels
+      ADD CONSTRAINT fk_parcels_ai_calibration_org
+      FOREIGN KEY (ai_calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
     WHERE conname = 'fk_product_applications_ai_recommendation'
       AND conrelid = 'public.product_applications'::regclass
   ) THEN
     ALTER TABLE public.product_applications
       ADD CONSTRAINT fk_product_applications_ai_recommendation
       FOREIGN KEY (ai_recommendation_id) REFERENCES public.ai_recommendations(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'product_applications'
+      AND column_name = 'organization_id'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_product_applications_ai_recommendation_org'
+      AND conrelid = 'public.product_applications'::regclass
+  ) THEN
+    ALTER TABLE public.product_applications
+      ADD CONSTRAINT fk_product_applications_ai_recommendation_org
+      FOREIGN KEY (ai_recommendation_id, organization_id)
+      REFERENCES public.ai_recommendations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
   END IF;
 END $$;
 
@@ -187,6 +304,7 @@ CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(par
 CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_annual_plan_id ON public.plan_interventions(annual_plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_parcel_id ON public.plan_interventions(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_organization_id ON public.plan_interventions(organization_id);
 CREATE INDEX IF NOT EXISTS idx_performance_alerts_is_ai_generated ON public.performance_alerts(is_ai_generated);
 
 DROP TRIGGER IF EXISTS trg_calibrations_updated_at ON public.calibrations;
@@ -235,7 +353,8 @@ CREATE POLICY "org_write_calibrations" ON public.calibrations
 
 DROP POLICY IF EXISTS "org_update_calibrations" ON public.calibrations;
 CREATE POLICY "org_update_calibrations" ON public.calibrations
-  FOR UPDATE USING (public.is_organization_member(organization_id));
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
 
 DROP POLICY IF EXISTS "org_delete_calibrations" ON public.calibrations;
 CREATE POLICY "org_delete_calibrations" ON public.calibrations
@@ -251,7 +370,8 @@ CREATE POLICY "org_write_ai_recommendations" ON public.ai_recommendations
 
 DROP POLICY IF EXISTS "org_update_ai_recommendations" ON public.ai_recommendations;
 CREATE POLICY "org_update_ai_recommendations" ON public.ai_recommendations
-  FOR UPDATE USING (public.is_organization_member(organization_id));
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
 
 DROP POLICY IF EXISTS "org_delete_ai_recommendations" ON public.ai_recommendations;
 CREATE POLICY "org_delete_ai_recommendations" ON public.ai_recommendations
@@ -267,7 +387,8 @@ CREATE POLICY "org_write_annual_plans" ON public.annual_plans
 
 DROP POLICY IF EXISTS "org_update_annual_plans" ON public.annual_plans;
 CREATE POLICY "org_update_annual_plans" ON public.annual_plans
-  FOR UPDATE USING (public.is_organization_member(organization_id));
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
 
 DROP POLICY IF EXISTS "org_delete_annual_plans" ON public.annual_plans;
 CREATE POLICY "org_delete_annual_plans" ON public.annual_plans
@@ -283,7 +404,8 @@ CREATE POLICY "org_write_plan_interventions" ON public.plan_interventions
 
 DROP POLICY IF EXISTS "org_update_plan_interventions" ON public.plan_interventions;
 CREATE POLICY "org_update_plan_interventions" ON public.plan_interventions
-  FOR UPDATE USING (public.is_organization_member(organization_id));
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
 
 DROP POLICY IF EXISTS "org_delete_plan_interventions" ON public.plan_interventions;
 CREATE POLICY "org_delete_plan_interventions" ON public.plan_interventions
@@ -309,23 +431,23 @@ CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.calibrations;
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
 END $$;
 
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.performance_alerts;
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
 END $$;
 
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.ai_recommendations;
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
 END $$;
 
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.plan_interventions;
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
 END $$;

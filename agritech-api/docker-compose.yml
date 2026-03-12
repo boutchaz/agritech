@@ -72,6 +72,29 @@ services:
       - supabase-network
       - dokploy-network
 
+  db-migrator:
+    image: supabase/cli:2.72.7
+    container_name: agritech-db-migrator
+    profiles:
+      - migrations
+    working_dir: /workspace/project
+    environment:
+      - MIGRATIONS_DB_URL=${MIGRATIONS_DB_URL}
+    command: >
+      sh -lc '
+      if [ -z "$MIGRATIONS_DB_URL" ]; then
+        echo "MIGRATIONS_DB_URL is required";
+        exit 1;
+      fi;
+      supabase migration list --db-url "$MIGRATIONS_DB_URL" &&
+      supabase db push --db-url "$MIGRATIONS_DB_URL"
+      '
+    volumes:
+      - ../project:/workspace/project
+    restart: "no"
+    networks:
+      - supabase-network
+
 networks:
   agritech-network:
     external: true

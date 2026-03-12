@@ -77,7 +77,7 @@ export class SatelliteCacheService {
     try {
       const client = this.db.getAdminClient();
 
-      let query = client
+      const query = client
         .from('parcels')
         .select('boundary, name')
         .eq('id', parcelId);
