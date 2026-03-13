@@ -568,7 +568,31 @@ const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: Extreme
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
                       {anomaly.severity}
                     </span>
+                    {anomaly.index_name && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {anomaly.index_name}
+                      </span>
+                    )}
                   </div>
+                  {(anomaly.value != null || anomaly.deviation != null) && (
+                    <div className="flex items-center space-x-3 mt-1.5 text-xs text-gray-600 dark:text-gray-400">
+                      {anomaly.value != null && (
+                        <span>
+                          Value: <span className="font-medium text-gray-800 dark:text-gray-200">{anomaly.value.toFixed(3)}</span>
+                        </span>
+                      )}
+                      {anomaly.previous_value != null && (
+                        <span>
+                          Prev: <span className="font-medium text-gray-800 dark:text-gray-200">{anomaly.previous_value.toFixed(3)}</span>
+                        </span>
+                      )}
+                      {anomaly.deviation != null && (
+                        <span>
+                          Deviation: <span className="font-medium text-gray-800 dark:text-gray-200">{(anomaly.deviation * 100).toFixed(1)}%</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {anomaly.weather_reference && (
                     <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
                       <CloudRain className="w-3 h-3" />
@@ -1043,8 +1067,8 @@ const AICalibrationPage = () => {
   const { data: diagnostics } = useAIDiagnostics(parcelId);
   const { isPending: isStartingV1 } = useStartAICalibration();
 
-  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
   const { data: phase } = useCalibrationPhase(parcelId);
+  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId, phase);
   const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
 
   const v2Output = reportData?.report?.output ?? null;

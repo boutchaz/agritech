@@ -53,6 +53,10 @@ export interface AnomalyRecord {
   date: string;
   anomaly_type: string;
   severity: SeverityLevel;
+  index_name: string;
+  value: number | null;
+  previous_value: number | null;
+  deviation: number | null;
   weather_reference?: string | null;
   excluded_from_reference: boolean;
 }
@@ -228,6 +232,10 @@ const typeContractExample = {
         date: '2025-08-10',
         anomaly_type: 'sudden_drop',
         severity: 'high',
+        index_name: 'NDVI',
+        value: 0.35,
+        previous_value: 0.61,
+        deviation: 0.4262,
         weather_reference: 'heatwave',
         excluded_from_reference: true,
       },

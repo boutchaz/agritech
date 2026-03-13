@@ -82,6 +82,10 @@ class AnomalyRecord(BaseModel):
     date: date
     anomaly_type: str
     severity: Literal["low", "medium", "high", "critical"]
+    index_name: str = "NDVI"
+    value: float | None = None
+    previous_value: float | None = None
+    deviation: float | None = None
     weather_reference: str | None = None
     excluded_from_reference: bool = False
 

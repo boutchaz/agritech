@@ -59,6 +59,10 @@ def detect_anomalies(
                         date=curr.date,
                         anomaly_type="sudden_drop",
                         severity=severity,
+                        index_name=index,
+                        value=curr.value,
+                        previous_value=prev.value,
+                        deviation=round(drop_ratio, 4),
                         weather_reference=weather_ref,
                         excluded_from_reference=severity in {"high", "critical"},
                     )
@@ -74,6 +78,10 @@ def detect_anomalies(
                         date=ordered[idx].date,
                         anomaly_type="progressive_decline",
                         severity="medium",
+                        index_name=index,
+                        value=c,
+                        previous_value=a,
+                        deviation=round((a - c) / a, 4),
                         weather_reference=_nearest_weather_event(
                             weather, ordered[idx].date
                         ),
@@ -92,6 +100,12 @@ def detect_anomalies(
                             date=point.date,
                             anomaly_type="abnormal_value",
                             severity="medium",
+                            index_name=index,
+                            value=point.value,
+                            previous_value=round(avg, 4),
+                            deviation=round(abs(point.value - avg) / sigma, 4)
+                            if sigma > 0
+                            else None,
                             weather_reference=_nearest_weather_event(
                                 weather, point.date
                             ),
@@ -109,6 +123,10 @@ def detect_anomalies(
                     date=ordered[-1].date,
                     anomaly_type="trend_break",
                     severity="medium",
+                    index_name=index,
+                    value=round(late_mean, 4),
+                    previous_value=round(early_mean, 4),
+                    deviation=round((late_mean - early_mean) / early_mean, 4),
                     weather_reference=_nearest_weather_event(weather, ordered[-1].date),
                     excluded_from_reference=False,
                 )
@@ -116,12 +134,17 @@ def detect_anomalies(
 
         if len(values) >= 8:
             window = values[-8:]
-            if pstdev(window) < 0.01:
+            window_std = pstdev(window)
+            if window_std < 0.01:
                 anomalies.append(
                     AnomalyRecord(
                         date=ordered[-1].date,
                         anomaly_type="prolonged_stagnation",
                         severity="low",
+                        index_name=index,
+                        value=round(mean(window), 4),
+                        previous_value=None,
+                        deviation=round(window_std, 6),
                         weather_reference=None,
                         excluded_from_reference=False,
                     )

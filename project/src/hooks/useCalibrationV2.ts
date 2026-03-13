@@ -34,6 +34,8 @@ export function useStartCalibrationV2(parcelId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.calibrationV2.report(parcelId, currentOrganization?.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calibrationV2.phase(parcelId, currentOrganization?.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.calibrationV2.nutritionSuggestion(parcelId, currentOrganization?.id) });
+      // Also invalidate V1 calibration queries so the page reflects the new state
+      queryClient.invalidateQueries({ queryKey: ['ai-calibration', parcelId] });
       toast.success('Calibration V2 started');
     },
     onError: (error) => {
@@ -42,8 +44,9 @@ export function useStartCalibrationV2(parcelId: string) {
   });
 }
 
-export function useCalibrationReport(parcelId: string) {
+export function useCalibrationReport(parcelId: string, phase?: CalibrationPhase) {
   const { currentOrganization } = useAuth();
+  const isTransitioning = phase === 'calibrating' || phase === 'awaiting_validation';
 
   return useQuery({
     queryKey: queryKeys.calibrationV2.report(parcelId, currentOrganization?.id),
@@ -54,12 +57,14 @@ export function useCalibrationReport(parcelId: string) {
       return calibrationV2Api.getCalibrationReport(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: isTransitioning ? 0 : 5 * 60 * 1000,
+    refetchInterval: isTransitioning ? POLLING_INTERVAL_MS : false,
   });
 }
 
-export function useCalibrationStatus(parcelId: string) {
+export function useCalibrationStatus(parcelId: string, phase?: CalibrationPhase) {
   const { currentOrganization } = useAuth();
+  const isTransitioning = phase === 'calibrating';
 
   return useQuery({
     queryKey: queryKeys.calibrationV2.status(parcelId, currentOrganization?.id),
@@ -70,7 +75,8 @@ export function useCalibrationStatus(parcelId: string) {
       return calibrationV2Api.getCalibrationStatus(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
-    staleTime: 60 * 1000,
+    staleTime: isTransitioning ? 0 : 60 * 1000,
+    refetchInterval: isTransitioning ? POLLING_INTERVAL_MS : false,
   });
 }
 
