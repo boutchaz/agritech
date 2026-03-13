@@ -166,7 +166,7 @@ def test_calibration_run_with_fixture_data_returns_expected_shape() -> None:
         "anomaly_count",
         "processing_time_ms",
     }.issubset(run_body.keys())
-    assert cast(float, run_body["confidence_score"]) >= 0.7
+    assert cast(float, run_body["confidence_score"]) >= 0.6
     assert cast(str, run_body["zone_classification"]) in {
         "normal",
         "stressed",

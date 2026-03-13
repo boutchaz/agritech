@@ -1,11 +1,15 @@
-from datetime import datetime
+from datetime import date, datetime
 import logging
 import time
-from typing import SupportsFloat, TypedDict, cast
+from typing import Any, SupportsFloat, TypedDict, cast
 
 import numpy as np
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
+from ..services.calibration.gdd_service import precompute_gdd
+from ..services.calibration.orchestrator import run_calibration_pipeline
+from ..services.calibration.types import CalibrationInput, CalibrationOutput
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -269,6 +273,85 @@ class CalibrationRunResponse(BaseModel):
     processing_time_ms: int
 
 
+class CalibrationRunV2Request(BaseModel):
+    calibration_input: CalibrationInput
+    satellite_images: list[dict[str, Any]]
+    weather_rows: list[dict[str, Any]]
+
+
+class PrecomputeGddRequest(BaseModel):
+    latitude: float
+    longitude: float
+    crop_type: str
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class PrecomputeGddResponse(BaseModel):
+    crop_type: str
+    updated_rows: int
+
+
+def _build_v2_error(step: str, reason: str) -> dict[str, str]:
+    return {"step": step, "reason": reason}
+
+
+def _validate_v2_request(request: CalibrationRunV2Request) -> None:
+    if request.calibration_input.crop_type not in VALID_CROP_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error(
+                "validation",
+                "Invalid crop_type",
+            ),
+        )
+
+    if len(request.satellite_images) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error(
+                "validation",
+                "Insufficient satellite data",
+            ),
+        )
+
+    if len(request.weather_rows) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error(
+                "validation",
+                "Insufficient weather data",
+            ),
+        )
+
+
+def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
+    _validate_v2_request(request)
+
+    try:
+        return run_calibration_pipeline(
+            calibration_input=request.calibration_input,
+            satellite_images=request.satellite_images,
+            weather_rows=request.weather_rows,
+            storage=None,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error("pipeline", str(exc)),
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("V2 calibration pipeline failed")
+        raise HTTPException(
+            status_code=500,
+            detail=_build_v2_error(
+                "pipeline",
+                "Internal error while running calibration V2",
+            ),
+        ) from exc
+
+
 class PercentilesRequest(BaseModel):
     values: list[float]
     percentiles: list[int]
@@ -316,11 +399,15 @@ class PhenologyResponse(BaseModel):
 def _validate_crop_type(crop_type: str) -> None:
     if not crop_type or not crop_type.strip():
         raise HTTPException(status_code=400, detail="crop_type is required")
+    if crop_type not in VALID_CROP_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid crop_type")
 
 
 def _validate_system_type(system: str) -> None:
     if not system or not system.strip():
         raise HTTPException(status_code=400, detail="system is required")
+    if system not in VALID_SYSTEM_TYPES:
+        raise HTTPException(status_code=400, detail="Invalid system")
 
 
 def _parse_thresholds(thresholds: NdviThresholds) -> tuple[float, float, float, float]:
@@ -445,6 +532,35 @@ async def run_calibration(request: CalibrationRunRequest):
         anomaly_count=anomalies.anomaly_count,
         processing_time_ms=processing_time_ms,
     )
+
+
+@router.post("/v2/run", response_model=CalibrationOutput)
+async def run_calibration_v2(request: CalibrationRunV2Request):
+    return _run_v2(request)
+
+
+@router.post("/run-v2", response_model=CalibrationOutput)
+async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
+    return _run_v2(request)
+
+
+@router.post("/v2/precompute-gdd", response_model=PrecomputeGddResponse)
+async def precompute_gdd_v2(request: PrecomputeGddRequest):
+    if request.crop_type not in VALID_CROP_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error("validation", "Invalid crop_type"),
+        )
+
+    updated_rows = precompute_gdd(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        crop_type=request.crop_type,
+        rows=request.rows,
+        as_of=date.today(),
+    )
+
+    return PrecomputeGddResponse(crop_type=request.crop_type, updated_rows=updated_rows)
 
 
 @router.post("/percentiles", response_model=PercentilesResponse)

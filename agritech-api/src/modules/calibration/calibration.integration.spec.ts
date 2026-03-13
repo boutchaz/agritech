@@ -17,6 +17,16 @@ import {
 } from '../../../test/helpers/mock-database.helper';
 import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { CalibrationService } from './calibration.service';
+import { CalibrationStateMachine } from './calibration-state-machine';
+import { NutritionOptionService } from './nutrition-option.service';
+
+const mockStateMachine = {
+  transitionPhase: jest.fn(),
+};
+
+const mockNutritionOptionService = {
+  suggestNutritionOption: jest.fn(),
+};
 
 describe('Calibration integration', () => {
   let calibrationService: CalibrationService;
@@ -27,13 +37,18 @@ describe('Calibration integration', () => {
 
   const organizationId = 'org-001';
   const parcelId = agromindCalibrationFixture.parcel.id;
-  const parcelBoundary = [
+const parcelBoundary = [
     [-7.1, 31.7],
     [-7.1, 31.8],
     [-7.0, 31.8],
     [-7.0, 31.7],
-    [-7.1, 31.7],
-  ];
+  [-7.1, 31.7],
+];
+
+const lookbackBase = new Date();
+lookbackBase.setDate(lookbackBase.getDate() - 730);
+
+const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
 
   beforeEach(async () => {
     process.env.SATELLITE_SERVICE_URL = 'http://satellite-service.test';
@@ -43,6 +58,8 @@ describe('Calibration integration', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalibrationService,
+        { provide: CalibrationStateMachine, useValue: mockStateMachine },
+        { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         AiDiagnosticsService,
         AiAlertsService,
         { provide: DatabaseService, useValue: mockDatabaseService },
@@ -57,6 +74,8 @@ describe('Calibration integration', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
+    mockStateMachine.transitionPhase.mockReset();
+    mockNutritionOptionService.suggestNutritionOption.mockReset();
     delete process.env.SATELLITE_SERVICE_URL;
   });
 
@@ -215,7 +234,10 @@ describe('Calibration integration', () => {
       mockQueryResult({
         id: parcelId,
         crop_type: agromindCalibrationFixture.parcel.crop_type,
-        system: agromindCalibrationFixture.parcel.system,
+        planting_system: agromindCalibrationFixture.parcel.system,
+        planting_year: 2010,
+        variety: 'picholine_marocaine',
+        ai_phase: 'disabled',
         boundary: parcelBoundary,
         farms: { organization_id: organizationId },
       }),
@@ -246,14 +268,19 @@ describe('Calibration integration', () => {
     query.order.mockReturnValue(query);
     setupThenableMock(
       query,
-      agromindCalibrationFixture.satellite_readings.flatMap((reading) => [
-        { date: reading.date, index_name: 'NDVI', mean_value: reading.ndvi },
-        { date: reading.date, index_name: 'NDRE', mean_value: reading.ndre },
-        { date: reading.date, index_name: 'NDMI', mean_value: reading.ndmi },
-        { date: reading.date, index_name: 'GCI', mean_value: reading.gci },
-        { date: reading.date, index_name: 'EVI', mean_value: reading.evi },
-        { date: reading.date, index_name: 'SAVI', mean_value: reading.savi },
-      ]),
+      agromindCalibrationFixture.satellite_readings.flatMap((reading, index) => {
+        const readingDate = new Date(lookbackBase);
+        readingDate.setDate(readingDate.getDate() + index);
+        const date = toIsoDate(readingDate);
+        return [
+          { date, index_name: 'NDVI', mean_value: reading.ndvi },
+          { date, index_name: 'NDRE', mean_value: reading.ndre },
+          { date, index_name: 'NDMI', mean_value: reading.ndmi },
+          { date, index_name: 'GCI', mean_value: reading.gci },
+          { date, index_name: 'EVI', mean_value: reading.evi },
+          { date, index_name: 'SAVI', mean_value: reading.savi },
+        ];
+      }),
     );
     return query;
   }
@@ -264,7 +291,19 @@ describe('Calibration integration', () => {
     query.eq.mockReturnValue(query);
     query.gte.mockReturnValue(query);
     query.order.mockReturnValue(query);
-    setupThenableMock(query, agromindCalibrationFixture.satellite_readings);
+    setupThenableMock(
+      query,
+      agromindCalibrationFixture.satellite_readings.flatMap((reading, index) => {
+        const readingDate = new Date(lookbackBase);
+        readingDate.setDate(readingDate.getDate() + index);
+        const date = toIsoDate(readingDate);
+        return [
+          { date, index_name: 'NDVI', mean_value: reading.ndvi },
+          { date, index_name: 'NDRE', mean_value: reading.ndre },
+          { date, index_name: 'NDMI', mean_value: reading.ndmi },
+        ];
+      }),
+    );
     return query;
   }
 
@@ -276,13 +315,19 @@ describe('Calibration integration', () => {
     query.order.mockReturnValue(query);
     setupThenableMock(
       query,
-      agromindCalibrationFixture.weather_readings.map((reading) => ({
-        date: reading.date,
-        temperature_min: reading.temp_min,
-        temperature_max: reading.temp_max,
-        precipitation_sum: reading.precip,
-        et0_fao_evapotranspiration: reading.et0,
-      })),
+      agromindCalibrationFixture.weather_readings.map((reading, index) => {
+        const readingDate = new Date(lookbackBase);
+        readingDate.setDate(readingDate.getDate() + index);
+        return {
+          date: toIsoDate(readingDate),
+          latitude: 31.75,
+          longitude: -7.05,
+          temperature_min: reading.temp_min,
+          temperature_max: reading.temp_max,
+          precipitation_sum: reading.precip,
+          et0_fao_evapotranspiration: reading.et0,
+        };
+      }),
     );
     return query;
   }
@@ -295,11 +340,16 @@ describe('Calibration integration', () => {
     query.order.mockReturnValue(query);
     setupThenableMock(
       query,
-      agromindCalibrationFixture.weather_readings.map((reading) => ({
-        date: reading.date,
-        precipitation_sum: reading.precip,
-        et0_fao_evapotranspiration: reading.et0,
-      })),
+      agromindCalibrationFixture.weather_readings.map((reading, index) => {
+        const readingDate = new Date(lookbackBase);
+        readingDate.setDate(readingDate.getDate() + index);
+        return {
+          date: toIsoDate(readingDate),
+          temperature_min: reading.temp_min,
+          precipitation_sum: reading.precip,
+          et0_fao_evapotranspiration: reading.et0,
+        };
+      }),
     );
     return query;
   }

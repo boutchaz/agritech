@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { CalibrationService } from './calibration.service';
 import { StartCalibrationDto } from './dto/start-calibration.dto';
+import { ConfirmNutritionOptionDto } from './dto/confirm-nutrition-option.dto';
 
 @ApiTags('calibration')
 @ApiBearerAuth()
@@ -38,6 +39,18 @@ export class CalibrationController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.startCalibration(parcelId, organizationId, dto);
+  }
+
+  @Post('start-v2')
+  @ApiOperation({ summary: 'Trigger the V2 calibration pipeline for a parcel' })
+  @ApiResponse({ status: 201, description: 'V2 calibration started successfully' })
+  async startCalibrationV2(
+    @Param('parcelId') parcelId: string,
+    @Body() dto: StartCalibrationDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.startCalibrationV2(parcelId, organizationId, dto);
   }
 
   @Get()
@@ -82,6 +95,44 @@ export class CalibrationController {
     return this.calibrationService.validateCalibration(
       latestCalibration.id,
       organizationId,
+    );
+  }
+
+  @Post(':calibrationId/validate')
+  @ApiOperation({ summary: 'Validate a specific calibration by id' })
+  @ApiResponse({ status: 200, description: 'Calibration validated successfully' })
+  async validateCalibrationById(
+    @Param('calibrationId') calibrationId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.validateCalibration(calibrationId, organizationId);
+  }
+
+  @Get('nutrition-suggestion')
+  @ApiOperation({ summary: 'Get nutrition option suggestion for a parcel' })
+  @ApiResponse({ status: 200, description: 'Nutrition option suggestion retrieved successfully' })
+  async getNutritionSuggestion(
+    @Param('parcelId') parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getNutritionSuggestion(parcelId, organizationId);
+  }
+
+  @Post(':calibrationId/nutrition-option')
+  @ApiOperation({ summary: 'Confirm nutrition option for a calibration' })
+  @ApiResponse({ status: 200, description: 'Nutrition option confirmed successfully' })
+  async confirmNutritionOption(
+    @Param('calibrationId') calibrationId: string,
+    @Body() dto: ConfirmNutritionOptionDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.confirmNutritionOption(
+      calibrationId,
+      organizationId,
+      dto.option,
     );
   }
 

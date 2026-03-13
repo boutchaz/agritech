@@ -33,6 +33,8 @@
     "clean:dist": "pnpm -r exec rm -rf dist",
     "db:generate-types": "pnpm --filter agriprofy db:generate-types-remote",
     "db:push": "pnpm --filter agriprofy db:push",
+    "db:migrate": "pnpm --filter agritech-api db:migrate",
+    "db:migrate:dry-run": "pnpm --filter agritech-api db:migrate:dry-run",
     "db:reset": "pnpm --filter agriprofy db:reset",
     "tauri:dev": "pnpm --filter agriprofy tauri:dev",
     "tauri:build": "pnpm --filter agriprofy tauri:build",

@@ -7,9 +7,12 @@ import { Request } from 'express';
 
 const mockCalibrationService = {
   startCalibration: jest.fn(),
+  startCalibrationV2: jest.fn(),
   getLatestCalibration: jest.fn(),
   getCalibrationReport: jest.fn(),
   validateCalibration: jest.fn(),
+  getNutritionSuggestion: jest.fn(),
+  confirmNutritionOption: jest.fn(),
   getPercentiles: jest.fn(),
   getZones: jest.fn(),
 };
@@ -82,6 +85,24 @@ describe('CalibrationController', () => {
       await expect(controller.startCalibration(parcelId, dto, req)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('startCalibrationV2', () => {
+    it('calls service.startCalibrationV2 with parcelId, organizationId, and dto', async () => {
+      const dto: StartCalibrationDto = {};
+      const serviceResult = { id: 'cal-v2-001', parcel_id: parcelId, status: 'in_progress' };
+      mockCalibrationService.startCalibrationV2.mockResolvedValue(serviceResult);
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.startCalibrationV2(parcelId, dto, req);
+
+      expect(mockCalibrationService.startCalibrationV2).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+        dto,
+      );
+      expect(result).toEqual(serviceResult);
     });
   });
 
@@ -212,6 +233,62 @@ describe('CalibrationController', () => {
       await expect(controller.validateCalibration(parcelId, req)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('validateCalibrationById', () => {
+    it('calls validateCalibration for explicit calibration id', async () => {
+      const serviceResult = { id: 'cal-001', parcel_id: parcelId, status: 'completed' };
+      mockCalibrationService.validateCalibration.mockResolvedValue(serviceResult);
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.validateCalibrationById('cal-001', req);
+
+      expect(mockCalibrationService.validateCalibration).toHaveBeenCalledWith(
+        'cal-001',
+        organizationId,
+      );
+      expect(result).toEqual(serviceResult);
+    });
+  });
+
+  describe('nutrition option endpoints', () => {
+    it('calls getNutritionSuggestion with parcel and organization id', async () => {
+      const suggestion = { suggested_option: 'A', rationale: {}, alternatives: [] };
+      mockCalibrationService.getNutritionSuggestion.mockResolvedValue(suggestion);
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.getNutritionSuggestion(parcelId, req);
+
+      expect(mockCalibrationService.getNutritionSuggestion).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+      );
+      expect(result).toEqual(suggestion);
+    });
+
+    it('calls confirmNutritionOption with calibration id and selected option', async () => {
+      const confirmation = {
+        calibration_id: 'cal-001',
+        parcel_id: parcelId,
+        option: 'B',
+        ai_phase: 'active',
+      };
+      mockCalibrationService.confirmNutritionOption.mockResolvedValue(confirmation);
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.confirmNutritionOption(
+        'cal-001',
+        { option: 'B' },
+        req,
+      );
+
+      expect(mockCalibrationService.confirmNutritionOption).toHaveBeenCalledWith(
+        'cal-001',
+        organizationId,
+        'B',
+      );
+      expect(result).toEqual(confirmation);
     });
   });
 

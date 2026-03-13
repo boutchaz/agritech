@@ -1,23 +1,992 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration'
-import { useAIDiagnostics } from '@/hooks/useAIDiagnostics'
-import { CalibrationCard } from '@/components/ai/CalibrationCard'
-import { BrainCircuit, Play, AlertCircle, Satellite, CloudRain, CheckCircle2 } from 'lucide-react'
+import React, { useState } from 'react';
+import { createFileRoute } from '@tanstack/react-router';
+import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
+import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
+import {
+  useCalibrationReport,
+  useCalibrationPhase,
+  useStartCalibrationV2,
+  useValidateCalibration,
+  useNutritionSuggestion,
+  useConfirmNutritionOption,
+} from '@/hooks/useCalibrationV2';
+import type {
+  CalibrationV2Output,
+  AnomalyRecord,
+  SeverityLevel,
+  CalibrationMaturityPhase,
+  NutritionOption,
+  IndexTimePoint,
+  SpectralPercentiles,
+  ZoneSummary,
+  MonthlyWeatherAggregate,
+  ExtremeEvent,
+  ConfidenceComponent,
+} from '@/types/calibration-v2';
+import type { CalibrationPhase } from '@/lib/api/calibration-v2';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  ComposedChart,
+} from 'recharts';
+import {
+  BrainCircuit,
+  Play,
+  AlertCircle,
+  Satellite,
+  CloudRain,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Target,
+  Leaf,
+  Activity,
+  BarChart3,
+  Shield,
+  Calendar,
+  Thermometer,
+  AlertTriangle,
+  Info,
+  Zap,
+  TrendingUp,
+} from 'lucide-react';
+
+interface CollapsibleSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  defaultOpen?: boolean;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+  title,
+  icon,
+  defaultOpen = true,
+  badge,
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+      >
+        <div className="flex items-center space-x-3">
+          {icon}
+          <span className="font-medium text-gray-900 dark:text-white">{title}</span>
+          {badge}
+        </div>
+        {isOpen ? (
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        ) : (
+          <ChevronRight className="w-5 h-5 text-gray-500" />
+        )}
+      </button>
+      {isOpen && <div className="p-4 bg-white dark:bg-gray-800">{children}</div>}
+    </div>
+  );
+};
+
+const MATURITY_LABELS: Record<CalibrationMaturityPhase, string> = {
+  juvenile: 'Juvenile',
+  entree_production: 'Early Production',
+  pleine_production: 'Full Production',
+  maturite_avancee: 'Advanced Maturity',
+  senescence: 'Senescence',
+  unknown: 'Unknown',
+};
+
+const SEVERITY_COLORS: Record<SeverityLevel, { bg: string; text: string; dot: string }> = {
+  low: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-300', dot: 'bg-blue-500' },
+  medium: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', dot: 'bg-yellow-500' },
+  high: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', dot: 'bg-orange-500' },
+  critical: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', dot: 'bg-red-500' },
+};
+
+const ZONE_COLORS: Record<string, string> = {
+  A: '#22c55e',
+  B: '#3b82f6',
+  C: '#f59e0b',
+  D: '#f97316',
+  E: '#ef4444',
+};
+
+const CHART_COLORS = {
+  ndvi: '#22c55e',
+  ndmi: '#3b82f6',
+  ndre: '#eab308',
+  precip: '#3b82f6',
+  gdd: '#f59e0b',
+  band: '#22c55e',
+};
+
+function healthScoreColor(score: number): string {
+  if (score >= 70) return 'text-green-600 dark:text-green-400';
+  if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
+  return 'text-red-600 dark:text-red-400';
+}
+
+function healthBarColor(score: number): string {
+  if (score >= 70) return 'bg-green-500';
+  if (score >= 40) return 'bg-yellow-500';
+  return 'bg-red-500';
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
+  if (phase === 'awaiting_validation') {
+    return (
+      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4">
+        <div className="flex items-center space-x-3">
+          <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <div>
+            <h3 className="font-semibold text-amber-900 dark:text-amber-100">Awaiting Validation</h3>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              Review the calibration report below and validate to activate AI diagnostics.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'awaiting_nutrition_option') {
+    return (
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4">
+        <div className="flex items-center space-x-3">
+          <Leaf className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div>
+            <h3 className="font-semibold text-blue-900 dark:text-blue-100">Select Nutrition Option</h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              Choose a nutrition management option to complete calibration setup.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === 'active') {
+    return (
+      <div className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800/30 p-4">
+        <div className="flex items-center space-x-3">
+          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+          <div>
+            <h3 className="font-semibold text-green-900 dark:text-green-100">Calibration Active</h3>
+            <p className="text-sm text-green-700 dark:text-green-300">
+              AI diagnostics and monitoring are fully operational for this parcel.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+  const health = output.step8.health_score;
+  const confidence = output.confidence;
+  const yieldPotential = output.step6.yield_potential;
+  const zones = output.step7.zone_summary;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6">
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Health Score</div>
+          <div className="flex items-end space-x-3">
+            <span className={`text-5xl font-bold ${healthScoreColor(health.total)}`}>
+              {health.total}
+            </span>
+            <span className="text-lg text-gray-400 dark:text-gray-500 mb-1">/100</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-3">
+            <div
+              className={`h-2.5 rounded-full transition-all ${healthBarColor(health.total)}`}
+              style={{ width: `${health.total}%` }}
+            />
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {Object.entries(health.components).map(([key, value]) => (
+              <div key={key} className="flex items-center space-x-3">
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-24 capitalize">{key}</span>
+                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full ${healthBarColor(value)}`}
+                    style={{ width: `${value}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-8 text-right">{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                {(confidence.normalized_score * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div
+                className="bg-blue-500 h-2 rounded-full transition-all"
+                style={{ width: `${confidence.normalized_score * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Maturity Phase</div>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+              {MATURITY_LABELS[output.maturity_phase]}
+            </span>
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Yield Potential</div>
+            <div className="flex items-baseline space-x-1">
+              <span className="text-xl font-bold text-gray-900 dark:text-white">
+                {yieldPotential.minimum} – {yieldPotential.maximum}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">t/ha</span>
+            </div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Method: {yieldPotential.method.replace(/_/g, ' ')} · Bracket: {yieldPotential.reference_bracket.replace(/_/g, ' ')}
+            </div>
+            {yieldPotential.historical_average != null && (
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                Historical avg: {yieldPotential.historical_average} t/ha
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {zones.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Zone Distribution</div>
+          <div className="flex items-center space-x-2">
+            {zones.map((zone) => (
+              <div
+                key={zone.class_name}
+                className="flex-1 text-center"
+                style={{ flex: zone.surface_percent }}
+              >
+                <div
+                  className="h-4 rounded-sm"
+                  style={{ backgroundColor: ZONE_COLORS[zone.class_name] ?? '#6b7280' }}
+                />
+                <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
+                  {zone.class_name} ({zone.surface_percent.toFixed(0)}%)
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface IndexChartProps {
+  title: string;
+  data: IndexTimePoint[];
+  color: string;
+  percentiles?: SpectralPercentiles;
+}
+
+const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, percentiles }) => {
+  const chartData = data.map((pt) => ({
+    date: new Date(pt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    value: Number(pt.value.toFixed(3)),
+    ...(percentiles ? { p25: percentiles.p25, p75: percentiles.p75 } : {}),
+  }));
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{title}</h4>
+      <ResponsiveContainer width="100%" height={220}>
+        <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <XAxis dataKey="date" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={50} />
+          <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
+          <Tooltip />
+          {percentiles && (
+            <Area
+              type="monotone"
+              dataKey="p75"
+              stroke="none"
+              fill={color}
+              fillOpacity={0.1}
+              name="P75"
+            />
+          )}
+          {percentiles && (
+            <Area
+              type="monotone"
+              dataKey="p25"
+              stroke="none"
+              fill="#ffffff"
+              fillOpacity={1}
+              name="P25"
+            />
+          )}
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke={color}
+            strokeWidth={2}
+            dot={{ r: 2 }}
+            name={title}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const ZonePieChart: React.FC<{ zones: ZoneSummary[] }> = ({ zones }) => {
+  const data = zones.map((z) => ({
+    name: `Zone ${z.class_name}`,
+    value: z.surface_percent,
+    color: ZONE_COLORS[z.class_name] ?? '#6b7280',
+  }));
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Spatial Homogeneity</h4>
+      <ResponsiveContainer width="100%" height={220}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            dataKey="value"
+            label={({ name, value }: { name: string; value: number }) => `${name}: ${value.toFixed(0)}%`}
+          >
+            {data.map((entry) => (
+              <Cell key={`cell-${entry.name}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(val: number) => `${val.toFixed(1)}%`} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const PhenologyTimeline: React.FC<{ dates: Record<string, string> }> = ({ dates }) => {
+  const stages = [
+    { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
+    { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
+    { key: 'plateau_start', label: 'Plateau', icon: <Activity className="w-3 h-3" /> },
+    { key: 'decline_start', label: 'Decline', icon: <AlertTriangle className="w-3 h-3" /> },
+    { key: 'dormancy_entry', label: 'Dormancy', icon: <Calendar className="w-3 h-3" /> },
+  ];
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Phenological Timeline</h4>
+      <div className="flex items-center justify-between">
+        {stages.map((stage, i) => {
+          const dateStr = dates[stage.key];
+          return (
+            <div key={stage.key} className="flex flex-col items-center text-center flex-1">
+              <div className="flex items-center w-full">
+                {i > 0 && <div className="flex-1 h-0.5 bg-green-300 dark:bg-green-700" />}
+                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                  {stage.icon}
+                </div>
+                {i < stages.length - 1 && <div className="flex-1 h-0.5 bg-green-300 dark:bg-green-700" />}
+              </div>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">{stage.label}</span>
+              {dateStr && (
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> = ({ aggregates }) => {
+  const data = aggregates.map((m) => ({
+    month: m.month,
+    precipitation: Number(m.precipitation_total.toFixed(1)),
+    gdd: Number(m.gdd_total.toFixed(0)),
+  }));
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Monthly Weather</h4>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+          <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+          <YAxis yAxisId="precip" tick={{ fontSize: 10 }} />
+          <YAxis yAxisId="gdd" orientation="right" tick={{ fontSize: 10 }} />
+          <Tooltip />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar yAxisId="precip" dataKey="precipitation" fill={CHART_COLORS.precip} name="Precipitation (mm)" />
+          <Bar yAxisId="gdd" dataKey="gdd" fill={CHART_COLORS.gdd} name="GDD" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+const DetailedAnalysis: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+  const ndviData = output.step1.index_time_series.NDVI;
+  const ndmiData = output.step1.index_time_series.NDMI;
+  const ndreData = output.step1.index_time_series.NDRE;
+  const ndviPercentiles = output.step3.global_percentiles.NDVI;
+  const ndmiPercentiles = output.step3.global_percentiles.NDMI;
+  const ndrePercentiles = output.step3.global_percentiles.NDRE;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {ndviData && ndviData.length > 0 && (
+          <IndexTimeSeriesChart
+            title="NDVI - Vegetative Vigor"
+            data={ndviData}
+            color={CHART_COLORS.ndvi}
+            percentiles={ndviPercentiles}
+          />
+        )}
+        {ndmiData && ndmiData.length > 0 && (
+          <IndexTimeSeriesChart
+            title="NDMI - Hydric State"
+            data={ndmiData}
+            color={CHART_COLORS.ndmi}
+            percentiles={ndmiPercentiles}
+          />
+        )}
+        {ndreData && ndreData.length > 0 && (
+          <IndexTimeSeriesChart
+            title="NDRE - Nutritional State"
+            data={ndreData}
+            color={CHART_COLORS.ndre}
+            percentiles={ndrePercentiles}
+          />
+        )}
+        {output.step7.zone_summary.length > 0 && (
+          <ZonePieChart zones={output.step7.zone_summary} />
+        )}
+      </div>
+
+      <PhenologyTimeline dates={output.step4.mean_dates as unknown as Record<string, string>} />
+
+      {output.step2.monthly_aggregates.length > 0 && (
+        <MonthlyWeatherChart aggregates={output.step2.monthly_aggregates} />
+      )}
+    </div>
+  );
+};
+
+const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }> = ({
+  anomalies,
+  extremeEvents,
+}) => {
+  if (anomalies.length === 0 && extremeEvents.length === 0) {
+    return (
+      <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+        <span className="text-sm text-green-700 dark:text-green-300">No anomalies detected during the analysis period.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {anomalies.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Spectral Anomalies</h4>
+          {anomalies.map((anomaly) => {
+            const sev = SEVERITY_COLORS[anomaly.severity];
+            return (
+              <div
+                key={`anomaly-${anomaly.date}-${anomaly.anomaly_type}`}
+                className={`flex items-start space-x-3 p-3 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
+              >
+                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${sev.dot}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {formatDate(anomaly.date)}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
+                      {anomaly.anomaly_type.replace(/_/g, ' ')}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
+                      {anomaly.severity}
+                    </span>
+                  </div>
+                  {anomaly.weather_reference && (
+                    <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <CloudRain className="w-3 h-3" />
+                      <span>Weather ref: {anomaly.weather_reference}</span>
+                    </div>
+                  )}
+                  {anomaly.excluded_from_reference && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 italic">Excluded from reference baseline</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {extremeEvents.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Extreme Weather Events</h4>
+          {extremeEvents.map((event) => {
+            const sev = SEVERITY_COLORS[event.severity];
+            return (
+              <div
+                key={`event-${event.date}-${event.event_type}`}
+                className={`flex items-center space-x-3 p-3 rounded-lg ${sev.bg}`}
+              >
+                <Thermometer className={`w-4 h-4 ${sev.text}`} />
+                <span className="text-sm text-gray-900 dark:text-white">{formatDate(event.date)}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
+                  {event.event_type.replace(/_/g, ' ')}
+                </span>
+                <span className={`text-xs font-medium ${sev.text}`}>{event.severity}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceComponent> }> = ({ components }) => {
+  return (
+    <div className="space-y-2">
+      {Object.entries(components).map(([name, comp]) => {
+        const pct = comp.max_score > 0 ? (comp.score / comp.max_score) * 100 : 0;
+        return (
+          <div key={name} className="flex items-center space-x-3">
+            <span className="text-xs text-gray-500 dark:text-gray-400 w-28 capitalize">{name.replace(/_/g, ' ')}</span>
+            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div
+                className="bg-blue-500 h-1.5 rounded-full"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 text-right">
+              {comp.score}/{comp.max_score}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+  const flags = output.metadata.data_quality_flags;
+  const conf = output.confidence;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-3">
+          Confidence Score Breakdown
+        </h4>
+        <ConfidenceBreakdown components={conf.components} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2 mb-1">
+            <Satellite className="w-4 h-4 text-blue-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Cloud Coverage</span>
+          </div>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            {output.step1.cloud_coverage_mean.toFixed(1)}%
+          </span>
+        </div>
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2 mb-1">
+            <BarChart3 className="w-4 h-4 text-green-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Filtered Images</span>
+          </div>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            {output.step1.filtered_image_count}
+          </span>
+        </div>
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2 mb-1">
+            <AlertCircle className="w-4 h-4 text-yellow-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Outliers Removed</span>
+          </div>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            {output.step1.outlier_count}
+          </span>
+        </div>
+      </div>
+
+      {flags.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
+            Data Quality Flags
+          </h4>
+          <div className="space-y-1">
+            {flags.map((flag) => (
+              <div key={flag} className="flex items-center space-x-2 text-sm">
+                <Info className="w-4 h-4 text-yellow-500 shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">{flag}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {flags.length === 0 && (
+        <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <CheckCircle2 className="w-4 h-4 text-green-500" />
+          <span className="text-sm text-green-700 dark:text-green-300">No data quality issues detected.</span>
+        </div>
+      )}
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+          <span>Version: {output.metadata.version}</span>
+          <span>Generated: {formatDate(output.metadata.generated_at)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+  return (
+    <div className="space-y-4">
+      <CollapsibleSection
+        title="Executive Summary"
+        icon={<Target className="w-5 h-5 text-green-600 dark:text-green-400" />}
+        defaultOpen={true}
+      >
+        <ExecutiveSummary output={output} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Detailed Analysis"
+        icon={<BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
+        defaultOpen={false}
+      >
+        <DetailedAnalysis output={output} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title={`Detected Anomalies (${output.step5.anomalies.length})`}
+        icon={<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
+        defaultOpen={false}
+      >
+        <AnomalyList anomalies={output.step5.anomalies} extremeEvents={output.step2.extreme_events} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Calibration Improvement"
+        icon={<Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
+        defaultOpen={false}
+      >
+        <CalibrationImprovement output={output} />
+      </CollapsibleSection>
+    </div>
+  );
+};
+
+const NUTRITION_OPTION_LABELS: Record<NutritionOption, { name: string; description: string }> = {
+  A: {
+    name: 'Option A — Standard',
+    description: 'Balanced fertigation with standard foliar applications.',
+  },
+  B: {
+    name: 'Option B — Enhanced',
+    description: 'Enhanced fertigation with biostimulant mix for improved vigor.',
+  },
+  C: {
+    name: 'Option C — Intensive',
+    description: 'Intensive program with leaching management and soil amendments.',
+  },
+};
+
+const ValidationPanel: React.FC<{
+  calibrationId: string;
+  parcelId: string;
+  healthScore: number;
+  confidence: number;
+  onReCalibrate: () => void;
+}> = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }) => {
+  const { mutate: validate, isPending: isValidating } = useValidateCalibration(parcelId);
+
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border-2 border-amber-300 dark:border-amber-700 p-6">
+      <div className="flex items-start space-x-4">
+        <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg shrink-0">
+          <Shield className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+            Validate Calibration Baseline
+          </h3>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+            Review the report above. If the results look correct for this parcel, validate to proceed.
+          </p>
+
+          <div className="flex items-center space-x-6 mt-4 text-sm">
+            <div>
+              <span className="text-amber-600 dark:text-amber-400">Health Score:</span>{' '}
+              <span className="font-bold text-amber-900 dark:text-amber-100">{healthScore}/100</span>
+            </div>
+            <div>
+              <span className="text-amber-600 dark:text-amber-400">Confidence:</span>{' '}
+              <span className="font-bold text-amber-900 dark:text-amber-100">{(confidence * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 mt-5">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isValidating}
+                  className="inline-flex items-center space-x-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Validate this calibration?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will lock in the current baseline (health score: {healthScore}/100, confidence: {(confidence * 100).toFixed(0)}%).
+                    You will then be asked to select a nutrition management option.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => validate(calibrationId)}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    Validate
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <button
+              type="button"
+              onClick={onReCalibrate}
+              className="inline-flex items-center space-x-2 px-4 py-2.5 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              <span>Re-run Calibration</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NutritionOptionSelector: React.FC<{
+  parcelId: string;
+  calibrationId: string;
+}> = ({ parcelId, calibrationId }) => {
+  const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
+  const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
+  const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
+
+  const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
+
+  if (isSuggestionLoading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!suggestion) {
+    return (
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800 p-4">
+        <div className="flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-yellow-500" />
+          <span className="text-sm text-yellow-700 dark:text-yellow-300">
+            Unable to load nutrition suggestions. Please try re-calibrating.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const options: NutritionOption[] = ['A', 'B', 'C'];
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-700 p-6">
+      <div className="flex items-start space-x-4 mb-5">
+        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg shrink-0">
+          <Leaf className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+            Select Nutrition Option
+          </h3>
+          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            Choose a nutrition management program for this parcel.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        {options.map((opt) => {
+          const alt = suggestion.alternatives.find((a) => a.option === opt);
+          const isEligible = alt?.eligible ?? true;
+          const isSuggested = suggestion.suggested_option === opt;
+          const isSelected = effectiveSelection === opt;
+          const label = NUTRITION_OPTION_LABELS[opt];
+
+          return (
+            <button
+              key={opt}
+              type="button"
+              disabled={!isEligible || isConfirming}
+              onClick={() => setSelectedOption(opt)}
+              className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                isSelected
+                  ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500/30'
+                  : isEligible
+                    ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
+                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              {isSuggested && (
+                <span className="absolute -top-2.5 left-3 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
+                  Recommended
+                </span>
+              )}
+              <div className="text-base font-semibold text-gray-900 dark:text-white mt-1">
+                {label.name}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {label.description}
+              </p>
+              {alt && !isEligible && (
+                <p className="text-xs text-red-500 mt-2">{alt.reason}</p>
+              )}
+              {alt && isEligible && alt.reason && (
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{alt.reason}</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center space-x-3">
+        <button
+          type="button"
+          disabled={!effectiveSelection || isConfirming}
+          onClick={() => {
+            if (effectiveSelection) {
+              confirm({ calibrationId, option: effectiveSelection });
+            }
+          }}
+          className="inline-flex items-center space-x-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{isConfirming ? 'Confirming...' : 'Confirm Selection'}</span>
+        </button>
+        {effectiveSelection && effectiveSelection !== suggestion.suggested_option && (
+          <span className="text-xs text-blue-600 dark:text-blue-400">
+            Overriding system suggestion ({suggestion.suggested_option})
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
+
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId);
-  const { mutate: startCalibration, isPending: isStarting } = useStartAICalibration();
+  const { isPending: isStartingV1 } = useStartAICalibration();
 
-  const isInProgress = calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
-  const isBusy = isInProgress || isStarting;
-  const isCompleted = calibration?.status === 'completed';
+  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
+  const { data: phase } = useCalibrationPhase(parcelId);
+  const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
 
-  if (isCalibrationLoading) {
+  const v2Output = reportData?.report?.output ?? null;
+  const hasV2Report = v2Output !== null;
+
+  const isStarting = isStartingV1 || isStartingV2;
+  const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
+  const isBusy = isCalibrating || isStarting;
+  const isFailed = calibration?.status === 'failed';
+  const isDisabled = phase === 'disabled' || phase === 'unknown';
+  const hasNoCalibration = !calibration && !hasV2Report && (isDisabled || !phase);
+
+  const handleStartCalibration = () => {
+    startCalibrationV2();
+  };
+
+  if (isCalibrationLoading || isReportLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
       </div>
     );
   }
@@ -27,12 +996,14 @@ const AICalibrationPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Calibration</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Manage the AI model calibration for this parcel.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Manage the AI model calibration for this parcel.
+          </p>
         </div>
-        {calibration && (
+        {(calibration || hasV2Report) && (
           <button
             type="button"
-            onClick={() => startCalibration(parcelId)}
+            onClick={handleStartCalibration}
             disabled={isBusy}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
           >
@@ -41,12 +1012,14 @@ const AICalibrationPage = () => {
             ) : (
               <Play className="w-4 h-4" />
             )}
-            <span>{isInProgress ? 'Calibrating...' : 'Re-calibrate'}</span>
+            <span>{isCalibrating ? 'Calibrating...' : 'Re-calibrate'}</span>
           </button>
         )}
       </div>
 
-      {isInProgress && (
+      {phase && <PhaseBanner phase={phase} />}
+
+      {isCalibrating && (
         <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
@@ -71,17 +1044,32 @@ const AICalibrationPage = () => {
           </div>
           <div className="mt-4 ml-11">
             <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-purple-600 dark:bg-purple-400 h-1.5 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '60%' }}></div>
+              <div className="bg-purple-600 dark:bg-purple-400 h-1.5 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '60%' }} />
             </div>
           </div>
         </div>
       )}
 
-      {isCompleted && calibration && (
-        <CalibrationCard calibration={calibration} />
+      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} />}
+
+      {phase === 'awaiting_validation' && hasV2Report && v2Output && reportData?.calibration?.id && (
+        <ValidationPanel
+          calibrationId={reportData.calibration.id}
+          parcelId={parcelId}
+          healthScore={v2Output.step8.health_score.total}
+          confidence={v2Output.confidence.normalized_score}
+          onReCalibrate={handleStartCalibration}
+        />
       )}
 
-      {calibration?.status === 'failed' && (
+      {phase === 'awaiting_nutrition_option' && reportData?.calibration?.id && (
+        <NutritionOptionSelector
+          parcelId={parcelId}
+          calibrationId={reportData.calibration.id}
+        />
+      )}
+
+      {isFailed && !isCalibrating && (
         <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/30 p-6">
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-red-500 mt-0.5" />
@@ -92,7 +1080,7 @@ const AICalibrationPage = () => {
               </p>
               <button
                 type="button"
-                onClick={() => startCalibration(parcelId)}
+                onClick={handleStartCalibration}
                 disabled={isStarting}
                 className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
@@ -104,7 +1092,7 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {!calibration && (
+      {hasNoCalibration && (
         <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-2xl border border-green-200 dark:border-green-800/30 p-12 text-center">
           <div className="max-w-md mx-auto">
             <div className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm inline-block mb-6">
@@ -137,7 +1125,7 @@ const AICalibrationPage = () => {
             </div>
             <button
               type="button"
-              onClick={() => startCalibration(parcelId)}
+              onClick={handleStartCalibration}
               disabled={isStarting}
               className="inline-flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium shadow-sm"
             >

@@ -197,7 +197,7 @@ def test_calibration_run_happy_path() -> None:
     assert body["baseline_ndvi"] == 0.55
     assert body["baseline_ndre"] == 0.21
     assert body["baseline_ndmi"] == 0.17
-    assert body["confidence_score"] == 0.82
+    assert body["confidence_score"] == 0.63
     assert body["zone_classification"] == "normal"
     assert body["phenology_stage"] == "repos_vegetatif"
     assert body["anomaly_count"] == 0

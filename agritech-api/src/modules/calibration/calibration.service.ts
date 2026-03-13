@@ -8,6 +8,11 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { WeatherProvider } from '../chat/providers/weather.provider';
 import { StartCalibrationDto } from './dto/start-calibration.dto';
+import { CalibrationStateMachine } from './calibration-state-machine';
+import {
+  NutritionOptionService,
+  NutritionOptionSuggestion,
+} from './nutrition-option.service';
 
 const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
@@ -20,6 +25,15 @@ const SATELLITE_SYNC_INDICES = [
 ];
 
 type ZoneClassification = 'optimal' | 'normal' | 'stressed';
+type ParcelAiPhase =
+  | 'disabled'
+  | 'calibrating'
+  | 'awaiting_validation'
+  | 'awaiting_nutrition_option'
+  | 'active'
+  | 'paused'
+  | 'calibration'
+  | string;
 type JsonObject = Record<string, unknown>;
 
 interface NdviThresholds {
@@ -71,6 +85,10 @@ interface ParcelContext {
   cropType: string;
   system: string;
   boundary: number[][];
+  organizationId: string | null;
+  variety: string | null;
+  plantingYear: number | null;
+  aiPhase: ParcelAiPhase;
 }
 
 interface CropReferenceRow {
@@ -85,10 +103,66 @@ interface SatelliteIndexRow {
 
 interface WeatherDailyRow {
   date: string;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
   temperature_min: number | string | null;
   temperature_max: number | string | null;
+  temperature_mean?: number | string | null;
+  relative_humidity_mean?: number | string | null;
+  wind_speed_max?: number | string | null;
+  shortwave_radiation_sum?: number | string | null;
   precipitation_sum: number | string | null;
   et0_fao_evapotranspiration: number | string | null;
+  gdd_olivier?: number | string | null;
+  gdd_agrumes?: number | string | null;
+  gdd_avocatier?: number | string | null;
+  gdd_palmier_dattier?: number | string | null;
+  chill_hours?: number | string | null;
+}
+
+interface AnalysisRow {
+  analysis_type: string;
+  analysis_date: string;
+  data: unknown;
+}
+
+interface HarvestRow {
+  harvest_date: string | null;
+  quantity: number | string | null;
+  unit: string | null;
+}
+
+interface CalibrationV2Response {
+  parcel_id: string;
+  maturity_phase: string;
+  step3?: {
+    global_percentiles?: Record<string, { p50?: number }>;
+  };
+  step4?: {
+    mean_dates?: Record<string, string>;
+  };
+  step5?: {
+    anomalies?: unknown[];
+  };
+  step6?: {
+    yield_potential?: {
+      minimum?: number;
+      maximum?: number;
+    };
+  };
+  step7?: {
+    zone_summary?: Array<{ class_name?: string; surface_percent?: number }>;
+    spatial_pattern_type?: string;
+  };
+  step8?: {
+    health_score?: {
+      total?: number;
+    };
+  };
+  confidence?: {
+    total_score?: number;
+    normalized_score?: number;
+  };
 }
 
 export interface CalibrationRecord {
@@ -110,11 +184,22 @@ export interface CalibrationRecord {
   updated_at: string;
 }
 
+export interface NutritionOptionConfirmation {
+  calibration_id: string;
+  parcel_id: string;
+  option: 'A' | 'B' | 'C';
+  ai_phase: 'active';
+}
+
 @Injectable()
 export class CalibrationService {
   private readonly logger = new Logger(CalibrationService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly stateMachine: CalibrationStateMachine,
+    private readonly nutritionOptionService: NutritionOptionService,
+  ) {}
 
   async startCalibration(
     parcelId: string,
@@ -147,6 +232,88 @@ export class CalibrationService {
     }
 
     return this.runCalibrationComputation(parcelId, organizationId, parcel, dto, satelliteReadings, weatherReadings);
+  }
+
+  async startCalibrationV2(
+    parcelId: string,
+    organizationId: string,
+    dto: StartCalibrationDto,
+  ): Promise<CalibrationRecord> {
+    const parcel = await this.getParcelContext(parcelId, organizationId);
+
+    if (parcel.aiPhase === 'calibrating') {
+      throw new BadRequestException('Parcel calibration is already in progress');
+    }
+
+    if (parcel.aiPhase !== 'disabled' && parcel.aiPhase !== 'active') {
+      throw new BadRequestException(
+        `V2 calibration can only start from disabled or active phase (current: ${parcel.aiPhase})`,
+      );
+    }
+
+    if (!parcel.plantingYear) {
+      throw new BadRequestException('Parcel planting_year is required for calibration V2');
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const startedAt = new Date().toISOString();
+
+    await this.stateMachine.transitionPhase(
+      parcelId,
+      parcel.aiPhase as 'disabled' | 'active',
+      'calibrating',
+      organizationId,
+    );
+
+    const { data: calibration, error: insertError } = await supabase
+      .from('calibrations')
+      .insert({
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        status: 'in_progress',
+        started_at: startedAt,
+        calibration_version: 'v2',
+        calibration_data: {
+          version: 'v2',
+          request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          parcel: {
+            id: parcel.id,
+            crop_type: parcel.cropType,
+            planting_year: parcel.plantingYear,
+            variety: parcel.variety,
+            planting_system: parcel.system,
+          },
+        },
+      })
+      .select('*')
+      .single();
+
+    if (insertError || !calibration) {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        'calibrating',
+        'disabled',
+        organizationId,
+      );
+
+      throw new BadRequestException(
+        `Failed to create V2 calibration: ${insertError?.message ?? 'unknown error'}`,
+      );
+    }
+
+    this.runCalibrationV2InBackground(
+      calibration.id as string,
+      parcelId,
+      organizationId,
+      parcel,
+      dto,
+    ).catch((error) => {
+      this.logger.error(
+        `Background V2 calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+    });
+
+    return calibration as CalibrationRecord;
   }
 
   private async startProvisioningCalibration(
@@ -306,6 +473,184 @@ export class CalibrationService {
         })
         .eq('id', calibrationId);
     }
+  }
+
+  private async runCalibrationV2InBackground(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    try {
+      await Promise.race([
+        this.executeCalibrationV2(calibrationId, parcelId, organizationId, parcel, dto),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('V2 calibration timed out after 10 minutes'));
+          }, 10 * 60 * 1000);
+        }),
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      this.logger.error(`V2 calibration ${calibrationId} failed: ${message}`);
+
+      await supabase
+        .from('calibrations')
+        .update({
+          status: 'failed',
+          error_message: message,
+        })
+        .eq('id', calibrationId);
+
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        'calibrating',
+        'disabled',
+        organizationId,
+      );
+    }
+  }
+
+  private async executeCalibrationV2(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const [satelliteReadings, satelliteImages, weatherRows, analyses, harvestRecords, referenceData] =
+      await Promise.all([
+        this.fetchSatelliteReadings(parcelId, organizationId),
+        this.fetchSatelliteImagesForV2(parcelId, organizationId),
+        this.fetchWeatherRowsForV2(parcel),
+        this.fetchAnalysesForV2(parcelId),
+        this.fetchHarvestRecordsForV2(parcelId),
+        this.fetchCropReferenceData(parcel.cropType),
+      ]);
+
+    if (weatherRows.length && this.hasMissingGdd(weatherRows, parcel.cropType)) {
+      const firstRow = weatherRows[0];
+      const latitude = this.toNumber(firstRow?.latitude) ?? 0;
+      const longitude = this.toNumber(firstRow?.longitude) ?? 0;
+
+      await this.postCalibrationApi<{ crop_type: string; updated_rows: number }>(
+        '/api/calibration/v2/precompute-gdd',
+        {
+          latitude,
+          longitude,
+          crop_type: parcel.cropType,
+          rows: weatherRows,
+        },
+        organizationId,
+      );
+    }
+
+    const weatherDaily = this.normalizeWeatherReadings(weatherRows);
+    const calibrationInput = {
+      parcel_id: parcelId,
+      organization_id: organizationId,
+      crop_type: parcel.cropType,
+      variety: parcel.variety,
+      planting_year: parcel.plantingYear,
+      planting_system: parcel.system,
+      satellite_series: {
+        NDVI: satelliteReadings.slice(0, 1).map((reading) => ({
+          date: reading.date,
+          value: reading.ndvi,
+        })),
+      },
+      weather_daily: weatherDaily,
+      analyses,
+      harvest_records: harvestRecords,
+      reference_data: referenceData,
+    };
+
+    const v2Output = await this.postCalibrationApi<CalibrationV2Response>(
+      '/api/calibration/v2/run',
+      {
+        calibration_input: calibrationInput,
+        satellite_images: satelliteImages,
+        weather_rows: weatherRows,
+      },
+      organizationId,
+    );
+
+    const zoneClassification = this.deriveZoneClassification(v2Output);
+    const calibrationData = {
+      version: 'v2',
+      request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      parcel: {
+        id: parcel.id,
+        crop_type: parcel.cropType,
+        planting_system: parcel.system,
+        planting_year: parcel.plantingYear,
+        variety: parcel.variety,
+      },
+      inputs: {
+        satellite_images: satelliteImages,
+        weather_rows: weatherRows,
+        analyses,
+        harvest_records: harvestRecords,
+        reference_data: referenceData,
+      },
+      output: v2Output,
+      validation: {
+        validated: false,
+        validated_at: null,
+      },
+    };
+
+    const { error: updateCalibrationError } = await supabase
+      .from('calibrations')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        baseline_ndvi: this.extractIndexP50(v2Output, 'NDVI'),
+        baseline_ndre: this.extractIndexP50(v2Output, 'NDRE'),
+        baseline_ndmi: this.extractIndexP50(v2Output, 'NDMI'),
+        confidence_score: this.toNumber(v2Output.confidence?.normalized_score),
+        zone_classification: zoneClassification,
+        phenology_stage: this.extractPhenologyStage(v2Output),
+        health_score: this.toNumber(v2Output.step8?.health_score?.total),
+        yield_potential_min: this.toNumber(v2Output.step6?.yield_potential?.minimum),
+        yield_potential_max: this.toNumber(v2Output.step6?.yield_potential?.maximum),
+        data_completeness_score: this.toNumber(v2Output.confidence?.total_score),
+        maturity_phase: v2Output.maturity_phase,
+        anomaly_count: Array.isArray(v2Output.step5?.anomalies)
+          ? v2Output.step5?.anomalies.length
+          : 0,
+        calibration_version: 'v2',
+        calibration_data: calibrationData,
+      })
+      .eq('id', calibrationId);
+
+    if (updateCalibrationError) {
+      throw new Error(`Failed to update V2 calibration: ${updateCalibrationError.message}`);
+    }
+
+    const { error: updateParcelError } = await supabase
+      .from('parcels')
+      .update({
+        ai_calibration_id: calibrationId,
+        ai_enabled: true,
+      })
+      .eq('id', parcelId);
+
+    if (updateParcelError) {
+      throw new Error(`Failed to update parcel AI state: ${updateParcelError.message}`);
+    }
+
+    await this.stateMachine.transitionPhase(
+      parcelId,
+      'calibrating',
+      'awaiting_validation',
+      organizationId,
+    );
   }
 
   private async triggerSatelliteSync(
@@ -641,6 +986,17 @@ export class CalibrationService {
       throw new NotFoundException('Calibration not found');
     }
 
+    if (typeof existingCalibration.parcel_id !== 'string') {
+      throw new BadRequestException('Calibration is missing parcel_id');
+    }
+
+    const parcel = await this.getParcelContext(existingCalibration.parcel_id, organizationId);
+    if (parcel.aiPhase !== 'awaiting_validation') {
+      throw new BadRequestException(
+        `Calibration can only be validated in awaiting_validation phase (current: ${parcel.aiPhase})`,
+      );
+    }
+
     if (existingCalibration.status !== 'completed') {
       throw new BadRequestException('Only completed calibrations can be validated');
     }
@@ -680,7 +1036,76 @@ export class CalibrationService {
       );
     }
 
+    await this.stateMachine.transitionPhase(
+      existingCalibration.parcel_id,
+      'awaiting_validation',
+      'awaiting_nutrition_option',
+      organizationId,
+    );
+
     return updatedCalibration as CalibrationRecord;
+  }
+
+  async getNutritionSuggestion(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<NutritionOptionSuggestion> {
+    await this.getParcelContext(parcelId, organizationId);
+    return this.nutritionOptionService.suggestNutritionOption(parcelId, organizationId);
+  }
+
+  async confirmNutritionOption(
+    calibrationId: string,
+    organizationId: string,
+    option: 'A' | 'B' | 'C',
+  ): Promise<NutritionOptionConfirmation> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: calibration, error } = await supabase
+      .from('calibrations')
+      .select('id, parcel_id, organization_id')
+      .eq('id', calibrationId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch calibration: ${error.message}`);
+    }
+
+    if (!calibration || typeof calibration.parcel_id !== 'string') {
+      throw new NotFoundException('Calibration not found');
+    }
+
+    const parcel = await this.getParcelContext(calibration.parcel_id, organizationId);
+    if (parcel.aiPhase !== 'awaiting_nutrition_option') {
+      throw new BadRequestException(
+        `Nutrition option can only be confirmed in awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+      );
+    }
+
+    const { error: updateParcelError } = await supabase
+      .from('parcels')
+      .update({ ai_nutrition_option: option })
+      .eq('id', calibration.parcel_id);
+
+    if (updateParcelError) {
+      throw new BadRequestException(
+        `Failed to persist nutrition option: ${updateParcelError.message}`,
+      );
+    }
+
+    await this.stateMachine.transitionPhase(
+      calibration.parcel_id,
+      'awaiting_nutrition_option',
+      'active',
+      organizationId,
+    );
+
+    return {
+      calibration_id: calibrationId,
+      parcel_id: calibration.parcel_id,
+      option,
+      ai_phase: 'active',
+    };
   }
 
   async getPercentiles(parcelId: string, organizationId: string): Promise<PercentilesResponse> {
@@ -728,7 +1153,9 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, planting_system, boundary, organization_id, farms(organization_id)')
+      .select(
+        'id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, farms(organization_id)',
+      )
       .eq('id', parcelId)
       .single();
 
@@ -756,6 +1183,12 @@ export class CalibrationService {
       cropType: parcel.crop_type,
       system: parcel.planting_system ?? 'unknown',
       boundary: this.parseBoundary(parcel.boundary),
+      organizationId:
+        typeof parcel.organization_id === 'string' ? parcel.organization_id : null,
+      variety: typeof parcel.variety === 'string' ? parcel.variety : null,
+      plantingYear:
+        typeof parcel.planting_year === 'number' ? parcel.planting_year : null,
+      aiPhase: typeof parcel.ai_phase === 'string' ? parcel.ai_phase : 'disabled',
     };
   }
 
@@ -985,6 +1418,177 @@ export class CalibrationService {
       typeof reading.evi === 'number' &&
       typeof reading.savi === 'number'
     );
+  }
+
+  private async fetchSatelliteImagesForV2(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<Array<Record<string, unknown>>> {
+    const supabase = this.databaseService.getAdminClient();
+    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const { data, error } = await supabase
+      .from('satellite_indices_data')
+      .select('date, index_name, mean_value')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .gte('date', sinceDate)
+      .order('date', { ascending: true })
+      .order('index_name', { ascending: true });
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch satellite images: ${error.message}`);
+    }
+
+    const byDate = new Map<string, Record<string, number>>();
+    for (const row of data as SatelliteIndexRow[]) {
+      const value = this.toNumber(row.mean_value);
+      if (value === null) {
+        continue;
+      }
+      const current = byDate.get(row.date) ?? {};
+      current[row.index_name] = value;
+      byDate.set(row.date, current);
+    }
+
+    return Array.from(byDate.entries()).map(([date, indices]) => ({
+      date,
+      cloud_coverage: 0,
+      indices,
+    }));
+  }
+
+  private async fetchWeatherRowsForV2(parcel: ParcelContext): Promise<WeatherDailyRow[]> {
+    if (!parcel.boundary.length) {
+      throw new BadRequestException('Parcel boundary is required to fetch weather rows');
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
+    const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
+    const roundedLatitude = this.roundCoordinate(latitude, 2);
+    const roundedLongitude = this.roundCoordinate(longitude, 2);
+    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+
+    const { data, error } = await supabase
+      .from('weather_daily_data')
+      .select(
+        'date, latitude, longitude, temperature_min, temperature_max, temperature_mean, relative_humidity_mean, wind_speed_max, shortwave_radiation_sum, precipitation_sum, et0_fao_evapotranspiration, gdd_olivier, gdd_agrumes, gdd_avocatier, gdd_palmier_dattier, chill_hours',
+      )
+      .eq('latitude', roundedLatitude)
+      .eq('longitude', roundedLongitude)
+      .gte('date', sinceDate)
+      .order('date', { ascending: true });
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch weather rows: ${error.message}`);
+    }
+
+    return data as WeatherDailyRow[];
+  }
+
+  private async fetchAnalysesForV2(parcelId: string): Promise<Array<Record<string, unknown>>> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from('analyses')
+      .select('analysis_type, analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .in('analysis_type', ['soil', 'water'])
+      .order('analysis_date', { ascending: true });
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch analyses: ${error.message}`);
+    }
+
+    return (data as AnalysisRow[]).map((row) => ({
+      analysis_type: row.analysis_type,
+      analysis_date: row.analysis_date,
+      data: this.toJsonObject(row.data),
+    }));
+  }
+
+  private async fetchHarvestRecordsForV2(parcelId: string): Promise<Array<Record<string, unknown>>> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from('harvest_records')
+      .select('harvest_date, quantity, unit')
+      .eq('parcel_id', parcelId)
+      .order('harvest_date', { ascending: true });
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch harvest records: ${error.message}`);
+    }
+
+    return (data as HarvestRow[]).map((row) => ({
+      harvest_date: row.harvest_date,
+      quantity: this.toNumber(row.quantity),
+      unit: row.unit,
+    }));
+  }
+
+  private async fetchCropReferenceData(cropType: string): Promise<Record<string, unknown>> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from('crop_ai_references')
+      .select('reference_data')
+      .eq('crop_type', cropType)
+      .maybeSingle();
+
+    if (error) {
+      throw new BadRequestException(`Failed to fetch crop reference: ${error.message}`);
+    }
+
+    return this.toJsonObject((data as CropReferenceRow | null)?.reference_data);
+  }
+
+  private hasMissingGdd(rows: WeatherDailyRow[], cropType: string): boolean {
+    const gddColumnByCrop: Record<string, keyof WeatherDailyRow> = {
+      olivier: 'gdd_olivier',
+      agrumes: 'gdd_agrumes',
+      avocatier: 'gdd_avocatier',
+      palmier_dattier: 'gdd_palmier_dattier',
+    };
+
+    const column = gddColumnByCrop[cropType];
+    if (!column) {
+      return false;
+    }
+
+    return rows.some((row) => this.toNumber(row[column]) === null);
+  }
+
+  private deriveZoneClassification(output: CalibrationV2Response): ZoneClassification {
+    const summary = output.step7?.zone_summary;
+    if (!Array.isArray(summary) || summary.length === 0) {
+      return 'normal';
+    }
+
+    const sorted = [...summary].sort(
+      (left, right) => (right.surface_percent ?? 0) - (left.surface_percent ?? 0),
+    );
+    const dominant = sorted[0]?.class_name;
+
+    if (dominant === 'A' || dominant === 'B') {
+      return 'optimal';
+    }
+    if (dominant === 'D' || dominant === 'E') {
+      return 'stressed';
+    }
+    return 'normal';
+  }
+
+  private extractIndexP50(output: CalibrationV2Response, indexName: string): number | null {
+    const percentile = output.step3?.global_percentiles?.[indexName]?.p50;
+    return this.toNumber(percentile);
+  }
+
+  private extractPhenologyStage(output: CalibrationV2Response): string | null {
+    const meanDates = output.step4?.mean_dates;
+    if (!meanDates) {
+      return null;
+    }
+
+    const keys = Object.keys(meanDates);
+    return keys.length > 0 ? keys[0] : null;
   }
 
   private async postCalibrationApi<T>(

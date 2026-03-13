@@ -9,8 +9,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useAnalyses } from '../hooks/useAnalyses';
 import AnalysisCard from './Analysis/AnalysisCard';
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
+import { AIStatusBadge } from './ai/AIStatusBadge';
 
-// Lazy load heavy chart components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
 const StatisticsCalculator = lazy(() => import('./SatelliteAnalysisView/StatisticsCalculator'));
@@ -31,6 +31,7 @@ interface Parcel {
   variety?: string | null;
   rootstock?: string | null;
   organization_id?: string | null;
+  ai_phase?: string | null;
 }
 
 interface ParcelCardProps {
@@ -844,7 +845,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               {parcel.area ? `${parcel.area} hectares` : 'Superficie non définie'}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             {isAssigned ? (
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -859,6 +860,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             <span className={`font-medium ${data.healthColor}`}>
               {data.health}
             </span>
+            {parcel.ai_phase && parcel.ai_phase !== 'disabled' && (
+              <AIStatusBadge status={parcel.ai_phase as Parameters<typeof AIStatusBadge>[0]['status']} />
+            )}
           </div>
         </div>
 

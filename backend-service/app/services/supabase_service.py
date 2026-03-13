@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import logging
-from app.core.config import settings
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class SupabaseService:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 # Use list-of-tuples so httpx emits duplicate 'date' keys
                 # for PostgREST range filtering on the same column
-                query_params: list[tuple[str, str]] = [("parcel_id", f"eq.{parcel_id}")]
+                query_params: list[tuple[str, Any]] = [("parcel_id", f"eq.{parcel_id}")]
                 if date_range:
                     start = date_range.get("start_date")
                     end = date_range.get("end_date")
@@ -220,7 +220,7 @@ class SupabaseService:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                query_params: list[tuple[str, str]] = [
+                query_params: list[tuple[str, Any]] = [
                     ("select", "date,par_value"),
                     ("latitude", f"eq.{lat:.2f}"),
                     ("longitude", f"eq.{lon:.2f}"),
@@ -398,6 +398,48 @@ class SupabaseService:
             logger.error(f"Error uploading satellite file: {e}")
             return None
 
+    async def upload_calibration_raster(
+        self,
+        file_data: bytes,
+        organization_id: str,
+        parcel_id: str,
+        index: str,
+        raster_date: str,
+        filename: Optional[str] = None,
+    ) -> Optional[str]:
+        try:
+            safe_filename = filename or f"{index.lower()}.tif"
+            file_path = f"calibration-rasters/{organization_id}/{parcel_id}/{raster_date}/{safe_filename}"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{self.supabase_url}/storage/v1/object/satellite-data/{file_path}",
+                    headers={
+                        "apikey": self.supabase_key,
+                        "Authorization": f"Bearer {self.supabase_key}",
+                        "Content-Type": "application/octet-stream",
+                        "x-upsert": "true",
+                    },
+                    content=file_data,
+                )
+                response.raise_for_status()
+
+            return f"{self.supabase_url}/storage/v1/object/public/satellite-data/{file_path}"
+        except Exception as e:
+            logger.error(f"Error uploading calibration raster: {e}")
+            return None
+
+    def calibration_raster_path(
+        self,
+        organization_id: str,
+        parcel_id: str,
+        index: str,
+        raster_date: str,
+        filename: Optional[str] = None,
+    ) -> str:
+        safe_filename = filename or f"{index.lower()}.tif"
+        return f"calibration-rasters/{organization_id}/{parcel_id}/{raster_date}/{safe_filename}"
+
     async def save_file_metadata(self, metadata: Dict[str, Any]) -> Optional[str]:
         """Save file metadata to database"""
         try:
@@ -423,7 +465,7 @@ class SupabaseService:
         """Get satellite files for an organization"""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                query_params: list[tuple[str, str]] = [
+                query_params: list[tuple[str, Any]] = [
                     ("organization_id", f"eq.{organization_id}")
                 ]
 
