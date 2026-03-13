@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
+import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
 import {
   useCalibrationReport,
   useCalibrationPhase,
@@ -71,6 +72,8 @@ import {
   Info,
   Zap,
   TrendingUp,
+  TreePine,
+  Save,
 } from 'lucide-react';
 
 interface CollapsibleSectionProps {
@@ -958,9 +961,84 @@ const NutritionOptionSelector: React.FC<{
   );
 };
 
+const PlantingYearPrompt: React.FC<{
+  parcelId: string;
+  onSaved: () => void;
+}> = ({ parcelId, onSaved }) => {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState<string>('');
+  const updateParcel = useUpdateParcel();
+  const isSaving = updateParcel.isPending;
+
+  const parsedYear = parseInt(year, 10);
+  const isValid = !Number.isNaN(parsedYear) && parsedYear >= 1900 && parsedYear <= currentYear;
+
+  const handleSave = () => {
+    if (!isValid) return;
+    updateParcel.mutate(
+      { id: parcelId, updates: { planting_year: parsedYear } },
+      { onSuccess: onSaved },
+    );
+  };
+
+  return (
+    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-6">
+      <div className="flex items-start space-x-3">
+        <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg">
+          <TreePine className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+            Planting Year Required
+          </h3>
+          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+            Calibration V2 uses the plantation age to adjust thresholds and maturity models.
+            Please specify the year this parcel was planted.
+          </p>
+          <div className="flex items-end space-x-3 mt-4">
+            <div>
+              <label htmlFor="planting-year-input" className="block text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">
+                Year planted
+              </label>
+              <input
+                id="planting-year-input"
+                type="number"
+                min={1900}
+                max={currentYear}
+                placeholder={String(currentYear - 10)}
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && isValid) handleSave();
+                }}
+                className="w-28 px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isValid || isSaving}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+            >
+              <Save className="w-4 h-4" />
+              <span>{isSaving ? 'Saving...' : 'Save & Continue'}</span>
+            </button>
+          </div>
+          {year && !isValid && (
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+              Enter a year between 1900 and {currentYear}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
 
+  const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId);
   const { isPending: isStartingV1 } = useStartAICalibration();
@@ -971,6 +1049,7 @@ const AICalibrationPage = () => {
 
   const v2Output = reportData?.report?.output ?? null;
   const hasV2Report = v2Output !== null;
+  const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const isStarting = isStartingV1 || isStartingV2;
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
@@ -1004,8 +1083,9 @@ const AICalibrationPage = () => {
           <button
             type="button"
             onClick={handleStartCalibration}
-            disabled={isBusy}
+            disabled={isBusy || missingPlantingYear}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            title={missingPlantingYear ? 'Set planting year first' : undefined}
           >
             {isBusy ? (
               <BrainCircuit className="w-4 h-4 animate-pulse" />
@@ -1018,6 +1098,10 @@ const AICalibrationPage = () => {
       </div>
 
       {phase && <PhaseBanner phase={phase} />}
+
+      {missingPlantingYear && (
+        <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
+      )}
 
       {isCalibrating && (
         <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
@@ -1123,19 +1207,24 @@ const AICalibrationPage = () => {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleStartCalibration}
-              disabled={isStarting}
-              className="inline-flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium shadow-sm"
-            >
-              {isStarting ? (
-                <BrainCircuit className="w-5 h-5 animate-pulse" />
-              ) : (
-                <Play className="w-5 h-5" />
-              )}
-              <span>{isStarting ? 'Starting...' : 'Start Calibration'}</span>
-            </button>
+            {missingPlantingYear && (
+              <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
+            )}
+            {!missingPlantingYear && (
+              <button
+                type="button"
+                onClick={handleStartCalibration}
+                disabled={isStarting}
+                className="inline-flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium shadow-sm"
+              >
+                {isStarting ? (
+                  <BrainCircuit className="w-5 h-5 animate-pulse" />
+                ) : (
+                  <Play className="w-5 h-5" />
+                )}
+                <span>{isStarting ? 'Starting...' : 'Start Calibration'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}
