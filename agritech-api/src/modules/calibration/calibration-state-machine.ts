@@ -12,8 +12,8 @@ export type AiPhase =
 const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
   disabled: ['calibrating'],
   calibrating: ['awaiting_validation', 'disabled'],
-  awaiting_validation: ['awaiting_nutrition_option'],
-  awaiting_nutrition_option: ['active'],
+  awaiting_validation: ['awaiting_nutrition_option', 'calibrating', 'disabled'],
+  awaiting_nutrition_option: ['active', 'calibrating', 'disabled'],
   active: ['awaiting_nutrition_option', 'calibrating', 'disabled'],
   paused: ['disabled'],
 };
