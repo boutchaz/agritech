@@ -121,10 +121,6 @@ export class CreateStockEntryDto {
   @IsOptional()
   purpose?: string;
 
-  @IsUUID()
-  @IsOptional()
-  crop_cycle_id?: string;
-
   @IsString()
   @IsOptional()
   notes?: string;

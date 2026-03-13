@@ -17,7 +17,6 @@ interface StockEntry {
   entry_type: StockEntryType;
   entry_number: string;
   entry_date: Date;
-  crop_cycle_id?: string;
   items: StockEntryItem[];
 }
 
