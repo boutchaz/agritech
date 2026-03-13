@@ -1181,7 +1181,7 @@ export class CalibrationService {
     return {
       id: parcel.id,
       cropType: parcel.crop_type,
-      system: parcel.planting_system ?? 'unknown',
+      system: parcel.planting_system ?? 'traditionnel',
       boundary: this.parseBoundary(parcel.boundary),
       organizationId:
         typeof parcel.organization_id === 'string' ? parcel.organization_id : null,

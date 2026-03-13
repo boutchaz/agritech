@@ -40,6 +40,45 @@ VALID_SYSTEM_TYPES = {
     "super_intensif",
 }
 
+DEFAULT_CROP_TYPE = "olivier"
+DEFAULT_SYSTEM_TYPE = "traditionnel"
+
+
+# TODO: Replace fallback with proper crop/system expansion once all types are defined
+def _normalize_crop_type(crop_type: str | None) -> str:
+    """Accept any crop_type — map unknown ones to default with a log warning."""
+    if not crop_type or not crop_type.strip():
+        logger.warning(
+            "Empty crop_type received, defaulting to '%s'", DEFAULT_CROP_TYPE
+        )
+        return DEFAULT_CROP_TYPE
+    if crop_type in VALID_CROP_TYPES:
+        return crop_type
+    logger.warning(
+        "Unknown crop_type '%s' not in %s — defaulting to '%s'",
+        crop_type,
+        VALID_CROP_TYPES,
+        DEFAULT_CROP_TYPE,
+    )
+    return DEFAULT_CROP_TYPE
+
+
+def _normalize_system_type(system: str | None) -> str:
+    """Accept any system — map unknown ones to default with a log warning."""
+    if not system or not system.strip():
+        logger.warning("Empty system received, defaulting to '%s'", DEFAULT_SYSTEM_TYPE)
+        return DEFAULT_SYSTEM_TYPE
+    if system in VALID_SYSTEM_TYPES:
+        return system
+    logger.warning(
+        "Unknown system '%s' not in %s — defaulting to '%s'",
+        system,
+        VALID_SYSTEM_TYPES,
+        DEFAULT_SYSTEM_TYPE,
+    )
+    return DEFAULT_SYSTEM_TYPE
+
+
 GENERIC_PHENOLOGY: list[PhenologyDefinition] = [
     {
         "months": {1, 2},
@@ -296,14 +335,9 @@ def _build_v2_error(step: str, reason: str) -> dict[str, str]:
 
 
 def _validate_v2_request(request: CalibrationRunV2Request) -> None:
-    if request.calibration_input.crop_type not in VALID_CROP_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=_build_v2_error(
-                "validation",
-                "Invalid crop_type",
-            ),
-        )
+    request.calibration_input.crop_type = _normalize_crop_type(
+        request.calibration_input.crop_type
+    )
 
     if len(request.satellite_images) < 1:
         raise HTTPException(
@@ -396,20 +430,6 @@ class PhenologyResponse(BaseModel):
     description: str
 
 
-def _validate_crop_type(crop_type: str) -> None:
-    if not crop_type or not crop_type.strip():
-        raise HTTPException(status_code=400, detail="crop_type is required")
-    if crop_type not in VALID_CROP_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid crop_type")
-
-
-def _validate_system_type(system: str) -> None:
-    if not system or not system.strip():
-        raise HTTPException(status_code=400, detail="system is required")
-    if system not in VALID_SYSTEM_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid system")
-
-
 def _parse_thresholds(thresholds: NdviThresholds) -> tuple[float, float, float, float]:
     optimal_min, optimal_max = thresholds.optimal
     return optimal_min, optimal_max, thresholds.vigilance, thresholds.alerte
@@ -451,7 +471,7 @@ def _detect_anomalies(
 
 
 def _get_phenology_stage(crop_type: str, month: int) -> PhenologyResponse:
-    _validate_crop_type(crop_type)
+    crop_type = _normalize_crop_type(crop_type)
 
     stages = PHENOLOGY_CONFIG.get(crop_type, GENERIC_PHENOLOGY)
 
@@ -477,8 +497,8 @@ def _extract_month(date_value: str) -> int:
 async def run_calibration(request: CalibrationRunRequest):
     start_time = time.perf_counter()
 
-    _validate_crop_type(request.crop_type)
-    _validate_system_type(request.system)
+    request.crop_type = _normalize_crop_type(request.crop_type)
+    request.system = _normalize_system_type(request.system)
 
     if not request.satellite_readings or not request.weather_readings:
         raise HTTPException(
@@ -546,11 +566,7 @@ async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
 
 @router.post("/v2/precompute-gdd", response_model=PrecomputeGddResponse)
 async def precompute_gdd_v2(request: PrecomputeGddRequest):
-    if request.crop_type not in VALID_CROP_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=_build_v2_error("validation", "Invalid crop_type"),
-        )
+    request.crop_type = _normalize_crop_type(request.crop_type)
 
     updated_rows = precompute_gdd(
         latitude=request.latitude,

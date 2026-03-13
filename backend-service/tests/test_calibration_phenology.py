@@ -44,7 +44,7 @@ def test_calibration_phenology_month_mapping() -> None:
         assert body["description"]
 
 
-def test_calibration_phenology_rejects_invalid_crop_type() -> None:
+def test_calibration_phenology_falls_back_for_unknown_crop_type() -> None:
     response = client.post(
         "/api/calibration/phenology",
         json={
@@ -55,5 +55,6 @@ def test_calibration_phenology_rejects_invalid_crop_type() -> None:
         },
     )
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid crop_type"
+    assert response.status_code == 200
+    body = cast(dict[str, object], response.json())
+    assert "stage" in body

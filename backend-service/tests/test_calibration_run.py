@@ -216,14 +216,15 @@ def test_calibration_run_rejects_empty_readings() -> None:
     assert response.json()["detail"] == "Satellite and weather readings are required"
 
 
-def test_calibration_run_rejects_invalid_crop_type() -> None:
+def test_calibration_run_falls_back_to_default_crop_type() -> None:
     payload = _build_payload()
     payload["crop_type"] = "mais"
 
     response = client.post("/api/calibration/run", json=payload)
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Invalid crop_type"
+    assert response.status_code == 200
+    data = response.json()
+    assert "baseline_ndvi" in data
 
 
 def test_main_registers_calibration_router() -> None:
