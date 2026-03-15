@@ -110,6 +110,7 @@ def run_calibration_pipeline(
     satellite_images: list[dict[str, Any]],
     weather_rows: list[dict[str, Any]],
     storage=None,
+    ndvi_raster_pixels: list[dict[str, Any]] | None = None,
 ) -> CalibrationOutput:
     step5_fn = getattr(
         import_module("app.services.calibration.step5_anomaly_detection"),
@@ -173,7 +174,44 @@ def run_calibration_pipeline(
     ndvi_points = step1.index_time_series.get("NDVI", [])
     ndvi_values = [point.value for point in ndvi_points] if ndvi_points else [0.0]
     median_ndvi = float(np.median(ndvi_values))
-    raster = np.array([[median_ndvi]], dtype=np.float64)
+
+    if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
+        lons = [float(p["lon"]) for p in ndvi_raster_pixels]
+        lats = [float(p["lat"]) for p in ndvi_raster_pixels]
+
+        min_lon, max_lon = min(lons), max(lons)
+        min_lat, max_lat = min(lats), max(lats)
+
+        pixel_deg = 10.0 / 111320.0
+
+        cols = max(1, int((max_lon - min_lon) / pixel_deg) + 1)
+        rows = max(1, int((max_lat - min_lat) / pixel_deg) + 1)
+
+        cols = min(cols, 200)
+        rows = min(rows, 200)
+
+        raster = np.full((rows, cols), np.nan, dtype=np.float64)
+
+        for pixel in ndvi_raster_pixels:
+            lon = float(pixel["lon"])
+            lat = float(pixel["lat"])
+            value = float(pixel["value"])
+
+            col = min(int((lon - min_lon) / pixel_deg), cols - 1)
+            row = min(int((max_lat - lat) / pixel_deg), rows - 1)
+            raster[row, col] = value
+
+        valid_values = raster[~np.isnan(raster)]
+        if len(valid_values) > 0:
+            raster[np.isnan(raster)] = float(np.median(valid_values))
+            has_real_zones = True
+        else:
+            raster = np.array([[median_ndvi]], dtype=np.float64)
+            has_real_zones = False
+    else:
+        raster = np.array([[median_ndvi]], dtype=np.float64)
+        has_real_zones = False
+
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
         ndvi_percentiles = next(iter(step3.global_percentiles.values()))
@@ -222,7 +260,8 @@ def run_calibration_pipeline(
     if ndvi_valid_count < MIN_SATELLITE_IMAGES:
         data_quality_flags.append("insufficient_satellite_data")
 
-    data_quality_flags.append("single_pixel_zones")
+    if not has_real_zones:
+        data_quality_flags.append("single_pixel_zones")
 
     if calibration_input.crop_type in EVERGREEN_CROPS:
         data_quality_flags.append("evergreen_phenology_approximate")

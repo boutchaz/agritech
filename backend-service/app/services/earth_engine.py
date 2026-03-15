@@ -226,7 +226,9 @@ class EarthEngineService:
 
         # Earth Engine's filterDate(start, end) is EXCLUSIVE on the end date
         # (includes dates >= start and < end). Add 1 day to end_date to make it inclusive.
-        end_dt_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        end_dt_inclusive = (
+            datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+        ).strftime("%Y-%m-%d")
 
         # First, get initial collection with loose tile-based filtering
         collection = (
@@ -450,6 +452,95 @@ class EarthEngineService:
 
         return results
 
+    def extract_ndvi_raster(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        scale: int = 10,
+    ) -> Dict[str, Any]:
+        self.initialize()
+
+        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
+
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(
+                    "No Sentinel-2 images found for the provided geometry and date range"
+                )
+        except Exception as exc:
+            if "Empty date ranges not supported" in str(exc):
+                raise ValueError(
+                    "No Sentinel-2 images found for the provided geometry and date range"
+                ) from exc
+            raise
+
+        composite = collection.median()
+        ndvi_image = self.calculate_vegetation_indices(composite, ["NDVI"])["NDVI"]
+
+        aoi = ee.Geometry(geometry)
+        clipped = ndvi_image.clip(aoi)
+
+        bounds = aoi.bounds().getInfo()["coordinates"][0]
+        min_lon = min([coord[0] for coord in bounds])
+        max_lon = max([coord[0] for coord in bounds])
+        min_lat = min([coord[1] for coord in bounds])
+        max_lat = max([coord[1] for coord in bounds])
+
+        sampled_pixels = clipped.sample(
+            region=aoi, scale=scale, numPixels=5000, geometries=True
+        )
+        sampled_data = sampled_pixels.getInfo()
+
+        pixel_data: list[dict[str, float]] = []
+        values: list[float] = []
+
+        for feature in sampled_data.get("features", []):
+            value = feature.get("properties", {}).get("NDVI")
+            coords = feature.get("geometry", {}).get("coordinates", [])
+
+            if value is None or len(coords) < 2:
+                continue
+
+            lon = float(coords[0])
+            lat = float(coords[1])
+            ndvi_value = float(value)
+
+            pixel_data.append({"lon": lon, "lat": lat, "value": ndvi_value})
+            values.append(ndvi_value)
+
+        if values:
+            values_array = np.array(values, dtype=np.float64)
+            stats = {
+                "min": float(np.min(values_array)),
+                "max": float(np.max(values_array)),
+                "mean": float(np.mean(values_array)),
+                "median": float(np.median(values_array)),
+                "std": float(np.std(values_array)),
+            }
+        else:
+            stats = {
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "median": 0.0,
+                "std": 0.0,
+            }
+
+        return {
+            "pixels": pixel_data,
+            "bounds": {
+                "min_lon": float(min_lon),
+                "max_lon": float(max_lon),
+                "min_lat": float(min_lat),
+                "max_lat": float(max_lat),
+            },
+            "scale": int(scale),
+            "count": len(pixel_data),
+            "stats": stats,
+        }
+
     def get_time_series(
         self,
         geometry: Dict,
@@ -511,7 +602,13 @@ class EarthEngineService:
                     f"Batched time series also failed ({e2}), falling back to sequential"
                 )
                 return self._get_time_series_sequential(
-                    geometry, aoi, index, step, scale, start_dt, end_dt,
+                    geometry,
+                    aoi,
+                    index,
+                    step,
+                    scale,
+                    start_dt,
+                    end_dt,
                     max_cloud=max_cloud,
                     use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
@@ -608,7 +705,7 @@ class EarthEngineService:
                 reducer=ee.Reducer.mean(),
                 geometry=aoi,
                 scale=scale,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -732,7 +829,7 @@ class EarthEngineService:
                 reducer=ee.Reducer.mean(),
                 geometry=aoi,
                 scale=scale,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -811,7 +908,7 @@ class EarthEngineService:
                     reducer=ee.Reducer.mean(),
                     geometry=aoi,
                     scale=scale,
-                    crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                    crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                     maxPixels=settings.MAX_PIXELS,
                     bestEffort=True,
                     tileScale=4,
@@ -898,7 +995,7 @@ class EarthEngineService:
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
             ).getInfo()
 
@@ -1315,7 +1412,9 @@ class EarthEngineService:
                     # Heatmap uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
                     # SCL is reserved for available-dates AOI-level cloud filtering.
                     collection = self.get_sentinel2_collection(
-                        geometry, search_start, search_end,
+                        geometry,
+                        search_start,
+                        search_end,
                         max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
                         use_aoi_cloud_filter=False,
                     )
@@ -1696,7 +1795,9 @@ class EarthEngineService:
 
         # Statistics use B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
         collection = self.get_sentinel2_collection(
-            geometry, start_date, end_date,
+            geometry,
+            start_date,
+            end_date,
             max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
             use_aoi_cloud_filter=False,
         )
@@ -1717,7 +1818,7 @@ class EarthEngineService:
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
             )
 
@@ -1740,7 +1841,9 @@ class EarthEngineService:
 
             # Get all available images (without cloud filter)
             # Earth Engine's filterDate is exclusive on end date, add 1 day to make inclusive
-            end_date_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            end_date_inclusive = (
+                datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
 
             collection = (
                 ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")

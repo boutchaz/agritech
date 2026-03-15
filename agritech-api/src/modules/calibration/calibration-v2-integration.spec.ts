@@ -319,14 +319,18 @@ describe('Calibration V2 integration', () => {
     );
   });
 
-  it('startCalibrationV2 rejects invalid phase awaiting_validation', async () => {
+  it('allows recalibration when parcel ai_phase is awaiting_validation', async () => {
     setupV2StatefulMock('awaiting_validation');
+    jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
 
-    await expect(calibrationService.startCalibrationV2(parcelId, organizationId, {})).rejects.toThrow(
-      BadRequestException,
-    );
-    await expect(calibrationService.startCalibrationV2(parcelId, organizationId, {})).rejects.toThrow(
-      'V2 calibration can only start from disabled or active phase',
+    const result = await calibrationService.startCalibrationV2(parcelId, organizationId, {});
+
+    expect(result.status).toBe('in_progress');
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'awaiting_validation',
+      'calibrating',
+      organizationId,
     );
   });
 

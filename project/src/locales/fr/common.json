@@ -5344,6 +5344,17 @@
       "retry": "Réessayer"
     }
   },
+  "calibrationZones": {
+    "A": "Forte vigueur",
+    "B": "Bonne vigueur",
+    "C": "Moyenne",
+    "D": "Zone de vigilance",
+    "E": "Zone de stress",
+    "spatialHomogeneity": "Homogénéité spatiale",
+    "zoneDistribution": "Distribution des zones",
+    "comingSoon": "L'analyse zonale nécessite des rasters satellite par pixel.",
+    "comingSoonSub": "Bientôt disponible — un résumé au niveau parcelle est utilisé pour l'instant."
+  },
   "emptyState": {
     "noData": "Aucune donnée disponible",
     "noResults": "Aucun résultat trouvé",

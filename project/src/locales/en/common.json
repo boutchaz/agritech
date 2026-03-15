@@ -5526,6 +5526,17 @@
       "retry": "Retry"
     }
   },
+  "calibrationZones": {
+    "A": "High Vigor",
+    "B": "Good Vigor",
+    "C": "Average",
+    "D": "Watch Zone",
+    "E": "Stress Zone",
+    "spatialHomogeneity": "Spatial Homogeneity",
+    "zoneDistribution": "Zone Distribution",
+    "comingSoon": "Zone analysis requires per-pixel satellite rasters.",
+    "comingSoonSub": "Coming soon — parcel-level summary is used for now."
+  },
   "emptyState": {
     "noData": "No data available",
     "noResults": "No results found",

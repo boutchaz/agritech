@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
 import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
@@ -246,7 +247,7 @@ const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
   return null;
 };
 
-const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
   const health = output.step8.health_score;
   const confidence = output.confidence;
   const yieldPotential = output.step6.yield_potential;
@@ -338,7 +339,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output })
 
       {zones.length > 1 && (
         <div>
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Zone Distribution</div>
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('calibrationZones.zoneDistribution')}</div>
           <div className="flex items-center space-x-2">
             {zones.map((zone) => (
               <div
@@ -351,7 +352,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output })
                   style={{ backgroundColor: ZONE_COLORS[zone.class_name] ?? '#6b7280' }}
                 />
                 <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-                  {zone.class_name} ({zone.surface_percent.toFixed(0)}%)
+                  {t(`calibrationZones.${zone.class_name}`)} ({zone.surface_percent.toFixed(0)}%)
                 </div>
               </div>
             ))}
@@ -419,16 +420,16 @@ const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, p
   );
 };
 
-const ZonePieChart: React.FC<{ zones: ZoneSummary[] }> = ({ zones }) => {
+const ZonePieChart: React.FC<{ zones: ZoneSummary[]; t: (key: string) => string }> = ({ zones, t }) => {
   const data = zones.map((z) => ({
-    name: `Zone ${z.class_name}`,
+    name: t(`calibrationZones.${z.class_name}`),
     value: z.surface_percent,
     color: ZONE_COLORS[z.class_name] ?? '#6b7280',
   }));
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Spatial Homogeneity</h4>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
@@ -514,7 +515,7 @@ const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> =
   );
 };
 
-const DetailedAnalysis: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
   const ndviData = output.step1.index_time_series.NDVI;
   const ndmiData = output.step1.index_time_series.NDMI;
   const ndreData = output.step1.index_time_series.NDRE;
@@ -550,17 +551,17 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output }> = ({ output })
           />
         )}
         {output.step7.zone_summary.length > 1 ? (
-          <ZonePieChart zones={output.step7.zone_summary} />
+          <ZonePieChart zones={output.step7.zone_summary} t={t} />
         ) : (
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Spatial Homogeneity</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
             <div className="flex flex-col items-center justify-center h-[188px] text-center">
               <Target className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Zone analysis requires per-pixel satellite rasters.
+                {t('calibrationZones.comingSoon')}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Coming soon — parcel-level summary is used for now.
+                {t('calibrationZones.comingSoonSub')}
               </p>
             </div>
           </div>
@@ -915,7 +916,7 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
   const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
 
   return (
@@ -940,7 +941,7 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output
         icon={<Target className="w-5 h-5 text-green-600 dark:text-green-400" />}
         defaultOpen={true}
       >
-        <ExecutiveSummary output={output} />
+        <ExecutiveSummary output={output} t={t} />
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -948,7 +949,7 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output
         icon={<BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
         defaultOpen={false}
       >
-        <DetailedAnalysis output={output} />
+        <DetailedAnalysis output={output} t={t} />
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -1272,6 +1273,7 @@ const PlantingYearPrompt: React.FC<{
 
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
+  const { t } = useTranslation();
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
@@ -1370,7 +1372,7 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} />}
+      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} t={t} />}
 
       {historyRecords && historyRecords.length > 1 && !isCalibrating && (
         <CollapsibleSection

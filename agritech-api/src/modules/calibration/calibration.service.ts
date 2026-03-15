@@ -305,6 +305,45 @@ export class CalibrationService {
         this.fetchCropReferenceData(parcel.cropType),
       ]);
 
+    let ndviRasterPixels: Array<{ lon: number; lat: number; value: number }> | null = null;
+    try {
+      const wgs84Boundary = parcel.boundary.map((coord: number[]) => {
+        if (Math.abs(coord[0]) > 180 || Math.abs(coord[1]) > 90) {
+          const lon = (coord[0] / 20037508.34) * 180;
+          const lat = (Math.atan(Math.exp((coord[1] / 20037508.34) * Math.PI)) * 360) / Math.PI - 90;
+          return [lon, lat];
+        }
+        return coord;
+      });
+
+      const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+      const today = new Date().toISOString().split('T')[0];
+
+      const rasterResult = await this.postCalibrationApi<{
+        pixels: Array<{ lon: number; lat: number; value: number }>;
+        count: number;
+      }>(
+        '/api/calibration/v2/extract-raster',
+        {
+          geometry: wgs84Boundary,
+          start_date: sinceDate,
+          end_date: today,
+          scale: 10,
+        },
+        organizationId,
+        1,
+      );
+
+      if (rasterResult.count > 1) {
+        ndviRasterPixels = rasterResult.pixels;
+        this.logger.log(`Extracted ${rasterResult.count} NDVI pixels for parcel ${parcelId}`);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Per-pixel raster extraction failed for parcel ${parcelId}, falling back to parcel-level: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+    }
+
     if (weatherRows.length && this.hasMissingGdd(weatherRows, parcel.cropType)) {
       const firstRow = weatherRows[0];
       const latitude = this.toNumber(firstRow?.latitude) ?? 0;
@@ -340,6 +379,7 @@ export class CalibrationService {
         calibration_input: calibrationInput,
         satellite_images: satelliteImages,
         weather_rows: weatherRows,
+        ndvi_raster_pixels: ndviRasterPixels,
       },
       organizationId,
     );

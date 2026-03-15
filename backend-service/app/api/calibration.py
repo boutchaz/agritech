@@ -254,6 +254,28 @@ class CalibrationRunV2Request(BaseModel):
     calibration_input: CalibrationInput
     satellite_images: list[dict[str, Any]]
     weather_rows: list[dict[str, Any]]
+    ndvi_raster_pixels: list[dict[str, Any]] | None = None
+
+
+class ExtractRasterRequest(BaseModel):
+    geometry: list[list[float]]
+    start_date: str
+    end_date: str
+    scale: int = 10
+
+
+class RasterPixel(BaseModel):
+    lon: float
+    lat: float
+    value: float
+
+
+class ExtractRasterResponse(BaseModel):
+    pixels: list[RasterPixel]
+    bounds: dict[str, float]
+    scale: int
+    count: int
+    stats: dict[str, float]
 
 
 class PrecomputeGddRequest(BaseModel):
@@ -305,6 +327,7 @@ def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
             satellite_images=request.satellite_images,
             weather_rows=request.weather_rows,
             storage=None,
+            ndvi_raster_pixels=request.ndvi_raster_pixels,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -456,6 +479,24 @@ async def precompute_gdd_v2(request: PrecomputeGddRequest):
     )
 
     return PrecomputeGddResponse(crop_type=request.crop_type, updated_rows=updated_rows)
+
+
+@router.post("/v2/extract-raster", response_model=ExtractRasterResponse)
+async def extract_ndvi_raster(request: ExtractRasterRequest):
+    from ..services.earth_engine import EarthEngineService
+
+    ee_service = EarthEngineService()
+    ee_service.initialize()
+
+    geometry = {"type": "Polygon", "coordinates": [request.geometry]}
+
+    result = ee_service.extract_ndvi_raster(
+        geometry=geometry,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        scale=request.scale,
+    )
+    return ExtractRasterResponse(**result)
 
 
 @router.post("/percentiles", response_model=PercentilesResponse)

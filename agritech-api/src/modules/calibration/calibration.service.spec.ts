@@ -197,6 +197,24 @@ describe('CalibrationService', () => {
     const fetchSpy = jest
       .spyOn(global, 'fetch')
       .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            pixels: [
+              { lon: -7.5, lat: 33.5, value: 0.55 },
+              { lon: -7.4999, lat: 33.5, value: 0.52 },
+            ],
+            bounds: { min_lon: -7.5, max_lon: -7.4999, min_lat: 33.5, max_lat: 33.5001 },
+            scale: 10,
+            count: 2,
+            stats: { min: 0.52, max: 0.55, mean: 0.535, median: 0.535, std: 0.015 },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
         new Response(JSON.stringify({ crop_type: 'olivier', updated_rows: 1 }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
@@ -251,19 +269,24 @@ describe('CalibrationService', () => {
       {},
     );
 
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
     expect(fetchSpy).toHaveBeenNthCalledWith(
       1,
-      'http://satellite-service.test/api/calibration/v2/precompute-gdd',
+      'http://satellite-service.test/api/calibration/v2/extract-raster',
       expect.objectContaining({ method: 'POST' }),
     );
     expect(fetchSpy).toHaveBeenNthCalledWith(
       2,
+      'http://satellite-service.test/api/calibration/v2/precompute-gdd',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
       'http://satellite-service.test/api/calibration/v2/run',
       expect.objectContaining({ method: 'POST' }),
     );
 
-    const v2Body = fetchSpy.mock.calls[1]?.[1]?.body;
+    const v2Body = fetchSpy.mock.calls[2]?.[1]?.body;
     expect(typeof v2Body).toBe('string');
     if (typeof v2Body !== 'string') {
       throw new Error('V2 calibration request body should be a string');
