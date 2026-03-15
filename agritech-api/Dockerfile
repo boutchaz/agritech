@@ -9,6 +9,9 @@ COPY agritech-api/package.json ./
 # Install all dependencies
 RUN npm install
 
+# Copy shared libs (required for prompts imports)
+COPY libs/ ./libs/
+
 # Copy source code
 COPY agritech-api/ ./
 
