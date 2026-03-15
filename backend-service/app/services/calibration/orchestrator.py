@@ -176,34 +176,15 @@ def run_calibration_pipeline(
     median_ndvi = float(np.median(ndvi_values))
 
     if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
-        lons = [float(p["lon"]) for p in ndvi_raster_pixels]
-        lats = [float(p["lat"]) for p in ndvi_raster_pixels]
+        # Use actual sampled pixel values directly as a column vector.
+        # A spatial grid would flood NaN cells with median, drowning real variation.
+        # Step7 only counts pixels per class — it doesn't need spatial adjacency.
+        pixel_values = [
+            float(p["value"]) for p in ndvi_raster_pixels if p.get("value") is not None
+        ]
 
-        min_lon, max_lon = min(lons), max(lons)
-        min_lat, max_lat = min(lats), max(lats)
-
-        pixel_deg = 10.0 / 111320.0
-
-        cols = max(1, int((max_lon - min_lon) / pixel_deg) + 1)
-        rows = max(1, int((max_lat - min_lat) / pixel_deg) + 1)
-
-        cols = min(cols, 200)
-        rows = min(rows, 200)
-
-        raster = np.full((rows, cols), np.nan, dtype=np.float64)
-
-        for pixel in ndvi_raster_pixels:
-            lon = float(pixel["lon"])
-            lat = float(pixel["lat"])
-            value = float(pixel["value"])
-
-            col = min(int((lon - min_lon) / pixel_deg), cols - 1)
-            row = min(int((max_lat - lat) / pixel_deg), rows - 1)
-            raster[row, col] = value
-
-        valid_values = raster[~np.isnan(raster)]
-        if len(valid_values) > 0:
-            raster[np.isnan(raster)] = float(np.median(valid_values))
+        if len(pixel_values) > 1:
+            raster = np.array(pixel_values, dtype=np.float64).reshape(-1, 1)
             has_real_zones = True
         else:
             raster = np.array([[median_ndvi]], dtype=np.float64)

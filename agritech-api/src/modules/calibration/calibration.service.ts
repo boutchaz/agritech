@@ -63,6 +63,7 @@ interface SatelliteIndexRow {
   date: string;
   index_name: string;
   mean_value: number | string | null;
+  cloud_coverage_percentage: number | null;
 }
 
 interface WeatherDailyRow {
@@ -856,7 +857,7 @@ export class CalibrationService {
     const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
     const { data, error } = await supabase
       .from('satellite_indices_data')
-      .select('date, index_name, mean_value')
+      .select('date, index_name, mean_value, cloud_coverage_percentage')
       .eq('organization_id', organizationId)
       .eq('parcel_id', parcelId)
       .gte('date', sinceDate)
@@ -867,20 +868,23 @@ export class CalibrationService {
       throw new BadRequestException(`Failed to fetch satellite images: ${error.message}`);
     }
 
-    const byDate = new Map<string, Record<string, number>>();
+    const byDate = new Map<string, { indices: Record<string, number>; cloudCoverage: number }>();
     for (const row of data as SatelliteIndexRow[]) {
       const value = this.toNumber(row.mean_value);
       if (value === null) {
         continue;
       }
-      const current = byDate.get(row.date) ?? {};
-      current[row.index_name] = value;
-      byDate.set(row.date, current);
+      const existing = byDate.get(row.date) ?? { indices: {}, cloudCoverage: 0 };
+      existing.indices[row.index_name] = value;
+      if (row.cloud_coverage_percentage !== null && row.cloud_coverage_percentage > existing.cloudCoverage) {
+        existing.cloudCoverage = row.cloud_coverage_percentage;
+      }
+      byDate.set(row.date, existing);
     }
 
-    return Array.from(byDate.entries()).map(([date, indices]) => ({
+    return Array.from(byDate.entries()).map(([date, { indices, cloudCoverage }]) => ({
       date,
-      cloud_coverage: 0,
+      cloud_coverage: cloudCoverage,
       indices,
     }));
   }
