@@ -19,6 +19,7 @@ import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { CalibrationService } from './calibration.service';
 import { CalibrationStateMachine } from './calibration-state-machine';
 import { NutritionOptionService } from './nutrition-option.service';
+import { AIReportsService } from '../ai-reports/ai-reports.service';
 
 const mockStateMachine = {
   transitionPhase: jest.fn(),
@@ -26,6 +27,10 @@ const mockStateMachine = {
 
 const mockNutritionOptionService = {
   suggestNutritionOption: jest.fn(),
+};
+
+const mockAIReportsService = {
+  generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
 };
 
 describe('Calibration integration', () => {
@@ -51,6 +56,7 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
         CalibrationService,
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
+        { provide: AIReportsService, useValue: mockAIReportsService },
         AiDiagnosticsService,
         AiAlertsService,
         { provide: DatabaseService, useValue: mockDatabaseService },

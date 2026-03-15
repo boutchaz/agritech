@@ -13,6 +13,11 @@ import {
 import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { CalibrationStateMachine } from './calibration-state-machine';
 import { NutritionOptionService } from './nutrition-option.service';
+import { AIReportsService } from '../ai-reports/ai-reports.service';
+
+const mockAIReportsService = {
+  generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
+};
 
 const mockStateMachine = {
   transitionPhase: jest.fn(),
@@ -48,6 +53,7 @@ describe('CalibrationService', () => {
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
+        { provide: AIReportsService, useValue: mockAIReportsService },
       ],
     }).compile();
 

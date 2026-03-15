@@ -1,10 +1,14 @@
 import {
   BadGatewayException,
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
+import { AIReportsService } from '../ai-reports/ai-reports.service';
+import { AIProvider, AgromindReportType } from '../ai-reports/interfaces';
 import { DatabaseService } from '../database/database.service';
 import { WeatherProvider } from '../chat/providers/weather.provider';
 import { StartCalibrationDto } from './dto/start-calibration.dto';
@@ -159,6 +163,9 @@ export interface NutritionOptionConfirmation {
 @Injectable()
 export class CalibrationService {
   private readonly logger = new Logger(CalibrationService.name);
+
+  @Inject(forwardRef(() => AIReportsService))
+  private readonly aiReportsService: AIReportsService;
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -438,6 +445,29 @@ export class CalibrationService {
       throw new Error(`Failed to update V2 calibration: ${updateCalibrationError.message}`);
     }
 
+    const aiCalibrationResult = await this.runCalibrationAI(
+      calibrationId,
+      parcelId,
+      organizationId,
+      v2Output,
+    );
+
+    if (aiCalibrationResult) {
+      const { error: aiUpdateError } = await supabase
+        .from('calibrations')
+        .update({
+          calibration_data: {
+            ...calibrationData,
+            ai_analysis: aiCalibrationResult,
+          },
+        })
+        .eq('id', calibrationId);
+
+      if (aiUpdateError) {
+        this.logger.warn(`Failed to store AI calibration analysis: ${aiUpdateError.message}`);
+      }
+    }
+
     const { error: updateParcelError } = await supabase
       .from('parcels')
       .update({
@@ -456,6 +486,44 @@ export class CalibrationService {
       'awaiting_validation',
       organizationId,
     );
+  }
+
+  private async runCalibrationAI(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    v2Output: CalibrationV2Response,
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      this.logger.log(
+        `Starting AI calibration analysis for calibration ${calibrationId} parcel ${parcelId} with ${Object.keys(v2Output).length} output keys`,
+      );
+
+      const result = await this.aiReportsService.generateReport(
+        organizationId,
+        'system',
+        {
+          parcel_id: parcelId,
+          provider: AIProvider.GEMINI,
+          model: 'gemini-2.5-flash',
+          reportType: AgromindReportType.CALIBRATION,
+          data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+          data_end_date: new Date().toISOString().split('T')[0],
+        },
+      );
+
+      if (result?.sections) {
+        this.logger.log(`AI calibration analysis completed for parcel ${parcelId}`);
+        return result.sections as Record<string, unknown>;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.warn(
+        `AI calibration analysis failed for parcel ${parcelId}, continuing without AI report: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return null;
+    }
   }
 
   async getLatestCalibration(
@@ -676,12 +744,42 @@ export class CalibrationService {
       organizationId,
     );
 
+    setImmediate(() => {
+      this.generateAnnualPlan(calibrationId, calibration.parcel_id, organizationId).catch(
+        (err) =>
+          this.logger.warn(
+            `Annual plan generation failed for parcel ${calibration.parcel_id}: ${err instanceof Error ? err.message : 'unknown'}`,
+          ),
+      );
+    });
+
     return {
       calibration_id: calibrationId,
       parcel_id: calibration.parcel_id,
       option,
       ai_phase: 'active',
     };
+  }
+
+  private async generateAnnualPlan(
+    _calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    this.logger.log(
+      `Generating annual plan for parcel ${parcelId} after nutrition option confirmation`,
+    );
+
+    await this.aiReportsService.generateReport(organizationId, 'system', {
+      parcel_id: parcelId,
+      provider: AIProvider.GEMINI,
+      model: 'gemini-2.5-flash',
+      reportType: AgromindReportType.ANNUAL_PLAN,
+      data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+      data_end_date: new Date().toISOString().split('T')[0],
+    });
+
+    this.logger.log(`Annual plan generated for parcel ${parcelId}`);
   }
 
   async getPercentiles(parcelId: string, organizationId: string): Promise<PercentilesResponse> {

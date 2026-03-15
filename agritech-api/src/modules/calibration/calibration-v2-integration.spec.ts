@@ -5,6 +5,7 @@ import { CalibrationService } from './calibration.service';
 import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { DatabaseService } from '../database/database.service';
 import { NutritionOptionService } from './nutrition-option.service';
+import { AIReportsService } from '../ai-reports/ai-reports.service';
 import {
   createMockDatabaseService,
   createMockQueryBuilder,
@@ -22,6 +23,10 @@ const mockStateMachine = {
 
 const mockNutritionOptionService = {
   suggestNutritionOption: jest.fn(),
+};
+
+const mockAIReportsService = {
+  generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
 };
 
 const organizationId = 'org-001';
@@ -122,6 +127,7 @@ describe('Calibration V2 integration', () => {
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: AIReportsService, useValue: mockAIReportsService },
       ],
     }).compile();
 

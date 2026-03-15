@@ -1245,12 +1245,301 @@ export class AIReportsService {
   }
 
   private async aggregateAnnualPlanData(
-    _organizationId: string,
-    _parcelId: string,
+    organizationId: string,
+    parcelId: string,
     _startDate?: string,
     _endDate?: string,
   ): Promise<AnnualPlanInput> {
-    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: parcel } = await supabase
+      .from('parcels')
+      .select(
+        'id, name, crop_type, area, area_unit, variety, planting_year, planting_system, planting_density, tree_count, soil_type, irrigation_type, water_source, ai_nutrition_option, ai_calibration_id',
+      )
+      .eq('id', parcelId)
+      .single();
+
+    if (!parcel) {
+      throw new BadRequestException('Parcel not found');
+    }
+
+    const { data: calibration } = await supabase
+      .from('calibrations')
+      .select(
+        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+      )
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!calibration) {
+      throw new BadRequestException(
+        'No completed calibration found - annual plan requires calibration first',
+      );
+    }
+
+    const calibrationData =
+      calibration.calibration_data &&
+      typeof calibration.calibration_data === 'object' &&
+      !Array.isArray(calibration.calibration_data)
+        ? (calibration.calibration_data as Record<string, unknown>)
+        : null;
+
+    const v2Output =
+      calibrationData?.output &&
+      typeof calibrationData.output === 'object' &&
+      !Array.isArray(calibrationData.output)
+        ? (calibrationData.output as Record<string, unknown>)
+        : {};
+
+    const aiAnalysis =
+      calibrationData?.ai_analysis &&
+      typeof calibrationData.ai_analysis === 'object' &&
+      !Array.isArray(calibrationData.ai_analysis)
+        ? (calibrationData.ai_analysis as Record<string, unknown>)
+        : {};
+
+    const alternanceStatus = this.extractAlternanceStatus(v2Output) ?? 'indetermine';
+    const soilManagementMode = this.extractSoilManagementMode(aiAnalysis) ?? 'C';
+
+    const { data: soilAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'soil')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: waterAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'water')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: plantAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'plant')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: harvestRecords } = await supabase
+      .from('harvest_records')
+      .select('harvest_date, quantity, unit, quality_grade')
+      .eq('parcel_id', parcelId)
+      .order('harvest_date', { ascending: false })
+      .limit(10);
+
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    const season =
+      currentMonth >= 9
+        ? `${currentYear}/${currentYear + 1}`
+        : `${currentYear - 1}/${currentYear}`;
+
+    const area = this.toNumber(parcel.area) || 0;
+    const areaForYield = area > 0 ? area : 1;
+    const plantingYear = this.toNumber(parcel.planting_year);
+    const density = this.toNumber(parcel.planting_density);
+
+    return {
+      season,
+      generationDate: new Date().toISOString().split('T')[0],
+      parcel: {
+        id: parcel.id,
+        name: parcel.name ?? 'Parcelle',
+        area,
+        areaUnit: typeof parcel.area_unit === 'string' ? parcel.area_unit : 'ha',
+        cropType: typeof parcel.crop_type === 'string' ? parcel.crop_type : undefined,
+        variety: typeof parcel.variety === 'string' ? parcel.variety : undefined,
+        plantingSystem:
+          typeof parcel.planting_system === 'string' ? parcel.planting_system : undefined,
+        plantingYear,
+        age: plantingYear ? currentYear - plantingYear : undefined,
+        density,
+        treeCount: this.toNumber(parcel.tree_count),
+        soilType: typeof parcel.soil_type === 'string' ? parcel.soil_type : undefined,
+        irrigationType:
+          typeof parcel.irrigation_type === 'string' ? parcel.irrigation_type : undefined,
+        waterSource: typeof parcel.water_source === 'string' ? parcel.water_source : undefined,
+        nutritionOption:
+          typeof parcel.ai_nutrition_option === 'string' ? parcel.ai_nutrition_option : 'A',
+        productionTarget: 'huile_qualite',
+      },
+      baseline: {
+        confidenceScore:
+          typeof calibration.confidence_score === 'number'
+            ? calibration.confidence_score * 100
+            : 50,
+        healthScore:
+          typeof calibration.health_score === 'number' ? calibration.health_score : 50,
+        yieldPotential: {
+          low:
+            typeof calibration.yield_potential_min === 'number'
+              ? calibration.yield_potential_min
+              : 0,
+          high:
+            typeof calibration.yield_potential_max === 'number'
+              ? calibration.yield_potential_max
+              : 0,
+        },
+        alternanceStatus,
+        soilManagementMode,
+      },
+      soilAnalysis: this.mapAnalysisToSoilData(soilAnalysis),
+      waterAnalysis: this.mapAnalysisToWaterData(waterAnalysis),
+      plantAnalysis: this.mapAnalysisToPlantData(plantAnalysis),
+      yieldHistory: (harvestRecords || []).map((record) => {
+        const year =
+          typeof record.harvest_date === 'string' && record.harvest_date
+            ? new Date(record.harvest_date).getFullYear()
+            : currentYear;
+        return {
+          year: Number.isFinite(year) ? year : currentYear,
+          yieldPerHa: (this.toNumber(record.quantity) || 0) / areaForYield,
+        };
+      }),
+    };
+  }
+
+  private mapAnalysisToSoilData(
+    analysis: { analysis_date: string; data: unknown } | null,
+  ): AnnualPlanInput['soilAnalysis'] {
+    if (!analysis) {
+      return undefined;
+    }
+
+    const data =
+      analysis.data && typeof analysis.data === 'object' && !Array.isArray(analysis.data)
+        ? (analysis.data as Record<string, unknown>)
+        : {};
+
+    return {
+      latestDate: analysis.analysis_date,
+      phLevel: this.toNumber(data.ph_level),
+      ec: this.toNumber(data.salinity_level),
+      texture: typeof data.texture === 'string' ? data.texture : undefined,
+      organicMatter: this.toNumber(data.organic_matter_percentage),
+      totalLimestone:
+        this.toNumber(data.total_limestone_percentage) || this.toNumber(data.total_limestone),
+      activeLimestone:
+        this.toNumber(data.active_limestone_percentage) || this.toNumber(data.active_limestone),
+      cec: this.toNumber(data.cec_meq_per_100g),
+      nitrogenPpm: this.toNumber(data.nitrogen_ppm),
+      phosphorusPpm: this.toNumber(data.phosphorus_ppm),
+      potassiumPpm: this.toNumber(data.potassium_ppm),
+      calcium: this.toNumber(data.calcium_ppm),
+      magnesium: this.toNumber(data.magnesium_ppm),
+      iron: this.toNumber(data.iron_ppm),
+      zinc: this.toNumber(data.zinc_ppm),
+      manganese: this.toNumber(data.manganese_ppm),
+      copper: this.toNumber(data.copper_ppm),
+      boron: this.toNumber(data.boron_ppm),
+    };
+  }
+
+  private mapAnalysisToWaterData(
+    analysis: { analysis_date: string; data: unknown } | null,
+  ): AnnualPlanInput['waterAnalysis'] {
+    if (!analysis) {
+      return undefined;
+    }
+
+    const data =
+      analysis.data && typeof analysis.data === 'object' && !Array.isArray(analysis.data)
+        ? (analysis.data as Record<string, unknown>)
+        : {};
+
+    return {
+      latestDate: analysis.analysis_date,
+      ph: this.toNumber(data.ph_level),
+      ec: this.toNumber(data.ec_ds_per_m),
+      sar: this.toNumber(data.sar),
+      sodium: this.toNumber(data.sodium_mg_l) || this.toNumber(data.sodium),
+      chlorides: this.toNumber(data.chloride_ppm),
+      bicarbonates: this.toNumber(data.bicarbonate_mg_l) || this.toNumber(data.bicarbonates),
+      boron: this.toNumber(data.boron_mg_l) || this.toNumber(data.boron),
+      nitrates: this.toNumber(data.nitrate_ppm),
+      tds: this.toNumber(data.tds_ppm),
+    };
+  }
+
+  private mapAnalysisToPlantData(
+    analysis: { analysis_date: string; data: unknown } | null,
+  ): AnnualPlanInput['plantAnalysis'] {
+    if (!analysis) {
+      return undefined;
+    }
+
+    const data =
+      analysis.data && typeof analysis.data === 'object' && !Array.isArray(analysis.data)
+        ? (analysis.data as Record<string, unknown>)
+        : {};
+
+    return {
+      latestDate: analysis.analysis_date,
+      nitrogenPercent: this.toNumber(data.nitrogen_percent),
+      phosphorusPercent: this.toNumber(data.phosphorus_percent),
+      potassiumPercent: this.toNumber(data.potassium_percent),
+      calcium: this.toNumber(data.calcium_percent) || this.toNumber(data.calcium),
+      magnesium: this.toNumber(data.magnesium_percent) || this.toNumber(data.magnesium),
+      iron: this.toNumber(data.iron_ppm) || this.toNumber(data.iron),
+      zinc: this.toNumber(data.zinc_ppm) || this.toNumber(data.zinc),
+      manganese: this.toNumber(data.manganese_ppm) || this.toNumber(data.manganese),
+      boron: this.toNumber(data.boron_ppm) || this.toNumber(data.boron),
+      copper: this.toNumber(data.copper_ppm) || this.toNumber(data.copper),
+      sodium: this.toNumber(data.sodium_percent) || this.toNumber(data.sodium),
+      chloride: this.toNumber(data.chloride_percent) || this.toNumber(data.chloride),
+    };
+  }
+
+  private extractAlternanceStatus(v2Output: Record<string, unknown>): string | null {
+    const step6 =
+      v2Output.step6 && typeof v2Output.step6 === 'object' && !Array.isArray(v2Output.step6)
+        ? (v2Output.step6 as Record<string, unknown>)
+        : null;
+
+    if (!step6) {
+      return null;
+    }
+
+    const alternance =
+      step6.alternance_info &&
+      typeof step6.alternance_info === 'object' &&
+      !Array.isArray(step6.alternance_info)
+        ? (step6.alternance_info as Record<string, unknown>)
+        : null;
+
+    if (!alternance) {
+      return null;
+    }
+
+    return typeof alternance.status === 'string' ? alternance.status : null;
+  }
+
+  private extractSoilManagementMode(aiAnalysis: Record<string, unknown>): string | null {
+    const soilMode =
+      aiAnalysis.soilManagementMode &&
+      typeof aiAnalysis.soilManagementMode === 'object' &&
+      !Array.isArray(aiAnalysis.soilManagementMode)
+        ? (aiAnalysis.soilManagementMode as Record<string, unknown>)
+        : null;
+
+    if (!soilMode) {
+      return null;
+    }
+
+    return typeof soilMode.recommended === 'string' ? soilMode.recommended : null;
   }
 
   private async aggregateFollowUpData(
