@@ -16,15 +16,27 @@ import { WeatherProvider } from '../chat/providers/weather.provider';
 import {
   AIProvider,
   AggregatedParcelData,
-  AIReportSections,
   AIProviderConfig,
   IAIProvider,
+  AgromindReportType,
+  ParcelCalibrationInput,
+  ParcelOperationalInput,
+  AnnualPlanInput,
+  PostRecommendationFollowUpInput,
 } from './interfaces';
 import { GenerateAIReportDto, AIProviderInfoDto, CalibrationStatusDto, CalibrateRequestDto, FetchDataRequestDto } from './dto';
 import {
   AGRICULTURAL_EXPERT_SYSTEM_PROMPT,
+  CALIBRATION_EXPERT_SYSTEM_PROMPT,
+  RECOMMENDATIONS_EXPERT_SYSTEM_PROMPT,
+  ANNUAL_PLAN_EXPERT_SYSTEM_PROMPT,
+  FOLLOWUP_EXPERT_SYSTEM_PROMPT,
   buildUserPrompt,
-} from './prompts/agricultural-expert.prompt';
+  buildCalibrationPrompt,
+  buildRecommendationsPrompt,
+  buildAnnualPlanPrompt,
+  buildFollowUpPrompt,
+} from './prompts';
 import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
 import { AIProviderType } from '../organization-ai-settings/dto';
 
@@ -105,17 +117,7 @@ export class AIReportsService {
       dto.data_end_date,
     );
 
-    // 3. Aggregate all data sources (after calibration)
-    const aggregatedData = await this.aggregateParcelData(
-      organizationId,
-      dto.parcel_id,
-      dto.data_start_date,
-      dto.data_end_date,
-    );
-
-    // 4. Build prompts
-    const systemPrompt = AGRICULTURAL_EXPERT_SYSTEM_PROMPT;
-    const userPrompt = buildUserPrompt(aggregatedData, dto.language || 'fr');
+    const reportPayload = await this.buildReportPayload(organizationId, dto);
 
     // 5. Generate AI response
     const config: AIProviderConfig = {
@@ -126,9 +128,9 @@ export class AIReportsService {
     };
 
     try {
-      const response = await provider.generate({
-        systemPrompt,
-        userPrompt,
+        const response = await provider.generate({
+        systemPrompt: reportPayload.systemPrompt,
+        userPrompt: reportPayload.userPrompt,
         config,
       });
 
@@ -142,7 +144,9 @@ export class AIReportsService {
         dto.parcel_id,
         dto.provider,
         reportSections,
-        aggregatedData,
+        reportPayload.parcelName,
+        reportPayload.dataSnapshot,
+        reportPayload.reportType,
       );
 
       return {
@@ -910,6 +914,354 @@ export class AIReportsService {
     }
   }
 
+  private getDefaultDateRange(startDate?: string, endDate?: string) {
+    const now = new Date();
+    const defaultEndDate = endDate || now.toISOString().split('T')[0];
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const defaultStartDate = startDate || sixMonthsAgo.toISOString().split('T')[0];
+
+    return { defaultStartDate, defaultEndDate };
+  }
+
+  private toNumber(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+
+    return undefined;
+  }
+
+  private async buildReportPayload(organizationId: string, dto: GenerateAIReportDto): Promise<{
+    reportType: AgromindReportType;
+    systemPrompt: string;
+    userPrompt: string;
+    parcelName: string;
+    dataSnapshot: unknown;
+  }> {
+    const reportType = dto.reportType || AgromindReportType.GENERAL;
+    const language = dto.language || 'fr';
+
+    switch (reportType) {
+      case AgromindReportType.CALIBRATION: {
+        const calibrationData = await this.aggregateCalibrationData(
+          organizationId,
+          dto.parcel_id,
+          dto.data_start_date,
+          dto.data_end_date,
+        );
+
+        return {
+          reportType,
+          systemPrompt: CALIBRATION_EXPERT_SYSTEM_PROMPT,
+          userPrompt: buildCalibrationPrompt(calibrationData, language),
+          parcelName: calibrationData.parcel.name,
+          dataSnapshot: calibrationData,
+        };
+      }
+      case AgromindReportType.RECOMMENDATIONS: {
+        const operationalData = await this.aggregateOperationalData(
+          organizationId,
+          dto.parcel_id,
+          dto.data_start_date,
+          dto.data_end_date,
+        );
+
+        return {
+          reportType,
+          systemPrompt: RECOMMENDATIONS_EXPERT_SYSTEM_PROMPT,
+          userPrompt: buildRecommendationsPrompt(operationalData, language),
+          parcelName: operationalData.parcel.name,
+          dataSnapshot: operationalData,
+        };
+      }
+      case AgromindReportType.ANNUAL_PLAN: {
+        const annualPlanData = await this.aggregateAnnualPlanData(
+          organizationId,
+          dto.parcel_id,
+          dto.data_start_date,
+          dto.data_end_date,
+        );
+
+        return {
+          reportType,
+          systemPrompt: ANNUAL_PLAN_EXPERT_SYSTEM_PROMPT,
+          userPrompt: buildAnnualPlanPrompt(annualPlanData, language),
+          parcelName: annualPlanData.parcel.name,
+          dataSnapshot: annualPlanData,
+        };
+      }
+      case AgromindReportType.FOLLOWUP: {
+        const followUpData = await this.aggregateFollowUpData(
+          organizationId,
+          dto.parcel_id,
+          dto.data_start_date,
+          dto.data_end_date,
+        );
+
+        return {
+          reportType,
+          systemPrompt: FOLLOWUP_EXPERT_SYSTEM_PROMPT,
+          userPrompt: buildFollowUpPrompt(followUpData, language),
+          parcelName: followUpData.parcel.name,
+          dataSnapshot: followUpData,
+        };
+      }
+      case AgromindReportType.GENERAL:
+      default: {
+        const aggregatedData = await this.aggregateParcelData(
+          organizationId,
+          dto.parcel_id,
+          dto.data_start_date,
+          dto.data_end_date,
+        );
+
+        return {
+          reportType: AgromindReportType.GENERAL,
+          systemPrompt: AGRICULTURAL_EXPERT_SYSTEM_PROMPT,
+          userPrompt: buildUserPrompt(aggregatedData, language),
+          parcelName: aggregatedData.parcel.name,
+          dataSnapshot: aggregatedData,
+        };
+      }
+    }
+  }
+
+  private async aggregateCalibrationData(
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<ParcelCalibrationInput> {
+    const baseData = await this.aggregateParcelData(organizationId, parcelId, startDate, endDate);
+    const supabase = this.databaseService.getAdminClient();
+    const { defaultStartDate, defaultEndDate } = this.getDefaultDateRange(startDate, endDate);
+
+    const { data: parcelDetails } = await supabase
+      .from('parcels')
+      .select('id, name, planting_system, planting_density')
+      .eq('id', parcelId)
+      .single();
+
+    const { data: soilAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'soil')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: waterAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'water')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: plantAnalysis } = await supabase
+      .from('analyses')
+      .select('analysis_date, data')
+      .eq('parcel_id', parcelId)
+      .eq('analysis_type', 'plant')
+      .order('analysis_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const indices = ['NDVI', 'NIRV', 'NIRVP', 'NDMI', 'NDRE', 'MSI', 'EVI', 'MSAVI', 'GCI'];
+    const { data: satelliteSeries } = await supabase
+      .from('satellite_indices_data')
+      .select('date, index_name, mean_value')
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .in('index_name', indices)
+      .order('date', { ascending: true });
+
+    const timeSeries: Record<string, Array<{ date: string; value: number }>> = {};
+    const latestValues: Record<string, number> = {};
+
+    for (const index of indices) {
+      timeSeries[index.toLowerCase()] = [];
+    }
+
+    for (const item of satelliteSeries || []) {
+      const indexKey = item.index_name.toLowerCase();
+      const value = this.toNumber(item.mean_value);
+
+      if (!timeSeries[indexKey] || value === undefined) {
+        continue;
+      }
+
+      timeSeries[indexKey].push({ date: item.date, value });
+      latestValues[indexKey] = value;
+    }
+
+    const validScenes = new Set((satelliteSeries || []).map((entry) => entry.date)).size;
+    const coverageMonths = new Set(
+      (satelliteSeries || []).map((entry) => {
+        const [year, month] = entry.date.split('-');
+        return `${year}-${month}`;
+      }),
+    ).size;
+
+    const soilData = (soilAnalysis?.data as Record<string, unknown> | null) || null;
+    const waterData = (waterAnalysis?.data as Record<string, unknown> | null) || null;
+    const plantData = (plantAnalysis?.data as Record<string, unknown> | null) || null;
+
+    return {
+      parcel: {
+        id: baseData.parcel.id,
+        name: baseData.parcel.name,
+        area: baseData.parcel.area,
+        areaUnit: baseData.parcel.areaUnit,
+        cropType: baseData.parcel.cropType,
+        treeType: baseData.parcel.treeType,
+        variety: baseData.parcel.variety,
+        rootstock: baseData.parcel.rootstock,
+        plantingYear: baseData.parcel.plantingYear,
+        treeCount: baseData.parcel.treeCount,
+        plantingSystem:
+          (typeof parcelDetails?.planting_system === 'string' && parcelDetails.planting_system) ||
+          undefined,
+        soilType: baseData.parcel.soilType,
+        irrigationType: baseData.parcel.irrigationType,
+      },
+      satelliteHistory: {
+        period: {
+          start: defaultStartDate,
+          end: defaultEndDate,
+        },
+        validScenes,
+        coverageMonths,
+        timeSeries,
+        latestValues: {
+          ndvi: latestValues.ndvi,
+          nirv: latestValues.nirv,
+          nirvp: latestValues.nirvp,
+          ndmi: latestValues.ndmi,
+          ndre: latestValues.ndre,
+          msi: latestValues.msi,
+          evi: latestValues.evi,
+          msavi: latestValues.msavi,
+          gci: latestValues.gci,
+        },
+      },
+      weather: {
+        period: baseData.weather.period,
+        temperatureSummary: baseData.weather.temperatureSummary,
+        precipitationTotal: baseData.weather.precipitationTotal,
+        frostDays: baseData.weather.frostDays,
+        drySpellsCount: baseData.weather.drySpellsCount,
+      },
+      soilAnalysis: soilAnalysis
+        ? {
+            latestDate: soilAnalysis.analysis_date,
+            phLevel: baseData.soilAnalysis?.phLevel,
+            ec: baseData.soilAnalysis?.ec,
+            texture: baseData.soilAnalysis?.texture,
+            organicMatter: baseData.soilAnalysis?.organicMatter,
+            totalLimestone:
+              this.toNumber(soilData?.total_limestone_percentage) || this.toNumber(soilData?.total_limestone),
+            activeLimestone:
+              this.toNumber(soilData?.active_limestone_percentage) || this.toNumber(soilData?.active_limestone),
+            cec: baseData.soilAnalysis?.cec,
+            nitrogenPpm: baseData.soilAnalysis?.nitrogenPpm,
+            phosphorusPpm: baseData.soilAnalysis?.phosphorusPpm,
+            potassiumPpm: baseData.soilAnalysis?.potassiumPpm,
+            calcium: baseData.soilAnalysis?.calcium,
+            magnesium: baseData.soilAnalysis?.magnesium,
+            iron: baseData.soilAnalysis?.iron,
+            zinc: baseData.soilAnalysis?.zinc,
+            manganese: baseData.soilAnalysis?.manganese,
+            copper: baseData.soilAnalysis?.copper,
+            boron: baseData.soilAnalysis?.boron,
+          }
+        : undefined,
+      waterAnalysis: waterAnalysis
+        ? {
+            latestDate: waterAnalysis.analysis_date,
+            ph: baseData.waterAnalysis?.ph,
+            ec: baseData.waterAnalysis?.ec,
+            sar: baseData.waterAnalysis?.sar,
+            sodium: this.toNumber(waterData?.sodium_mg_l) || this.toNumber(waterData?.sodium),
+            chlorides: baseData.waterAnalysis?.chlorides,
+            bicarbonates:
+              this.toNumber(waterData?.bicarbonate_mg_l) || this.toNumber(waterData?.bicarbonates),
+            boron: this.toNumber(waterData?.boron_mg_l) || this.toNumber(waterData?.boron),
+            nitrates: baseData.waterAnalysis?.nitrates,
+            tds: baseData.waterAnalysis?.tds,
+          }
+        : undefined,
+      plantAnalysis: plantAnalysis
+        ? {
+            latestDate: plantAnalysis.analysis_date,
+            nitrogenPercent: baseData.plantAnalysis?.nitrogenPercent,
+            phosphorusPercent: baseData.plantAnalysis?.phosphorusPercent,
+            potassiumPercent: baseData.plantAnalysis?.potassiumPercent,
+            calcium: this.toNumber(plantData?.calcium_percent) || this.toNumber(plantData?.calcium),
+            magnesium: this.toNumber(plantData?.magnesium_percent) || this.toNumber(plantData?.magnesium),
+            iron: this.toNumber(plantData?.iron_ppm) || this.toNumber(plantData?.iron),
+            zinc: this.toNumber(plantData?.zinc_ppm) || this.toNumber(plantData?.zinc),
+            manganese: this.toNumber(plantData?.manganese_ppm) || this.toNumber(plantData?.manganese),
+            boron: this.toNumber(plantData?.boron_ppm) || this.toNumber(plantData?.boron),
+            copper: this.toNumber(plantData?.copper_ppm) || this.toNumber(plantData?.copper),
+            sodium: this.toNumber(plantData?.sodium_percent) || this.toNumber(plantData?.sodium),
+            chloride: this.toNumber(plantData?.chloride_percent) || this.toNumber(plantData?.chloride),
+          }
+        : undefined,
+      yieldHistory:
+        baseData.yieldHistory?.map((entry) => ({
+          year: entry.year,
+          season: entry.season,
+          yieldPerHa: entry.yieldPerHa,
+          qualityGrade: entry.qualityGrade,
+        })) || [],
+      operationsHistory:
+        baseData.tasks?.map((task) => ({
+          date: task.date,
+          type: task.type,
+          description: task.description,
+        })) || [],
+    };
+  }
+
+  private async aggregateOperationalData(
+    _organizationId: string,
+    _parcelId: string,
+    _startDate?: string,
+    _endDate?: string,
+  ): Promise<ParcelOperationalInput> {
+    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+  }
+
+  private async aggregateAnnualPlanData(
+    _organizationId: string,
+    _parcelId: string,
+    _startDate?: string,
+    _endDate?: string,
+  ): Promise<AnnualPlanInput> {
+    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+  }
+
+  private async aggregateFollowUpData(
+    _organizationId: string,
+    _parcelId: string,
+    _startDate?: string,
+    _endDate?: string,
+  ): Promise<PostRecommendationFollowUpInput> {
+    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+  }
+
   private async aggregateParcelData(
     organizationId: string,
     parcelId: string,
@@ -1364,7 +1716,7 @@ export class AIReportsService {
     };
   }
 
-  private parseAIResponse(content: string): AIReportSections {
+  private parseAIResponse(content: string): Record<string, unknown> {
     try {
       // Extract JSON from response (handle markdown code blocks if present)
       let jsonStr = content;
@@ -1384,14 +1736,12 @@ export class AIReportsService {
         }
       }
 
-      const parsed = JSON.parse(jsonStr);
-
-      // Validate required fields
-      if (!parsed.executiveSummary || !parsed.healthAssessment) {
-        throw new Error('Missing required fields in AI response');
+      const parsed = JSON.parse(jsonStr) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('AI response must be a JSON object');
       }
 
-      return parsed as AIReportSections;
+      return parsed as Record<string, unknown>;
     } catch (error) {
       this.logger.error(
         `Failed to parse AI response: ${error.message}`,
@@ -1408,35 +1758,48 @@ export class AIReportsService {
     userId: string,
     parcelId: string,
     provider: AIProvider,
-    sections: AIReportSections,
-    aggregatedData: AggregatedParcelData,
+    sections: Record<string, unknown>,
+    parcelName: string,
+    dataSnapshot: unknown,
+    reportType: AgromindReportType,
   ) {
     const supabase = this.databaseService.getAdminClient();
     const now = new Date();
+
+    const recommendations = Array.isArray(sections.recommendations)
+      ? sections.recommendations.length
+      : 0;
+    const riskAlerts = Array.isArray(sections.riskAlerts)
+      ? sections.riskAlerts.length
+      : 0;
+    const healthAssessment = sections.healthAssessment;
+    const healthScore =
+      healthAssessment &&
+      typeof healthAssessment === 'object' &&
+      !Array.isArray(healthAssessment) &&
+      typeof (healthAssessment as Record<string, unknown>).overallScore === 'number'
+        ? (healthAssessment as Record<string, unknown>).overallScore
+        : undefined;
 
     const { data, error } = await supabase
       .from('parcel_reports')
       .insert({
         parcel_id: parcelId,
         template_id: 'ai-generated',
-        title: `Rapport IA - ${aggregatedData.parcel.name} - ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+        title: `Rapport IA - ${reportType} - ${parcelName} - ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
         status: 'completed',
         generated_at: now.toISOString(),
         generated_by: userId,
         metadata: {
           type: 'ai_report',
+          report_type: reportType,
+          organization_id: organizationId,
           provider,
           sections,
-          health_score: sections.healthAssessment.overallScore,
-          recommendations_count: sections.recommendations.length,
-          risk_alerts_count: sections.riskAlerts.length,
-          data_snapshot: {
-            parcel: aggregatedData.parcel,
-            satellite_period: aggregatedData.satelliteIndices.period,
-            has_soil_analysis: !!aggregatedData.soilAnalysis,
-            has_water_analysis: !!aggregatedData.waterAnalysis,
-            has_plant_analysis: !!aggregatedData.plantAnalysis,
-          },
+          health_score: healthScore,
+          recommendations_count: recommendations,
+          risk_alerts_count: riskAlerts,
+          data_snapshot: dataSnapshot,
         },
       })
       .select()
@@ -1561,27 +1924,37 @@ export class AIReportsService {
       await this.calibrateParcelData(organizationId, dto.parcel_id, dto.data_start_date, dto.data_end_date);
 
       await updateProgress(50);
-      const aggregatedData = await this.aggregateParcelData(organizationId, dto.parcel_id, dto.data_start_date, dto.data_end_date);
+      const reportPayload = await this.buildReportPayload(organizationId, dto);
 
       await updateProgress(60);
-      const systemPrompt = AGRICULTURAL_EXPERT_SYSTEM_PROMPT;
-      const userPrompt = buildUserPrompt(aggregatedData, dto.language || 'fr');
-
       await updateProgress(70);
       const config: AIProviderConfig = { provider: dto.provider, model: dto.model, temperature: 0.7, maxTokens: 16384 };
       
       this.logger.log(`Job ${jobId}: Starting AI generation with ${dto.provider}`);
-      const response = await provider.generate({ systemPrompt, userPrompt, config });
+      const response = await provider.generate({
+        systemPrompt: reportPayload.systemPrompt,
+        userPrompt: reportPayload.userPrompt,
+        config,
+      });
       this.logger.log(`Job ${jobId}: AI generation completed`);
 
       if (isCompleted) {
         this.logger.warn(`Job ${jobId} already marked as completed/failed, skipping result storage`);
         return;
       }
-
+      
       await updateProgress(90);
       const reportSections = this.parseAIResponse(response.content);
-      const storedReport = await this.storeReport(organizationId, userId, dto.parcel_id, dto.provider, reportSections, aggregatedData);
+      const storedReport = await this.storeReport(
+        organizationId,
+        userId,
+        dto.parcel_id,
+        dto.provider,
+        reportSections,
+        reportPayload.parcelName,
+        reportPayload.dataSnapshot,
+        reportPayload.reportType,
+      );
 
       const result = {
         success: true,

@@ -6,7 +6,7 @@ import {
   IsOptional,
   IsDateString,
 } from 'class-validator';
-import { AIProvider } from '../interfaces';
+import { AIProvider, AgromindReportType } from '../interfaces';
 
 export class GenerateAIReportDto {
   @ApiProperty({ description: 'Parcel ID to generate report for' })
@@ -38,6 +38,15 @@ export class GenerateAIReportDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @ApiPropertyOptional({
+    enum: AgromindReportType,
+    description: 'Agromind report type (defaults to general for backward compatibility)',
+    default: AgromindReportType.GENERAL,
+  })
+  @IsOptional()
+  @IsEnum(AgromindReportType)
+  reportType?: AgromindReportType;
 }
 
 export class AIProviderInfoDto {
