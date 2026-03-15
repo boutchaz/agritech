@@ -176,9 +176,10 @@ export class CalibrationService {
       throw new BadRequestException('Parcel calibration is already in progress');
     }
 
-    if (parcel.aiPhase !== 'disabled' && parcel.aiPhase !== 'active') {
+    const allowedStartPhases = ['disabled', 'active', 'awaiting_validation', 'awaiting_nutrition_option'];
+    if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `V2 calibration can only start from disabled or active phase (current: ${parcel.aiPhase})`,
+        `V2 calibration can only start from disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -191,7 +192,7 @@ export class CalibrationService {
 
     await this.stateMachine.transitionPhase(
       parcelId,
-      parcel.aiPhase as 'disabled' | 'active',
+      parcel.aiPhase as 'disabled' | 'active' | 'awaiting_validation' | 'awaiting_nutrition_option',
       'calibrating',
       organizationId,
     );
