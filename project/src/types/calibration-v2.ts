@@ -84,7 +84,7 @@ export interface HealthScore {
   total: number;
   components: {
     vigor: number;
-    homogeneity: number;
+    temporal_stability: number;
     stability: number;
     hydric: number;
     nutritional: number;
@@ -143,12 +143,25 @@ export interface Step5Output {
 
 export interface Step6Output {
   yield_potential: YieldPotential;
+  alternance?: {
+    detected: boolean;
+    current_year_type: 'on' | 'off' | null;
+    confidence: number;
+    yearly_means: Record<number, number>;
+  } | null;
 }
 
 export type Step7Output = ZoneClassification;
 
 export interface Step8Output {
   health_score: HealthScore;
+}
+
+export interface Recommendation {
+  type: string;
+  severity: string;
+  message: string;
+  component: string | null;
 }
 
 export interface NutritionOptionSuggestion {
@@ -186,6 +199,7 @@ export interface CalibrationV2Output {
   step6: Step6Output;
   step7: Step7Output;
   step8: Step8Output;
+  recommendations?: Array<{ type: string; severity: string; message: string; component: string | null }>;
   confidence: ConfidenceScore;
   metadata: CalibrationMetadata;
 }
@@ -263,13 +277,21 @@ const typeContractExample = {
       total: 78,
       components: {
         vigor: 80,
-        homogeneity: 76,
+        temporal_stability: 76,
         stability: 75,
         hydric: 79,
         nutritional: 77,
       },
     },
   },
+  recommendations: [
+    {
+      type: 'heat_management',
+      severity: 'medium',
+      message: 'Heatwave events recorded. Consider shade nets, increased irrigation frequency, or kaolin spray applications.',
+      component: null,
+    },
+  ],
   confidence: {
     total_score: 84,
     normalized_score: 0.84,

@@ -1,0 +1,20 @@
+Test Results for Tasks 2+4: Alert Dedup + Satellite Window
+============================================================
+
+Command: pnpm --filter agritech-api test -- --testPathPattern=ai-jobs.service.spec
+
+Result: PASS
+Test Suites: 1 passed, 1 total
+Tests: 6 passed, 6 total
+Snapshots: 0 total
+Time: 0.505 s
+
+Test Cases:
+✓ runDailyWeatherFetch calls the historical weather API and isolates parcel failures
+✓ runDailyAiPipelineTrigger runs diagnostics and creates alerts without propagating parcel errors
+✓ runDailyAiPipelineTrigger skips alert creation when unresolved alert already exists (NEW)
+✓ runMonthlyPlanReminder checks planned interventions for the current month
+✓ runWeeklyForecastUpdate calls the forecast API and stores forecast rows
+✓ runDailyRecommendationWeatherVerification expires pending recommendations and isolates update errors
+
+All tests passed with 0 failures.

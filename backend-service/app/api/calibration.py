@@ -1,6 +1,5 @@
 from datetime import date, datetime
 import logging
-import time
 from typing import Any, SupportsFloat, TypedDict, cast
 
 import numpy as np
@@ -34,14 +33,7 @@ VALID_CROP_TYPES = {
     "avocatier",
     "palmier_dattier",
 }
-VALID_SYSTEM_TYPES = {
-    "traditionnel",
-    "intensif",
-    "super_intensif",
-}
-
 DEFAULT_CROP_TYPE = "olivier"
-DEFAULT_SYSTEM_TYPE = "traditionnel"
 
 
 # TODO: Replace fallback with proper crop/system expansion once all types are defined
@@ -61,22 +53,6 @@ def _normalize_crop_type(crop_type: str | None) -> str:
         DEFAULT_CROP_TYPE,
     )
     return DEFAULT_CROP_TYPE
-
-
-def _normalize_system_type(system: str | None) -> str:
-    """Accept any system — map unknown ones to default with a log warning."""
-    if not system or not system.strip():
-        logger.warning("Empty system received, defaulting to '%s'", DEFAULT_SYSTEM_TYPE)
-        return DEFAULT_SYSTEM_TYPE
-    if system in VALID_SYSTEM_TYPES:
-        return system
-    logger.warning(
-        "Unknown system '%s' not in %s — defaulting to '%s'",
-        system,
-        VALID_SYSTEM_TYPES,
-        DEFAULT_SYSTEM_TYPE,
-    )
-    return DEFAULT_SYSTEM_TYPE
 
 
 GENERIC_PHENOLOGY: list[PhenologyDefinition] = [
@@ -274,44 +250,6 @@ PHENOLOGY_CONFIG: dict[str, list[PhenologyDefinition]] = {
 }
 
 
-class SatelliteReading(BaseModel):
-    date: str
-    ndvi: float
-    ndre: float
-    ndmi: float
-    gci: float
-    evi: float
-    savi: float
-
-
-class WeatherReading(BaseModel):
-    date: str
-    temp_min: float
-    temp_max: float
-    precip: float
-    et0: float
-
-
-class CalibrationRunRequest(BaseModel):
-    parcel_id: str
-    crop_type: str
-    system: str
-    satellite_readings: list[SatelliteReading]
-    weather_readings: list[WeatherReading]
-    ndvi_thresholds: NdviThresholds
-
-
-class CalibrationRunResponse(BaseModel):
-    baseline_ndvi: float
-    baseline_ndre: float
-    baseline_ndmi: float
-    confidence_score: float
-    zone_classification: str
-    phenology_stage: str
-    anomaly_count: int
-    processing_time_ms: int
-
-
 class CalibrationRunV2Request(BaseModel):
     calibration_input: CalibrationInput
     satellite_images: list[dict[str, Any]]
@@ -438,11 +376,13 @@ def _parse_thresholds(thresholds: NdviThresholds) -> tuple[float, float, float, 
 def _classify_ndvi_value(value: float, thresholds: NdviThresholds) -> str:
     optimal_min, optimal_max, vigilance, alerte = _parse_thresholds(thresholds)
 
-    if value <= alerte or value < vigilance:
+    if value <= alerte:
         return "stressed"
-    if value > optimal_max:
+    if value < vigilance:
+        return "stressed"
+    if value >= optimal_min and value <= optimal_max:
         return "optimal"
-    if value < optimal_min:
+    if value > optimal_max:
         return "normal"
     return "normal"
 
@@ -491,67 +431,6 @@ def _extract_month(date_value: str) -> int:
         return datetime.fromisoformat(date_value).month
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid reading date") from exc
-
-
-@router.post("/run", response_model=CalibrationRunResponse)
-async def run_calibration(request: CalibrationRunRequest):
-    start_time = time.perf_counter()
-
-    request.crop_type = _normalize_crop_type(request.crop_type)
-    request.system = _normalize_system_type(request.system)
-
-    if not request.satellite_readings or not request.weather_readings:
-        raise HTTPException(
-            status_code=400, detail="Satellite and weather readings are required"
-        )
-
-    ndvi_values = [reading.ndvi for reading in request.satellite_readings]
-    ndre_values = [reading.ndre for reading in request.satellite_readings]
-    ndmi_values = [reading.ndmi for reading in request.satellite_readings]
-
-    baseline_ndvi = float(np.mean(np.array(ndvi_values, dtype=float)))
-    baseline_ndre = float(np.mean(np.array(ndre_values, dtype=float)))
-    baseline_ndmi = float(np.mean(np.array(ndmi_values, dtype=float)))
-
-    satellite_dates = {reading.date for reading in request.satellite_readings}
-    weather_dates = {reading.date for reading in request.weather_readings}
-    satellite_covered = len(satellite_dates & weather_dates)
-    coverage_ratio = satellite_covered / max(len(satellite_dates), 1)
-    count_ratio = (
-        min(len(request.satellite_readings) / 30.0, 1.0) * 0.5
-        + min(len(request.weather_readings) / 90.0, 1.0) * 0.5
-    )
-    completeness_ratio = count_ratio * (0.5 + 0.5 * coverage_ratio)
-    ndvi_std = float(np.std(np.array(ndvi_values, dtype=float)))
-    coefficient_of_variation = ndvi_std / baseline_ndvi if baseline_ndvi else 1.0
-    stability_score = max(0.1, 1.0 - (coefficient_of_variation * 1.5))
-    confidence_score = round(min(1.0, completeness_ratio * stability_score), 2)
-
-    zone_classification = _classify_ndvi_value(baseline_ndvi, request.ndvi_thresholds)
-    phenology = _get_phenology_stage(
-        request.crop_type,
-        _extract_month(request.satellite_readings[0].date),
-    )
-    anomalies = _detect_anomalies(ndvi_values, threshold_std=2.0)
-    processing_time_ms = max(int(round((time.perf_counter() - start_time) * 1000)), 1)
-
-    logger.info(
-        "Calibration run completed for parcel_id=%s crop_type=%s system=%s",
-        request.parcel_id,
-        request.crop_type,
-        request.system,
-    )
-
-    return CalibrationRunResponse(
-        baseline_ndvi=round(baseline_ndvi, 2),
-        baseline_ndre=round(baseline_ndre, 2),
-        baseline_ndmi=round(baseline_ndmi, 2),
-        confidence_score=confidence_score,
-        zone_classification=zone_classification,
-        phenology_stage=phenology.stage,
-        anomaly_count=anomalies.anomaly_count,
-        processing_time_ms=processing_time_ms,
-    )
 
 
 @router.post("/v2/run", response_model=CalibrationOutput)

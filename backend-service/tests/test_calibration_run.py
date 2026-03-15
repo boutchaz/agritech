@@ -188,43 +188,9 @@ def _build_payload() -> dict[str, object]:
     }
 
 
-def test_calibration_run_happy_path() -> None:
+def test_v1_run_endpoint_removed() -> None:
     response = client.post("/api/calibration/run", json=_build_payload())
-
-    assert response.status_code == 200
-    body = cast(dict[str, object], response.json())
-
-    assert body["baseline_ndvi"] == 0.55
-    assert body["baseline_ndre"] == 0.21
-    assert body["baseline_ndmi"] == 0.17
-    assert body["confidence_score"] == 0.63
-    assert body["zone_classification"] == "normal"
-    assert body["phenology_stage"] == "repos_vegetatif"
-    assert body["anomaly_count"] == 0
-    assert isinstance(body["processing_time_ms"], int)
-    assert body["processing_time_ms"] >= 1
-
-
-def test_calibration_run_rejects_empty_readings() -> None:
-    payload = _build_payload()
-    payload["satellite_readings"] = []
-    payload["weather_readings"] = []
-
-    response = client.post("/api/calibration/run", json=payload)
-
-    assert response.status_code == 400
-    assert response.json()["detail"] == "Satellite and weather readings are required"
-
-
-def test_calibration_run_falls_back_to_default_crop_type() -> None:
-    payload = _build_payload()
-    payload["crop_type"] = "mais"
-
-    response = client.post("/api/calibration/run", json=payload)
-
-    assert response.status_code == 200
-    data = response.json()
-    assert "baseline_ndvi" in data
+    assert response.status_code == 404
 
 
 def test_main_registers_calibration_router() -> None:

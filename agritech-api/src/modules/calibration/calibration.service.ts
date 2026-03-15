@@ -16,13 +16,6 @@ import {
 
 const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
-const PROVISION_POLL_INTERVAL_MS = 10_000;
-const PROVISION_MAX_ATTEMPTS = 60;
-const WEATHER_LOOKBACK_DAYS = 730;
-const SATELLITE_SYNC_INDICES = [
-  'NIRv', 'EVI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI',
-  'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI',
-];
 
 type ZoneClassification = 'optimal' | 'normal' | 'stressed';
 type ParcelAiPhase =
@@ -40,35 +33,6 @@ interface NdviThresholds {
   optimal: [number, number];
   vigilance: number;
   alerte: number;
-}
-
-interface CalibrationSatelliteReading {
-  date: string;
-  ndvi: number;
-  ndre: number;
-  ndmi: number;
-  gci: number;
-  evi: number;
-  savi: number;
-}
-
-interface CalibrationWeatherReading {
-  date: string;
-  temp_min: number;
-  temp_max: number;
-  precip: number;
-  et0: number;
-}
-
-interface CalibrationComputationResponse {
-  baseline_ndvi: number;
-  baseline_ndre: number;
-  baseline_ndmi: number;
-  confidence_score: number;
-  zone_classification: ZoneClassification;
-  phenology_stage: string;
-  anomaly_count: number;
-  processing_time_ms: number;
 }
 
 export interface PercentilesResponse {
@@ -201,39 +165,6 @@ export class CalibrationService {
     private readonly nutritionOptionService: NutritionOptionService,
   ) {}
 
-  async startCalibration(
-    parcelId: string,
-    organizationId: string,
-    dto: StartCalibrationDto,
-  ): Promise<CalibrationRecord> {
-    const parcel = await this.getParcelContext(parcelId, organizationId);
-
-    const [satelliteReadings, weatherReadings] = await Promise.all([
-      this.fetchSatelliteReadings(parcelId, organizationId),
-      this.fetchWeatherReadings(parcel),
-    ]);
-
-    const needsSatelliteProvisioning =
-      !satelliteReadings.length ||
-      this.hasInsufficientCoverage(satelliteReadings, CALIBRATION_LOOKBACK_DAYS);
-    const needsWeatherProvisioning =
-      !weatherReadings.length ||
-      this.hasInsufficientCoverage(weatherReadings, WEATHER_LOOKBACK_DAYS);
-
-    if (needsSatelliteProvisioning || needsWeatherProvisioning) {
-      return this.startProvisioningCalibration(
-        parcelId,
-        organizationId,
-        parcel,
-        dto,
-        needsSatelliteProvisioning,
-        needsWeatherProvisioning,
-      );
-    }
-
-    return this.runCalibrationComputation(parcelId, organizationId, parcel, dto, satelliteReadings, weatherReadings);
-  }
-
   async startCalibrationV2(
     parcelId: string,
     organizationId: string,
@@ -316,165 +247,6 @@ export class CalibrationService {
     return calibration as CalibrationRecord;
   }
 
-  private async startProvisioningCalibration(
-    parcelId: string,
-    organizationId: string,
-    parcel: ParcelContext,
-    dto: StartCalibrationDto,
-    needsSatellite: boolean,
-    needsWeather: boolean,
-  ): Promise<CalibrationRecord> {
-    const supabase = this.databaseService.getAdminClient();
-    const startedAt = new Date().toISOString();
-
-    const { data: calibration, error: insertError } = await supabase
-      .from('calibrations')
-      .insert({
-        parcel_id: parcelId,
-        organization_id: organizationId,
-        status: 'in_progress',
-        started_at: startedAt,
-        calibration_data: {
-          request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
-          parcel: { id: parcel.id, crop_type: parcel.cropType, system: parcel.system },
-          provisioning: {
-            satellite: needsSatellite,
-            weather: needsWeather,
-            started_at: startedAt,
-          },
-        },
-      })
-      .select('*')
-      .single();
-
-    if (insertError || !calibration) {
-      this.logger.error(
-        `Failed to create provisioning calibration for parcel ${parcelId}: ${insertError?.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to create calibration: ${insertError?.message ?? 'unknown error'}`,
-      );
-    }
-
-    this.provisionAndCalibrateInBackground(
-      calibration.id as string,
-      parcelId,
-      organizationId,
-      parcel,
-      dto,
-      needsSatellite,
-      needsWeather,
-    ).catch((error) => {
-      this.logger.error(
-        `Background provisioning failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : 'unknown error'}`,
-      );
-    });
-
-    return calibration as CalibrationRecord;
-  }
-
-  private async provisionAndCalibrateInBackground(
-    calibrationId: string,
-    parcelId: string,
-    organizationId: string,
-    parcel: ParcelContext,
-    dto: StartCalibrationDto,
-    needsSatellite: boolean,
-    needsWeather: boolean,
-  ): Promise<void> {
-    const supabase = this.databaseService.getAdminClient();
-
-    try {
-      if (needsSatellite) {
-        this.logger.log(`Provisioning satellite data for parcel ${parcelId}`);
-        await this.triggerSatelliteSync(parcelId, organizationId, parcel.boundary);
-        await this.waitForSatelliteSync(parcelId, organizationId);
-      }
-
-      if (needsWeather) {
-        this.logger.log(`Provisioning weather data for parcel ${parcelId}`);
-        await this.provisionWeatherData(parcel, organizationId);
-      }
-
-      const [satelliteReadings, weatherReadings] = await Promise.all([
-        this.fetchSatelliteReadings(parcelId, organizationId),
-        this.fetchWeatherReadings(parcel),
-      ]);
-
-      if (!satelliteReadings.length || !weatherReadings.length) {
-        const missing = !satelliteReadings.length ? 'satellite' : 'weather';
-        throw new Error(`${missing} data still unavailable after provisioning`);
-      }
-
-      const ndviThresholds = await this.fetchNdviThresholds(parcel.cropType, parcel.system);
-      const computation = await this.postCalibrationApi<CalibrationComputationResponse>(
-        '/api/calibration/run',
-        {
-          parcel_id: parcelId,
-          crop_type: parcel.cropType,
-          system: parcel.system,
-          satellite_readings: satelliteReadings,
-          weather_readings: weatherReadings,
-          ndvi_thresholds: ndviThresholds,
-        },
-        organizationId,
-      );
-
-      const completedAt = new Date().toISOString();
-      const calibrationData = {
-        request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
-        parcel: { id: parcel.id, crop_type: parcel.cropType, system: parcel.system },
-        thresholds: ndviThresholds,
-        inputs: { satellite_readings: satelliteReadings, weather_readings: weatherReadings },
-        computation,
-        validation: { validated: false, validated_at: null },
-      };
-
-      const { error: updateError } = await supabase
-        .from('calibrations')
-        .update({
-          status: 'completed',
-          completed_at: completedAt,
-          baseline_ndvi: computation.baseline_ndvi,
-          baseline_ndre: computation.baseline_ndre,
-          baseline_ndmi: computation.baseline_ndmi,
-          confidence_score: computation.confidence_score,
-          zone_classification: computation.zone_classification,
-          phenology_stage: computation.phenology_stage,
-          calibration_data: calibrationData,
-        })
-        .eq('id', calibrationId);
-
-      if (updateError) {
-        throw new Error(`Failed to update calibration: ${updateError.message}`);
-      }
-
-      const { error: updateParcelError } = await supabase
-        .from('parcels')
-        .update({ ai_calibration_id: calibrationId, ai_enabled: true, ai_phase: 'active' })
-        .eq('id', parcelId);
-
-      if (updateParcelError) {
-        this.logger.error(
-          `Failed to link calibration ${calibrationId} to parcel ${parcelId}: ${updateParcelError.message}`,
-        );
-      }
-
-      this.logger.log(`Calibration ${calibrationId} completed successfully for parcel ${parcelId}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'unknown error';
-      this.logger.error(`Provisioning calibration ${calibrationId} failed: ${message}`);
-
-      await supabase
-        .from('calibrations')
-        .update({
-          status: 'failed',
-          error_message: message,
-        })
-        .eq('id', calibrationId);
-    }
-  }
-
   private async runCalibrationV2InBackground(
     calibrationId: string,
     parcelId: string,
@@ -523,9 +295,8 @@ export class CalibrationService {
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
 
-    const [satelliteReadings, satelliteImages, weatherRows, analyses, harvestRecords, referenceData] =
+    const [satelliteImages, weatherRows, analyses, harvestRecords, referenceData] =
       await Promise.all([
-        this.fetchSatelliteReadings(parcelId, organizationId),
         this.fetchSatelliteImagesForV2(parcelId, organizationId),
         this.fetchWeatherRowsForV2(parcel),
         this.fetchAnalysesForV2(parcelId),
@@ -550,7 +321,6 @@ export class CalibrationService {
       );
     }
 
-    const weatherDaily = this.normalizeWeatherReadings(weatherRows);
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,
@@ -558,13 +328,6 @@ export class CalibrationService {
       variety: parcel.variety,
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
-      satellite_series: {
-        NDVI: satelliteReadings.slice(0, 1).map((reading) => ({
-          date: reading.date,
-          value: reading.ndvi,
-        })),
-      },
-      weather_daily: weatherDaily,
       analyses,
       harvest_records: harvestRecords,
       reference_data: referenceData,
@@ -653,277 +416,6 @@ export class CalibrationService {
     );
   }
 
-  private async triggerSatelliteSync(
-    parcelId: string,
-    organizationId: string,
-    boundary: number[][],
-  ): Promise<void> {
-    const url = `${this.getSatelliteServiceUrl()}/api/sync/parcel`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-organization-id': organizationId,
-      },
-      body: JSON.stringify({
-        parcel_id: parcelId,
-        organization_id: organizationId,
-        boundary,
-        indices: SATELLITE_SYNC_INDICES,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to trigger satellite sync: ${errorText || response.statusText}`);
-    }
-  }
-
-  private async waitForSatelliteSync(
-    parcelId: string,
-    organizationId: string,
-  ): Promise<void> {
-    for (let attempt = 0; attempt < PROVISION_MAX_ATTEMPTS; attempt += 1) {
-      await this.delay(PROVISION_POLL_INTERVAL_MS);
-
-      const status = await this.getSatelliteSyncStatus(parcelId, organizationId);
-      if (status === 'synced' || status === 'partial') {
-        this.logger.log(`Satellite sync completed for parcel ${parcelId}: ${status}`);
-        return;
-      }
-    }
-
-    throw new Error('Satellite data provisioning timed out');
-  }
-
-  private async getSatelliteSyncStatus(
-    parcelId: string,
-    _organizationId: string,
-  ): Promise<string> {
-    const url = `${this.getSatelliteServiceUrl()}/api/sync/parcel/${parcelId}/status`;
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      return 'no_data';
-    }
-
-    const data = await response.json() as { status: string };
-    return data.status;
-  }
-
-  private async provisionWeatherData(
-    parcel: ParcelContext,
-    organizationId: string,
-  ): Promise<void> {
-    if (!parcel.boundary.length) {
-      throw new Error('Parcel boundary is required to provision weather data');
-    }
-
-    const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
-    const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
-    const roundedLat = this.roundCoordinate(latitude, 2);
-    const roundedLon = this.roundCoordinate(longitude, 2);
-
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = this.getLookbackDate(WEATHER_LOOKBACK_DAYS);
-
-    const params = new URLSearchParams({
-      latitude: String(roundedLat),
-      longitude: String(roundedLon),
-      start_date: startDate,
-      end_date: endDate,
-    });
-
-    const url = `${this.getSatelliteServiceUrl()}/api/weather/historical?${params.toString()}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'x-organization-id': organizationId },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch weather data: ${errorText || response.statusText}`);
-    }
-
-    const weatherResponse = await response.json() as {
-      latitude: number;
-      longitude: number;
-      source?: string;
-      data: Array<Record<string, unknown>>;
-    };
-
-    if (!weatherResponse.data?.length) {
-      this.logger.warn(`No weather data returned for parcel at ${roundedLat},${roundedLon}`);
-      return;
-    }
-
-    const supabase = this.databaseService.getAdminClient();
-    const rows = weatherResponse.data.map((entry) => ({
-      latitude: this.roundCoordinate(weatherResponse.latitude, 2),
-      longitude: this.roundCoordinate(weatherResponse.longitude, 2),
-      date: entry.date as string,
-      temperature_min: entry.temperature_min ?? null,
-      temperature_max: entry.temperature_max ?? null,
-      temperature_mean: entry.temperature_mean ?? null,
-      relative_humidity_mean: entry.relative_humidity_mean ?? null,
-      relative_humidity_max: entry.relative_humidity_max ?? null,
-      relative_humidity_min: entry.relative_humidity_min ?? null,
-      precipitation_sum: entry.precipitation_sum ?? null,
-      wind_speed_max: entry.wind_speed_max ?? null,
-      wind_gusts_max: entry.wind_gusts_max ?? null,
-      shortwave_radiation_sum: entry.shortwave_radiation_sum ?? null,
-      et0_fao_evapotranspiration: entry.et0_fao_evapotranspiration ?? null,
-      soil_temperature_0_7cm: entry.soil_temperature_0_7cm ?? null,
-      soil_temperature_7_28cm: entry.soil_temperature_7_28cm ?? null,
-      soil_moisture_0_7cm: entry.soil_moisture_0_7cm ?? null,
-      soil_moisture_7_28cm: entry.soil_moisture_7_28cm ?? null,
-      source: weatherResponse.source ?? 'open-meteo-archive',
-    }));
-
-    const { error } = await supabase
-      .from('weather_daily_data')
-      .upsert(rows, { onConflict: 'latitude,longitude,date' });
-
-    if (error) {
-      throw new Error(`Failed to persist weather data: ${error.message}`);
-    }
-
-    this.logger.log(`Provisioned ${rows.length} weather data points for parcel`);
-  }
-
-  private hasInsufficientCoverage(
-    readings: { date: string }[],
-    lookbackDays: number,
-  ): boolean {
-    if (!readings.length) {
-      return true;
-    }
-
-    const sorted = [...readings].sort((a, b) => a.date.localeCompare(b.date));
-    const earliestDate = new Date(sorted[0].date);
-    const requiredStart = new Date();
-    requiredStart.setDate(requiredStart.getDate() - lookbackDays);
-
-    const coverageThreshold = new Date(
-      requiredStart.getTime() + lookbackDays * 0.3 * 86_400_000,
-    );
-
-    if (earliestDate > coverageThreshold) {
-      this.logger.log(
-        `Insufficient data coverage: earliest=${sorted[0].date}, ` +
-          `required=${requiredStart.toISOString().split('T')[0]}, ` +
-          `threshold=${coverageThreshold.toISOString().split('T')[0]}`,
-      );
-      return true;
-    }
-
-    return false;
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }
-
-  private async runCalibrationComputation(
-    parcelId: string,
-    organizationId: string,
-    parcel: ParcelContext,
-    dto: StartCalibrationDto,
-    satelliteReadings: CalibrationSatelliteReading[],
-    weatherReadings: CalibrationWeatherReading[],
-  ): Promise<CalibrationRecord> {
-    const supabase = this.databaseService.getAdminClient();
-    const ndviThresholds = await this.fetchNdviThresholds(parcel.cropType, parcel.system);
-
-    const startedAt = new Date().toISOString();
-    const computation = await this.postCalibrationApi<CalibrationComputationResponse>(
-      '/api/calibration/run',
-      {
-        parcel_id: parcelId,
-        crop_type: parcel.cropType,
-        system: parcel.system,
-        satellite_readings: satelliteReadings,
-        weather_readings: weatherReadings,
-        ndvi_thresholds: ndviThresholds,
-      },
-      organizationId,
-    );
-    const completedAt = new Date().toISOString();
-
-    const calibrationData = {
-      request: {
-        ...dto,
-        lookback_days: CALIBRATION_LOOKBACK_DAYS,
-      },
-      parcel: {
-        id: parcel.id,
-        crop_type: parcel.cropType,
-        system: parcel.system,
-      },
-      thresholds: ndviThresholds,
-      inputs: {
-        satellite_readings: satelliteReadings,
-        weather_readings: weatherReadings,
-      },
-      computation,
-      validation: {
-        validated: false,
-        validated_at: null,
-      },
-    };
-
-    const { data: calibration, error: insertError } = await supabase
-      .from('calibrations')
-      .insert({
-        parcel_id: parcelId,
-        organization_id: organizationId,
-        status: 'completed',
-        started_at: startedAt,
-        completed_at: completedAt,
-        baseline_ndvi: computation.baseline_ndvi,
-        baseline_ndre: computation.baseline_ndre,
-        baseline_ndmi: computation.baseline_ndmi,
-        confidence_score: computation.confidence_score,
-        zone_classification: computation.zone_classification,
-        phenology_stage: computation.phenology_stage,
-        calibration_data: calibrationData,
-      })
-      .select('*')
-      .single();
-
-    if (insertError || !calibration) {
-      this.logger.error(
-        `Failed to persist calibration for parcel ${parcelId}: ${insertError?.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to persist calibration: ${insertError?.message ?? 'unknown error'}`,
-      );
-    }
-
-    const { error: updateParcelError } = await supabase
-      .from('parcels')
-      .update({ ai_calibration_id: calibration.id, ai_enabled: true, ai_phase: 'active' })
-      .eq('id', parcelId);
-
-    if (updateParcelError) {
-      this.logger.error(
-        `Failed to link calibration ${calibration.id} to parcel ${parcelId}: ${updateParcelError.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to update parcel calibration reference: ${updateParcelError.message}`,
-      );
-    }
-
-    return calibration as CalibrationRecord;
-  }
-
   async getLatestCalibration(
     parcelId: string,
     organizationId: string,
@@ -946,6 +438,48 @@ export class CalibrationService {
     }
 
     return data as CalibrationRecord | null;
+  }
+
+  async getCalibrationHistory(
+    parcelId: string,
+    organizationId: string,
+    limit: number = 5,
+  ): Promise<Array<{
+    id: string;
+    status: string;
+    health_score: number | null;
+    confidence_score: number | null;
+    maturity_phase: string | null;
+    error_message: string | null;
+    created_at: string;
+    completed_at: string | null;
+  }>> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from('calibrations')
+      .select('id, status, health_score, confidence_score, maturity_phase, error_message, created_at, completed_at')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch calibration history for parcel ${parcelId}: ${error.message}`,
+      );
+      throw new BadRequestException(`Failed to fetch calibration history: ${error.message}`);
+    }
+
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      status: row.status as string,
+      health_score: this.toNumber(row.health_score),
+      confidence_score: this.toNumber(row.confidence_score),
+      maturity_phase: typeof row.maturity_phase === 'string' ? row.maturity_phase : null,
+      error_message: typeof row.error_message === 'string' ? row.error_message : null,
+      created_at: row.created_at as string,
+      completed_at: typeof row.completed_at === 'string' ? row.completed_at : null,
+    }));
   }
 
   async getCalibrationReport(parcelId: string, organizationId: string) {
@@ -1192,66 +726,6 @@ export class CalibrationService {
     };
   }
 
-  private async fetchSatelliteReadings(
-    parcelId: string,
-    organizationId: string,
-  ): Promise<CalibrationSatelliteReading[]> {
-    const supabase = this.databaseService.getAdminClient();
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
-    const { data, error } = await supabase
-      .from('satellite_indices_data')
-      .select('date, index_name, mean_value')
-      .eq('organization_id', organizationId)
-      .eq('parcel_id', parcelId)
-      .in('index_name', ['NDVI', 'NDRE', 'NDMI', 'GCI', 'EVI', 'SAVI'])
-      .gte('date', sinceDate)
-      .order('date', { ascending: true })
-      .order('index_name', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Failed to fetch satellite readings for parcel ${parcelId}: ${error.message}`,
-      );
-      throw new BadRequestException(
-        `Failed to fetch satellite readings: ${error.message}`,
-      );
-    }
-
-    return this.normalizeSatelliteReadings(data as SatelliteIndexRow[]);
-  }
-
-  private async fetchWeatherReadings(parcel: ParcelContext): Promise<CalibrationWeatherReading[]> {
-    if (!parcel.boundary.length) {
-      throw new BadRequestException('Parcel boundary is required to fetch weather readings');
-    }
-
-    const supabase = this.databaseService.getAdminClient();
-    const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
-    const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
-    const roundedLatitude = this.roundCoordinate(latitude, 2);
-    const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
-
-    const { data, error } = await supabase
-      .from('weather_daily_data')
-      .select(
-        'date, temperature_min, temperature_max, precipitation_sum, et0_fao_evapotranspiration',
-      )
-      .eq('latitude', roundedLatitude)
-      .eq('longitude', roundedLongitude)
-      .gte('date', sinceDate)
-      .order('date', { ascending: true });
-
-    if (error) {
-      this.logger.error(
-        `Failed to fetch weather readings for parcel ${parcel.id}: ${error.message}`,
-      );
-      throw new BadRequestException(`Failed to fetch weather readings: ${error.message}`);
-    }
-
-    return this.normalizeWeatherReadings(data as WeatherDailyRow[]);
-  }
-
   private async fetchNdviThresholds(
     cropType: string,
     system: string,
@@ -1330,93 +804,6 @@ export class CalibrationService {
         return values;
       },
       [],
-    );
-  }
-
-  private normalizeSatelliteReadings(
-    rows: SatelliteIndexRow[],
-  ): CalibrationSatelliteReading[] {
-    const readingsByDate = new Map<string, Partial<CalibrationSatelliteReading>>();
-
-    for (const row of rows) {
-      const value = this.toNumber(row.mean_value);
-      if (value === null) {
-        continue;
-      }
-
-      const currentReading = readingsByDate.get(row.date) ?? { date: row.date };
-
-      switch (row.index_name) {
-        case 'NDVI':
-          currentReading.ndvi = value;
-          break;
-        case 'NDRE':
-          currentReading.ndre = value;
-          break;
-        case 'NDMI':
-          currentReading.ndmi = value;
-          break;
-        case 'GCI':
-          currentReading.gci = value;
-          break;
-        case 'EVI':
-          currentReading.evi = value;
-          break;
-        case 'SAVI':
-          currentReading.savi = value;
-          break;
-        default:
-          break;
-      }
-
-      readingsByDate.set(row.date, currentReading);
-    }
-
-    return Array.from(readingsByDate.values())
-      .filter((reading): reading is CalibrationSatelliteReading =>
-        this.isCompleteSatelliteReading(reading),
-      )
-      .sort((left, right) => left.date.localeCompare(right.date));
-  }
-
-  private normalizeWeatherReadings(rows: WeatherDailyRow[]): CalibrationWeatherReading[] {
-    return rows
-      .map((row) => ({
-        date: row.date,
-        temp_min: this.toNumber(row.temperature_min),
-        temp_max: this.toNumber(row.temperature_max),
-        precip: this.toNumber(row.precipitation_sum),
-        et0: this.toNumber(row.et0_fao_evapotranspiration),
-      }))
-      .filter(
-        (
-          reading,
-        ): reading is {
-          date: string;
-          temp_min: number;
-          temp_max: number;
-          precip: number;
-          et0: number;
-        } =>
-          reading.temp_min !== null &&
-          reading.temp_max !== null &&
-          reading.precip !== null &&
-          reading.et0 !== null,
-      )
-      .sort((left, right) => left.date.localeCompare(right.date));
-  }
-
-  private isCompleteSatelliteReading(
-    reading: Partial<CalibrationSatelliteReading>,
-  ): reading is CalibrationSatelliteReading {
-    return (
-      typeof reading.date === 'string' &&
-      typeof reading.ndvi === 'number' &&
-      typeof reading.ndre === 'number' &&
-      typeof reading.ndmi === 'number' &&
-      typeof reading.gci === 'number' &&
-      typeof reading.evi === 'number' &&
-      typeof reading.savi === 'number'
     );
   }
 
@@ -1595,38 +982,82 @@ export class CalibrationService {
     path: string,
     payload: unknown,
     organizationId: string,
+    maxRetries: number = 3,
   ): Promise<T> {
     const url = `${this.getSatelliteServiceUrl()}${path}`;
+    let lastError: Error | null = null;
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-organization-id': organizationId,
-        },
-        body: JSON.stringify(payload),
-      });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-organization-id': organizationId,
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(5 * 60 * 1000),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        const message = errorText || `Calibration service request failed with status ${response.status}`;
-        throw response.status >= 500
-          ? new BadGatewayException(message)
-          : new BadRequestException(message);
+        if (!response.ok) {
+          const errorText = await response.text();
+          const message =
+            errorText ||
+            `Calibration service request failed with status ${response.status}`;
+
+          if (response.status >= 500 && attempt < maxRetries) {
+            lastError = new BadGatewayException(message);
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+            this.logger.warn(
+              `Calibration API ${path} returned ${response.status}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
+
+          throw response.status >= 500
+            ? new BadGatewayException(message)
+            : new BadRequestException(message);
+        }
+
+        const responseBody: T = await response.json();
+        return responseBody;
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+
+        const isRetryable =
+          error instanceof BadGatewayException ||
+          (error instanceof Error &&
+            (error.name === 'AbortError' || error.name === 'TimeoutError' || error.message.includes('fetch failed')));
+
+        if (isRetryable && attempt < maxRetries) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          this.logger.warn(
+            `Calibration API ${path} failed (${lastError.message}), retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        if (error instanceof BadGatewayException) {
+          throw error;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unknown calibration service error';
+        this.logger.error(`Calibration API call failed for ${url}: ${message}`);
+        throw new BadGatewayException(
+          `Calibration service unavailable: ${message}`,
+        );
       }
-
-      const responseBody: T = await response.json();
-      return responseBody;
-    } catch (error) {
-      if (error instanceof BadGatewayException || error instanceof BadRequestException) {
-        throw error;
-      }
-
-      const message = error instanceof Error ? error.message : 'Unknown calibration service error';
-      this.logger.error(`Calibration API call failed for ${url}: ${message}`);
-      throw new BadGatewayException(`Calibration service unavailable: ${message}`);
     }
+
+    throw lastError ?? new BadGatewayException('Calibration service unavailable after retries');
   }
 
   private getSatelliteServiceUrl(): string {

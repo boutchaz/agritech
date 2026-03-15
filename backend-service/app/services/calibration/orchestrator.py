@@ -14,6 +14,7 @@ from .confidence import (
     ConfidenceInput,
     calculate_confidence_score,
 )
+from .recommendations import generate_recommendations
 from .step1_satellite_extraction import (
     extract_satellite_history,
 )
@@ -36,6 +37,17 @@ TBASE_BY_CROP = {
     "avocatier": 10.0,
     "palmier_dattier": 18.0,
 }
+
+FROST_THRESHOLD_BY_CROP = {
+    "olivier": -2.0,
+    "agrumes": 0.0,
+    "avocatier": 2.0,
+    "palmier_dattier": -4.0,
+}
+
+EVERGREEN_CROPS = {"olivier", "agrumes", "avocatier"}
+
+MIN_SATELLITE_IMAGES = 6
 
 
 def _normalize_satellite_images(
@@ -136,13 +148,15 @@ def run_calibration_pipeline(
     )
 
     tbase = TBASE_BY_CROP.get(calibration_input.crop_type, 10.0)
+    frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)
     step2 = extract_weather_history(
         weather_data=weather_rows,
         crop_type=calibration_input.crop_type,
         tbase=tbase,
+        frost_threshold=frost_threshold,
     )
 
-    step3 = calculate_percentiles(step1, age_adjustment=adjustment)
+    step3 = calculate_percentiles(step1)
     step4 = detect_phenology(step1, step2)
     step5 = step5_fn(step1, step2, step4, adjustment)
 
@@ -153,11 +167,13 @@ def run_calibration_pipeline(
         reference_data=calibration_input.reference_data,
         harvest_records=calibration_input.harvest_records,
         maturity_phase=maturity_phase,
+        satellite_data=step1,
     )
 
     ndvi_points = step1.index_time_series.get("NDVI", [])
     ndvi_values = [point.value for point in ndvi_points] if ndvi_points else [0.0]
-    raster = np.array([ndvi_values], dtype=np.float64)
+    median_ndvi = float(np.median(ndvi_values))
+    raster = np.array([[median_ndvi]], dtype=np.float64)
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
         ndvi_percentiles = next(iter(step3.global_percentiles.values()))
@@ -168,6 +184,14 @@ def run_calibration_pipeline(
         step3=step3,
         step5=step5,
         step7=step7,
+    )
+
+    recommendations = generate_recommendations(
+        step8=step8,
+        step5=step5,
+        step2=step2,
+        crop_type=calibration_input.crop_type,
+        maturity_phase=maturity_phase,
     )
 
     soil_date, soil_fields = _latest_analysis_fields(calibration_input.analyses, "soil")
@@ -192,6 +216,17 @@ def run_calibration_pipeline(
         )
     )
 
+    data_quality_flags: list[str] = []
+
+    ndvi_valid_count = len([p for p in ndvi_points if not p.outlier])
+    if ndvi_valid_count < MIN_SATELLITE_IMAGES:
+        data_quality_flags.append("insufficient_satellite_data")
+
+    data_quality_flags.append("single_pixel_zones")
+
+    if calibration_input.crop_type in EVERGREEN_CROPS:
+        data_quality_flags.append("evergreen_phenology_approximate")
+
     return CalibrationOutput(
         parcel_id=calibration_input.parcel_id,
         maturity_phase=maturity_phase
@@ -206,6 +241,7 @@ def run_calibration_pipeline(
         step6=step6,
         step7=step7,
         step8=step8,
+        recommendations=recommendations,
         confidence=ConfidenceScore(
             total_score=confidence.total_score,
             normalized_score=confidence.normalized_score,
@@ -215,6 +251,8 @@ def run_calibration_pipeline(
             },
         ),
         metadata=CalibrationMetadata(
-            version="v2", generated_at=datetime.now(UTC), data_quality_flags=[]
+            version="v2",
+            generated_at=datetime.now(UTC),
+            data_quality_flags=data_quality_flags,
         ),
     )

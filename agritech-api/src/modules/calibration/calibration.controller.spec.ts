@@ -6,7 +6,6 @@ import { StartCalibrationDto } from './dto/start-calibration.dto';
 import { Request } from 'express';
 
 const mockCalibrationService = {
-  startCalibration: jest.fn(),
   startCalibrationV2: jest.fn(),
   getLatestCalibration: jest.fn(),
   getCalibrationReport: jest.fn(),
@@ -46,46 +45,6 @@ describe('CalibrationController', () => {
       .compile();
 
     controller = module.get<CalibrationController>(CalibrationController);
-  });
-
-  describe('startCalibration', () => {
-    it('calls service.startCalibration with parcelId, organizationId, and dto', async () => {
-      const dto: StartCalibrationDto = {};
-      const serviceResult = { id: 'cal-001', parcel_id: parcelId, status: 'completed' };
-      mockCalibrationService.startCalibration.mockResolvedValue(serviceResult);
-
-      const req = makeRequest(parcelId, organizationId);
-      const result = await controller.startCalibration(parcelId, dto, req);
-
-      expect(mockCalibrationService.startCalibration).toHaveBeenCalledWith(
-        parcelId,
-        organizationId,
-        dto,
-      );
-      expect(result).toEqual(serviceResult);
-    });
-
-    it('throws BadRequestException when organization ID header is missing', async () => {
-      const dto: StartCalibrationDto = {};
-      const req = makeRequest(parcelId);
-
-      await expect(controller.startCalibration(parcelId, dto, req)).rejects.toThrow(
-        BadRequestException,
-      );
-      expect(mockCalibrationService.startCalibration).not.toHaveBeenCalled();
-    });
-
-    it('propagates service errors', async () => {
-      const dto: StartCalibrationDto = {};
-      mockCalibrationService.startCalibration.mockRejectedValue(
-        new BadRequestException('Satellite and weather readings are required'),
-      );
-
-      const req = makeRequest(parcelId, organizationId);
-      await expect(controller.startCalibration(parcelId, dto, req)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
   });
 
   describe('startCalibrationV2', () => {

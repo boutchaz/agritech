@@ -93,7 +93,7 @@ def test_step8_returns_health_score_and_components() -> None:
     assert 0 <= output.health_score.total <= 100
     assert set(output.health_score.components.keys()) == {
         "vigor",
-        "homogeneity",
+        "temporal_stability",
         "stability",
         "hydric",
         "nutritional",
@@ -107,7 +107,7 @@ def test_step8_weighted_total_matches_formula() -> None:
 
     expected = (
         c["vigor"] * 0.30
-        + c["homogeneity"] * 0.20
+        + c["temporal_stability"] * 0.20
         + c["stability"] * 0.15
         + c["hydric"] * 0.20
         + c["nutritional"] * 0.15

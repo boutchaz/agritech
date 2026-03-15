@@ -6,14 +6,17 @@ import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
 import {
   useCalibrationReport,
   useCalibrationPhase,
+  useCalibrationHistory,
   useStartCalibrationV2,
   useValidateCalibration,
   useNutritionSuggestion,
   useConfirmNutritionOption,
 } from '@/hooks/useCalibrationV2';
+import type { CalibrationHistoryRecord } from '@/lib/api/calibration-v2';
 import type {
   CalibrationV2Output,
   AnomalyRecord,
+  Recommendation,
   SeverityLevel,
   CalibrationMaturityPhase,
   NutritionOption,
@@ -149,6 +152,21 @@ const CHART_COLORS = {
   band: '#22c55e',
 };
 
+const DATA_QUALITY_FLAG_LABELS: Record<string, string> = {
+  insufficient_satellite_data: 'Limited satellite observations — results may be less reliable',
+  single_pixel_zones: 'Zone analysis uses parcel-level summary (per-pixel rasters not yet available)',
+  evergreen_phenology_approximate: 'Phenological stages are approximate for this evergreen crop',
+};
+
+const HEALTH_COMPONENT_LABELS: Record<string, string> = {
+  vigor: 'Vigor',
+  temporal_stability: 'Temporal Stability',
+  homogeneity: 'Temporal Stability',
+  stability: 'Stability',
+  hydric: 'Hydric Status',
+  nutritional: 'Nutritional Status',
+};
+
 function healthScoreColor(score: number): string {
   if (score >= 70) return 'text-green-600 dark:text-green-400';
   if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
@@ -167,6 +185,13 @@ function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+function toSeverityLevel(value: string): SeverityLevel {
+  if (value === 'high' || value === 'medium' || value === 'low' || value === 'critical') {
+    return value;
+  }
+  return 'low';
 }
 
 const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
@@ -225,6 +250,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output })
   const health = output.step8.health_score;
   const confidence = output.confidence;
   const yieldPotential = output.step6.yield_potential;
+  const alternance = output.step6.alternance;
   const zones = output.step7.zone_summary;
 
   return (
@@ -248,7 +274,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output })
           <div className="mt-4 space-y-2">
             {Object.entries(health.components).map(([key, value]) => (
               <div key={key} className="flex items-center space-x-3">
-                <span className="text-xs text-gray-500 dark:text-gray-400 w-24 capitalize">{key}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 w-24">{HEALTH_COMPONENT_LABELS[key] ?? key}</span>
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                   <div
                     className={`h-1.5 rounded-full ${healthBarColor(value)}`}
@@ -300,11 +326,17 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output }> = ({ output })
                 Historical avg: {yieldPotential.historical_average} t/ha
               </div>
             )}
+            {alternance?.detected && (
+              <div className="mt-2 inline-flex items-center rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                Alternance detected - {alternance.current_year_type === 'on' ? 'ON' : 'OFF'} year (confidence:{' '}
+                {(alternance.confidence * 100).toFixed(0)}%)
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {zones.length > 0 && (
+      {zones.length > 1 && (
         <div>
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Zone Distribution</div>
           <div className="flex items-center space-x-2">
@@ -517,11 +549,33 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output }> = ({ output })
             percentiles={ndrePercentiles}
           />
         )}
-        {output.step7.zone_summary.length > 0 && (
+        {output.step7.zone_summary.length > 1 ? (
           <ZonePieChart zones={output.step7.zone_summary} />
+        ) : (
+          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Spatial Homogeneity</h4>
+            <div className="flex flex-col items-center justify-center h-[188px] text-center">
+              <Target className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Zone analysis requires per-pixel satellite rasters.
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Coming soon — parcel-level summary is used for now.
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
+      {output.metadata.data_quality_flags.includes('evergreen_phenology_approximate') && (
+        <div className="flex items-start space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30">
+          <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            This crop is evergreen — phenological stages are approximate. Evergreen trees show subtle seasonal variation
+            that is difficult to detect from satellite imagery alone.
+          </p>
+        </div>
+      )}
       <PhenologyTimeline dates={output.step4.mean_dates as unknown as Record<string, string>} />
 
       {output.step2.monthly_aggregates.length > 0 && (
@@ -634,6 +688,48 @@ const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: Extreme
   );
 };
 
+const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ recommendations }) => {
+  if (recommendations.length === 0) {
+    return (
+      <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+        <span className="text-sm text-green-700 dark:text-green-300">No immediate actions recommended.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {recommendations.map((recommendation, index) => {
+        const severity = toSeverityLevel(recommendation.severity);
+        const sev = SEVERITY_COLORS[severity];
+
+        return (
+          <div
+            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${index}`}
+            className={`p-4 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
+          >
+            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
+                {recommendation.type.replace(/_/g, ' ')}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
+                {severity}
+              </span>
+              {recommendation.component && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                  {recommendation.component.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-800 dark:text-gray-200">{recommendation.message}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceComponent> }> = ({ components }) => {
   return (
     <div className="space-y-2">
@@ -704,13 +800,13 @@ const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ out
       {flags.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
-            Data Quality Flags
+            Data Quality Notes
           </h4>
           <div className="space-y-1">
             {flags.map((flag) => (
               <div key={flag} className="flex items-center space-x-2 text-sm">
                 <Info className="w-4 h-4 text-yellow-500 shrink-0" />
-                <span className="text-gray-700 dark:text-gray-300">{flag}</span>
+                <span className="text-gray-700 dark:text-gray-300">{DATA_QUALITY_FLAG_LABELS[flag] ?? flag}</span>
               </div>
             ))}
           </div>
@@ -734,9 +830,111 @@ const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ out
   );
 };
 
+const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> = ({ records }) => {
+  if (records.length === 0) {
+    return (
+      <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <Info className="w-5 h-5 text-gray-400" />
+        <span className="text-sm text-gray-500 dark:text-gray-400">No previous calibration runs.</span>
+      </div>
+    );
+  }
+
+  const statusStyles: Record<string, { bg: string; text: string }> = {
+    completed: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
+    failed: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
+    in_progress: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
+    pending: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
+  };
+
+  return (
+    <div className="space-y-2">
+      {records.map((record, index) => {
+        const style = statusStyles[record.status] ?? statusStyles.pending;
+        const isLatest = index === 0;
+
+        return (
+          <div
+            key={record.id}
+            className={`flex items-center justify-between p-3 rounded-lg border ${
+              isLatest
+                ? 'border-green-200 dark:border-green-800/40 bg-green-50/50 dark:bg-green-900/10'
+                : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'
+            }`}
+          >
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="flex flex-col">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {formatDate(record.created_at)}
+                  </span>
+                  {isLatest && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+                      Current
+                    </span>
+                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
+                    {record.status}
+                  </span>
+                </div>
+                {record.maturity_phase && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {MATURITY_LABELS[record.maturity_phase as CalibrationMaturityPhase] ?? record.maturity_phase}
+                  </span>
+                )}
+                {record.status === 'failed' && record.error_message && (
+                  <span className="text-xs text-red-500 dark:text-red-400 mt-0.5 truncate max-w-xs">
+                    {record.error_message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-4 shrink-0">
+              {record.health_score != null && (
+                <div className="text-right">
+                  <div className="text-xs text-gray-400 dark:text-gray-500">Health</div>
+                  <div className={`text-sm font-bold ${healthScoreColor(record.health_score)}`}>
+                    {record.health_score}
+                  </div>
+                </div>
+              )}
+              {record.confidence_score != null && (
+                <div className="text-right">
+                  <div className="text-xs text-gray-400 dark:text-gray-500">Confidence</div>
+                  <div className="text-sm font-bold text-gray-900 dark:text-white">
+                    {(record.confidence_score * 100).toFixed(0)}%
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+  const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
+
   return (
     <div className="space-y-4">
+      {hasInsufficientData && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div>
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Limited Satellite Data</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                This calibration was computed with fewer than 6 satellite observations. Results may be unreliable —
+                consider re-calibrating once more imagery is available.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CollapsibleSection
         title="Executive Summary"
         icon={<Target className="w-5 h-5 text-green-600 dark:text-green-400" />}
@@ -759,6 +957,19 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output }> = ({ output
         defaultOpen={false}
       >
         <AnomalyList anomalies={output.step5.anomalies} extremeEvents={output.step2.extreme_events} />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Recommendations"
+        icon={<Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />}
+        badge={(
+          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+            {(output.recommendations ?? []).length}
+          </span>
+        )}
+        defaultOpen={false}
+      >
+        <RecommendationsList recommendations={output.recommendations ?? []} />
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -1069,6 +1280,7 @@ const AICalibrationPage = () => {
 
   const { data: phase } = useCalibrationPhase(parcelId);
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId, phase);
+  const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
 
   const v2Output = reportData?.report?.output ?? null;
@@ -1160,6 +1372,21 @@ const AICalibrationPage = () => {
 
       {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} />}
 
+      {historyRecords && historyRecords.length > 1 && !isCalibrating && (
+        <CollapsibleSection
+          title="Calibration History"
+          icon={<Calendar className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+          badge={(
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">
+              {historyRecords.length}
+            </span>
+          )}
+          defaultOpen={false}
+        >
+          <CalibrationHistoryList records={historyRecords} />
+        </CollapsibleSection>
+      )}
+
       {phase === 'awaiting_validation' && hasV2Report && v2Output && reportData?.calibration?.id && (
         <ValidationPanel
           calibrationId={reportData.calibration.id}
@@ -1184,12 +1411,15 @@ const AICalibrationPage = () => {
             <div>
               <h3 className="text-lg font-semibold text-red-900 dark:text-red-100">Calibration Failed</h3>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                The calibration process encountered an error. Please try again.
+                The calibration process encountered an error.
+                {calibration?.error_message && (
+                  <> Reason: <span className="font-medium">{calibration.error_message}</span></>
+                )}
               </p>
               <button
                 type="button"
                 onClick={handleStartCalibration}
-                disabled={isStarting}
+                disabled={isStarting || missingPlantingYear}
                 className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 <Play className="w-4 h-4" />

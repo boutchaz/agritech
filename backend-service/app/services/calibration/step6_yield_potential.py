@@ -4,7 +4,13 @@ from datetime import datetime
 import re
 from typing import Any
 
-from .types import MaturityPhase, Step6Output, YieldPotential
+from .types import (
+    AlternanceInfo,
+    MaturityPhase,
+    Step1Output,
+    Step6Output,
+    YieldPotential,
+)
 
 
 def _parse_age_bracket(key: str) -> tuple[int, int] | None:
@@ -67,6 +73,93 @@ def _resolve_bracket(
     return selected_label, selected_range
 
 
+def _round_yearly_means(yearly_means: dict[int, float]) -> dict[int, float]:
+    return {year: round(value, 4) for year, value in yearly_means.items()}
+
+
+def _detect_olive_alternance(
+    *, satellite_data: Step1Output, current_year: int
+) -> AlternanceInfo:
+    ndvi_points = satellite_data.index_time_series.get("NDVI", [])
+
+    yearly_values: dict[int, list[float]] = {}
+    for point in ndvi_points:
+        year_values = yearly_values.setdefault(point.date.year, [])
+        year_values.append(point.value)
+
+    yearly_means: dict[int, float] = {}
+    for year, values in yearly_values.items():
+        if values:
+            yearly_means[year] = sum(values) / len(values)
+
+    if len(yearly_means) < 3:
+        return AlternanceInfo(
+            detected=False,
+            current_year_type=None,
+            confidence=0.0,
+            yearly_means=_round_yearly_means(yearly_means),
+        )
+
+    sorted_years = sorted(yearly_means.keys())
+    significant_directions: list[int] = []
+
+    for index in range(1, len(sorted_years)):
+        previous_year = sorted_years[index - 1]
+        current = sorted_years[index]
+        previous_mean = yearly_means[previous_year]
+        current_mean = yearly_means[current]
+        baseline = max(abs(previous_mean), 1e-6)
+        relative_diff = abs(current_mean - previous_mean) / baseline
+        if relative_diff <= 0.10:
+            continue
+        significant_directions.append(1 if current_mean > previous_mean else -1)
+
+    if len(significant_directions) < 2:
+        return AlternanceInfo(
+            detected=False,
+            current_year_type=None,
+            confidence=0.0,
+            yearly_means=_round_yearly_means(yearly_means),
+        )
+
+    alternating_matches = 0
+    for index in range(1, len(significant_directions)):
+        if significant_directions[index] == -significant_directions[index - 1]:
+            alternating_matches += 1
+
+    total_transitions = len(significant_directions) - 1
+    confidence = (
+        alternating_matches / total_transitions if total_transitions > 0 else 0.0
+    )
+    detected = confidence > 0.0 and alternating_matches == total_transitions
+
+    current_year_type: str | None = None
+    if detected:
+        if current_year in yearly_means and (current_year - 1) in yearly_means:
+            current_year_type = (
+                "on"
+                if yearly_means[current_year] >= yearly_means[current_year - 1]
+                else "off"
+            )
+        elif sorted_years:
+            latest_year = sorted_years[-1]
+            if current_year > latest_year and significant_directions:
+                current_year_type = "off" if significant_directions[-1] > 0 else "on"
+            elif latest_year in yearly_means and (latest_year - 1) in yearly_means:
+                current_year_type = (
+                    "on"
+                    if yearly_means[latest_year] >= yearly_means[latest_year - 1]
+                    else "off"
+                )
+
+    return AlternanceInfo(
+        detected=detected,
+        current_year_type=current_year_type,
+        confidence=round(confidence, 4),
+        yearly_means=_round_yearly_means(yearly_means),
+    )
+
+
 def calculate_yield_potential(
     *,
     planting_year: int | None,
@@ -76,6 +169,7 @@ def calculate_yield_potential(
     harvest_records: list[dict[str, Any]],
     maturity_phase: MaturityPhase | None = None,
     current_year: int | None = None,
+    satellite_data: Step1Output | None = None,
 ) -> Step6Output:
     _ = (crop_type, maturity_phase)
 
@@ -110,6 +204,17 @@ def calculate_yield_potential(
         min_value = min(min_ref, historical_avg)
         max_value = max(max_ref, historical_avg)
 
+    alternance: AlternanceInfo | None = None
+    if crop_type == "olivier" and satellite_data is not None:
+        alternance = _detect_olive_alternance(
+            satellite_data=satellite_data,
+            current_year=year,
+        )
+        if alternance.detected and alternance.current_year_type == "on":
+            max_value = max_value * 1.3
+        elif alternance.detected and alternance.current_year_type == "off":
+            min_value = min_value * 0.7
+
     yield_potential = YieldPotential(
         minimum=round(min_value, 4),
         maximum=round(max_value, 4),
@@ -118,4 +223,4 @@ def calculate_yield_potential(
         historical_average=None if historical_avg is None else round(historical_avg, 4),
     )
 
-    return Step6Output(yield_potential=yield_potential)
+    return Step6Output(yield_potential=yield_potential, alternance=alternance)

@@ -184,7 +184,7 @@ export class NutritionOptionService {
       return 2.5;
     }
     if (cropType === 'palmier_dattier') {
-      return 3.5;
+      return 6.0;
     }
     return 1.5;
   }
@@ -194,7 +194,7 @@ export class NutritionOptionService {
       return 3.0;
     }
     if (cropType === 'palmier_dattier') {
-      return 4.0;
+      return 8.0;
     }
     return 2.0;
   }

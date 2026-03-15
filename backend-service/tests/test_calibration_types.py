@@ -236,6 +236,7 @@ def test_calibration_output_serialization_matches_expected_schema() -> None:
         "step6",
         "step7",
         "step8",
+        "recommendations",
         "confidence",
         "metadata",
     }

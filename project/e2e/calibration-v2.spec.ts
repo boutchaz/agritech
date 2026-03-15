@@ -40,9 +40,11 @@ const baseParcel = {
   organization_id: organizationId,
   name: 'Parcel Alpha',
   description: 'Calibration V2 E2E parcel',
+  crop_type: 'olivier',
   area: 12.5,
   area_unit: 'ha',
   calculated_area: 12.5,
+  planting_year: 2010,
   is_active: true,
   created_at: now,
   updated_at: now,
@@ -152,7 +154,7 @@ const mockCalibrationOutput = {
       total: 72,
       components: {
         vigor: 75,
-        homogeneity: 68,
+        temporal_stability: 68,
         stability: 70,
         hydric: 72,
         nutritional: 65,
@@ -168,6 +170,14 @@ const mockCalibrationOutput = {
       coverage: { score: 21, max_score: 25 },
     },
   },
+  recommendations: [
+    {
+      type: 'nutrition',
+      severity: 'medium',
+      message: 'Nutritional indices suggest potential deficiency. Consider soil and/or leaf tissue analysis to identify specific nutrient gaps.',
+      component: 'nutritional',
+    },
+  ],
   metadata: {
     version: 'v2',
     generated_at: now,
@@ -189,7 +199,10 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-function createCalibrationRecord(status: 'in_progress' | 'completed' = 'completed') {
+function createCalibrationRecord(
+  status: 'in_progress' | 'completed' | 'failed' = 'completed',
+  overrides?: Record<string, unknown>,
+) {
   return {
     id: calibrationId,
     parcel_id: parcelId,
@@ -205,12 +218,50 @@ function createCalibrationRecord(status: 'in_progress' | 'completed' = 'complete
     health_score: 72,
     yield_potential_min: 4.2,
     yield_potential_max: 8.1,
-    maturity_phase: 'adult',
+    maturity_phase: 'pleine_production',
     anomaly_count: 0,
     data_completeness_score: 75,
+    error_message: null,
     started_at: now,
     completed_at: status === 'completed' ? now : null,
+    created_at: now,
+    ...overrides,
   };
+}
+
+function createHistoryRecords() {
+  return [
+    {
+      id: calibrationId,
+      status: 'completed',
+      health_score: 72,
+      confidence_score: 0.63,
+      maturity_phase: 'pleine_production',
+      error_message: null,
+      created_at: now,
+      completed_at: now,
+    },
+    {
+      id: 'cal-e2e-002',
+      status: 'completed',
+      health_score: 65,
+      confidence_score: 0.58,
+      maturity_phase: 'pleine_production',
+      error_message: null,
+      created_at: '2026-02-15T12:00:00.000Z',
+      completed_at: '2026-02-15T12:05:00.000Z',
+    },
+    {
+      id: 'cal-e2e-003',
+      status: 'failed',
+      health_score: null,
+      confidence_score: null,
+      maturity_phase: null,
+      error_message: 'Calibration service unavailable',
+      created_at: '2026-01-20T12:00:00.000Z',
+      completed_at: null,
+    },
+  ];
 }
 
 function createReportResponse(validated: boolean) {
@@ -355,6 +406,15 @@ async function mockCalibrationRoutes(
       return;
     }
 
+    if (pathname === `/api/v1/parcels/${parcelId}/calibration/history` && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(createHistoryRecords()),
+      });
+      return;
+    }
+
     if (pathname === `/api/v1/parcels/${parcelId}/calibration/start-v2` && method === 'POST') {
       await delay(300);
       state.phase = 'awaiting_validation';
@@ -467,6 +527,7 @@ test.describe('Calibration V2 Page', () => {
     await expect(page.getByText('Full Production')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Detailed Analysis' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Detected Anomalies (0)' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Recommendations/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Calibration Improvement' })).toBeVisible();
 
     await expect(page.getByText('Awaiting Validation')).toBeVisible();
@@ -510,5 +571,271 @@ test.describe('Calibration V2 Page', () => {
     await expect(page.getByText('Calibration Active')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Executive Summary' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Re-calibrate' })).toBeVisible();
+  });
+
+  test('should display failed calibration with error message', async ({ authenticatedPage: page }) => {
+    await seedOrganization(page);
+
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const pathname = url.pathname;
+      const method = request.method();
+
+      if (pathname === `/api/v1/parcels/${parcelId}` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...baseParcel, ai_phase: 'disabled' }),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(createCalibrationRecord('failed', {
+            error_message: 'Calibration service unavailable: Connection refused',
+          })),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/report` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(null),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/history` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/ai/diagnostics` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
+
+    await page.goto(`/parcels/${parcelId}/ai/calibration`);
+    await waitForLoadingComplete(page);
+
+    await expect(page.getByText('Calibration Failed')).toBeVisible();
+    await expect(page.getByText('Calibration service unavailable: Connection refused')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Retry Calibration' })).toBeVisible();
+  });
+
+  test('should display calibration history with multiple records', async ({ authenticatedPage: page }) => {
+    await seedOrganization(page);
+    await mockCalibrationRoutes(page, 'active');
+
+    await page.goto(`/parcels/${parcelId}/ai/calibration`);
+    await waitForLoadingComplete(page);
+
+    await expect(page.getByRole('button', { name: /Calibration History/ })).toBeVisible();
+    await page.getByRole('button', { name: /Calibration History/ }).click();
+    await expect(page.getByText('Current')).toBeVisible();
+    await expect(page.getByText('72').first()).toBeVisible();
+  });
+
+  test('should display recommendations section with content', async ({ authenticatedPage: page }) => {
+    await seedOrganization(page);
+    await mockCalibrationRoutes(page, 'active');
+
+    await page.goto(`/parcels/${parcelId}/ai/calibration`);
+    await waitForLoadingComplete(page);
+
+    const recommendationsButton = page.getByRole('button', { name: /Recommendations/ });
+    await expect(recommendationsButton).toBeVisible();
+
+    await recommendationsButton.click();
+
+    await expect(page.getByText('Nutritional indices suggest potential deficiency.')).toBeVisible();
+    await expect(page.getByText('nutrition')).toBeVisible();
+  });
+
+  test('should show data quality warnings when flags are present', async ({ authenticatedPage: page }) => {
+    await seedOrganization(page);
+
+    const outputWithFlags = {
+      ...mockCalibrationOutput,
+      metadata: {
+        ...mockCalibrationOutput.metadata,
+        data_quality_flags: ['insufficient_satellite_data', 'evergreen_phenology_approximate'],
+      },
+    };
+
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const pathname = url.pathname;
+      const method = request.method();
+
+      if (pathname === `/api/v1/parcels/${parcelId}` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...baseParcel, ai_phase: 'active' }),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(createCalibrationRecord('completed')),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/report` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            calibration: createCalibrationRecord('completed'),
+            report: { version: 'v2', output: outputWithFlags, validation: { validated: true, validated_at: now } },
+          }),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/history` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/ai/diagnostics` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
+
+    await page.goto(`/parcels/${parcelId}/ai/calibration`);
+    await waitForLoadingComplete(page);
+
+    await expect(page.getByText('Limited Satellite Data')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Detailed Analysis' }).click();
+    await expect(page.getByText('This crop is evergreen')).toBeVisible();
+  });
+
+  test('should display alternance badge for olivier parcels', async ({ authenticatedPage: page }) => {
+    await seedOrganization(page);
+
+    const outputWithAlternance = {
+      ...mockCalibrationOutput,
+      step6: {
+        ...mockCalibrationOutput.step6,
+        alternance: {
+          detected: true,
+          current_year_type: 'on' as const,
+          confidence: 0.85,
+          yearly_means: { 2023: 0.52, 2024: 0.61, 2025: 0.49 },
+        },
+      },
+    };
+
+    await page.route('**/api/v1/**', async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      const pathname = url.pathname;
+      const method = request.method();
+
+      if (pathname === `/api/v1/parcels/${parcelId}` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...baseParcel, ai_phase: 'active' }),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(createCalibrationRecord('completed')),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/report` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            calibration: createCalibrationRecord('completed'),
+            report: { version: 'v2', output: outputWithAlternance, validation: { validated: true, validated_at: now } },
+          }),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/calibration/history` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      if (pathname === `/api/v1/parcels/${parcelId}/ai/diagnostics` && method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      });
+    });
+
+    await page.goto(`/parcels/${parcelId}/ai/calibration`);
+    await waitForLoadingComplete(page);
+
+    await expect(page.getByText(/Alternance detected/)).toBeVisible();
+    await expect(page.getByText(/ON year/)).toBeVisible();
+    await expect(page.getByText(/85%/)).toBeVisible();
   });
 });

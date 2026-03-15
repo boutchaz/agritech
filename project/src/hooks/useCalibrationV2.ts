@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 import {
   calibrationV2Api,
+  type CalibrationHistoryRecord,
   type CalibrationPhase,
   type CalibrationReportResponse,
   type CalibrationStatusRecord,
@@ -141,6 +142,22 @@ export function useConfirmNutritionOption(parcelId: string) {
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to confirm nutrition option');
     },
+  });
+}
+
+export function useCalibrationHistory(parcelId: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.calibrationV2.history(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<CalibrationHistoryRecord[]> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return calibrationV2Api.getCalibrationHistory(parcelId, currentOrganization.id);
+    },
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

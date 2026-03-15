@@ -507,7 +507,7 @@ export class ParcelsService {
     }
 
     this.calibrationService
-      .startCalibration(parcelId, organizationId, {})
+      .startCalibrationV2(parcelId, organizationId, {})
       .then((calibration) => {
         this.logger.log(
           `Auto-calibration triggered for parcel ${parcelId}: ${calibration.id} (${calibration.status})`,

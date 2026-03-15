@@ -90,6 +90,13 @@ class AnomalyRecord(BaseModel):
     excluded_from_reference: bool = False
 
 
+class Recommendation(BaseModel):
+    type: str
+    severity: Literal["low", "medium", "high"]
+    message: str
+    component: str | None = None
+
+
 class YieldPotential(BaseModel):
     minimum: float = Field(ge=0)
     maximum: float = Field(ge=0)
@@ -102,6 +109,13 @@ class YieldPotential(BaseModel):
         if self.maximum < self.minimum:
             raise ValueError("maximum must be greater than or equal to minimum")
         return self
+
+
+class AlternanceInfo(BaseModel):
+    detected: bool
+    current_year_type: Literal["on", "off"] | None = None
+    confidence: float = Field(ge=0, le=1)
+    yearly_means: dict[int, float] = Field(default_factory=dict)
 
 
 class ZoneSummary(BaseModel):
@@ -120,17 +134,17 @@ class HealthScore(BaseModel):
 
     @model_validator(mode="after")
     def validate_components(self) -> "HealthScore":
-        required = {
-            "vigor",
-            "homogeneity",
-            "stability",
-            "hydric",
-            "nutritional",
-        }
+        required = {"vigor", "stability", "hydric", "nutritional"}
         missing = required.difference(set(self.components.keys()))
         if missing:
             joined_missing = ", ".join(sorted(missing))
             raise ValueError(f"missing health components: {joined_missing}")
+
+        has_temporal_component = (
+            "temporal_stability" in self.components or "homogeneity" in self.components
+        )
+        if not has_temporal_component:
+            raise ValueError("missing health components: temporal_stability")
 
         for key, value in self.components.items():
             if value < 0 or value > 100:
@@ -199,6 +213,7 @@ class Step5Output(BaseModel):
 
 class Step6Output(BaseModel):
     yield_potential: YieldPotential
+    alternance: AlternanceInfo | None = None
 
 
 class Step7Output(BaseModel):
@@ -220,11 +235,11 @@ class CalibrationInput(BaseModel):
     planting_system: str | None = None
     maturity_phase: MaturityPhase | None = None
     nutrition_option: NutritionOption | None = None
-    satellite_series: dict[str, list[IndexTimePoint]]
-    weather_daily: list[WeatherDay]
-    analyses: list[Dict[str, object]]
-    harvest_records: list[Dict[str, object]]
-    reference_data: Dict[str, object]
+    satellite_series: dict[str, list[IndexTimePoint]] = Field(default_factory=dict)
+    weather_daily: list[WeatherDay] = Field(default_factory=list)
+    analyses: list[Dict[str, object]] = Field(default_factory=list)
+    harvest_records: list[Dict[str, object]] = Field(default_factory=list)
+    reference_data: Dict[str, object] = Field(default_factory=dict)
 
 
 class CalibrationMetadata(BaseModel):
@@ -245,5 +260,6 @@ class CalibrationOutput(BaseModel):
     step6: Step6Output
     step7: Step7Output
     step8: Step8Output
+    recommendations: list[Recommendation] = Field(default_factory=list)
     confidence: ConfidenceScore
     metadata: CalibrationMetadata

@@ -89,43 +89,6 @@ def _build_v2_payload() -> dict[str, object]:
     }
 
 
-def _build_v1_payload() -> dict[str, object]:
-    satellite_readings = [
-        {
-            "date": f"2026-01-{index + 1:02d}",
-            "ndvi": 0.55,
-            "ndre": 0.21,
-            "ndmi": 0.17,
-            "gci": 1.25,
-            "evi": 0.32,
-            "savi": 0.40,
-        }
-        for index in range(30)
-    ]
-    weather_readings = [
-        {
-            "date": f"2026-01-{index + 1:02d}",
-            "temp_min": 8,
-            "temp_max": 20,
-            "precip": 1,
-            "et0": 1.8,
-        }
-        for index in range(30)
-    ]
-    return {
-        "parcel_id": "fixture-parcel-001",
-        "crop_type": "olivier",
-        "system": "intensif",
-        "satellite_readings": satellite_readings,
-        "weather_readings": weather_readings,
-        "ndvi_thresholds": {
-            "optimal": [0.4, 0.6],
-            "vigilance": 0.35,
-            "alerte": 0.3,
-        },
-    }
-
-
 def test_run_v2_returns_calibration_output() -> None:
     response = client.post("/api/calibration/v2/run", json=_build_v2_payload())
 
@@ -171,8 +134,6 @@ def test_precompute_gdd_v2_updates_rows() -> None:
     assert response.json() == {"crop_type": "olivier", "updated_rows": 1}
 
 
-def test_v1_run_endpoint_still_works() -> None:
-    response = client.post("/api/calibration/run", json=_build_v1_payload())
-
-    assert response.status_code == 200
-    assert "baseline_ndvi" in response.json()
+def test_v1_run_endpoint_removed() -> None:
+    response = client.post("/api/calibration/run", json={})
+    assert response.status_code == 404

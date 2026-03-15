@@ -29,18 +29,6 @@ import { ConfirmNutritionOptionDto } from './dto/confirm-nutrition-option.dto';
 export class CalibrationController {
   constructor(private readonly calibrationService: CalibrationService) {}
 
-  @Post('start')
-  @ApiOperation({ summary: 'Trigger the calibration pipeline for a parcel' })
-  @ApiResponse({ status: 201, description: 'Calibration completed successfully' })
-  async startCalibration(
-    @Param('parcelId') parcelId: string,
-    @Body() dto: StartCalibrationDto,
-    @Req() req: Request,
-  ) {
-    const organizationId = this.getOrganizationId(req);
-    return this.calibrationService.startCalibration(parcelId, organizationId, dto);
-  }
-
   @Post('start-v2')
   @ApiOperation({ summary: 'Trigger the V2 calibration pipeline for a parcel' })
   @ApiResponse({ status: 201, description: 'V2 calibration started successfully' })
@@ -62,6 +50,17 @@ export class CalibrationController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.getLatestCalibration(parcelId, organizationId);
+  }
+
+  @Get('history')
+  @ApiOperation({ summary: 'Get calibration history (last 5 runs) for a parcel' })
+  @ApiResponse({ status: 200, description: 'Calibration history retrieved successfully' })
+  async getCalibrationHistory(
+    @Param('parcelId') parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCalibrationHistory(parcelId, organizationId);
   }
 
   @Get('report')

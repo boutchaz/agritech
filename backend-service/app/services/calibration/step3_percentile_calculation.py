@@ -16,19 +16,19 @@ DEFAULT_PERIODS: dict[str, set[int]] = {
 }
 
 
-def _as_percentile_set(values: list[float], multiplier: float) -> PercentileSet:
+def _as_percentile_set(values: list[float]) -> PercentileSet:
     arr = np.array(values, dtype=np.float64)
     p10, p25, p50, p75, p90 = np.percentile(arr, [10, 25, 50, 75, 90])
     avg = float(np.mean(arr))
     std = float(np.std(arr))
 
     return PercentileSet(
-        p10=float(p10 * multiplier),
-        p25=float(p25 * multiplier),
-        p50=float(p50 * multiplier),
-        p75=float(p75 * multiplier),
-        p90=float(p90 * multiplier),
-        mean=float(avg * multiplier),
+        p10=float(p10),
+        p25=float(p25),
+        p50=float(p50),
+        p75=float(p75),
+        p90=float(p90),
+        mean=float(avg),
         std=std,
     )
 
@@ -43,10 +43,8 @@ def _collect_period_values(
 def calculate_percentiles(
     satellite_data: Step1Output,
     phenology_periods: dict[str, set[int]] | None = None,
-    age_adjustment: dict[str, float] | None = None,
 ) -> Step3Output:
     periods = phenology_periods or DEFAULT_PERIODS
-    adjustments = age_adjustment or {}
 
     global_percentiles: dict[str, PercentileSet] = {}
     period_percentiles: dict[str, dict[str, PercentileSet]] = defaultdict(dict)
@@ -60,9 +58,8 @@ def calculate_percentiles(
             valid = [(point.date, point.value) for point in points]
 
         values = [value for _, value in valid]
-        multiplier = adjustments.get(index, 1.0)
 
-        global_percentiles[index] = _as_percentile_set(values, multiplier)
+        global_percentiles[index] = _as_percentile_set(values)
 
         first_date = min(point_date for point_date, _ in valid)
         last_date = max(point_date for point_date, _ in valid)
@@ -76,7 +73,6 @@ def calculate_percentiles(
                 if period_values:
                     period_percentiles[period_name][index] = _as_percentile_set(
                         period_values,
-                        multiplier,
                     )
 
     return Step3Output(

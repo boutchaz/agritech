@@ -50,17 +50,6 @@ def test_step3_global_percentiles_for_all_indices() -> None:
     assert ndvi.std >= 0
 
 
-def test_step3_applies_age_adjustment_multiplier() -> None:
-    step1 = _step1_fixture()
-    baseline = calculate_percentiles(step1)
-    adjusted = calculate_percentiles(step1, age_adjustment={"NDVI": 0.9})
-
-    assert (
-        adjusted.global_percentiles["NDVI"].p50
-        == baseline.global_percentiles["NDVI"].p50 * 0.9
-    )
-
-
 def test_step3_builds_period_percentiles_when_history_exceeds_24_months() -> None:
     step1 = _step1_fixture(months=30)
     output = calculate_percentiles(step1)

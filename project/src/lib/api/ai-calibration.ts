@@ -8,6 +8,7 @@ export interface AICalibration {
   status: 'pending' | 'provisioning' | 'in_progress' | 'completed' | 'failed';
   confidence_score: number;
   zone_classification: 'optimal' | 'normal' | 'stressed' | null;
+  error_message: string | null;
   created_at: string;
   updated_at: string;
 }

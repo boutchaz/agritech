@@ -37,6 +37,17 @@ export interface NutritionConfirmationResponse {
   ai_phase: 'active';
 }
 
+export interface CalibrationHistoryRecord {
+  id: string;
+  status: string;
+  health_score: number | null;
+  confidence_score: number | null;
+  maturity_phase: string | null;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 export interface CalibrationReportResponse {
   calibration: CalibrationStatusRecord;
   report: {
@@ -132,5 +143,16 @@ export const calibrationV2Api = {
       return 'unknown';
     }
     return aiPhase as CalibrationPhase;
+  },
+
+  async getCalibrationHistory(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationHistoryRecord[]> {
+    return apiClient.get<CalibrationHistoryRecord[]>(
+      `${BASE_URL}/${parcelId}/calibration/history`,
+      {},
+      organizationId,
+    );
   },
 };
