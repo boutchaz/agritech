@@ -4908,6 +4908,50 @@
       "flood": "الغمر",
       "furrow": "الأخاديد",
       "none": "بدون (بعلي)"
+    },
+    "waterSources": {
+      "well": "بئر",
+      "dam": "سد / حوض",
+      "canal": "سَاقِيَة",
+      "municipal": "شبكة مياه الشرب",
+      "mixed": "مختلط",
+      "other": "أخرى"
+    },
+    "irrigationFrequencies": {
+      "daily": "يومي",
+      "2_3_per_week": "2-3 مرات/أسبوع",
+      "weekly": "مرة/أسبوع",
+      "biweekly": "مرة/15 يوم",
+      "monthly": "مرة/شهر",
+      "other": "أخرى"
+    },
+    "harvestRegularity": {
+      "stable": "مستقر",
+      "marked_alternance": "معاومة واضحة",
+      "very_irregular": "غير منتظم جداً"
+    },
+    "pruningTypes": {
+      "formation": "تقليم تكويني",
+      "production": "تقليم إنتاجي",
+      "rejuvenation": "تقليم تجديدي",
+      "sanitary": "تقليم صحي",
+      "mixed": "مختلط"
+    },
+    "pruningIntensities": {
+      "light": "خفيف (<15%)",
+      "medium": "متوسط (15-25%)",
+      "heavy": "شديد (>25%)"
+    },
+    "fertilizationStatus": {
+      "yes": "نعم",
+      "no": "لا",
+      "partial": "جزئي"
+    },
+    "fertilizationTypes": {
+      "organic": "عضوي",
+      "mineral": "معدني",
+      "both": "مختلط",
+      "unknown": "غير معروف"
     }
   },
   "moduleView": {

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime
 from enum import Enum
 from typing import Literal
-from typing import Dict
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -125,7 +124,7 @@ class ZoneSummary(BaseModel):
 
 class GeoJsonFeatureCollection(BaseModel):
     type: Literal["FeatureCollection"]
-    features: list[Dict[str, object]]
+    features: list[dict[str, object]]
 
 
 class HealthScore(BaseModel):
@@ -158,7 +157,7 @@ class ConfidenceComponent(BaseModel):
 
 
 class ConfidenceScore(BaseModel):
-    total_score: float = Field(ge=0, le=100)
+    total_score: float = Field(ge=0, le=110)
     normalized_score: float = Field(ge=0, le=1)
     components: dict[str, ConfidenceComponent]
 
@@ -234,13 +233,19 @@ class CalibrationInput(BaseModel):
     variety: str | None = None
     planting_year: int | None = None
     planting_system: str | None = None
+    irrigation_frequency: str | None = None
+    volume_per_tree_liters: float | None = None
+    water_source: str | None = None
+    plant_count: int | None = None
+    harvest_regularity: str | None = None
+    cultural_history: dict[str, object] = Field(default_factory=dict)
     maturity_phase: MaturityPhase | None = None
     nutrition_option: NutritionOption | None = None
     satellite_series: dict[str, list[IndexTimePoint]] = Field(default_factory=dict)
     weather_daily: list[WeatherDay] = Field(default_factory=list)
-    analyses: list[Dict[str, object]] = Field(default_factory=list)
-    harvest_records: list[Dict[str, object]] = Field(default_factory=list)
-    reference_data: Dict[str, object] = Field(default_factory=dict)
+    analyses: list[dict[str, object]] = Field(default_factory=list)
+    harvest_records: list[dict[str, object]] = Field(default_factory=list)
+    reference_data: dict[str, object] = Field(default_factory=dict)
 
 
 class CalibrationMetadata(BaseModel):

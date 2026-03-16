@@ -1,21 +1,26 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { BadRequestException, Injectable } from "@nestjs/common";
+import { DatabaseService } from "../database/database.service";
 
 export type AiPhase =
-  | 'disabled'
-  | 'calibrating'
-  | 'awaiting_validation'
-  | 'awaiting_nutrition_option'
-  | 'active'
-  | 'paused';
+  | "disabled"
+  | "calibrating"
+  | "awaiting_validation"
+  | "awaiting_nutrition_option"
+  | "active"
+  | "paused";
 
 const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
-  disabled: ['calibrating'],
-  calibrating: ['awaiting_validation', 'disabled'],
-  awaiting_validation: ['awaiting_nutrition_option', 'calibrating', 'disabled'],
-  awaiting_nutrition_option: ['active', 'calibrating', 'disabled'],
-  active: ['awaiting_nutrition_option', 'calibrating', 'disabled'],
-  paused: ['disabled'],
+  disabled: ["calibrating"],
+  calibrating: ["awaiting_validation", "disabled"],
+  awaiting_validation: [
+    "awaiting_nutrition_option",
+    "active",
+    "calibrating",
+    "disabled",
+  ],
+  awaiting_nutrition_option: ["active", "calibrating", "disabled"],
+  active: ["awaiting_nutrition_option", "calibrating", "disabled"],
+  paused: ["disabled"],
 };
 
 @Injectable()
@@ -28,7 +33,7 @@ export class CalibrationStateMachine {
     toPhase: AiPhase,
     organizationId: string,
   ): Promise<void> {
-    const canResetToDisabled = toPhase === 'disabled';
+    const canResetToDisabled = toPhase === "disabled";
     const allowed = VALID_TRANSITIONS[fromPhase] ?? [];
     if (!canResetToDisabled && !allowed.includes(toPhase)) {
       throw new BadRequestException(
@@ -38,10 +43,10 @@ export class CalibrationStateMachine {
 
     const supabase = this.databaseService.getAdminClient();
     const { error } = await supabase
-      .from('parcels')
+      .from("parcels")
       .update({ ai_phase: toPhase })
-      .eq('id', parcelId)
-      .eq('organization_id', organizationId);
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
 
     if (error) {
       throw new BadRequestException(
@@ -57,7 +62,7 @@ export class CalibrationStateMachine {
     previousBoundary: unknown,
     nextBoundary: unknown,
   ): Promise<boolean> {
-    if (currentPhase === 'disabled') {
+    if (currentPhase === "disabled") {
       return false;
     }
 
@@ -65,11 +70,19 @@ export class CalibrationStateMachine {
       return false;
     }
 
-    await this.transitionPhase(parcelId, currentPhase, 'disabled', organizationId);
+    await this.transitionPhase(
+      parcelId,
+      currentPhase,
+      "disabled",
+      organizationId,
+    );
     return true;
   }
 
-  private boundaryChanged(previousBoundary: unknown, nextBoundary: unknown): boolean {
+  private boundaryChanged(
+    previousBoundary: unknown,
+    nextBoundary: unknown,
+  ): boolean {
     return JSON.stringify(previousBoundary) !== JSON.stringify(nextBoundary);
   }
 }

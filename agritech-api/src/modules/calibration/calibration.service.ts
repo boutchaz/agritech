@@ -57,6 +57,11 @@ interface ParcelContext {
   organizationId: string | null;
   variety: string | null;
   plantingYear: number | null;
+  plantCount: number | null;
+  irrigationType: string | null;
+  waterSource: string | null;
+  irrigationFrequency: string | null;
+  waterQuantityPerSession: number | null;
   aiPhase: ParcelAiPhase;
 }
 
@@ -100,9 +105,13 @@ interface HarvestRow {
   harvest_date: string | null;
   quantity: number | string | null;
   unit: string | null;
+  quality_grade: string | null;
+  crop_type: string | null;
+  actual_yield: number | string | null;
+  estimated_yield: number | string | null;
 }
 
-interface CalibrationV2Response {
+interface CalibrationResponse {
   parcel_id: string;
   maturity_phase: string;
   step3?: {
@@ -175,10 +184,11 @@ export class CalibrationService {
     private readonly satelliteCacheService: SatelliteCacheService,
   ) {}
 
-  async startCalibrationV2(
+  async startCalibration(
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
+    options?: { skipReadinessCheck?: boolean },
   ): Promise<CalibrationRecord> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
 
@@ -196,14 +206,23 @@ export class CalibrationService {
     ];
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `V2 calibration can only start from disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Calibration can only start from disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
-    if (!parcel.plantingYear) {
-      throw new BadRequestException(
-        "Parcel planting_year is required for calibration V2",
+    if (!options?.skipReadinessCheck) {
+      const readiness = await this.checkCalibrationReadiness(
+        parcelId,
+        organizationId,
       );
+      if (!readiness.ready) {
+        const failedChecks = readiness.checks
+          .filter((c) => c.status === "fail")
+          .map((c) => c.message);
+        throw new BadRequestException(
+          `Calibration cannot start: ${failedChecks.join("; ")}`,
+        );
+      }
     }
 
     const supabase = this.databaseService.getAdminClient();
@@ -252,11 +271,11 @@ export class CalibrationService {
       );
 
       throw new BadRequestException(
-        `Failed to create V2 calibration: ${insertError?.message ?? "unknown error"}`,
+        `Failed to create calibration: ${insertError?.message ?? "unknown error"}`,
       );
     }
 
-    this.runCalibrationV2InBackground(
+    this.runCalibrationInBackground(
       calibration.id as string,
       parcelId,
       organizationId,
@@ -264,14 +283,14 @@ export class CalibrationService {
       dto,
     ).catch((error) => {
       this.logger.error(
-        `Background V2 calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
+        `Background calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
       );
     });
 
     return calibration as CalibrationRecord;
   }
 
-  private async runCalibrationV2InBackground(
+  private async runCalibrationInBackground(
     calibrationId: string,
     parcelId: string,
     organizationId: string,
@@ -282,7 +301,7 @@ export class CalibrationService {
 
     try {
       await Promise.race([
-        this.executeCalibrationV2(
+        this.executeCalibration(
           calibrationId,
           parcelId,
           organizationId,
@@ -292,7 +311,7 @@ export class CalibrationService {
         new Promise<never>((_, reject) => {
           setTimeout(
             () => {
-              reject(new Error("V2 calibration timed out after 10 minutes"));
+              reject(new Error("Calibration timed out after 10 minutes"));
             },
             10 * 60 * 1000,
           );
@@ -300,7 +319,7 @@ export class CalibrationService {
       ]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown error";
-      this.logger.error(`V2 calibration ${calibrationId} failed: ${message}`);
+      this.logger.error(`Calibration ${calibrationId} failed: ${message}`);
 
       await supabase
         .from("calibrations")
@@ -319,7 +338,7 @@ export class CalibrationService {
     }
   }
 
-  private async executeCalibrationV2(
+  private async executeCalibration(
     calibrationId: string,
     parcelId: string,
     organizationId: string,
@@ -335,10 +354,10 @@ export class CalibrationService {
       harvestRecords,
       referenceData,
     ] = await Promise.all([
-      this.fetchSatelliteImagesForV2(parcelId, organizationId),
-      this.fetchWeatherRowsForV2(parcel),
-      this.fetchAnalysesForV2(parcelId),
-      this.fetchHarvestRecordsForV2(parcelId),
+      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchWeatherRows(parcel),
+      this.fetchAnalyses(parcelId),
+      this.fetchHarvestRecords(parcelId),
       this.fetchCropReferenceData(parcel.cropType),
     ]);
 
@@ -365,7 +384,7 @@ export class CalibrationService {
         `Auto-sync completed for parcel ${parcelId}: ${syncResult.totalPoints} total points`,
       );
 
-      satelliteImages = await this.fetchSatelliteImagesForV2(
+      satelliteImages = await this.fetchSatelliteImages(
         parcelId,
         organizationId,
       );
@@ -451,12 +470,37 @@ export class CalibrationService {
       variety: parcel.variety,
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
+      plant_count: parcel.plantCount,
+      irrigation_frequency:
+        dto.irrigation_frequency ?? parcel.irrigationFrequency,
+      volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
+      water_source: dto.water_source ?? parcel.waterSource,
+      harvest_regularity: dto.harvest_regularity ?? null,
+      cultural_history: {
+        pruning_type: dto.pruning_type ?? null,
+        last_pruning_date: dto.last_pruning_date ?? null,
+        pruning_intensity: dto.pruning_intensity ?? null,
+        past_fertilization: dto.past_fertilization ?? null,
+        fertilization_type: dto.fertilization_type ?? null,
+        biostimulants_used: dto.biostimulants_used ?? null,
+        stress_events: dto.stress_events ?? [],
+        observations: dto.observations ?? null,
+        water_source_changed: dto.water_source_changed ?? null,
+        water_source_change_date: dto.water_source_change_date ?? null,
+        previous_water_source: dto.previous_water_source ?? null,
+        irrigation_regime_changed: dto.irrigation_regime_changed ?? null,
+        irrigation_change_date: dto.irrigation_change_date ?? null,
+        previous_irrigation_frequency:
+          dto.previous_irrigation_frequency ?? null,
+        previous_volume_per_tree_liters:
+          dto.previous_volume_per_tree_liters ?? null,
+      },
       analyses,
       harvest_records: harvestRecords,
       reference_data: referenceData,
     };
 
-    const v2Output = await this.postCalibrationApi<CalibrationV2Response>(
+    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
       "/api/calibration/v2/run",
       {
         calibration_input: calibrationInput,
@@ -524,7 +568,7 @@ export class CalibrationService {
 
     if (updateCalibrationError) {
       throw new Error(
-        `Failed to update V2 calibration: ${updateCalibrationError.message}`,
+        `Failed to update calibration: ${updateCalibrationError.message}`,
       );
     }
 
@@ -579,7 +623,7 @@ export class CalibrationService {
     calibrationId: string,
     parcelId: string,
     organizationId: string,
-    v2Output: CalibrationV2Response,
+    v2Output: CalibrationResponse,
   ): Promise<Record<string, unknown> | null> {
     try {
       this.logger.log(
@@ -708,6 +752,181 @@ export class CalibrationService {
     };
   }
 
+  async checkCalibrationReadiness(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{
+    ready: boolean;
+    confidence_preview: number;
+    checks: Array<{
+      check: string;
+      status: "pass" | "fail" | "warning";
+      message: string;
+    }>;
+    improvements: string[];
+  }> {
+    const checks: Array<{
+      check: string;
+      status: "pass" | "fail" | "warning";
+      message: string;
+    }> = [];
+    const improvements: string[] = [];
+
+    const parcel = await this.getParcelContext(parcelId, organizationId);
+
+    checks.push(
+      parcel.cropType
+        ? { check: "crop_type", status: "pass", message: "Culture renseignée" }
+        : {
+            check: "crop_type",
+            status: "fail",
+            message: "Culture obligatoire",
+          },
+    );
+
+    checks.push(
+      parcel.plantingYear
+        ? {
+            check: "planting_year",
+            status: "pass",
+            message: "Année de plantation renseignée",
+          }
+        : {
+            check: "planting_year",
+            status: "fail",
+            message: "Année de plantation obligatoire",
+          },
+    );
+
+    checks.push(
+      parcel.variety
+        ? { check: "variety", status: "pass", message: "Variété renseignée" }
+        : {
+            check: "variety",
+            status: "warning",
+            message: "Variété recommandée pour améliorer la précision",
+          },
+    );
+
+    const hasIrrigation = parcel.irrigationType && parcel.irrigationFrequency;
+    checks.push(
+      hasIrrigation
+        ? {
+            check: "irrigation",
+            status: "pass",
+            message: "Données d'irrigation renseignées",
+          }
+        : {
+            check: "irrigation",
+            status: "fail",
+            message: "Type et fréquence d'irrigation obligatoires",
+          },
+    );
+
+    if (!parcel.waterSource) {
+      improvements.push(
+        "Ajouter la source d'eau pour contextualiser l'historique satellite",
+      );
+    }
+
+    const satelliteImages = await this.fetchSatelliteImages(
+      parcelId,
+      organizationId,
+    );
+    const hasMinSatellite = satelliteImages.length >= 10;
+    checks.push(
+      hasMinSatellite
+        ? {
+            check: "satellite_data",
+            status: "pass",
+            message: `${satelliteImages.length} images satellite disponibles`,
+          }
+        : {
+            check: "satellite_data",
+            status: satelliteImages.length >= 1 ? "warning" : "fail",
+            message: `${satelliteImages.length}/10 images satellite (minimum 10 recommandées)`,
+          },
+    );
+
+    const analyses = await this.fetchAnalyses(parcelId);
+    const hasSoil = analyses.some((a) => a.analysis_type === "soil");
+    const hasWater = analyses.some((a) => a.analysis_type === "water");
+    const hasFoliar = analyses.some((a) => a.analysis_type === "plant");
+
+    checks.push(
+      hasSoil
+        ? {
+            check: "soil_analysis",
+            status: "pass",
+            message: "Analyse de sol disponible",
+          }
+        : {
+            check: "soil_analysis",
+            status: "warning",
+            message: "Analyse de sol recommandée (confiance -20 pts)",
+          },
+    );
+
+    if (!hasSoil) improvements.push("Ajouter une analyse de sol (+20 pts)");
+    if (!hasWater) improvements.push("Ajouter une analyse d'eau (+15 pts)");
+    if (!hasFoliar) improvements.push("Ajouter une analyse foliaire (+10 pts)");
+
+    const harvestRecords = await this.fetchHarvestRecords(parcelId);
+    checks.push(
+      harvestRecords.length >= 3
+        ? {
+            check: "harvest_history",
+            status: "pass",
+            message: `${harvestRecords.length} années de récolte`,
+          }
+        : {
+            check: "harvest_history",
+            status: "warning",
+            message: `${harvestRecords.length}/3 années de récolte (3+ recommandées)`,
+          },
+    );
+
+    if (harvestRecords.length < 3) {
+      improvements.push(
+        "Ajouter l'historique de récolte (3+ ans) pour améliorer l'estimation du rendement",
+      );
+    }
+
+    let confidencePreview = 0;
+    confidencePreview +=
+      satelliteImages.length >= 36
+        ? 30
+        : satelliteImages.length >= 24
+          ? 20
+          : satelliteImages.length >= 12
+            ? 10
+            : 5;
+    confidencePreview += hasSoil ? 20 : 0;
+    confidencePreview += hasWater ? 15 : 0;
+    confidencePreview +=
+      harvestRecords.length >= 5
+        ? 20
+        : harvestRecords.length >= 3
+          ? 15
+          : harvestRecords.length >= 1
+            ? 8
+            : 0;
+    confidencePreview += parcel.cropType ? 2 : 0;
+    confidencePreview += parcel.variety ? 2 : 0;
+    confidencePreview += parcel.plantingYear ? 2 : 0;
+    confidencePreview += parcel.system ? 2 : 0;
+    confidencePreview += parcel.boundary.length >= 3 ? 2 : 0;
+
+    const hasCriticalFail = checks.some((c) => c.status === "fail");
+
+    return {
+      ready: !hasCriticalFail,
+      confidence_preview: Math.min(confidencePreview, 100),
+      checks,
+      improvements,
+    };
+  }
+
   async validateCalibration(
     calibrationId: string,
     organizationId: string,
@@ -786,6 +1005,36 @@ export class CalibrationService {
       throw new BadRequestException(
         `Failed to validate calibration: ${updateError?.message ?? "unknown error"}`,
       );
+    }
+
+    const confidenceScore = this.toNumber(updatedCalibration.confidence_score);
+    const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
+
+    if (
+      confidenceScore !== null &&
+      confidenceScore < MINIMUM_CONFIDENCE_FOR_ACTIVE
+    ) {
+      this.logger.warn(
+        `Calibration ${calibrationId} confidence ${confidenceScore} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
+      );
+
+      await this.stateMachine.transitionPhase(
+        existingCalibration.parcel_id,
+        "awaiting_validation",
+        "active",
+        organizationId,
+      );
+
+      await supabase
+        .from("parcels")
+        .update({ ai_observation_only: true })
+        .eq("id", existingCalibration.parcel_id);
+
+      return {
+        ...(updatedCalibration as CalibrationRecord),
+        observation_only: true,
+        observation_reason: `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`,
+      } as CalibrationRecord;
     }
 
     await this.stateMachine.transitionPhase(
@@ -953,7 +1202,7 @@ export class CalibrationService {
     const { data: parcel, error } = await supabase
       .from("parcels")
       .select(
-        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, farms(organization_id)",
+        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, farms(organization_id)",
       )
       .eq("id", parcelId)
       .single();
@@ -991,6 +1240,18 @@ export class CalibrationService {
       variety: typeof parcel.variety === "string" ? parcel.variety : null,
       plantingYear:
         typeof parcel.planting_year === "number" ? parcel.planting_year : null,
+      plantCount: this.toNumber(parcel.plant_count),
+      irrigationType:
+        typeof parcel.irrigation_type === "string"
+          ? parcel.irrigation_type
+          : null,
+      waterSource:
+        typeof parcel.water_source === "string" ? parcel.water_source : null,
+      irrigationFrequency:
+        typeof parcel.irrigation_frequency === "string"
+          ? parcel.irrigation_frequency
+          : null,
+      waterQuantityPerSession: this.toNumber(parcel.water_quantity_per_session),
       aiPhase:
         typeof parcel.ai_phase === "string" ? parcel.ai_phase : "disabled",
     };
@@ -1084,7 +1345,7 @@ export class CalibrationService {
     }, []);
   }
 
-  private async fetchSatelliteImagesForV2(
+  private async fetchSatelliteImages(
     parcelId: string,
     organizationId: string,
   ): Promise<Array<Record<string, unknown>>> {
@@ -1137,7 +1398,7 @@ export class CalibrationService {
     );
   }
 
-  private async fetchWeatherRowsForV2(
+  private async fetchWeatherRows(
     parcel: ParcelContext,
   ): Promise<WeatherDailyRow[]> {
     if (!parcel.boundary.length) {
@@ -1173,7 +1434,7 @@ export class CalibrationService {
     return data as WeatherDailyRow[];
   }
 
-  private async fetchAnalysesForV2(
+  private async fetchAnalyses(
     parcelId: string,
   ): Promise<Array<Record<string, unknown>>> {
     const supabase = this.databaseService.getAdminClient();
@@ -1181,7 +1442,7 @@ export class CalibrationService {
       .from("analyses")
       .select("analysis_type, analysis_date, data")
       .eq("parcel_id", parcelId)
-      .in("analysis_type", ["soil", "water"])
+      .in("analysis_type", ["soil", "water", "plant"])
       .order("analysis_date", { ascending: true });
 
     if (error) {
@@ -1197,13 +1458,15 @@ export class CalibrationService {
     }));
   }
 
-  private async fetchHarvestRecordsForV2(
+  private async fetchHarvestRecords(
     parcelId: string,
   ): Promise<Array<Record<string, unknown>>> {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from("harvest_records")
-      .select("harvest_date, quantity, unit")
+      .select(
+        "harvest_date, quantity, unit, quality_grade, crop_type, actual_yield, estimated_yield",
+      )
       .eq("parcel_id", parcelId)
       .order("harvest_date", { ascending: true });
 
@@ -1217,6 +1480,10 @@ export class CalibrationService {
       harvest_date: row.harvest_date,
       quantity: this.toNumber(row.quantity),
       unit: row.unit,
+      quality_grade: row.quality_grade,
+      crop_type: row.crop_type,
+      actual_yield: this.toNumber(row.actual_yield),
+      estimated_yield: this.toNumber(row.estimated_yield),
     }));
   }
 
@@ -1256,7 +1523,7 @@ export class CalibrationService {
   }
 
   private deriveZoneClassification(
-    output: CalibrationV2Response,
+    output: CalibrationResponse,
   ): ZoneClassification {
     const summary = output.step7?.zone_summary;
     if (!Array.isArray(summary) || summary.length === 0) {
@@ -1279,14 +1546,14 @@ export class CalibrationService {
   }
 
   private extractIndexP50(
-    output: CalibrationV2Response,
+    output: CalibrationResponse,
     indexName: string,
   ): number | null {
     const percentile = output.step3?.global_percentiles?.[indexName]?.p50;
     return this.toNumber(percentile);
   }
 
-  private extractPhenologyStage(output: CalibrationV2Response): string | null {
+  private extractPhenologyStage(output: CalibrationResponse): string | null {
     const meanDates = output.step4?.mean_dates;
     if (!meanDates) {
       return null;

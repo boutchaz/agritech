@@ -5154,6 +5154,50 @@
       "flood": "Submersion",
       "furrow": "Rigole",
       "none": "Aucune (Bour)"
+    },
+    "waterSources": {
+      "well": "Puits",
+      "dam": "Barrage",
+      "canal": "Séguia",
+      "municipal": "Réseau AEP",
+      "mixed": "Mixte",
+      "other": "Autre"
+    },
+    "irrigationFrequencies": {
+      "daily": "Quotidien",
+      "2_3_per_week": "2-3 fois/semaine",
+      "weekly": "1 fois/semaine",
+      "biweekly": "1 fois/15 jours",
+      "monthly": "1 fois/mois",
+      "other": "Autre"
+    },
+    "harvestRegularity": {
+      "stable": "Stable",
+      "marked_alternance": "Alternance marquée",
+      "very_irregular": "Très irrégulière"
+    },
+    "pruningTypes": {
+      "formation": "Formation",
+      "production": "Production",
+      "rejuvenation": "Rajeunissement",
+      "sanitary": "Sanitaire",
+      "mixed": "Mixte"
+    },
+    "pruningIntensities": {
+      "light": "Légère (<15%)",
+      "medium": "Moyenne (15-25%)",
+      "heavy": "Sévère (>25%)"
+    },
+    "fertilizationStatus": {
+      "yes": "Oui",
+      "no": "Non",
+      "partial": "Partielle"
+    },
+    "fertilizationTypes": {
+      "organic": "Organique",
+      "mineral": "Minérale",
+      "both": "Mixte",
+      "unknown": "Inconnu"
     }
   },
   "moduleView": {

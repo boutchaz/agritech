@@ -250,6 +250,9 @@ def run_calibration_pipeline(
             variety=calibration_input.variety,
             planting_year=calibration_input.planting_year,
             planting_system=calibration_input.planting_system,
+            irrigation_frequency=calibration_input.irrigation_frequency,
+            volume_per_tree_liters=calibration_input.volume_per_tree_liters,
+            water_source=calibration_input.water_source,
             has_boundary=True,
             coherence_level="none",
         )

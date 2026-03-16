@@ -15,13 +15,16 @@ class ConfidenceInput(BaseModel):
     variety: str | None = None
     planting_year: int | None = None
     planting_system: str | None = None
+    irrigation_frequency: str | None = None
+    volume_per_tree_liters: float | None = None
+    water_source: str | None = None
     has_boundary: bool = False
     coherence_level: str = "none"
     as_of: date = Field(default_factory=date.today)
 
 
 class ConfidenceOutput(BaseModel):
-    total_score: float = Field(ge=0, le=100)
+    total_score: float = Field(ge=0, le=110)
     normalized_score: float = Field(ge=0, le=1)
     components: dict[str, float]
 
@@ -124,6 +127,21 @@ def _profile_score(input_data: ConfidenceInput) -> float:
     return points
 
 
+def _irrigation_score(input_data: ConfidenceInput) -> float:
+    fields = (
+        input_data.irrigation_frequency,
+        input_data.volume_per_tree_liters,
+        input_data.water_source,
+    )
+    present_count = sum(value is not None for value in fields)
+
+    if present_count == 3:
+        return 10
+    if present_count > 0:
+        return 5
+    return 0
+
+
 def _coherence_score(level: str) -> float:
     normalized = level.strip().lower()
     if normalized in {"major", "critical"}:
@@ -139,10 +157,11 @@ def calculate_confidence_score(input_data: ConfidenceInput) -> ConfidenceOutput:
     water = _water_score(input_data)
     yield_history = _yield_score(input_data.yield_years)
     profile = _profile_score(input_data)
+    irrigation = _irrigation_score(input_data)
     coherence = _coherence_score(input_data.coherence_level)
 
-    total = satellite + soil + water + yield_history + profile + coherence
-    normalized = round(total / 100, 4)
+    total = satellite + soil + water + yield_history + profile + irrigation + coherence
+    normalized = round(total / 110, 4)
 
     return ConfidenceOutput(
         total_score=total,
@@ -153,6 +172,7 @@ def calculate_confidence_score(input_data: ConfidenceInput) -> ConfidenceOutput:
             "water": water,
             "yield": yield_history,
             "profile": profile,
+            "irrigation": irrigation,
             "coherence": coherence,
         },
     )

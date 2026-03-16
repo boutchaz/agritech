@@ -1,21 +1,24 @@
-import { apiClient } from '../api-client';
-import type { CalibrationV2Output, NutritionOption } from '@/types/calibration-v2';
+import { apiClient } from "../api-client";
+import type {
+  CalibrationV2Output,
+  NutritionOption,
+} from "@/types/calibration-v2";
 
-const BASE_URL = '/api/v1/parcels';
+const BASE_URL = "/api/v1/parcels";
 
 export type CalibrationPhase =
-  | 'disabled'
-  | 'calibrating'
-  | 'awaiting_validation'
-  | 'awaiting_nutrition_option'
-  | 'active'
-  | 'paused'
-  | 'unknown';
+  | "disabled"
+  | "calibrating"
+  | "awaiting_validation"
+  | "awaiting_nutrition_option"
+  | "active"
+  | "paused"
+  | "unknown";
 
 export interface CalibrationStatusRecord {
   id: string;
   parcel_id: string;
-  status: 'pending' | 'provisioning' | 'in_progress' | 'completed' | 'failed';
+  status: "pending" | "provisioning" | "in_progress" | "completed" | "failed";
   calibration_version?: string | null;
   confidence_score?: number | null;
 }
@@ -34,7 +37,7 @@ export interface NutritionConfirmationResponse {
   calibration_id: string;
   parcel_id: string;
   option: NutritionOption;
-  ai_phase: 'active';
+  ai_phase: "active";
 }
 
 export interface CalibrationHistoryRecord {
@@ -57,13 +60,34 @@ export interface CalibrationReportResponse {
 }
 
 export const calibrationV2Api = {
-  async startCalibrationV2(
+  async startCalibration(
     parcelId: string,
+    dto: Record<string, unknown> = {},
     organizationId?: string,
   ): Promise<CalibrationStatusRecord> {
     return apiClient.post<CalibrationStatusRecord>(
-      `${BASE_URL}/${parcelId}/calibration/start-v2`,
+      `${BASE_URL}/${parcelId}/calibration/start`,
+      dto,
       {},
+      organizationId,
+    );
+  },
+
+  async checkReadiness(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<{
+    ready: boolean;
+    confidence_preview: number;
+    checks: Array<{
+      check: string;
+      status: "pass" | "fail" | "warning";
+      message: string;
+    }>;
+    improvements: string[];
+  }> {
+    return apiClient.get(
+      `${BASE_URL}/${parcelId}/calibration/readiness`,
       {},
       organizationId,
     );
@@ -140,7 +164,7 @@ export const calibrationV2Api = {
     );
     const aiPhase = parcel?.ai_phase;
     if (!aiPhase) {
-      return 'unknown';
+      return "unknown";
     }
     return aiPhase as CalibrationPhase;
   },

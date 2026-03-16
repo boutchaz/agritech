@@ -5336,6 +5336,50 @@
       "flood": "Flood",
       "furrow": "Furrow",
       "none": "None (Rainfed)"
+    },
+    "waterSources": {
+      "well": "Well",
+      "dam": "Dam / Reservoir",
+      "canal": "Canal / Seguia",
+      "municipal": "Municipal network",
+      "mixed": "Mixed",
+      "other": "Other"
+    },
+    "irrigationFrequencies": {
+      "daily": "Daily",
+      "2_3_per_week": "2-3 times/week",
+      "weekly": "Once a week",
+      "biweekly": "Every 2 weeks",
+      "monthly": "Once a month",
+      "other": "Other"
+    },
+    "harvestRegularity": {
+      "stable": "Stable",
+      "marked_alternance": "Marked alternance",
+      "very_irregular": "Very irregular"
+    },
+    "pruningTypes": {
+      "formation": "Formation",
+      "production": "Production",
+      "rejuvenation": "Rejuvenation",
+      "sanitary": "Sanitary",
+      "mixed": "Mixed"
+    },
+    "pruningIntensities": {
+      "light": "Light (<15%)",
+      "medium": "Medium (15-25%)",
+      "heavy": "Heavy (>25%)"
+    },
+    "fertilizationStatus": {
+      "yes": "Yes",
+      "no": "No",
+      "partial": "Partial"
+    },
+    "fertilizationTypes": {
+      "organic": "Organic",
+      "mineral": "Mineral",
+      "both": "Both",
+      "unknown": "Unknown"
     }
   },
   "moduleView": {
