@@ -3,9 +3,6 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy shared libs (required for prompts imports - must be sibling to agritech-api)
-COPY libs/ ./libs/
-
 # Copy API package files
 COPY agritech-api/package.json ./agritech-api/
 
