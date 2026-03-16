@@ -1,13 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Satellite, TrendingUp, Download, BarChart3, Loader2, AlertCircle, RefreshCw, Check, ChevronDown, FileJson, FileSpreadsheet, FileText, Image, Thermometer, X, Maximize2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { useSatelliteIndices } from '../hooks/useSatelliteIndices';
-import { TimeSeriesResponse, IndexCalculationResponse, ExportFormat } from '../services/satelliteIndicesService';
-import TimeSeriesChart from './TimeSeriesChart';
-import MultiIndexChart from './MultiIndexChart';
-import { useTifUpload } from '../hooks/useTifUpload';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Satellite,
+  TrendingUp,
+  Download,
+  BarChart3,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+  Check,
+  ChevronDown,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  Image,
+  Thermometer,
+  X,
+  Maximize2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useSatelliteIndices } from "../hooks/useSatelliteIndices";
+import {
+  TimeSeriesResponse,
+  IndexCalculationResponse,
+  ExportFormat,
+} from "../services/satelliteIndicesService";
+import TimeSeriesChart from "./TimeSeriesChart";
+import MultiIndexChart from "./MultiIndexChart";
+import { useTifUpload } from "../hooks/useTifUpload";
 
-type DataExportFormat = 'JSON' | 'CSV' | 'PDF';
+type DataExportFormat = "JSON" | "CSV" | "PDF";
 type ImageExportFormat = ExportFormat;
 
 interface Parcel {
@@ -30,24 +51,34 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     loading,
     error,
     availableIndices,
-    loadAvailableIndices
+    loadAvailableIndices,
   } = useSatelliteIndices();
 
-  const [selectedIndex, setSelectedIndex] = useState<string>('NDVI');
-  const [selectedIndices, setSelectedIndices] = useState<string[]>(['NDVI']);
-  const [timeRange, setTimeRange] = useState<'30d' | '90d' | '6m' | '1y' | '2y'>('2y');
-  const [indicesData, setIndicesData] = useState<IndexCalculationResponse | null>(null);
-  const [timeSeriesData, setTimeSeriesData] = useState<TimeSeriesResponse | null>(null);
-  const [multiTimeSeriesData, setMultiTimeSeriesData] = useState<Record<string, TimeSeriesResponse>>({});
-  const [activeTab, setActiveTab] = useState<'current' | 'timeseries'>('current');
-  const [chartMode, setChartMode] = useState<'single' | 'multi'>('single');
+  const [selectedIndex, setSelectedIndex] = useState<string>("NDVI");
+  const [selectedIndices, setSelectedIndices] = useState<string[]>(["NDVI"]);
+  const [timeRange, setTimeRange] = useState<
+    "30d" | "90d" | "6m" | "1y" | "2y"
+  >("2y");
+  const [indicesData, setIndicesData] =
+    useState<IndexCalculationResponse | null>(null);
+  const [timeSeriesData, setTimeSeriesData] =
+    useState<TimeSeriesResponse | null>(null);
+  const [multiTimeSeriesData, setMultiTimeSeriesData] = useState<
+    Record<string, TimeSeriesResponse>
+  >({});
+  const [activeTab, setActiveTab] = useState<"current" | "timeseries">(
+    "current",
+  );
+  const [chartMode, setChartMode] = useState<"single" | "multi">("single");
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showTemperatureOverlay, setShowTemperatureOverlay] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-   // TIF Image state
-   const [tifImageUrl, setTifImageUrl] = useState<string | null>(parcel.tif_image_url || null);
+  // TIF Image state
+  const [tifImageUrl, setTifImageUrl] = useState<string | null>(
+    parcel.tif_image_url || null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TIF upload hook
@@ -62,12 +93,15 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
   // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+      if (
+        exportMenuRef.current &&
+        !exportMenuRef.current.contains(event.target as Node)
+      ) {
         setShowExportMenu(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -80,11 +114,11 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     }
   }, [availableIndices, selectedIndex]);
 
-  const timeSeriesIndices = Array.from(new Set([...availableIndices, 'NIRvP']));
+  const timeSeriesIndices = Array.from(new Set([...availableIndices, "NIRvP"]));
 
   useEffect(() => {
     if (
-      activeTab === 'current' &&
+      activeTab === "current" &&
       availableIndices.length > 0 &&
       !availableIndices.includes(selectedIndex)
     ) {
@@ -97,59 +131,63 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     const startDate = new Date();
 
     switch (range) {
-      case '30d':
+      case "30d":
         startDate.setDate(endDate.getDate() - 30);
         break;
-      case '90d':
+      case "90d":
         startDate.setDate(endDate.getDate() - 90);
         break;
-      case '6m':
+      case "6m":
         startDate.setMonth(endDate.getMonth() - 6);
         break;
-      case '1y':
+      case "1y":
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
-      case '2y':
+      case "2y":
         startDate.setFullYear(endDate.getFullYear() - 2);
         break;
     }
 
     return {
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: startDate.toISOString().split("T")[0],
+      end_date: endDate.toISOString().split("T")[0],
     };
   };
 
   const handleCalculateCurrentIndices = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
+      toast.error(
+        "Cette parcelle n'a pas de limites géographiques définies. Veuillez d'abord définir les limites sur la carte.",
+      );
       return;
     }
 
     try {
-      const dateRange = getDateRange('30d'); // Last 30 days for current values
+      const dateRange = getDateRange("30d"); // Last 30 days for current values
       const result = await calculateIndices(
         parcel.boundary,
         parcel.name,
         availableIndices,
-        dateRange
+        dateRange,
       );
       setIndicesData(result);
     } catch (err) {
-      console.error('Error calculating indices:', err);
+      console.error("Error calculating indices:", err);
     }
   };
 
   const handleGetTimeSeries = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error('Cette parcelle n\'a pas de limites géographiques définies. Veuillez d\'abord définir les limites sur la carte.');
+      toast.error(
+        "Cette parcelle n'a pas de limites géographiques définies. Veuillez d'abord définir les limites sur la carte.",
+      );
       return;
     }
 
     try {
       const dateRange = getDateRange(timeRange);
 
-      if (chartMode === 'multi') {
+      if (chartMode === "multi") {
         // Fetch data for multiple indices
         const results: Record<string, TimeSeriesResponse> = {};
 
@@ -159,7 +197,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             parcel.boundary || [],
             parcel.name,
             index,
-            dateRange
+            dateRange,
           );
           return { index, result };
         });
@@ -176,44 +214,44 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           parcel.boundary,
           parcel.name,
           selectedIndex,
-          dateRange
+          dateRange,
         );
         setTimeSeriesData(result);
       }
     } catch (err) {
-      console.error('Error getting time series:', err);
+      console.error("Error getting time series:", err);
     }
   };
 
-  const handleExportMap = async (format: ImageExportFormat = 'GeoTIFF') => {
+  const handleExportMap = async (format: ImageExportFormat = "GeoTIFF") => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error('Cette parcelle n\'a pas de limites géographiques définies.');
+      toast.error("Cette parcelle n'a pas de limites géographiques définies.");
       return;
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split("T")[0];
       const result = await exportIndexMap(
         parcel.boundary,
         parcel.name,
         today,
         selectedIndex,
-        { format }
+        { format },
       );
 
       // Get file extension based on format
       const extensions: Record<string, string> = {
-        'GeoTIFF': 'tif',
-        'PNG': 'png',
-        'JPEG': 'jpg',
-        'JSON': 'json',
-        'CSV': 'csv',
-        'PDF': 'pdf',
+        GeoTIFF: "tif",
+        PNG: "png",
+        JPEG: "jpg",
+        JSON: "json",
+        CSV: "csv",
+        PDF: "pdf",
       };
-      const ext = extensions[format] || 'tif';
+      const ext = extensions[format] || "tif";
 
       // Create a temporary link to download the file
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = result.download_url;
       link.download = `${parcel.name}_${selectedIndex}_${today}.${ext}`;
       document.body.appendChild(link);
@@ -221,13 +259,15 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       document.body.removeChild(link);
       setShowExportMenu(false);
     } catch (err) {
-      console.error('Error exporting map:', err);
+      console.error("Error exporting map:", err);
     }
   };
 
   const handleExportData = async (format: DataExportFormat) => {
     if (!timeSeriesData) {
-      toast.warning('Veuillez d\'abord charger les données de la série temporelle.');
+      toast.warning(
+        "Veuillez d'abord charger les données de la série temporelle.",
+      );
       return;
     }
 
@@ -235,52 +275,54 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       await exportTimeSeries(timeSeriesData, format, parcel.name);
       setShowExportMenu(false);
     } catch (err) {
-      console.error('Error exporting data:', err);
+      console.error("Error exporting data:", err);
     }
   };
 
   const getIndexColor = (index: string, value?: number) => {
     if (value !== undefined) {
       switch (index) {
-        case 'NDVI':
-          if (value > 0.6) return 'text-green-600 dark:text-green-400';
-          if (value > 0.3) return 'text-yellow-600 dark:text-yellow-400';
-          return 'text-red-600 dark:text-red-400';
+        case "NDVI":
+          if (value > 0.6) return "text-green-600 dark:text-green-400";
+          if (value > 0.3) return "text-yellow-600 dark:text-yellow-400";
+          return "text-red-600 dark:text-red-400";
         default:
-          return 'text-blue-600 dark:text-blue-400';
+          return "text-blue-600 dark:text-blue-400";
       }
     }
 
     // Return chart colors when value is not provided
     const chartColors: Record<string, string> = {
-      NDVI: '#22c55e',   // green
-      NDRE: '#eab308',   // yellow
-      NDMI: '#3b82f6',   // blue
-      MNDWI: '#06b6d4',  // cyan
-      GCI: '#10b981',    // emerald
-      SAVI: '#f59e0b',   // amber
-      OSAVI: '#8b5cf6',  // violet
-      MSAVI2: '#ec4899', // pink
-      NIRv: '#f97316',    // orange
-      EVI: '#0ea5e9',    // sky
-      NIRvP: '#9333ea',  // violet
-      MSI: '#ef4444',    // red
-      MCARI: '#a855f7',  // purple
-      TCARI: '#14b8a6',  // teal
+      NDVI: "#22c55e", // green
+      NDRE: "#eab308", // yellow
+      NDMI: "#3b82f6", // blue
+      MNDWI: "#06b6d4", // cyan
+      GCI: "#10b981", // emerald
+      SAVI: "#f59e0b", // amber
+      OSAVI: "#8b5cf6", // violet
+      MSAVI2: "#ec4899", // pink
+      NIRv: "#f97316", // orange
+      EVI: "#0ea5e9", // sky
+      NIRvP: "#9333ea", // violet
+      MSI: "#ef4444", // red
+      MCARI: "#a855f7", // purple
+      TCARI: "#14b8a6", // teal
     };
-    return chartColors[index] || '#6366f1'; // indigo as default
+    return chartColors[index] || "#6366f1"; // indigo as default
   };
 
   const toggleIndexSelection = (index: string) => {
-    setSelectedIndices(prev => {
+    setSelectedIndices((prev) => {
       if (prev.includes(index)) {
         // Don't allow deselecting if it's the only one selected
         if (prev.length === 1) return prev;
-        return prev.filter(i => i !== index);
+        return prev.filter((i) => i !== index);
       } else {
         // Maximum 5 indices for performance
         if (prev.length >= 5) {
-          toast.warning('Maximum 5 indices peuvent être affichés simultanément');
+          toast.warning(
+            "Maximum 5 indices peuvent être affichés simultanément",
+          );
           return prev;
         }
         return [...prev, index];
@@ -290,22 +332,22 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
   const getIndexDescription = (index: string) => {
     const descriptions: Record<string, string> = {
-      NDVI: 'Indice de végétation différentiel normalisé - Santé générale de la végétation',
-      NDRE: 'Indice de végétation différentiel normalisé rouge-bord - Stress végétal',
-      NDMI: 'Indice d\'humidité différentiel normalisé - Contenu en eau',
-      GCI: 'Indice de chlorophylle verte - Activité photosynthétique',
-      SAVI: 'Indice de végétation ajusté au sol - Végétation clairsemée',
-      MNDWI: 'Indice d\'eau différentiel normalisé modifié - Détection de l\'eau',
-      OSAVI: 'Indice de végétation ajusté au sol optimisé',
-      MSAVI2: 'Indice de végétation ajusté au sol modifié 2',
-      NIRv: 'Indice NIRv - Réflectance proche infrarouge de la végétation',
-      EVI: 'Indice de végétation amélioré - adapté aux couverts denses',
-      NIRvP: 'Produit de NIRv et PAR - proxy de productivité photosynthétique',
-      MSI: 'Indice de stress hydrique',
-      MCARI: 'Indice de chlorophylle résistant à l\'atmosphère modifié',
-      TCARI: 'Indice de chlorophylle résistant à l\'atmosphère transformé',
+      NDVI: "Indice de végétation différentiel normalisé - Santé générale de la végétation",
+      NDRE: "Indice de végétation différentiel normalisé rouge-bord - Stress végétal",
+      NDMI: "Indice d'humidité différentiel normalisé - Contenu en eau",
+      GCI: "Indice de chlorophylle verte - Activité photosynthétique",
+      SAVI: "Indice de végétation ajusté au sol - Végétation clairsemée",
+      MNDWI: "Indice d'eau différentiel normalisé modifié - Détection de l'eau",
+      OSAVI: "Indice de végétation ajusté au sol optimisé",
+      MSAVI2: "Indice de végétation ajusté au sol modifié 2",
+      NIRv: "Indice NIRv - Réflectance proche infrarouge de la végétation",
+      EVI: "Indice de végétation amélioré - adapté aux couverts denses",
+      NIRvP: "Produit de NIRv et PAR - proxy de productivité photosynthétique",
+      MSI: "Indice de stress hydrique",
+      MCARI: "Indice de chlorophylle résistant à l'atmosphère modifié",
+      TCARI: "Indice de chlorophylle résistant à l'atmosphère transformé",
     };
-    return descriptions[index] || 'Indice de végétation';
+    return descriptions[index] || "Indice de végétation";
   };
 
   if (!parcel.boundary || parcel.boundary.length === 0) {
@@ -323,7 +365,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             Limites géographiques non définies
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Veuillez d'abord définir les limites de cette parcelle sur la carte pour accéder aux données satellites.
+            Veuillez d'abord définir les limites de cette parcelle sur la carte
+            pour accéder aux données satellites.
           </p>
         </div>
       </div>
@@ -345,8 +388,13 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             onChange={(e) => setSelectedIndex(e.target.value)}
             className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           >
-            {(activeTab === 'timeseries' ? timeSeriesIndices : availableIndices).map(index => (
-              <option key={index} value={index}>{index}</option>
+            {(activeTab === "timeseries"
+              ? timeSeriesIndices
+              : availableIndices
+            ).map((index) => (
+              <option key={index} value={index}>
+                {index}
+              </option>
             ))}
           </select>
           <button
@@ -360,7 +408,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             ) : (
               <Image className="h-3 w-3" />
             )}
-            <span>{tifImageUrl ? 'Remplacer TIF' : 'Importer TIF'}</span>
+            <span>{tifImageUrl ? "Remplacer TIF" : "Importer TIF"}</span>
           </button>
           <input
             ref={fileInputRef}
@@ -387,22 +435,22 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
         <button
-          onClick={() => setActiveTab('current')}
+          onClick={() => setActiveTab("current")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'current'
-              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            activeTab === "current"
+              ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
           <BarChart3 className="h-4 w-4 inline mr-2" />
           Valeurs Actuelles
         </button>
         <button
-          onClick={() => setActiveTab('timeseries')}
+          onClick={() => setActiveTab("timeseries")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === 'timeseries'
-              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            activeTab === "timeseries"
+              ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
           }`}
         >
           <TrendingUp className="h-4 w-4 inline mr-2" />
@@ -417,13 +465,17 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             <div className="flex items-center space-x-2">
               <Image className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">Image Drone</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Image orthomosaïque GeoTIFF</p>
+                <h4 className="font-semibold text-gray-900 dark:text-white">
+                  Image Drone
+                </h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Image orthomosaïque GeoTIFF
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => window.open(tifImageUrl, '_blank')}
+                onClick={() => window.open(tifImageUrl, "_blank")}
                 className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 title="Ouvrir en plein écran"
               >
@@ -431,7 +483,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               </button>
               <button
                 onClick={() => {
-                  if (confirm('Êtes-vous sûr de vouloir supprimer cette image ?')) {
+                  if (
+                    confirm("Êtes-vous sûr de vouloir supprimer cette image ?")
+                  ) {
                     removeTif();
                     setTifImageUrl(null);
                   }
@@ -446,14 +500,21 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           </div>
 
           {/* Image Preview */}
-          <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden" style={{ maxHeight: '300px' }}>
+          <div
+            className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+            style={{ maxHeight: "300px" }}
+          >
             <img
               src={tifImageUrl}
               alt="Image drone de la parcelle"
               className="w-full h-auto object-contain cursor-pointer"
-              onClick={() => window.open(tifImageUrl, '_blank')}
+              onClick={() => window.open(tifImageUrl, "_blank")}
               onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12">Image non disponible</text></svg>');
+                e.currentTarget.src =
+                  "data:image/svg+xml," +
+                  encodeURIComponent(
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12">Image non disponible</text></svg>',
+                  );
               }}
             />
           </div>
@@ -479,13 +540,15 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
           <div className="flex items-center">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mr-2" />
-            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
+            <span className="text-sm text-red-600 dark:text-red-400">
+              {error}
+            </span>
           </div>
         </div>
       )}
 
       {/* Current Values Tab */}
-      {activeTab === 'current' && (
+      {activeTab === "current" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -515,7 +578,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                     {indexData.index}
                   </div>
-                  <div className={`text-2xl font-bold ${getIndexColor(indexData.index, indexData.value)}`}>
+                  <div
+                    className={`text-2xl font-bold ${getIndexColor(indexData.index, indexData.value)}`}
+                  >
                     {indexData.value.toFixed(3)}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
@@ -529,7 +594,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
       )}
 
       {/* Time Series Tab */}
-      {activeTab === 'timeseries' && (
+      {activeTab === "timeseries" && (
         <div className="space-y-4">
           {/* Controls Row */}
           <div className="flex flex-wrap gap-4 items-end justify-between">
@@ -541,21 +606,21 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 </label>
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
                   <button
-                    onClick={() => setChartMode('single')}
+                    onClick={() => setChartMode("single")}
                     className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-                      chartMode === 'single'
-                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400'
+                      chartMode === "single"
+                        ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     Indice unique
                   </button>
                   <button
-                    onClick={() => setChartMode('multi')}
+                    onClick={() => setChartMode("multi")}
                     className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-                      chartMode === 'multi'
-                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400'
+                      chartMode === "multi"
+                        ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm"
+                        : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
                     Multi-indices
@@ -582,7 +647,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               </div>
 
               {/* Index Selector for Single Mode */}
-              {chartMode === 'single' && (
+              {chartMode === "single" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Indice
@@ -592,15 +657,17 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     onChange={(e) => setSelectedIndex(e.target.value)}
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    {timeSeriesIndices.map(index => (
-                      <option key={index} value={index}>{index}</option>
+                    {timeSeriesIndices.map((index) => (
+                      <option key={index} value={index}>
+                        {index}
+                      </option>
                     ))}
                   </select>
                 </div>
               )}
 
               {/* Multi-Index Selector Button */}
-              {chartMode === 'multi' && (
+              {chartMode === "multi" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Indices ({selectedIndices.length}/5)
@@ -615,22 +682,26 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               )}
 
               {/* Temperature Overlay Toggle */}
-              {chartMode === 'single' && (
+              {chartMode === "single" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Température
                   </label>
                   <button
-                    onClick={() => setShowTemperatureOverlay(!showTemperatureOverlay)}
+                    onClick={() =>
+                      setShowTemperatureOverlay(!showTemperatureOverlay)
+                    }
                     className={`flex items-center gap-2 px-3 py-2 border rounded-md transition-colors ${
                       showTemperatureOverlay
-                        ? 'bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        ? "bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
                     }`}
                     title="Afficher la température au moment du passage satellite (11h)"
                   >
                     <Thermometer className="h-4 w-4" />
-                    <span className="hidden sm:inline">{showTemperatureOverlay ? 'Masquer' : 'Afficher'}</span>
+                    <span className="hidden sm:inline">
+                      {showTemperatureOverlay ? "Masquer" : "Afficher"}
+                    </span>
                   </button>
                 </div>
               )}
@@ -639,7 +710,10 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             {/* Load Button */}
             <button
               onClick={handleGetTimeSeries}
-              disabled={loading || (chartMode === 'multi' && selectedIndices.length === 0)}
+              disabled={
+                loading ||
+                (chartMode === "multi" && selectedIndices.length === 0)
+              }
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -652,7 +726,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           </div>
 
           {/* Multi-Index Selector Panel */}
-          {chartMode === 'multi' && showIndexSelector && (
+          {chartMode === "multi" && showIndexSelector && (
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="flex justify-between items-center mb-3">
                 <h4 className="font-medium text-gray-900 dark:text-white">
@@ -666,7 +740,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 </button>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
-                {timeSeriesIndices.map(index => {
+                {timeSeriesIndices.map((index) => {
                   const isSelected = selectedIndices.includes(index);
                   return (
                     <button
@@ -674,8 +748,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                       onClick={() => toggleIndexSelection(index)}
                       className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
                         isSelected
-                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-2 border-blue-500'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                          ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-2 border-blue-500"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
                       }`}
                     >
                       <span className="flex items-center gap-2">
@@ -694,37 +768,47 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           )}
 
           {/* Single Index Chart */}
-          {chartMode === 'single' && timeSeriesData && (
+          {chartMode === "single" && timeSeriesData && (
             <div className="space-y-4">
               {/* Statistics */}
               {timeSeriesData.statistics && (
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Moyenne</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Moyenne
+                    </div>
                     <div className="text-lg font-semibold text-gray-900 dark:text-white">
                       {timeSeriesData.statistics.mean.toFixed(3)}
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Médiane</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Médiane
+                    </div>
                     <div className="text-lg font-semibold text-gray-900 dark:text-white">
                       {timeSeriesData.statistics.median.toFixed(3)}
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Min</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Min
+                    </div>
                     <div className="text-lg font-semibold text-green-600 dark:text-green-400">
                       {timeSeriesData.statistics.min.toFixed(3)}
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Max</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Max
+                    </div>
                     <div className="text-lg font-semibold text-red-600 dark:text-red-400">
                       {timeSeriesData.statistics.max.toFixed(3)}
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Écart-type</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Écart-type
+                    </div>
                     <div className="text-lg font-semibold text-gray-900 dark:text-white">
                       {timeSeriesData.statistics.std.toFixed(3)}
                     </div>
@@ -757,21 +841,21 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                             Données
                           </div>
                           <button
-                            onClick={() => handleExportData('JSON')}
+                            onClick={() => handleExportData("JSON")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileJson className="h-4 w-4 mr-3 text-blue-500" />
                             JSON
                           </button>
                           <button
-                            onClick={() => handleExportData('CSV')}
+                            onClick={() => handleExportData("CSV")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileSpreadsheet className="h-4 w-4 mr-3 text-green-500" />
                             CSV / Excel
                           </button>
                           <button
-                            onClick={() => handleExportData('PDF')}
+                            onClick={() => handleExportData("PDF")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileText className="h-4 w-4 mr-3 text-red-500" />
@@ -784,21 +868,21 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                             Image Satellite
                           </div>
                           <button
-                            onClick={() => handleExportMap('GeoTIFF')}
+                            onClick={() => handleExportMap("GeoTIFF")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-purple-500" />
                             GeoTIFF (SIG)
                           </button>
                           <button
-                            onClick={() => handleExportMap('PNG')}
+                            onClick={() => handleExportMap("PNG")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-orange-500" />
                             PNG (Image)
                           </button>
                           <button
-                            onClick={() => handleExportMap('JPEG')}
+                            onClick={() => handleExportMap("JPEG")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-amber-500" />
@@ -814,29 +898,35 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   data={timeSeriesData.data}
                   index={selectedIndex}
                   showTemperature={showTemperatureOverlay}
-                  temperatureData={showTemperatureOverlay ? timeSeriesData.data.map(point => {
-                    // Simulated temperature at 11:00 (satellite pass time)
-                    // In production, this would come from a weather API
-                    const date = new Date(point.date);
-                    const month = date.getMonth();
-                    // Approximate temperature based on month (Northern Hemisphere pattern)
-                    // Summer (June-Aug): 25-35°C, Winter (Dec-Feb): 5-15°C
-                    const baseTemp = 15 + 10 * Math.sin((month - 3) * Math.PI / 6);
-                    const dailyVariation = (Math.random() - 0.5) * 8;
-                    const temperature = baseTemp + dailyVariation;
-                    return {
-                      date: point.date,
-                      temperature: Math.round(temperature * 10) / 10,
-                      temp_min: temperature - 5,
-                      temp_max: temperature + 8,
-                    };
-                  }) : []}
+                  temperatureData={
+                    showTemperatureOverlay
+                      ? timeSeriesData.data.map((point) => {
+                          // Simulated temperature at 11:00 (satellite pass time)
+                          // In production, this would come from a weather API
+                          const date = new Date(point.date);
+                          const month = date.getMonth();
+                          // Approximate temperature based on month (Northern Hemisphere pattern)
+                          // Summer (June-Aug): 25-35°C, Winter (Dec-Feb): 5-15°C
+                          const baseTemp =
+                            15 + 10 * Math.sin(((month - 3) * Math.PI) / 6);
+                          const dailyVariation = (Math.random() - 0.5) * 8;
+                          const temperature = baseTemp + dailyVariation;
+                          return {
+                            date: point.date,
+                            temperature: Math.round(temperature * 10) / 10,
+                            temp_min: temperature - 5,
+                            temp_max: temperature + 8,
+                          };
+                        })
+                      : []
+                  }
                 />
 
                 {/* Data table (collapsed by default) */}
                 <details className="mt-4">
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-                    Voir les données détaillées ({timeSeriesData.data.length} points)
+                    Voir les données détaillées ({timeSeriesData.data.length}{" "}
+                    points)
                   </summary>
                   <div className="mt-2 max-h-64 overflow-y-auto">
                     <div className="grid grid-cols-1 gap-2">
@@ -848,7 +938,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                           <span className="text-sm text-gray-600 dark:text-gray-400">
                             {new Date(point.date).toLocaleDateString()}
                           </span>
-                          <span className={`font-medium ${getIndexColor(selectedIndex, point.value)}`}>
+                          <span
+                            className={`font-medium ${getIndexColor(selectedIndex, point.value)}`}
+                          >
                             {point.value.toFixed(3)}
                           </span>
                         </div>
@@ -861,97 +953,162 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
           )}
 
           {/* Multi-Index Chart */}
-          {chartMode === 'multi' && Object.keys(multiTimeSeriesData).length > 0 && (
-            <div className="space-y-4">
-              {/* Combined Statistics */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                  Statistiques comparatives
-                </h4>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                          Indice
-                        </th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                          Moyenne
-                        </th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                          Min
-                        </th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                          Max
-                        </th>
-                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                          Écart-type
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                      {Object.entries(multiTimeSeriesData).map(([index, data]) => (
-                        <tr key={index}>
-                          <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
-                            <span className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: getIndexColor(index) }}
-                              />
+          {chartMode === "multi" &&
+            Object.keys(multiTimeSeriesData).length > 0 && (
+              <div className="space-y-4">
+                {/* Combined Statistics */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                    Statistiques comparatives
+                  </h4>
+                  {/* Mobile-friendly stacked cards */}
+                  <div className="space-y-3 md:hidden">
+                    {Object.entries(multiTimeSeriesData).map(
+                      ([index, data]) => (
+                        <div
+                          key={index}
+                          className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 bg-white dark:bg-gray-800"
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: getIndexColor(index) }}
+                            />
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">
                               {index}
                             </span>
-                          </td>
-                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
-                            {data.statistics?.mean.toFixed(3) || '-'}
-                          </td>
-                          <td className="px-4 py-2 text-center text-sm text-green-600 dark:text-green-400">
-                            {data.statistics?.min.toFixed(3) || '-'}
-                          </td>
-                          <td className="px-4 py-2 text-center text-sm text-red-600 dark:text-red-400">
-                            {data.statistics?.max.toFixed(3) || '-'}
-                          </td>
-                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
-                            {data.statistics?.std.toFixed(3) || '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Moyenne
+                              </span>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {data.statistics?.mean.toFixed(3) || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Min
+                              </span>
+                              <span className="font-medium text-green-600 dark:text-green-400">
+                                {data.statistics?.min.toFixed(3) || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Max
+                              </span>
+                              <span className="font-medium text-red-600 dark:text-red-400">
+                                {data.statistics?.max.toFixed(3) || "-"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Écart-type
+                              </span>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {data.statistics?.std.toFixed(3) || "-"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
 
-              {/* Multi-Index Chart */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white">
-                    Comparaison des indices
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {Object.keys(multiTimeSeriesData).length} indices affichés
-                    </span>
-                    <button
-                      onClick={() => handleExportMap('GeoTIFF')}
-                      disabled={loading}
-                      className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
-                    >
-                      <Download className="h-3 w-3" />
-                      <span>GeoTIFF</span>
-                    </button>
+                  {/* Desktop table */}
+                  <div className="overflow-x-auto hidden md:block">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Indice
+                          </th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Moyenne
+                          </th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Min
+                          </th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Max
+                          </th>
+                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                            Écart-type
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                        {Object.entries(multiTimeSeriesData).map(
+                          ([index, data]) => (
+                            <tr key={index}>
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
+                                <span className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{
+                                      backgroundColor: getIndexColor(index),
+                                    }}
+                                  />
+                                  {index}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
+                                {data.statistics?.mean.toFixed(3) || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-center text-sm text-green-600 dark:text-green-400">
+                                {data.statistics?.min.toFixed(3) || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-center text-sm text-red-600 dark:text-red-400">
+                                {data.statistics?.max.toFixed(3) || "-"}
+                              </td>
+                              <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
+                                {data.statistics?.std.toFixed(3) || "-"}
+                              </td>
+                            </tr>
+                          ),
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                <MultiIndexChart
-                  datasets={Object.entries(multiTimeSeriesData).map(([index, data]) => ({
-                    index,
-                    data: data.data,
-                    color: getIndexColor(index),
-                    visible: true
-                  }))}
-                />
+                {/* Multi-Index Chart */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-medium text-gray-900 dark:text-white">
+                      Comparaison des indices
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {Object.keys(multiTimeSeriesData).length} indices
+                        affichés
+                      </span>
+                      <button
+                        onClick={() => handleExportMap("GeoTIFF")}
+                        disabled={loading}
+                        className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
+                      >
+                        <Download className="h-3 w-3" />
+                        <span>GeoTIFF</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <MultiIndexChart
+                    datasets={Object.entries(multiTimeSeriesData).map(
+                      ([index, data]) => ({
+                        index,
+                        data: data.data,
+                        color: getIndexColor(index),
+                        visible: true,
+                      }),
+                    )}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
     </div>

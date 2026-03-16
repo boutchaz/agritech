@@ -1,44 +1,58 @@
-import { IsString, IsOptional, IsBoolean, IsUUID, IsObject, IsEnum } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+  IsObject,
+  IsEnum,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export enum NotificationType {
-  TASK_ASSIGNED = 'task_assigned',
-  TASK_STATUS_CHANGED = 'task_status_changed',
-  TASK_REMINDER = 'task_reminder',
-  ORDER_STATUS_CHANGED = 'order_status_changed',
-  QUOTE_RECEIVED = 'quote_received',
-  QUOTE_RESPONDED = 'quote_responded',
-  HARVEST_COMPLETED = 'harvest_completed',
-  LOW_INVENTORY = 'low_inventory',
-  PAYMENT_PROCESSED = 'payment_processed',
-  AUDIT_REMINDER = 'audit_reminder',
-  CERTIFICATION_EXPIRY = 'certification_expiry',
-  GENERAL = 'general',
+  TASK_ASSIGNED = "task_assigned",
+  TASK_STATUS_CHANGED = "task_status_changed",
+  TASK_REMINDER = "task_reminder",
+  ORDER_STATUS_CHANGED = "order_status_changed",
+  QUOTE_RECEIVED = "quote_received",
+  QUOTE_RESPONDED = "quote_responded",
+  HARVEST_COMPLETED = "harvest_completed",
+  LOW_INVENTORY = "low_inventory",
+  PAYMENT_PROCESSED = "payment_processed",
+  AUDIT_REMINDER = "audit_reminder",
+  CERTIFICATION_EXPIRY = "certification_expiry",
+  SATELLITE_DOWNLOAD_COMPLETE = "satellite_download_complete",
+  CALIBRATION_COMPLETE = "calibration_complete",
+  CALIBRATION_FAILED = "calibration_failed",
+  CRITICAL_ALERT = "critical_alert",
+  SEASON_REMINDER = "season_reminder",
+  GENERAL = "general",
 }
 
 export class CreateNotificationDto {
-  @ApiProperty({ description: 'User ID to send notification to' })
+  @ApiProperty({ description: "User ID to send notification to" })
   @IsUUID()
   userId: string;
 
-  @ApiProperty({ description: 'Organization ID' })
+  @ApiProperty({ description: "Organization ID" })
   @IsUUID()
   organizationId: string;
 
-  @ApiProperty({ enum: NotificationType, description: 'Type of notification' })
+  @ApiProperty({ enum: NotificationType, description: "Type of notification" })
   @IsEnum(NotificationType)
   type: NotificationType;
 
-  @ApiProperty({ description: 'Notification title' })
+  @ApiProperty({ description: "Notification title" })
   @IsString()
   title: string;
 
-  @ApiPropertyOptional({ description: 'Notification message' })
+  @ApiPropertyOptional({ description: "Notification message" })
   @IsOptional()
   @IsString()
   message?: string;
 
-  @ApiPropertyOptional({ description: 'Additional data (e.g., task_id, order_id)' })
+  @ApiPropertyOptional({
+    description: "Additional data (e.g., task_id, order_id)",
+  })
   @IsOptional()
   @IsObject()
   data?: Record<string, any>;
@@ -77,27 +91,30 @@ export class NotificationResponseDto {
 }
 
 export class MarkAsReadDto {
-  @ApiProperty({ description: 'Notification ID' })
+  @ApiProperty({ description: "Notification ID" })
   @IsUUID()
   notificationId: string;
 }
 
 export class NotificationFiltersDto {
-  @ApiPropertyOptional({ description: 'Filter by read status' })
+  @ApiPropertyOptional({ description: "Filter by read status" })
   @IsOptional()
   @IsBoolean()
   isRead?: boolean;
 
-  @ApiPropertyOptional({ enum: NotificationType, description: 'Filter by type' })
+  @ApiPropertyOptional({
+    enum: NotificationType,
+    description: "Filter by type",
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 
-  @ApiPropertyOptional({ description: 'Limit results', default: 50 })
+  @ApiPropertyOptional({ description: "Limit results", default: 50 })
   @IsOptional()
   limit?: number;
 
-  @ApiPropertyOptional({ description: 'Offset for pagination', default: 0 })
+  @ApiPropertyOptional({ description: "Offset for pagination", default: 0 })
   @IsOptional()
   offset?: number;
 }

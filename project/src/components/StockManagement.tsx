@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload, MoreVertical, Pencil } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { useCurrency } from '../hooks/useCurrency';
-import { FormField } from './ui/FormField';
-import { Input } from './ui/Input';
-import { Select } from './ui/Select';
-import { Textarea } from './ui/Textarea';
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Package,
+  ShoppingCart,
+  AlertTriangle,
+  Search,
+  Trash2,
+  X,
+  Users,
+  Warehouse,
+  Building2,
+  Phone,
+  Mail,
+  Upload,
+  MoreVertical,
+  Pencil,
+} from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { useCurrency } from "../hooks/useCurrency";
+import { FormField } from "./ui/FormField";
+import { Input } from "./ui/Input";
+import { Select } from "./ui/Select";
+import { Textarea } from "./ui/Textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { suppliersApi } from '@/lib/api/suppliers';
-import { warehousesApi } from '@/lib/api/warehouses';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { suppliersApi } from "@/lib/api/suppliers";
+import { warehousesApi } from "@/lib/api/warehouses";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -82,58 +98,58 @@ interface WarehouseData {
 }
 
 const createDefaultPurchaseState = () => ({
-  product_id: '',
-  product_name: '',
-  category: '',
-  brand: '',
-  packaging_type: '',
+  product_id: "",
+  product_name: "",
+  category: "",
+  brand: "",
+  packaging_type: "",
   packaging_size: 0,
   quantity: 0,
-  unit: 'units',
+  unit: "units",
   cost_per_unit: 0,
   total_cost: 0,
-  supplier: '',
-  supplier_id: '',
-  warehouse_id: '',
-  notes: '',
-  batch_number: '',
-  purchase_date: new Date().toISOString().split('T')[0],
+  supplier: "",
+  supplier_id: "",
+  warehouse_id: "",
+  notes: "",
+  batch_number: "",
+  purchase_date: new Date().toISOString().split("T")[0],
   invoice_file: null as File | null,
-  invoice_number: '',
+  invoice_number: "",
 });
 
 const createDefaultSupplierState = () => ({
-  name: '',
-  contact_person: '',
-  email: '',
-  phone: '',
-  address: '',
-  city: '',
-  postal_code: '',
-  country: 'Morocco',
-  website: '',
-  tax_id: '',
-  payment_terms: '',
-  notes: '',
+  name: "",
+  contact_person: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  postal_code: "",
+  country: "Morocco",
+  website: "",
+  tax_id: "",
+  payment_terms: "",
+  notes: "",
 });
 
 const createDefaultWarehouseState = () => ({
-  name: '',
-  description: '',
-  location: '',
-  address: '',
-  city: '',
-  postal_code: '',
-  capacity: '',
-  capacity_unit: 'm3',
+  name: "",
+  description: "",
+  location: "",
+  address: "",
+  city: "",
+  postal_code: "",
+  capacity: "",
+  capacity_unit: "m3",
   temperature_controlled: false,
   humidity_controlled: false,
-  security_level: 'standard',
-  manager_name: '',
-  manager_phone: '',
+  security_level: "standard",
+  manager_name: "",
+  manager_phone: "",
 });
 
-export type InventoryTab = 'stock' | 'suppliers' | 'warehouses';
+export type InventoryTab = "stock" | "suppliers" | "warehouses";
 
 interface StockManagementProps {
   activeTab: InventoryTab;
@@ -150,21 +166,31 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   // showAddPurchase removed - purchases now handled via Stock Entries
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // newPurchase state removed - purchases now handled via Stock Entries
 
   const [newSupplier, setNewSupplier] = useState(createDefaultSupplierState());
 
-  const [newWarehouse, setNewWarehouse] = useState(createDefaultWarehouseState());
-  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
-  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
+  const [newWarehouse, setNewWarehouse] = useState(
+    createDefaultWarehouseState(),
+  );
+  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(
+    null,
+  );
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(
+    null,
+  );
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantityModalOpen, setQuantityModalOpen] = useState(false);
-  const [quantityAdjustment, setQuantityAdjustment] = useState<{ type: 'increase' | 'decrease'; amount: number; reason: string }>({
-    type: 'increase',
+  const [quantityAdjustment, setQuantityAdjustment] = useState<{
+    type: "increase" | "decrease";
+    amount: number;
+    reason: string;
+  }>({
+    type: "increase",
     amount: 0,
-    reason: '',
+    reason: "",
   });
   const [isAdjustingQuantity, setIsAdjustingQuantity] = useState(false);
   const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
@@ -186,7 +212,6 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       fetchSuppliers();
       fetchWarehouses();
     }
-     
   }, [currentOrganization]);
 
   // fetchProducts removed - stock management is now handled by InventoryStock component
@@ -196,11 +221,14 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const data = await suppliersApi.getAll({ is_active: true }, currentOrganization.id);
+      const data = await suppliersApi.getAll(
+        { is_active: true },
+        currentOrganization.id,
+      );
       setSuppliers(data || []);
     } catch (error) {
-      console.error('Error fetching suppliers:', error);
-      setError('Failed to fetch suppliers');
+      console.error("Error fetching suppliers:", error);
+      setError("Failed to fetch suppliers");
     }
   };
 
@@ -208,11 +236,14 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     if (!currentOrganization) return;
 
     try {
-      const data = await warehousesApi.getAll(undefined, currentOrganization.id);
+      const data = await warehousesApi.getAll(
+        undefined,
+        currentOrganization.id,
+      );
       setWarehouses(data || []);
     } catch (error) {
-      console.error('Error fetching warehouses:', error);
-      setError('Failed to fetch warehouses');
+      console.error("Error fetching warehouses:", error);
+      setError("Failed to fetch warehouses");
     }
   };
 
@@ -229,17 +260,17 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingSupplierId(supplier.id);
     setNewSupplier({
       name: supplier.name,
-      contact_person: supplier.contact_person || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      city: supplier.city || '',
-      postal_code: supplier.postal_code || '',
-      country: supplier.country || 'Morocco',
-      website: supplier.website || '',
-      tax_id: supplier.tax_id || '',
-      payment_terms: supplier.payment_terms || '',
-      notes: supplier.notes || '',
+      contact_person: supplier.contact_person || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      city: supplier.city || "",
+      postal_code: supplier.postal_code || "",
+      country: supplier.country || "Morocco",
+      website: supplier.website || "",
+      tax_id: supplier.tax_id || "",
+      payment_terms: supplier.payment_terms || "",
+      notes: supplier.notes || "",
     });
     setError(null);
     setShowAddSupplier(true);
@@ -261,18 +292,18 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingWarehouseId(warehouse.id);
     setNewWarehouse({
       name: warehouse.name,
-      description: warehouse.description || '',
-      location: warehouse.location || '',
-      address: warehouse.address || '',
-      city: warehouse.city || '',
-      postal_code: warehouse.postal_code || '',
-      capacity: warehouse.capacity?.toString() || '',
-      capacity_unit: warehouse.capacity_unit || 'm3',
+      description: warehouse.description || "",
+      location: warehouse.location || "",
+      address: warehouse.address || "",
+      city: warehouse.city || "",
+      postal_code: warehouse.postal_code || "",
+      capacity: warehouse.capacity?.toString() || "",
+      capacity_unit: warehouse.capacity_unit || "m3",
       temperature_controlled: Boolean(warehouse.temperature_controlled),
       humidity_controlled: Boolean(warehouse.humidity_controlled),
-      security_level: warehouse.security_level || 'standard',
-      manager_name: warehouse.manager_name || '',
-      manager_phone: warehouse.manager_phone || '',
+      security_level: warehouse.security_level || "standard",
+      manager_name: warehouse.manager_name || "",
+      manager_phone: warehouse.manager_phone || "",
     });
     setError(null);
     setShowAddWarehouse(true);
@@ -286,7 +317,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
   // openAdjustQuantityModal, handleAdjustQuantity removed - stock adjustments now handled via Stock Entries
 
-  // handleAddPurchase, handleDeleteProduct removed - purchases and stock management 
+  // handleAddPurchase, handleDeleteProduct removed - purchases and stock management
   // are now handled via Stock Entries and Items system (not inventory_items)
 
   const handleSubmitSupplier = async () => {
@@ -295,30 +326,37 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setIsSubmittingSupplier(true);
     try {
       if (editingSupplierId) {
-        const data = await suppliersApi.update(editingSupplierId, newSupplier, currentOrganization.id);
+        const data = await suppliersApi.update(
+          editingSupplierId,
+          newSupplier,
+          currentOrganization.id,
+        );
 
         setSuppliers((prev) =>
-          prev.map((supplier) => (supplier.id === editingSupplierId ? data : supplier)),
+          prev.map((supplier) =>
+            supplier.id === editingSupplierId ? data : supplier,
+          ),
         );
-        toast.success('Supplier updated successfully');
+        toast.success("Supplier updated successfully");
       } else {
         const data = await suppliersApi.create(
           {
             ...newSupplier,
             is_active: true,
           },
-          currentOrganization.id
+          currentOrganization.id,
         );
 
         setSuppliers([...suppliers, data]);
-        toast.success('Supplier created successfully');
+        toast.success("Supplier created successfully");
       }
 
       closeSupplierModal();
       setError(null);
     } catch (error) {
-      console.error('Error saving supplier:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save supplier';
+      console.error("Error saving supplier:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to save supplier";
       setError(message);
       toast.error(message);
     } finally {
@@ -327,21 +365,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir archiver ce fournisseur ?')) return;
+    if (!confirm("Êtes-vous sûr de vouloir archiver ce fournisseur ?")) return;
     if (!currentOrganization) return;
 
     try {
       await suppliersApi.delete(id, currentOrganization.id);
 
-      setSuppliers(suppliers.filter(s => s.id !== id));
+      setSuppliers(suppliers.filter((s) => s.id !== id));
       if (editingSupplierId === id) {
         closeSupplierModal();
       }
       setError(null);
-      toast.success('Supplier archived successfully');
+      toast.success("Supplier archived successfully");
     } catch (error) {
-      console.error('Error deleting supplier:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete supplier';
+      console.error("Error deleting supplier:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to delete supplier";
       setError(message);
       toast.error(message);
     }
@@ -354,29 +393,41 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     try {
       const payload = {
         ...newWarehouse,
-        capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : undefined,
+        capacity: newWarehouse.capacity
+          ? parseFloat(newWarehouse.capacity)
+          : undefined,
         farm_id: currentFarm?.id || undefined,
       };
 
       if (editingWarehouseId) {
-        const data = await warehousesApi.update(editingWarehouseId, payload, currentOrganization.id);
+        const data = await warehousesApi.update(
+          editingWarehouseId,
+          payload,
+          currentOrganization.id,
+        );
 
         setWarehouses((prev) =>
-          prev.map((warehouse) => (warehouse.id === editingWarehouseId ? data : warehouse)),
+          prev.map((warehouse) =>
+            warehouse.id === editingWarehouseId ? data : warehouse,
+          ),
         );
-        toast.success('Warehouse updated successfully');
+        toast.success("Warehouse updated successfully");
       } else {
-        const data = await warehousesApi.create(payload, currentOrganization.id);
+        const data = await warehousesApi.create(
+          payload,
+          currentOrganization.id,
+        );
 
         setWarehouses([...warehouses, data]);
-        toast.success('Warehouse created successfully');
+        toast.success("Warehouse created successfully");
       }
 
       closeWarehouseModal();
       setError(null);
     } catch (error) {
-      console.error('Error saving warehouse:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save warehouse';
+      console.error("Error saving warehouse:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to save warehouse";
       setError(message);
       toast.error(message);
     } finally {
@@ -385,21 +436,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteWarehouse = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir archiver cet entrepôt ?')) return;
+    if (!confirm("Êtes-vous sûr de vouloir archiver cet entrepôt ?")) return;
     if (!currentOrganization) return;
 
     try {
       await warehousesApi.delete(id, currentOrganization.id);
 
-      setWarehouses(warehouses.filter(w => w.id !== id));
+      setWarehouses(warehouses.filter((w) => w.id !== id));
       if (editingWarehouseId === id) {
         closeWarehouseModal();
       }
       setError(null);
-      toast.success('Warehouse archived successfully');
+      toast.success("Warehouse archived successfully");
     } catch (error) {
-      console.error('Error deleting warehouse:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete warehouse';
+      console.error("Error deleting warehouse:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to delete warehouse";
       setError(message);
       toast.error(message);
     }
@@ -426,7 +478,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       {/* Stock tab is handled by InventoryStock component, so no actions needed here */}
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {/* Stock tab actions removed - handled by InventoryStock component */}
-        {activeTab === 'suppliers' && (
+        {activeTab === "suppliers" && (
           <button
             onClick={openCreateSupplierModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
@@ -435,7 +487,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <span>Nouveau Fournisseur</span>
           </button>
         )}
-        {activeTab === 'warehouses' && (
+        {activeTab === "warehouses" && (
           <button
             onClick={openCreateWarehouseModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
@@ -458,7 +510,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       {/* Stock tab content removed - now handled by InventoryStock component using items table */}
 
       {/* Suppliers Tab */}
-      {activeTab === 'suppliers' && (
+      {activeTab === "suppliers" && (
         <>
           {/* Search */}
           <div className="relative">
@@ -474,119 +526,261 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
           {/* Suppliers List */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Fournisseur
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Localisation
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {suppliers
-                  .filter(supplier =>
-                    supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    supplier.city?.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((supplier) => (
-                    <tr key={supplier.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <Building2 className="h-6 w-6 text-gray-400" />
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+              {suppliers
+                .filter(
+                  (supplier) =>
+                    supplier.name
+                      ?.toLowerCase()
+                      .includes(searchTerm.toLowerCase()) ||
+                    supplier.contact_person
+                      ?.toLowerCase()
+                      .includes(searchTerm.toLowerCase()) ||
+                    supplier.city
+                      ?.toLowerCase()
+                      .includes(searchTerm.toLowerCase()),
+                )
+                .map((supplier) => (
+                  <div key={supplier.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {supplier.name}
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {supplier.name}
+                          {supplier.payment_terms && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {supplier.payment_terms}
                             </div>
-                            {supplier.payment_terms && (
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {supplier.payment_terms}
+                          )}
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 min-h-[44px] min-w-[44px]"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openEditSupplierModal(supplier)}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Modifier
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteSupplier(supplier.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Archiver
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {supplier.contact_person && (
+                        <div>
+                          <span className="text-gray-500 dark:text-gray-400 block text-xs">
+                            Contact
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            {supplier.contact_person}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block text-xs">
+                          Localisation
+                        </span>
+                        <span className="text-gray-900 dark:text-white">
+                          {supplier.city && supplier.country
+                            ? `${supplier.city}, ${supplier.country}`
+                            : supplier.country || supplier.city || "-"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
+                      {supplier.email && (
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5" />
+                          <span>{supplier.email}</span>
+                        </div>
+                      )}
+                      {supplier.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5" />
+                          <span>{supplier.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              {suppliers.filter(
+                (supplier) =>
+                  supplier.name
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                  supplier.contact_person
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()) ||
+                  supplier.city
+                    ?.toLowerCase()
+                    .includes(searchTerm.toLowerCase()),
+              ).length === 0 && (
+                <div className="text-center py-12">
+                  <Users className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                    Aucun fournisseur
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Commencez par ajouter un nouveau fournisseur.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Fournisseur
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Localisation
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {suppliers
+                    .filter(
+                      (supplier) =>
+                        supplier.name
+                          ?.toLowerCase()
+                          .includes(searchTerm.toLowerCase()) ||
+                        supplier.contact_person
+                          ?.toLowerCase()
+                          .includes(searchTerm.toLowerCase()) ||
+                        supplier.city
+                          ?.toLowerCase()
+                          .includes(searchTerm.toLowerCase()),
+                    )
+                    .map((supplier) => (
+                      <tr key={supplier.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0">
+                              <Building2 className="h-6 w-6 text-gray-400" />
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {supplier.name}
+                              </div>
+                              {supplier.payment_terms && (
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {supplier.payment_terms}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900 dark:text-white">
+                            {supplier.contact_person}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                            {supplier.email && (
+                              <div className="flex items-center">
+                                <Mail className="h-3 w-3 mr-1" />
+                                {supplier.email}
+                              </div>
+                            )}
+                            {supplier.phone && (
+                              <div className="flex items-center">
+                                <Phone className="h-3 w-3 mr-1" />
+                                {supplier.phone}
                               </div>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {supplier.contact_person}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                          {supplier.email && (
-                            <div className="flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {supplier.email}
-                            </div>
-                          )}
-                          {supplier.phone && (
-                            <div className="flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {supplier.phone}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {supplier.city && supplier.country ? `${supplier.city}, ${supplier.country}` : supplier.country || supplier.city || '-'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteSupplier(supplier.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Archiver
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {supplier.city && supplier.country
+                              ? `${supplier.city}, ${supplier.country}`
+                              : supplier.country || supplier.city || "-"}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => openEditSupplierModal(supplier)}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleDeleteSupplier(supplier.id)
+                                }
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Archiver
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
 
-            {suppliers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun fournisseur</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Commencez par ajouter un nouveau fournisseur.
-                </p>
-              </div>
-            )}
+              {suppliers.length === 0 && (
+                <div className="text-center py-12">
+                  <Users className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                    Aucun fournisseur
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Commencez par ajouter un nouveau fournisseur.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
 
       {/* Warehouses Tab */}
-      {activeTab === 'warehouses' && (
+      {activeTab === "warehouses" && (
         <>
           {/* Search */}
           <div className="relative">
@@ -624,10 +818,17 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {warehouses
-                  .filter(warehouse =>
-                    warehouse.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    warehouse.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    warehouse.manager_name?.toLowerCase().includes(searchTerm.toLowerCase())
+                  .filter(
+                    (warehouse) =>
+                      warehouse.name
+                        ?.toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      warehouse.location
+                        ?.toLowerCase()
+                        .includes(searchTerm.toLowerCase()) ||
+                      warehouse.manager_name
+                        ?.toLowerCase()
+                        .includes(searchTerm.toLowerCase()),
                   )
                   .map((warehouse) => (
                     <tr key={warehouse.id}>
@@ -641,19 +842,21 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               {warehouse.name}
                             </div>
                             <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {warehouse.location || warehouse.city || '-'}
+                              {warehouse.location || warehouse.city || "-"}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.capacity ? `${warehouse.capacity} ${warehouse.capacity_unit}` : '-'}
+                          {warehouse.capacity
+                            ? `${warehouse.capacity} ${warehouse.capacity_unit}`
+                            : "-"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.manager_name || '-'}
+                          {warehouse.manager_name || "-"}
                         </div>
                         {warehouse.manager_phone && (
                           <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
@@ -690,13 +893,17 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                            <DropdownMenuItem
+                              onClick={() => openEditWarehouseModal(warehouse)}
+                            >
                               <Pencil className="mr-2 h-4 w-4" />
                               Modifier
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleDeleteWarehouse(warehouse.id)}
+                              onClick={() =>
+                                handleDeleteWarehouse(warehouse.id)
+                              }
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -713,7 +920,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             {warehouses.length === 0 && (
               <div className="text-center py-12">
                 <Warehouse className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun entrepôt</h3>
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                  Aucun entrepôt
+                </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   Commencez par ajouter un nouvel entrepôt.
                 </p>
@@ -950,17 +1159,33 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <div className="mb-6">
               <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={() => setNewPurchase({ ...newPurchase, product_id: '', product_name: '' })}
+                  onClick={() =>
+                    setNewPurchase({
+                      ...newPurchase,
+                      product_id: "",
+                      product_name: "",
+                    })
+                  }
                   className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    !newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    !newPurchase.product_id
+                      ? "border-green-500 text-green-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   Nouveau Produit
                 </button>
                 <button
-                  onClick={() => setNewPurchase({ ...newPurchase, product_name: '', product_id: products.length > 0 ? products[0].id : '' })}
+                  onClick={() =>
+                    setNewPurchase({
+                      ...newPurchase,
+                      product_name: "",
+                      product_id: products.length > 0 ? products[0].id : "",
+                    })
+                  }
                   className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                    newPurchase.product_id
+                      ? "border-green-500 text-green-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                   disabled={products.length === 0}
                 >
@@ -973,30 +1198,35 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               {/* Product Selection or Creation */}
               {newPurchase.product_id ? (
                 <div>
-                  <FormField label="Sélectionner un produit existant *" htmlFor="purchase_product" required>
+                  <FormField
+                    label="Sélectionner un produit existant *"
+                    htmlFor="purchase_product"
+                    required
+                  >
                     <Select
                       id="purchase_product"
                       value={newPurchase.product_id}
                       onChange={(e) => {
                         const value = (e.target as HTMLSelectElement).value;
-                        const product = products.find(p => p.id === value);
+                        const product = products.find((p) => p.id === value);
                         setNewPurchase({
                           ...newPurchase,
                           product_id: value,
                           cost_per_unit: product?.cost_per_unit || 0,
-                          supplier: product?.supplier || '',
-                          unit: product?.unit || 'units',
-                          packaging_type: product?.packaging_type || '',
-                          packaging_size: product?.packaging_size || 0
+                          supplier: product?.supplier || "",
+                          unit: product?.unit || "units",
+                          packaging_type: product?.packaging_type || "",
+                          packaging_size: product?.packaging_size || 0,
                         });
                       }}
                       required
                     >
                       <option value="">Sélectionner un produit</option>
-                      {products.map(product => (
+                      {products.map((product) => (
                         <option key={product.id} value={product.id}>
                           {product.item_name}
-                          {product.packaging_type && ` - ${product.packaging_type} ${product.packaging_size}${product.unit}`}
+                          {product.packaging_type &&
+                            ` - ${product.packaging_type} ${product.packaging_size}${product.unit}`}
                           ({product.quantity} {product.unit} en stock)
                         </option>
                       ))}
@@ -1008,12 +1238,21 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   {/* New Product Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2">
-                      <FormField label="Nom du produit *" htmlFor="product_name" required>
+                      <FormField
+                        label="Nom du produit *"
+                        htmlFor="product_name"
+                        required
+                      >
                         <Input
                           id="product_name"
                           type="text"
                           value={newPurchase.product_name}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, product_name: e.target.value })}
+                          onChange={(e) =>
+                            setNewPurchase({
+                              ...newPurchase,
+                              product_name: e.target.value,
+                            })
+                          }
                           placeholder="Ex: Engrais NPK 15-15-15"
                           required
                         />
@@ -1021,11 +1260,20 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     </div>
 
                     <div>
-                      <FormField label="Catégorie *" htmlFor="purchase_category" required>
+                      <FormField
+                        label="Catégorie *"
+                        htmlFor="purchase_category"
+                        required
+                      >
                         <Select
                           id="purchase_category"
                           value={newPurchase.category}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, category: (e.target as HTMLSelectElement).value })}
+                          onChange={(e) =>
+                            setNewPurchase({
+                              ...newPurchase,
+                              category: (e.target as HTMLSelectElement).value,
+                            })
+                          }
                           required
                         >
                           <option value="">Sélectionner...</option>
@@ -1048,7 +1296,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                           id="purchase_brand"
                           type="text"
                           value={newPurchase.brand}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, brand: e.target.value })}
+                          onChange={(e) =>
+                            setNewPurchase({
+                              ...newPurchase,
+                              brand: e.target.value,
+                            })
+                          }
                           placeholder="Ex: Bayer, Syngenta, etc."
                         />
                       </FormField>
@@ -1059,14 +1312,26 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
               {/* Packaging Information */}
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Conditionnement</h4>
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">
+                  Conditionnement
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <FormField label="Type de conditionnement *" htmlFor="packaging_type" required>
+                    <FormField
+                      label="Type de conditionnement *"
+                      htmlFor="packaging_type"
+                      required
+                    >
                       <Select
                         id="packaging_type"
                         value={newPurchase.packaging_type}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_type: (e.target as HTMLSelectElement).value })}
+                        onChange={(e) =>
+                          setNewPurchase({
+                            ...newPurchase,
+                            packaging_type: (e.target as HTMLSelectElement)
+                              .value,
+                          })
+                        }
                         required
                       >
                         <option value="">Sélectionner...</option>
@@ -1083,13 +1348,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   </div>
 
                   <div>
-                    <FormField label="Taille *" htmlFor="packaging_size" required>
+                    <FormField
+                      label="Taille *"
+                      htmlFor="packaging_size"
+                      required
+                    >
                       <Input
                         id="packaging_size"
                         type="number"
                         step="0.01"
                         value={newPurchase.packaging_size}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_size: Number(e.target.value) })}
+                        onChange={(e) =>
+                          setNewPurchase({
+                            ...newPurchase,
+                            packaging_size: Number(e.target.value),
+                          })
+                        }
                         placeholder="Ex: 5, 25, 1000"
                         required
                       />
@@ -1101,7 +1375,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       <Select
                         id="purchase_unit"
                         value={newPurchase.unit}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, unit: (e.target as HTMLSelectElement).value })}
+                        onChange={(e) =>
+                          setNewPurchase({
+                            ...newPurchase,
+                            unit: (e.target as HTMLSelectElement).value,
+                          })
+                        }
                         required
                       >
                         <option value="L">Litres (L)</option>
@@ -1121,16 +1400,23 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               {/* Purchase Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <FormField label="Quantité achetée *" htmlFor="purchase_qty" required>
+                  <FormField
+                    label="Quantité achetée *"
+                    htmlFor="purchase_qty"
+                    required
+                  >
                     <Input
                       id="purchase_qty"
                       type="number"
                       value={newPurchase.quantity}
-                      onChange={(e) => setNewPurchase({
-                        ...newPurchase,
-                        quantity: Number(e.target.value),
-                        total_cost: Number(e.target.value) * newPurchase.cost_per_unit
-                      })}
+                      onChange={(e) =>
+                        setNewPurchase({
+                          ...newPurchase,
+                          quantity: Number(e.target.value),
+                          total_cost:
+                            Number(e.target.value) * newPurchase.cost_per_unit,
+                        })
+                      }
                       placeholder="Nombre de conditionnements"
                       required
                     />
@@ -1138,17 +1424,24 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label={`Prix unitaire (${currencySymbol}) *`} htmlFor="purchase_cpu" required>
+                  <FormField
+                    label={`Prix unitaire (${currencySymbol}) *`}
+                    htmlFor="purchase_cpu"
+                    required
+                  >
                     <Input
                       id="purchase_cpu"
                       type="number"
                       step="0.01"
                       value={newPurchase.cost_per_unit}
-                      onChange={(e) => setNewPurchase({
-                        ...newPurchase,
-                        cost_per_unit: Number(e.target.value),
-                        total_cost: newPurchase.quantity * Number(e.target.value)
-                      })}
+                      onChange={(e) =>
+                        setNewPurchase({
+                          ...newPurchase,
+                          cost_per_unit: Number(e.target.value),
+                          total_cost:
+                            newPurchase.quantity * Number(e.target.value),
+                        })
+                      }
                       placeholder="Prix par conditionnement"
                       required
                     />
@@ -1156,12 +1449,21 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Date d'achat *" htmlFor="purchase_date" required>
+                  <FormField
+                    label="Date d'achat *"
+                    htmlFor="purchase_date"
+                    required
+                  >
                     <Input
                       id="purchase_date"
                       type="date"
                       value={newPurchase.purchase_date}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
+                      onChange={(e) =>
+                        setNewPurchase({
+                          ...newPurchase,
+                          purchase_date: e.target.value,
+                        })
+                      }
                       required
                     />
                   </FormField>
@@ -1173,7 +1475,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="purchase_batch"
                       type="text"
                       value={newPurchase.batch_number}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
+                      onChange={(e) =>
+                        setNewPurchase({
+                          ...newPurchase,
+                          batch_number: e.target.value,
+                        })
+                      }
                       placeholder="Ex: LOT2024001"
                     />
                   </FormField>
@@ -1183,23 +1490,29 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               {/* Supplier Information */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <FormField label="Fournisseur *" htmlFor="purchase_supplier" required>
+                  <FormField
+                    label="Fournisseur *"
+                    htmlFor="purchase_supplier"
+                    required
+                  >
                     <Select
                       id="purchase_supplier"
                       value={newPurchase.supplier}
                       onChange={(e) => {
                         const value = (e.target as HTMLSelectElement).value;
-                        const selectedSupplier = suppliers.find(s => s.name === value);
+                        const selectedSupplier = suppliers.find(
+                          (s) => s.name === value,
+                        );
                         setNewPurchase({
                           ...newPurchase,
                           supplier: value,
-                          supplier_id: selectedSupplier?.id || ''
+                          supplier_id: selectedSupplier?.id || "",
                         });
                       }}
                       required
                     >
                       <option value="">Sélectionner un fournisseur</option>
-                      {suppliers.map(supplier => (
+                      {suppliers.map((supplier) => (
                         <option key={supplier.id} value={supplier.name}>
                           {supplier.name}
                         </option>
@@ -1209,14 +1522,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Entrepôt de stockage" htmlFor="purchase_warehouse">
+                  <FormField
+                    label="Entrepôt de stockage"
+                    htmlFor="purchase_warehouse"
+                  >
                     <Select
                       id="purchase_warehouse"
                       value={newPurchase.warehouse_id}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, warehouse_id: (e.target as HTMLSelectElement).value })}
+                      onChange={(e) =>
+                        setNewPurchase({
+                          ...newPurchase,
+                          warehouse_id: (e.target as HTMLSelectElement).value,
+                        })
+                      }
                     >
                       <option value="">Sélectionner un entrepôt</option>
-                      {warehouses.map(warehouse => (
+                      {warehouses.map((warehouse) => (
                         <option key={warehouse.id} value={warehouse.id}>
                           {warehouse.name}
                         </option>
@@ -1228,26 +1549,46 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
               {/* Invoice Upload */}
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Document d'achat</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                  Document d'achat
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <FormField label="Numéro de facture/bon" htmlFor="invoice_number">
+                    <FormField
+                      label="Numéro de facture/bon"
+                      htmlFor="invoice_number"
+                    >
                       <Input
                         id="invoice_number"
                         type="text"
                         value={newPurchase.invoice_number}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, invoice_number: e.target.value })}
+                        onChange={(e) =>
+                          setNewPurchase({
+                            ...newPurchase,
+                            invoice_number: e.target.value,
+                          })
+                        }
                         placeholder="Ex: FAC-2024-001"
                       />
                     </FormField>
                   </div>
 
                   <div>
-                    <FormField label="Importer facture/bon (PDF, Image)" htmlFor="invoice_file">
+                    <FormField
+                      label="Importer facture/bon (PDF, Image)"
+                      htmlFor="invoice_file"
+                    >
                       <div className="flex items-center space-x-2">
-                        <label htmlFor="invoice_upload" className="cursor-pointer flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500">
+                        <label
+                          htmlFor="invoice_upload"
+                          className="cursor-pointer flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500"
+                        >
                           <Upload className="h-4 w-4" />
-                          <span className="text-sm">{newPurchase.invoice_file ? newPurchase.invoice_file.name : 'Choisir un fichier'}</span>
+                          <span className="text-sm">
+                            {newPurchase.invoice_file
+                              ? newPurchase.invoice_file.name
+                              : "Choisir un fichier"}
+                          </span>
                         </label>
                         <input
                           id="invoice_upload"
@@ -1256,14 +1597,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              setNewPurchase({ ...newPurchase, invoice_file: file });
+                              setNewPurchase({
+                                ...newPurchase,
+                                invoice_file: file,
+                              });
                             }
                           }}
                           className="hidden"
                         />
                         {newPurchase.invoice_file && (
                           <button
-                            onClick={() => setNewPurchase({ ...newPurchase, invoice_file: null })}
+                            onClick={() =>
+                              setNewPurchase({
+                                ...newPurchase,
+                                invoice_file: null,
+                              })
+                            }
                             className="text-red-600 hover:text-red-800"
                           >
                             <X className="h-4 w-4" />
@@ -1281,7 +1630,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   <Textarea
                     id="purchase_notes"
                     value={newPurchase.notes}
-                    onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
+                    onChange={(e) =>
+                      setNewPurchase({ ...newPurchase, notes: e.target.value })
+                    }
                     rows={3}
                     placeholder="Informations supplémentaires sur cet achat..."
                   />
@@ -1295,14 +1646,20 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     Total de l'achat
                   </span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} {currencySymbol}
+                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(
+                      2,
+                    )}{" "}
+                    {currencySymbol}
                   </span>
                 </div>
-                {newPurchase.packaging_type && newPurchase.packaging_size > 0 && (
-                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {newPurchase.quantity} × {newPurchase.packaging_type} de {newPurchase.packaging_size}{newPurchase.unit}
-                  </div>
-                )}
+                {newPurchase.packaging_type &&
+                  newPurchase.packaging_size > 0 && (
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                      {newPurchase.quantity} × {newPurchase.packaging_type} de{" "}
+                      {newPurchase.packaging_size}
+                      {newPurchase.unit}
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -1315,7 +1672,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               </button>
               <button
                 onClick={handleAddPurchase}
-                disabled={(!newPurchase.product_id && !newPurchase.product_name) || !newPurchase.quantity || !newPurchase.cost_per_unit || !newPurchase.packaging_type}
+                disabled={
+                  (!newPurchase.product_id && !newPurchase.product_name) ||
+                  !newPurchase.quantity ||
+                  !newPurchase.cost_per_unit ||
+                  !newPurchase.packaging_type
+                }
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 <ShoppingCart className="h-4 w-4" />
@@ -1332,7 +1694,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingSupplierId ? 'Modifier le fournisseur' : 'Nouveau Fournisseur'}
+                {editingSupplierId
+                  ? "Modifier le fournisseur"
+                  : "Nouveau Fournisseur"}
               </h3>
               <button
                 onClick={closeSupplierModal}
@@ -1344,24 +1708,38 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <FormField label="Nom du fournisseur *" htmlFor="supplier_name" required>
+                  <FormField
+                    label="Nom du fournisseur *"
+                    htmlFor="supplier_name"
+                    required
+                  >
                     <Input
                       id="supplier_name"
                       type="text"
                       value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({ ...newSupplier, name: e.target.value })
+                      }
                       required
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Personne de contact" htmlFor="supplier_contact">
+                  <FormField
+                    label="Personne de contact"
+                    htmlFor="supplier_contact"
+                  >
                     <Input
                       id="supplier_contact"
                       type="text"
                       value={newSupplier.contact_person}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          contact_person: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1372,7 +1750,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_email"
                       type="email"
                       value={newSupplier.email}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          email: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1383,7 +1766,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_phone"
                       type="tel"
                       value={newSupplier.phone}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          phone: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1394,7 +1782,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_address"
                       type="text"
                       value={newSupplier.address}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          address: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1405,7 +1798,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_city"
                       type="text"
                       value={newSupplier.city}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, city: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({ ...newSupplier, city: e.target.value })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1416,7 +1811,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_postal"
                       type="text"
                       value={newSupplier.postal_code}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, postal_code: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          postal_code: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1427,7 +1827,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_country"
                       type="text"
                       value={newSupplier.country}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, country: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          country: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1438,7 +1843,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_website"
                       type="url"
                       value={newSupplier.website}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, website: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          website: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1449,18 +1859,32 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="supplier_tax"
                       type="text"
                       value={newSupplier.tax_id}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, tax_id: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          tax_id: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Conditions de paiement" htmlFor="supplier_payment" helper="Ex: Net 30, COD, etc.">
+                  <FormField
+                    label="Conditions de paiement"
+                    htmlFor="supplier_payment"
+                    helper="Ex: Net 30, COD, etc."
+                  >
                     <Input
                       id="supplier_payment"
                       type="text"
                       value={newSupplier.payment_terms}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          payment_terms: e.target.value,
+                        })
+                      }
                       placeholder="Net 30, COD, etc."
                     />
                   </FormField>
@@ -1471,7 +1895,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     <Textarea
                       id="supplier_notes"
                       value={newSupplier.notes}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          notes: e.target.value,
+                        })
+                      }
                       rows={3}
                     />
                   </FormField>
@@ -1491,7 +1920,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 disabled={isSubmittingSupplier || !newSupplier.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmittingSupplier ? 'Enregistrement...' : editingSupplierId ? 'Mettre à jour' : 'Ajouter'}
+                {isSubmittingSupplier
+                  ? "Enregistrement..."
+                  : editingSupplierId
+                    ? "Mettre à jour"
+                    : "Ajouter"}
               </button>
             </div>
           </div>
@@ -1504,7 +1937,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingWarehouseId ? 'Modifier l’entrepôt' : 'Nouvel Entrepôt'}
+                {editingWarehouseId ? "Modifier l’entrepôt" : "Nouvel Entrepôt"}
               </h3>
               <button
                 onClick={closeWarehouseModal}
@@ -1516,12 +1949,21 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <FormField label="Nom de l'entrepôt *" htmlFor="warehouse_name" required>
+                  <FormField
+                    label="Nom de l'entrepôt *"
+                    htmlFor="warehouse_name"
+                    required
+                  >
                     <Input
                       id="warehouse_name"
                       type="text"
                       value={newWarehouse.name}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          name: e.target.value,
+                        })
+                      }
                       required
                     />
                   </FormField>
@@ -1532,7 +1974,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     <Textarea
                       id="warehouse_desc"
                       value={newWarehouse.description}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          description: e.target.value,
+                        })
+                      }
                       rows={2}
                     />
                   </FormField>
@@ -1544,7 +1991,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="warehouse_location"
                       type="text"
                       value={newWarehouse.location}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          location: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1555,7 +2007,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="warehouse_address"
                       type="text"
                       value={newWarehouse.address}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, address: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          address: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1566,7 +2023,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="warehouse_city"
                       type="text"
                       value={newWarehouse.city}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, city: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          city: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1577,7 +2039,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="warehouse_postal"
                       type="text"
                       value={newWarehouse.postal_code}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, postal_code: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          postal_code: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
@@ -1589,17 +2056,30 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       type="number"
                       step={1}
                       value={newWarehouse.capacity}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          capacity: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Unité de capacité" htmlFor="warehouse_capacity_unit">
+                  <FormField
+                    label="Unité de capacité"
+                    htmlFor="warehouse_capacity_unit"
+                  >
                     <Select
                       id="warehouse_capacity_unit"
                       value={newWarehouse.capacity_unit}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity_unit: (e.target as HTMLSelectElement).value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          capacity_unit: (e.target as HTMLSelectElement).value,
+                        })
+                      }
                     >
                       <option value="m3">Mètres cubes (m³)</option>
                       <option value="m2">Mètres carrés (m²)</option>
@@ -1615,28 +2095,49 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       id="warehouse_manager"
                       type="text"
                       value={newWarehouse.manager_name}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_name: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          manager_name: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Téléphone du responsable" htmlFor="warehouse_manager_phone">
+                  <FormField
+                    label="Téléphone du responsable"
+                    htmlFor="warehouse_manager_phone"
+                  >
                     <Input
                       id="warehouse_manager_phone"
                       type="tel"
                       value={newWarehouse.manager_phone}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_phone: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          manager_phone: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Niveau de sécurité" htmlFor="warehouse_security">
+                  <FormField
+                    label="Niveau de sécurité"
+                    htmlFor="warehouse_security"
+                  >
                     <Select
                       id="warehouse_security"
                       value={newWarehouse.security_level}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, security_level: (e.target as HTMLSelectElement).value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          security_level: (e.target as HTMLSelectElement).value,
+                        })
+                      }
                     >
                       <option value="basic">Basique</option>
                       <option value="standard">Standard</option>
@@ -1653,10 +2154,18 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         type="checkbox"
                         id="temperature_controlled"
                         checked={newWarehouse.temperature_controlled}
-                        onChange={(e) => setNewWarehouse({ ...newWarehouse, temperature_controlled: e.target.checked })}
+                        onChange={(e) =>
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            temperature_controlled: e.target.checked,
+                          })
+                        }
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <label htmlFor="temperature_controlled" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label
+                        htmlFor="temperature_controlled"
+                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
                         Température contrôlée
                       </label>
                     </div>
@@ -1666,10 +2175,18 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         type="checkbox"
                         id="humidity_controlled"
                         checked={newWarehouse.humidity_controlled}
-                        onChange={(e) => setNewWarehouse({ ...newWarehouse, humidity_controlled: e.target.checked })}
+                        onChange={(e) =>
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            humidity_controlled: e.target.checked,
+                          })
+                        }
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <label htmlFor="humidity_controlled" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <label
+                        htmlFor="humidity_controlled"
+                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
                         Humidité contrôlée
                       </label>
                     </div>
@@ -1690,7 +2207,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 disabled={isSubmittingWarehouse || !newWarehouse.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmittingWarehouse ? 'Enregistrement...' : editingWarehouseId ? 'Mettre à jour' : 'Ajouter'}
+                {isSubmittingWarehouse
+                  ? "Enregistrement..."
+                  : editingWarehouseId
+                    ? "Mettre à jour"
+                    : "Ajouter"}
               </button>
             </div>
           </div>
@@ -1713,7 +2234,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Produit :{' '}
+                Produit :{" "}
                 <span className="font-medium text-gray-900 dark:text-white">
                   {selectedProduct.item_name || selectedProduct.name}
                 </span>
@@ -1726,7 +2247,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     onChange={(e) =>
                       setQuantityAdjustment({
                         ...quantityAdjustment,
-                        type: (e.target as HTMLSelectElement).value as 'increase' | 'decrease',
+                        type: (e.target as HTMLSelectElement).value as
+                          | "increase"
+                          | "decrease",
                       })
                     }
                   >
@@ -1734,7 +2257,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     <option value="decrease">Diminuer le stock</option>
                   </Select>
                 </FormField>
-                <FormField label="Quantité" htmlFor="adjustment_amount" required>
+                <FormField
+                  label="Quantité"
+                  htmlFor="adjustment_amount"
+                  required
+                >
                   <Input
                     id="adjustment_amount"
                     type="number"
@@ -1760,7 +2287,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                     rows={3}
                     value={quantityAdjustment.reason}
                     onChange={(e) =>
-                      setQuantityAdjustment({ ...quantityAdjustment, reason: e.target.value })
+                      setQuantityAdjustment({
+                        ...quantityAdjustment,
+                        reason: e.target.value,
+                      })
                     }
                   />
                 </FormField>
@@ -1778,7 +2308,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isAdjustingQuantity ? 'Enregistrement...' : 'Appliquer'}
+                {isAdjustingQuantity ? "Enregistrement..." : "Appliquer"}
               </button>
             </div>
           </div>

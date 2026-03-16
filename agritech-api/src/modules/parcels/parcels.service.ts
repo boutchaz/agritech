@@ -14,6 +14,10 @@ import { UpdateParcelDto } from "./dto/update-parcel.dto";
 import { ListParcelsResponseDto } from "./dto/list-parcels.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
+import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
+import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../notifications/dto/notification.dto";
 
 @Injectable()
 export class ParcelsService {
@@ -24,6 +28,9 @@ export class ParcelsService {
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
     private calibrationService: CalibrationService,
+    private stateMachine: CalibrationStateMachine,
+    private satelliteCacheService: SatelliteCacheService,
+    private notificationsService: NotificationsService,
   ) {
     const supabaseUrl = this.configService.get<string>("SUPABASE_URL");
     const supabaseServiceKey = this.configService.get<string>(
@@ -495,8 +502,20 @@ export class ParcelsService {
       );
     }
 
-    // Prepare parcel data
-    const parcelData: any = {
+    let resolvedPlantingYear = dto.planting_year ?? null;
+    const resolvedPlantingDate = dto.planting_date ?? null;
+
+    if (!resolvedPlantingYear && resolvedPlantingDate) {
+      resolvedPlantingYear = new Date(resolvedPlantingDate).getFullYear();
+    }
+
+    if (!resolvedPlantingYear && !resolvedPlantingDate) {
+      throw new BadRequestException(
+        "Planting year or planting date is required (needed to determine plantation age)",
+      );
+    }
+
+    const parcelData: Record<string, unknown> = {
       farm_id: dto.farm_id,
       name: dto.name,
       description: dto.description || null,
@@ -509,8 +528,8 @@ export class ParcelsService {
       spacing: dto.spacing || null,
       density_per_hectare: dto.density_per_hectare || null,
       plant_count: dto.plant_count || null,
-      planting_date: dto.planting_date || null,
-      planting_year: dto.planting_year || null,
+      planting_date: resolvedPlantingDate,
+      planting_year: resolvedPlantingYear,
       planting_type: dto.planting_type || null,
       rootstock: dto.rootstock || null,
       soil_type: dto.soil_type || null,
@@ -522,6 +541,7 @@ export class ParcelsService {
       boundary: dto.boundary || null,
       calculated_area: dto.calculated_area || null,
       perimeter: dto.perimeter || null,
+      langue: dto.langue || "fr",
       is_active: true,
     };
 
@@ -546,60 +566,102 @@ export class ParcelsService {
       Array.isArray(newParcel.boundary) &&
       newParcel.boundary.length >= 3
     ) {
-      this.triggerAutoCalibration(
+      this.triggerProactiveSatelliteDownload(
         newParcel.id,
         organizationId,
-        newParcel.crop_type,
+        resolvedPlantingYear,
       );
     }
 
     return newParcel;
   }
 
-  private triggerAutoCalibration(
+  private triggerProactiveSatelliteDownload(
     parcelId: string,
     organizationId: string,
-    cropType: string | null,
+    plantingYear: number | null,
   ) {
-    if (!cropType) {
-      this.logger.log(
-        `Skipping auto-calibration for parcel ${parcelId}: no crop type set`,
-      );
-      return;
-    }
+    const age = plantingYear ? new Date().getFullYear() - plantingYear : null;
+    const isJuvenile = age !== null && age <= 5;
+    const monthsToSync = isJuvenile ? 6 : 24;
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsToSync);
 
-    this.calibrationService
-      .checkCalibrationReadiness(parcelId, organizationId)
-      .then((readiness) => {
-        if (!readiness.ready) {
-          this.logger.log(
-            `Skipping auto-calibration for parcel ${parcelId}: not ready (${readiness.checks
-              .filter((c) => c.status === "fail")
-              .map((c) => c.message)
-              .join(", ")})`,
-          );
-          return;
-        }
-
-        return this.calibrationService
-          .startCalibration(
-            parcelId,
-            organizationId,
-            {},
-            { skipReadinessCheck: true },
-          )
-          .then((calibration) => {
-            this.logger.log(
-              `Auto-calibration triggered for parcel ${parcelId}: ${calibration.id} (${calibration.status})`,
-            );
-          });
+    this.stateMachine
+      .transitionPhase(parcelId, "disabled", "downloading", organizationId)
+      .then(() =>
+        this.satelliteCacheService.syncParcelSatelliteData(
+          parcelId,
+          organizationId,
+          undefined,
+          {
+            startDate: startDate.toISOString().split("T")[0],
+            endDate: new Date().toISOString().split("T")[0],
+            indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+          },
+        ),
+      )
+      .then((syncResult) => {
+        this.logger.log(
+          `Satellite download completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
+        );
+        return this.stateMachine.transitionPhase(
+          parcelId,
+          "downloading",
+          "pret_calibrage",
+          organizationId,
+        );
+      })
+      .then(() => {
+        this.logger.log(
+          `Parcel ${parcelId} is now pret_calibrage — ready for user to launch calibration`,
+        );
+        return this.notifyOrganizationUsers(
+          organizationId,
+          NotificationType.SATELLITE_DOWNLOAD_COMPLETE,
+          "Données satellite prêtes",
+          "Les données satellite de votre parcelle sont téléchargées. Vous pouvez lancer le calibrage.",
+          { parcel_id: parcelId },
+        );
       })
       .catch((err) => {
         const message = err instanceof Error ? err.message : "unknown error";
         this.logger.warn(
-          `Auto-calibration skipped for parcel ${parcelId}: ${message}`,
+          `Satellite download failed for parcel ${parcelId}: ${message}`,
         );
+        this.stateMachine
+          .transitionPhase(parcelId, "downloading", "disabled", organizationId)
+          .catch(() => {});
       });
+  }
+
+  private async notifyOrganizationUsers(
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const { data: orgUsers } = await this.supabaseAdmin
+      .from("organization_users")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true);
+
+    if (!orgUsers?.length) return;
+
+    for (const orgUser of orgUsers) {
+      await this.notificationsService
+        .createNotification({
+          userId: orgUser.user_id as string,
+          organizationId,
+          type,
+          title,
+          message,
+          data,
+        })
+        .catch(() => {});
+    }
   }
 
   async updateParcel(
@@ -687,6 +749,7 @@ export class ParcelsService {
     if (dto.calculated_area !== undefined)
       updateData.calculated_area = dto.calculated_area;
     if (dto.perimeter !== undefined) updateData.perimeter = dto.perimeter;
+    if (dto.langue !== undefined) updateData.langue = dto.langue;
 
     // Update parcel
     const { data: updatedParcel, error: updateError } = await this.supabaseAdmin

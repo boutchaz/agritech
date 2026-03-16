@@ -11,6 +11,8 @@ import { AIReportsService } from "../ai-reports/ai-reports.service";
 import { AIProvider, AgromindReportType } from "../ai-reports/interfaces";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../notifications/dto/notification.dto";
 import { WeatherProvider } from "../chat/providers/weather.provider";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { CalibrationStateMachine } from "./calibration-state-machine";
@@ -62,6 +64,7 @@ interface ParcelContext {
   waterSource: string | null;
   irrigationFrequency: string | null;
   waterQuantityPerSession: number | null;
+  langue: string;
   aiPhase: ParcelAiPhase;
 }
 
@@ -182,6 +185,7 @@ export class CalibrationService {
     private readonly stateMachine: CalibrationStateMachine,
     private readonly nutritionOptionService: NutritionOptionService,
     private readonly satelliteCacheService: SatelliteCacheService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async startCalibration(
@@ -200,13 +204,14 @@ export class CalibrationService {
 
     const allowedStartPhases = [
       "disabled",
+      "pret_calibrage",
       "active",
       "awaiting_validation",
       "awaiting_nutrition_option",
     ];
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Calibration can only start from disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Calibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -246,6 +251,7 @@ export class CalibrationService {
         organization_id: organizationId,
         status: "in_progress",
         started_at: startedAt,
+        mode_calibrage: "F1",
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
@@ -572,27 +578,55 @@ export class CalibrationService {
       );
     }
 
-    const aiCalibrationResult = await this.runCalibrationAI(
-      calibrationId,
-      parcelId,
-      organizationId,
-      v2Output,
-    );
+    const primaryLanguage = parcel.langue || "fr";
+    const secondaryLanguage = primaryLanguage === "fr" ? "ar" : "fr";
 
-    if (aiCalibrationResult) {
+    const [primaryReport, secondaryReport] = await Promise.all([
+      this.runCalibrationAI(
+        calibrationId,
+        parcelId,
+        organizationId,
+        v2Output,
+        primaryLanguage,
+      ),
+      this.runCalibrationAI(
+        calibrationId,
+        parcelId,
+        organizationId,
+        v2Output,
+        secondaryLanguage,
+      ),
+    ]);
+
+    const bilingualUpdate: Record<string, unknown> = {};
+    if (primaryReport || secondaryReport) {
+      bilingualUpdate.calibration_data = {
+        ...calibrationData,
+        ai_analysis: primaryReport ?? secondaryReport,
+      };
+    }
+
+    if (primaryLanguage === "fr") {
+      if (primaryReport)
+        bilingualUpdate.rapport_fr = JSON.stringify(primaryReport);
+      if (secondaryReport)
+        bilingualUpdate.rapport_ar = JSON.stringify(secondaryReport);
+    } else {
+      if (primaryReport)
+        bilingualUpdate.rapport_ar = JSON.stringify(primaryReport);
+      if (secondaryReport)
+        bilingualUpdate.rapport_fr = JSON.stringify(secondaryReport);
+    }
+
+    if (Object.keys(bilingualUpdate).length > 0) {
       const { error: aiUpdateError } = await supabase
         .from("calibrations")
-        .update({
-          calibration_data: {
-            ...calibrationData,
-            ai_analysis: aiCalibrationResult,
-          },
-        })
+        .update(bilingualUpdate)
         .eq("id", calibrationId);
 
       if (aiUpdateError) {
         this.logger.warn(
-          `Failed to store AI calibration analysis: ${aiUpdateError.message}`,
+          `Failed to store bilingual calibration reports: ${aiUpdateError.message}`,
         );
       }
     }
@@ -617,6 +651,46 @@ export class CalibrationService {
       "awaiting_validation",
       organizationId,
     );
+
+    this.notifyOrganizationUsers(
+      organizationId,
+      NotificationType.CALIBRATION_COMPLETE,
+      "Calibration terminée",
+      `Le calibrage de la parcelle est terminé et en attente de validation.`,
+      { parcel_id: parcelId, calibration_id: calibrationId },
+    ).catch((err) =>
+      this.logger.warn(`Failed to send calibration notification: ${err}`),
+    );
+  }
+
+  private async notifyOrganizationUsers(
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: orgUsers } = await supabase
+      .from("organization_users")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true);
+
+    if (!orgUsers?.length) return;
+
+    for (const orgUser of orgUsers) {
+      await this.notificationsService
+        .createNotification({
+          userId: orgUser.user_id as string,
+          organizationId,
+          type,
+          title,
+          message,
+          data,
+        })
+        .catch(() => {});
+    }
   }
 
   private async runCalibrationAI(
@@ -624,10 +698,11 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
     v2Output: CalibrationResponse,
+    language: string = "fr",
   ): Promise<Record<string, unknown> | null> {
     try {
       this.logger.log(
-        `Starting AI calibration analysis for calibration ${calibrationId} parcel ${parcelId} with ${Object.keys(v2Output).length} output keys`,
+        `Starting AI calibration analysis (${language}) for calibration ${calibrationId} parcel ${parcelId}`,
       );
 
       const result = await this.aiReportsService.generateReport(
@@ -638,6 +713,7 @@ export class CalibrationService {
           provider: AIProvider.GEMINI,
           model: "gemini-2.5-flash",
           reportType: AgromindReportType.CALIBRATION,
+          language,
           data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
           data_end_date: new Date().toISOString().split("T")[0],
         },
@@ -1148,6 +1224,119 @@ export class CalibrationService {
     });
 
     this.logger.log(`Annual plan generated for parcel ${parcelId}`);
+
+    await this.generateTasksFromAnnualPlan(parcelId, organizationId);
+  }
+
+  private async generateTasksFromAnnualPlan(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: latestReport } = await supabase
+      .from("ai_reports")
+      .select("id, report_data")
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("report_type", "annual_plan")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!latestReport?.report_data) {
+      this.logger.warn(
+        `No annual plan report found for parcel ${parcelId}, skipping task generation`,
+      );
+      return;
+    }
+
+    const reportData = this.toJsonObject(latestReport.report_data);
+    const calendar =
+      (reportData as Record<string, unknown>)?.calendrier_mensuel ??
+      (reportData as Record<string, unknown>)?.monthly_calendar ??
+      (reportData as Record<string, unknown>)?.tasks;
+
+    if (!Array.isArray(calendar) || calendar.length === 0) {
+      this.logger.log(
+        `Annual plan for parcel ${parcelId} has no calendar tasks to generate`,
+      );
+      return;
+    }
+
+    const { data: parcel } = await supabase
+      .from("parcels")
+      .select("farm_id")
+      .eq("id", parcelId)
+      .single();
+
+    if (!parcel?.farm_id) {
+      return;
+    }
+
+    const validTaskTypes = new Set([
+      "planting",
+      "harvesting",
+      "irrigation",
+      "fertilization",
+      "maintenance",
+      "general",
+      "pest_control",
+      "pruning",
+      "soil_preparation",
+    ]);
+
+    const taskRows = calendar
+      .filter(
+        (item: unknown): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null,
+      )
+      .map((item) => {
+        const rawType = String(item.type ?? item.task_type ?? "general");
+        const taskType = validTaskTypes.has(rawType) ? rawType : "general";
+
+        return {
+          farm_id: parcel.farm_id,
+          parcel_id: parcelId,
+          organization_id: organizationId,
+          title: String(item.title ?? item.description ?? item.action ?? ""),
+          description: item.description
+            ? String(item.description)
+            : item.details
+              ? String(item.details)
+              : null,
+          task_type: taskType,
+          priority: String(item.priority ?? "medium"),
+          status: "planned",
+          due_date: item.date_prevue ?? item.due_date ?? item.date ?? null,
+          metadata: {
+            source: "annual_plan",
+            ai_report_id: latestReport.id,
+            month: item.mois ?? item.month ?? null,
+            dose: item.dose ?? null,
+          },
+        };
+      })
+      .filter((row: { title: string }) => row.title && row.title.length > 0);
+
+    if (taskRows.length === 0) {
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("tasks")
+      .insert(taskRows);
+
+    if (insertError) {
+      this.logger.warn(
+        `Failed to create tasks from annual plan for parcel ${parcelId}: ${insertError.message}`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Created ${taskRows.length} tasks from annual plan for parcel ${parcelId}`,
+    );
   }
 
   async getPercentiles(
@@ -1202,7 +1391,7 @@ export class CalibrationService {
     const { data: parcel, error } = await supabase
       .from("parcels")
       .select(
-        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, farms(organization_id)",
+        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, langue, farms(organization_id)",
       )
       .eq("id", parcelId)
       .single();
@@ -1252,6 +1441,7 @@ export class CalibrationService {
           ? parcel.irrigation_frequency
           : null,
       waterQuantityPerSession: this.toNumber(parcel.water_quantity_per_session),
+      langue: typeof parcel.langue === "string" ? parcel.langue : "fr",
       aiPhase:
         typeof parcel.ai_phase === "string" ? parcel.ai_phase : "disabled",
     };

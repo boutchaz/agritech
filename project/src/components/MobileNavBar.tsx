@@ -1,7 +1,7 @@
-import React from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MobileNavBarProps {
   title: string;
@@ -29,16 +29,18 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   };
 
   const handleHome = () => {
-    navigate({ to: '/' });
+    navigate({ to: "/" });
   };
 
   return (
-    <div className={cn(
-      "md:hidden flex items-center gap-2 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
-      // Add left padding to make room for hamburger menu button (16px margin + 40px button + 8px gap = 64px)
-      "pl-16 pr-3",
-      className
-    )}>
+    <div
+      className={cn(
+        "lg:hidden flex items-center gap-2 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
+        // Add left padding to make room for hamburger menu button (16px margin + 40px button + 8px gap = 64px)
+        "pl-16 pr-3",
+        className,
+      )}
+    >
       {showBackButton && (
         <button
           onClick={handleBack}

@@ -3,6 +3,8 @@ import { DatabaseService } from "../database/database.service";
 
 export type AiPhase =
   | "disabled"
+  | "downloading"
+  | "pret_calibrage"
   | "calibrating"
   | "awaiting_validation"
   | "awaiting_nutrition_option"
@@ -10,7 +12,9 @@ export type AiPhase =
   | "paused";
 
 const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
-  disabled: ["calibrating"],
+  disabled: ["downloading", "calibrating"],
+  downloading: ["pret_calibrage", "disabled"],
+  pret_calibrage: ["calibrating", "disabled"],
   calibrating: ["awaiting_validation", "disabled"],
   awaiting_validation: [
     "awaiting_nutrition_option",

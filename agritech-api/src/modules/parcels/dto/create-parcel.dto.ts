@@ -226,4 +226,12 @@ export class CreateParcelDto {
   @IsOptional()
   @IsNumber()
   perimeter?: number;
+
+  @ApiPropertyOptional({
+    description: "Report language key: fr, ar, ber",
+    example: "fr",
+  })
+  @IsOptional()
+  @IsString()
+  langue?: string;
 }

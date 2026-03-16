@@ -177,4 +177,9 @@ export class UpdateParcelDto {
   @IsOptional()
   @IsNumber()
   perimeter?: number;
+
+  @ApiPropertyOptional({ description: "Report language key: fr, ar, ber" })
+  @IsOptional()
+  @IsString()
+  langue?: string;
 }

@@ -111,6 +111,7 @@ def run_calibration_pipeline(
     weather_rows: list[dict[str, Any]],
     storage=None,
     ndvi_raster_pixels: list[dict[str, Any]] | None = None,
+    previous_output: CalibrationOutput | None = None,
 ) -> CalibrationOutput:
     step5_fn = getattr(
         import_module("app.services.calibration.step5_anomaly_detection"),
