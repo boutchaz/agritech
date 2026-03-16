@@ -1,15 +1,28 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { AIReportsModule } from '../ai-reports/ai-reports.module';
-import { DatabaseModule } from '../database/database.module';
-import { CalibrationController } from './calibration.controller';
-import { CalibrationService } from './calibration.service';
-import { CalibrationStateMachine } from './calibration-state-machine';
-import { NutritionOptionService } from './nutrition-option.service';
+import { Module, forwardRef } from "@nestjs/common";
+import { AIReportsModule } from "../ai-reports/ai-reports.module";
+import { DatabaseModule } from "../database/database.module";
+import { SatelliteIndicesModule } from "../satellite-indices/satellite-indices.module";
+import { CalibrationController } from "./calibration.controller";
+import { CalibrationService } from "./calibration.service";
+import { CalibrationStateMachine } from "./calibration-state-machine";
+import { NutritionOptionService } from "./nutrition-option.service";
 
 @Module({
-  imports: [DatabaseModule, forwardRef(() => AIReportsModule)],
+  imports: [
+    DatabaseModule,
+    forwardRef(() => AIReportsModule),
+    SatelliteIndicesModule,
+  ],
   controllers: [CalibrationController],
-  providers: [CalibrationService, CalibrationStateMachine, NutritionOptionService],
-  exports: [CalibrationService, CalibrationStateMachine, NutritionOptionService],
+  providers: [
+    CalibrationService,
+    CalibrationStateMachine,
+    NutritionOptionService,
+  ],
+  exports: [
+    CalibrationService,
+    CalibrationStateMachine,
+    NutritionOptionService,
+  ],
 })
 export class CalibrationModule {}
