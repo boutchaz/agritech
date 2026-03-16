@@ -369,6 +369,8 @@ export class CalibrationService {
       );
     }
 
+    // Parcel crop_type and variety are used for calibration: reference_data is loaded by crop_type;
+    // variety is matched against reference_data.varietes[].nom or .code for yield curves and maturity.
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,

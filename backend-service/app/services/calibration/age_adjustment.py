@@ -54,6 +54,11 @@ def _extract_age_brackets(
 def _lookup_variety_yield_curve(
     reference_data: dict[str, object], variety: str | None
 ) -> dict[str, YieldValue]:
+    """Look up yield-by-age curve for the parcel's variety from the crop referential.
+
+    The variety comes from the parcel (calibration_input.variety) and must match
+    a variete in reference_data.varietes by nom or code (case-insensitive).
+    """
     if variety is None:
         return {}
 

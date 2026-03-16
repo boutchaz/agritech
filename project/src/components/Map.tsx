@@ -23,6 +23,7 @@ import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/pa
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
 import {
   calculatePlantCount,
+  PLANTING_SYSTEMS,
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
 import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
@@ -230,9 +231,9 @@ const MapComponent: React.FC<MapProps> = ({
     ? allVarietiesFromStrapi
     : [];
 
-  // Planting systems - TODO: Add to CMS when available
-  // For now, empty array - will be populated from CMS in the future
-  const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = [];
+  // Planting systems — use static PLANTING_SYSTEMS (tree systems) as default fallback
+  // TODO: Replace with CMS data when available
+  const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = PLANTING_SYSTEMS;
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
@@ -1681,101 +1682,99 @@ const MapComponent: React.FC<MapProps> = ({
                   )}
                 </div>
 
-                {/* Planting System */}
-                {availablePlantingSystems.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {t('map.plantingSystem')}
-                    </h4>
+                {/* Planting System — always visible */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Sprout className="w-4 h-4" />
+                    {t('map.plantingSystem')}
+                  </h4>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t('map.systemType')}
-                      </label>
-                      <select
-                        value={parcelDetails.planting_system}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          planting_system: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="">{t('map.select')}</option>
-                        {availablePlantingSystems.map((system, idx) => (
-                          <option key={idx} value={system.type}>
-                            {system.type} ({system.spacing})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('map.plantingDate')}
+                    </label>
+                    <input
+                      type="date"
+                      value={parcelDetails.planting_date}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_date: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    />
+                    {parcelDetails.planting_date && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('map.plantingYear')}: {new Date(parcelDetails.planting_date).getFullYear()}
+                      </p>
+                    )}
+                  </div>
 
-                    {parcelDetails.planting_system && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('map.spacing')}
-                            </label>
-                            <input
-                              type="text"
-                              value={parcelDetails.spacing}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
-                              readOnly
-                            />
-                          </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('map.systemType')}
+                    </label>
+                    <select
+                      value={parcelDetails.planting_system}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_system: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">{t('map.select')}</option>
+                      {availablePlantingSystems.map((system, idx) => (
+                        <option key={idx} value={system.type}>
+                          {system.type} ({system.spacing})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('map.densityPlantsHa')}
-                            </label>
-                            <input
-                              type="number"
-                              value={parcelDetails.density_per_hectare}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
-                              readOnly
-                            />
-                          </div>
+                  {parcelDetails.planting_system && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('map.spacing')}
+                          </label>
+                          <input
+                            type="text"
+                            value={parcelDetails.spacing}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                            readOnly
+                          />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('map.totalPlants')}
+                            {t('map.densityPlantsHa')}
                           </label>
                           <input
                             type="number"
-                            value={parcelDetails.plant_count}
+                            value={parcelDetails.density_per_hectare}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
                             readOnly
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {t('map.autoCalculatedFormula', { area: parcelDetails.area, density: parcelDetails.density_per_hectare })}
-                          </p>
                         </div>
-                      </>
-                    )}
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t('map.plantingDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={parcelDetails.planting_date}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          planting_date: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                        placeholder="jj/mm/aaaa"
-                      />
-                      {parcelDetails.planting_date && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {t('map.totalPlants')}
+                        </label>
+                        <input
+                          type="number"
+                          value={parcelDetails.plant_count}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                          readOnly
+                        />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {t('map.plantingYear')}: {new Date(parcelDetails.planting_date).getFullYear()}
+                          {t('map.autoCalculatedFormula', { area: parcelDetails.area, density: parcelDetails.density_per_hectare })}
                         </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               <DialogFooter>

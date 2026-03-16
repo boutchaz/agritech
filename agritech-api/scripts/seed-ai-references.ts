@@ -7,7 +7,6 @@ import * as path from 'path';
 import type {
   AgrumesReference,
   AvocatierReference,
-  CropType,
   OlivierReference,
   PalmierDattierReference,
 } from '../../project/src/types/ai-references';
@@ -25,19 +24,24 @@ interface JsonObject {
   [key: string]: JsonValue;
 }
 
+const REFERENTIALS_DIR = path.resolve(__dirname, '../../referentials');
+
+/** Matches DATA_<crop_type>.json; crop_type is derived from filename (e.g. DATA_OLIVIER.json → olivier). */
+const REFERENTIAL_FILE_PATTERN = /^DATA_(.+)\.json$/i;
+
 interface CropFileConfig {
-  readonly cropType: CropType;
+  readonly cropType: string;
   readonly fileName: string;
 }
 
 interface CropAIReferenceRow {
-  readonly crop_type: CropType;
+  readonly crop_type: string;
   readonly version: string;
   readonly reference_data: RawCropAIReference;
 }
 
 interface DryRunRowPreview {
-  readonly crop_type: CropType;
+  readonly crop_type: string;
   readonly version: string;
   readonly metadata: RawCropAIReference['metadata'];
   readonly reference_data_keys: string[];
@@ -45,12 +49,26 @@ interface DryRunRowPreview {
 
 const isDryRun = process.argv.includes('--dry-run');
 
-const cropFiles: readonly CropFileConfig[] = [
-  { cropType: 'olivier', fileName: 'DATA_OLIVIER.json' },
-  { cropType: 'agrumes', fileName: 'DATA_AGRUMES.json' },
-  { cropType: 'avocatier', fileName: 'DATA_AVOCATIER.json' },
-  { cropType: 'palmier_dattier', fileName: 'DATA_PALMIER_DATTIER.json' },
-];
+/**
+ * Discovers all referential files in referentials/ matching DATA_*.json.
+ * Crop type is derived from filename: DATA_OLIVIER.json → olivier, DATA_PALMIER_DATTIER.json → palmier_dattier.
+ * Add a new referential by placing DATA_<crop_type>.json in referentials/; metadata.culture in the file must match.
+ */
+function discoverReferentialFiles(): CropFileConfig[] {
+  if (!fs.existsSync(REFERENTIALS_DIR)) {
+    throw new Error(`Referentials directory not found: ${REFERENTIALS_DIR}`);
+  }
+  const entries = fs.readdirSync(REFERENTIALS_DIR, { withFileTypes: true });
+  const configs: CropFileConfig[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    const match = entry.name.match(REFERENTIAL_FILE_PATTERN);
+    if (!match) continue;
+    const cropType = match[1].toLowerCase();
+    configs.push({ cropType, fileName: entry.name });
+  }
+  return configs.sort((a, b) => a.cropType.localeCompare(b.cropType));
+}
 
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -71,7 +89,7 @@ function isRawCropAIReference(value: unknown): value is RawCropAIReference {
 }
 
 function resolveCropFilePath(fileName: string): string {
-  return path.resolve(__dirname, `../../${fileName}`);
+  return path.join(REFERENTIALS_DIR, fileName);
 }
 
 function loadEnvFile(): void {
@@ -193,6 +211,11 @@ async function main(): Promise<void> {
   const dryRunRows: DryRunRowPreview[] = [];
   const client = isDryRun ? null : getAdminClient();
   let hasFailure = false;
+
+  const cropFiles = discoverReferentialFiles();
+  if (cropFiles.length === 0) {
+    throw new Error(`No DATA_*.json files found in ${REFERENTIALS_DIR}`);
+  }
 
   for (const cropFile of cropFiles) {
     try {

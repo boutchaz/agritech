@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
+from typing import Any
 
 import numpy as np
 
+from .referential_utils import get_phenology_periods_from_stades_bbch
 from .types import PercentileSet, Step1Output, Step3Output
 
 
@@ -43,8 +45,15 @@ def _collect_period_values(
 def calculate_percentiles(
     satellite_data: Step1Output,
     phenology_periods: dict[str, set[int]] | None = None,
+    reference_data: dict[str, Any] | None = None,
+    crop_type: str | None = None,
+    planting_system: str | None = None,
 ) -> Step3Output:
     periods = phenology_periods or DEFAULT_PERIODS
+    if reference_data and crop_type:
+        ref_periods = get_phenology_periods_from_stades_bbch(reference_data)
+        if ref_periods:
+            periods = ref_periods
 
     global_percentiles: dict[str, PercentileSet] = {}
     period_percentiles: dict[str, dict[str, PercentileSet]] = defaultdict(dict)

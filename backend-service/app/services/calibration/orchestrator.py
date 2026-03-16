@@ -157,9 +157,29 @@ def run_calibration_pipeline(
         frost_threshold=frost_threshold,
     )
 
-    step3 = calculate_percentiles(step1)
-    step4 = detect_phenology(step1, step2)
-    step5 = step5_fn(step1, step2, step4, adjustment)
+    step3 = calculate_percentiles(
+        step1,
+        reference_data=calibration_input.reference_data,
+        crop_type=calibration_input.crop_type,
+        planting_system=calibration_input.planting_system,
+    )
+    step4 = detect_phenology(
+        step1,
+        step2,
+        crop_type=calibration_input.crop_type,
+        variety=calibration_input.variety,
+        planting_system=calibration_input.planting_system,
+        reference_data=calibration_input.reference_data,
+    )
+    step5 = step5_fn(
+        step1,
+        step2,
+        step4,
+        adjustment,
+        reference_data=calibration_input.reference_data,
+        planting_system=calibration_input.planting_system,
+        crop_type=calibration_input.crop_type,
+    )
 
     step6 = step6_fn(
         planting_year=calibration_input.planting_year,

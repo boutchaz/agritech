@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import timedelta
 from statistics import mean, pstdev
-from typing import Literal
+from typing import Any, Literal
 
+from .referential_utils import get_satellite_thresholds_from_referential
 from .types import AnomalyRecord, Step1Output, Step2Output, Step4Output, Step5Output
 
 
@@ -29,6 +30,9 @@ def detect_anomalies(
     weather: Step2Output,
     phenology: Step4Output,
     age_adjustment: dict[str, float] | None = None,
+    reference_data: dict[str, Any] | None = None,
+    planting_system: str | None = None,
+    crop_type: str | None = None,
 ) -> Step5Output:
     _ = (phenology, age_adjustment)
 
@@ -39,6 +43,36 @@ def detect_anomalies(
             continue
 
         ordered = sorted(points, key=lambda point: point.date)
+
+        # Referential thresholds: flag points below alerte (and optionally below vigilance)
+        if reference_data and planting_system:
+            thresholds = get_satellite_thresholds_from_referential(
+                reference_data, planting_system, index
+            )
+            if thresholds:
+                alerte = thresholds.get("alerte")
+                vigilance = thresholds.get("vigilance")
+                if alerte is not None:
+                    for point in ordered:
+                        if point.value < alerte:
+                            severity = "critical"
+                            if vigilance is not None and point.value >= vigilance:
+                                severity = "high"
+                            anomalies.append(
+                                AnomalyRecord(
+                                    date=point.date,
+                                    anomaly_type="below_referential_alerte",
+                                    severity=severity,
+                                    index_name=index,
+                                    value=point.value,
+                                    previous_value=None,
+                                    deviation=round(alerte - point.value, 4),
+                                    weather_reference=_nearest_weather_event(
+                                        weather, point.date
+                                    ),
+                                    excluded_from_reference=True,
+                                )
+                            )
         values = [point.value for point in ordered]
         avg = mean(values)
         sigma = pstdev(values) if len(values) > 1 else 0.0

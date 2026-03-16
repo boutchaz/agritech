@@ -9,11 +9,11 @@ Source spec: `AGROMIND_IA_INTEGRATION_SPECS_v2.docx`
 1. Build one end-to-end plan covering all 5 phases from the spec.
 2. Implement P0 only.
 3. Use TDD for backend and frontend.
-4. Use existing reference JSON files already added at repo root:
-   - `DATA_OLIVIER.json`
-   - `DATA_AGRUMES.json`
-   - `DATA_AVOCATIER.json`
-   - `DATA_PALMIER_DATTIER.json`
+4. Use existing reference JSON files in `referentials/` (see `referentials/README.md`):
+   - `referentials/DATA_OLIVIER.json`
+   - `referentials/DATA_AGRUMES.json`
+   - `referentials/DATA_AVOCATIER.json`
+   - `referentials/DATA_PALMIER_DATTIER.json`
 5. Satellite indices already computed (including NIRv/NDRE/MSI/GCI), so no index-computation rewrite.
 6. Satellite ingestion trigger is manual from UI; AI pipeline starts after manual sync completes.
 

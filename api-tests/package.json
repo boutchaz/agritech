@@ -1,0 +1,23 @@
+{
+  "name": "agritech-api-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright API integration tests for AgriTech platform",
+  "scripts": {
+    "test": "playwright test",
+    "test:auth": "playwright test --grep @auth",
+    "test:farms": "playwright test --grep @farms",
+    "test:inventory": "playwright test --grep @inventory",
+    "test:workforce": "playwright test --grep @workforce",
+    "test:accounting": "playwright test --grep @accounting",
+    "test:harvests": "playwright test --grep @harvests",
+    "test:crm": "playwright test --grep @crm",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:report": "playwright show-report",
+    "test:list": "playwright test --list"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "dotenv": "^16.4.7"
+  }
+}

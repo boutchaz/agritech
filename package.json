@@ -28,6 +28,8 @@
     "type-check": "pnpm -r type-check",
     "test": "pnpm --filter agriprofy test",
     "test:api": "pnpm --filter agritech-api test",
+    "test:api:integration": "pnpm --filter agritech-api-tests test",
+    "test:api:smoke": "pnpm --filter agritech-api-tests test:smoke",
     "test:e2e": "pnpm --filter agriprofy test:e2e",
     "clean": "pnpm -r exec rm -rf node_modules && rm -rf node_modules",
     "clean:dist": "pnpm -r exec rm -rf dist",

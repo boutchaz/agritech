@@ -24,7 +24,7 @@
 - Indexes: `idx_tablename_column` naming
 
 ### JSON Reference Files
-- Location: repo root — DATA_OLIVIER.json (1867 lines), DATA_AGRUMES.json, DATA_AVOCATIER.json, DATA_PALMIER_DATTIER.json
+- Location: `referentials/` — DATA_OLIVIER.json, DATA_AGRUMES.json, DATA_AVOCATIER.json, DATA_PALMIER_DATTIER.json (see referentials/README.md)
 - Structure: metadata, varietes[], seuils_satellite, stades_bbch, alertes, plan_annuel, fertilisation
 - Key gotcha: rendement_kg_arbre values can be `"declin"` or `"arrachage"` (strings, not numbers) for super-intensif varieties
 - Agrumes uses `especes` + nested `varietes.oranges[]` etc (different from olivier flat `varietes[]`)
@@ -59,7 +59,7 @@
 - Local `pnpm --filter agriprofy db:reset` and `pnpm --filter agriprofy db:generate-types` both require Docker Desktop in this repo; if Docker is down, `db:generate-types` with shell redirection can truncate `project/src/types/database.types.ts`, so restore it immediately from git before continuing.
 
 ## [2026-03-12] T1.2: Seed Script
-- JSON metadata.version field location: `metadata.version` in all four crop JSON files (`DATA_OLIVIER.json`, `DATA_AGRUMES.json`, `DATA_AVOCATIER.json`, `DATA_PALMIER_DATTIER.json`).
+- JSON metadata.version field location: `metadata.version` in all four crop JSON files in `referentials/` (`DATA_OLIVIER.json`, etc.).
 - Supabase env vars used: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
 - Upsert conflict key: `crop_type`
 

@@ -3,9 +3,15 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 from statistics import mean, pstdev
+from typing import Any
 
 import numpy as np
 
+from .referential_utils import (
+    get_cycle_months_from_stades_bbch,
+    get_index_key_from_referential,
+    group_points_by_cycle_year,
+)
 from .types import PhenologyDates, Step1Output, Step2Output, Step4Output
 
 
@@ -86,14 +92,40 @@ def detect_phenology(
     satellite_data: Step1Output,
     weather_data: Step2Output,
     index_key: str = "NIRv",
+    crop_type: str | None = None,
+    variety: str | None = None,
+    planting_system: str | None = None,
+    reference_data: dict[str, Any] | None = None,
 ) -> Step4Output:
-    preferred = satellite_data.index_time_series.get(index_key)
+    # Resolve index from referential when available (e.g. systemes[system].indice_cle)
+    resolved_index = index_key
+    if reference_data and planting_system:
+        ref_index = get_index_key_from_referential(reference_data, planting_system)
+        if ref_index:
+            resolved_index = ref_index
+
+    preferred = satellite_data.index_time_series.get(resolved_index)
     fallback = satellite_data.index_time_series.get("NDVI", [])
     series = preferred if preferred else fallback
 
-    grouped: dict[int, list[tuple[date, float]]] = defaultdict(list)
-    for point in series:
-        grouped[point.date.year].append((point.date, point.value))
+    # Build (date, value) list for grouping
+    points_list: list[tuple[date, float]] = [
+        (point.date, point.value) for point in series
+    ]
+
+    cycle_months = None
+    if reference_data:
+        cycle_months = get_cycle_months_from_stades_bbch(reference_data)
+
+    referential_cycle_used = False
+    if cycle_months is not None and points_list:
+        start_month, end_month = cycle_months
+        grouped = group_points_by_cycle_year(points_list, start_month, end_month)
+        referential_cycle_used = True
+    else:
+        grouped = defaultdict(list)
+        for point in series:
+            grouped[point.date.year].append((point.date, point.value))
 
     yearly_stages: dict[int, dict[str, date]] = {}
     for year, points in grouped.items():
@@ -125,6 +157,7 @@ def detect_phenology(
                 "decline_start": 0.0,
                 "dormancy_entry": 0.0,
             },
+            referential_cycle_used=referential_cycle_used,
         )
 
     stage_names = [
@@ -173,4 +206,5 @@ def detect_phenology(
         ),
         inter_annual_variability_days=variability,
         gdd_correlation=gdd_correlation,
+        referential_cycle_used=referential_cycle_used,
     )

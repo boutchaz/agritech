@@ -179,6 +179,7 @@ def calculate_yield_potential(
     rendement_map: dict[str, Any] = {}
     varieties = reference_data.get("varietes")
     if isinstance(varieties, list):
+        # Parcel variety (from calibration_input) is matched to referential varietes by nom or code.
         normalized_variety = (variety or "").strip().lower()
         for item in varieties:
             if not isinstance(item, dict):

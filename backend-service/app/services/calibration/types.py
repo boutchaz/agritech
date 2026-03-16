@@ -205,6 +205,7 @@ class Step4Output(BaseModel):
     mean_dates: PhenologyDates
     inter_annual_variability_days: dict[str, float]
     gdd_correlation: dict[str, float]
+    referential_cycle_used: bool | None = None
 
 
 class Step5Output(BaseModel):

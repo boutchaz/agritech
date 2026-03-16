@@ -105,3 +105,46 @@ def test_step4_produces_gdd_correlation_for_each_stage() -> None:
         "decline_start",
         "dormancy_entry",
     }
+
+
+def test_step4_uses_referential_cycle_when_stades_bbch_present() -> None:
+    step1 = _build_step1_for_three_years()
+    step2 = _build_step2_weather()
+    reference_data = {
+        "stades_bbch": [
+            {"code": "00", "nom": "Dormance", "mois": ["Dec", "Jan"]},
+            {"code": "92", "nom": "Post-récolte", "mois": ["Nov", "Dec"]},
+        ],
+        "systemes": {"intensif": {"indice_cle": "NDVI"}},
+    }
+    output = detect_phenology(
+        step1,
+        step2,
+        reference_data=reference_data,
+        crop_type="olivier",
+        planting_system="intensif",
+    )
+    assert output.referential_cycle_used is True
+    assert output.mean_dates.peak is not None
+
+
+def test_step4_resolves_index_from_referential() -> None:
+    """When referential has systemes[system].indice_cle, step4 uses that index."""
+    step1 = _build_step1_for_three_years()
+    step2 = _build_step2_weather()
+    reference_data = {
+        "stades_bbch": [
+            {"code": "00", "nom": "Dormance", "mois": ["Dec", "Jan"]},
+            {"code": "92", "nom": "Post-récolte", "mois": ["Nov", "Dec"]},
+        ],
+        "systemes": {"traditionnel": {"indice_cle": "NDVI"}},
+    }
+    output = detect_phenology(
+        step1,
+        step2,
+        reference_data=reference_data,
+        crop_type="olivier",
+        planting_system="traditionnel",
+    )
+    assert output.referential_cycle_used is True
+    assert output.mean_dates.dormancy_exit is not None

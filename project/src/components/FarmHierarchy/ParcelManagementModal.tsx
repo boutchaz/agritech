@@ -12,6 +12,7 @@ import {
   getCropTypesByCategory,
   getPlantingSystemsByCategory,
   getVarietiesByCropType,
+  PLANTING_SYSTEMS,
   type CropCategory,
 } from '../../lib/plantingSystemData';
 import { parcelsService, type Parcel } from '../../services/parcelsService';
@@ -136,7 +137,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const availableVarieties = selectedCropType ? getVarietiesByCropType(selectedCropType) : [];
 
   // Get available planting systems based on category
-  const availablePlantingSystems = selectedCategory ? getPlantingSystemsByCategory(selectedCategory) : [];
+  const availablePlantingSystems = selectedCategory ? getPlantingSystemsByCategory(selectedCategory) : PLANTING_SYSTEMS;
 
   // Auto-update density when planting system changes
   useEffect(() => {
@@ -159,6 +160,17 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       setValue('plant_count', count);
     }
   }, [selectedArea, selectedDensity, setValue]);
+
+  // Auto-derive planting_year from planting_date
+  const watchedPlantingDate = watch('planting_date');
+  useEffect(() => {
+    if (watchedPlantingDate) {
+      const year = new Date(watchedPlantingDate).getFullYear();
+      if (!isNaN(year)) {
+        setValue('planting_year', year);
+      }
+    }
+  }, [watchedPlantingDate, setValue]);
 
   // Fetch parcels for this farm using parcelsService (apiClient)
   const { data: parcels = [], isLoading } = useQuery({
@@ -448,78 +460,78 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                     </div>
 
                     {/* Planting System */}
-                    {availablePlantingSystems.length > 0 && (
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          {t('farmHierarchy.parcel.sections.plantingSystem')}
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField label={t('farmHierarchy.parcel.plantingSystem')} htmlFor="planting_system">
-                            <Select value={watch('planting_system') || undefined} onValueChange={(value) => setValue('planting_system', value)}>
-                              <SelectTrigger id="planting_system">
-                                <SelectValue placeholder={t('common.selectOption')} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availablePlantingSystems.map((system, idx) => (
-                                  <SelectItem key={idx} value={system.type}>
-                                    {system.type} ({system.spacing})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormField>
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        {t('farmHierarchy.parcel.sections.plantingSystem')}
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label={t('farmHierarchy.parcel.plantingDate')} htmlFor="planting_date">
+                          <Input
+                            id="planting_date"
+                            type="date"
+                            {...register('planting_date')}
+                          />
+                        </FormField>
 
-                          <FormField label={t('farmHierarchy.parcel.spacing')} htmlFor="spacing">
-                            <Input
-                              id="spacing"
-                              {...register('spacing')}
-                              placeholder={t('farmHierarchy.parcel.spacingPlaceholder')}
-                              readOnly
-                              className="bg-gray-50 dark:bg-gray-800"
-                            />
-                          </FormField>
+                        <FormField label={t('farmHierarchy.parcel.plantingYear')} htmlFor="planting_year">
+                          <Input
+                            id="planting_year"
+                            type="number"
+                            {...register('planting_year', { valueAsNumber: true })}
+                            placeholder="2024"
+                            readOnly={!!watch('planting_date')}
+                            className={watch('planting_date') ? 'bg-gray-50 dark:bg-gray-800' : ''}
+                          />
+                        </FormField>
 
-                          <FormField label={t('farmHierarchy.parcel.densityPerHectare')} htmlFor="density_per_hectare">
-                            <Input
-                              id="density_per_hectare"
-                              type="number"
-                              {...register('density_per_hectare', { valueAsNumber: true })}
-                              placeholder="0"
-                              readOnly
-                              className="bg-gray-50 dark:bg-gray-800"
-                            />
-                          </FormField>
+                        <FormField label={t('farmHierarchy.parcel.plantingSystem')} htmlFor="planting_system">
+                          <Select value={watch('planting_system') || undefined} onValueChange={(value) => setValue('planting_system', value)}>
+                            <SelectTrigger id="planting_system">
+                              <SelectValue placeholder={t('common.selectOption')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availablePlantingSystems.map((system, idx) => (
+                                <SelectItem key={idx} value={system.type}>
+                                  {system.type} ({system.spacing})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormField>
 
-                          <FormField label={t('farmHierarchy.parcel.plantCount')} htmlFor="plant_count">
-                            <Input
-                              id="plant_count"
-                              type="number"
-                              {...register('plant_count', { valueAsNumber: true })}
-                              placeholder="0"
-                              readOnly
-                              className="bg-gray-50 dark:bg-gray-800"
-                            />
-                          </FormField>
+                        <FormField label={t('farmHierarchy.parcel.spacing')} htmlFor="spacing">
+                          <Input
+                            id="spacing"
+                            {...register('spacing')}
+                            placeholder={t('farmHierarchy.parcel.spacingPlaceholder')}
+                            readOnly
+                            className="bg-gray-50 dark:bg-gray-800"
+                          />
+                        </FormField>
 
-                          <FormField label={t('farmHierarchy.parcel.plantingDate')} htmlFor="planting_date">
-                            <Input
-                              id="planting_date"
-                              type="date"
-                              {...register('planting_date')}
-                            />
-                          </FormField>
+                        <FormField label={t('farmHierarchy.parcel.densityPerHectare')} htmlFor="density_per_hectare">
+                          <Input
+                            id="density_per_hectare"
+                            type="number"
+                            {...register('density_per_hectare', { valueAsNumber: true })}
+                            placeholder="0"
+                            readOnly
+                            className="bg-gray-50 dark:bg-gray-800"
+                          />
+                        </FormField>
 
-                          <FormField label={t('farmHierarchy.parcel.plantingYear')} htmlFor="planting_year">
-                            <Input
-                              id="planting_year"
-                              type="number"
-                              {...register('planting_year', { valueAsNumber: true })}
-                              placeholder="2024"
-                            />
-                          </FormField>
-                        </div>
+                        <FormField label={t('farmHierarchy.parcel.plantCount')} htmlFor="plant_count">
+                          <Input
+                            id="plant_count"
+                            type="number"
+                            {...register('plant_count', { valueAsNumber: true })}
+                            placeholder="0"
+                            readOnly
+                            className="bg-gray-50 dark:bg-gray-800"
+                          />
+                        </FormField>
                       </div>
-                    )}
+                    </div>
 
                     {/* Additional Information */}
                     <div className="space-y-4">

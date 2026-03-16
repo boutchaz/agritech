@@ -143,3 +143,53 @@ def test_step5_avoids_duplicate_anomaly_records() -> None:
         (item.date.isoformat(), item.anomaly_type) for item in output.anomalies
     }
     assert len(unique_keys) == len(output.anomalies)
+
+
+def test_step5_flags_below_referential_alerte_when_thresholds_present() -> None:
+    """When reference_data has seuils_satellite with alerte, values below alerte are flagged."""
+    start = date(2024, 1, 1)
+    # NDVI values below alerte 0.2
+    points = []
+    for idx in range(10):
+        points.append(
+            {
+                "date": (start + timedelta(days=15 * idx)).isoformat(),
+                "value": 0.15 if idx >= 3 else 0.5,
+                "outlier": False,
+                "interpolated": False,
+            }
+        )
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {
+                "NDVI": points,
+                "NIRv": points,
+            },
+            "cloud_coverage_mean": 10,
+            "filtered_image_count": 0,
+            "outlier_count": 0,
+            "interpolated_dates": [],
+            "raster_paths": {"NDVI": [], "NIRv": []},
+        }
+    )
+    reference_data = {
+        "seuils_satellite": {
+            "intensif": {
+                "NDVI": {"optimal": [0.4, 0.6], "vigilance": 0.35, "alerte": 0.2},
+            }
+        }
+    }
+    output = detect_anomalies(
+        satellite=step1,
+        weather=_build_step2_events(),
+        phenology=_build_step4_stub(),
+        reference_data=reference_data,
+        planting_system="intensif",
+        crop_type="olivier",
+    )
+    below_alerte = [
+        a for a in output.anomalies if a.anomaly_type == "below_referential_alerte"
+    ]
+    assert len(below_alerte) >= 1
+    assert below_alerte[0].index_name == "NDVI"
+    assert below_alerte[0].value < 0.2

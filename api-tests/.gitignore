@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env.test
+test-report/
+test-results/
+test-results.json
+blob-report/
+playwright-report/

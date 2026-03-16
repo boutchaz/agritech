@@ -57,3 +57,26 @@ def test_step3_builds_period_percentiles_when_history_exceeds_24_months() -> Non
     assert output.phenology_period_percentiles
     assert "dormancy" in output.phenology_period_percentiles
     assert "NDVI" in output.phenology_period_percentiles["dormancy"]
+
+
+def test_step3_uses_referential_stades_bbch_for_periods_when_present() -> None:
+    step1 = _step1_fixture(months=30)
+    reference_data = {
+        "stades_bbch": [
+            {"code": "00", "mois": ["Dec", "Jan"]},
+            {"code": "09", "mois": ["Fev", "Mar"]},
+            {"code": "60", "mois": ["Mai"]},
+            {"code": "92", "mois": ["Nov", "Dec"]},
+        ]
+    }
+    output = calculate_percentiles(
+        step1,
+        reference_data=reference_data,
+        crop_type="olivier",
+    )
+    assert output.phenology_period_percentiles
+    assert "dormancy" in output.phenology_period_percentiles
+    assert "growth" in output.phenology_period_percentiles
+    assert "flowering" in output.phenology_period_percentiles
+    assert "maturation" in output.phenology_period_percentiles
+    assert "NDVI" in output.phenology_period_percentiles["dormancy"]
