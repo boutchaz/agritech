@@ -217,18 +217,16 @@ export class ParcelsService {
       .select(
         `
         parcel_id,
-        crop_type,
-        actual_yield,
-        estimated_yield,
-        revenue_amount,
-        cost_amount,
-        profit_amount,
+        quantity,
+        unit,
         harvest_date,
+        estimated_revenue,
         parcels!inner (
           id,
           name,
           area,
           area_unit,
+          crop_type,
           farms!inner (
             id,
             name,
@@ -274,7 +272,7 @@ export class ParcelsService {
           parcel_id: parcelId,
           parcel_name: parcel.name,
           farm_name: farm.name,
-          crop_type: record.crop_type,
+          crop_type: parcel.crop_type,
           total_harvests: 0,
           total_yield: 0,
           total_estimated_yield: 0,
@@ -291,11 +289,8 @@ export class ParcelsService {
 
       const summary = summaryMap.get(parcelId);
       summary.total_harvests++;
-      summary.total_yield += record.actual_yield || 0;
-      summary.total_estimated_yield += record.estimated_yield || 0;
-      summary.total_revenue += record.revenue_amount || 0;
-      summary.total_cost += record.cost_amount || 0;
-      summary.total_profit += record.profit_amount || 0;
+      summary.total_yield += record.quantity || 0;
+      summary.total_revenue += record.estimated_revenue || 0;
 
       const harvestDate = new Date(record.harvest_date);
       if (

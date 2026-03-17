@@ -109,9 +109,7 @@ interface HarvestRow {
   quantity: number | string | null;
   unit: string | null;
   quality_grade: string | null;
-  crop_type: string | null;
-  actual_yield: number | string | null;
-  estimated_yield: number | string | null;
+  quality_score: number | null;
 }
 
 interface CalibrationResponse {
@@ -1655,7 +1653,7 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("harvest_records")
       .select(
-        "harvest_date, quantity, unit, quality_grade, crop_type, actual_yield, estimated_yield",
+        "harvest_date, quantity, unit, quality_grade, quality_score",
       )
       .eq("parcel_id", parcelId)
       .order("harvest_date", { ascending: true });
@@ -1671,9 +1669,7 @@ export class CalibrationService {
       quantity: this.toNumber(row.quantity),
       unit: row.unit,
       quality_grade: row.quality_grade,
-      crop_type: row.crop_type,
-      actual_yield: this.toNumber(row.actual_yield),
-      estimated_yield: this.toNumber(row.estimated_yield),
+      quality_score: row.quality_score,
     }));
   }
 
