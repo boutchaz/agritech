@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
 import { Building2, ClipboardCheck } from 'lucide-react';
@@ -61,22 +61,14 @@ function ReceptionBatchesPage() {
     <PageLayout
       activeModule="reception-batches"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('receptionBatches.title')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
-              ]}
-              title={t('receptionBatches.title')}
-              subtitle={t('receptionBatches.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
+          ]}
+          title={t('receptionBatches.title')}
+          subtitle={t('receptionBatches.subtitle')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Package, Plus, Filter, Download, Building2, Loader2, Search } from 'lucide-react';
 import { usePaginatedHarvests, useHarvests, useHarvestStatistics, useDeleteHarvest } from '@/hooks/useHarvests';
 import { useFarms } from '@/hooks/useParcelsQuery';
@@ -42,7 +42,7 @@ function HarvestsPage() {
 
   const { data: allHarvestsForExport = [] } = useHarvests(currentOrganization?.id || '', {});
   const { data: statistics } = useHarvestStatistics(currentOrganization?.id || '');
-  const { data: farms = [] } = useFarms(currentOrganization?.id);
+  const { data: _farms = [] } = useFarms(currentOrganization?.id);
   const deleteHarvestMutation = useDeleteHarvest();
 
   const harvests = paginatedData?.data ?? [];
@@ -141,54 +141,46 @@ function HarvestsPage() {
     <PageLayout
       activeModule="harvests"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('production.harvests.title')} />
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Package, label: t('production.harvests.title'), isActive: true }
+          ]}
+          title={t('production.harvests.title')}
+          subtitle={t('production.harvests.harvestsCount', { count: totalItems })}
+          showSearch={true}
+          searchPlaceholder={t('production.harvests.searchPlaceholder')}
+          onSearch={(query) => tableState.setSearch(query)}
+          actions={
+            <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
+              >
+                <Filter className="h-4 w-4" />
+                {t('production.harvests.filters')}
+              </button>
 
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Package, label: t('production.harvests.title'), isActive: true }
-              ]}
-              title={t('production.harvests.title')}
-              subtitle={t('production.harvests.harvestsCount', { count: totalItems })}
-              showSearch={true}
-              searchPlaceholder={t('production.harvests.searchPlaceholder')}
-              onSearch={(query) => tableState.setSearch(query)}
-              actions={
-                <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
-                  >
-                    <Filter className="h-4 w-4" />
-                    {t('production.harvests.filters')}
-                  </button>
+              <button
+                onClick={exportToCSV}
+                disabled={harvests.length === 0}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                {t('production.harvests.export')}
+              </button>
 
-                  <button
-                    onClick={exportToCSV}
-                    disabled={harvests.length === 0}
-                    className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-                  >
-                    <Download className="h-4 w-4" />
-                    {t('production.harvests.export')}
-                  </button>
-
-                  <button
-                    data-tour="harvest-add"
-                    onClick={handleAddHarvest}
-                    className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t('production.harvests.newHarvest')}
-                  </button>
-                </div>
-              }
-            />
-          </div>
-        </>
+              <button
+                data-tour="harvest-add"
+                onClick={handleAddHarvest}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4" />
+                {t('production.harvests.newHarvest')}
+              </button>
+            </div>
+          }
+        />
       }
     >
 

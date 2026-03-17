@@ -5,7 +5,7 @@ import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -225,22 +225,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('quotes.pageTitle')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-              ]}
-              title={t('quotes.title')}
-              subtitle={t('quotes.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
+          ]}
+          title={t('quotes.title')}
+          subtitle={t('quotes.subtitle')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">

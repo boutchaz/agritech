@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
-import { MobileNavBar } from '@/components/MobileNavBar';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -107,20 +106,15 @@ function MarketplacePage() {
       <PageLayout
         activeModule="marketplace"
         header={
-          <>
-            <MobileNavBar title={t('marketplace.title', 'Marketplace')} />
-            <div className="hidden md:block">
-              <ModernPageHeader
-                breadcrumbs={[
-                  { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                  { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), path: '/marketplace' },
-                  { label: t('marketplace.quoteRequests', 'Quote Requests'), isActive: true }
-                ]}
-                title={t('marketplace.quoteRequests', 'Quote Requests')}
-                subtitle={t('marketplace.quoteRequestsSubtitle', 'Manage your quote requests')}
-              />
-            </div>
-          </>
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+              { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), path: '/marketplace' },
+              { label: t('marketplace.quoteRequests', 'Quote Requests'), isActive: true }
+            ]}
+            title={t('marketplace.quoteRequests', 'Quote Requests')}
+            subtitle={t('marketplace.quoteRequestsSubtitle', 'Manage your quote requests')}
+          />
         }
       >
         <div className="p-4 md:p-8">
@@ -135,17 +129,14 @@ function MarketplacePage() {
       activeModule="marketplace"
       header={
         <>
-          <MobileNavBar title={t('marketplace.title', 'Marketplace')} />
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), isActive: true }
-              ]}
-              title={t('marketplace.title', 'Marketplace')}
-              subtitle={t('marketplace.subtitle', 'Manage your products available for sale')}
-            />
-          </div>
+          <ModernPageHeader
+            breadcrumbs={[
+              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+              { icon: ShoppingBag, label: t('marketplace.title', 'Marketplace'), isActive: true }
+            ]}
+            title={t('marketplace.title', 'Marketplace')}
+            subtitle={t('marketplace.subtitle', 'Manage your products available for sale')}
+          />
         </>
       }
     >

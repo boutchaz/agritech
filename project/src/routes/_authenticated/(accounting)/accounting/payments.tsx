@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Building2, CreditCard, Plus, CheckCircle2, Clock, XCircle, Eye, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -94,22 +94,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title="Payments" />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: CreditCard, label: 'Payments', isActive: true }
-              ]}
-              title="Payments"
-              subtitle="Track and manage incoming and outgoing payments"
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: CreditCard, label: 'Payments', isActive: true }
+          ]}
+          title="Payments"
+          subtitle="Track and manage incoming and outgoing payments"
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">

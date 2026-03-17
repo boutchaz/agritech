@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { PageLayout } from "@/components/PageLayout";
 import ModernPageHeader from "@/components/ModernPageHeader";
-import { MobileNavBar } from "@/components/MobileNavBar";
+
 import {
   Building2,
   BookOpen,
@@ -325,7 +324,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const clearFilters = () => {
+  const _clearFilters = () => {
     setFilterStatus("all");
     tableState.resetFilters();
   };
@@ -369,30 +368,22 @@ const AppContent: React.FC = () => {
       <PageLayout
         activeModule="accounting"
         header={
-          <>
-            {/* Mobile Navigation Bar */}
-            <MobileNavBar title="Journal Comptable" />
-
-            {/* Desktop Header */}
-            <div className="hidden md:block">
-              <ModernPageHeader
-                breadcrumbs={[
-                  {
-                    icon: Building2,
-                    label: currentOrganization.name,
-                    path: "/dashboard",
-                  },
-                  {
-                    icon: BookOpen,
-                    label: "Journal Comptable",
-                    isActive: true,
-                  },
-                ]}
-                title="Journal Comptable"
-                subtitle="Gérer les écritures du grand livre"
-              />
-            </div>
-          </>
+          <ModernPageHeader
+            breadcrumbs={[
+              {
+                icon: Building2,
+                label: currentOrganization.name,
+                path: "/dashboard",
+              },
+              {
+                icon: BookOpen,
+                label: "Journal Comptable",
+                isActive: true,
+              },
+            ]}
+            title="Journal Comptable"
+            subtitle="Gérer les écritures du grand livre"
+          />
         }
       >
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -206,22 +206,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('billingModule.purchaseOrders.title', 'Purchase Orders')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
-              ]}
-              title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
-              subtitle={t('billingModule.purchaseOrders.subtitle', 'Manage supplier purchase orders and goods receipt')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
+          ]}
+          title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
+          subtitle={t('billingModule.purchaseOrders.subtitle', 'Manage supplier purchase orders and goods receipt')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 md:space-y-6">

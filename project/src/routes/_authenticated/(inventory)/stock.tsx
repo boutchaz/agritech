@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
@@ -64,22 +64,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="stock"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('stock.title')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Package, label: t('stock.title'), isActive: true }
-              ]}
-              title={t('stock.title')}
-              subtitle={t('stock.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Package, label: t('stock.title'), isActive: true }
+          ]}
+          title={t('stock.title')}
+          subtitle={t('stock.subtitle')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">

@@ -79,7 +79,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex items-center gap-1 py-1.5 pl-14 pr-2">
+        <div className="flex items-center gap-1 py-1.5 pl-16 pr-2">
           {breadcrumbs.length > 1 && (
             <button
               type="button"

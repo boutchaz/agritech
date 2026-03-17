@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Package, Plus, Filter, Download, Building2, Loader2, Search } from 'lucide-react';
 import { usePaginatedHarvests, useHarvests, useHarvestStatistics, useDeleteHarvest } from '@/hooks/useHarvests';
 import { useFarms } from '@/hooks/useParcelsQuery';
@@ -41,7 +41,7 @@ function HarvestsPage() {
 
   const { data: allHarvestsForExport = [] } = useHarvests(currentOrganization?.id || '', {});
   const { data: statistics } = useHarvestStatistics(currentOrganization?.id || '');
-  const { data: farms = [] } = useFarms(currentOrganization?.id);
+  const { data: _farms = [] } = useFarms(currentOrganization?.id);
   const deleteHarvestMutation = useDeleteHarvest();
 
   const harvests = paginatedData?.data ?? [];
@@ -129,12 +129,7 @@ function HarvestsPage() {
 
   return (
     <>
-      {/* Mobile Navigation Bar */}
-      <MobileNavBar title={t('harvests.title')} />
-
-      {/* Desktop Header */}
-      <div className="hidden md:block">
-        <ModernPageHeader
+      <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
             { icon: Package, label: t('harvests.title'), isActive: true }
@@ -174,7 +169,6 @@ function HarvestsPage() {
             </div>
           }
         />
-      </div>
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
         {/* Mobile Add Button - Only visible on mobile */}

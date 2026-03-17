@@ -3,7 +3,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
-import { MobileNavBar } from '@/components/MobileNavBar'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Loader2, Building2, Zap } from 'lucide-react'
  
@@ -29,22 +28,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="utilities"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('utilities.title')} />
- 
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Zap, label: t('utilities.title'), isActive: true }
-              ]}
-              title={t('utilities.title')}
-              subtitle={t('utilities.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Zap, label: t('utilities.title'), isActive: true }
+          ]}
+          title={t('utilities.title')}
+          subtitle={t('utilities.subtitle')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">

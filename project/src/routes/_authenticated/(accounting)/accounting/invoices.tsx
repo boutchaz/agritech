@@ -5,7 +5,7 @@ import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { useInvoices, usePaginatedInvoices, useInvoiceStats, useDeleteInvoice } from '@/hooks/useInvoices';
+import { usePaginatedInvoices, useInvoiceStats, useDeleteInvoice } from '@/hooks/useInvoices';
 import { InvoiceForm } from '@/components/Accounting/InvoiceForm';
 import { InvoiceDetailDialog } from '@/components/Accounting/InvoiceDetailDialog';
 import { toast } from 'sonner';
@@ -147,22 +147,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('invoices.pageTitle', 'Invoices')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
-              ]}
-              title={t('invoices.title', 'Invoices')}
-              subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
+          ]}
+          title={t('invoices.title', 'Invoices')}
+          subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
+        />
       }
     >
       <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6", isRTL && "text-right")}>

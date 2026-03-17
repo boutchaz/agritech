@@ -3,7 +3,6 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import InfrastructureManagement from '@/components/InfrastructureManagement'
-import { MobileNavBar } from '@/components/MobileNavBar'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Building2, Building } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -27,22 +26,14 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="infrastructure"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('nav.infrastructure')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Building2, label: t('nav.infrastructure'), isActive: true }
-              ]}
-              title={t('nav.infrastructure')}
-              subtitle={t('infrastructure.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Building2, label: t('nav.infrastructure'), isActive: true }
+          ]}
+          title={t('nav.infrastructure')}
+          subtitle={t('infrastructure.subtitle')}
+        />
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
