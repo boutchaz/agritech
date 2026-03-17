@@ -1,12 +1,16 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AlertService } from '../health/alert.service';
 
 @Injectable()
 export class SatelliteProxyService {
   private readonly logger = new Logger(SatelliteProxyService.name);
   private readonly satelliteBaseUrl: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly alertService: AlertService,
+  ) {
     const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
@@ -91,6 +95,14 @@ export class SatelliteProxyService {
       }
 
       this.logger.error(`[Proxy] Connection failed: ${method} ${url}`, error);
+      this.alertService.notify({
+        service: 'satellite',
+        status: 'down',
+        severity: 'critical',
+        error: error instanceof Error ? error.message : String(error),
+        url: this.satelliteBaseUrl,
+        message: `Satellite service is unreachable: ${error instanceof Error ? error.message : String(error)}`,
+      }).catch(() => undefined);
       throw new HttpException(
         'Satellite service unavailable',
         HttpStatus.BAD_GATEWAY,

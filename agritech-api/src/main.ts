@@ -36,11 +36,11 @@ class AllExceptionsFilter implements ExceptionFilter {
       stack = exception.stack || '';
     }
 
-    // Log 403 errors with full details to identify the source
-    if (status === 403) {
-      console.error(`\n========== [EXCEPTION FILTER #${requestId}] 403 FORBIDDEN ==========`);
+    // Log 403 and 500 errors with full details
+    if (status === 403 || status >= 500) {
+      console.error(`\n========== [EXCEPTION FILTER #${requestId}] ${status} ==========`);
       console.error(`URL: ${request.method} ${request.url}`);
-      console.error(`Message: ${message}`);
+      console.error(`Message: ${typeof message === 'object' ? JSON.stringify(message) : message}`);
       console.error(`Exception Type: ${exception?.constructor?.name}`);
       console.error(`Stack trace (first 15 lines):\n${stack.split('\n').slice(0, 15).join('\n')}`);
       console.error(`==========================================================\n`);

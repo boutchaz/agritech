@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AlertService } from '../health/alert.service';
 import { moroccanChartOfAccounts } from './data/moroccan-chart-of-accounts';
 import { frenchChartOfAccounts } from './data/french-chart-of-accounts';
 import { usaChartOfAccounts } from './data/usa-chart-of-accounts';
@@ -31,7 +32,10 @@ interface AccountData {
 export class AccountsService {
   private readonly logger = new Logger(AccountsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly alertService: AlertService,
+  ) {}
 
   /**
    * Get all accounts for an organization
@@ -270,6 +274,14 @@ export class AccountsService {
       return result.data || [];
     } catch (error) {
       this.logger.warn(`CMS unavailable, using fallback templates: ${error.message}`);
+      this.alertService.notify({
+        service: 'cms',
+        status: 'down',
+        severity: 'warning',
+        error: error.message,
+        url: cmsUrl,
+        message: `CMS (Strapi) is unreachable: ${error.message}`,
+      }).catch(() => undefined);
       return this.getFallbackTemplates();
     }
   }
@@ -327,8 +339,15 @@ export class AccountsService {
       const result = await response.json();
       return result.data?.attributes || result.data;
     } catch (error) {
-      // Use fallback templates for network errors and other exceptions
       this.logger.warn(`CMS unavailable, using fallback template for ${upperCountryCode}: ${error.message}`);
+      this.alertService.notify({
+        service: 'cms',
+        status: 'down',
+        severity: 'warning',
+        error: error.message,
+        url: `${cmsUrl}/api/chart-of-account-templates/country/${upperCountryCode}`,
+        message: `CMS (Strapi) is unreachable: ${error.message}`,
+      }).catch(() => undefined);
       return this.getFallbackTemplate(upperCountryCode);
     }
   }
@@ -397,10 +416,10 @@ export class AccountsService {
       throw new BadRequestException('Template has no accounts to apply');
     }
 
-    const pool = this.databaseService.getPgPool();
-    const client = await pool.connect();
-
+    let client: import('pg').PoolClient | undefined;
     try {
+      const pool = this.databaseService.getPgPool();
+      client = await pool.connect();
       await client.query('BEGIN');
 
       const orgResult = await client.query('SELECT id FROM organizations WHERE id = $1', [organizationId]);
@@ -531,11 +550,17 @@ export class AccountsService {
         message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts${accountMappingsCreated > 0 ? ` and ${accountMappingsCreated} account mappings` : ''}`,
       };
     } catch (error) {
-      await client.query('ROLLBACK');
       this.logger.error(`Failed to apply template: ${error.message}`, error.stack);
+      if (client) {
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          this.logger.error(`ROLLBACK also failed: ${rollbackError.message}`);
+        }
+      }
       throw error;
     } finally {
-      client.release();
+      client?.release();
     }
   }
 }

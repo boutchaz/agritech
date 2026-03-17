@@ -98,6 +98,7 @@ import { AiRecommendationsModule } from "./modules/ai-recommendations/ai-recomme
 import { AnnualPlanModule } from "./modules/annual-plan/annual-plan.module";
 import { AiJobsModule } from "./modules/ai-jobs/ai-jobs.module";
 import { ParcelEventsModule } from "./modules/parcel-events/parcel-events.module";
+import { HealthModule } from "./modules/health/health.module";
 
 @Module({
   imports: [
@@ -213,6 +214,7 @@ import { ParcelEventsModule } from "./modules/parcel-events/parcel-events.module
     AnnualPlanModule,
     AiJobsModule,
     ParcelEventsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService, Reflector],
