@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X, ChevronRight, ArrowLeft, Home } from 'lucide-react';
+import { Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
@@ -74,37 +74,54 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
     }
   };
 
-  const handleHome = () => {
-    navigate({ to: '/' });
-  };
-
   return (
     <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex items-center gap-2 py-2 pl-16 pr-3">
+        <div className="flex items-center gap-1.5 py-2 pl-16 pr-3">
           {breadcrumbs.length > 1 && (
             <button
               type="button"
               onClick={handleBack}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
               aria-label="Go back"
             >
               <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </button>
           )}
-          <h1 className="text-base font-semibold text-gray-900 dark:text-white flex-1 truncate">
-            {title || currentPage.label}
-          </h1>
-          <button
-            type="button"
-            onClick={handleHome}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Go to home"
-          >
-            <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+          <nav className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
+            {breadcrumbs.map((item, index) => {
+              const Icon = item.icon;
+              const isLast = index === breadcrumbs.length - 1;
+              return (
+                <React.Fragment key={item.label}>
+                  {index > 0 && (
+                    <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => !isLast && handleBreadcrumbClick(item.path)}
+                    disabled={isLast}
+                    className={`flex items-center gap-1 whitespace-nowrap ${
+                      isLast
+                        ? 'text-sm font-semibold text-gray-900 dark:text-white'
+                        : 'text-xs text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {Icon && <Icon className={`flex-shrink-0 ${isLast ? 'h-4 w-4' : 'h-3.5 w-3.5'}`} />}
+                    <span className={index === 0 && breadcrumbs.length > 2 ? 'hidden' : 'truncate max-w-[120px]'}>
+                      {item.label}
+                    </span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </nav>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <NotificationBell />
+            <OrganizationSwitcher />
+          </div>
         </div>
 
         {/* Mobile Actions */}
