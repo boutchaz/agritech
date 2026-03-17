@@ -79,46 +79,50 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex items-center gap-1.5 py-2 pl-16 pr-3">
+        <div className="flex items-center gap-1 py-1.5 pl-14 pr-2">
           {breadcrumbs.length > 1 && (
             <button
               type="button"
               onClick={handleBack}
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex-shrink-0"
               aria-label="Go back"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <ArrowLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
             </button>
           )}
-          <nav className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
+          <nav className="flex items-center gap-0.5 flex-1 min-w-0">
             {breadcrumbs.map((item, index) => {
               const Icon = item.icon;
               const isLast = index === breadcrumbs.length - 1;
               return (
                 <React.Fragment key={item.label}>
                   {index > 0 && (
-                    <ChevronRight className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                    <ChevronRight className="h-3 w-3 text-gray-300 dark:text-gray-500 flex-shrink-0" />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => !isLast && handleBreadcrumbClick(item.path)}
-                    disabled={isLast}
-                    className={`flex items-center gap-1 whitespace-nowrap ${
-                      isLast
-                        ? 'text-sm font-semibold text-gray-900 dark:text-white'
-                        : 'text-xs text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    {Icon && <Icon className={`flex-shrink-0 ${isLast ? 'h-4 w-4' : 'h-3.5 w-3.5'}`} />}
-                    <span className={index === 0 && breadcrumbs.length > 2 ? 'hidden' : 'truncate max-w-[120px]'}>
+                  {isLast ? (
+                    <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">
                       {item.label}
                     </span>
-                  </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleBreadcrumbClick(item.path)}
+                      className="flex-shrink-0"
+                    >
+                      {Icon ? (
+                        <Icon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                      ) : (
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[60px]">
+                          {item.label}
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </React.Fragment>
               );
             })}
           </nav>
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center flex-shrink-0">
             <NotificationBell />
             <OrganizationSwitcher />
           </div>
