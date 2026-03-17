@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { useAuth } from '@/hooks/useAuth'
 import Map from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
+import { PageLoader } from '@/components/ui/loader'
 import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 
@@ -49,14 +50,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
   const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
 
-  // Debug logging for farmId issue
-  console.warn('🔍 FarmId Debug:', {
-    selectedFarmId,
-    currentFarmId: currentFarm?.id,
-    targetFarmId,
-    mapFarmId: targetFarmId, // This is what Map component will use
-    currentFarmName: currentFarm?.name
-  });
+
 
   // Sync URL search params to state (URL is source of truth)
   useEffect(() => {
@@ -134,14 +128,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
 
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('parcels.loadingOrganization')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -212,9 +199,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            </div>
+            <PageLoader className="h-96 min-h-0" />
           ) : parcels.length === 0 && !showAddParcelMap ? (
             <div data-testid="parcels-empty-state" className="space-y-6">
               {/* Show farms overview when no specific farm is selected */}

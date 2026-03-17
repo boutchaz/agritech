@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ModuleCard } from '../ui/ModuleCard';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
+import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import {
   isModuleAvailableForPlan,
   normalizePlanType,
@@ -124,17 +125,13 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
 
   if (isSubmitting) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader className="h-64" />
     );
   }
 
   if (isLoadingConfig) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader className="h-64" />
     );
   }
 
@@ -267,7 +264,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
       >
         {isSubmitting ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <ButtonLoader className="h-5 w-5 text-white" />
             <span>Enregistrement...</span>
           </>
         ) : (

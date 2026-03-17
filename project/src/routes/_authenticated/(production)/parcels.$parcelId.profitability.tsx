@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { SectionLoader } from '@/components/ui/loader'
 
 const ParcelProfitability = lazy(() => import('../../../components/ParcelProfitability'));
 
@@ -12,11 +13,7 @@ const ParcelProfitabilityPage = () => {
   const { data: parcel, isLoading } = useParcelById(parcelId);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <SectionLoader className="h-64 py-0" />;
   }
 
   if (!parcel) return null;

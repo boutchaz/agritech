@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Thermometer, Snowflake, Sun, Flame, Leaf, Timer, Calendar, Settings2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Thermometer, Snowflake, Sun, Flame, Leaf, Timer, Calendar, Settings2, X, ChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -406,8 +406,8 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     });
   };
 
-  // Filter temperature data by date range for a specific stage
-  const getFilteredDataForStage = (stageKey: string, stageIndex: number): TemperatureDataPoint[] => {
+   // Filter temperature data by date range for a specific stage
+   const getFilteredDataForStage = (stageKey: string, _stageIndex: number): TemperatureDataPoint[] => {
     const dateRange = stageDateRanges[stageKey];
 
     // Use custom stage range if set
@@ -444,8 +444,8 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     return temperatureData;
   };
 
-  // Get formatted date range display for a stage
-  const getDateRangeDisplay = (stageKey: string, stage: PhenologicalStage): string => {
+   // Get formatted date range display for a stage
+   const getDateRangeDisplay = (stageKey: string, _stage: PhenologicalStage): string => {
     const dateRange = stageDateRanges[stageKey];
 
     if (dateRange?.enabled && dateRange.startDate && dateRange.endDate) {
@@ -518,13 +518,12 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
       const counters = calculateCountersForData(filteredData, stage);
       const totalHours = filteredData.length * 24;
 
-      // Validate: Log warnings if counters exceed total hours (impossible values)
-      Object.entries(counters).forEach(([key, value]) => {
-        if (value > totalHours && totalHours > 0) {
-          console.warn(`[Temperature Validation] ${key}: ${value} hours exceeds period total of ${totalHours} hours (${filteredData.length} days)`);
-          console.warn(`  This indicates either: 1) Data spans wrong period, 2) Sinusoidal model issue, or 3) Data corruption`);
-        }
-      });
+       // Validate: Check if counters exceed total hours (impossible values)
+       Object.entries(counters).forEach(([_key, value]) => {
+         if (value > totalHours && totalHours > 0) {
+           // Data validation: counter exceeds period total (possible data corruption)
+         }
+       });
 
       results[stage.nameKey] = counters;
     });

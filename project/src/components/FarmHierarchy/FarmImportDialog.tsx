@@ -63,7 +63,7 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
       }
 
       if (!exportData.version) {
-        console.warn('Version non spécifiée dans le fichier d\'export');
+        // Version not specified in export file
       }
 
       const data = await apiClient.post<{

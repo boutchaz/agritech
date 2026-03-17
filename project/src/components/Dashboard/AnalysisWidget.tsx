@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale';
 import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '../../types/analysis';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const AnalysisWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -152,9 +153,25 @@ const AnalysisWidget: React.FC = () => {
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="flex gap-1 mb-4 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="flex-1 h-9 rounded-md" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Skeleton className="h-24 rounded-lg" />
+          <Skeleton className="h-24 rounded-lg" />
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-20 rounded-lg" />
         </div>
       </div>
     );

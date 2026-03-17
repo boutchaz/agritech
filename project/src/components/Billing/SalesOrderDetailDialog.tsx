@@ -25,6 +25,7 @@ import type { SalesOrder } from '@/hooks/useSalesOrders';
 import { useSalesOrder, useConvertOrderToInvoice, useIssueStock } from '@/hooks/useSalesOrders';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { formatCurrency } from '@/lib/taxCalculations';
+import { SectionLoader } from '@/components/ui/loader';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -67,7 +68,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { t } = useTranslation();
+  useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
@@ -182,10 +183,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            Loading sales order details...
-          </div>
+          <SectionLoader className="py-10" />
         </DialogContent>
       </Dialog>
     );

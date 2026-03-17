@@ -9,6 +9,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface OnboardingFlowProps {
   user: any;
@@ -345,14 +346,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
   // Show loading state while checking existing data
   if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Préparation de votre espace...</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="min-h-screen" />;
   }
 
   return (

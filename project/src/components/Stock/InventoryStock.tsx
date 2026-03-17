@@ -8,8 +8,7 @@ import { useWarehouses } from '@/hooks/useWarehouses';
 import { itemsApi } from '@/lib/api/items';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { Package, Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface InventoryStockLevel {
   item_id: string;
@@ -39,17 +38,16 @@ export default function InventoryStock() {
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
 
-      try {
-        // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
-        const filters: any = {};
-        // Note: The API returns data grouped by item_id with warehouse details
-        // We need to transform it to match the expected format
-        const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
-        return stockData;
-      } catch (error) {
-        console.warn('Could not fetch stock levels:', error);
-        return {};
-      }
+       try {
+         // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
+         const filters: any = {};
+         // Note: The API returns data grouped by item_id with warehouse details
+         // We need to transform it to match the expected format
+         const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
+         return stockData;
+       } catch (_error) {
+         return {};
+       }
     },
     enabled: !!currentOrganization?.id,
   });

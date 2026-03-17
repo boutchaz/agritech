@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useParcelById, useFarms } from '@/hooks/useParcelsQuery'
 import ModernPageHeader from '@/components/ModernPageHeader'
+import { PageLoader } from '@/components/ui/loader'
 import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp, BrainCircuit } from 'lucide-react'
 
 const ParcelLayout = () => {
@@ -26,14 +27,7 @@ const ParcelLayout = () => {
   ];
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('parcels.detail.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!parcel) {

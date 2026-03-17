@@ -43,6 +43,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Checkbox } from '../ui/checkbox';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface TasksListProps {
   organizationId: string;
@@ -473,9 +474,7 @@ const TasksList: React.FC<TasksListProps> = ({
 
       {/* Tasks List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+        <SectionLoader />
       ) : tasks.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
           <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -768,4 +767,3 @@ const TasksList: React.FC<TasksListProps> = ({
 };
 
 export default TasksList;
-

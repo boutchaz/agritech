@@ -131,7 +131,7 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               return;
             }
           } catch {
-            console.warn('Failed to parse saved farm');
+            // Failed to parse saved farm
           }
         }
         setCurrentFarm(mappedFarms[0]);
@@ -178,7 +178,7 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               return;
             }
           } catch {
-            console.warn('Failed to parse saved organization');
+            // Failed to parse saved organization
           }
         }
         

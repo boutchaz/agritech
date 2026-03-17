@@ -4,13 +4,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import SettingsLayout from '@/components/SettingsLayout'
-import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Home } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
+import { PageLoader } from '@/components/ui/loader'
 
 const SettingsLayoutComponent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   useAutoStartTour('settings', 1500);
@@ -20,14 +19,7 @@ const SettingsLayoutComponent: React.FC = () => {
   };
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('settings.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   return (

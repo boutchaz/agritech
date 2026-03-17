@@ -13,6 +13,7 @@ import {
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
+import { ButtonLoader } from '@/components/ui/loader';
 
 interface IndicesCalculatorProps {
   parcelId: string;
@@ -198,26 +199,25 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
         throw new Error('No satellite imagery data available for the selected date range and location. Try another nearby date range.');
       }
 
-      // Save results to database cache
-      for (const indexResult of response.indices) {
-        try {
-          await satelliteIndicesApi.create(
-            {
-              parcel_id: parcelId,
-              farm_id: farmId,
-              index_name: indexResult.index,
-              date: endDate,
-              mean_value: indexResult.value,
-              cloud_coverage_percentage: CLOUD_COVERAGE_FIXED,
-              metadata: { scale, source: 'indices_calculator' },
-            },
-            organizationId
-          );
-        } catch (saveError) {
-          console.warn('[IndicesCalculator] Failed to save index to cache:', saveError);
-          // Continue anyway - the main result is what matters
-        }
-      }
+       // Save results to database cache
+       for (const indexResult of response.indices) {
+         try {
+           await satelliteIndicesApi.create(
+             {
+               parcel_id: parcelId,
+               farm_id: farmId,
+               index_name: indexResult.index,
+               date: endDate,
+               mean_value: indexResult.value,
+               cloud_coverage_percentage: CLOUD_COVERAGE_FIXED,
+               metadata: { scale, source: 'indices_calculator' },
+             },
+             organizationId
+           );
+         } catch (_saveError) {
+           // Continue anyway - the main result is what matters
+         }
+       }
 
       // Refetch cache
       await refetchCache();
@@ -377,7 +377,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
           >
             {isCalculating ? (
               <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <ButtonLoader className="text-white" />
                 Calcul en cours...
               </>
             ) : (

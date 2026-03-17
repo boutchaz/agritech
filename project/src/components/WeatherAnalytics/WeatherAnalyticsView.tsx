@@ -7,6 +7,7 @@ import PrecipitationChart from './PrecipitationChart';
 import DryWetConditionsCharts from './DryWetConditionsCharts';
 import PhenologicalTemperatureCounters from './PhenologicalTemperatureCounters';
 import WeatherForecast from '../WeatherForecast';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface WeatherAnalyticsViewProps {
   parcelBoundary: number[][];
@@ -101,16 +102,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   }, [parcelBoundary]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('weather.loading')}
-          </p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="h-96 py-0" />;
   }
 
   if (error) {

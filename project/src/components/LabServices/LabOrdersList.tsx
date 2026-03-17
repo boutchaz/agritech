@@ -2,6 +2,7 @@ import { Eye, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface LabOrdersListProps {
   orders: any[];
@@ -19,11 +20,7 @@ const statusConfig: Record<string, { label: string; variant: any }> = {
 
 export function LabOrdersList({ orders, isLoading }: LabOrdersListProps) {
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (orders.length === 0) {

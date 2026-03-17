@@ -25,6 +25,7 @@ import { formatCurrency } from '@/lib/taxCalculations';
 import { YieldHistoryForm } from './YieldHistoryForm';
 import { BenchmarkForm } from './BenchmarkForm';
 import { HarvestForecastForm } from './HarvestForecastForm';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface ProductionDashboardProps {
   parcelId?: string;
@@ -108,14 +109,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
   };
 
   if (loadingPerformance || loadingAlerts || loadingForecasts) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading production intelligence...</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="h-96 py-0" />;
   }
 
   return (

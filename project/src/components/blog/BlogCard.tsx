@@ -9,9 +9,7 @@ interface BlogCardProps {
 
 export function BlogCard({ post, featured = false }: BlogCardProps) {
   // Defensive check: ensure slug exists before rendering
-  // Version: 2.0 - Fixed cache issue
   if (!post.slug) {
-    console.warn('BlogCard: post.slug is missing', post);
     return null;
   }
 

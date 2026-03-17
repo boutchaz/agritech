@@ -275,15 +275,12 @@ export class ParcelsService {
           crop_type: parcel.crop_type,
           total_harvests: 0,
           total_yield: 0,
-          total_estimated_yield: 0,
           total_revenue: 0,
-          total_cost: 0,
-          total_profit: 0,
           last_harvest_date: null,
           area_hectares:
             parcel.area_unit === "hectares"
               ? parcel.area
-              : parcel.area * 0.404686, // Simple conversion if needed
+              : parcel.area * 0.404686,
         });
       }
 
@@ -305,14 +302,17 @@ export class ParcelsService {
     const result = Array.from(summaryMap.values()).map((s) => {
       const avgYieldPerHectare =
         s.area_hectares > 0 ? s.total_yield / s.area_hectares : 0;
-      const avgTargetYield =
-        s.total_harvests > 0 ? s.total_estimated_yield / s.total_harvests : 0;
-      const avgVariancePercent =
-        s.total_estimated_yield > 0
-          ? ((s.total_yield - s.total_estimated_yield) /
-              s.total_estimated_yield) *
-            100
-          : 0;
+      const avgYieldPerHarvest =
+        s.total_harvests > 0 ? s.total_yield / s.total_harvests : 0;
+
+      // Performance rating based on yield productivity per hectare
+      // Uses relative thresholds since target yield is not available on harvest_records
+      const performanceRating =
+        s.total_harvests === 0
+          ? "No Data"
+          : avgYieldPerHectare > 0
+            ? "Active"
+            : "No Yield";
 
       return {
         parcel_id: s.parcel_id,
@@ -321,21 +321,14 @@ export class ParcelsService {
         crop_type: s.crop_type,
         total_harvests: s.total_harvests,
         avg_yield_per_hectare: parseFloat(avgYieldPerHectare.toFixed(2)),
-        avg_target_yield: parseFloat(avgTargetYield.toFixed(2)),
-        avg_variance_percent: parseFloat(avgVariancePercent.toFixed(2)),
-        performance_rating:
-          avgVariancePercent >= 0
-            ? "Excellent"
-            : avgVariancePercent > -10
-              ? "Good"
-              : "Poor",
+        avg_yield_per_harvest: parseFloat(avgYieldPerHarvest.toFixed(2)),
+        avg_target_yield: 0,
+        avg_variance_percent: 0,
+        performance_rating: performanceRating,
         total_revenue: parseFloat(s.total_revenue.toFixed(2)),
-        total_cost: parseFloat(s.total_cost.toFixed(2)),
-        total_profit: parseFloat(s.total_profit.toFixed(2)),
-        avg_profit_margin:
-          s.total_revenue > 0
-            ? parseFloat(((s.total_profit / s.total_revenue) * 100).toFixed(2))
-            : 0,
+        total_cost: 0,
+        total_profit: 0,
+        avg_profit_margin: 0,
         last_harvest_date: s.last_harvest_date,
       };
     });

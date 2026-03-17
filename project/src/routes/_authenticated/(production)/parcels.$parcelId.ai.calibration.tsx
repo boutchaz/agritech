@@ -79,6 +79,7 @@ import {
   TreePine,
   Save,
 } from 'lucide-react';
+import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -1093,7 +1094,7 @@ const NutritionOptionSelector: React.FC<{
   if (isSuggestionLoading) {
     return (
       <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+        <ButtonLoader className="h-6 w-6 text-blue-600" />
       </div>
     );
   }
@@ -1301,11 +1302,7 @@ const AICalibrationPage = () => {
   };
 
   if (isCalibrationLoading || isReportLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600" />
-      </div>
-    );
+    return <SectionLoader className="h-64 py-0" />;
   }
 
   return (

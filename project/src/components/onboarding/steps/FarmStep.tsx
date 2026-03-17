@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Ruler, Cloud, Droplets, ArrowRight, Sprout } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
+import { ButtonLoader } from '@/components/ui/loader';
 
 interface FarmData {
   name: string;
@@ -343,7 +344,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
       >
         {isLoading ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <ButtonLoader className="h-5 w-5 text-white" />
             <span>Enregistrement...</span>
           </>
         ) : (

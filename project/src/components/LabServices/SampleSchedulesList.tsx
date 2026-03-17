@@ -2,6 +2,7 @@ import { Calendar, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface SampleSchedulesListProps {
   schedules: any[];
@@ -10,11 +11,7 @@ interface SampleSchedulesListProps {
 
 export function SampleSchedulesList({ schedules, isLoading }: SampleSchedulesListProps) {
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (

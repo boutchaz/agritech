@@ -1,10 +1,11 @@
-import { createFileRoute, Outlet, Link, useLocation, useMatches } from '@tanstack/react-router';
+import { createFileRoute, Outlet, Link, useLocation } from '@tanstack/react-router';
 import { CheckSquare, Calendar, Building2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { PageLoader } from '@/components/ui/loader';
 
 function TasksLayout() {
   const { t } = useTranslation();
@@ -15,14 +16,7 @@ function TasksLayout() {
   const isTaskDetailPage = /^\/tasks\/[a-f0-9-]{36}/.test(location.pathname);
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('tasks.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   const navItems = [

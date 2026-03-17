@@ -45,6 +45,7 @@ import {
 import { format, parseISO, startOfMonth, endOfMonth, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface TasksCalendarProps {
   organizationId: string;
@@ -603,20 +604,15 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
     setShowTaskForm(true);
   };
 
-  const handleCreateTask = () => {
-    setSelectedTask(null);
-    setShowTaskForm(true);
-  };
+   const handleCreateTask = () => {
+     setSelectedTask(null);
+     setShowTaskForm(true);
+   };
 
-  const { t } = useTranslation();
+   useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">{t('tasks.calendarPage.loading')}</span>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (

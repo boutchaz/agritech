@@ -314,18 +314,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         // Transform API response to match expected format
         const itemStock = stockData[item.id];
         if (itemStock && itemStock.total_quantity > 0) {
-          return {
-            total_quantity: itemStock.total_quantity,
-            total_value: itemStock.total_value,
-            warehouses: itemStock.warehouses || [],
-          };
-        }
+         return {
+           total_quantity: itemStock.total_quantity,
+           total_value: itemStock.total_value,
+           warehouses: itemStock.warehouses || [],
+         };
+       }
 
-        return null;
-      } catch (error) {
-        console.warn('Could not fetch stock level:', error);
-        return null;
-      }
+       return null;
+     } catch (_error) {
+       return null;
+     }
     },
     enabled: !!item?.id && !!currentOrganization?.id && !!item?.is_stock_item,
   });

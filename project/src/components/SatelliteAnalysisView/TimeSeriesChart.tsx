@@ -92,10 +92,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           setEndDate(end);
           return;
         }
-      }
-    } catch (e) {
-      console.warn('Failed to restore date range from localStorage:', e);
-    }
+       }
+     } catch (_e) {
+       // Failed to restore date range from localStorage
+     }
     // Fallback to default 2 years
     const defaultRange = getDateRangeLastNDays(730);
     setStartDate(defaultRange.start_date);
@@ -105,11 +105,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   // Persist date range changes to localStorage
   useEffect(() => {
     if (startDate && endDate) {
-      try {
-        localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate, end: endDate }));
-      } catch (e) {
-        console.warn('Failed to persist date range:', e);
-      }
+       try {
+          localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate, end: endDate }));
+        } catch (_e) {
+          // Failed to persist date range
+        }
     }
   }, [startDate, endDate, DATE_RANGE_STORAGE_KEY]);
 
@@ -173,11 +173,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             },
             organizationId
           );
-          result[index] = response;
-        } catch (err) {
-          console.warn(`Failed to fetch cached data for ${index}:`, err);
-          result[index] = [];
-        }
+           result[index] = response;
+          } catch (_err) {
+            result[index] = [];
+          }
       }
 
       // Fetch derived indices from the timeseries API (calculated on-demand)
@@ -199,15 +198,14 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             });
 
             // Convert timeseries response to same format as cached data
-            result[index] = (response.data || []).map((point) => ({
-              date: point.date,
-              index_value: point.value,
-              mean_value: point.value,
-            }));
-          } catch (err) {
-            console.warn(`Failed to fetch on-demand data for ${index}:`, err);
-            result[index] = [];
-          }
+             result[index] = (response.data || []).map((point) => ({
+               date: point.date,
+               index_value: point.value,
+               mean_value: point.value,
+             }));
+            } catch (_err) {
+              result[index] = [];
+            }
         }
       }
 

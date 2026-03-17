@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageLoader, SectionLoader } from '@/components/ui/loader';
 import { farmsApi } from '@/lib/api/farms';
 
 function WorkersPage() {
@@ -75,14 +76,7 @@ function WorkersPage() {
   }, [currentOrganization]);
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('workers.loadingOrganization')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   // Access denied - user doesn't have permission to view workers
@@ -147,10 +141,7 @@ function WorkersPage() {
           {isChildRoute ? (
             <Outlet />
           ) : farmsLoading ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
-            </div>
+            <SectionLoader />
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {farmsError && (

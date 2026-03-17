@@ -15,6 +15,7 @@ import {
 import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import type { Task } from '../../types/tasks';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const UpcomingTasksWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -116,10 +117,20 @@ const UpcomingTasksWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm p-4 sm:p-6 flex flex-col gap-4 h-full">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-12 w-full rounded-lg" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-4 w-40" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          ))}
         </div>
       </div>
     );

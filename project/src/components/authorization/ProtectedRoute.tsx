@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAbility } from '../../lib/casl/AbilityContext';
 import { useAuth } from '../../hooks/useAuth';
@@ -36,11 +36,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   useEffect(() => {
     // Only check permission after BOTH auth and rules are fully loaded
     if (isReady && !ability.can(action, subject)) {
-      console.warn(`Access denied to ${subject}. Required: ${action}`, {
-        user: user?.email,
-        role: userRole?.role_name,
-        organization: currentOrganization?.name,
-      });
       navigate({ to: redirectTo });
     }
   }, [ability, action, subject, navigate, redirectTo, isReady, user, userRole, currentOrganization]);

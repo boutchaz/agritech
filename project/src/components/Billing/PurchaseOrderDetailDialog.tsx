@@ -47,6 +47,7 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
+import { SectionLoader } from '@/components/ui/loader';
 
 type ExtendedStatus = PurchaseOrder['status'] | 'approved' | 'in_transit' | 'completed';
 type StatusActionKey = 'submitted' | 'confirmed' | 'received';
@@ -262,10 +263,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            Chargement du bon de commande…
-          </div>
+          <SectionLoader className="py-10" />
         </DialogContent>
       </Dialog>
     );

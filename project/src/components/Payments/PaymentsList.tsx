@@ -5,7 +5,6 @@ import {
   Clock,
   AlertCircle,
   Search,
-  Filter,
   Download,
 } from 'lucide-react';
 import { usePayments } from '../../hooks/usePayments';
@@ -17,6 +16,7 @@ import {
   PAYMENT_STATUS_COLORS,
 } from '../../types/payments';
 import { format } from 'date-fns';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface PaymentsListProps {
   organizationId: string;
@@ -158,9 +158,7 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
 
       {/* Payments Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
+        <SectionLoader />
       ) : filteredPayments.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
           <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -256,4 +254,3 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
 };
 
 export default PaymentsList;
-

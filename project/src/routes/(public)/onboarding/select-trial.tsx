@@ -36,7 +36,7 @@ const pollUntil = async <T,>(
   fn: () => Promise<T | null>,
   options: { interval?: number; maxAttempts?: number; label?: string } = {}
 ): Promise<T | null> => {
-  const { interval = 200, maxAttempts = 25, label = 'condition' } = options
+  const { interval = 200, maxAttempts = 25, _label = 'condition' } = options
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const result = await fn()
@@ -45,8 +45,7 @@ const pollUntil = async <T,>(
     }
     await new Promise(resolve => setTimeout(resolve, interval))
   }
-  console.warn(`⚠️ Polling timeout: ${label} not met after ${maxAttempts} attempts`)
-  return null
+   return null
 }
 
 function SelectTrialPage() {
@@ -65,10 +64,10 @@ function SelectTrialPage() {
     trackPageView({ title: 'Start Your Free Trial' })
     trackOnboardingStart()
 
-    // Track all plan views on page load
-    Object.entries(SUBSCRIPTION_PLANS).forEach(([planType, plan]) => {
-      trackTrialPlanView(plan.name)
-    })
+     // Track all plan views on page load
+     Object.entries(SUBSCRIPTION_PLANS).forEach(([_planType, plan]) => {
+       trackTrialPlanView(plan.name)
+     })
   }, [])
 
   // Use organizations array as fallback if currentOrganization isn't set yet
@@ -147,9 +146,9 @@ function SelectTrialPage() {
           )
 
           if (orgResult) {
-            console.log('✅ Organization found:', orgResult)
+            // Organization found
           } else {
-            console.warn('⚠️ Organization not found after polling, proceeding anyway')
+            // Organization not found after polling, proceeding anyway
           }
 
           // Refresh user data to update React Query cache

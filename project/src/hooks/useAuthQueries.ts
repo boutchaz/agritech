@@ -41,18 +41,11 @@ export const useUserProfile = (userId: string | undefined) => {
           // Return null to stop retries
           return null;
         }
-        // Re-throw network errors to trigger retry
-        if (error instanceof Error && (
-          error.message?.includes('Failed to fetch') ||
-          error.message?.includes('NetworkError') ||
-          error.message?.includes('Network request failed')
-        )) {
-          console.warn('⚠️ Network error fetching profile, will retry:', error);
-          throw error;
-        }
-        // For other errors (404, 403), return null
-        console.error('Profile fetch error:', error);
-        return null;
+        // For ALL other errors (network, 403, 404, 500, etc.), THROW so TanStack Query
+        // keeps the previous cached data during background refetches instead of
+        // replacing valid profile data with null (which triggers false onboarding redirects)
+        console.warn('⚠️ Error fetching profile, keeping cached data:', error);
+        throw error;
       }
     },
     enabled: !!userId,
@@ -104,17 +97,10 @@ export const useUserOrganizations = (userId: string | undefined) => {
           // Return empty array to stop retries
           return [];
         }
-        // Re-throw network errors to trigger retry
-        if (error instanceof Error && (
-          error.message?.includes('Failed to fetch') ||
-          error.message?.includes('NetworkError') ||
-          error.message?.includes('Network request failed')
-        )) {
-          throw error;
-        }
-        // For other errors, return empty array
-        console.error('❌ Error fetching organizations:', error);
-        return [];
+        // THROW all other errors so TanStack Query keeps cached organizations
+        // during background refetches (prevents false onboarding redirects)
+        console.warn('⚠️ Error fetching organizations, keeping cached data:', error);
+        throw error;
       }
     },
     enabled: !!userId,

@@ -1,7 +1,7 @@
 import React from 'react';
-import { Users, Clock, Circle, ChevronRight } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { formatDistanceToNow } from 'date-fns';
+import { WidgetSkeleton } from '@/components/ui/skeleton';
 import type { ConcurrentUser } from '../../services/liveDashboardService';
 
 interface ConcurrentUsersWidgetProps {
@@ -18,14 +18,7 @@ const ConcurrentUsersWidget: React.FC<ConcurrentUsersWidgetProps> = ({
   const { t } = useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    );
+    return <WidgetSkeleton lines={3} />;
   }
 
   const getStatusColor = (lastActivity: string) => {
@@ -87,7 +80,7 @@ const ConcurrentUsersWidget: React.FC<ConcurrentUsersWidgetProps> = ({
             </div>
           </div>
           <div className="flex -space-x-2">
-            {users.slice(0, 4).map((user, index) => (
+            {users.slice(0, 4).map((user, _index) => (
               <div
                 key={user.id}
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold border-2 border-white dark:border-gray-800"

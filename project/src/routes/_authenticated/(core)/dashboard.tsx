@@ -26,6 +26,7 @@ import {
   trackRefreshMetrics,
   trackPageView,
 } from '@/lib/analytics'
+import { PageLoader } from '@/components/ui/loader'
 
 // Sensor data is now fetched via useSensorData hook in Dashboard component
 // No mock data needed - the hook handles real sensor connections when available
@@ -148,14 +149,7 @@ const AppContent: React.FC = () => {
   }, [currentOrganization, siteOrigin, t]);
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

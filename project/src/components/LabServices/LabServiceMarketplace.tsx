@@ -3,6 +3,7 @@ import { FlaskConical, MapPin, Clock, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SectionLoader } from '@/components/ui/loader';
 import type { ServiceCategory } from '@/hooks/useLabServices';
 import { OrderLabServiceDialog } from './OrderLabServiceDialog';
 
@@ -38,11 +39,7 @@ export function LabServiceMarketplace({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (

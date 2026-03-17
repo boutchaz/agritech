@@ -6,6 +6,7 @@ import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
 import MobileBottomNav from '../components/MobileBottomNav'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
 import { isSubscriptionValid } from '../lib/polar'
@@ -120,7 +121,9 @@ function AuthenticatedLayout() {
             </div>
           </header> */}
           <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 lg:pb-0">
-            <Outlet />
+            <ErrorBoundary>
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </div>
         {/* Mobile Bottom Navigation */}

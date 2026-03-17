@@ -1,8 +1,9 @@
 import React from 'react';
-import { Activity, Clock, MapPin, User, ChevronRight, Zap, CheckCircle, AlertCircle, FileText, Package } from 'lucide-react';
+import { Activity, Clock, MapPin, User, Zap, CheckCircle, AlertCircle, FileText, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
 import type { FarmActivity } from '../../services/liveDashboardService';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface FarmActivitiesWidgetProps {
   activities: FarmActivity[];
@@ -19,10 +20,23 @@ const FarmActivitiesWidget: React.FC<FarmActivitiesWidgetProps> = ({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-3 w-3 rounded-full" />
+            <Skeleton className="h-4 w-10" />
+          </div>
+        </div>
+        <Skeleton className="h-28 rounded-xl mb-5" />
+        <div className="space-y-3">
+          <Skeleton className="h-3 w-28" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-lg" />
+          ))}
         </div>
       </div>
     );

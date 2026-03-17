@@ -12,6 +12,7 @@ import {
   Plus
 } from 'lucide-react';
 import { Can } from '../lib/casl';
+import { SectionLoader } from '@/components/ui/loader';
 
 // Type aliases from generated database types
 type Farm = Database['public']['Tables']['farms']['Row'];
@@ -286,10 +287,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading farm hierarchy...</span>
-      </div>
+      <SectionLoader />
     );
   }
 

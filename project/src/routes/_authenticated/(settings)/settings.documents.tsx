@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { SectionLoader } from '@/components/ui/loader';
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/documents')({
   component: DocumentSettingsPage,
@@ -144,9 +145,7 @@ function DocumentSettingsPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            </div>
+            <SectionLoader className="py-8" />
           ) : templates && templates.length > 0 ? (
             <div className="space-y-3">
               {templates.map((template) => (

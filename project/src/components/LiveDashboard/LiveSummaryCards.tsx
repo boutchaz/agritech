@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, Activity, Building2, Clock, TrendingUp, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { StatsGridSkeleton } from '@/components/ui/skeleton';
 import type { LiveDashboardSummary } from '../../services/liveDashboardService';
 
 interface LiveSummaryCardsProps {
@@ -15,19 +16,7 @@ const LiveSummaryCards: React.FC<LiveSummaryCardsProps> = ({
   const { t } = useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="animate-pulse space-y-3">
-              <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <StatsGridSkeleton count={6} />;
   }
 
   const cards = [

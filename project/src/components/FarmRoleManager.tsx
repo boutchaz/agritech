@@ -17,6 +17,7 @@ import {
   useAssignFarmRole,
   useRemoveFarmRole,
 } from '../hooks/useFarmRoles';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface FarmRoleManagerProps {
   farmId: string;
@@ -119,12 +120,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   );
 
   if (loading && roles.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading roles...</span>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (

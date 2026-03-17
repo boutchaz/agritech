@@ -1,7 +1,7 @@
 import React from 'react';
-import { Activity, Tractor, Package, Droplets, Wrench, Leaf, ChevronRight, Clock, CheckCircle, PauseCircle } from 'lucide-react';
+import { Activity, Tractor, Package, Droplets, Wrench, Leaf } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { formatDistanceToNow } from 'date-fns';
+import { WidgetSkeleton } from '@/components/ui/skeleton';
 import type { ActiveOperation } from '../../services/liveDashboardService';
 
 interface ActiveOperationsWidgetProps {
@@ -20,14 +20,7 @@ const ActiveOperationsWidget: React.FC<ActiveOperationsWidgetProps> = ({
   const { t } = useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    );
+    return <WidgetSkeleton lines={4} />;
   }
 
   const getOperationIcon = (type: ActiveOperation['type']) => {
@@ -50,15 +43,6 @@ const ActiveOperationsWidget: React.FC<ActiveOperationsWidgetProps> = ({
       maintenance: { bg: 'from-purple-100 to-purple-50', dark: 'from-purple-900/40 to-purple-900/20', text: 'text-purple-600 dark:text-purple-400' },
     };
     return colors[type] || colors.task;
-  };
-
-  const getStatusIcon = (status: ActiveOperation['status']) => {
-    const icons = {
-      in_progress: <Activity className="h-4 w-4 text-green-500 animate-pulse" />,
-      pending: <Clock className="h-4 w-4 text-yellow-500" />,
-      paused: <PauseCircle className="h-4 w-4 text-gray-500" />,
-    };
-    return icons[status] || icons.pending;
   };
 
   const getStatusBadge = (status: ActiveOperation['status']) => {

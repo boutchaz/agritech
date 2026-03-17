@@ -5,20 +5,14 @@ import { useAuth } from '@/hooks/useAuth';
 import AnalysisPage from '@/components/AnalysisPage';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Beaker, FlaskConical, ArrowRight } from 'lucide-react';
+import { PageLoader } from '@/components/ui/loader';
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('analyses.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

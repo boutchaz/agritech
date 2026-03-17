@@ -64,8 +64,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
 
   // TanStack Query hooks
-  const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
-  const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useUserProfile(user?.id);
+  const { data: organizations = [], isLoading: orgsLoading, isError: orgsError } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
   const { isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
@@ -96,18 +96,18 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     waitingForOrganization;
 
 
-  // Calculate onboarding state - check profile, organizations, and onboarding completion
-  // IMPORTANT: Only calculate needsOnboarding if the session is actually valid
+  // Calculate onboarding state - only redirect when we have POSITIVE evidence onboarding is incomplete.
+  // Never redirect based on missing/errored data (API failures should not trigger onboarding).
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
   const hasCompletedOnboarding = profile?.onboarding_completed === true;
-  const needsOnboarding = isSessionValid && !!(
-    user && !loading && (
-      // No profile yet (missing required fields)
-      !profile || !profile.full_name ||
-      // Onboarding not marked as completed in user_profiles
+  const needsOnboarding = isSessionValid && !profileError && !orgsError && !!(
+    user && !loading && !hasCompletedOnboarding && (
+      // Profile explicitly says onboarding not completed
       (profile && profile.onboarding_completed === false) ||
-      // Only force onboarding on missing organizations when onboarding was not already completed
-      (!hasCompletedOnboarding && organizations.length === 0)
+      // Profile exists but missing required fields and onboarding not yet completed
+      (profile && !profile.full_name) ||
+      // No profile AND no organizations (genuinely new user, not an API error)
+      (!profile && organizations.length === 0)
     )
   );
 
@@ -268,10 +268,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const accessToken = getAccessToken();
 
       if (!accessToken) {
-        console.warn('⚠️ No access token for role fetch');
         // Fall back to role from organization object if available
         if (currentOrganization.role) {
-          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
           setUserRole(resolveFallbackRole(currentOrganization.role));
           return;
         }
@@ -293,10 +291,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          console.warn('⚠️ Not authorized for role fetch, status:', response.status);
           // Fall back to role from organization object if available
           if (currentOrganization.role) {
-            console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
             setUserRole(resolveFallbackRole(currentOrganization.role));
             return;
           }
@@ -309,10 +305,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const data = await response.json();
 
       if (!data || !data.role) {
-        console.warn('⚠️ No role found for user in organization from API');
         // Fall back to role from organization object if available
         if (currentOrganization.role) {
-          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
           setUserRole(resolveFallbackRole(currentOrganization.role));
           return;
         }
@@ -329,7 +323,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       console.error('Error fetching user role:', error);
       // Fall back to role from organization object if available
       if (currentOrganization.role) {
-        console.warn('ℹ️ Fallback: Using role from organization object on error:', currentOrganization.role);
         setUserRole(resolveFallbackRole(currentOrganization.role));
         return;
       }
@@ -606,7 +599,6 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
         window.location.href = '/onboarding';
       } else {
         // Session is invalid - clear auth and redirect to login
-        console.warn('[AuthProvider] Invalid session detected, clearing auth and redirecting to login');
         useAuthStore.getState().clearAuth();
         window.location.href = '/login';
       }

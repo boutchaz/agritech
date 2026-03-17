@@ -323,12 +323,11 @@ export default function ReceptionBatchForm({
               temperature: data.temperature,
               moisture_content: data.moisture_content,
             },
-          });
-        } catch (qcError: any) {
-          // Log quality control error but don't fail the entire operation
-          console.warn('Quality control update failed:', qcError);
-          toast.warning('Lot créé mais contrôle qualité non enregistré');
-        }
+           });
+         } catch (_qcError: any) {
+           // Quality control error but don't fail the entire operation
+           toast.warning('Lot créé mais contrôle qualité non enregistré');
+         }
       }
 
       toast.success(isEditMode ? 'Lot de réception mis à jour avec succès' : 'Lot de réception créé avec succès');

@@ -11,6 +11,7 @@ import HarvestForm from '@/components/Harvests/HarvestForm';
 import HarvestCard from '@/components/Harvests/HarvestCard';
 import HarvestDetailsModal from '@/components/Harvests/HarvestDetailsModal';
 import HarvestStatistics from '@/components/Harvests/HarvestStatistics';
+import { PageLoader } from '@/components/ui/loader';
 import type { HarvestSummary } from '@/types/harvests';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -117,14 +118,7 @@ function HarvestsPage() {
   };
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('harvests.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (

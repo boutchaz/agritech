@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, useMap, Marker, Popup, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Map, Layers, Filter, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ChartSkeleton } from '@/components/ui/skeleton';
 import type { ActivityHeatmapPoint } from '../../services/liveDashboardService';
 
 // Fix Leaflet default icon issue
@@ -175,14 +176,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
   };
 
   if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded"></div>
-        </div>
-      </div>
-    );
+    return <ChartSkeleton height="h-96" />;
   }
 
   return (

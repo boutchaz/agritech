@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Building2, User, Briefcase, CheckCircle, ArrowRight, Mail } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
+import { ButtonLoader } from '@/components/ui/loader';
 
 interface OrganizationData {
   name: string;
@@ -370,7 +371,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
       >
         {isLoading ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <ButtonLoader className="h-5 w-5 text-white" />
             <span>Enregistrement...</span>
           </>
         ) : (

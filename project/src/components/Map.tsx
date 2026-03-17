@@ -275,14 +275,14 @@ const MapComponent: React.FC<MapProps> = ({
       );
 
       if (pixel) {
-        return {
-          left: `${pixel[0]}px`,
-          top: `${pixel[1]}px`
-        };
-      }
-    } catch (error) {
-      console.warn('Error converting coordinates to pixels:', error);
-    }
+         return {
+           left: `${pixel[0]}px`,
+           top: `${pixel[1]}px`
+         };
+       }
+     } catch (_error) {
+       // Error converting coordinates to pixels
+     }
 
     return { left: '50%', top: '50%' };
   };
@@ -424,8 +424,8 @@ const MapComponent: React.FC<MapProps> = ({
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.updateSize();
-        } catch (error) {
-          console.warn('Error updating map size:', error);
+        } catch (_error) {
+          // Error updating map size
         }
       }
     }, 200);
@@ -502,8 +502,6 @@ const MapComponent: React.FC<MapProps> = ({
         }
       } else {
         // If parcel not found in current features, it might not have boundaries yet
-        console.warn(`Parcel ${selectedParcelId} not found on map. It may not have boundary data.`);
-
         // Try to find the parcel in the parcels array and center on it if it has boundary data
         const parcel = parcels.find(p => p.id === selectedParcelId);
         if (parcel && parcel.boundary && parcel.boundary.length > 0) {
@@ -725,7 +723,6 @@ const MapComponent: React.FC<MapProps> = ({
   useEffect(() => {
     try {
       if (!mapRef.current) {
-        console.warn('Map ref not available');
         return;
       }
 

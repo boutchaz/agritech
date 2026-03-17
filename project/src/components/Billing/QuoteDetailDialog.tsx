@@ -51,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Locale } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface QuoteDetailDialogProps {
   quote: Quote | null;
@@ -361,10 +362,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            {t('quotes.detail.loading')}
-          </div>
+          <SectionLoader className="py-10" />
         </DialogContent>
       </Dialog>
     );
