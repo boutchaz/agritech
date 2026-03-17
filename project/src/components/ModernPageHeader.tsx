@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Search, X, ChevronRight, Home as HomeIcon } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
@@ -65,64 +65,46 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
     }
   };
 
-  const parentBreadcrumb = breadcrumbs.length > 1 ? breadcrumbs[breadcrumbs.length - 2] : null;
-  const handleBack = () => {
-    if (parentBreadcrumb?.path) {
-      navigate({ to: parentBreadcrumb.path });
-    } else {
-      window.history.back();
-    }
-  };
-
   return (
     <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex items-center gap-1 py-1.5 pl-16 pr-2">
-          {breadcrumbs.length > 1 && (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors flex-shrink-0"
-              aria-label="Go back"
-            >
-              <ArrowLeft className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-            </button>
-          )}
-          <nav className="flex items-center gap-0.5 flex-1 min-w-0">
+        <div className="flex items-center gap-3 py-2.5 pl-16 pr-2">
+          <button
+            type="button"
+            onClick={() => navigate({ to: '/' })}
+            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            aria-label="Go to home"
+          >
+            <HomeIcon className="h-5 w-5" />
+          </button>
+          <nav className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto">
             {breadcrumbs.map((item, index) => {
-              const Icon = item.icon;
               const isLast = index === breadcrumbs.length - 1;
               return (
                 <React.Fragment key={item.label}>
                   {index > 0 && (
-                    <ChevronRight className="h-3 w-3 text-gray-300 dark:text-gray-500 flex-shrink-0" />
+                    <span className="text-gray-300 dark:text-gray-600 flex-shrink-0 text-sm">/</span>
                   )}
                   {isLast ? (
-                    <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                       {item.label}
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleBreadcrumbClick(item.path)}
-                      className="flex-shrink-0"
+                      className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors"
                     >
-                      {Icon ? (
-                        <Icon className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                      ) : (
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate max-w-[60px]">
-                          {item.label}
-                        </span>
-                      )}
+                      {item.label}
                     </button>
                   )}
                 </React.Fragment>
               );
             })}
           </nav>
-          <div className="flex items-center flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <NotificationBell />
             <OrganizationSwitcher />
           </div>
