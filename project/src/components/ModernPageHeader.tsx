@@ -1,6 +1,7 @@
-import React, { ReactNode, useState } from 'react';
+import React, { useState } from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, X, ChevronRight, Home as HomeIcon } from 'lucide-react';
+import { Search, X, Home as HomeIcon } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
@@ -66,47 +67,52 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700">
+    <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex items-center gap-3 py-2.5 pl-20 pr-2">
+        <div className="flex gap-1 py-1.5 pl-16 pr-2 items-center">
           <button
             type="button"
             onClick={() => navigate({ to: '/' })}
-            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center"
             aria-label="Go to home"
+            style={{ alignSelf: 'center' }}
           >
             <HomeIcon className="h-5 w-5" />
           </button>
-          <nav className="flex items-center gap-2 flex-1 min-w-0 overflow-x-auto">
-            {breadcrumbs.map((item, index) => {
-              const isLast = index === breadcrumbs.length - 1;
-              return (
-                <React.Fragment key={item.label}>
-                  {index > 0 && (
-                    <span className="text-gray-300 dark:text-gray-600 flex-shrink-0 text-sm">/</span>
-                  )}
-                  {isLast ? (
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                      {item.label}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleBreadcrumbClick(item.path)}
-                      className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors"
-                    >
-                      {item.label}
-                    </button>
-                  )}
-                </React.Fragment>
-              );
-            })}
+          <nav className="flex flex-col justify-center flex-1 min-w-0">
+            <div className="flex items-center gap-1 text-xs">
+              {breadcrumbs.map((item, index) => {
+                const isLast = index === breadcrumbs.length - 1;
+                return (
+                  <React.Fragment key={item.label}>
+                    {index > 0 && (
+                      <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">/</span>
+                    )}
+                    {isLast ? (
+                      <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                        {item.label}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleBreadcrumbClick(item.path)}
+                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
+                      >
+                        {item.label}
+                      </button>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </nav>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <NotificationBell />
-            <OrganizationSwitcher />
+          <div className="flex flex-col justify-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <OrganizationSwitcher compact />
+            </div>
           </div>
         </div>
 
@@ -122,33 +128,37 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
       <div className="hidden lg:block">
         <div className="px-4 sm:px-6 lg:px-8">
           {/* Top Section - Breadcrumbs & Organization */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700/50">
+          <div className="flex items-center justify-between py-1.5">
             {/* Breadcrumbs */}
-            <nav className="flex items-center space-x-2 text-sm overflow-x-auto flex-1 mr-4">
+            <nav className="flex items-center gap-1 text-xs flex-1 mr-3 min-h-[1.25rem]" aria-label="Breadcrumb">
               {breadcrumbs.map((item, index) => {
                 const Icon = item.icon;
                 const isLast = index === breadcrumbs.length - 1;
 
                 return (
-                  <React.Fragment key={index}>
+                  <React.Fragment key={`${item.path ?? item.label}-${index}`}>
                     {index > 0 && (
-                      <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0 select-none" aria-hidden>/</span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => !isLast && handleBreadcrumbClick(item.path)}
-                      disabled={isLast}
-                      className={`flex items-center gap-1.5 whitespace-nowrap transition-colors ${
-                        isLast
-                          ? 'text-gray-900 dark:text-white font-medium cursor-default'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
-                      <span className={index === 0 ? 'hidden sm:inline' : ''}>
-                        {item.label}
+                    {isLast ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-gray-900 dark:text-white font-medium">
+                        {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                        <span className={index === 0 ? 'hidden sm:inline' : ''}>
+                          {item.label}
+                        </span>
                       </span>
-                    </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleBreadcrumbClick(item.path)}
+                        className="inline-flex items-center gap-1 whitespace-nowrap text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
+                      >
+                        {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                        <span className={index === 0 ? 'hidden sm:inline' : ''}>
+                          {item.label}
+                        </span>
+                      </button>
+                    )}
                   </React.Fragment>
                 );
               })}

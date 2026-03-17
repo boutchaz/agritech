@@ -404,13 +404,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className={cn(
-            "lg:hidden fixed top-4 z-50 p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg",
-            "min-h-11 min-w-11", // 44px minimum touch target
-            isRTL ? "right-4" : "left-4",
+            "lg:hidden fixed top-2 z-50 inline-flex items-center justify-center rounded-xl bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-md",
+            "h-9 w-9", // compact but still tappable
+            "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0",
+            isRTL ? "right-3" : "left-3",
           )}
           aria-label="Toggle menu"
         >
-          <Menu className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+          <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
         </button>
       )}
 

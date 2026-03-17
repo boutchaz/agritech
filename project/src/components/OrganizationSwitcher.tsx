@@ -1,9 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { Building, ChevronDown, Check, Settings, Users, LogOut } from 'lucide-react';
 
-const OrganizationSwitcher: React.FC = () => {
+interface OrganizationSwitcherProps {
+  compact?: boolean;
+}
+
+const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = false }) => {
   const {
     organizations,
     currentOrganization,
@@ -63,12 +68,12 @@ const OrganizationSwitcher: React.FC = () => {
     }
   }, [isOpen]);
 
-  const handleOrganizationSelect = async (org: any) => {
+  const handleOrganizationSelect = async (org: { id: string; name: string; role: string }) => {
     setCurrentOrganization(org);
     setShowFarms(true);
   };
 
-  const handleFarmSelect = (farm: any) => {
+  const handleFarmSelect = (farm: { id: string; name: string; location?: string | null; size?: number | null }) => {
     setCurrentFarm(farm);
     setIsOpen(false);
     setShowFarms(false);
@@ -120,23 +125,28 @@ const OrganizationSwitcher: React.FC = () => {
   return (
     <div className="relative w-full sm:w-auto" ref={dropdownRef} data-tour="org-switcher">
       <button
+        type="button"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         data-tour="user-menu"
-        className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        className={`flex w-full sm:w-auto items-center ${
+          compact ? 'justify-center gap-2 px-2 py-1.5' : 'justify-between sm:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-2'
+        } bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors`}
       >
         <div className="flex items-center gap-2 min-w-0">
           <Building className="h-5 w-5 text-gray-500 flex-shrink-0" />
-          <div className="text-left min-w-0">
-            <div className="font-medium text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-              {currentOrganization.name}
-            </div>
-            {currentFarm && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-                {currentFarm.name}
+          {!compact && (
+            <div className="text-left min-w-0">
+              <div className="font-medium text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[160px] sm:max-w-[220px]">
+                {currentOrganization.name}
               </div>
-            )}
-          </div>
+              {currentFarm && (
+                <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
+                  {currentFarm.name}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -147,6 +157,7 @@ const OrganizationSwitcher: React.FC = () => {
         }`}>
           {/* User Info */}
           <button
+            type="button"
             onClick={handleUserProfile}
             className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
@@ -181,6 +192,7 @@ const OrganizationSwitcher: React.FC = () => {
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {organizations.map((org) => (
                   <button
+                    type="button"
                     key={org.id}
                     onClick={() => handleOrganizationSelect(org)}
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-3"
@@ -208,6 +220,7 @@ const OrganizationSwitcher: React.FC = () => {
               {/* Actions */}
               <div className="border-t border-gray-200 dark:border-gray-700">
                 <button
+                  type="button"
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
                   onClick={handleOrganizationSettings}
                 >
@@ -215,6 +228,7 @@ const OrganizationSwitcher: React.FC = () => {
                   <span className="text-gray-700 dark:text-gray-300">Paramètres de l'organisation</span>
                 </button>
                 <button
+                  type="button"
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
                   onClick={handleTeamManagement}
                 >
@@ -222,6 +236,7 @@ const OrganizationSwitcher: React.FC = () => {
                   <span className="text-gray-700 dark:text-gray-300">Gérer l'équipe</span>
                 </button>
                 <button
+                  type="button"
                   onClick={signOut}
                   className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm text-red-600"
                 >
@@ -235,6 +250,7 @@ const OrganizationSwitcher: React.FC = () => {
             <>
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                 <button
+                  type="button"
                   onClick={() => setShowFarms(false)}
                   className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
@@ -249,6 +265,7 @@ const OrganizationSwitcher: React.FC = () => {
                   farms.map((farm) => (
                     <button
                       key={farm.id}
+                      type="button"
                       onClick={() => handleFarmSelect(farm)}
                       className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
                     >
