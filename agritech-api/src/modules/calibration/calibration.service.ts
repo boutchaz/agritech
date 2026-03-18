@@ -20,6 +20,7 @@ import {
   NutritionOptionService,
   NutritionOptionSuggestion,
 } from "./nutrition-option.service";
+import { getLocalCropReference } from "./crop-reference-loader";
 
 const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
@@ -2166,13 +2167,30 @@ export class CalibrationService {
       .eq("crop_type", cropType)
       .maybeSingle();
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to fetch crop reference: ${error.message}`,
+    if (!error && data) {
+      return this.toJsonObject(
+        (data as CropReferenceRow).reference_data,
       );
     }
 
-    return this.toJsonObject((data as CropReferenceRow | null)?.reference_data);
+    if (error) {
+      this.logger.warn(
+        `DB crop reference lookup failed for "${cropType}": ${error.message}, falling back to local JSON`,
+      );
+    }
+
+    const localRef = getLocalCropReference(cropType);
+    if (localRef) {
+      this.logger.log(
+        `Using bundled JSON reference for "${cropType}"`,
+      );
+      return localRef;
+    }
+
+    this.logger.warn(
+      `No crop reference found for "${cropType}" (DB or local)`,
+    );
+    return {};
   }
 
   private async getLatestCompletedCalibration(

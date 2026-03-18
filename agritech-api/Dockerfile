@@ -33,6 +33,9 @@ COPY --from=builder /app/agritech-api/dist ./dist
 # Copy email templates
 COPY --from=builder /app/agritech-api/src/modules/email/templates ./dist/modules/email/templates
 
+# Bundle crop reference data (JSON files read at runtime as fallback)
+COPY referentials/DATA_*.json ./referentials/
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001
