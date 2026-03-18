@@ -1682,15 +1682,25 @@ export class CalibrationService {
         organizationId,
       );
 
+      const observationReason = `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
+      const currentData = this.toJsonObject(updatedCalibration.calibration_data);
+
       await supabase
-        .from("parcels")
-        .update({ ai_observation_only: true })
-        .eq("id", existingCalibration.parcel_id);
+        .from("calibrations")
+        .update({
+          calibration_data: {
+            ...currentData,
+            observation_only: true,
+            observation_reason: observationReason,
+          },
+        })
+        .eq("id", calibrationId)
+        .eq("organization_id", organizationId);
 
       return {
         ...(updatedCalibration as CalibrationRecord),
         observation_only: true,
-        observation_reason: `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`,
+        observation_reason: observationReason,
       } as CalibrationRecord;
     }
 

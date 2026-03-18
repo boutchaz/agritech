@@ -79,6 +79,7 @@ import {
   TreePine,
   Save,
   GitCompareArrows,
+  Eye,
 } from 'lucide-react';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
@@ -923,7 +924,7 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
+const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: string) => string; phase?: string }> = ({ output, t, phase }) => {
   const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
 
   return (
@@ -967,18 +968,20 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: stri
         <AnomalyList anomalies={output.step5.anomalies} extremeEvents={output.step2.extreme_events} />
       </CollapsibleSection>
 
-      <CollapsibleSection
-        title="Recommendations"
-        icon={<Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />}
-        badge={(
-          <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
-            {(output.recommendations ?? []).length}
-          </span>
-        )}
-        defaultOpen={false}
-      >
-        <RecommendationsList recommendations={output.recommendations ?? []} />
-      </CollapsibleSection>
+      {phase === 'active' && (output.recommendations ?? []).length > 0 && (
+        <CollapsibleSection
+          title="Recommendations"
+          icon={<Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />}
+          badge={(
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
+              {(output.recommendations ?? []).length}
+            </span>
+          )}
+          defaultOpen={false}
+        >
+          <RecommendationsList recommendations={output.recommendations ?? []} />
+        </CollapsibleSection>
+      )}
 
       <CollapsibleSection
         title="Calibration Improvement"
@@ -1312,6 +1315,7 @@ const AICalibrationPage = () => {
   const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage';
   const hasNoCalibration = !isWizardPhase && !calibration && !hasV2Report && (isDisabled || !phase);
   const canShowF3Banner = phase === 'active' && f3Eligibility?.eligible === true;
+  const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
 
   const handleStartCalibration = () => {
@@ -1475,7 +1479,22 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} t={t} />}
+      {isObservationOnly && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4">
+          <div className="flex items-start space-x-3">
+            <Eye className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Mode Observation</h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Le score de confiance est insuffisant pour des recommandations actives.
+                Ajoutez des analyses de sol/eau ou des historiques de r&eacute;colte pour am&eacute;liorer la pr&eacute;cision.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} t={t} phase={isObservationOnly ? 'observation' : phase} />}
 
       {historyRecords && historyRecords.length > 1 && !isCalibrating && (
         <CollapsibleSection

@@ -14,7 +14,6 @@ from .confidence import (
     ConfidenceInput,
     calculate_confidence_score,
 )
-from .recommendations import generate_recommendations
 from .step1_satellite_extraction import (
     extract_satellite_history,
 )
@@ -28,6 +27,7 @@ from .types import (
     ConfidenceComponent,
     ConfidenceScore,
     MaturityPhase,
+    Recommendation,
 )
 
 
@@ -226,13 +226,7 @@ def run_calibration_pipeline(
         step7=step7,
     )
 
-    recommendations = generate_recommendations(
-        step8=step8,
-        step5=step5,
-        step2=step2,
-        crop_type=calibration_input.crop_type,
-        maturity_phase=maturity_phase,
-    )
+    recommendations: list[Recommendation] = []
 
     soil_date, soil_fields = _latest_analysis_fields(calibration_input.analyses, "soil")
     water_date, water_fields = _latest_analysis_fields(
