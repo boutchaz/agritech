@@ -82,6 +82,7 @@ interface AiParcelContext {
   id: string;
   cropType: string;
   boundary: unknown;
+  aiPhase: string;
 }
 
 interface AiSatelliteReadingRow {
@@ -141,6 +142,12 @@ export class AiDiagnosticsService {
 
   async getDiagnostics(parcelId: string, organizationId: string): Promise<AiDiagnosticsResponse> {
     const parcelContext = await this.getParcelContext(parcelId, organizationId);
+
+    if (parcelContext.aiPhase !== 'active') {
+      throw new BadRequestException(
+        `Diagnostics are only available for parcels in active AI phase (current: ${parcelContext.aiPhase})`,
+      );
+    }
 
     const [calibration, satelliteReadings, weatherReadings] = await Promise.all([
       this.getLatestCalibration(parcelId, organizationId),
@@ -318,7 +325,7 @@ export class AiDiagnosticsService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, boundary, organization_id, farms(organization_id)')
+      .select('id, crop_type, boundary, organization_id, ai_phase, farms(organization_id)')
       .eq('id', parcelId)
       .single();
 
@@ -345,6 +352,7 @@ export class AiDiagnosticsService {
       id: parcel.id,
       cropType: parcel.crop_type,
       boundary: parcel.boundary,
+      aiPhase: typeof parcel.ai_phase === 'string' ? parcel.ai_phase : 'disabled',
     };
   }
 

@@ -832,7 +832,6 @@ export class CalibrationService {
       .from("parcels")
       .update({
         ai_calibration_id: calibrationId,
-        ai_enabled: true,
       })
       .eq("id", parcelId);
 
@@ -1158,7 +1157,6 @@ export class CalibrationService {
       .from("parcels")
       .update({
         ai_calibration_id: calibrationId,
-        ai_enabled: true,
       })
       .eq("id", parcelId);
 
@@ -1682,6 +1680,11 @@ export class CalibrationService {
         organizationId,
       );
 
+      await supabase
+        .from("parcels")
+        .update({ ai_enabled: true })
+        .eq("id", existingCalibration.parcel_id);
+
       const observationReason = `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
       const currentData = this.toJsonObject(updatedCalibration.calibration_data);
 
@@ -1760,7 +1763,7 @@ export class CalibrationService {
 
     const { error: updateParcelError } = await supabase
       .from("parcels")
-      .update({ ai_nutrition_option: option })
+      .update({ ai_nutrition_option: option, ai_enabled: true })
       .eq("id", calibration.parcel_id);
 
     if (updateParcelError) {

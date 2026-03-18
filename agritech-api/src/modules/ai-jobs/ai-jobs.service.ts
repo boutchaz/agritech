@@ -353,7 +353,8 @@ export class AiJobsService {
     const { data, error } = await client
       .from('parcels')
       .select('id, organization_id, crop_type, boundary')
-      .eq('ai_enabled', true);
+      .eq('ai_enabled', true)
+      .eq('ai_phase', 'active');
 
     if (error) {
       throw new Error(`Failed to fetch AI-enabled parcels: ${error.message}`);

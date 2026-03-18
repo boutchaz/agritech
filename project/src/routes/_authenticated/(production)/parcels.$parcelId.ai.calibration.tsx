@@ -1607,7 +1607,7 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {diagnostics && Array.isArray(diagnostics) && diagnostics.length > 0 && (
+      {phase === 'active' && diagnostics && Array.isArray(diagnostics) && diagnostics.length > 0 && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Diagnostics</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
