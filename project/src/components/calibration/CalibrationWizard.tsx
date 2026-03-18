@@ -97,14 +97,41 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       ? Math.max(0, new Date().getFullYear() - parcelData.planting_year)
       : calibrationWizardDefaultValues.plantation_age;
 
+    const VALID_FREQUENCIES = ['daily', '2_3_per_week', 'weekly', 'biweekly', 'other'] as const;
+    type Freq = (typeof VALID_FREQUENCIES)[number];
+    const rawFreq = parcelData?.irrigation_frequency;
+    const mappedFrequency: Freq =
+      rawFreq && (VALID_FREQUENCIES as readonly string[]).includes(rawFreq)
+        ? (rawFreq as Freq)
+        : calibrationWizardDefaultValues.irrigation_frequency;
+
+    const VALID_WATER_SOURCES = ['well', 'dam', 'seguia', 'municipal', 'mixed', 'other'] as const;
+    type WS = (typeof VALID_WATER_SOURCES)[number];
+    const rawWs = parcelData?.water_source;
+    const mappedWaterSource: WS =
+      rawWs && (VALID_WATER_SOURCES as readonly string[]).includes(rawWs)
+        ? (rawWs as WS)
+        : calibrationWizardDefaultValues.water_source;
+
     return {
       ...calibrationWizardDefaultValues,
       plantation_age: estimatedAge,
       real_tree_count: parcelData?.tree_count ?? calibrationWizardDefaultValues.real_tree_count,
       real_spacing: calibrationWizardDefaultValues.real_spacing,
+      water_source: mappedWaterSource,
+      irrigation_frequency: mappedFrequency,
+      volume_per_tree_liters:
+        parcelData?.water_quantity_per_session ?? calibrationWizardDefaultValues.volume_per_tree_liters,
       ...formData,
     } satisfies CalibrationWizardFormValues;
-  }, [parcelData?.tree_count, parcelData?.planting_year, formData]);
+  }, [
+    parcelData?.tree_count,
+    parcelData?.planting_year,
+    parcelData?.irrigation_frequency,
+    parcelData?.water_source,
+    parcelData?.water_quantity_per_session,
+    formData,
+  ]);
 
   const form = useForm<CalibrationWizardFormValues>({
     resolver: zodResolver(CalibrationWizardSchema as unknown as Parameters<typeof zodResolver>[0]) as unknown as Resolver<CalibrationWizardFormValues>,

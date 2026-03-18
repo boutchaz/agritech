@@ -1360,8 +1360,9 @@ export class CalibrationService {
           }
         : {
             check: "irrigation_frequency",
-            status: "fail",
-            message: "Fréquence d'irrigation obligatoire",
+            status: "warning",
+            message:
+              "Fréquence d'irrigation recommandée pour améliorer la précision",
           },
     );
 

@@ -25,6 +25,10 @@ export interface Parcel {
   rootstock?: string | null;
   planting_date?: string | null;
   planting_type?: string | null;
+  planting_system?: string | null;
+  irrigation_frequency?: string | null;
+  water_source?: string | null;
+  water_quantity_per_session?: number | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -103,6 +107,10 @@ export const useParcelsByFarm = (farmId: string | undefined) => {
         rootstock: parcel.rootstock ?? null,
         planting_date: parcel.planting_date ?? null,
         planting_type: (parcel as any).planting_type ?? null,
+        planting_system: (parcel as any).planting_system ?? null,
+        irrigation_frequency: (parcel as any).irrigation_frequency ?? null,
+        water_source: (parcel as any).water_source ?? null,
+        water_quantity_per_session: (parcel as any).water_quantity_per_session ?? null,
         created_at: parcel.created_at ?? null,
         updated_at: parcel.updated_at ?? null,
       }));
@@ -145,6 +153,10 @@ export const useParcelsByFarms = (farmIds: string[]) => {
         rootstock: parcel.rootstock ?? null,
         planting_date: parcel.planting_date ?? null,
         planting_type: (parcel as any).planting_type ?? null,
+        planting_system: (parcel as any).planting_system ?? null,
+        irrigation_frequency: (parcel as any).irrigation_frequency ?? null,
+        water_source: (parcel as any).water_source ?? null,
+        water_quantity_per_session: (parcel as any).water_quantity_per_session ?? null,
         created_at: parcel.created_at ?? null,
         updated_at: parcel.updated_at ?? null,
       }));
@@ -184,6 +196,10 @@ export const useParcelById = (parcelId: string | null | undefined) => {
         rootstock: parcel.rootstock ?? null,
         planting_date: parcel.planting_date ?? null,
         planting_type: (parcel as any).planting_type ?? null,
+        planting_system: (parcel as any).planting_system ?? null,
+        irrigation_frequency: (parcel as any).irrigation_frequency ?? null,
+        water_source: (parcel as any).water_source ?? null,
+        water_quantity_per_session: (parcel as any).water_quantity_per_session ?? null,
         created_at: parcel.created_at ?? null,
         updated_at: parcel.updated_at ?? null,
       };
