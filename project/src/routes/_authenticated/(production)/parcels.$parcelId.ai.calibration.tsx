@@ -13,6 +13,7 @@ import {
   useNutritionSuggestion,
   useConfirmNutritionOption,
 } from '@/hooks/useCalibrationV2';
+import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
 import type { CalibrationHistoryRecord } from '@/lib/api/calibration-v2';
 import type {
   CalibrationV2Output,
@@ -1281,6 +1282,110 @@ const PlantingYearPrompt: React.FC<{
   );
 };
 
+const CALIBRATION_STEPS: Record<string, { icon: React.ReactNode; label: string }> = {
+  data_collection: { icon: <Satellite className="w-4 h-4" />, label: 'Collecte des données' },
+  satellite_sync: { icon: <Satellite className="w-4 h-4" />, label: 'Synchronisation satellite' },
+  raster_extraction: { icon: <Target className="w-4 h-4" />, label: 'Extraction pixels NDVI' },
+  gdd_precompute: { icon: <Thermometer className="w-4 h-4" />, label: 'Calcul degrés-jours' },
+  calibration_engine: { icon: <BrainCircuit className="w-4 h-4" />, label: 'Moteur de calibration' },
+  saving_results: { icon: <Save className="w-4 h-4" />, label: 'Sauvegarde résultats' },
+  ai_reports: { icon: <Activity className="w-4 h-4" />, label: 'Rapports IA' },
+  finalizing: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Finalisation' },
+};
+
+const CalibrationProgressStepper: React.FC<{ progress: CalibrationProgressEvent | null }> = ({ progress }) => {
+  const currentStep = progress?.step ?? 0;
+  const totalSteps = progress?.total_steps ?? 7;
+  const percent = progress?.percent ?? 0;
+  const stepKey = progress?.step_key ?? '';
+  const message = progress?.message ?? 'Initialisation du calibrage...';
+
+  const stepKeys = totalSteps === 5
+    ? ['data_collection', 'calibration_engine', 'saving_results', 'ai_reports', 'finalizing']
+    : ['data_collection', 'satellite_sync', 'raster_extraction', 'gdd_precompute', 'calibration_engine', 'saving_results', 'ai_reports'];
+
+  return (
+    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
+      <div className="flex items-center space-x-3 mb-5">
+        <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+          <BrainCircuit className="w-6 h-6 text-purple-600 dark:text-purple-400 animate-pulse" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">Calibration en cours</h3>
+          <p className="text-sm text-purple-700 dark:text-purple-300">{message}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{percent}%</span>
+        </div>
+      </div>
+
+      <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2 mb-5 overflow-hidden">
+        <div
+          className="bg-purple-600 dark:bg-purple-400 h-2 rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${Math.max(percent, 2)}%` }}
+        />
+      </div>
+
+      <div className="space-y-2">
+        {stepKeys.map((key, index) => {
+          const stepNum = index + 1;
+          const stepDef = CALIBRATION_STEPS[key];
+          const isActive = key === stepKey;
+          const isCompleted = currentStep > stepNum;
+
+          return (
+            <div
+              key={key}
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-300 ${
+                isActive
+                  ? 'bg-purple-100 dark:bg-purple-900/40 ring-1 ring-purple-300 dark:ring-purple-700'
+                  : isCompleted
+                    ? 'bg-green-50 dark:bg-green-900/20'
+                    : 'opacity-50'
+              }`}
+            >
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                isActive
+                  ? 'bg-purple-600 text-white'
+                  : isCompleted
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+              }`}>
+                {isCompleted ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : isActive ? (
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                ) : (
+                  <span className="text-xs font-medium">{stepNum}</span>
+                )}
+              </div>
+
+              <div className={`flex items-center space-x-2 ${
+                isActive
+                  ? 'text-purple-900 dark:text-purple-100'
+                  : isCompleted
+                    ? 'text-green-700 dark:text-green-300'
+                    : 'text-gray-400 dark:text-gray-500'
+              }`}>
+                {stepDef?.icon}
+                <span className={`text-sm ${isActive ? 'font-medium' : ''}`}>
+                  {stepDef?.label ?? key}
+                </span>
+              </div>
+
+              {isActive && (
+                <div className="ml-auto">
+                  <div className="w-4 h-4 border-2 border-purple-600 dark:border-purple-400 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
   const { t } = useTranslation();
@@ -1292,6 +1397,7 @@ const AICalibrationPage = () => {
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId);
   const { isPending: isStartingV1 } = useStartAICalibration();
+  const calibrationProgress = useCalibrationProgress(parcelId);
 
   const { data: phase } = useCalibrationPhase(parcelId);
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
@@ -1449,34 +1555,7 @@ const AICalibrationPage = () => {
       )}
 
       {isCalibrating && (
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
-              <BrainCircuit className="w-6 h-6 text-purple-600 dark:text-purple-400 animate-pulse" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">Provisioning Data</h3>
-              <p className="text-sm text-purple-700 dark:text-purple-300">
-                Fetching satellite imagery and weather data for this parcel. This may take a few minutes.
-              </p>
-            </div>
-          </div>
-          <div className="space-y-3 ml-11">
-            <div className="flex items-center space-x-2 text-sm text-purple-700 dark:text-purple-300">
-              <Satellite className="w-4 h-4 animate-pulse" />
-              <span>Fetching satellite indices (NDVI, NDRE, NDMI, EVI, SAVI, GCI)...</span>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-purple-700 dark:text-purple-300">
-              <CloudRain className="w-4 h-4 animate-pulse" />
-              <span>Fetching weather history (temperature, precipitation, evapotranspiration)...</span>
-            </div>
-          </div>
-          <div className="mt-4 ml-11">
-            <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-1.5 overflow-hidden">
-              <div className="bg-purple-600 dark:bg-purple-400 h-1.5 rounded-full animate-[progress_2s_ease-in-out_infinite]" style={{ width: '60%' }} />
-            </div>
-          </div>
-        </div>
+        <CalibrationProgressStepper progress={calibrationProgress} />
       )}
 
       {isObservationOnly && (

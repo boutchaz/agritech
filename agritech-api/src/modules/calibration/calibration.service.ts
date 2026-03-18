@@ -199,6 +199,30 @@ export class CalibrationService {
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
+  private emitCalibrationProgress(
+    organizationId: string,
+    parcelId: string,
+    calibrationId: string,
+    step: number,
+    totalSteps: number,
+    stepKey: string,
+    message: string,
+  ): void {
+    this.notificationsGateway.emitToOrganization(
+      organizationId,
+      "calibration:progress",
+      {
+        parcel_id: parcelId,
+        calibration_id: calibrationId,
+        step,
+        total_steps: totalSteps,
+        step_key: stepKey,
+        message,
+        percent: Math.round((step / totalSteps) * 100),
+      },
+    );
+  }
+
   async startCalibration(
     parcelId: string,
     organizationId: string,
@@ -653,6 +677,11 @@ export class CalibrationService {
     previousBaseline: JsonObject,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
+    const totalSteps = 5;
+    const emitProgress = (step: number, stepKey: string, message: string) =>
+      this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
+
+    emitProgress(1, "data_collection", "Collecte des données satellite, météo et analyses...");
 
     const [satelliteImages, weatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
       this.fetchSatelliteImages(parcelId, organizationId),
@@ -703,6 +732,8 @@ export class CalibrationService {
       updated_blocks: updatedBlocks,
     };
 
+    emitProgress(2, "calibration_engine", "Exécution du moteur de calibration V2...");
+
     const v2Output = await this.postCalibrationApi<CalibrationResponse>(
       "/api/calibration/v2/run",
       {
@@ -712,6 +743,8 @@ export class CalibrationService {
       },
       organizationId,
     );
+
+    emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
     const calibrationData = {
@@ -775,6 +808,8 @@ export class CalibrationService {
       );
     }
 
+    emitProgress(4, "ai_reports", "Génération des rapports d'analyse IA...");
+
     const primaryLanguage = parcel.langue || "fr";
     const secondaryLanguage = primaryLanguage === "fr" ? "ar" : "fr";
 
@@ -828,6 +863,8 @@ export class CalibrationService {
       }
     }
 
+    emitProgress(5, "finalizing", "Finalisation et transition vers la validation...");
+
     const { error: updateParcelError } = await supabase
       .from("parcels")
       .update({
@@ -874,6 +911,11 @@ export class CalibrationService {
     dto: StartCalibrationDto,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
+    const totalSteps = 7;
+    const emitProgress = (step: number, stepKey: string, message: string) =>
+      this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
+
+    emitProgress(1, "data_collection", "Collecte des données satellite, météo et analyses...");
 
     const [
       initialSatelliteImages,
@@ -892,6 +934,7 @@ export class CalibrationService {
     let satelliteImages = initialSatelliteImages;
 
     if (satelliteImages.length === 0) {
+      emitProgress(2, "satellite_sync", "Synchronisation des images satellite...");
       this.logger.log(
         `No satellite data for parcel ${parcelId}, auto-syncing from satellite service`,
       );
@@ -917,6 +960,8 @@ export class CalibrationService {
         organizationId,
       );
     }
+
+    emitProgress(3, "raster_extraction", "Extraction des pixels NDVI par zone...");
 
     let ndviRasterPixels: Array<{
       lon: number;
@@ -966,6 +1011,8 @@ export class CalibrationService {
       );
     }
 
+    emitProgress(4, "gdd_precompute", "Calcul des degrés-jours de croissance...");
+
     if (
       weatherRows.length &&
       this.hasMissingGdd(weatherRows, parcel.cropType)
@@ -989,8 +1036,8 @@ export class CalibrationService {
       );
     }
 
-    // Parcel crop_type and variety are used for calibration: reference_data is loaded by crop_type;
-    // variety is matched against reference_data.varietes[].nom or .code for yield curves and maturity.
+    emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
+
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,
@@ -1038,6 +1085,8 @@ export class CalibrationService {
       },
       organizationId,
     );
+
+    emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
     const calibrationData = {
@@ -1100,6 +1149,8 @@ export class CalibrationService {
       );
     }
 
+    emitProgress(7, "ai_reports", "Génération des rapports d'analyse IA...");
+
     const primaryLanguage = parcel.langue || "fr";
     const secondaryLanguage = primaryLanguage === "fr" ? "ar" : "fr";
 
@@ -1148,7 +1199,7 @@ export class CalibrationService {
 
       if (aiUpdateError) {
         this.logger.warn(
-          `Failed to store bilingual calibration reports: ${aiUpdateError.message}`,
+          `Failed to store bilingual AI reports: ${aiUpdateError.message}`,
         );
       }
     }

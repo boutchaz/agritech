@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { socketManager } from '@/lib/socket';
 import { queryKeys } from '@/lib/query-keys';
@@ -14,6 +14,16 @@ interface CalibrationFailedEvent {
   parcel_id: string;
   calibration_id: string;
   error_message: string;
+}
+
+export interface CalibrationProgressEvent {
+  parcel_id: string;
+  calibration_id: string;
+  step: number;
+  total_steps: number;
+  step_key: string;
+  message: string;
+  percent: number;
 }
 
 export function useCalibrationSocket(parcelId: string): void {
@@ -63,4 +73,34 @@ export function useCalibrationSocket(parcelId: string): void {
       unsubFailed();
     };
   }, [parcelId, organizationId, queryClient]);
+}
+
+export function useCalibrationProgress(parcelId: string): CalibrationProgressEvent | null {
+  const [progress, setProgress] = useState<CalibrationProgressEvent | null>(null);
+
+  useEffect(() => {
+    if (!parcelId) return;
+
+    const handleProgress = (data: CalibrationProgressEvent) => {
+      if (data.parcel_id !== parcelId) return;
+      setProgress(data);
+    };
+
+    const handlePhaseChanged = (data: CalibrationPhaseEvent) => {
+      if (data.parcel_id !== parcelId) return;
+      if (data.to_phase !== 'calibrating') {
+        setProgress(null);
+      }
+    };
+
+    const unsubProgress = socketManager.on('calibration:progress', handleProgress);
+    const unsubPhase = socketManager.on('calibration:phase-changed', handlePhaseChanged);
+
+    return () => {
+      unsubProgress();
+      unsubPhase();
+    };
+  }, [parcelId]);
+
+  return progress;
 }
