@@ -25,6 +25,59 @@ class StressEventDto {
 }
 
 export class StartCalibrationDto {
+  @ApiPropertyOptional({
+    description: "Calibration mode: F1 (initial), F2 (partial), F3 (annual)",
+  })
+  @IsOptional()
+  @IsString()
+  mode_calibrage?: "F1" | "F2" | "F3";
+
+  @ApiPropertyOptional({ description: "F2 recalibration motif" })
+  @IsOptional()
+  @IsString()
+  recalibration_motif?: string;
+
+  @ApiPropertyOptional({
+    description: "F3: expected trigger reason (harvest_completed, date_reached, manual)",
+  })
+  @IsOptional()
+  @IsString()
+  f3_trigger_reason?: string;
+
+  @ApiPropertyOptional({
+    description: "F3: actual seasonal yield entered by user",
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  f3_actual_yield?: number;
+
+  @ApiPropertyOptional({
+    description: "F3: unit for actual seasonal yield (kg, tons, etc.)",
+  })
+  @IsOptional()
+  @IsString()
+  f3_actual_yield_unit?: string;
+
+  @ApiPropertyOptional({
+    description: "F3: user acknowledges unresolved seasonal tasks",
+  })
+  @IsOptional()
+  @IsBoolean()
+  f3_missing_tasks_acknowledged?: boolean;
+
+  @ApiPropertyOptional({
+    description: "F3: optional notes about campaign review before validation",
+  })
+  @IsOptional()
+  @IsString()
+  f3_campaign_notes?: string;
+
+  @ApiPropertyOptional({ description: "F2: free text for motif=other" })
+  @IsOptional()
+  @IsString()
+  recalibration_motif_detail?: string;
+
   // Step 1: Plantation Complements
   @ApiPropertyOptional({
     description: "Real tree count (overrides auto-estimated)",

@@ -21,13 +21,17 @@ import { OrganizationGuard } from "../../common/guards/organization.guard";
 import { CalibrationService } from "./calibration.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
+import { F3RecalibrationService } from "./f3-recalibration.service";
 
 @ApiTags("calibration")
 @ApiBearerAuth()
 @Controller("parcels/:parcelId/calibration")
 @UseGuards(JwtAuthGuard, OrganizationGuard)
 export class CalibrationController {
-  constructor(private readonly calibrationService: CalibrationService) {}
+  constructor(
+    private readonly calibrationService: CalibrationService,
+    private readonly f3RecalibrationService: F3RecalibrationService,
+  ) {}
 
   @Post("start")
   @ApiOperation({ summary: "Trigger the calibration pipeline for a parcel" })
@@ -42,6 +46,24 @@ export class CalibrationController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.startCalibration(
+      parcelId,
+      organizationId,
+      dto,
+    );
+  }
+
+  @Post("partial")
+  @ApiOperation({
+    summary:
+      "Start partial recalibration (F2) for a specific data block change",
+  })
+  async startPartialRecalibration(
+    @Param("parcelId") parcelId: string,
+    @Body() dto: StartCalibrationDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.startPartialRecalibration(
       parcelId,
       organizationId,
       dto,
@@ -96,6 +118,23 @@ export class CalibrationController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.getCalibrationHistory(
+      parcelId,
+      organizationId,
+    );
+  }
+
+  @Get("history/recalibration")
+  @ApiOperation({ summary: "Get partial recalibration history (F2) for a parcel" })
+  @ApiResponse({
+    status: 200,
+    description: "Partial recalibration history retrieved successfully",
+  })
+  async getRecalibrationHistory(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getRecalibrationHistory(
       parcelId,
       organizationId,
     );
@@ -221,6 +260,87 @@ export class CalibrationController {
   async getZones(@Param("parcelId") parcelId: string, @Req() req: Request) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.getZones(parcelId, organizationId);
+  }
+
+  @Get("f3/eligibility")
+  @ApiOperation({ summary: "Check F3 annual recalibration eligibility" })
+  @ApiResponse({ status: 200, description: "F3 eligibility evaluated" })
+  async checkF3Eligibility(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.f3RecalibrationService.checkF3Eligibility(
+      parcelId,
+      organizationId,
+    );
+  }
+
+  @Get("f3/missing-tasks")
+  @ApiOperation({ summary: "Detect missing annual tasks before F3" })
+  @ApiResponse({ status: 200, description: "Missing tasks list generated" })
+  async getMissingTasks(@Param("parcelId") parcelId: string, @Req() req: Request) {
+    const organizationId = this.getOrganizationId(req);
+    return this.f3RecalibrationService.detectMissingTasks(parcelId, organizationId);
+  }
+
+  @Get("f3/new-analyses")
+  @ApiOperation({ summary: "Check analyses created since latest calibration" })
+  @ApiResponse({ status: 200, description: "New analyses availability checked" })
+  async checkNewAnalyses(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const latestCalibration = await this.calibrationService.getLatestCalibration(
+      parcelId,
+      organizationId,
+    );
+
+    const referenceDate =
+      latestCalibration?.completed_at ?? latestCalibration?.created_at;
+
+    if (!referenceDate) {
+      throw new NotFoundException(
+        "Latest calibration date is required to compare analyses",
+      );
+    }
+
+    return this.f3RecalibrationService.checkNewAnalyses(
+      parcelId,
+      organizationId,
+      referenceDate,
+    );
+  }
+
+  @Get("f3/campaign-bilan")
+  @ApiOperation({ summary: "Generate automatic F3 campaign comparison" })
+  @ApiResponse({ status: 200, description: "Campaign bilan generated" })
+  async getCampaignBilan(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.f3RecalibrationService.generateCampaignBilan(
+      parcelId,
+      organizationId,
+    );
+  }
+
+  @Post("f3/start")
+  @ApiOperation({ summary: "Start F3 annual post-campaign recalibration" })
+  @ApiResponse({ status: 201, description: "F3 recalibration started" })
+  async startAnnualRecalibration(
+    @Param("parcelId") parcelId: string,
+    @Body() dto: StartCalibrationDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.f3RecalibrationService.startAnnualRecalibration(
+      parcelId,
+      organizationId,
+      dto,
+    );
   }
 
   private getOrganizationId(req: Request): string {

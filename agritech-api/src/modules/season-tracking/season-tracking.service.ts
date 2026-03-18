@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { CalibrationService } from "../calibration/calibration.service";
+import { F3RecalibrationService } from "../calibration/f3-recalibration.service";
 import { DatabaseService } from "../database/database.service";
+import { NotificationType } from "../notifications/dto/notification.dto";
+import { NotificationsService } from "../notifications/notifications.service";
 import { CloseSeasonDto } from "./dto/close-season.dto";
 import { CreateSeasonDto } from "./dto/create-season.dto";
 
@@ -30,7 +32,8 @@ export interface SeasonRecord {
 export class SeasonTrackingService {
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly calibrationService: CalibrationService,
+    private readonly f3RecalibrationService: F3RecalibrationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async createSeason(
@@ -147,40 +150,110 @@ export class SeasonTrackingService {
       throw new NotFoundException("Season not found");
     }
 
-    const calibration = await this.calibrationService.startCalibration(
+    await this.handleF3TriggerAfterHarvestCompletion(
+      userId,
       parcelId,
       organizationId,
-      { harvest_regularity: dto.regularite_percue },
-      { skipReadinessCheck: true },
+      7,
     );
 
-    const { error: modeError } = await supabase
-      .from("calibrations")
-      .update({ mode_calibrage: "F3" })
-      .eq("id", calibration.id)
+    return closedSeason as SeasonRecord;
+  }
+
+  async handleF3TriggerAfterHarvestCompletion(
+    userId: string,
+    parcelId: string,
+    organizationId: string,
+    snoozeDays: number,
+  ): Promise<{
+    eligible: boolean;
+    snoozed_until?: string;
+  }> {
+    const eligibility = await this.f3RecalibrationService.checkF3Eligibility(
+      parcelId,
+      organizationId,
+    );
+
+    if (!eligibility.eligible) {
+      const snoozedUntil = await this.snoozeF3Reminder(
+        parcelId,
+        organizationId,
+        snoozeDays,
+      );
+      return {
+        eligible: false,
+        snoozed_until: snoozedUntil,
+      };
+    }
+
+    await this.notificationsService.createNotification({
+      userId,
+      organizationId,
+      type: NotificationType.SEASON_REMINDER,
+      title: "Recalibrage annuel disponible",
+      message:
+        "Votre recolte est-elle completement terminee? Si oui, vous pouvez lancer le recalibrage annuel.",
+      data: {
+        parcel_id: parcelId,
+        f3_trigger_reason: eligibility.trigger_reason,
+        harvest_date: eligibility.harvest_date,
+        days_since_harvest: eligibility.days_since_harvest,
+        snooze_available: true,
+      },
+    });
+
+    return { eligible: true };
+  }
+
+  async snoozeF3Reminder(
+    parcelId: string,
+    organizationId: string,
+    days: number,
+  ): Promise<string> {
+    const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 7;
+    const snoozedUntilDate = new Date();
+    snoozedUntilDate.setDate(snoozedUntilDate.getDate() + safeDays);
+    const snoozedUntil = snoozedUntilDate.toISOString();
+
+    const supabase = this.databaseService.getAdminClient();
+    const { data: parcel, error: parcelError } = await supabase
+      .from("parcels")
+      .select("f3_trigger_config")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (parcelError) {
+      throw new BadRequestException(
+        `Failed to load parcel F3 trigger config: ${parcelError.message}`,
+      );
+    }
+
+    const currentConfig =
+      parcel &&
+      typeof parcel.f3_trigger_config === "object" &&
+      parcel.f3_trigger_config !== null &&
+      !Array.isArray(parcel.f3_trigger_config)
+        ? (parcel.f3_trigger_config as Record<string, unknown>)
+        : {};
+
+    const { error: updateError } = await supabase
+      .from("parcels")
+      .update({
+        f3_trigger_config: {
+          ...currentConfig,
+          snoozed_until: snoozedUntil,
+        },
+      })
+      .eq("id", parcelId)
       .eq("organization_id", organizationId);
 
-    if (modeError) {
+    if (updateError) {
       throw new BadRequestException(
-        `Failed to set calibration mode F3: ${modeError.message}`,
+        `Failed to snooze F3 reminder: ${updateError.message}`,
       );
     }
 
-    const { data: updatedSeason, error: linkError } = await supabase
-      .from("suivis_saison")
-      .update({ recalibrage_f3_id: calibration.id })
-      .eq("id", seasonId)
-      .eq("parcel_id", parcelId)
-      .eq("organization_id", organizationId)
-      .select("*")
-      .single();
-
-    if (linkError || !updatedSeason) {
-      throw new BadRequestException(
-        `Failed to link F3 recalibration: ${linkError?.message ?? "unknown error"}`,
-      );
-    }
-
-    return updatedSeason as SeasonRecord;
+    return snoozedUntil;
   }
 }

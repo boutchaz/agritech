@@ -35,6 +35,15 @@ type ParcelAiPhase =
   | "calibration"
   | string;
 type JsonObject = Record<string, unknown>;
+type CalibrationMode = "F1" | "F2" | "F3";
+type RecalibrationMotif =
+  | "water_source_change"
+  | "irrigation_change"
+  | "new_soil_analysis"
+  | "new_water_analysis"
+  | "new_foliar_analysis"
+  | "parcel_restructure"
+  | "other";
 
 interface NdviThresholds {
   optimal: [number, number];
@@ -249,7 +258,7 @@ export class CalibrationService {
         organization_id: organizationId,
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: "F1",
+        mode_calibrage: dto.mode_calibrage ?? "F1",
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
@@ -288,6 +297,182 @@ export class CalibrationService {
     ).catch((error) => {
       this.logger.error(
         `Background calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    });
+
+    return calibration as CalibrationRecord;
+  }
+
+  async startPartialRecalibration(
+    parcelId: string,
+    organizationId: string,
+    dto: StartCalibrationDto,
+  ): Promise<CalibrationRecord> {
+    const mode = dto.mode_calibrage ?? "F2";
+    if (mode !== "F2") {
+      throw new BadRequestException(
+        "Partial recalibration endpoint only accepts mode_calibrage=F2",
+      );
+    }
+
+    const motif = dto.recalibration_motif as RecalibrationMotif | undefined;
+    if (!motif) {
+      throw new BadRequestException(
+        "recalibration_motif is required for partial recalibration",
+      );
+    }
+
+    const allowedMotifs: RecalibrationMotif[] = [
+      "water_source_change",
+      "irrigation_change",
+      "new_soil_analysis",
+      "new_water_analysis",
+      "new_foliar_analysis",
+      "parcel_restructure",
+      "other",
+    ];
+    if (!allowedMotifs.includes(motif)) {
+      throw new BadRequestException(
+        `Invalid recalibration_motif: ${motif}`,
+      );
+    }
+
+    if (motif === "other" && !dto.recalibration_motif_detail?.trim()) {
+      throw new BadRequestException(
+        "recalibration_motif_detail is required when recalibration_motif=other",
+      );
+    }
+
+    if (motif === "parcel_restructure") {
+      return this.startCalibration(
+        parcelId,
+        organizationId,
+        {
+          ...dto,
+          mode_calibrage: "F1",
+        },
+        { skipReadinessCheck: true },
+      );
+    }
+
+    const parcel = await this.getParcelContext(parcelId, organizationId);
+
+    if (parcel.aiPhase === "calibrating") {
+      throw new BadRequestException(
+        "Parcel calibration is already in progress",
+      );
+    }
+
+    const allowedStartPhases = [
+      "disabled",
+      "pret_calibrage",
+      "active",
+      "awaiting_validation",
+      "awaiting_nutrition_option",
+    ];
+
+    if (!allowedStartPhases.includes(parcel.aiPhase)) {
+      throw new BadRequestException(
+        `Partial recalibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+      );
+    }
+
+    const baselineCalibration = await this.getLatestCompletedCalibration(
+      parcelId,
+      organizationId,
+    );
+
+    if (!baselineCalibration) {
+      throw new BadRequestException(
+        "A completed baseline calibration is required before partial recalibration",
+      );
+    }
+
+    const affectedBlocks = this.getAffectedBlocksForMotif(motif);
+    const updatedBlocks = await this.buildUpdatedBlocksForMotif(
+      motif,
+      parcelId,
+      parcel,
+      dto,
+    );
+    const previousBaseline = this.extractPreviousBaseline(baselineCalibration);
+
+    const supabase = this.databaseService.getAdminClient();
+    const startedAt = new Date().toISOString();
+
+    await this.stateMachine.transitionPhase(
+      parcelId,
+      parcel.aiPhase as
+        | "disabled"
+        | "active"
+        | "awaiting_validation"
+        | "awaiting_nutrition_option",
+      "calibrating",
+      organizationId,
+    );
+
+    const { data: calibration, error: insertError } = await supabase
+      .from("calibrations")
+      .insert({
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        status: "in_progress",
+        started_at: startedAt,
+        mode_calibrage: "F2",
+        recalibration_motif: motif,
+        previous_baseline: previousBaseline,
+        calibration_version: "v2",
+        calibration_data: {
+          version: "v2",
+          request: { ...dto, mode_calibrage: "F2", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          recalibration: {
+            motif,
+            motif_detail: dto.recalibration_motif_detail ?? null,
+            affected_blocks: affectedBlocks,
+          },
+          parcel: {
+            id: parcel.id,
+            crop_type: parcel.cropType,
+            planting_year: parcel.plantingYear,
+            variety: parcel.variety,
+            planting_system: parcel.system,
+          },
+          baseline_reference: {
+            calibration_id: baselineCalibration.id,
+            completed_at: baselineCalibration.completed_at,
+          },
+          updated_blocks: updatedBlocks,
+        },
+      })
+      .select("*")
+      .single();
+
+    if (insertError || !calibration) {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "calibrating",
+        "disabled",
+        organizationId,
+      );
+
+      throw new BadRequestException(
+        `Failed to create partial recalibration: ${insertError?.message ?? "unknown error"}`,
+      );
+    }
+
+    this.runPartialRecalibrationInBackground(
+      calibration.id as string,
+      parcelId,
+      organizationId,
+      parcel,
+      dto,
+      motif,
+      affectedBlocks,
+      updatedBlocks,
+      previousBaseline,
+    ).catch((error) => {
+      this.logger.error(
+        `Background partial recalibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
       );
     });
 
@@ -340,6 +525,252 @@ export class CalibrationService {
         organizationId,
       );
     }
+  }
+
+  private async runPartialRecalibrationInBackground(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+    motif: RecalibrationMotif,
+    affectedBlocks: string[],
+    updatedBlocks: Record<string, unknown>,
+    previousBaseline: JsonObject,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    try {
+      await Promise.race([
+        this.executePartialRecalibration(
+          calibrationId,
+          parcelId,
+          organizationId,
+          parcel,
+          dto,
+          motif,
+          affectedBlocks,
+          updatedBlocks,
+          previousBaseline,
+        ),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => {
+              reject(new Error("Partial recalibration timed out after 10 minutes"));
+            },
+            10 * 60 * 1000,
+          );
+        }),
+      ]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown error";
+      this.logger.error(`Partial recalibration ${calibrationId} failed: ${message}`);
+
+      await supabase
+        .from("calibrations")
+        .update({
+          status: "failed",
+          error_message: message,
+        })
+        .eq("id", calibrationId);
+
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "calibrating",
+        "disabled",
+        organizationId,
+      );
+    }
+  }
+
+  private async executePartialRecalibration(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+    motif: RecalibrationMotif,
+    affectedBlocks: string[],
+    updatedBlocks: Record<string, unknown>,
+    previousBaseline: JsonObject,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const calibrationInput = {
+      parcel_id: parcelId,
+      organization_id: organizationId,
+      crop_type: parcel.cropType,
+      variety: parcel.variety,
+      planting_year: parcel.plantingYear,
+      planting_system: parcel.system,
+      mode_calibrage: "F2" as CalibrationMode,
+      recalibration_motif: motif,
+      baseline_calibration: previousBaseline,
+      updated_blocks: updatedBlocks,
+    };
+
+    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
+      "/api/calibration/v2/run",
+      {
+        calibration_input: calibrationInput,
+        satellite_images: [],
+        weather_rows: [],
+      },
+      organizationId,
+    );
+
+    const zoneClassification = this.deriveZoneClassification(v2Output);
+    const calibrationData = {
+      version: "v2",
+      request: { ...dto, mode_calibrage: "F2", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      recalibration: {
+        motif,
+        motif_detail: dto.recalibration_motif_detail ?? null,
+        affected_blocks: affectedBlocks,
+      },
+      parcel: {
+        id: parcel.id,
+        crop_type: parcel.cropType,
+        planting_system: parcel.system,
+        planting_year: parcel.plantingYear,
+        variety: parcel.variety,
+      },
+      previous_baseline: previousBaseline,
+      updated_blocks: updatedBlocks,
+      output: v2Output,
+      validation: {
+        validated: false,
+        validated_at: null,
+      },
+    };
+
+    const { error: updateCalibrationError } = await supabase
+      .from("calibrations")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+        mode_calibrage: "F2",
+        recalibration_motif: motif,
+        previous_baseline: previousBaseline,
+        baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+        baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
+        baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+        confidence_score: this.toNumber(v2Output.confidence?.normalized_score),
+        zone_classification: zoneClassification,
+        phenology_stage: this.extractPhenologyStage(v2Output),
+        health_score: this.toNumber(v2Output.step8?.health_score?.total),
+        yield_potential_min: this.toNumber(
+          v2Output.step6?.yield_potential?.minimum,
+        ),
+        yield_potential_max: this.toNumber(
+          v2Output.step6?.yield_potential?.maximum,
+        ),
+        data_completeness_score: this.toNumber(v2Output.confidence?.total_score),
+        maturity_phase: v2Output.maturity_phase,
+        anomaly_count: Array.isArray(v2Output.step5?.anomalies)
+          ? v2Output.step5?.anomalies.length
+          : 0,
+        calibration_version: "v2",
+        calibration_data: calibrationData,
+      })
+      .eq("id", calibrationId);
+
+    if (updateCalibrationError) {
+      throw new Error(
+        `Failed to update partial recalibration: ${updateCalibrationError.message}`,
+      );
+    }
+
+    const primaryLanguage = parcel.langue || "fr";
+    const secondaryLanguage = primaryLanguage === "fr" ? "ar" : "fr";
+
+    const [primaryReport, secondaryReport] = await Promise.all([
+      this.runCalibrationAI(
+        calibrationId,
+        parcelId,
+        organizationId,
+        v2Output,
+        primaryLanguage,
+      ),
+      this.runCalibrationAI(
+        calibrationId,
+        parcelId,
+        organizationId,
+        v2Output,
+        secondaryLanguage,
+      ),
+    ]);
+
+    const bilingualUpdate: Record<string, unknown> = {};
+    if (primaryReport || secondaryReport) {
+      bilingualUpdate.calibration_data = {
+        ...calibrationData,
+        ai_analysis: primaryReport ?? secondaryReport,
+      };
+    }
+
+    if (primaryLanguage === "fr") {
+      if (primaryReport)
+        bilingualUpdate.rapport_fr = JSON.stringify(primaryReport);
+      if (secondaryReport)
+        bilingualUpdate.rapport_ar = JSON.stringify(secondaryReport);
+    } else {
+      if (primaryReport)
+        bilingualUpdate.rapport_ar = JSON.stringify(primaryReport);
+      if (secondaryReport)
+        bilingualUpdate.rapport_fr = JSON.stringify(secondaryReport);
+    }
+
+    if (Object.keys(bilingualUpdate).length > 0) {
+      const { error: aiUpdateError } = await supabase
+        .from("calibrations")
+        .update(bilingualUpdate)
+        .eq("id", calibrationId);
+
+      if (aiUpdateError) {
+        this.logger.warn(
+          `Failed to store bilingual partial recalibration reports: ${aiUpdateError.message}`,
+        );
+      }
+    }
+
+    const { error: updateParcelError } = await supabase
+      .from("parcels")
+      .update({
+        ai_calibration_id: calibrationId,
+        ai_enabled: true,
+      })
+      .eq("id", parcelId);
+
+    if (updateParcelError) {
+      throw new Error(
+        `Failed to update parcel AI state: ${updateParcelError.message}`,
+      );
+    }
+
+    await this.stateMachine.transitionPhase(
+      parcelId,
+      "calibrating",
+      "awaiting_validation",
+      organizationId,
+    );
+
+    this.notifyOrganizationUsers(
+      organizationId,
+      NotificationType.CALIBRATION_COMPLETE,
+      "Calibration terminée",
+      "Le recalibrage partiel de la parcelle est terminé et en attente de validation.",
+      {
+        parcel_id: parcelId,
+        calibration_id: calibrationId,
+        mode_calibrage: "F2",
+        recalibration_motif: motif,
+      },
+    ).catch((err) =>
+      this.logger.warn(
+        `Failed to send partial recalibration notification: ${err}`,
+      ),
+    );
   }
 
   private async executeCalibration(
@@ -771,6 +1202,8 @@ export class CalibrationService {
       confidence_score: number | null;
       maturity_phase: string | null;
       error_message: string | null;
+      mode_calibrage: CalibrationMode;
+      recalibration_motif: string | null;
       created_at: string;
       completed_at: string | null;
     }>
@@ -779,7 +1212,7 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, health_score, confidence_score, maturity_phase, error_message, created_at, completed_at",
+        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
@@ -795,19 +1228,49 @@ export class CalibrationService {
       );
     }
 
-    return (data ?? []).map((row) => ({
-      id: row.id as string,
-      status: row.status as string,
-      health_score: this.toNumber(row.health_score),
-      confidence_score: this.toNumber(row.confidence_score),
-      maturity_phase:
-        typeof row.maturity_phase === "string" ? row.maturity_phase : null,
-      error_message:
-        typeof row.error_message === "string" ? row.error_message : null,
-      created_at: row.created_at as string,
-      completed_at:
-        typeof row.completed_at === "string" ? row.completed_at : null,
-    }));
+    return this.mapCalibrationHistoryRows(data ?? []);
+  }
+
+  async getRecalibrationHistory(
+    parcelId: string,
+    organizationId: string,
+    limit: number = 5,
+  ): Promise<
+    Array<{
+      id: string;
+      status: string;
+      health_score: number | null;
+      confidence_score: number | null;
+      maturity_phase: string | null;
+      error_message: string | null;
+      mode_calibrage: CalibrationMode;
+      recalibration_motif: string | null;
+      created_at: string;
+      completed_at: string | null;
+    }>
+  > {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .select(
+        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
+      )
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("mode_calibrage", "F2")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch recalibration history for parcel ${parcelId}: ${error.message}`,
+      );
+      throw new BadRequestException(
+        `Failed to fetch recalibration history: ${error.message}`,
+      );
+    }
+
+    return this.mapCalibrationHistoryRows(data ?? []);
   }
 
   async getCalibrationReport(parcelId: string, organizationId: string) {
@@ -1690,6 +2153,222 @@ export class CalibrationService {
     }
 
     return this.toJsonObject((data as CropReferenceRow | null)?.reference_data);
+  }
+
+  private async getLatestCompletedCalibration(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<CalibrationRecord | null> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .select("*")
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch latest completed calibration for parcel ${parcelId}: ${error.message}`,
+      );
+      throw new BadRequestException(
+        `Failed to fetch latest completed calibration: ${error.message}`,
+      );
+    }
+
+    return data as CalibrationRecord | null;
+  }
+
+  private getAffectedBlocksForMotif(motif: RecalibrationMotif): string[] {
+    switch (motif) {
+      case "water_source_change":
+        return ["water_analysis", "irrigation_params"];
+      case "irrigation_change":
+        return ["irrigation_params"];
+      case "new_soil_analysis":
+        return ["soil_analysis"];
+      case "new_water_analysis":
+        return ["water_analysis"];
+      case "new_foliar_analysis":
+        return ["foliar_analysis"];
+      case "other":
+        return ["user_defined"];
+      case "parcel_restructure":
+        return ["full_recalibration"];
+      default:
+        return ["user_defined"];
+    }
+  }
+
+  private async buildUpdatedBlocksForMotif(
+    motif: RecalibrationMotif,
+    parcelId: string,
+    parcel: ParcelContext,
+    dto: StartCalibrationDto,
+  ): Promise<Record<string, unknown>> {
+    const irrigationParams = {
+      irrigation_frequency:
+        dto.irrigation_frequency ?? parcel.irrigationFrequency ?? null,
+      volume_per_tree_liters:
+        dto.volume_per_tree_liters ?? parcel.waterQuantityPerSession ?? null,
+      irrigation_regime_changed: dto.irrigation_regime_changed ?? null,
+      irrigation_change_date: dto.irrigation_change_date ?? null,
+      previous_irrigation_frequency:
+        dto.previous_irrigation_frequency ?? null,
+      previous_volume_per_tree_liters:
+        dto.previous_volume_per_tree_liters ?? null,
+      water_source: dto.water_source ?? parcel.waterSource ?? null,
+      water_source_changed: dto.water_source_changed ?? null,
+      water_source_change_date: dto.water_source_change_date ?? null,
+      previous_water_source: dto.previous_water_source ?? null,
+    };
+
+    const latestAnalyses = await this.fetchLatestAnalysesByTypes(parcelId, [
+      "soil",
+      "water",
+      "plant",
+    ]);
+
+    switch (motif) {
+      case "water_source_change":
+        return {
+          water_analysis: latestAnalyses.water ?? null,
+          irrigation_params: irrigationParams,
+        };
+      case "irrigation_change":
+        return {
+          irrigation_params: irrigationParams,
+        };
+      case "new_soil_analysis":
+        return {
+          soil_analysis: latestAnalyses.soil ?? null,
+        };
+      case "new_water_analysis":
+        return {
+          water_analysis: latestAnalyses.water ?? null,
+        };
+      case "new_foliar_analysis":
+        return {
+          foliar_analysis: latestAnalyses.plant ?? null,
+        };
+      case "other":
+        return {
+          user_defined: {
+            detail: dto.recalibration_motif_detail ?? null,
+            request_overrides: this.toJsonObject(dto),
+          },
+        };
+      case "parcel_restructure":
+        return {
+          full_recalibration: true,
+        };
+      default:
+        return {
+          user_defined: {
+            detail: dto.recalibration_motif_detail ?? null,
+            request_overrides: this.toJsonObject(dto),
+          },
+        };
+    }
+  }
+
+  private async fetchLatestAnalysesByTypes(
+    parcelId: string,
+    types: string[],
+  ): Promise<Record<string, Record<string, unknown>>> {
+    const analyses = await this.fetchAnalyses(parcelId);
+    const typeSet = new Set(types);
+    const latestByType: Record<string, Record<string, unknown>> = {};
+
+    for (const analysis of analyses) {
+      const analysisType =
+        typeof analysis.analysis_type === "string" ? analysis.analysis_type : "";
+      if (typeSet.has(analysisType)) {
+        latestByType[analysisType] = analysis;
+      }
+    }
+
+    return latestByType;
+  }
+
+  private extractPreviousBaseline(calibration: CalibrationRecord): JsonObject {
+    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const output = this.toJsonObject(calibrationData.output);
+
+    if (Object.keys(output).length > 0) {
+      return output;
+    }
+
+    return calibrationData;
+  }
+
+  private mapCalibrationHistoryRows(
+    rows: Array<Record<string, unknown>>,
+  ): Array<{
+    id: string;
+    status: string;
+    health_score: number | null;
+    confidence_score: number | null;
+    maturity_phase: string | null;
+    error_message: string | null;
+    mode_calibrage: CalibrationMode;
+    recalibration_motif: string | null;
+    created_at: string;
+    completed_at: string | null;
+  }> {
+    return rows.map((row) => {
+      const calibrationData = this.toJsonObject(row.calibration_data);
+      const recalibrationData = this.toJsonObject(calibrationData.recalibration);
+      const requestData = this.toJsonObject(calibrationData.request);
+
+      const modeFromColumn =
+        typeof row.mode_calibrage === "string" ? row.mode_calibrage : null;
+      const modeFromRequest =
+        typeof requestData.mode_calibrage === "string"
+          ? requestData.mode_calibrage
+          : null;
+      const mode: CalibrationMode =
+        modeFromColumn === "F1" ||
+        modeFromColumn === "F2" ||
+        modeFromColumn === "F3"
+          ? modeFromColumn
+          : modeFromRequest === "F1" ||
+              modeFromRequest === "F2" ||
+              modeFromRequest === "F3"
+            ? modeFromRequest
+            : "F1";
+
+      const motifFromColumn =
+        typeof row.recalibration_motif === "string"
+          ? row.recalibration_motif
+          : null;
+      const motifFromData =
+        typeof calibrationData.recalibration_motif === "string"
+          ? calibrationData.recalibration_motif
+          : typeof recalibrationData.motif === "string"
+            ? recalibrationData.motif
+            : null;
+
+      return {
+        id: row.id as string,
+        status: row.status as string,
+        health_score: this.toNumber(row.health_score),
+        confidence_score: this.toNumber(row.confidence_score),
+        maturity_phase:
+          typeof row.maturity_phase === "string" ? row.maturity_phase : null,
+        error_message:
+          typeof row.error_message === "string" ? row.error_message : null,
+        mode_calibrage: mode,
+        recalibration_motif: motifFromColumn ?? motifFromData,
+        created_at: row.created_at as string,
+        completed_at:
+          typeof row.completed_at === "string" ? row.completed_at : null,
+      };
+    });
   }
 
   private hasMissingGdd(rows: WeatherDailyRow[], cropType: string): boolean {
