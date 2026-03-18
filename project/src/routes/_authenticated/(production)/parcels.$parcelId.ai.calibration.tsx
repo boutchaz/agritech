@@ -1285,6 +1285,7 @@ const PlantingYearPrompt: React.FC<{
 const CALIBRATION_STEPS: Record<string, { icon: React.ReactNode; label: string }> = {
   data_collection: { icon: <Satellite className="w-4 h-4" />, label: 'Collecte des données' },
   satellite_sync: { icon: <Satellite className="w-4 h-4" />, label: 'Synchronisation satellite' },
+  weather_sync: { icon: <CloudRain className="w-4 h-4" />, label: 'Synchronisation météo' },
   raster_extraction: { icon: <Target className="w-4 h-4" />, label: 'Extraction pixels NDVI' },
   gdd_precompute: { icon: <Thermometer className="w-4 h-4" />, label: 'Calcul degrés-jours' },
   calibration_engine: { icon: <BrainCircuit className="w-4 h-4" />, label: 'Moteur de calibration' },

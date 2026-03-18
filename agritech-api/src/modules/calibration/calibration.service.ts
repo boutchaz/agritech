@@ -683,13 +683,24 @@ export class CalibrationService {
 
     emitProgress(1, "data_collection", "Collecte des données satellite, météo et analyses...");
 
-    const [satelliteImages, weatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
+    const [satelliteImages, initialWeatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
       this.fetchSatelliteImages(parcelId, organizationId),
       this.fetchWeatherRows(parcel),
       this.fetchAnalyses(parcelId),
       this.fetchHarvestRecords(parcelId),
       this.fetchCropReferenceData(parcel.cropType),
     ]);
+
+    let weatherRows = initialWeatherRows;
+
+    if (weatherRows.length === 0) {
+      emitProgress(1, "weather_sync", "Synchronisation des données météo...");
+      await this.syncWeatherData(parcel, organizationId);
+      weatherRows = await this.fetchWeatherRows(parcel);
+      this.logger.log(
+        `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
+      );
+    }
 
     const calibrationInput = {
       parcel_id: parcelId,
@@ -919,7 +930,7 @@ export class CalibrationService {
 
     const [
       initialSatelliteImages,
-      weatherRows,
+      initialWeatherRows,
       analyses,
       harvestRecords,
       referenceData,
@@ -958,6 +969,17 @@ export class CalibrationService {
       satelliteImages = await this.fetchSatelliteImages(
         parcelId,
         organizationId,
+      );
+    }
+
+    let weatherRows = initialWeatherRows;
+
+    if (weatherRows.length === 0) {
+      emitProgress(2, "weather_sync", "Synchronisation des données météo...");
+      await this.syncWeatherData(parcel, organizationId);
+      weatherRows = await this.fetchWeatherRows(parcel);
+      this.logger.log(
+        `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
       );
     }
 
@@ -2267,6 +2289,81 @@ export class CalibrationService {
     }
 
     return data as WeatherDailyRow[];
+  }
+
+  private async syncWeatherData(
+    parcel: ParcelContext,
+    organizationId: string,
+  ): Promise<void> {
+    if (!parcel.boundary.length) {
+      return;
+    }
+
+    const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
+    const { latitude, longitude } =
+      WeatherProvider.calculateCentroid(wgs84Boundary);
+    const roundedLatitude = this.roundCoordinate(latitude, 2);
+    const roundedLongitude = this.roundCoordinate(longitude, 2);
+    const startDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const endDate = new Date().toISOString().split("T")[0];
+
+    const url = new URL(
+      `${this.getSatelliteServiceUrl()}/api/weather/historical`,
+    );
+    url.searchParams.set("latitude", String(roundedLatitude));
+    url.searchParams.set("longitude", String(roundedLongitude));
+    url.searchParams.set("start_date", startDate);
+    url.searchParams.set("end_date", endDate);
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: { "x-organization-id": organizationId },
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (!response.ok) {
+      this.logger.warn(
+        `Weather auto-sync failed for parcel ${parcel.id}: HTTP ${response.status}`,
+      );
+      return;
+    }
+
+    const body = (await response.json()) as {
+      latitude: number;
+      longitude: number;
+      source?: string;
+      data: Array<Record<string, unknown>>;
+    };
+
+    if (!body.data?.length) {
+      return;
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const rows = body.data.map((entry) => ({
+      latitude: roundedLatitude,
+      longitude: roundedLongitude,
+      date: entry.date as string,
+      temperature_min: entry.temperature_min ?? null,
+      temperature_max: entry.temperature_max ?? null,
+      temperature_mean: entry.temperature_mean ?? null,
+      relative_humidity_mean: entry.relative_humidity_mean ?? null,
+      precipitation_sum: entry.precipitation_sum ?? null,
+      wind_speed_max: entry.wind_speed_max ?? null,
+      shortwave_radiation_sum: entry.shortwave_radiation_sum ?? null,
+      et0_fao_evapotranspiration: entry.et0_fao_evapotranspiration ?? null,
+      source: body.source ?? "open-meteo-archive",
+    }));
+
+    const { error } = await supabase
+      .from("weather_daily_data")
+      .upsert(rows, { onConflict: "latitude,longitude,date" });
+
+    if (error) {
+      this.logger.warn(
+        `Weather auto-sync persist failed for parcel ${parcel.id}: ${error.message}`,
+      );
+    }
   }
 
   private async fetchAnalyses(
