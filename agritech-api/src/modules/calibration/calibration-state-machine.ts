@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, forwardRef } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 
 export type AiPhase =
   | "disabled"
@@ -29,7 +30,11 @@ const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
 
 @Injectable()
 export class CalibrationStateMachine {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly gateway: NotificationsGateway,
+  ) {}
 
   async transitionPhase(
     parcelId: string,
@@ -57,6 +62,12 @@ export class CalibrationStateMachine {
         `Failed to transition ai_phase: ${error.message}`,
       );
     }
+
+    this.gateway.emitToOrganization(organizationId, "calibration:phase-changed", {
+      parcel_id: parcelId,
+      from_phase: fromPhase,
+      to_phase: toPhase,
+    });
   }
 
   async resetToDisabledOnBoundaryChange(

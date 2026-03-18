@@ -13,16 +13,7 @@ import {
 } from "@/lib/api/calibration-v2";
 import { queryKeys } from "@/lib/query-keys";
 import type { NutritionOption } from "@/types/calibration-v2";
-
-const POLLING_INTERVAL_MS = 5000;
-
-function shouldPollPhase(phase: CalibrationPhase): boolean {
-  return (
-    phase === "calibrating" ||
-    phase === "awaiting_validation" ||
-    phase === "awaiting_nutrition_option"
-  );
-}
+import { useCalibrationSocket } from "./useCalibrationSocket";
 
 export function useStartCalibration(parcelId: string) {
   const { currentOrganization } = useAuth();
@@ -135,13 +126,8 @@ export function useStartPartialRecalibration(parcelId: string) {
   });
 }
 
-export function useCalibrationReport(
-  parcelId: string,
-  phase?: CalibrationPhase,
-) {
+export function useCalibrationReport(parcelId: string) {
   const { currentOrganization } = useAuth();
-  const isTransitioning =
-    phase === "calibrating" || phase === "awaiting_validation";
 
   return useQuery({
     queryKey: queryKeys.calibrationV2.report(parcelId, currentOrganization?.id),
@@ -155,17 +141,12 @@ export function useCalibrationReport(
       );
     },
     enabled: !!parcelId && !!currentOrganization?.id,
-    staleTime: isTransitioning ? 0 : 5 * 60 * 1000,
-    refetchInterval: isTransitioning ? POLLING_INTERVAL_MS : false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useCalibrationStatus(
-  parcelId: string,
-  phase?: CalibrationPhase,
-) {
+export function useCalibrationStatus(parcelId: string) {
   const { currentOrganization } = useAuth();
-  const isTransitioning = phase === "calibrating";
 
   return useQuery({
     queryKey: queryKeys.calibrationV2.status(parcelId, currentOrganization?.id),
@@ -179,8 +160,7 @@ export function useCalibrationStatus(
       );
     },
     enabled: !!parcelId && !!currentOrganization?.id,
-    staleTime: isTransitioning ? 0 : 60 * 1000,
-    refetchInterval: isTransitioning ? POLLING_INTERVAL_MS : false,
+    staleTime: 60 * 1000,
   });
 }
 
@@ -343,6 +323,7 @@ export function useCalibrationHistory(parcelId: string) {
 
 export function useCalibrationPhase(parcelId: string) {
   const { currentOrganization } = useAuth();
+  useCalibrationSocket(parcelId);
 
   return useQuery({
     queryKey: queryKeys.calibrationV2.phase(parcelId, currentOrganization?.id),
@@ -357,9 +338,5 @@ export function useCalibrationPhase(parcelId: string) {
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 30 * 1000,
-    refetchInterval: (query) =>
-      shouldPollPhase(query.state.data ?? "unknown")
-        ? POLLING_INTERVAL_MS
-        : false,
   });
 }

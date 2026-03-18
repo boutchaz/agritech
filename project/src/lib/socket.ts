@@ -115,6 +115,14 @@ class SocketManager {
     this.socket.on('notification:read-all', (data: { count: number; readAt: string }) => {
       this.emit('notification:read-all', data);
     });
+
+    this.socket.on('calibration:phase-changed', (data: any) => {
+      this.emit('calibration:phase-changed', data);
+    });
+
+    this.socket.on('calibration:failed', (data: any) => {
+      this.emit('calibration:failed', data);
+    });
   }
 
   disconnect(): void {
@@ -128,7 +136,9 @@ class SocketManager {
 
   private setStatus(status: SocketStatus): void {
     this.status = status;
-    this.statusHandlers.forEach((handler) => handler(status));
+    this.statusHandlers.forEach((handler) => {
+      handler(status);
+    });
   }
 
   getStatus(): SocketStatus {

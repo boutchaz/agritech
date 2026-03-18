@@ -130,13 +130,13 @@ export class ParcelEventsService {
 
     const { error: updateCalibrationError } = await supabase
       .from("calibrations")
-      .update({ mode_calibrage: "F2" })
+      .update({ mode_calibrage: "partial" })
       .eq("id", calibration.id)
       .eq("organization_id", organizationId);
 
     if (updateCalibrationError) {
       throw new BadRequestException(
-        `Failed to set calibration mode to F2: ${updateCalibrationError.message}`,
+        `Failed to set calibration mode to partial: ${updateCalibrationError.message}`,
       );
     }
 

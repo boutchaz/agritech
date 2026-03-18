@@ -12,6 +12,7 @@ import { AIProvider, AgromindReportType } from "../ai-reports/interfaces";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 import { NotificationType } from "../notifications/dto/notification.dto";
 import { WeatherProvider } from "../chat/providers/weather.provider";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
@@ -36,7 +37,7 @@ type ParcelAiPhase =
   | "calibration"
   | string;
 type JsonObject = Record<string, unknown>;
-type CalibrationMode = "F1" | "F2" | "F3";
+type CalibrationMode = "full" | "partial" | "annual";
 type RecalibrationMotif =
   | "water_source_change"
   | "irrigation_change"
@@ -194,6 +195,8 @@ export class CalibrationService {
     private readonly nutritionOptionService: NutritionOptionService,
     private readonly satelliteCacheService: SatelliteCacheService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async startCalibration(
@@ -260,7 +263,7 @@ export class CalibrationService {
         organization_id: organizationId,
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: dto.mode_calibrage ?? "F1",
+        mode_calibrage: dto.mode_calibrage ?? "full",
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
@@ -310,10 +313,10 @@ export class CalibrationService {
     organizationId: string,
     dto: StartCalibrationDto,
   ): Promise<CalibrationRecord> {
-    const mode = dto.mode_calibrage ?? "F2";
-    if (mode !== "F2") {
+    const mode = dto.mode_calibrage ?? "partial";
+    if (mode !== "partial") {
       throw new BadRequestException(
-        "Partial recalibration endpoint only accepts mode_calibrage=F2",
+        "Partial recalibration endpoint only accepts mode_calibrage=partial",
       );
     }
 
@@ -346,13 +349,14 @@ export class CalibrationService {
     }
 
     if (motif === "parcel_restructure") {
+      const fullCalibrationDto = {
+        ...dto,
+        mode_calibrage: "full",
+      } as unknown as StartCalibrationDto;
       return this.startCalibration(
         parcelId,
         organizationId,
-        {
-          ...dto,
-          mode_calibrage: "F1",
-        },
+        fullCalibrationDto,
         { skipReadinessCheck: true },
       );
     }
@@ -420,13 +424,13 @@ export class CalibrationService {
         organization_id: organizationId,
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: "F2",
+        mode_calibrage: "partial",
         recalibration_motif: motif,
         previous_baseline: previousBaseline,
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
-          request: { ...dto, mode_calibrage: "F2", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
           recalibration: {
             motif,
             motif_detail: dto.recalibration_motif_detail ?? null,
@@ -526,6 +530,30 @@ export class CalibrationService {
         "disabled",
         organizationId,
       );
+
+      this.notificationsGateway.emitToOrganization(
+        organizationId,
+        "calibration:failed",
+        {
+          parcel_id: parcelId,
+          calibration_id: calibrationId,
+          error_message: message,
+        },
+      );
+
+      this.notifyOrganizationUsers(
+        organizationId,
+        NotificationType.CALIBRATION_FAILED,
+        "Calibration échouée",
+        "La calibration de la parcelle a échoué.",
+        {
+          parcel_id: parcelId,
+          calibration_id: calibrationId,
+          error_message: message,
+        },
+      ).catch((err) =>
+        this.logger.warn(`Failed to send calibration failure notification: ${err}`),
+      );
     }
   }
 
@@ -582,6 +610,34 @@ export class CalibrationService {
         "disabled",
         organizationId,
       );
+
+      this.notificationsGateway.emitToOrganization(
+        organizationId,
+        "calibration:failed",
+        {
+          parcel_id: parcelId,
+          calibration_id: calibrationId,
+          error_message: message,
+        },
+      );
+
+      this.notifyOrganizationUsers(
+        organizationId,
+        NotificationType.CALIBRATION_FAILED,
+        "Recalibrage partiel échoué",
+        "Le recalibrage partiel de la parcelle a échoué.",
+        {
+          parcel_id: parcelId,
+          calibration_id: calibrationId,
+          error_message: message,
+          mode_calibrage: "partial",
+          recalibration_motif: motif,
+        },
+      ).catch((err) =>
+        this.logger.warn(
+          `Failed to send partial recalibration failure notification: ${err}`,
+        ),
+      );
     }
   }
 
@@ -598,6 +654,14 @@ export class CalibrationService {
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
 
+    const [satelliteImages, weatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
+      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchWeatherRows(parcel),
+      this.fetchAnalyses(parcelId),
+      this.fetchHarvestRecords(parcelId),
+      this.fetchCropReferenceData(parcel.cropType),
+    ]);
+
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,
@@ -605,7 +669,35 @@ export class CalibrationService {
       variety: parcel.variety,
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
-      mode_calibrage: "F2" as CalibrationMode,
+      plant_count: parcel.plantCount,
+      irrigation_frequency:
+        dto.irrigation_frequency ?? parcel.irrigationFrequency,
+      volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
+      water_source: dto.water_source ?? parcel.waterSource,
+      harvest_regularity: dto.harvest_regularity ?? null,
+      cultural_history: {
+        pruning_type: dto.pruning_type ?? null,
+        last_pruning_date: dto.last_pruning_date ?? null,
+        pruning_intensity: dto.pruning_intensity ?? null,
+        past_fertilization: dto.past_fertilization ?? null,
+        fertilization_type: dto.fertilization_type ?? null,
+        biostimulants_used: dto.biostimulants_used ?? null,
+        stress_events: dto.stress_events ?? [],
+        observations: dto.observations ?? null,
+        water_source_changed: dto.water_source_changed ?? null,
+        water_source_change_date: dto.water_source_change_date ?? null,
+        previous_water_source: dto.previous_water_source ?? null,
+        irrigation_regime_changed: dto.irrigation_regime_changed ?? null,
+        irrigation_change_date: dto.irrigation_change_date ?? null,
+        previous_irrigation_frequency:
+          dto.previous_irrigation_frequency ?? null,
+        previous_volume_per_tree_liters:
+          dto.previous_volume_per_tree_liters ?? null,
+      },
+      analyses,
+      harvest_records: harvestRecords,
+      reference_data: referenceData,
+      mode_calibrage: "partial" as CalibrationMode,
       recalibration_motif: motif,
       baseline_calibration: previousBaseline,
       updated_blocks: updatedBlocks,
@@ -615,8 +707,8 @@ export class CalibrationService {
       "/api/calibration/v2/run",
       {
         calibration_input: calibrationInput,
-        satellite_images: [],
-        weather_rows: [],
+        satellite_images: satelliteImages,
+        weather_rows: weatherRows,
       },
       organizationId,
     );
@@ -624,7 +716,7 @@ export class CalibrationService {
     const zoneClassification = this.deriveZoneClassification(v2Output);
     const calibrationData = {
       version: "v2",
-      request: { ...dto, mode_calibrage: "F2", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
       recalibration: {
         motif,
         motif_detail: dto.recalibration_motif_detail ?? null,
@@ -651,7 +743,7 @@ export class CalibrationService {
       .update({
         status: "completed",
         completed_at: new Date().toISOString(),
-        mode_calibrage: "F2",
+        mode_calibrage: "partial",
         recalibration_motif: motif,
         previous_baseline: previousBaseline,
         baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
@@ -765,7 +857,7 @@ export class CalibrationService {
       {
         parcel_id: parcelId,
         calibration_id: calibrationId,
-        mode_calibrage: "F2",
+        mode_calibrage: "partial",
         recalibration_motif: motif,
       },
     ).catch((err) =>
@@ -1266,7 +1358,7 @@ export class CalibrationService {
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .eq("mode_calibrage", "F2")
+      .in("mode_calibrage", ["F2", "partial"])
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -2376,16 +2468,18 @@ export class CalibrationService {
         typeof requestData.mode_calibrage === "string"
           ? requestData.mode_calibrage
           : null;
+      const CALIBRATION_MODE_MAP: Record<string, CalibrationMode> = {
+        F1: "full",
+        F2: "partial",
+        F3: "annual",
+        full: "full",
+        partial: "partial",
+        annual: "annual",
+      };
       const mode: CalibrationMode =
-        modeFromColumn === "F1" ||
-        modeFromColumn === "F2" ||
-        modeFromColumn === "F3"
-          ? modeFromColumn
-          : modeFromRequest === "F1" ||
-              modeFromRequest === "F2" ||
-              modeFromRequest === "F3"
-            ? modeFromRequest
-            : "F1";
+        CALIBRATION_MODE_MAP[modeFromColumn ?? ""] ??
+        CALIBRATION_MODE_MAP[modeFromRequest ?? ""] ??
+        "full";
 
       const motifFromColumn =
         typeof row.recalibration_motif === "string"

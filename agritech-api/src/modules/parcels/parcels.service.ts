@@ -131,6 +131,11 @@ export class ParcelsService {
 
     this.logger.log(`Deleting parcel: ${parcel_id}`);
 
+    const shouldCleanupRelatedData = dto.cleanup_related_data !== false;
+    const cleanupSummary = shouldCleanupRelatedData
+      ? await this.cleanupParcelRelatedData(parcel_id, organizationId)
+      : [];
+
     // Delete the parcel
     const { data: deletedParcels, error: deleteError } =
       await this.supabaseAdmin
@@ -172,14 +177,96 @@ export class ParcelsService {
         );
       } else {
         this.logger.log("Parcel was already deleted or does not exist");
-        return { success: true, message: "Parcel deleted or already absent" };
+        return {
+          success: true,
+          message: "Parcel deleted or already absent",
+          cleanup_summary: cleanupSummary,
+        };
       }
     }
 
     const deletedParcel = deletedParcels[0];
     this.logger.log(`Parcel deleted successfully: ${deletedParcel.id}`);
 
-    return { success: true, deleted_parcel: deletedParcel };
+    return {
+      success: true,
+      deleted_parcel: deletedParcel,
+      cleanup_summary: cleanupSummary,
+    };
+  }
+
+  private async cleanupParcelRelatedData(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<Array<{ table: string; deleted: number }>> {
+    const tablesInDeletionOrder: Array<{
+      name: string;
+      hasOrganizationId: boolean;
+    }> = [
+      { name: "monitoring_analyses", hasOrganizationId: true },
+      { name: "weather_daily", hasOrganizationId: true },
+      { name: "weather_forecast", hasOrganizationId: true },
+      { name: "yield_forecasts", hasOrganizationId: true },
+      { name: "plan_interventions", hasOrganizationId: true },
+      { name: "annual_plans", hasOrganizationId: true },
+      { name: "ai_recommendations", hasOrganizationId: true },
+      { name: "suivis_saison", hasOrganizationId: true },
+      { name: "evenements_parcelle", hasOrganizationId: true },
+      { name: "performance_alerts", hasOrganizationId: true },
+      { name: "product_applications", hasOrganizationId: true },
+      { name: "satellite_indices_data", hasOrganizationId: true },
+      { name: "harvest_records", hasOrganizationId: true },
+      { name: "parcel_events", hasOrganizationId: true },
+      { name: "calibrations", hasOrganizationId: true },
+    ];
+
+    const summary: Array<{ table: string; deleted: number }> = [];
+
+    for (const table of tablesInDeletionOrder) {
+      const deletedCount = await this.deleteRowsForParcel(
+        table.name,
+        parcelId,
+        table.hasOrganizationId ? organizationId : null,
+      );
+
+      if (deletedCount !== null) {
+        summary.push({ table: table.name, deleted: deletedCount });
+      }
+    }
+
+    return summary;
+  }
+
+  private async deleteRowsForParcel(
+    tableName: string,
+    parcelId: string,
+    organizationId: string | null,
+  ): Promise<number | null> {
+    let query = this.supabaseAdmin
+      .from(tableName)
+      .delete({ count: "exact" })
+      .eq("parcel_id", parcelId);
+
+    if (organizationId) {
+      query = query.eq("organization_id", organizationId);
+    }
+
+    const { count, error } = await query;
+    if (error) {
+      if (error.code === "42P01" || error.code === "42703") {
+        this.logger.debug(
+          `Skipping cleanup for ${tableName}: ${error.message}`,
+        );
+        return null;
+      }
+
+      this.logger.warn(
+        `Cleanup failed for ${tableName} on parcel ${parcelId}: ${error.message}`,
+      );
+      return null;
+    }
+
+    return count ?? 0;
   }
 
   async getPerformanceSummary(
@@ -602,24 +689,45 @@ export class ParcelsService {
       })
       .then(() => {
         this.logger.log(
-          `Parcel ${parcelId} is now pret_calibrage — ready for user to launch calibration`,
+          `Parcel ${parcelId} is now pret_calibrage — auto-starting calibration`,
+        );
+        return this.calibrationService.startCalibration(
+          parcelId,
+          organizationId,
+          {},
+          { skipReadinessCheck: true },
+        );
+      })
+      .then((calibration) => {
+        this.logger.log(
+          `Auto-calibration started for parcel ${parcelId}: calibration ${calibration.id}`,
         );
         return this.notifyOrganizationUsers(
           organizationId,
           NotificationType.SATELLITE_DOWNLOAD_COMPLETE,
-          "Données satellite prêtes",
-          "Les données satellite de votre parcelle sont téléchargées. Vous pouvez lancer le calibrage.",
-          { parcel_id: parcelId },
+          "Calibrage automatique lancé",
+          "Les données satellite de votre parcelle sont téléchargées et le calibrage a été lancé automatiquement.",
+          { parcel_id: parcelId, calibration_id: calibration.id },
         );
       })
-      .catch((err) => {
+      .catch(async (err) => {
         const message = err instanceof Error ? err.message : "unknown error";
         this.logger.warn(
-          `Satellite download failed for parcel ${parcelId}: ${message}`,
+          `Satellite download or auto-calibration failed for parcel ${parcelId}: ${message}`,
         );
-        this.stateMachine
-          .transitionPhase(parcelId, "downloading", "disabled", organizationId)
-          .catch(() => {});
+        for (const phase of ["pret_calibrage", "downloading"] as const) {
+          try {
+            await this.stateMachine.transitionPhase(
+              parcelId,
+              phase,
+              "disabled",
+              organizationId,
+            );
+            break;
+          } catch {
+            /* phase mismatch — try next */
+          }
+        }
       });
   }
 

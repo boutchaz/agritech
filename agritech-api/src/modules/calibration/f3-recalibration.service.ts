@@ -398,7 +398,7 @@ export class F3RecalibrationService {
       organizationId,
       {
         ...dto,
-        mode_calibrage: "F3",
+        mode_calibrage: "annual",
         recalibration_motif: "post_campaign",
       },
       { skipReadinessCheck: true },
@@ -423,7 +423,7 @@ export class F3RecalibrationService {
     const { data: updatedCalibration, error: updateError } = await supabase
       .from("calibrations")
       .update({
-        mode_calibrage: "F3",
+        mode_calibrage: "annual",
         recalibration_motif: "post_campaign",
         previous_baseline: previousBaseline,
         campaign_bilan: campaignBilan,

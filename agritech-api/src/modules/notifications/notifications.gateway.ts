@@ -191,6 +191,14 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     this.logger.debug(`Notification sent to organization ${organizationId}: ${notification.title}`);
   }
 
+  emitToOrganization(
+    organizationId: string,
+    event: string,
+    data: Record<string, unknown>,
+  ): void {
+    this.server.to(`org:${organizationId}`).emit(event, data);
+  }
+
   /**
    * Check if a user is currently connected
    */

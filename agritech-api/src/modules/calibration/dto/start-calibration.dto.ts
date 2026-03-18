@@ -26,26 +26,26 @@ class StressEventDto {
 
 export class StartCalibrationDto {
   @ApiPropertyOptional({
-    description: "Calibration mode: F1 (initial), F2 (partial), F3 (annual)",
+    description: "Calibration mode: full (initial), partial (block update), annual (post-campaign)",
   })
   @IsOptional()
   @IsString()
-  mode_calibrage?: "F1" | "F2" | "F3";
+  mode_calibrage?: "full" | "partial" | "annual";
 
-  @ApiPropertyOptional({ description: "F2 recalibration motif" })
+  @ApiPropertyOptional({ description: "Partial recalibration motif" })
   @IsOptional()
   @IsString()
   recalibration_motif?: string;
 
   @ApiPropertyOptional({
-    description: "F3: expected trigger reason (harvest_completed, date_reached, manual)",
+    description: "Annual: expected trigger reason (harvest_completed, date_reached, manual)",
   })
   @IsOptional()
   @IsString()
   f3_trigger_reason?: string;
 
   @ApiPropertyOptional({
-    description: "F3: actual seasonal yield entered by user",
+    description: "Annual: actual seasonal yield entered by user",
   })
   @IsOptional()
   @IsNumber()
@@ -53,27 +53,27 @@ export class StartCalibrationDto {
   f3_actual_yield?: number;
 
   @ApiPropertyOptional({
-    description: "F3: unit for actual seasonal yield (kg, tons, etc.)",
+    description: "Annual: unit for actual seasonal yield (kg, tons, etc.)",
   })
   @IsOptional()
   @IsString()
   f3_actual_yield_unit?: string;
 
   @ApiPropertyOptional({
-    description: "F3: user acknowledges unresolved seasonal tasks",
+    description: "Annual: user acknowledges unresolved seasonal tasks",
   })
   @IsOptional()
   @IsBoolean()
   f3_missing_tasks_acknowledged?: boolean;
 
   @ApiPropertyOptional({
-    description: "F3: optional notes about campaign review before validation",
+    description: "Annual: optional notes about campaign review before validation",
   })
   @IsOptional()
   @IsString()
   f3_campaign_notes?: string;
 
-  @ApiPropertyOptional({ description: "F2: free text for motif=other" })
+  @ApiPropertyOptional({ description: "Partial: free text for motif=other" })
   @IsOptional()
   @IsString()
   recalibration_motif_detail?: string;

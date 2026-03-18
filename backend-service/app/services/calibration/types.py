@@ -230,7 +230,7 @@ class CalibrationInput(BaseModel):
     parcel_id: str
     organization_id: str
     crop_type: str
-    mode_calibrage: str = "F1"
+    mode_calibrage: str = "full"
     affected_components: list[str] = Field(default_factory=list)
     variety: str | None = None
     planting_year: int | None = None

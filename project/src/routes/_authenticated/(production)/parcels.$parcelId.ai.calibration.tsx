@@ -1291,7 +1291,7 @@ const AICalibrationPage = () => {
   const { isPending: isStartingV1 } = useStartAICalibration();
 
   const { data: phase } = useCalibrationPhase(parcelId);
-  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId, phase);
+  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
