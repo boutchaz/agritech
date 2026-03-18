@@ -1755,7 +1755,7 @@ export class CalibrationService {
 
       await supabase
         .from("parcels")
-        .update({ ai_enabled: true })
+        .update({ ai_enabled: true, ai_observation_only: true })
         .eq("id", existingCalibration.parcel_id);
 
       const observationReason = `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
@@ -1836,7 +1836,7 @@ export class CalibrationService {
 
     const { error: updateParcelError } = await supabase
       .from("parcels")
-      .update({ ai_nutrition_option: option, ai_enabled: true })
+      .update({ ai_nutrition_option: option, ai_enabled: true, ai_observation_only: false })
       .eq("id", calibration.parcel_id);
 
     if (updateParcelError) {

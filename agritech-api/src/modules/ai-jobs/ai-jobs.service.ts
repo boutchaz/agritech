@@ -52,6 +52,7 @@ export interface AiEnabledParcelJobRecord {
   organization_id: string;
   crop_type: string | null;
   boundary: number[][] | null;
+  ai_observation_only: boolean;
 }
 
 export interface AiWeatherLocation {
@@ -201,6 +202,15 @@ export class AiJobsService {
           parcel.id,
           parcel.organization_id,
         );
+
+        if (parcel.ai_observation_only) {
+          this.logger.debug(
+            `Parcel ${parcel.id} is observation-only — diagnostics computed, skipping alerts/recommendations`,
+          );
+          summary.succeeded += 1;
+          continue;
+        }
+
         const alertInput = this.buildStressAlert(parcel, diagnostics);
 
         if (alertInput) {
@@ -352,7 +362,7 @@ export class AiJobsService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('parcels')
-      .select('id, organization_id, crop_type, boundary')
+      .select('id, organization_id, crop_type, boundary, ai_observation_only')
       .eq('ai_enabled', true)
       .eq('ai_phase', 'active');
 

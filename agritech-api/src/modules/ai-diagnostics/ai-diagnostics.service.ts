@@ -47,6 +47,7 @@ export interface AiDiagnosticsResponse {
   confidence: number;
   description: string;
   indicators: AiDiagnosticsIndicators;
+  observation_only?: boolean;
 }
 
 export interface AiPhenologyResponse {
@@ -83,6 +84,7 @@ interface AiParcelContext {
   cropType: string;
   boundary: unknown;
   aiPhase: string;
+  aiObservationOnly: boolean;
 }
 
 interface AiSatelliteReadingRow {
@@ -250,6 +252,7 @@ export class AiDiagnosticsService {
         water_balance: waterBalance,
         weather_anomaly: weatherAnomaly,
       },
+      ...(parcelContext.aiObservationOnly ? { observation_only: true } : {}),
     };
   }
 
@@ -325,7 +328,7 @@ export class AiDiagnosticsService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error } = await supabase
       .from('parcels')
-      .select('id, crop_type, boundary, organization_id, ai_phase, farms(organization_id)')
+      .select('id, crop_type, boundary, organization_id, ai_phase, ai_observation_only, farms(organization_id)')
       .eq('id', parcelId)
       .single();
 
@@ -353,6 +356,7 @@ export class AiDiagnosticsService {
       cropType: parcel.crop_type,
       boundary: parcel.boundary,
       aiPhase: typeof parcel.ai_phase === 'string' ? parcel.ai_phase : 'disabled',
+      aiObservationOnly: parcel.ai_observation_only === true,
     };
   }
 
