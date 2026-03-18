@@ -20,6 +20,8 @@ const sidebars: SidebarsConfig = {
       label: 'Architecture',
       items: [
         'architecture/overview',
+        'architecture/mobile-app',
+        'architecture/desktop-app',
       ],
     },
     {
@@ -35,6 +37,10 @@ const sidebars: SidebarsConfig = {
       items: [
         'features/satellite-analysis',
         'features/subscriptions',
+        'features/ai-calibration',
+        'features/ai-operational-engine',
+        'features/real-time',
+        'features/calibration-v2-validation-report',
       ],
     },
     {

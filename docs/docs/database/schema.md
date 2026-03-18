@@ -312,6 +312,115 @@ CREATE TABLE satellite_indices (
 );
 ```
 
+## AI Calibration Tables
+
+### calibrations
+
+Stores AI calibration sessions for parcels, tracking baseline indices, health scores, and yield potential.
+
+```sql
+CREATE TABLE calibrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL REFERENCES parcels(id),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  status VARCHAR(50) DEFAULT 'in_progress',
+  mode_calibrage VARCHAR(20),
+  recalibration_motif VARCHAR(100),
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  baseline_ndvi DECIMAL(10,4),
+  baseline_ndre DECIMAL(10,4),
+  baseline_ndmi DECIMAL(10,4),
+  confidence_score DECIMAL(5,4),
+  health_score DECIMAL(5,2),
+  zone_classification VARCHAR(20),
+  phenology_stage VARCHAR(50),
+  maturity_phase VARCHAR(50),
+  yield_potential_min DECIMAL(10,2),
+  yield_potential_max DECIMAL(10,2),
+  calibration_version VARCHAR(10) DEFAULT 'v2',
+  calibration_data JSONB,
+  error_message TEXT,
+  previous_baseline JSONB,
+  rapport_fr TEXT,
+  rapport_ar TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### weather_daily_data
+
+Daily weather observations used for GDD (Growing Degree Days) calculations and evapotranspiration modeling.
+
+```sql
+CREATE TABLE weather_daily_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude DECIMAL(6,2) NOT NULL,
+  longitude DECIMAL(6,2) NOT NULL,
+  date DATE NOT NULL,
+  temperature_min DECIMAL(5,2),
+  temperature_max DECIMAL(5,2),
+  temperature_mean DECIMAL(5,2),
+  relative_humidity_mean DECIMAL(5,2),
+  precipitation_sum DECIMAL(8,2),
+  wind_speed_max DECIMAL(6,2),
+  et0_fao_evapotranspiration DECIMAL(6,2),
+  gdd_olivier DECIMAL(8,2),
+  gdd_agrumes DECIMAL(8,2),
+  gdd_avocatier DECIMAL(8,2),
+  gdd_palmier_dattier DECIMAL(8,2),
+  chill_hours DECIMAL(8,2),
+  source VARCHAR(50) DEFAULT 'open-meteo-archive',
+  UNIQUE(latitude, longitude, date)
+);
+```
+
+### satellite_indices_data
+
+Time-series satellite index values per parcel, used for trend analysis and AI calibration.
+
+```sql
+CREATE TABLE satellite_indices_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  parcel_id UUID NOT NULL REFERENCES parcels(id),
+  date DATE NOT NULL,
+  index_name VARCHAR(20) NOT NULL,
+  mean_value DECIMAL(10,6),
+  cloud_coverage_percentage DECIMAL(5,2),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### ai_reports
+
+Generated AI analysis reports associated with parcels.
+
+```sql
+CREATE TABLE ai_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL REFERENCES parcels(id),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
+  report_type VARCHAR(50) NOT NULL,
+  report_data JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### AI columns on parcels
+
+The `parcels` table has additional columns to track AI enablement and calibration state:
+
+```sql
+-- AI columns on parcels table
+ALTER TABLE parcels ADD COLUMN ai_phase VARCHAR(50) DEFAULT 'disabled';
+ALTER TABLE parcels ADD COLUMN ai_enabled BOOLEAN DEFAULT false;
+ALTER TABLE parcels ADD COLUMN ai_calibration_id UUID REFERENCES calibrations(id);
+ALTER TABLE parcels ADD COLUMN ai_nutrition_option VARCHAR(5);
+```
+
+**ai_phase values**: `'disabled'`, `'calibrating'`, `'active'`, `'error'`
+
 ## Inventory Tables
 
 ### warehouses
