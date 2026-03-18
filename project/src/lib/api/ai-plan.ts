@@ -5,37 +5,63 @@ const BASE_URL = '/api/v1/parcels';
 export interface AIPlan {
   id: string;
   parcel_id: string;
-  status: 'draft' | 'active' | 'completed';
+  organization_id: string;
+  calibration_id: string | null;
+  year: number;
+  status: 'draft' | 'validated' | 'active' | 'archived';
+  crop_type?: string;
+  variety?: string | null;
+  plan_data?: Record<string, unknown> | null;
+  validated_at?: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 }
 
 export interface AIPlanIntervention {
   id: string;
-  plan_id: string;
+  annual_plan_id: string;
+  parcel_id: string;
+  organization_id: string;
   month: number;
+  week: number | null;
   intervention_type: string;
   description: string;
-  status: 'pending' | 'executed' | 'skipped';
-  created_at: string;
-  updated_at: string;
+  product: string | null;
+  dose: string | null;
+  unit: string | null;
+  status: 'planned' | 'executed' | 'skipped' | 'delayed';
+  executed_at: string | null;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+ }
+
+export interface AIPlanSummary {
+  plan_id: string;
+  parcel_id: string;
+  year: number;
+  status: 'draft' | 'validated' | 'active' | 'archived';
+  total_interventions: number;
+  executed: number;
+  planned: number;
+  skipped: number;
 }
 
 export const aiPlanApi = {
-  async getAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/ai/plan`, {}, organizationId);
+  async getAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan | null> {
+    return apiClient.get<AIPlan | null>(`${BASE_URL}/${parcelId}/ai/plan`, {}, organizationId);
   },
 
-  async getAIPlanCalendar(parcelId: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/ai/plan/calendar`, {}, organizationId);
+  async getAIPlanCalendar(parcelId: string, organizationId?: string): Promise<Record<string, unknown>> {
+    return apiClient.get<Record<string, unknown>>(`${BASE_URL}/${parcelId}/ai/plan/calendar`, {}, organizationId);
   },
 
-  async getAIPlanSummary(parcelId: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/ai/plan/summary`, {}, organizationId);
+  async getAIPlanSummary(parcelId: string, organizationId?: string): Promise<AIPlanSummary> {
+    return apiClient.get<AIPlanSummary>(`${BASE_URL}/${parcelId}/ai/plan/summary`, {}, organizationId);
   },
 
   async validateAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan> {
-    return apiClient.post(`${BASE_URL}/${parcelId}/ai/plan/validate`, {}, {}, organizationId);
+    return apiClient.post<AIPlan>(`${BASE_URL}/${parcelId}/ai/plan/validate`, {}, {}, organizationId);
   },
 
   async getAIPlanInterventions(parcelId: string, organizationId?: string): Promise<AIPlanIntervention[]> {

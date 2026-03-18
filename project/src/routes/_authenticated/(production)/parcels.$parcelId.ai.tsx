@@ -1,13 +1,11 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router'
 import { type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { BrainCircuit, AlertTriangle, Lightbulb, Calendar, Cloud, Settings } from 'lucide-react'
 
 type AITab = 'dashboard' | 'calibration' | 'alerts' | 'recommendations' | 'plan' | 'weather';
 
 const ParcelAILayout = () => {
-  const { t } = useTranslation();
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const matchRoute = useMatchRoute();
@@ -61,7 +59,7 @@ const ParcelAILayout = () => {
     {
       id: 'plan',
       to: `/parcels/${parcelId}/ai/plan`,
-      label: 'Annual Plan',
+      label: 'Plan annuel',
       icon: <Calendar className="w-4 h-4" />,
       active: isPlanActive,
     },
@@ -77,13 +75,11 @@ const ParcelAILayout = () => {
   return (
     <div className="space-y-6">
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex gap-1 overflow-x-auto" role="tablist">
+        <nav className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => (
             <Link
               key={tab.id}
               to={tab.to}
-              role="tab"
-              aria-selected={tab.active}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 tab.active
                   ? 'border-green-600 text-green-700 dark:text-green-400'

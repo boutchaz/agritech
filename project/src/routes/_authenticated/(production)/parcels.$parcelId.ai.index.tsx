@@ -77,8 +77,8 @@ const AIDashboard = () => {
             className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-500 transition-colors text-left group"
           >
             <Calendar className="w-8 h-8 text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Annual Plan</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">AI-generated schedule for interventions and tasks.</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Plan annuel</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Calendrier des interventions et taches generees par l'IA.</p>
           </button>
         </div>
       </div>
