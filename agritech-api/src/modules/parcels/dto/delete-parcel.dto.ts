@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
 
 export class DeleteParcelDto {
   @ApiProperty({
@@ -8,6 +8,16 @@ export class DeleteParcelDto {
   })
   @IsUUID()
   parcel_id: string;
+
+  @ApiProperty({
+    description:
+      'If true (default), delete all parcel-related records before deleting the parcel itself',
+    required: false,
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  cleanup_related_data?: boolean;
 }
 
 export class DeleteParcelResponseDto {
@@ -22,4 +32,11 @@ export class DeleteParcelResponseDto {
 
   @ApiProperty({ description: 'Success or info message', required: false })
   message?: string;
+
+  @ApiProperty({
+    description: 'Cleanup summary by table',
+    required: false,
+    type: [Object],
+  })
+  cleanup_summary?: Array<{ table: string; deleted: number }>;
 }
