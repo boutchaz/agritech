@@ -1100,6 +1100,7 @@ export class CalibrationService {
     title: string,
     message: string,
     data: Record<string, unknown>,
+    excludeUserId?: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const { data: orgUsers } = await supabase
@@ -1110,10 +1111,16 @@ export class CalibrationService {
 
     if (!orgUsers?.length) return;
 
+    const seen = new Set<string>();
+
     for (const orgUser of orgUsers) {
+      const uid = orgUser.user_id as string;
+      if (seen.has(uid) || uid === excludeUserId) continue;
+      seen.add(uid);
+
       await this.notificationsService
         .createNotification({
-          userId: orgUser.user_id as string,
+          userId: uid,
           organizationId,
           type,
           title,
