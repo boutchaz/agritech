@@ -388,7 +388,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de calibrage F1</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de calibrage initial</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Saisie initiale de la parcelle avant lancement du calibrage IA.</p>
 
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300">

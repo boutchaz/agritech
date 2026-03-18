@@ -60,7 +60,7 @@ export const RECALIBRATION_MOTIFS: RecalibrationMotifOption[] = [
     value: 'parcel_restructure',
     label: 'Restructuration parcelle',
     description: 'Changements structurels majeurs (replantation, etc.)',
-    blockUpdated: 'Recalibrage complet (redirection F1)',
+    blockUpdated: 'Recalibrage complet',
     icon: RefreshCcw,
   },
   {
@@ -133,9 +133,9 @@ export function MotifSelectionStep({
           <div className="flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 dark:text-amber-400" />
             <div>
-              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">Redirection vers recalibrage complet (F1)</p>
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">Redirection vers recalibrage complet</p>
               <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                Une restructuration parcellaire implique un nouveau profil de reference complet. L&apos;assistant F1 est recommande.
+                Une restructuration parcellaire implique un nouveau profil de reference complet. L&apos;assistant de calibrage initial est recommande.
               </p>
             </div>
           </div>

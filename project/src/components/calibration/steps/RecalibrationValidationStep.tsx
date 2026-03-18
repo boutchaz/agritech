@@ -21,7 +21,7 @@ export function RecalibrationValidationStep({
       <div>
         <h4 className="text-base font-semibold text-gray-900 dark:text-white">Validation finale</h4>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Confirmez les changements pour lancer le recalibrage partiel, annulez, ou basculez vers F1 complet.
+          Confirmez les changements pour lancer le recalibrage partiel, annulez, ou basculez vers un recalibrage complet.
         </p>
       </div>
 

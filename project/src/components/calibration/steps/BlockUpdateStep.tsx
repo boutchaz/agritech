@@ -145,11 +145,11 @@ function BlockDetails({ motif, form }: { motif: RecalibrationMotif; form: UseFor
     return (
       <div className="space-y-6">
         <div>
-          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Bloc irrigation (F1 Step 2)</h5>
+          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Bloc irrigation</h5>
           <IrrigationStep form={form} />
         </div>
         <div>
-          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Bloc analyse eau (F1 Step 4)</h5>
+          <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Bloc analyse eau</h5>
           <WaterAnalysisStep form={form} />
         </div>
       </div>
@@ -234,7 +234,7 @@ export function BlockUpdateStep({ motif, form, fields, baselineValues }: BlockUp
         <summary className="list-none cursor-pointer px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-medium text-gray-800 dark:text-gray-200">
             <FlaskConical className="h-4 w-4" />
-            <span>Formulaire detaille du bloc (reuse F1)</span>
+            <span>Formulaire detaille du bloc</span>
           </div>
           <ChevronDown className="h-4 w-4 text-gray-500" />
         </summary>

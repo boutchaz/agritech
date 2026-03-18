@@ -479,7 +479,7 @@ export function RecalibrationWizard({
       if (selectedMotif === 'parcel_restructure') {
         return (
           <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-300">
-            Ce motif necessite un recalibrage complet. Passez a l&apos;etape suivante pour confirmer la redirection vers F1.
+            Ce motif necessite un recalibrage complet. Passez a l&apos;etape suivante pour confirmer.
           </div>
         );
       }
@@ -527,7 +527,7 @@ export function RecalibrationWizard({
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage partiel F2</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage partiel</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Met a jour un bloc specifique sans relancer un recalibrage complet de la parcelle.
         </p>

@@ -107,7 +107,7 @@ export function ImpactPreviewStep({
                 recommendation === 'partial' ? 'text-green-900 dark:text-green-200' : 'text-amber-900 dark:text-amber-200'
               }`}
             >
-              Recommandation IA: {recommendation === 'partial' ? 'Recalibrage partiel' : 'Recalibrage complet (F1)'}
+              Recommandation IA: {recommendation === 'partial' ? 'Recalibrage partiel' : 'Recalibrage complet'}
             </p>
             <p
               className={`text-xs mt-1 ${
@@ -116,7 +116,7 @@ export function ImpactPreviewStep({
             >
               {recommendation === 'partial'
                 ? 'Le systeme estime que les changements restent limites au bloc cible.'
-                : 'L impact est large ou structurel. Un recalibrage F1 complet est plus fiable.'}
+                : 'L impact est large ou structurel. Un recalibrage complet est plus fiable.'}
             </p>
           </div>
         </div>
