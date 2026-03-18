@@ -226,6 +226,7 @@ export class CalibrationService {
       const readiness = await this.checkCalibrationReadiness(
         parcelId,
         organizationId,
+        dto,
       );
       if (!readiness.ready) {
         const failedChecks = readiness.checks
@@ -1292,6 +1293,7 @@ export class CalibrationService {
   async checkCalibrationReadiness(
     parcelId: string,
     organizationId: string,
+    dto?: Pick<StartCalibrationDto, "irrigation_frequency" | "water_source">,
   ): Promise<{
     ready: boolean;
     confidence_preview: number;
@@ -1345,18 +1347,35 @@ export class CalibrationService {
           },
     );
 
-    const hasIrrigation = parcel.irrigationType && parcel.irrigationFrequency;
+    const effectiveIrrigationFrequency =
+      dto?.irrigation_frequency ?? parcel.irrigationFrequency;
+    const hasIrrigationFrequency = Boolean(effectiveIrrigationFrequency);
+
     checks.push(
-      hasIrrigation
+      hasIrrigationFrequency
         ? {
-            check: "irrigation",
+            check: "irrigation_frequency",
             status: "pass",
-            message: "Données d'irrigation renseignées",
+            message: "Fréquence d'irrigation renseignée",
           }
         : {
-            check: "irrigation",
+            check: "irrigation_frequency",
             status: "fail",
-            message: "Type et fréquence d'irrigation obligatoires",
+            message: "Fréquence d'irrigation obligatoire",
+          },
+    );
+
+    checks.push(
+      parcel.irrigationType
+        ? {
+            check: "irrigation_type",
+            status: "pass",
+            message: "Type d'irrigation renseigné",
+          }
+        : {
+            check: "irrigation_type",
+            status: "warning",
+            message: "Type d'irrigation recommandé pour améliorer la précision",
           },
     );
 
