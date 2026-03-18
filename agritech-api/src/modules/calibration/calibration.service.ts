@@ -1498,8 +1498,8 @@ export class CalibrationService {
           }
         : {
             check: "satellite_data",
-            status: satelliteImages.length >= 1 ? "warning" : "fail",
-            message: `${satelliteImages.length}/10 images satellite (minimum 10 recommandées)`,
+            status: "warning",
+            message: `${satelliteImages.length}/10 images satellite (minimum 10 recommandées — auto-sync disponible)`,
           },
     );
 
