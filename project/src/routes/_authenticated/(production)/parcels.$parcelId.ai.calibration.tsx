@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
@@ -78,8 +78,14 @@ import {
   TrendingUp,
   TreePine,
   Save,
+  GitCompareArrows,
 } from 'lucide-react';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
+import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
+import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
+import { useF3Eligibility } from '@/hooks/useF3Recalibration';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -1275,6 +1281,9 @@ const PlantingYearPrompt: React.FC<{
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
+  const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
@@ -1285,6 +1294,11 @@ const AICalibrationPage = () => {
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId, phase);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
+  const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
+
+  const { data: f3Eligibility, isLoading: isF3EligibilityLoading } = useF3Eligibility(
+    phase === 'active' ? parcelId : '',
+  );
 
   const v2Output = reportData?.report?.output ?? null;
   const hasV2Report = v2Output !== null;
@@ -1295,10 +1309,35 @@ const AICalibrationPage = () => {
   const isBusy = isCalibrating || isStarting;
   const isFailed = calibration?.status === 'failed';
   const isDisabled = phase === 'disabled' || phase === 'unknown';
-  const hasNoCalibration = !calibration && !hasV2Report && (isDisabled || !phase);
+  const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage';
+  const hasNoCalibration = !isWizardPhase && !calibration && !hasV2Report && (isDisabled || !phase);
+  const canShowF3Banner = phase === 'active' && f3Eligibility?.eligible === true;
+  const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
 
   const handleStartCalibration = () => {
-    startCalibrationV2();
+    startCalibrationV2({});
+  };
+
+  const handleOpenPartialRecalibration = () => {
+    setIsPartialWizardOpen(true);
+  };
+
+  const handleClosePartialRecalibration = () => {
+    setIsPartialWizardOpen(false);
+  };
+
+  const handleCancelPartialRecalibration = () => {
+    setIsPartialWizardOpen(false);
+    navigate({ to: `/parcels/${parcelId}` });
+  };
+
+  const handleOpenFullRecalibrationWizard = () => {
+    setIsPartialWizardOpen(false);
+    setIsFullWizardOpen(true);
+  };
+
+  const handleCloseFullWizard = () => {
+    setIsFullWizardOpen(false);
   };
 
   if (isCalibrationLoading || isReportLoading) {
@@ -1315,27 +1354,94 @@ const AICalibrationPage = () => {
           </p>
         </div>
         {(calibration || hasV2Report) && (
-          <button
-            type="button"
-            onClick={handleStartCalibration}
-            disabled={isBusy || missingPlantingYear}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-            title={missingPlantingYear ? 'Set planting year first' : undefined}
-          >
-            {isBusy ? (
-              <BrainCircuit className="w-4 h-4 animate-pulse" />
-            ) : (
-              <Play className="w-4 h-4" />
+          <div className="flex items-center gap-2">
+            {phase === 'active' && (
+              <button
+                type="button"
+                onClick={handleOpenPartialRecalibration}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                <GitCompareArrows className="w-4 h-4" />
+                <span>Recalibrage partiel</span>
+              </button>
             )}
-            <span>{isCalibrating ? 'Calibrating...' : 'Re-calibrate'}</span>
-          </button>
+
+            <button
+              type="button"
+              onClick={handleStartCalibration}
+              disabled={isBusy || missingPlantingYear}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              title={missingPlantingYear ? 'Set planting year first' : undefined}
+            >
+              {isBusy ? (
+                <BrainCircuit className="w-4 h-4 animate-pulse" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+              <span>{isCalibrating ? 'Calibrating...' : 'Re-calibrate'}</span>
+            </button>
+          </div>
         )}
       </div>
 
       {phase && <PhaseBanner phase={phase} />}
 
+      <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
+        <DialogContent className="sm:max-w-6xl max-h-[92vh] overflow-y-auto p-0">
+          <div className="p-6">
+            <RecalibrationWizard
+              parcelId={parcelId}
+              baselineData={reportData}
+              confidenceScore={v2Output?.confidence.normalized_score}
+              onClose={handleCancelPartialRecalibration}
+              onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isFullWizardOpen} onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}>
+        <DialogContent className="sm:max-w-6xl max-h-[92vh] overflow-y-auto p-0">
+          <div className="p-6">
+            <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {phase === 'active' && !isF3EligibilityLoading && canShowF3Banner && (
+        <div className="rounded-xl border border-green-200 dark:border-green-800/30 bg-green-50 dark:bg-green-900/20 p-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <h3 className="font-semibold text-green-900 dark:text-green-100">Recalibrage annuel disponible</h3>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                Votre recolte semble terminee. Lancez le recalibrage pour mettre a jour votre baseline.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAnnualRecalibrationWizard(true)}
+              className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+            >
+              Lancer le recalibrage annuel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showAnnualRecalibrationWizard && (
+        <AnnualRecalibrationWizard
+          parcelId={parcelId}
+          estimatedCampaignCount={estimatedCampaignCount}
+          onClose={() => setShowAnnualRecalibrationWizard(false)}
+        />
+      )}
+
       {missingPlantingYear && (
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
+      )}
+
+      {isWizardPhase && !missingPlantingYear && (
+        <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
       )}
 
       {isCalibrating && (
