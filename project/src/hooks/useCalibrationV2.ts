@@ -9,6 +9,7 @@ import {
   type CalibrationStatusRecord,
   type NutritionConfirmationResponse,
   type NutritionSuggestionResponse,
+  type PartialRecalibrationDto,
 } from "@/lib/api/calibration-v2";
 import { queryKeys } from "@/lib/query-keys";
 import type { NutritionOption } from "@/types/calibration-v2";
@@ -79,6 +80,60 @@ export function useStartCalibration(parcelId: string) {
 }
 
 export { useStartCalibration as useStartCalibrationV2 };
+
+export function useStartPartialRecalibration(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      dto: PartialRecalibrationDto,
+    ): Promise<CalibrationStatusRecord> => {
+      if (!currentOrganization?.id) {
+        throw new Error("No organization selected");
+      }
+      return calibrationV2Api.startPartialRecalibration(
+        parcelId,
+        dto,
+        currentOrganization.id,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationV2.status(
+          parcelId,
+          currentOrganization?.id,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationV2.report(
+          parcelId,
+          currentOrganization?.id,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationV2.phase(
+          parcelId,
+          currentOrganization?.id,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibrationV2.history(
+          parcelId,
+          currentOrganization?.id,
+        ),
+      });
+      toast.success("Recalibrage partiel lance");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Echec du recalibrage partiel",
+      );
+    },
+  });
+}
 
 export function useCalibrationReport(
   parcelId: string,
