@@ -1403,7 +1403,7 @@ const AICalibrationPage = () => {
   const { data: phase } = useCalibrationPhase(parcelId);
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
-  const { mutate: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
+  const { isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
 
   const { data: f3Eligibility, isLoading: isF3EligibilityLoading } = useF3Eligibility(
@@ -1418,16 +1418,10 @@ const AICalibrationPage = () => {
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
   const isBusy = isCalibrating || isStarting;
   const isFailed = calibration?.status === 'failed';
-  const isDisabled = phase === 'disabled' || phase === 'unknown';
-  const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage';
-  const hasNoCalibration = !isWizardPhase && !calibration && !hasV2Report && (isDisabled || !phase);
+  const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage' || !phase;
   const canShowF3Banner = phase === 'active' && f3Eligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
-
-  const handleStartCalibration = () => {
-    startCalibrationV2({});
-  };
 
   const handleOpenPartialRecalibration = () => {
     setIsPartialWizardOpen(true);
@@ -1479,7 +1473,7 @@ const AICalibrationPage = () => {
 
             <button
               type="button"
-              onClick={handleStartCalibration}
+              onClick={handleOpenFullRecalibrationWizard}
               disabled={isBusy || missingPlantingYear}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
               title={missingPlantingYear ? 'Set planting year first' : undefined}
@@ -1597,7 +1591,7 @@ const AICalibrationPage = () => {
           parcelId={parcelId}
           healthScore={v2Output.step8.health_score.total}
           confidence={v2Output.confidence.normalized_score}
-          onReCalibrate={handleStartCalibration}
+          onReCalibrate={handleOpenFullRecalibrationWizard}
         />
       )}
 
@@ -1622,7 +1616,7 @@ const AICalibrationPage = () => {
               </p>
               <button
                 type="button"
-                onClick={handleStartCalibration}
+                onClick={handleOpenFullRecalibrationWizard}
                 disabled={isStarting || missingPlantingYear}
                 className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
@@ -1634,58 +1628,7 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {hasNoCalibration && (
-        <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-2xl border border-green-200 dark:border-green-800/30 p-12 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="p-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm inline-block mb-6">
-              <BrainCircuit className="w-12 h-12 text-green-600 dark:text-green-400" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Launch AI Calibration</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Calibrate the AI model for this parcel to enable diagnostics, alerts, and recommendations.
-            </p>
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 mb-6 text-left">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">What happens during calibration</p>
-              <div className="space-y-2.5">
-                <div className="flex items-center space-x-2.5 text-sm text-gray-700 dark:text-gray-300">
-                  <Satellite className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span>Satellite data is fetched (NDVI, NDRE, NDMI and more)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 text-sm text-gray-700 dark:text-gray-300">
-                  <CloudRain className="w-4 h-4 text-blue-500 shrink-0" />
-                  <span>Weather history is provisioned (temperature, rain, ET0)</span>
-                </div>
-                <div className="flex items-center space-x-2.5 text-sm text-gray-700 dark:text-gray-300">
-                  <BrainCircuit className="w-4 h-4 text-green-500 shrink-0" />
-                  <span>AI baselines and thresholds are computed</span>
-                </div>
-                <div className="flex items-center space-x-2.5 text-sm text-gray-700 dark:text-gray-300">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                  <span>Diagnostics, alerts, and plans become available</span>
-                </div>
-              </div>
-            </div>
-            {missingPlantingYear && (
-              <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
-            )}
-            {!missingPlantingYear && (
-              <button
-                type="button"
-                onClick={handleStartCalibration}
-                disabled={isStarting}
-                className="inline-flex items-center space-x-2 px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium shadow-sm"
-              >
-                {isStarting ? (
-                  <BrainCircuit className="w-5 h-5 animate-pulse" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-                <span>{isStarting ? 'Starting...' : 'Start Calibration'}</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {phase === 'active' && diagnostics && Array.isArray(diagnostics) && diagnostics.length > 0 && (
         <div className="mt-8">
