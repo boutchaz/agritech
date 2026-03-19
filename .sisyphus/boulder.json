@@ -1,43 +1,11 @@
 {
-  "active_plan": "/Users/boutchaz/Documents/CodeLovers/agritech/.sisyphus/plans/calibration-engine-v2.md",
-  "started_at": "2026-03-13T02:17:11Z",
+  "active_plan": "/Users/boutchaz/Documents/CodeLovers/agritech/.sisyphus/plans/mobile-feature-parity.md",
+  "started_at": "2026-03-18T23:44:36.047Z",
   "session_ids": [
-    "ses_31db0cfa4ffeAt2b4m25hHK9V6",
-    "ses_31b47ae3cffeSQ3zYNdM18E6ts"
+    "ses_2fccf6f46ffe4J8UWniqyvKGj1",
+    "ses_2fccf6f46ffe4J8UWniqyvKGj1"
   ],
-  "plan_name": "calibration-engine-v2",
+  "plan_name": "mobile-feature-parity",
   "worktree_path": "/Users/boutchaz/Documents/CodeLovers/agritech",
-  "completed_tasks": [
-    "1",
-    "4",
-    "5",
-    "6",
-    "7",
-    "24",
-    "8",
-    "9",
-    "10",
-    "11",
-    "12",
-    "13",
-    "14",
-    "15",
-    "16",
-    "17",
-    "18",
-    "19",
-    "20",
-    "21",
-    "22",
-    "23",
-    "25",
-    "26",
-    "27",
-    "28",
-    "29",
-    "30",
-    "F1",
-    "F2",
-    "F4"
-  ]
+  "completed_tasks": ["1", "2", "3", "4", "5", "6"]
 }

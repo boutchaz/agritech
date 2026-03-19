@@ -20,9 +20,10 @@ interface DeviceInfo {
 
 async function getDeviceInfo(): Promise<DeviceInfo> {
   // Get or generate unique device ID
-  let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-  if (!deviceId) {
-    deviceId = Constants.deviceId || Constants.sessionId || `mobile_${Date.now()}`;
+  const storedDeviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  const deviceId = storedDeviceId ?? Constants.deviceId ?? Constants.sessionId ?? `mobile_${Date.now()}`;
+
+  if (!storedDeviceId) {
     await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
   }
 
@@ -160,10 +161,30 @@ class ApiClient {
       (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      if (
+        retryOnUnauthorized &&
+        (fetchError instanceof TypeError ||
+          (fetchError instanceof Error && fetchError.name === 'AbortError'))
+      ) {
+        return this.request<T>(endpoint, options, false);
+      }
+
+      throw fetchError;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({

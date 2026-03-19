@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "AgriTech Field"
+  },
+  "actions": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "back": "رجوع",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "retry": "إعادة المحاولة",
+    "refresh": "تحديث",
+    "search": "بحث",
+    "filter": "تصفية",
+    "seeAll": "عرض الكل",
+    "loading": "جارٍ التحميل...",
+    "submit": "إرسال"
+  },
+  "status": {
+    "pending": "قيد الانتظار",
+    "in_progress": "قيد التنفيذ",
+    "completed": "مكتمل",
+    "cancelled": "ملغي",
+    "active": "نشط",
+    "inactive": "غير نشط"
+  },
+  "priority": {
+    "low": "منخفض",
+    "medium": "متوسط",
+    "high": "مرتفع",
+    "urgent": "عاجل"
+  },
+  "time": {
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "thisWeek": "هذا الأسبوع",
+    "hoursToday": "ساعات اليوم",
+    "hoursWeek": "ساعات هذا الأسبوع",
+    "todaysTasks": "مهام اليوم"
+  },
+  "errors": {
+    "generic": "حدث خطأ ما",
+    "network": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+    "unauthorized": "ليست لديك صلاحية للقيام بذلك",
+    "notFound": "غير موجود"
+  },
+  "empty": {
+    "noData": "لا توجد بيانات متاحة",
+    "noResults": "لم يتم العثور على نتائج",
+    "noRecentActivity": "لا يوجد نشاط حديث"
+  },
+  "greetings": {
+    "morning": "صباح الخير",
+    "afternoon": "نهارك سعيد",
+    "evening": "مساء الخير"
+  },
+  "dashboard": {
+    "quickActions": "إجراءات سريعة",
+    "recentActivity": "النشاط الأخير",
+    "activity": {
+      "completed": "تم إكمال المهمة - {{title}}",
+      "inProgress": "بدأت المهمة - {{title}}",
+      "new": "مهمة جديدة - {{title}}"
+    },
+    "actions": {
+      "newHarvest": {
+        "title": "حصاد جديد",
+        "subtitle": "تسجيل الحصاد"
+      },
+      "myTasks": {
+        "title": "مهامي",
+        "subtitle": "عرض المهام"
+      },
+      "clock": {
+        "title": "تسجيل الحضور/الانصراف",
+        "subtitle": "تتبع الوقت"
+      },
+      "photo": {
+        "title": "التقاط صورة",
+        "subtitle": "توثيق"
+      }
+    }
+  },
+  "tasks": {
+    "loading": "جارٍ تحميل المهام...",
+    "empty": {
+      "assigned": "لا توجد مهام مخصصة لك",
+      "filtered": "لا توجد مهام {{status}}"
+    }
+  }
+}

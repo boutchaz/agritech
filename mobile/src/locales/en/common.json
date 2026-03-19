@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "AgriTech Field"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "close": "Close",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "refresh": "Refresh",
+    "search": "Search",
+    "filter": "Filter",
+    "seeAll": "See All",
+    "loading": "Loading...",
+    "submit": "Submit"
+  },
+  "status": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This Week",
+    "hoursToday": "Hours Today",
+    "hoursWeek": "Hours This Week",
+    "todaysTasks": "Today's Tasks"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "network": "Network error. Please try again.",
+    "unauthorized": "You don't have permission to do this",
+    "notFound": "Not found"
+  },
+  "empty": {
+    "noData": "No data available",
+    "noResults": "No results found",
+    "noRecentActivity": "No recent activity"
+  },
+  "greetings": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "dashboard": {
+    "quickActions": "Quick Actions",
+    "recentActivity": "Recent Activity",
+    "activity": {
+      "completed": "Task completed - {{title}}",
+      "inProgress": "Task started - {{title}}",
+      "new": "New task - {{title}}"
+    },
+    "actions": {
+      "newHarvest": {
+        "title": "New Harvest",
+        "subtitle": "Record harvest"
+      },
+      "myTasks": {
+        "title": "My Tasks",
+        "subtitle": "View tasks"
+      },
+      "clock": {
+        "title": "Clock In/Out",
+        "subtitle": "Track time"
+      },
+      "photo": {
+        "title": "Take Photo",
+        "subtitle": "Document"
+      }
+    }
+  },
+  "tasks": {
+    "loading": "Loading tasks...",
+    "empty": {
+      "assigned": "No tasks assigned to you",
+      "filtered": "No {{status}} tasks"
+    }
+  }
+}

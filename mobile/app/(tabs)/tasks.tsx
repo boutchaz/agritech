@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useMyTasks, useTaskStatistics } from '@/hooks/useTasks';
 import { colors, spacing, borderRadius, fontSize, shadows } from '@/constants/theme';
 import type { Task } from '@/lib/api';
@@ -17,21 +18,22 @@ import type { Task } from '@/lib/api';
 type TaskStatus = Task['status'];
 type TaskPriority = Task['priority'];
 
-const STATUS_CONFIG: Record<TaskStatus, { color: string; label: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  pending: { color: colors.yellow[500], label: 'Pending', icon: 'time-outline' },
-  in_progress: { color: colors.blue[500], label: 'In Progress', icon: 'play-circle-outline' },
-  completed: { color: colors.primary[500], label: 'Completed', icon: 'checkmark-circle-outline' },
-  cancelled: { color: colors.gray[400], label: 'Cancelled', icon: 'close-circle-outline' },
+const STATUS_CONFIG: Record<TaskStatus, { color: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  pending: { color: colors.yellow[500], icon: 'time-outline' },
+  in_progress: { color: colors.blue[500], icon: 'play-circle-outline' },
+  completed: { color: colors.primary[500], icon: 'checkmark-circle-outline' },
+  cancelled: { color: colors.gray[400], icon: 'close-circle-outline' },
 };
 
-const PRIORITY_CONFIG: Record<TaskPriority, { color: string; label: string }> = {
-  low: { color: colors.gray[400], label: 'Low' },
-  medium: { color: colors.yellow[500], label: 'Medium' },
-  high: { color: colors.red[500], label: 'High' },
-  urgent: { color: colors.red[700], label: 'Urgent' },
+const PRIORITY_CONFIG: Record<TaskPriority, { color: string }> = {
+  low: { color: colors.gray[400] },
+  medium: { color: colors.yellow[500] },
+  high: { color: colors.red[500] },
+  urgent: { color: colors.red[700] },
 };
 
 function TaskCard({ task, onPress }: { task: Task; onPress: () => void }) {
+  const { t } = useTranslation();
   const status = STATUS_CONFIG[task.status];
   const priority = PRIORITY_CONFIG[task.priority];
 
@@ -41,13 +43,13 @@ function TaskCard({ task, onPress }: { task: Task; onPress: () => void }) {
         <View style={[styles.priorityBadge, { backgroundColor: priority.color + '20' }]}>
           <View style={[styles.priorityDot, { backgroundColor: priority.color }]} />
           <Text style={[styles.priorityText, { color: priority.color }]}>
-            {priority.label}
+            {t(`priority.${task.priority}`)}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
           <Ionicons name={status.icon} size={14} color={status.color} />
           <Text style={[styles.statusText, { color: status.color }]}>
-            {status.label}
+            {t(`status.${task.status}`)}
           </Text>
         </View>
       </View>
@@ -84,6 +86,8 @@ type FilterType = 'all' | TaskStatus;
 export default function TasksScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterType>('all');
+  const { t } = useTranslation();
+  const { t: tNav } = useTranslation('navigation');
 
   const { data: tasks, isLoading, refetch, isRefetching } = useMyTasks();
   const { data: statistics } = useTaskStatistics();
@@ -93,17 +97,19 @@ export default function TasksScreen() {
     : tasks?.filter((t) => t.status === filter);
 
   const filters: { key: FilterType; label: string; count?: number }[] = [
-    { key: 'all', label: 'All', count: statistics?.total },
-    { key: 'pending', label: 'Pending', count: statistics?.pending },
-    { key: 'in_progress', label: 'Active', count: statistics?.in_progress },
-    { key: 'completed', label: 'Done', count: statistics?.completed },
+    { key: 'all', label: tNav('filters.all'), count: statistics?.total },
+    { key: 'pending', label: t('status.pending'), count: statistics?.pending },
+    { key: 'in_progress', label: tNav('filters.active'), count: statistics?.in_progress },
+    { key: 'completed', label: tNav('filters.done'), count: statistics?.completed },
   ];
+
+  const activeFilterLabel = filters.find((item) => item.key === filter)?.label ?? '';
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary[600]} />
-        <Text style={styles.loadingText}>Loading tasks...</Text>
+        <Text style={styles.loadingText}>{t('tasks.loading')}</Text>
       </View>
     );
   }
@@ -144,7 +150,9 @@ export default function TasksScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="checkbox-outline" size={48} color={colors.gray[300]} />
             <Text style={styles.emptyText}>
-              {filter === 'all' ? 'No tasks assigned to you' : `No ${filter.replace('_', ' ')} tasks`}
+              {filter === 'all'
+                ? t('tasks.empty.assigned')
+                : t('tasks.empty.filtered', { status: activeFilterLabel })}
             </Text>
           </View>
         }

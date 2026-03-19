@@ -1,0 +1,33 @@
+{
+  "tabs": {
+    "home": "Home",
+    "tasks": "Tasks",
+    "harvest": "Harvest",
+    "clock": "Clock",
+    "profile": "Profile"
+  },
+  "domains": {
+    "production": "Production",
+    "workforce": "Workforce",
+    "inventory": "Inventory",
+    "accounting": "Accounting",
+    "settings": "Settings",
+    "misc": "Miscellaneous"
+  },
+  "screens": {
+    "dashboard": "Dashboard",
+    "tasks": "Tasks",
+    "harvests": "Harvests",
+    "workers": "Workers",
+    "parcels": "Parcels",
+    "farms": "Farms",
+    "inventory": "Inventory",
+    "notifications": "Notifications",
+    "profile": "Profile"
+  },
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "done": "Done"
+  }
+}

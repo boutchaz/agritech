@@ -2,10 +2,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, A
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, spacing, borderRadius, fontSize, shadows } from '@/constants/theme';
 import { useMyTasks, useTaskStatistics } from '@/hooks/useTasks';
-import { format, startOfDay, endOfDay, isToday } from 'date-fns';
+import { format, isToday } from 'date-fns';
 
 interface QuickActionProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -62,9 +63,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile, currentFarm } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
+  const { t } = useTranslation();
+  const { t: tAuth } = useTranslation('auth');
 
   const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useMyTasks();
-  const { data: statistics, isLoading: statsLoading, refetch: refetchStats } = useTaskStatistics();
+  const { isLoading: statsLoading, refetch: refetchStats } = useTaskStatistics();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -77,9 +80,9 @@ export default function HomeScreen() {
 
   const greeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return t('greetings.morning');
+    if (hour < 18) return t('greetings.afternoon');
+    return t('greetings.evening');
   };
 
   // Calculate today's stats from actual data
@@ -94,8 +97,7 @@ export default function HomeScreen() {
 
   // Calculate hours worked - this would need to come from time logs API
   // For now, we'll use a placeholder that could be enhanced with real data
-  const hoursToday = statistics ? '—' : '—';
-  const hoursWeek = statistics ? '—' : '—';
+  const hoursToday = '—';
 
   // Get recent activity from tasks
   const recentActivity = tasks?.slice(0, 3).map((task) => ({
@@ -116,39 +118,39 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.greeting}>{greeting()},</Text>
           <Text style={styles.userName}>
-            {profile?.first_name || 'Worker'}
+            {profile?.first_name || tAuth('profile.firstName')}
           </Text>
         </View>
         <View style={styles.farmBadge}>
           <Ionicons name="location" size={14} color={colors.primary[600]} />
           <Text style={styles.farmName}>
-            {currentFarm?.name || 'Select Farm'}
+            {currentFarm?.name || tAuth('selectFarm')}
           </Text>
         </View>
       </View>
 
       <View style={styles.statsGrid}>
         <StatCard
-          title="Today's Tasks"
+          title={t('time.todaysTasks')}
           value={todayTasksCount}
           icon="checkbox"
           trend={todayTasksCount > 0 ? 'up' : undefined}
           isLoading={tasksLoading}
         />
         <StatCard
-          title="Pending"
+          title={t('status.pending')}
           value={pendingTasksCount}
           icon="list-outline"
           isLoading={tasksLoading}
         />
         <StatCard
-          title="Completed"
+          title={t('status.completed')}
           value={completedTasksCount}
           icon="checkmark-circle"
           isLoading={tasksLoading}
         />
         <StatCard
-          title="Hours Today"
+          title={t('time.hoursToday')}
           value={hoursToday}
           icon="time"
           isLoading={statsLoading}
@@ -156,33 +158,33 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.quickActions')}</Text>
         <View style={styles.quickActionsGrid}>
           <QuickAction
             icon="add-circle"
-            title="New Harvest"
-            subtitle="Record harvest"
+            title={t('dashboard.actions.newHarvest.title')}
+            subtitle={t('dashboard.actions.newHarvest.subtitle')}
             color={colors.primary[500]}
             onPress={() => router.push('/harvest/new')}
           />
           <QuickAction
             icon="checkbox"
-            title="My Tasks"
-            subtitle="View tasks"
+            title={t('dashboard.actions.myTasks.title')}
+            subtitle={t('dashboard.actions.myTasks.subtitle')}
             color={colors.blue[500]}
             onPress={() => router.push('/(tabs)/tasks')}
           />
           <QuickAction
             icon="time"
-            title="Clock In/Out"
-            subtitle="Track time"
+            title={t('dashboard.actions.clock.title')}
+            subtitle={t('dashboard.actions.clock.subtitle')}
             color={colors.yellow[500]}
             onPress={() => router.push('/(tabs)/clock')}
           />
           <QuickAction
             icon="camera"
-            title="Take Photo"
-            subtitle="Document"
+            title={t('dashboard.actions.photo.title')}
+            subtitle={t('dashboard.actions.photo.subtitle')}
             color={colors.red[500]}
             onPress={() => {}}
           />
@@ -191,15 +193,15 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.recentActivity')}</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/tasks')}>
-            <Text style={styles.seeAll}>See All</Text>
+            <Text style={styles.seeAll}>{t('actions.seeAll')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.activityList}>
           {recentActivity.length > 0 ? (
-            recentActivity.map((activity, index) => (
-              <View key={index} style={styles.activityItem}>
+            recentActivity.map((activity) => (
+              <View key={`${activity.type}-${activity.text}-${activity.time}`} style={styles.activityItem}>
                 <View
                   style={[
                     styles.activityDot,
@@ -215,8 +217,11 @@ export default function HomeScreen() {
                 />
                 <View style={styles.activityContent}>
                   <Text style={styles.activityText}>
-                    {activity.type === 'completed' ? 'Task completed - ' : activity.type === 'in_progress' ? 'Task started - ' : 'New task - '}
-                    {activity.text}
+                    {activity.type === 'completed'
+                      ? t('dashboard.activity.completed', { title: activity.text })
+                      : activity.type === 'in_progress'
+                      ? t('dashboard.activity.inProgress', { title: activity.text })
+                      : t('dashboard.activity.new', { title: activity.text })}
                   </Text>
                   <Text style={styles.activityTime}>{activity.time}</Text>
                 </View>
@@ -224,7 +229,7 @@ export default function HomeScreen() {
             ))
           ) : (
             <View style={styles.emptyActivity}>
-              <Text style={styles.emptyActivityText}>No recent activity</Text>
+              <Text style={styles.emptyActivityText}>{t('empty.noRecentActivity')}</Text>
             </View>
           )}
         </View>

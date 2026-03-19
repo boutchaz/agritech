@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "AgriTech Field"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "back": "Retour",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "retry": "Réessayer",
+    "refresh": "Actualiser",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "seeAll": "Voir tout",
+    "loading": "Chargement...",
+    "submit": "Envoyer"
+  },
+  "status": {
+    "pending": "En attente",
+    "in_progress": "En cours",
+    "completed": "Terminée",
+    "cancelled": "Annulée",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "priority": {
+    "low": "Faible",
+    "medium": "Moyenne",
+    "high": "Haute",
+    "urgent": "Urgente"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "thisWeek": "Cette semaine",
+    "hoursToday": "Heures aujourd'hui",
+    "hoursWeek": "Heures cette semaine",
+    "todaysTasks": "Tâches du jour"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite",
+    "network": "Erreur réseau. Veuillez réessayer.",
+    "unauthorized": "Vous n'avez pas l'autorisation d'effectuer cette action",
+    "notFound": "Introuvable"
+  },
+  "empty": {
+    "noData": "Aucune donnée disponible",
+    "noResults": "Aucun résultat trouvé",
+    "noRecentActivity": "Aucune activité récente"
+  },
+  "greetings": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  },
+  "dashboard": {
+    "quickActions": "Actions rapides",
+    "recentActivity": "Activité récente",
+    "activity": {
+      "completed": "Tâche terminée - {{title}}",
+      "inProgress": "Tâche démarrée - {{title}}",
+      "new": "Nouvelle tâche - {{title}}"
+    },
+    "actions": {
+      "newHarvest": {
+        "title": "Nouvelle récolte",
+        "subtitle": "Enregistrer la récolte"
+      },
+      "myTasks": {
+        "title": "Mes tâches",
+        "subtitle": "Voir les tâches"
+      },
+      "clock": {
+        "title": "Pointage",
+        "subtitle": "Suivre le temps"
+      },
+      "photo": {
+        "title": "Prendre une photo",
+        "subtitle": "Documenter"
+      }
+    }
+  },
+  "tasks": {
+    "loading": "Chargement des tâches...",
+    "empty": {
+      "assigned": "Aucune tâche ne vous est assignée",
+      "filtered": "Aucune tâche {{status}}"
+    }
+  }
+}

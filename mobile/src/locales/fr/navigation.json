@@ -1,0 +1,33 @@
+{
+  "tabs": {
+    "home": "Accueil",
+    "tasks": "Tâches",
+    "harvest": "Récolte",
+    "clock": "Temps",
+    "profile": "Profil"
+  },
+  "domains": {
+    "production": "Production",
+    "workforce": "Main-d'oeuvre",
+    "inventory": "Inventaire",
+    "accounting": "Comptabilité",
+    "settings": "Paramètres",
+    "misc": "Divers"
+  },
+  "screens": {
+    "dashboard": "Tableau de bord",
+    "tasks": "Tâches",
+    "harvests": "Récoltes",
+    "workers": "Travailleurs",
+    "parcels": "Parcelles",
+    "farms": "Fermes",
+    "inventory": "Inventaire",
+    "notifications": "Notifications",
+    "profile": "Profil"
+  },
+  "filters": {
+    "all": "Toutes",
+    "active": "Actives",
+    "done": "Terminées"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "tabs": {
+    "home": "الرئيسية",
+    "tasks": "المهام",
+    "harvest": "الحصاد",
+    "clock": "الوقت",
+    "profile": "الملف الشخصي"
+  },
+  "domains": {
+    "production": "الإنتاج",
+    "workforce": "القوى العاملة",
+    "inventory": "المخزون",
+    "accounting": "المحاسبة",
+    "settings": "الإعدادات",
+    "misc": "متفرقات"
+  },
+  "screens": {
+    "dashboard": "لوحة التحكم",
+    "tasks": "المهام",
+    "harvests": "عمليات الحصاد",
+    "workers": "العمال",
+    "parcels": "القطع",
+    "farms": "المزارع",
+    "inventory": "المخزون",
+    "notifications": "الإشعارات",
+    "profile": "الملف الشخصي"
+  },
+  "filters": {
+    "all": "الكل",
+    "active": "نشطة",
+    "done": "مكتملة"
+  }
+}
