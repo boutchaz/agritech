@@ -43,7 +43,7 @@ const OPTIONNEL_PARAMS: WaterParameterConfig[] = [
 
 function WaterParamField({ form, config }: { form: UseFormReturn<CalibrationWizardFormValues>; config: WaterParameterConfig }) {
   const watchedValue = form.watch(config.name);
-  const isChecked = watchedValue !== undefined && watchedValue !== '';
+  const isChecked = watchedValue !== undefined;
 
   return (
     <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-3">
@@ -51,8 +51,10 @@ function WaterParamField({ form, config }: { form: UseFormReturn<CalibrationWiza
         <Checkbox
           checked={isChecked}
           onCheckedChange={(checked) => {
-            if (!checked) {
-              form.setValue(config.name, undefined);
+            if (checked) {
+              form.setValue(config.name, '' as never);
+            } else {
+              form.setValue(config.name, undefined as never);
             }
           }}
         />
