@@ -398,33 +398,43 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 overflow-x-auto">
-        <div className="flex items-center min-w-[760px] justify-between">
-          {STEPS.map((step, index) => {
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {STEPS.map((step) => {
             const isActive = currentStep === step.number;
             const isCompleted = isStepCompleted(step.number);
 
             return (
-              <div key={step.number} className="flex items-center">
-                <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 ${
+              <button
+                key={step.number}
+                type="button"
+                onClick={() => setStep(step.number)}
+                className={`flex flex-col items-center gap-1.5 rounded-lg p-2 transition-colors ${
+                  isActive
+                    ? 'bg-blue-50 dark:bg-blue-900/30'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium ${
                   isCompleted
                     ? 'bg-green-600 border-green-600 text-white'
                     : isActive
                       ? 'bg-blue-600 border-blue-600 text-white'
                       : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
                 }`}>
-                  {isCompleted ? <Check className="w-4 h-4" /> : step.number}
+                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.number}
                 </div>
-                <div className="ml-2 mr-3">
-                  <p className={`text-sm font-medium ${isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {step.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{STATUS_LABELS[step.status]}</p>
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div className={`w-8 h-0.5 ${isCompleted ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                )}
-              </div>
+                <span className={`text-[11px] leading-tight text-center ${
+                  isActive ? 'font-semibold text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {step.title}
+                </span>
+                <span className={`text-[10px] ${
+                  isActive ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                }`}>
+                  {STATUS_LABELS[step.status]}
+                </span>
+              </button>
             );
           })}
         </div>

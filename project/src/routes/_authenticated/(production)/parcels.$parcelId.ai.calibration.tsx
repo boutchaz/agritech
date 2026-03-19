@@ -1492,8 +1492,8 @@ const AICalibrationPage = () => {
       {phase && <PhaseBanner phase={phase} />}
 
       <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
-        <DialogContent className="sm:max-w-6xl max-h-[92vh] overflow-y-auto p-0">
-          <div className="p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0">
+          <div className="p-4 sm:p-6">
             <RecalibrationWizard
               parcelId={parcelId}
               baselineData={reportData}
@@ -1506,8 +1506,8 @@ const AICalibrationPage = () => {
       </Dialog>
 
       <Dialog open={isFullWizardOpen} onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}>
-        <DialogContent className="sm:max-w-6xl max-h-[92vh] overflow-y-auto p-0">
-          <div className="p-6">
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0">
+          <div className="p-4 sm:p-6">
             <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
           </div>
         </DialogContent>
