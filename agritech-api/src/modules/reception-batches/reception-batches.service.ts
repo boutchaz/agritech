@@ -1,14 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { CreateReceptionBatchDto } from './dto/create-reception-batch.dto';
 import { UpdateQualityControlDto } from './dto/update-quality-control.dto';
 import { MakeReceptionDecisionDto } from './dto/make-reception-decision.dto';
 import { ProcessReceptionPaymentDto } from './dto/process-reception-payment.dto';
 import { ReceptionBatchFiltersDto } from './dto/reception-batch-filters.dto';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 @Injectable()
 export class ReceptionBatchesService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(ReceptionBatchesService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
   private async verifyOrganizationAccess(
     userId: string,
     organizationId: string,
@@ -169,6 +176,38 @@ export class ReceptionBatchesService {
 
     if (error) {
       throw new BadRequestException(`Failed to make decision: ${error.message}`);
+    }
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const decisionLabels: Record<string, string> = {
+          accepted: 'accepted',
+          rejected: 'rejected',
+          partial: 'partially accepted',
+        };
+        const decisionLabel = decisionLabels[decisionDto.decision] || decisionDto.decision;
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.RECEPTION_BATCH_DECISION,
+          `Reception batch ${decisionLabel} (Grade: ${batch.quality_grade || 'N/A'})`,
+          `A reception batch has been ${decisionLabel}${decisionDto.decision_notes ? `: ${decisionDto.decision_notes}` : ''}`,
+          { batchId, decision: decisionDto.decision, qualityGrade: batch.quality_grade },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send reception batch notification: ${notifError}`);
     }
 
     return data;

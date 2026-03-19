@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
   OrganizationUserFiltersDto,
   CreateOrganizationUserDto,
@@ -14,6 +16,7 @@ export class OrganizationUsersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -244,6 +247,50 @@ export class OrganizationUsersService {
         throw new BadRequestException(`Failed to create organization user: ${error.message}`);
       }
 
+      try {
+        const { data: profile } = await client
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', dto.user_id)
+          .maybeSingle();
+
+        const memberName = profile
+          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'A new member'
+          : 'A new member';
+
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((id: string) => id !== dto.user_id && id !== createdBy);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.MEMBER_ADDED,
+            `${memberName} joined the organization`,
+            `${memberName} has been added to the organization`,
+            { userId: dto.user_id, memberName },
+          );
+        }
+
+        await this.notificationsService.createNotification({
+          userId: dto.user_id,
+          organizationId,
+          type: NotificationType.MEMBER_ADDED,
+          title: 'Welcome to the organization',
+          message: 'You have been added to the organization',
+          data: { userId: dto.user_id },
+        });
+      } catch (notifError) {
+        this.logger.warn(`Failed to send member added notification: ${notifError}`);
+      }
+
       return data;
     } catch (error) {
       this.logger.error('Error creating organization user:', error);
@@ -273,6 +320,29 @@ export class OrganizationUsersService {
       throw new BadRequestException(`Failed to update organization user: ${error.message}`);
     }
 
+    if (dto.role_id) {
+      try {
+        const { data: role } = await client
+          .from('roles')
+          .select('name')
+          .eq('id', dto.role_id)
+          .maybeSingle();
+
+        const roleName = role?.name || 'a new role';
+
+        await this.notificationsService.createNotification({
+          userId,
+          organizationId,
+          type: NotificationType.ROLE_CHANGED,
+          title: `Your role has been changed to ${roleName}`,
+          message: `Your permissions have been updated`,
+          data: { userId, roleId: dto.role_id, roleName },
+        });
+      } catch (notifError) {
+        this.logger.warn(`Failed to send role change notification: ${notifError}`);
+      }
+    }
+
     return data;
   }
 
@@ -294,6 +364,19 @@ export class OrganizationUsersService {
     if (error) {
       this.logger.error(`Failed to deactivate organization user: ${error.message}`);
       throw new BadRequestException(`Failed to deactivate organization user: ${error.message}`);
+    }
+
+    try {
+      await this.notificationsService.createNotification({
+        userId,
+        organizationId,
+        type: NotificationType.MEMBER_REMOVED,
+        title: 'You have been removed from the organization',
+        message: 'Your access to this organization has been revoked',
+        data: { userId },
+      });
+    } catch (notifError) {
+      this.logger.warn(`Failed to send member removed notification: ${notifError}`);
     }
 
     return { message: 'User removed from organization successfully' };

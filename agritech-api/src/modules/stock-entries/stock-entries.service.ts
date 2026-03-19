@@ -2,6 +2,8 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateStockEntryDto, StockEntryType, StockEntryStatus, ValuationMethod } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
 import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
@@ -18,6 +20,7 @@ export class StockEntriesService {
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly stockAccountingService: StockAccountingService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -307,7 +310,7 @@ export class StockEntriesService {
    * This processes all stock movements and valuations
    */
   async postStockEntry(stockEntryId: string, organizationId: string, userId: string): Promise<any> {
-    return this.executeInPgTransaction(async (client) => {
+    const result = await this.executeInPgTransaction(async (client) => {
       // 1. Get stock entry with items
       const entryResult = await client.query(
         `SELECT se.*, 
@@ -397,8 +400,44 @@ export class StockEntriesService {
         );
       }
 
-      return { message: 'Stock entry posted successfully' };
+      return { message: 'Stock entry posted successfully', stockEntry };
     });
+
+    try {
+      const client = this.databaseService.getAdminClient();
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const entryTypeLabels: Record<string, string> = {
+          material_receipt: 'Material Receipt',
+          material_issue: 'Material Issue',
+          stock_transfer: 'Stock Transfer',
+          stock_reconciliation: 'Stock Reconciliation',
+        };
+        const label = entryTypeLabels[result.stockEntry?.entry_type] || 'Stock Entry';
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.STOCK_ENTRY_CREATED,
+          `${label} #${result.stockEntry?.entry_number} posted`,
+          `${label} has been posted and stock levels updated`,
+          { stockEntryId, entryType: result.stockEntry?.entry_type, entryNumber: result.stockEntry?.entry_number },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send stock entry notification: ${notifError}`);
+    }
+
+    return result;
   }
 
   /**

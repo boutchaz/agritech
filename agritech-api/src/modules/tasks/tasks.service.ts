@@ -17,6 +17,7 @@ import { AccountingAutomationService } from "../journal-entries/accounting-autom
 import { ReceptionBatchesService } from "../reception-batches/reception-batches.service";
 import { AdoptionService, MilestoneType } from "../adoption/adoption.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../notifications/dto/notification.dto";
 import { ProductApplicationsService } from "../product-applications/product-applications.service";
 
 @Injectable()
@@ -457,6 +458,49 @@ export class TasksService {
         // Log error but don't fail the task update
         this.logger.error(
           `Failed to create work record for task ${taskId}: ${workRecordError}`,
+        );
+      }
+    }
+
+    // Send notification when task status changes
+    if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
+      try {
+        // Notify the assigned worker (if they have a user account)
+        if (existingTask.assigned_to) {
+          const { data: assignedWorker } = await client
+            .from("workers")
+            .select("user_id, first_name, last_name")
+            .eq("id", existingTask.assigned_to)
+            .maybeSingle();
+
+          if (assignedWorker?.user_id) {
+            const statusLabels: Record<string, string> = {
+              pending: "pending",
+              in_progress: "in progress",
+              completed: "completed",
+              cancelled: "cancelled",
+              on_hold: "on hold",
+            };
+            const statusLabel = statusLabels[updateTaskDto.status] || updateTaskDto.status;
+
+            await this.notificationsService.createNotification({
+              userId: assignedWorker.user_id,
+              organizationId,
+              type: NotificationType.TASK_STATUS_CHANGED,
+              title: `Task "${existingTask.title || "Untitled"}" is now ${statusLabel}`,
+              message: `The status of your task has been updated to ${statusLabel}`,
+              data: {
+                taskId,
+                previousStatus: existingTask.status,
+                newStatus: updateTaskDto.status,
+              },
+            });
+          }
+        }
+      } catch (notifError) {
+        // Don't fail the update if notification fails
+        this.logger.warn(
+          `Failed to send task status change notification: ${notifError.message}`,
         );
       }
     }

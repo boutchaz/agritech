@@ -1,9 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 @Injectable()
 export class DeliveriesService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(DeliveriesService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Verify user has access to organization
@@ -348,6 +355,31 @@ export class DeliveriesService {
       throw new BadRequestException(`Failed to create tracking record: ${trackingError.message}`);
     }
 
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.DELIVERY_STATUS_CHANGED,
+          `Delivery to ${delivery.customer_name || 'customer'} is now ${statusData.status}`,
+          `Delivery status updated to ${statusData.status}`,
+          { deliveryId, status: statusData.status, customerName: delivery.customer_name },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send delivery status notification: ${notifError}`);
+    }
+
     return delivery;
   }
 
@@ -385,6 +417,31 @@ export class DeliveriesService {
 
     if (error) {
       throw new BadRequestException(`Failed to complete delivery: ${error.message}`);
+    }
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.DELIVERY_COMPLETED,
+          `Delivery to ${data.customer_name || 'customer'} completed`,
+          `Delivery has been signed by ${completionData.signature_name} and marked as delivered`,
+          { deliveryId, customerName: data.customer_name, signedBy: completionData.signature_name },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send delivery completion notification: ${notifError}`);
     }
 
     return data;

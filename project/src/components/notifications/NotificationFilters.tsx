@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 
-export type NotificationTypeFilter = 'all' | 'task_assigned' | 'task_status_changed' | 'order_status_changed' | 'quote_received' | 'quote_responded' | 'harvest_completed' | 'low_inventory' | 'payment_processed' | 'general';
+export type NotificationTypeFilter = 'all' | 'task_assigned' | 'task_status_changed' | 'order_status_changed' | 'quote_received' | 'quote_responded' | 'harvest_completed' | 'low_inventory' | 'payment_processed' | 'sales_order_created' | 'sales_order_status_changed' | 'purchase_order_created' | 'purchase_order_status_changed' | 'stock_entry_created' | 'reception_batch_decision' | 'quality_inspection_completed' | 'delivery_status_changed' | 'delivery_completed' | 'member_added' | 'member_removed' | 'role_changed' | 'worker_added' | 'general';
 export type NotificationStatusFilter = 'all' | 'unread' | 'important';
 export type NotificationTimeFilter = 'all' | 'today' | 'week' | 'month' | 'older';
 
@@ -30,6 +30,13 @@ const typeFilters: { value: NotificationTypeFilter; label: string; icon: string 
   { value: 'harvest_completed', label: 'Harvests', icon: '🌾' },
   { value: 'low_inventory', label: 'Inventory', icon: '⚠️' },
   { value: 'payment_processed', label: 'Payments', icon: '💳' },
+  { value: 'sales_order_created', label: 'Sales Orders', icon: '🛒' },
+  { value: 'purchase_order_created', label: 'Purchase Orders', icon: '📝' },
+  { value: 'stock_entry_created', label: 'Stock', icon: '📦' },
+  { value: 'delivery_status_changed', label: 'Deliveries', icon: '🚚' },
+  { value: 'quality_inspection_completed', label: 'Quality', icon: '🔍' },
+  { value: 'member_added', label: 'Members', icon: '👤' },
+  { value: 'worker_added', label: 'Workers', icon: '👷' },
   { value: 'general', label: 'General', icon: 'ℹ️' },
 ];
 

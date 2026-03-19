@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
   CreateSalesOrderDto,
   UpdateSalesOrderDto,
@@ -24,6 +26,7 @@ export class SalesOrdersService {
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly stockEntriesService: StockEntriesService,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   /**
@@ -103,7 +106,35 @@ export class SalesOrdersService {
       }
 
       // Fetch complete order with items
-      return this.findOne(salesOrder.id, organizationId);
+      const result = await this.findOne(salesOrder.id, organizationId);
+
+      try {
+        const client = this.databaseService.getAdminClient();
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((id: string) => id !== userId);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.SALES_ORDER_CREATED,
+            `New sales order #${orderNumber}`,
+            `Sales order #${orderNumber} created — ${totalAmount} total`,
+            { orderId: salesOrder.id, orderNumber, totalAmount },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send sales order notification: ${notifError}`);
+      }
+
+      return result;
     } catch (error) {
       this.logger.error('Error in create sales order:', error);
       throw error;
@@ -317,6 +348,30 @@ export class SalesOrdersService {
       if (error) {
         this.logger.error('Error updating order status:', error);
         throw new BadRequestException(`Failed to update status: ${error.message}`);
+      }
+
+      try {
+        const client = this.databaseService.getAdminClient();
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || []).map((u: { user_id: string }) => u.user_id);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.SALES_ORDER_STATUS_CHANGED,
+            `Sales order #${order.order_number} is now ${updateStatusDto.status}`,
+            `Status updated from ${order.status} to ${updateStatusDto.status}`,
+            { orderId: id, orderNumber: order.order_number, previousStatus: order.status, newStatus: updateStatusDto.status },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send sales order status notification: ${notifError}`);
       }
 
       return this.findOne(id, organizationId);

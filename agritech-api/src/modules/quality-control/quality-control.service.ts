@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateQualityInspectionDto, InspectionStatus } from './dto';
 import { QualityInspectionFiltersDto } from './dto/quality-inspection-filters.dto';
 
@@ -7,7 +9,10 @@ import { QualityInspectionFiltersDto } from './dto/quality-inspection-filters.dt
 export class QualityControlService {
   private readonly logger = new Logger(QualityControlService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(organizationId: string, filters: QualityInspectionFiltersDto = {}) {
     const client = this.databaseService.getAdminClient();
@@ -198,6 +203,33 @@ export class QualityControlService {
     if (error) {
       this.logger.error(`Failed to update quality inspeection status: ${error.message}`);
       throw error;
+    }
+
+    if (status === InspectionStatus.PASSED || status === InspectionStatus.FAILED) {
+      try {
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((uid: string) => uid !== userId);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.QUALITY_INSPECTION_COMPLETED,
+            `Quality inspection completed${data?.overall_score ? ` — Score: ${data.overall_score}` : ''}`,
+            `A quality inspection has been completed${data?.type ? ` (${data.type})` : ''}`,
+            { inspectionId: id, score: data?.overall_score, type: data?.type },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send quality inspection notification: ${notifError}`);
+      }
     }
 
     return data;

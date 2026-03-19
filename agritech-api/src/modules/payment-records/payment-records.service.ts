@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 @Injectable()
 export class PaymentRecordsService {
@@ -9,6 +11,7 @@ export class PaymentRecordsService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly accountingAutomationService: AccountingAutomationService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -892,6 +895,37 @@ export class PaymentRecordsService {
         `Failed to create journal entry for payment ${paymentId}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
       );
       // Payment is still processed, just without journal entry
+    }
+
+    try {
+      const { data: worker } = await client
+        .from('workers')
+        .select('user_id, first_name, last_name')
+        .eq('id', data.worker_id)
+        .maybeSingle();
+
+      if (worker?.user_id) {
+        const workerName = `${worker.first_name || ''} ${worker.last_name || ''}`.trim();
+        const amount = data.net_amount || data.base_amount || 0;
+
+        await this.notificationsService.createNotification({
+          userId: worker.user_id,
+          organizationId,
+          type: NotificationType.PAYMENT_PROCESSED,
+          title: `Payment processed: ${amount} ${data.currency || 'MAD'}`,
+          message: `Your ${data.payment_type || 'salary'} payment of ${amount} ${data.currency || 'MAD'} has been processed`,
+          data: {
+            paymentId: data.id,
+            amount,
+            paymentType: data.payment_type,
+            paymentMethod: data.payment_method,
+          },
+        });
+      }
+    } catch (notifError) {
+      this.logger.warn(
+        `Failed to send payment notification: ${notifError instanceof Error ? notifError.message : 'Unknown error'}`,
+      );
     }
 
     return data;

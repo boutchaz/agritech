@@ -3,6 +3,8 @@ import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export interface WorkerProfile {
   id: string;
@@ -28,6 +30,7 @@ export class WorkersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -201,6 +204,34 @@ export class WorkersService {
 
     if (error) {
       throw new Error(`Failed to create worker: ${error.message}`);
+    }
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const workerName = `${worker.first_name || ''} ${worker.last_name || ''}`.trim();
+        const farmName = Array.isArray(worker.farms) ? worker.farms[0]?.name : worker.farms?.name;
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.WORKER_ADDED,
+          `New worker added: ${workerName}`,
+          `${workerName} has been added${farmName ? ` to ${farmName}` : ''}${worker.position ? ` as ${worker.position}` : ''}`,
+          { workerId: worker.id, workerName, farmName, position: worker.position },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send worker added notification: ${notifError}`);
     }
 
     return {

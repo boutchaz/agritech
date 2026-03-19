@@ -3,9 +3,10 @@ import { HarvestsController } from './harvests.controller';
 import { HarvestsService } from './harvests.service';
 import { JournalEntriesModule } from '../journal-entries/journal-entries.module';
 import { ReceptionBatchesModule } from '../reception-batches/reception-batches.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [JournalEntriesModule, ReceptionBatchesModule],
+  imports: [JournalEntriesModule, ReceptionBatchesModule, NotificationsModule],
   controllers: [HarvestsController],
   providers: [HarvestsService],
   exports: [HarvestsService],

@@ -7,6 +7,8 @@ import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 @Injectable()
 export class HarvestsService {
@@ -17,6 +19,7 @@ export class HarvestsService {
     private readonly accountingAutomationService: AccountingAutomationService,
     private readonly receptionBatchesService: ReceptionBatchesService,
     private readonly adoptionService: AdoptionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
@@ -257,6 +260,46 @@ export class HarvestsService {
         unit: harvest.unit,
       },
     );
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const { data: parcel } = await client
+          .from('parcels')
+          .select('name')
+          .eq('id', harvest.parcel_id)
+          .maybeSingle();
+
+        const parcelName = parcel?.name || 'Unknown parcel';
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.HARVEST_COMPLETED,
+          `Harvest recorded: ${harvest.quantity} ${harvest.unit} from ${parcelName}`,
+          `Lot ${harvest.lot_number} — ${harvest.quantity} ${harvest.unit} harvested from ${parcelName}`,
+          {
+            harvestId: harvest.id,
+            lotNumber: harvest.lot_number,
+            quantity: harvest.quantity,
+            unit: harvest.unit,
+            parcelId: harvest.parcel_id,
+            parcelName,
+          },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send harvest notification: ${notifError.message}`);
+    }
 
     return harvest;
   }
