@@ -1,0 +1,27 @@
+{
+  "id": "referentials/overview",
+  "title": "Crop Referentials Overview",
+  "description": "This folder contains crop referential JSON files used for calibration and AI features. Each file holds all reference data for one crop type (varieties, phenology stages, thresholds, nutrition, etc.).",
+  "source": "@site/docs/referentials/overview.md",
+  "sourceDirName": "referentials",
+  "slug": "/referentials/overview",
+  "permalink": "/referentials/overview",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1,
+    "title": "Crop Referentials Overview"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Operational Engine Specification",
+    "permalink": "/specs/operational-engine-spec"
+  },
+  "next": {
+    "title": "Olive Tree (Olivier)",
+    "permalink": "/referentials/olive-tree"
+  }
+}

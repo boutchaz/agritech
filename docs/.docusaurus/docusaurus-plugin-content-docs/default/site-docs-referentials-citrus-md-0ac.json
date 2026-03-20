@@ -1,0 +1,27 @@
+{
+  "id": "referentials/citrus",
+  "title": "Citrus (Agrumes)",
+  "description": "RÉFÉRENTIEL OPÉRATIONNEL COMPLET",
+  "source": "@site/docs/referentials/citrus.md",
+  "sourceDirName": "referentials",
+  "slug": "/referentials/citrus",
+  "permalink": "/referentials/citrus",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4,
+    "title": "Citrus (Agrumes)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Avocado (Avocatier)",
+    "permalink": "/referentials/avocado"
+  },
+  "next": {
+    "title": "Date Palm (Palmier Dattier)",
+    "permalink": "/referentials/date-palm"
+  }
+}

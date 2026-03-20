@@ -1,0 +1,27 @@
+{
+  "id": "guides/mobile-responsive",
+  "title": "Mobile Responsive Guidelines",
+  "description": "Tech Stack",
+  "source": "@site/docs/guides/mobile-responsive.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/mobile-responsive",
+  "permalink": "/guides/mobile-responsive",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4,
+    "title": "Mobile Responsive Guidelines"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Module Implementation Gap Analysis",
+    "permalink": "/guides/module-implementation"
+  },
+  "next": {
+    "title": "Development Setup & Commands",
+    "permalink": "/guides/development-setup"
+  }
+}

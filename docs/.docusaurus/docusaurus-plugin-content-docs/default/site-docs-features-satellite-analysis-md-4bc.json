@@ -16,8 +16,8 @@
   },
   "sidebar": "docs",
   "previous": {
-    "title": "Database Schema",
-    "permalink": "/database/schema"
+    "title": "Authentication & Permissions",
+    "permalink": "/features/auth-permissions"
   },
   "next": {
     "title": "Subscriptions & Module System",

@@ -19,7 +19,10 @@ import {
 } from './dto/delete-parcel.dto';
 import { CreateParcelDto } from './dto/create-parcel.dto';
 import { UpdateParcelDto } from './dto/update-parcel.dto';
-import { ListParcelsResponseDto } from './dto/list-parcels.dto';
+import {
+  GetParcelResponseDto,
+  ListParcelsResponseDto,
+} from './dto/list-parcels.dto';
 import { ListParcelApplicationsResponseDto } from './dto/list-parcel-applications.dto';
 
 @ApiTags('parcels')
@@ -159,6 +162,35 @@ export class ParcelsController {
       organizationId,
       parcelId,
     );
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get a single parcel',
+    description:
+      'Returns one parcel by ID when it belongs to the current organization.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Parcel ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Parcel retrieved successfully',
+    type: GetParcelResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Parcel'))
+  async getParcel(@Request() req, @Param('id') parcelId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+    return this.parcelsService.getParcel(req.user.id, organizationId, parcelId);
   }
 
   @Delete()

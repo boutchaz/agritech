@@ -82,3 +82,11 @@ export class ListParcelsResponseDto {
   parcels: ParcelDto[];
 }
 
+export class GetParcelResponseDto {
+  @ApiProperty({ description: 'Whether the request was successful' })
+  success: boolean;
+
+  @ApiProperty({ description: 'Parcel', type: ParcelDto })
+  parcel: ParcelDto;
+}
+

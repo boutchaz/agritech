@@ -6,17 +6,23 @@ import { I18nManager } from 'react-native';
 import enCommon from '../locales/en/common.json';
 import enNavigation from '../locales/en/navigation.json';
 import enAuth from '../locales/en/auth.json';
+import enCalibration from '../locales/en/calibration.json';
+import enNotifications from '../locales/en/notifications.json';
 import frCommon from '../locales/fr/common.json';
 import frNavigation from '../locales/fr/navigation.json';
 import frAuth from '../locales/fr/auth.json';
+import frCalibration from '../locales/fr/calibration.json';
+import frNotifications from '../locales/fr/notifications.json';
 import arCommon from '../locales/ar/common.json';
 import arNavigation from '../locales/ar/navigation.json';
 import arAuth from '../locales/ar/auth.json';
+import arCalibration from '../locales/ar/calibration.json';
+import arNotifications from '../locales/ar/notifications.json';
 
 const resources = {
-  en: { common: enCommon, navigation: enNavigation, auth: enAuth },
-  fr: { common: frCommon, navigation: frNavigation, auth: frAuth },
-  ar: { common: arCommon, navigation: arNavigation, auth: arAuth },
+  en: { common: enCommon, navigation: enNavigation, auth: enAuth, calibration: enCalibration, notifications: enNotifications },
+  fr: { common: frCommon, navigation: frNavigation, auth: frAuth, calibration: frCalibration, notifications: frNotifications },
+  ar: { common: arCommon, navigation: arNavigation, auth: arAuth, calibration: arCalibration, notifications: arNotifications },
 } as const;
 
 const supportedLocales = ['en', 'fr', 'ar'] as const;

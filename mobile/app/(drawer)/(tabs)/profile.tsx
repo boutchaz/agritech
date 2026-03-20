@@ -46,8 +46,10 @@ export default function ProfileScreen() {
   const { profile, role, abilities, signOut, biometricEnabled, enableBiometric, disableBiometric } = useAuthStore();
 
   const roleLabel =
-    abilities?.role?.display_name ||
-    (role ? role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()) : 'User');
+    abilities?.role?.display_name?.trim() ||
+    (typeof role === 'string' && role.length > 0
+      ? role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+      : 'User');
 
   const handleLogout = () => {
     Alert.alert(

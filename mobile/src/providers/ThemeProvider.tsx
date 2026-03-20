@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useEffect, type ReactNode } from 'react';
 import { useColorScheme, PixelRatio } from 'react-native';
 import {
   useFonts,
@@ -20,9 +20,15 @@ import {
   elevation,
   palette,
 } from '@/constants/tokens';
+import { useThemeStore } from '@/stores/themeStore';
+
+type ThemeMode = 'light' | 'dark' | 'system';
 
 type ThemeContextValue = {
-  mode: ColorMode;
+  mode: ColorMode; // Resolved mode (light or dark)
+  themeMode: ThemeMode; // User preference (light, dark, or system)
+  setThemeMode: (mode: ThemeMode) => void;
+  isDark: boolean;
   colors: typeof semanticColors.light;
   palette: typeof palette;
   type: typeof typeScale;
@@ -40,7 +46,24 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
-  const mode: ColorMode = systemScheme === 'dark' ? 'dark' : 'light';
+  const themeMode = useThemeStore((s) => s.mode);
+  const setThemeMode = useThemeStore((s) => s.setMode);
+  const loadTheme = useThemeStore((s) => s.loadTheme);
+
+  // Load saved theme preference on mount
+  useEffect(() => {
+    loadTheme();
+  }, [loadTheme]);
+
+  // Resolve the actual mode based on user preference
+  const mode: ColorMode = useMemo(() => {
+    if (themeMode === 'system') {
+      return systemScheme === 'dark' ? 'dark' : 'light';
+    }
+    return themeMode;
+  }, [themeMode, systemScheme]);
+
+  const isDark = mode === 'dark';
 
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -55,6 +78,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ThemeContextValue>(
     () => ({
       mode,
+      themeMode,
+      setThemeMode,
+      isDark,
       colors: semanticColors[mode],
       palette,
       type: typeScale,
@@ -70,7 +96,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           ? scaledFont(typeScale[token].size, fontScale)
           : typeScale[token].size,
     }),
-    [mode, fontScale, fontsLoaded],
+    [mode, themeMode, isDark, fontScale, fontsLoaded],
   );
 
   return (

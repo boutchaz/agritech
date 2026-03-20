@@ -11,7 +11,8 @@ const config: Config = {
   projectName: 'agritech-platform',
   onBrokenLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
-  markdown: { 
+  markdown: {
+    format: 'detect',
     mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'warn',

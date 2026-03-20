@@ -1,7 +1,7 @@
 {
   "id": "database/schema",
   "title": "Database Schema",
-  "description": "This document describes the database schema used by the AgriTech Platform, including tables for multi-tenancy, module configuration, and core farming entities.",
+  "description": "Overview",
   "source": "@site/docs/database/schema.md",
   "sourceDirName": "database",
   "slug": "/database/schema",
@@ -12,7 +12,8 @@
   "version": "current",
   "sidebarPosition": 1,
   "frontMatter": {
-    "sidebar_position": 1
+    "sidebar_position": 1,
+    "title": "Database Schema"
   },
   "sidebar": "docs",
   "previous": {
@@ -20,7 +21,7 @@
     "permalink": "/architecture/desktop-app"
   },
   "next": {
-    "title": "Satellite Analysis Service",
-    "permalink": "/features/satellite-analysis"
+    "title": "Authentication & Permissions",
+    "permalink": "/features/auth-permissions"
   }
 }

@@ -10,11 +10,11 @@ interface CalibrationHistoryListProps {
   onSelect?: (record: CalibrationHistoryRecord) => void;
 }
 
-const statusConfig: Record<string, { variant: 'success' | 'warning' | 'error' | 'info' | 'neutral'; label: string }> = {
-  completed: { variant: 'success', label: 'Completed' },
-  in_progress: { variant: 'info', label: 'In Progress' },
-  failed: { variant: 'error', label: 'Failed' },
-  pending: { variant: 'neutral', label: 'Pending' },
+const statusConfig: Record<string, { variant: 'success' | 'warning' | 'error' | 'info' | 'neutral'; color: string; label: string }> = {
+  completed: { variant: 'success', color: colors.primary[500], label: 'Completed' },
+  in_progress: { variant: 'info', color: colors.blue[500], label: 'In Progress' },
+  failed: { variant: 'error', color: colors.red[500], label: 'Failed' },
+  pending: { variant: 'neutral', color: colors.gray[500], label: 'Pending' },
 };
 
 function formatDate(dateString: string | null): string {
@@ -32,6 +32,7 @@ export function CalibrationHistoryList({ history, onSelect }: CalibrationHistory
   if (history.length === 0) {
     return (
       <EmptyState
+        icon="analytics-outline"
         title={t('calibration.noHistory')}
         subtitle={t('calibration.noHistoryDesc')}
       />
@@ -44,50 +45,51 @@ export function CalibrationHistoryList({ history, onSelect }: CalibrationHistory
     return (
       <View style={styles.timelineItem}>
         <View style={styles.timelineLine}>
-          <View style={[styles.timelineDot, { backgroundColor: colors[config.variant][500] }]} />
+          <View style={[styles.timelineDot, { backgroundColor: config.color }]} />
           {index < history.length - 1 && <View style={styles.timelineConnector} />}
         </View>
-        <Card
-          variant="outlined"
-          onPress={onSelect ? () => onSelect(item) : undefined}
-          style={styles.card}
-        >
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>
-              {t('calibration.calibration')} #{history.length - index}
-            </Text>
-            <Badge variant={config.variant} size="sm" label={config.label} />
-          </View>
-          <View style={styles.cardContent}>
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>{t('calibration.healthScore')}</Text>
-              <Text style={styles.metricValue}>
-                {item.health_score != null ? Math.round(item.health_score) : '-'}
+        <View style={styles.cardWrapper}>
+          <Card
+            variant="outlined"
+            onPress={onSelect ? () => onSelect(item) : undefined}
+          >
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                {t('calibration.calibration')} #{history.length - index}
               </Text>
+              <Badge variant={config.variant} size="sm" label={config.label} />
             </View>
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>{t('calibration.confidence')}</Text>
-              <Text style={styles.metricValue}>
-                {item.confidence_score != null ? `${Math.min(Math.round(item.confidence_score), 100)}%` : '-'}
-              </Text>
-            </View>
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>{t('calibration.date')}</Text>
-              <Text style={styles.metricValue}>{formatDate(item.created_at)}</Text>
-            </View>
-            {item.maturity_phase && (
+            <View style={styles.cardContent}>
               <View style={styles.metricRow}>
-                <Text style={styles.metricLabel}>{t('calibration.phase')}</Text>
-                <Text style={styles.metricValue}>{item.maturity_phase}</Text>
+                <Text style={styles.metricLabel}>{t('calibration.healthScore')}</Text>
+                <Text style={styles.metricValue}>
+                  {item.health_score != null ? Math.round(item.health_score) : '-'}
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>{t('calibration.confidence')}</Text>
+                <Text style={styles.metricValue}>
+                  {item.confidence_score != null ? `${Math.min(Math.round(item.confidence_score), 100)}%` : '-'}
+                </Text>
+              </View>
+              <View style={styles.metricRow}>
+                <Text style={styles.metricLabel}>{t('calibration.date')}</Text>
+                <Text style={styles.metricValue}>{formatDate(item.created_at)}</Text>
+              </View>
+              {item.maturity_phase && (
+                <View style={styles.metricRow}>
+                  <Text style={styles.metricLabel}>{t('calibration.phase')}</Text>
+                  <Text style={styles.metricValue}>{item.maturity_phase}</Text>
+                </View>
+              )}
+            </View>
+            {item.error_message && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{item.error_message}</Text>
               </View>
             )}
-          </View>
-          {item.error_message && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{item.error_message}</Text>
-            </View>
-          )}
-        </Card>
+          </Card>
+        </View>
       </View>
     );
   };
@@ -136,7 +138,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray[200],
     marginTop: 4,
   },
-  card: {
+  cardWrapper: {
     flex: 1,
   },
   cardHeader: {

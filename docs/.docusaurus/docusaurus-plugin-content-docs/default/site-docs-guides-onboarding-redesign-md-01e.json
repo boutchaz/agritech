@@ -1,0 +1,27 @@
+{
+  "id": "guides/onboarding-redesign",
+  "title": "Onboarding Redesign Plan",
+  "description": "Current State Analysis",
+  "source": "@site/docs/guides/onboarding-redesign.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/onboarding-redesign",
+  "permalink": "/guides/onboarding-redesign",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2,
+    "title": "Onboarding Redesign Plan"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Adding a Feature",
+    "permalink": "/guides/adding-feature"
+  },
+  "next": {
+    "title": "Module Implementation Gap Analysis",
+    "permalink": "/guides/module-implementation"
+  }
+}

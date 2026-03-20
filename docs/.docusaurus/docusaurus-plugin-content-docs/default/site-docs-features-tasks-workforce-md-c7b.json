@@ -1,0 +1,27 @@
+{
+  "id": "features/tasks-workforce",
+  "title": "Tasks & Workforce",
+  "description": "The Tasks & Workforce system covers task lifecycle management, worker profiles, time tracking, piece-work payment tracking, and automated reminders. All endpoints are multi-tenant, scoped by organization_id, and protected by JWT authentication with CASL-based permission guards.",
+  "source": "@site/docs/features/tasks-workforce.md",
+  "sourceDirName": "features",
+  "slug": "/features/tasks-workforce",
+  "permalink": "/features/tasks-workforce",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 10,
+  "frontMatter": {
+    "sidebar_position": 10,
+    "title": "Tasks & Workforce"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Notifications System",
+    "permalink": "/features/notifications"
+  },
+  "next": {
+    "title": "Accounting & Finance",
+    "permalink": "/features/accounting"
+  }
+}

@@ -21,6 +21,48 @@ const BIOMETRIC_KEY = 'agritech_biometric_enabled';
 const CREDENTIALS_KEY = 'agritech_credentials';
 
 /**
+ * `/auth/me/role` may return `role` as a string slug or a nested object; `/auth/me/abilities` uses `role.name`.
+ * `loadUserRole` and `loadAbilities` run in parallel — always normalize so `role` in the store stays a string slug.
+ */
+function parseRoleSlugFromApi(
+  value: string | { role_name?: string; name?: string } | null | undefined,
+): UserRole | null {
+  if (value == null) return null;
+  if (typeof value === 'string' && value.length > 0) {
+    return value as UserRole;
+  }
+  if (typeof value === 'object') {
+    const slug = value.role_name ?? value.name;
+    if (typeof slug === 'string' && slug.length > 0) {
+      return slug as UserRole;
+    }
+  }
+  return null;
+}
+
+function normalizeStoredRole(abilities: UserAbilities | null, previous: UserRole | null): UserRole | null {
+  const fromAbilities = abilities?.role?.name;
+  if (typeof fromAbilities === 'string' && fromAbilities.length > 0) {
+    return fromAbilities as UserRole;
+  }
+  return parseRoleSlugFromApi(previous);
+}
+
+function mapPermissionsToStrings(
+  raw: string[] | Array<{ permission_name?: string; resource?: string; action?: string }> | undefined,
+): string[] {
+  if (!raw?.length) return [];
+  return raw
+    .map((p) => {
+      if (typeof p === 'string') return p;
+      if (p.permission_name) return p.permission_name;
+      if (p.resource && p.action) return `${p.resource}:${p.action}`;
+      return '';
+    })
+    .filter(Boolean);
+}
+
+/**
  * Determine organization size based on organization data
  */
 function getOrganizationSize(org: Organization): 'solo' | 'small' | 'medium' | 'large' {
@@ -115,54 +157,72 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
 
       if (currentOrganization) {
-        const [, , farms] = await Promise.all([
+        const [roleResult, abilitiesResult, farmsResult] = await Promise.allSettled([
           get().loadUserRole(),
           get().loadAbilities(),
-          farmsApi.getFarms().catch(() => [] as Farm[]),
+          farmsApi.getFarms(),
         ]);
-        if (farms.length > 0) {
-          set({ currentFarm: farms[0] });
+        if (roleResult.status === 'rejected') {
+          console.warn('[Auth] loadUserRole failed:', roleResult.reason);
+        }
+        if (abilitiesResult.status === 'rejected') {
+          console.warn('[Auth] loadAbilities failed:', abilitiesResult.reason);
+        }
+        if (farmsResult.status === 'fulfilled' && farmsResult.value.length > 0) {
+          set({ currentFarm: farmsResult.value[0] });
+        } else if (farmsResult.status === 'rejected') {
+          console.warn('[Auth] getFarms failed:', farmsResult.reason);
         }
       }
 
-      if (get().biometricEnabled) {
-        await SecureStore.setItemAsync(
-          CREDENTIALS_KEY,
-          JSON.stringify({ email, password })
-        );
-      }
+      try {
+        if (get().biometricEnabled) {
+          await SecureStore.setItemAsync(
+            CREDENTIALS_KEY,
+            JSON.stringify({ email, password })
+          );
+        }
 
-      // Track successful login
-      await trackLoginSuccess('email');
-      await trackAuth('login', 'success');
-      await trackAction('login', 'authentication', 'manual');
-      await trackAppOpen();
+        await trackLoginSuccess('email');
+        await trackAuth('login', 'success');
+        await trackAction('login', 'authentication', 'manual');
+        await trackAppOpen();
 
-      // Set user properties after successful login
-      const role = get().role;
-      if (profile && currentOrganization && role) {
-        const orgSize = getOrganizationSize(currentOrganization);
-        const userProps: MobileAnalyticsUserProperties = {
-          userId: profile.id,
-          email: profile.email,
-          signUpDate: profile.created_at || new Date().toISOString(),
-          organizationId: currentOrganization.id,
-          organizationSize: orgSize,
-          subscriptionTier: 'trial', // TODO: Get from actual subscription data
-          trialStatus: 'active', // TODO: Get from actual trial data
-          role: role,
-          farmCount: organizations.length,
-          totalHectares: 0, // TODO: Calculate from farm data
-          platform: 'mobile',
-          appVersion: Constants.expoConfig?.version || '1.0.0',
-        };
-        await setUserProperties(userProps);
+        const roleSlug = get().role;
+        if (
+          profile &&
+          currentOrganization &&
+          typeof roleSlug === 'string' &&
+          roleSlug.length > 0
+        ) {
+          const orgSize = getOrganizationSize(currentOrganization);
+          const userProps: MobileAnalyticsUserProperties = {
+            userId: profile.id,
+            email: profile.email,
+            signUpDate: profile.created_at || new Date().toISOString(),
+            organizationId: currentOrganization.id,
+            organizationSize: orgSize,
+            subscriptionTier: 'trial',
+            trialStatus: 'active',
+            role: roleSlug,
+            farmCount: organizations.length,
+            totalHectares: 0,
+            platform: 'mobile',
+            appVersion: Constants.expoConfig?.version || '1.0.0',
+          };
+          await setUserProperties(userProps);
+        }
+      } catch (postLoginErr) {
+        console.warn('[Auth] Post-login storage/analytics failed (session is still valid):', postLoginErr);
       }
     } catch (error) {
       set({ isLoading: false });
-      // Track failed login
-      await trackLoginFailure('email', 'authentication_failed');
-      await trackAuth('login', 'failed');
+      try {
+        await trackLoginFailure('email', 'authentication_failed');
+        await trackAuth('login', 'failed');
+      } catch {
+        /* ignore analytics failures */
+      }
       throw error;
     }
   },
@@ -262,8 +322,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   loadUserRole: async () => {
     try {
-      const { role, permissions } = await authApi.getUserRole();
-      set({ role: role as UserRole, permissions });
+      const res = await authApi.getUserRole();
+      set({
+        role: parseRoleSlugFromApi(res.role),
+        permissions: mapPermissionsToStrings(res.permissions),
+      });
     } catch (error) {
       console.warn('Failed to load user role:', error);
     }
@@ -276,8 +339,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({
         abilities,
         ability,
-        // Also update role from abilities if available
-        role: abilities.role?.name as UserRole || get().role,
+        role: normalizeStoredRole(abilities, get().role),
       });
     } catch (error) {
       console.warn('Failed to load abilities:', error);

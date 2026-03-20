@@ -1,0 +1,27 @@
+{
+  "id": "features/ai-chat",
+  "title": "AI Chat & LLM Providers",
+  "description": "Overview",
+  "source": "@site/docs/features/ai-chat.md",
+  "sourceDirName": "features",
+  "slug": "/features/ai-chat",
+  "permalink": "/features/ai-chat",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 11,
+  "frontMatter": {
+    "sidebar_position": 11,
+    "title": "AI Chat & LLM Providers"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "AI Operational Engine",
+    "permalink": "/features/ai-operational-engine"
+  },
+  "next": {
+    "title": "Real-time Communication",
+    "permalink": "/features/real-time"
+  }
+}

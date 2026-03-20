@@ -31,8 +31,18 @@
               "sidebar": "docs"
             },
             {
+              "id": "features/accounting",
+              "path": "/features/accounting",
+              "sidebar": "docs"
+            },
+            {
               "id": "features/ai-calibration",
               "path": "/features/ai-calibration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/ai-chat",
+              "path": "/features/ai-chat",
               "sidebar": "docs"
             },
             {
@@ -41,8 +51,38 @@
               "sidebar": "docs"
             },
             {
+              "id": "features/auth-permissions",
+              "path": "/features/auth-permissions",
+              "sidebar": "docs"
+            },
+            {
               "id": "features/calibration-v2-validation-report",
               "path": "/features/calibration-v2-validation-report",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/compliance",
+              "path": "/features/compliance",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/cron-jobs",
+              "path": "/features/cron-jobs",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/inventory",
+              "path": "/features/inventory",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/marketplace",
+              "path": "/features/marketplace",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/notifications",
+              "path": "/features/notifications",
               "sidebar": "docs"
             },
             {
@@ -61,6 +101,11 @@
               "sidebar": "docs"
             },
             {
+              "id": "features/tasks-workforce",
+              "path": "/features/tasks-workforce",
+              "sidebar": "docs"
+            },
+            {
               "id": "getting-started/installation",
               "path": "/getting-started/installation",
               "sidebar": "docs"
@@ -76,8 +121,103 @@
               "sidebar": "docs"
             },
             {
+              "id": "guides/desktop-app-plan",
+              "path": "/guides/desktop-app-plan",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/development-setup",
+              "path": "/guides/development-setup",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/mobile-responsive",
+              "path": "/guides/mobile-responsive",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/module-implementation",
+              "path": "/guides/module-implementation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/onboarding-redesign",
+              "path": "/guides/onboarding-redesign",
+              "sidebar": "docs"
+            },
+            {
+              "id": "guides/platform-overview",
+              "path": "/guides/platform-overview",
+              "sidebar": "docs"
+            },
+            {
               "id": "intro",
               "path": "/intro",
+              "sidebar": "docs"
+            },
+            {
+              "id": "referentials/avocado",
+              "path": "/referentials/avocado",
+              "sidebar": "docs"
+            },
+            {
+              "id": "referentials/citrus",
+              "path": "/referentials/citrus",
+              "sidebar": "docs"
+            },
+            {
+              "id": "referentials/date-palm",
+              "path": "/referentials/date-palm",
+              "sidebar": "docs"
+            },
+            {
+              "id": "referentials/olive-tree",
+              "path": "/referentials/olive-tree",
+              "sidebar": "docs"
+            },
+            {
+              "id": "referentials/overview",
+              "path": "/referentials/overview",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/ai-feature-specs",
+              "path": "/specs/ai-feature-specs",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/ai-workflow",
+              "path": "/specs/ai-workflow",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/annual-plan-generation",
+              "path": "/specs/annual-plan-generation",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/calibration-engine-spec",
+              "path": "/specs/calibration-engine-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/calibration-input-forms",
+              "path": "/specs/calibration-input-forms",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/calibration-test-flow",
+              "path": "/specs/calibration-test-flow",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/operational-engine-spec",
+              "path": "/specs/operational-engine-spec",
+              "sidebar": "docs"
+            },
+            {
+              "id": "specs/reference-data-specs",
+              "path": "/specs/reference-data-specs",
               "sidebar": "docs"
             }
           ],

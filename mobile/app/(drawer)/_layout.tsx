@@ -89,8 +89,10 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
 
   const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
   const roleLabel =
-    abilities?.role?.display_name ||
-    (role ? role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()) : null);
+    abilities?.role?.display_name?.trim() ||
+    (typeof role === 'string' && role.length > 0
+      ? role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+      : null);
 
   async function handleSignOut() {
     Alert.alert(t('logout.title', { ns: 'auth' }), t('logout.confirm', { ns: 'auth' }), [

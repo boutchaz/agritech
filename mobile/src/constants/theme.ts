@@ -49,6 +49,56 @@ export const colors = {
   transparent: 'transparent',
 };
 
+// Dark mode colors
+export const darkColors = {
+  primary: {
+    50: '#1a3d1e',
+    100: '#1b5e20',
+    200: '#2e7d32',
+    300: '#43a047',
+    400: '#66bb6a',
+    500: '#66bb6a',
+    600: '#81c784',
+    700: '#a5d6a7',
+    800: '#c8e6c9',
+    900: '#e8f5e9',
+  },
+  gray: {
+    50: '#121e14',
+    100: '#1a2c1d',
+    200: '#223426',
+    300: '#2a3e2e',
+    400: '#4a5a4c',
+    500: '#6e7b6f',
+    600: '#a8b8aa',
+    700: '#c8d8ca',
+    800: '#e0f0e2',
+    900: '#e8f5e9',
+  },
+  red: {
+    50: '#3d1a1a',
+    100: '#5c1010',
+    500: '#ef9a9a',
+    600: '#e57373',
+    700: '#ef5350',
+  },
+  yellow: {
+    50: '#3e2a00',
+    100: '#5c4000',
+    500: '#ffb74d',
+    600: '#ffa726',
+  },
+  blue: {
+    50: '#0a3350',
+    100: '#0d4a6b',
+    500: '#4fc3f7',
+    600: '#29b6f6',
+  },
+  white: '#121e14',
+  black: '#e8f5e9',
+  transparent: 'transparent',
+};
+
 export const spacing = {
   xs: space.xs,
   sm: space.sm,

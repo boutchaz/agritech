@@ -1,0 +1,27 @@
+{
+  "id": "guides/module-implementation",
+  "title": "Module Implementation Gap Analysis",
+  "description": "Generated: 2026-01-29",
+  "source": "@site/docs/guides/module-implementation.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/module-implementation",
+  "permalink": "/guides/module-implementation",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3,
+    "title": "Module Implementation Gap Analysis"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Onboarding Redesign Plan",
+    "permalink": "/guides/onboarding-redesign"
+  },
+  "next": {
+    "title": "Mobile Responsive Guidelines",
+    "permalink": "/guides/mobile-responsive"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "id": "referentials/date-palm",
+  "title": "Date Palm (Palmier Dattier)",
+  "description": "RÉFÉRENTIEL OPÉRATIONNEL COMPLET",
+  "source": "@site/docs/referentials/date-palm.md",
+  "sourceDirName": "referentials",
+  "slug": "/referentials/date-palm",
+  "permalink": "/referentials/date-palm",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5,
+    "title": "Date Palm (Palmier Dattier)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Citrus (Agrumes)",
+    "permalink": "/referentials/citrus"
+  },
+  "next": {
+    "title": "Adding a Feature",
+    "permalink": "/guides/adding-feature"
+  }
+}

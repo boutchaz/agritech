@@ -1,0 +1,27 @@
+{
+  "id": "specs/ai-workflow",
+  "title": "AI Workflow - 12 Phases",
+  "description": "WORKFLOW IA",
+  "source": "@site/docs/specs/ai-workflow.md",
+  "sourceDirName": "specs",
+  "slug": "/specs/ai-workflow",
+  "permalink": "/specs/ai-workflow",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1,
+    "title": "AI Workflow - 12 Phases"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Calibration V2 — Multi-Stakeholder Validation Report",
+    "permalink": "/features/calibration-v2-validation-report"
+  },
+  "next": {
+    "title": "Annual Plan Generation",
+    "permalink": "/specs/annual-plan-generation"
+  }
+}

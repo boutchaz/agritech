@@ -1,0 +1,23 @@
+{
+  "id": "guides/desktop-app-plan",
+  "title": "Desktop App Implementation Plan",
+  "description": "Standalone desktop version using Tauri, with full org data export/import and offline-first architecture.",
+  "source": "@site/docs/guides/desktop-app-plan.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/desktop-app-plan",
+  "permalink": "/guides/desktop-app-plan",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7,
+    "title": "Desktop App Implementation Plan"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Platform Overview & Presentation",
+    "permalink": "/guides/platform-overview"
+  }
+}

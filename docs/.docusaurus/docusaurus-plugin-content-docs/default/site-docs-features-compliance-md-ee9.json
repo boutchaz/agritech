@@ -1,0 +1,27 @@
+{
+  "id": "features/compliance",
+  "title": "Compliance & Certifications",
+  "description": "The Compliance module provides end-to-end management of agricultural certifications, compliance checks, corrective actions, and automated audit reminders. It is implemented as a NestJS module (ComplianceModule) backed by Supabase and integrates with the Notifications and Email modules.",
+  "source": "@site/docs/features/compliance.md",
+  "sourceDirName": "features",
+  "slug": "/features/compliance",
+  "permalink": "/features/compliance",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 12,
+  "frontMatter": {
+    "sidebar_position": 12,
+    "title": "Compliance & Certifications"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Marketplace",
+    "permalink": "/features/marketplace"
+  },
+  "next": {
+    "title": "Scheduled Jobs & Cron",
+    "permalink": "/features/cron-jobs"
+  }
+}

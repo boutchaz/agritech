@@ -16,7 +16,11 @@
   },
   "sidebar": "docs",
   "previous": {
-    "title": "Calibration V2 — Multi-Stakeholder Validation Report",
-    "permalink": "/features/calibration-v2-validation-report"
+    "title": "Date Palm (Palmier Dattier)",
+    "permalink": "/referentials/date-palm"
+  },
+  "next": {
+    "title": "Onboarding Redesign Plan",
+    "permalink": "/guides/onboarding-redesign"
   }
 }

@@ -93,10 +93,14 @@ export default function HomeScreen() {
   const { data: farms = [], refetch: refetchFarms } = useFarms();
   const { data: parcels = [], refetch: refetchParcels } = useParcels(currentFarm?.id);
 
+  const roleSlug = typeof role === 'string' ? role : null;
   const roleLabel =
-    abilities?.role?.display_name ||
-    (role
-      ? role.split('_').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+    (abilities?.role?.display_name?.trim() ? abilities.role.display_name.trim() : '') ||
+    (roleSlug
+      ? roleSlug
+          .split('_')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ')
       : '');
 
   const initials = profile ? `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` : 'U';

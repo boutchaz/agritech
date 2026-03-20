@@ -14,6 +14,12 @@ interface ValidationPanelProps {
   canStart?: boolean;
 }
 
+const checkStatusColors: Record<string, string> = {
+  pass: colors.primary[500],
+  warning: colors.yellow[500],
+  fail: colors.red[500],
+};
+
 export function ValidationPanel({
   readiness,
   onValidate,
@@ -30,83 +36,87 @@ export function ValidationPanel({
   const failCount = checks.filter((c) => c.status === 'fail').length;
 
   return (
-    <Card variant="elevated" style={styles.container}>
-      <Text style={styles.title}>{t('calibration.validationPanel')}</Text>
+    <View style={styles.container}>
+      <Card variant="elevated">
+        <Text style={styles.title}>{t('calibration.validationPanel')}</Text>
 
-      {/* Confidence Preview */}
-      <View style={styles.confidenceContainer}>
-        <Text style={styles.confidenceLabel}>{t('calibration.confidencePreview')}</Text>
-        <Text style={styles.confidenceValue}>{Math.round(confidence_preview)}%</Text>
-      </View>
+        {/* Confidence Preview */}
+        <View style={styles.confidenceContainer}>
+          <Text style={styles.confidenceLabel}>{t('calibration.confidencePreview')}</Text>
+          <Text style={styles.confidenceValue}>{Math.round(confidence_preview)}%</Text>
+        </View>
 
-      {/* Check Summary */}
-      <View style={styles.summaryContainer}>
-        {passCount > 0 && (
-          <View style={styles.summaryItem}>
-            <Badge variant="success" size="sm" label={`${passCount} ${t('calibration.passed')}`} />
-          </View>
-        )}
-        {warningCount > 0 && (
-          <View style={styles.summaryItem}>
-            <Badge variant="warning" size="sm" label={`${warningCount} ${t('calibration.warnings')}`} />
-          </View>
-        )}
-        {failCount > 0 && (
-          <View style={styles.summaryItem}>
-            <Badge variant="error" size="sm" label={`${failCount} ${t('calibration.failed')}`} />
-          </View>
-        )}
-      </View>
-
-      {/* Checks List */}
-      <View style={styles.checksContainer}>
-        {checks.map((check, index) => (
-          <View key={index} style={styles.checkItem}>
-            <View style={[styles.checkDot, { backgroundColor: colors[check.status === 'pass' ? 'primary' : check.status === 'warning' ? 'yellow' : 'red'][500] }]} />
-            <View style={styles.checkContent}>
-              <Text style={styles.checkMessage}>{check.message}</Text>
-              <Text style={styles.checkName}>{check.check}</Text>
+        {/* Check Summary */}
+        <View style={styles.summaryContainer}>
+          {passCount > 0 && (
+            <View style={styles.summaryItem}>
+              <Badge variant="success" size="sm" label={`${passCount} ${t('calibration.passed')}`} />
             </View>
-          </View>
-        ))}
-      </View>
+          )}
+          {warningCount > 0 && (
+            <View style={styles.summaryItem}>
+              <Badge variant="warning" size="sm" label={`${warningCount} ${t('calibration.warnings')}`} />
+            </View>
+          )}
+          {failCount > 0 && (
+            <View style={styles.summaryItem}>
+              <Badge variant="error" size="sm" label={`${failCount} ${t('calibration.failed')}`} />
+            </View>
+          )}
+        </View>
 
-      {/* Actions */}
-      <View style={styles.actionsContainer}>
-        {canValidate && (
-          <Button
-            variant="primary"
-            onPress={onValidate}
-            disabled={isLoading || !ready}
-            style={styles.actionButton}
-          >
-            {isLoading ? <ActivityIndicator color={colors.white} /> : t('calibration.validate')}
-          </Button>
-        )}
-        {canStart && (
-          <Button
-            variant={ready ? 'primary' : 'secondary'}
-            onPress={onStartCalibration}
-            disabled={isLoading}
-            style={styles.actionButton}
-          >
-            {isLoading ? <ActivityIndicator color={colors.white} /> : t('calibration.start')}
-          </Button>
-        )}
-      </View>
-
-      {/* Improvements */}
-      {readiness.improvements.length > 0 && (
-        <View style={styles.improvementsContainer}>
-          <Text style={styles.improvementsTitle}>{t('calibration.improvements')}</Text>
-          {readiness.improvements.map((improvement, index) => (
-            <Text key={index} style={styles.improvementItem}>
-              • {improvement}
-            </Text>
+        {/* Checks List */}
+        <View style={styles.checksContainer}>
+          {checks.map((check, index) => (
+            <View key={index} style={styles.checkItem}>
+              <View style={[styles.checkDot, { backgroundColor: checkStatusColors[check.status] || colors.gray[500] }]} />
+              <View style={styles.checkContent}>
+                <Text style={styles.checkMessage}>{check.message}</Text>
+                <Text style={styles.checkName}>{check.check}</Text>
+              </View>
+            </View>
           ))}
         </View>
-      )}
-    </Card>
+
+        {/* Actions */}
+        <View style={styles.actionsContainer}>
+          {canValidate && (
+            <View style={styles.actionButtonWrapper}>
+              <Button
+                variant="primary"
+                onPress={onValidate}
+                disabled={isLoading || !ready}
+              >
+                {isLoading ? <ActivityIndicator color={colors.white} /> : t('calibration.validate')}
+              </Button>
+            </View>
+          )}
+          {canStart && (
+            <View style={styles.actionButtonWrapper}>
+              <Button
+                variant={ready ? 'primary' : 'secondary'}
+                onPress={onStartCalibration}
+                disabled={isLoading}
+              >
+                {isLoading ? <ActivityIndicator color={colors.white} /> : t('calibration.start')}
+              </Button>
+            </View>
+          )}
+        </View>
+
+        {/* Improvements */}
+        {readiness.improvements.length > 0 && (
+          <View style={styles.improvementsContainer}>
+            <Text style={styles.improvementsTitle}>{t('calibration.improvements')}</Text>
+            {readiness.improvements.map((improvement, index) => (
+              <Text key={index} style={styles.improvementItem}>
+                • {improvement}
+              </Text>
+            ))}
+          </View>
+        )}
+      </Card>
+    </View>
   );
 }
 
@@ -174,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  actionButton: {
+  actionButtonWrapper: {
     flex: 1,
   },
   improvementsContainer: {
@@ -186,7 +196,7 @@ const styles = StyleSheet.create({
   improvementsTitle: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    color: colors.yellow[700],
+    color: colors.yellow[600],
     marginBottom: spacing.xs,
   },
   improvementItem: {

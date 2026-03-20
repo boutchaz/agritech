@@ -16,11 +16,11 @@
   },
   "sidebar": "docs",
   "previous": {
-    "title": "AI Operational Engine",
-    "permalink": "/features/ai-operational-engine"
+    "title": "AI Chat & LLM Providers",
+    "permalink": "/features/ai-chat"
   },
   "next": {
-    "title": "Calibration V2 — Multi-Stakeholder Validation Report",
-    "permalink": "/features/calibration-v2-validation-report"
+    "title": "Notifications System",
+    "permalink": "/features/notifications"
   }
 }

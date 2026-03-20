@@ -408,6 +408,28 @@ export interface Parcel {
   status: string;
 }
 
+function mapApiParcelRowToParcel(raw: Record<string, unknown>): Parcel {
+  const isActive = raw.is_active === true;
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    farm_id: String(raw.farm_id ?? ''),
+    area: raw.area != null ? Number(raw.area) : null,
+    area_unit: (raw.area_unit as string | null) ?? null,
+    current_crop:
+      (raw.current_crop as string | null) ??
+      (raw.crop_type as string | null) ??
+      (raw.variety as string | null) ??
+      null,
+    status:
+      typeof raw.status === 'string'
+        ? raw.status
+        : isActive
+          ? 'active'
+          : 'fallow',
+  };
+}
+
 // CASL Ability Types
 export interface RoleInfo {
   name: string;
@@ -437,7 +459,15 @@ export const authApi = {
 
   getOrganizations: () => api.get<Organization[]>('/users/me/organizations'),
 
-  getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),
+  /** Backend may return `role` as a slug string or as `{ role_name, role_display_name, role_level }`. */
+  getUserRole: () =>
+    api.get<{
+      role:
+        | string
+        | null
+        | { role_name: string; role_display_name?: string; role_level?: number };
+      permissions: string[] | Array<{ permission_name?: string; resource?: string; action?: string }>;
+    }>('/auth/me/role'),
 
   /**
    * Get CASL abilities for the current user
@@ -577,8 +607,14 @@ export const parcelsApi = {
   },
 
   getParcel: async (parcelId: string): Promise<Parcel> => {
-    const res = await api.get<{ success: boolean; parcel: Parcel }>(`/parcels/${parcelId}`);
-    return res.parcel || res;
+    const res = await api.get<{ success: boolean; parcel?: Record<string, unknown> }>(
+      `/parcels/${parcelId}`,
+    );
+    const raw = res.parcel;
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid parcel response');
+    }
+    return mapApiParcelRowToParcel(raw);
   },
 };
 
@@ -594,3 +630,9 @@ export const filesApi = {
 };
 
 export { calibrationApi } from './api/calibration';
+export { analysesApi } from './api/analyses';
+export { weatherApi } from './api/weather';
+export { inventoryApi } from './api/inventory';
+export { workersApi } from './api/workers';
+export { accountingApi } from './api/accounting';
+export { notificationsApi, approvalsApi } from './api/notifications';

@@ -314,9 +314,55 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   max_parcels INT DEFAULT 25,
   max_users INT DEFAULT 5,
   max_satellite_reports INT DEFAULT 100,
+  -- Billing
+  billing_interval VARCHAR(20) DEFAULT 'monthly',
+  billing_cycle VARCHAR(20),
+  formula VARCHAR(30),
+  contracted_hectares NUMERIC(12,2),
+  included_users INTEGER,
+  -- Pricing
+  price_ht_per_ha_year NUMERIC(12,2),
+  vat_rate NUMERIC(5,4) DEFAULT 0.20,
+  amount_ht NUMERIC(14,2),
+  amount_tva NUMERIC(14,2),
+  amount_ttc NUMERIC(14,2),
+  currency VARCHAR(10) DEFAULT 'MAD',
+  -- Contract dates
+  contract_start_at TIMESTAMPTZ,
+  contract_end_at TIMESTAMPTZ,
+  renewal_notice_days INTEGER DEFAULT 60,
+  payment_terms_days INTEGER DEFAULT 30,
+  next_billing_at TIMESTAMPTZ,
+  grace_period_ends_at TIMESTAMPTZ,
+  suspended_at TIMESTAMPTZ,
+  terminated_at TIMESTAMPTZ,
+  -- Pending plan changes
+  pending_formula VARCHAR(30),
+  pending_billing_cycle VARCHAR(20),
+  pending_pricing_snapshot JSONB,
+  migration_effective_at TIMESTAMPTZ,
+  -- Payment enforcement
+  last_payment_notice_at TIMESTAMPTZ,
+  overdue_grace_days INTEGER DEFAULT 30,
+  suspension_notice_days INTEGER DEFAULT 7,
+  export_window_days INTEGER DEFAULT 30,
+  late_penalty_rate NUMERIC(8,6) DEFAULT 0.10,
+  fixed_recovery_fee NUMERIC(12,2) DEFAULT 40.00,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT subscriptions_formula_check
+    CHECK (formula IS NULL OR formula IN ('starter', 'standard', 'premium', 'enterprise')),
+  CONSTRAINT subscriptions_billing_cycle_check
+    CHECK (billing_cycle IS NULL OR billing_cycle IN ('monthly', 'semiannual', 'annual')),
+  CONSTRAINT subscriptions_pending_formula_check
+    CHECK (pending_formula IS NULL OR pending_formula IN ('starter', 'standard', 'premium', 'enterprise')),
+  CONSTRAINT subscriptions_pending_billing_cycle_check
+    CHECK (pending_billing_cycle IS NULL OR pending_billing_cycle IN ('monthly', 'semiannual', 'annual'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_formula ON subscriptions(formula);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_cycle ON subscriptions(billing_cycle);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_contract_end ON subscriptions(contract_end_at);
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_org ON subscriptions(organization_id);
 
@@ -431,7 +477,7 @@ ON CONFLICT (name) DO NOTHING;
 -- Farms
 CREATE TABLE IF NOT EXISTS farms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   location VARCHAR(255),
   address TEXT,
@@ -469,7 +515,7 @@ CREATE INDEX IF NOT EXISTS idx_farms_org ON farms(organization_id);
 CREATE TABLE IF NOT EXISTS parcels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   boundary JSONB,
@@ -1108,7 +1154,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   customer_address TEXT,
   shipping_address TEXT,
   tracking_number TEXT,
-  status TEXT,
+  status sales_order_status DEFAULT 'draft',
   subtotal NUMERIC,
   tax_amount NUMERIC,
   total_amount NUMERIC,
@@ -1169,7 +1215,7 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   supplier_id UUID REFERENCES suppliers(id) ON DELETE RESTRICT,
   supplier_name TEXT,
   supplier_contact TEXT,
-  status TEXT,
+  status purchase_order_status DEFAULT 'draft',
   subtotal NUMERIC,
   tax_amount NUMERIC,
   total_amount NUMERIC,
@@ -1578,28 +1624,6 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_invoice ON payment_allocations(invoice_id);
-
--- =====================================================
--- 9. TRIGGERS FOR UPDATED_AT
--- =====================================================
-
-DROP TRIGGER IF EXISTS trg_quotes_updated_at ON quotes;
-CREATE TRIGGER trg_quotes_updated_at
-  BEFORE UPDATE ON quotes
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_sales_orders_updated_at ON sales_orders;
-CREATE TRIGGER trg_sales_orders_updated_at
-  BEFORE UPDATE ON sales_orders
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_purchase_orders_updated_at ON purchase_orders;
-CREATE TRIGGER trg_purchase_orders_updated_at
-  BEFORE UPDATE ON purchase_orders
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- 10. RLS POLICIES
@@ -2092,7 +2116,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_user ON workers(user_id) WHERE user_id IS
 -- Work Units (for piece-work tracking)
 CREATE TABLE IF NOT EXISTS work_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   name_ar TEXT,
@@ -2120,7 +2144,7 @@ CREATE INDEX IF NOT EXISTS idx_work_units_code ON work_units(code);
 -- Tasks
 CREATE TABLE IF NOT EXISTS tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   crop_id UUID,
@@ -2321,7 +2345,7 @@ CREATE INDEX IF NOT EXISTS idx_task_equipment_task ON task_equipment(task_id);
 CREATE TABLE IF NOT EXISTS work_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   worker_id UUID REFERENCES workers(id),
   worker_type TEXT NOT NULL,
   work_date DATE NOT NULL,
@@ -2353,14 +2377,14 @@ CREATE TABLE IF NOT EXISTS metayage_settlements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   period_start DATE NOT NULL,
   period_end DATE NOT NULL,
   harvest_date DATE,
   gross_revenue NUMERIC NOT NULL,
   total_charges NUMERIC DEFAULT 0,
-  net_revenue NUMERIC GENERATED ALWAYS AS (gross_revenue - total_charges) STORED,
+  net_revenue NUMERIC GENERATED ALWAYS AS (gross_revenue - COALESCE(total_charges, 0)) STORED,
   worker_percentage NUMERIC NOT NULL,
   worker_share_amount NUMERIC NOT NULL,
   calculation_basis calculation_basis NOT NULL,
@@ -2591,7 +2615,7 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   humidity NUMERIC,
   intended_for TEXT,
   expected_price_per_unit NUMERIC,
-  estimated_revenue NUMERIC GENERATED ALWAYS AS (quantity * expected_price_per_unit) STORED,
+  estimated_revenue NUMERIC GENERATED ALWAYS AS (COALESCE(quantity, 0) * COALESCE(expected_price_per_unit, 0)) STORED,
   photos JSONB DEFAULT '[]'::jsonb,
   documents JSONB DEFAULT '[]'::jsonb,
   status TEXT DEFAULT 'stored',
@@ -2885,6 +2909,60 @@ CREATE INDEX IF NOT EXISTS idx_items_org ON items(organization_id);
 CREATE INDEX IF NOT EXISTS idx_items_group ON items(item_group_id);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL;
 
+-- ====================================================================
+-- PRODUCT VARIANTS SUPPORT
+-- ====================================================================
+-- Product variants for multi-dimension products (same product, different sizes)
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_name TEXT NOT NULL, -- e.g., "1L", "5L", "10kg", "25kg"
+  variant_sku TEXT, -- Unique SKU for the variant
+  quantity NUMERIC DEFAULT 0, -- Current stock quantity for this variant
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL, -- Reference to work_units table
+  base_quantity NUMERIC DEFAULT 1 CHECK (base_quantity > 0 AND base_quantity < 10000), -- Quantity in item default unit
+  min_stock_level NUMERIC DEFAULT 0,
+  standard_rate NUMERIC, -- Sales price per unit
+  last_purchase_rate NUMERIC,
+  barcode TEXT,
+  is_active BOOLEAN DEFAULT true,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Ensure variant_name is unique per item
+  CONSTRAINT product_variants_unique_name UNIQUE (organization_id, item_id, variant_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_variants_org ON product_variants(organization_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_item ON product_variants(item_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(variant_sku) WHERE variant_sku IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_product_variants_unit_id ON product_variants(unit_id);
+
+COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';
+COMMENT ON COLUMN product_variants.variant_name IS 'Variant designation (e.g., "1L", "5L", "10kg", "25kg")';
+COMMENT ON COLUMN product_variants.unit_id IS 'Reference to work_units table for unit of measure';
+COMMENT ON COLUMN product_variants.variant_sku IS 'Unique SKU code for this specific variant';
+COMMENT ON COLUMN product_variants.quantity IS 'Current stock quantity for this variant';
+COMMENT ON COLUMN product_variants.min_stock_level IS 'Minimum stock level before low stock alert';
+
+CREATE OR REPLACE FUNCTION update_product_variants_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER product_variants_updated_at
+BEFORE UPDATE ON product_variants
+FOR EACH ROW
+EXECUTE FUNCTION update_product_variants_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
+
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
 ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
 
@@ -3135,10 +3213,11 @@ CREATE TABLE IF NOT EXISTS stock_entry_items (
   serial_number TEXT,
   expiry_date DATE,
   cost_per_unit NUMERIC,
-  total_cost NUMERIC GENERATED ALWAYS AS (quantity * cost_per_unit) STORED,
+  total_cost NUMERIC GENERATED ALWAYS AS (quantity * COALESCE(cost_per_unit, 0)) STORED,
   system_quantity NUMERIC,
   physical_quantity NUMERIC,
-  variance NUMERIC GENERATED ALWAYS AS (physical_quantity - system_quantity) STORED,
+  variance NUMERIC GENERATED ALWAYS AS (COALESCE(physical_quantity, 0) - COALESCE(system_quantity, 0)) STORED,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0)
@@ -3167,7 +3246,7 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   marketplace_listing_id UUID,
   marketplace_order_item_id UUID,
   base_quantity_at_movement NUMERIC,
-  variant_id UUID,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   crop_cycle_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3271,7 +3350,7 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
   batch_number TEXT,
   serial_number TEXT,
   remaining_quantity NUMERIC DEFAULT 0,
-  variant_id UUID,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0),
@@ -4861,46 +4940,6 @@ ALTER TABLE financial_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE livestock ENABLE ROW LEVEL SECURITY;
 ALTER TABLE dashboard_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_usage ENABLE ROW LEVEL SECURITY;
-
--- =====================================================
--- 23. ADDITIONAL TRIGGERS FOR UPDATED_AT
--- =====================================================
-
-DROP TRIGGER IF EXISTS trg_workers_updated_at ON workers;
-CREATE TRIGGER trg_workers_updated_at
-  BEFORE UPDATE ON workers
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_tasks_updated_at ON tasks;
-CREATE TRIGGER trg_tasks_updated_at
-  BEFORE UPDATE ON tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_harvest_records_updated_at ON harvest_records;
-CREATE TRIGGER trg_harvest_records_updated_at
-  BEFORE UPDATE ON harvest_records
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_deliveries_updated_at ON deliveries;
-CREATE TRIGGER trg_deliveries_updated_at
-  BEFORE UPDATE ON deliveries
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_inventory_items_updated_at ON inventory_items;
-CREATE TRIGGER trg_inventory_items_updated_at
-  BEFORE UPDATE ON inventory_items
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS trg_stock_entries_updated_at ON stock_entries;
-CREATE TRIGGER trg_stock_entries_updated_at
-  BEFORE UPDATE ON stock_entries
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
 
 -- =====================================================
 -- 24. AUTO-POPULATE ORGANIZATION_ID TRIGGERS
@@ -6824,29 +6863,29 @@ DROP POLICY IF EXISTS "org_write_farms" ON farms;
 DROP POLICY IF EXISTS "org_update_farms" ON farms;
 DROP POLICY IF EXISTS "org_delete_farms" ON farms;
 
--- Read: Users can see farms from organizations they're members of, or farms with NULL organization_id
+-- Read: Users can see farms from organizations they're members of
 CREATE POLICY "org_read_farms" ON farms
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
--- Insert: Authenticated users can create farms for organizations they're members of, or farms with NULL organization_id
+-- Insert: Authenticated users can create farms for organizations they're members of
 CREATE POLICY "org_write_farms" ON farms
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
--- Update: Users can update farms from organizations they're members of, or farms with NULL organization_id
+-- Update: Users can update farms from organizations they're members of
 CREATE POLICY "org_update_farms" ON farms
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
--- Delete: Users can delete farms from organizations they're members of, or farms with NULL organization_id
+-- Delete: Users can delete farms from organizations they're members of
 CREATE POLICY "org_delete_farms" ON farms
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -6866,7 +6905,7 @@ CREATE POLICY "org_read_farm_roles" ON farm_management_roles
     EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = farm_management_roles.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     )
   );
 
@@ -6879,7 +6918,7 @@ CREATE POLICY "org_write_farm_roles" ON farm_management_roles
       EXISTS (
         SELECT 1 FROM farms
         WHERE farms.id = farm_management_roles.farm_id
-          AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+          AND is_organization_member(farms.organization_id)
       )
     )
   );
@@ -6891,7 +6930,7 @@ CREATE POLICY "org_update_farm_roles" ON farm_management_roles
     EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = farm_management_roles.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     )
   );
 
@@ -6902,7 +6941,7 @@ CREATE POLICY "org_delete_farm_roles" ON farm_management_roles
     EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = farm_management_roles.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     )
   );
 
@@ -6918,23 +6957,23 @@ DROP POLICY IF EXISTS "org_delete_parcels" ON parcels;
 
 CREATE POLICY "org_read_parcels" ON parcels
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 CREATE POLICY "org_update_parcels" ON parcels
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 CREATE POLICY "org_delete_parcels" ON parcels
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -7022,7 +7061,7 @@ CREATE POLICY "org_read_task_comments" ON task_comments
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7034,7 +7073,7 @@ CREATE POLICY "org_write_task_comments" ON task_comments
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7045,7 +7084,7 @@ CREATE POLICY "org_update_task_comments" ON task_comments
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7056,7 +7095,7 @@ CREATE POLICY "org_delete_task_comments" ON task_comments
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7067,7 +7106,7 @@ CREATE POLICY "org_read_task_time_logs" ON task_time_logs
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_time_logs.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7078,7 +7117,7 @@ CREATE POLICY "org_write_task_time_logs" ON task_time_logs
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_time_logs.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7088,7 +7127,7 @@ CREATE POLICY "org_update_task_time_logs" ON task_time_logs
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_time_logs.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7098,7 +7137,7 @@ CREATE POLICY "org_delete_task_time_logs" ON task_time_logs
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_time_logs.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7109,7 +7148,7 @@ CREATE POLICY "org_read_task_dependencies" ON task_dependencies
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_dependencies.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7120,7 +7159,7 @@ CREATE POLICY "org_write_task_dependencies" ON task_dependencies
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_dependencies.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7130,7 +7169,7 @@ CREATE POLICY "org_update_task_dependencies" ON task_dependencies
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_dependencies.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7140,7 +7179,7 @@ CREATE POLICY "org_delete_task_dependencies" ON task_dependencies
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_dependencies.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7151,7 +7190,7 @@ CREATE POLICY "org_read_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7162,7 +7201,7 @@ CREATE POLICY "org_write_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7172,7 +7211,7 @@ CREATE POLICY "org_update_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7182,7 +7221,7 @@ CREATE POLICY "org_delete_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
-        AND (tasks.organization_id IS NULL OR is_organization_member(tasks.organization_id))
+        AND is_organization_member(tasks.organization_id)
     )
   );
 
@@ -7190,52 +7229,52 @@ CREATE POLICY "org_delete_task_equipment" ON task_equipment
 DROP POLICY IF EXISTS "org_read_work_records" ON work_records;
 CREATE POLICY "org_read_work_records" ON work_records
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
 CREATE POLICY "org_write_work_records" ON work_records
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_work_records" ON work_records;
 CREATE POLICY "org_update_work_records" ON work_records
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_work_records" ON work_records;
 CREATE POLICY "org_delete_work_records" ON work_records
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Metayage Settlements Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_update_metayage_settlements" ON metayage_settlements
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_delete_metayage_settlements" ON metayage_settlements
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Payment Records Policies
@@ -7626,26 +7665,26 @@ CREATE POLICY "org_delete_stock_account_mappings" ON stock_account_mappings
 DROP POLICY IF EXISTS "org_read_analyses" ON analyses;
 CREATE POLICY "org_read_analyses" ON analyses
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_analyses" ON analyses;
 CREATE POLICY "org_write_analyses" ON analyses
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_analyses" ON analyses;
 CREATE POLICY "org_update_analyses" ON analyses
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_analyses" ON analyses;
 CREATE POLICY "org_delete_analyses" ON analyses
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Analysis Recommendations Policies (check through analysis relationship - no org_id on this table)
@@ -7654,7 +7693,7 @@ CREATE POLICY "org_access_analysis_recommendations" ON analysis_recommendations
   FOR ALL USING (
     analysis_id IN (
       SELECT a.id FROM analyses a
-      WHERE a.organization_id IS NULL OR is_organization_member(a.organization_id)
+      WHERE is_organization_member(a.organization_id)
     )
   );
 
@@ -7662,26 +7701,26 @@ CREATE POLICY "org_access_analysis_recommendations" ON analysis_recommendations
 DROP POLICY IF EXISTS "org_read_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_read_soil_analyses" ON soil_analyses
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_write_soil_analyses" ON soil_analyses
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_update_soil_analyses" ON soil_analyses
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_delete_soil_analyses" ON soil_analyses
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Test Types Policies (no organization_id - allow all authenticated users to read)
@@ -7705,26 +7744,26 @@ CREATE POLICY "org_delete_test_types" ON test_types
 DROP POLICY IF EXISTS "org_read_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_read_parcel_reports" ON parcel_reports
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_write_parcel_reports" ON parcel_reports
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_update_parcel_reports" ON parcel_reports
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_delete_parcel_reports" ON parcel_reports
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -7786,26 +7825,26 @@ CREATE POLICY "org_delete_crop_varieties" ON crop_varieties
 DROP POLICY IF EXISTS "org_read_crops" ON crops;
 CREATE POLICY "org_read_crops" ON crops
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_crops" ON crops;
 CREATE POLICY "org_write_crops" ON crops
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_crops" ON crops;
 CREATE POLICY "org_update_crops" ON crops
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_crops" ON crops;
 CREATE POLICY "org_delete_crops" ON crops
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Tree Categories Policies
@@ -7838,26 +7877,26 @@ CREATE POLICY "org_delete_tree_categories" ON tree_categories
 DROP POLICY IF EXISTS "org_read_trees" ON trees;
 CREATE POLICY "org_read_trees" ON trees
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_trees" ON trees;
 CREATE POLICY "org_write_trees" ON trees
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_trees" ON trees;
 CREATE POLICY "org_update_trees" ON trees
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_trees" ON trees;
 CREATE POLICY "org_delete_trees" ON trees
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Plantation Types Policies
@@ -7931,7 +7970,7 @@ CREATE POLICY "org_read_inventory" ON inventory
     farm_id IS NULL OR EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = inventory.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     ) OR
     (organization_id IS NOT NULL AND is_organization_member(organization_id))
   );
@@ -7944,7 +7983,7 @@ CREATE POLICY "org_write_inventory" ON inventory
       (farm_id IS NOT NULL AND EXISTS (
         SELECT 1 FROM farms
         WHERE farms.id = inventory.farm_id
-          AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+          AND is_organization_member(farms.organization_id)
       )) OR
       (organization_id IS NOT NULL AND is_organization_member(organization_id))
     )
@@ -7956,7 +7995,7 @@ CREATE POLICY "org_update_inventory" ON inventory
     farm_id IS NULL OR EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = inventory.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     ) OR
     (organization_id IS NOT NULL AND is_organization_member(organization_id))
   );
@@ -7967,7 +8006,7 @@ CREATE POLICY "org_delete_inventory" ON inventory
     farm_id IS NULL OR EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = inventory.farm_id
-        AND (farms.organization_id IS NULL OR is_organization_member(farms.organization_id))
+        AND is_organization_member(farms.organization_id)
     ) OR
     (organization_id IS NOT NULL AND is_organization_member(organization_id))
   );
@@ -8114,26 +8153,26 @@ CREATE POLICY "org_delete_structures" ON structures
 DROP POLICY IF EXISTS "org_read_utilities" ON utilities;
 CREATE POLICY "org_read_utilities" ON utilities
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_utilities" ON utilities;
 CREATE POLICY "org_write_utilities" ON utilities
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_utilities" ON utilities;
 CREATE POLICY "org_update_utilities" ON utilities
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_utilities" ON utilities;
 CREATE POLICY "org_delete_utilities" ON utilities
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- =====================================================
@@ -8195,26 +8234,26 @@ CREATE POLICY "org_delete_role_permissions" ON role_permissions
 DROP POLICY IF EXISTS "org_read_role_templates" ON role_templates;
 CREATE POLICY "org_read_role_templates" ON role_templates
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id) OR is_system_template = true
+    is_organization_member(organization_id) OR is_system_template = true
   );
 
 DROP POLICY IF EXISTS "org_write_role_templates" ON role_templates;
 CREATE POLICY "org_write_role_templates" ON role_templates
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_role_templates" ON role_templates;
 CREATE POLICY "org_update_role_templates" ON role_templates
   FOR UPDATE USING (
-    (organization_id IS NULL OR is_organization_member(organization_id)) OR is_system_template = true
+    is_organization_member(organization_id) OR is_system_template = true
   );
 
 DROP POLICY IF EXISTS "org_delete_role_templates" ON role_templates;
 CREATE POLICY "org_delete_role_templates" ON role_templates
   FOR DELETE USING (
-    (organization_id IS NULL OR is_organization_member(organization_id)) AND is_system_template = false
+    is_organization_member(organization_id) AND is_system_template = false
   );
 
 -- Role Assignments Audit Policies
@@ -8258,52 +8297,52 @@ CREATE POLICY "org_delete_permission_groups" ON permission_groups
 DROP POLICY IF EXISTS "org_read_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_read_financial_transactions" ON financial_transactions
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_write_financial_transactions" ON financial_transactions
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_update_financial_transactions" ON financial_transactions
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_delete_financial_transactions" ON financial_transactions
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Livestock Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_livestock" ON livestock;
 CREATE POLICY "org_read_livestock" ON livestock
   FOR SELECT USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_write_livestock" ON livestock;
 CREATE POLICY "org_write_livestock" ON livestock
   FOR INSERT WITH CHECK (
     auth.uid() IS NOT NULL AND
-    (organization_id IS NULL OR is_organization_member(organization_id))
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_update_livestock" ON livestock;
 CREATE POLICY "org_update_livestock" ON livestock
   FOR UPDATE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_livestock" ON livestock;
 CREATE POLICY "org_delete_livestock" ON livestock
   FOR DELETE USING (
-    organization_id IS NULL OR is_organization_member(organization_id)
+    is_organization_member(organization_id)
   );
 
 -- Subscription Usage Policies
@@ -11936,7 +11975,7 @@ BEGIN
 
   -- Handle DELETE
   IF (TG_OP = 'DELETE') THEN
-    v_old_data := to_jsonb(OLD);
+    v_old_data := to_jsonb(OLD) - 'encrypted_api_key' - 'password' - 'password_hash' - 'secret' - 'token' - 'api_key';
     INSERT INTO audit_logs (
       table_name, record_id, action, old_data, user_id, organization_id
     )
@@ -11952,7 +11991,7 @@ BEGIN
 
   -- Handle INSERT
   ELSIF (TG_OP = 'INSERT') THEN
-    v_new_data := to_jsonb(NEW);
+    v_new_data := to_jsonb(NEW) - 'encrypted_api_key' - 'password' - 'password_hash' - 'secret' - 'token' - 'api_key';
     INSERT INTO audit_logs (
       table_name, record_id, action, new_data, user_id, organization_id
     )
@@ -11968,8 +12007,8 @@ BEGIN
 
   -- Handle UPDATE
   ELSIF (TG_OP = 'UPDATE') THEN
-    v_old_data := to_jsonb(OLD);
-    v_new_data := to_jsonb(NEW);
+    v_old_data := to_jsonb(OLD) - 'encrypted_api_key' - 'password' - 'password_hash' - 'secret' - 'token' - 'api_key';
+    v_new_data := to_jsonb(NEW) - 'encrypted_api_key' - 'password' - 'password_hash' - 'secret' - 'token' - 'api_key';
 
     -- Detect changed fields by comparing JSONB objects
     -- Get keys where values are different
@@ -12756,6 +12795,7 @@ CREATE TABLE IF NOT EXISTS polar_subscriptions (
   current_period_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN DEFAULT false,
   canceled_at TIMESTAMPTZ,
+  billing_interval VARCHAR(20) DEFAULT 'monthly',
   metadata JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -12847,22 +12887,8 @@ FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
 
--- =====================================================
--- Migration: Add billing_interval to subscriptions
--- =====================================================
--- Supports monthly and yearly billing for Polar.sh products
-
--- Add billing_interval to main subscriptions table
-ALTER TABLE subscriptions
-ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'month';
-
-COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval: month or year. Matches Polar recurring_interval.';
-
--- Add billing_interval to polar_subscriptions table
-ALTER TABLE polar_subscriptions
-ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'month';
-
-COMMENT ON COLUMN polar_subscriptions.billing_interval IS 'Billing interval from Polar subscription: month or year.';
+COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval for the subscription: monthly or yearly';
+COMMENT ON COLUMN polar_subscriptions.billing_interval IS 'Billing interval from Polar subscription: monthly or yearly';
 -- =====================================================
 -- Migration: 20260129000001_fix_rls_issues.sql
 -- =====================================================
@@ -14503,82 +14529,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_farm_active
 
 
 
--- ====================================================================
--- PRODUCT VARIANTS SUPPORT
--- Migration: 20260131000001_add_product_variants.sql
--- ====================================================================
--- Add product variants support for multi-dimension products (same product, different sizes)
--- Migration: 20260131000001_add_product_variants.sql
-
--- Create product_variants table
-CREATE TABLE IF NOT EXISTS product_variants (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  variant_name TEXT NOT NULL, -- e.g., "1L", "5L", "10kg", "25kg"
-  variant_sku TEXT, -- Unique SKU for the variant
-  quantity NUMERIC DEFAULT 0, -- Current stock quantity for this variant
-  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL, -- Reference to work_units table
-  base_quantity NUMERIC DEFAULT 1 CHECK (base_quantity > 0 AND base_quantity < 10000), -- Quantity in item default unit
-  min_stock_level NUMERIC DEFAULT 0,
-  standard_rate NUMERIC, -- Sales price per unit
-  last_purchase_rate NUMERIC,
-  barcode TEXT,
-  is_active BOOLEAN DEFAULT true,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- Ensure variant_name is unique per item
-  CONSTRAINT product_variants_unique_name UNIQUE (organization_id, item_id, variant_name)
-);
-
--- Create indexes for product_variants
-CREATE INDEX IF NOT EXISTS idx_product_variants_org ON product_variants(organization_id);
-CREATE INDEX IF NOT EXISTS idx_product_variants_item ON product_variants(item_id);
-CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(variant_sku) WHERE variant_sku IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_product_variants_unit_id ON product_variants(unit_id);
-
--- Add variant_id column to stock_entry_items
-ALTER TABLE stock_entry_items
-ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
-
--- Add FK constraint for stock_movements.variant_id (column was added earlier without FK)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'stock_movements_variant_id_fkey'
-  ) THEN
-    ALTER TABLE stock_movements
-    ADD CONSTRAINT stock_movements_variant_id_fkey
-    FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL;
-  END IF;
-END $$;
-
--- Add comments for documentation
-COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';
-COMMENT ON COLUMN product_variants.variant_name IS 'Variant designation (e.g., "1L", "5L", "10kg", "25kg")';
-COMMENT ON COLUMN product_variants.unit_id IS 'Reference to work_units table for unit of measure';
-COMMENT ON COLUMN product_variants.variant_sku IS 'Unique SKU code for this specific variant';
-COMMENT ON COLUMN product_variants.quantity IS 'Current stock quantity for this variant';
-COMMENT ON COLUMN product_variants.min_stock_level IS 'Minimum stock level before low stock alert';
-
--- Create function to update variant timestamp
-CREATE OR REPLACE FUNCTION update_product_variants_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to auto-update updated_at
-CREATE TRIGGER product_variants_updated_at
-BEFORE UPDATE ON product_variants
-FOR EACH ROW
-EXECUTE FUNCTION update_product_variants_updated_at();
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
+-- (product_variants moved before stock_movements to resolve forward reference)
 
 
 
@@ -15402,57 +15353,9 @@ COMMENT ON COLUMN parcels.water_quantity_unit IS 'Unit for water quantity: m3, l
 
 
 -- ============================================================================
--- Migration: 20260301000000_add_billing_interval_to_subscriptions.sql
--- ============================================================================
-
--- Add billing_interval column to subscriptions table
--- This column stores the billing interval (monthly, yearly) for the subscription
-
-ALTER TABLE subscriptions
-ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(20) DEFAULT 'monthly';
-
--- Add comment for documentation
-COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval for the subscription: monthly or yearly';
-
-
--- ============================================================================
 -- Migration: 20260310100000_subscription_contract_alignment.sql
 -- ============================================================================
-
--- Subscription alignment with AGROGINA SaaS contract v1
--- Canonical formulas: starter, standard, premium, enterprise
--- Canonical billing cycles: monthly, semiannual, annual
-
--- Normalize and extend subscriptions table
-ALTER TABLE subscriptions
-  ADD COLUMN IF NOT EXISTS formula VARCHAR(30),
-  ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS contracted_hectares NUMERIC(12,2),
-  ADD COLUMN IF NOT EXISTS included_users INTEGER,
-  ADD COLUMN IF NOT EXISTS price_ht_per_ha_year NUMERIC(12,2),
-  ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5,4) DEFAULT 0.20,
-  ADD COLUMN IF NOT EXISTS amount_ht NUMERIC(14,2),
-  ADD COLUMN IF NOT EXISTS amount_tva NUMERIC(14,2),
-  ADD COLUMN IF NOT EXISTS amount_ttc NUMERIC(14,2),
-  ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'MAD',
-  ADD COLUMN IF NOT EXISTS contract_start_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS contract_end_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS renewal_notice_days INTEGER DEFAULT 60,
-  ADD COLUMN IF NOT EXISTS payment_terms_days INTEGER DEFAULT 30,
-  ADD COLUMN IF NOT EXISTS next_billing_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS grace_period_ends_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS terminated_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS pending_formula VARCHAR(30),
-  ADD COLUMN IF NOT EXISTS pending_billing_cycle VARCHAR(20),
-  ADD COLUMN IF NOT EXISTS pending_pricing_snapshot JSONB,
-  ADD COLUMN IF NOT EXISTS migration_effective_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS last_payment_notice_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS overdue_grace_days INTEGER DEFAULT 30,
-  ADD COLUMN IF NOT EXISTS suspension_notice_days INTEGER DEFAULT 7,
-  ADD COLUMN IF NOT EXISTS export_window_days INTEGER DEFAULT 30,
-  ADD COLUMN IF NOT EXISTS late_penalty_rate NUMERIC(8,6) DEFAULT 0.10,
-  ADD COLUMN IF NOT EXISTS fixed_recovery_fee NUMERIC(12,2) DEFAULT 40.00;
+-- Backfill canonical values for existing rows (idempotent)
 
 -- Canonical formula backfill from legacy plan_type values
 UPDATE subscriptions
@@ -15539,45 +15442,6 @@ SET pending_formula = COALESCE(pending_formula, formula),
 WHERE status = 'active'
   AND current_period_end IS NOT NULL;
 
--- Constraints
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_formula_check'
-  ) THEN
-    ALTER TABLE subscriptions
-      ADD CONSTRAINT subscriptions_formula_check
-      CHECK (formula IN ('starter', 'standard', 'premium', 'enterprise'));
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_billing_cycle_check'
-  ) THEN
-    ALTER TABLE subscriptions
-      ADD CONSTRAINT subscriptions_billing_cycle_check
-      CHECK (billing_cycle IN ('monthly', 'semiannual', 'annual'));
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_pending_formula_check'
-  ) THEN
-    ALTER TABLE subscriptions
-      ADD CONSTRAINT subscriptions_pending_formula_check
-      CHECK (pending_formula IS NULL OR pending_formula IN ('starter', 'standard', 'premium', 'enterprise'));
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'subscriptions_pending_billing_cycle_check'
-  ) THEN
-    ALTER TABLE subscriptions
-      ADD CONSTRAINT subscriptions_pending_billing_cycle_check
-      CHECK (pending_billing_cycle IS NULL OR pending_billing_cycle IN ('monthly', 'semiannual', 'annual'));
-  END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS idx_subscriptions_formula ON subscriptions(formula);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_billing_cycle ON subscriptions(billing_cycle);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_contract_end ON subscriptions(contract_end_at);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_migration_effective ON subscriptions(migration_effective_at);
 

@@ -1,0 +1,27 @@
+{
+  "id": "specs/calibration-engine-spec",
+  "title": "Calibration Engine Specification",
+  "description": "MOTEUR CALIBRAGE IA",
+  "source": "@site/docs/specs/calibration-engine-spec.md",
+  "sourceDirName": "specs",
+  "slug": "/specs/calibration-engine-spec",
+  "permalink": "/specs/calibration-engine-spec",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7,
+    "title": "Calibration Engine Specification"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Calibration Test Flow",
+    "permalink": "/specs/calibration-test-flow"
+  },
+  "next": {
+    "title": "Operational Engine Specification",
+    "permalink": "/specs/operational-engine-spec"
+  }
+}

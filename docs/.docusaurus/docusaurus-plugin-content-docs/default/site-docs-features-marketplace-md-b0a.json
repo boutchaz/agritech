@@ -1,0 +1,27 @@
+{
+  "id": "features/marketplace",
+  "title": "Marketplace",
+  "description": "The AgriTech Marketplace is a B2B e-commerce platform that allows agricultural organizations to list, browse, and trade products. It combines two product sources -- dedicated marketplace listings and inventory items flagged for sale -- into a unified storefront. The system includes seller profiles, shopping carts, quote requests, orders with stock management, and a review system.",
+  "source": "@site/docs/features/marketplace.md",
+  "sourceDirName": "features",
+  "slug": "/features/marketplace",
+  "permalink": "/features/marketplace",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 9,
+  "frontMatter": {
+    "sidebar_position": 9,
+    "title": "Marketplace"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Inventory & Stock Management",
+    "permalink": "/features/inventory"
+  },
+  "next": {
+    "title": "Compliance & Certifications",
+    "permalink": "/features/compliance"
+  }
+}

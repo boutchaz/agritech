@@ -21,12 +21,12 @@ export default {
     "localeConfigs": {}
   },
   "markdown": {
+    "format": "detect",
     "mermaid": true,
     "hooks": {
       "onBrokenMarkdownLinks": "warn",
       "onBrokenMarkdownImages": "throw"
     },
-    "format": "mdx",
     "emoji": true,
     "mdx1Compat": {
       "comments": true,

@@ -11,7 +11,10 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { DeleteParcelDto } from "./dto/delete-parcel.dto";
 import { CreateParcelDto } from "./dto/create-parcel.dto";
 import { UpdateParcelDto } from "./dto/update-parcel.dto";
-import { ListParcelsResponseDto } from "./dto/list-parcels.dto";
+import {
+  GetParcelResponseDto,
+  ListParcelsResponseDto,
+} from "./dto/list-parcels.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
 import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
@@ -504,6 +507,88 @@ export class ParcelsService {
     return {
       success: true,
       parcels: parcels || [],
+    };
+  }
+
+  async getParcel(
+    userId: string,
+    organizationId: string,
+    parcelId: string,
+  ): Promise<GetParcelResponseDto> {
+    this.logger.log(
+      `Getting parcel ${parcelId} for organization ${organizationId}`,
+    );
+
+    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error("User not authorized for organization", orgError);
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
+    }
+
+    const { data: parcel, error: parcelError } = await this.supabaseAdmin
+      .from("parcels")
+      .select(
+        `
+        id,
+        farm_id,
+        name,
+        description,
+        area,
+        area_unit,
+        boundary,
+        calculated_area,
+        perimeter,
+        crop_category,
+        crop_type,
+        tree_type,
+        tree_count,
+        planting_density,
+        variety,
+        planting_system,
+        spacing,
+        density_per_hectare,
+        plant_count,
+        planting_date,
+        planting_year,
+        rootstock,
+        soil_type,
+        irrigation_type,
+        is_active,
+        created_at,
+        updated_at,
+        farms!inner (
+          id,
+          organization_id
+        )
+      `,
+      )
+      .eq("id", parcelId)
+      .eq("farms.organization_id", organizationId)
+      .maybeSingle();
+
+    if (parcelError) {
+      this.logger.error("Error fetching parcel", parcelError);
+      throw new InternalServerErrorException("Failed to fetch parcel");
+    }
+
+    if (!parcel) {
+      throw new NotFoundException(
+        "Parcel not found or you do not have access to it",
+      );
+    }
+
+    return {
+      success: true,
+      parcel,
     };
   }
 

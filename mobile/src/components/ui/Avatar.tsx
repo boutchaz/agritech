@@ -23,6 +23,14 @@ const textSizeMap = {
   xl: fontSize.xl,
 };
 
+/** expo-image cannot load web `blob:` URLs on native; avoid passing them as `uri`. */
+function isRenderableRemoteUri(uri: string): boolean {
+  const t = uri.trim().toLowerCase();
+  if (!t) return false;
+  if (t.startsWith('blob:') || t.startsWith('data:')) return false;
+  return t.startsWith('http://') || t.startsWith('https://') || t.startsWith('file://');
+}
+
 function getInitials(name: string) {
   const trimmed = name.trim();
   if (!trimmed) return '--';
@@ -41,7 +49,7 @@ export function Avatar({ uri, name, size = 'md', testID }: AvatarProps) {
       testID={testID}
       style={[styles.container, { width: dimension, height: dimension, borderRadius: dimension / 2 }]}
     >
-      {uri ? (
+      {uri && isRenderableRemoteUri(uri) ? (
         <Image
           source={{ uri }}
           style={{ width: dimension, height: dimension, borderRadius: dimension / 2 }}
