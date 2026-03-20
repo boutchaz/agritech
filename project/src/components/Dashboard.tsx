@@ -165,12 +165,28 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
     }
   };
 
+  // Calculate dynamic grid classes based on visible widgets
+  const row1WidgetCount = 3 + (settings.showStockAlerts ? 1 : 0); // Parcels + (Stock?) + Harvest + Sales
+  const row1GridClass = row1WidgetCount === 4
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6';
+
+  const row2WidgetCount = (settings.showTaskAlerts ? 1 : 0) + 1; // (Tasks?) + Accounting
+  const row2GridClass = row2WidgetCount === 2
+    ? 'grid grid-cols-1 lg:grid-cols-2 gap-6'
+    : 'grid grid-cols-1 gap-6';
+
+  const row3WidgetCount = (settings.showSoilData ? 1 : 0) + 1; // (Analysis?) + Workers
+  const row3GridClass = row3WidgetCount === 2
+    ? 'grid grid-cols-1 lg:grid-cols-2 gap-6'
+    : 'grid grid-cols-1 gap-6';
+
   return (
     <div className="space-y-6">
       <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
 
       {/* Row 1: Key Performance Indicators */}
-      <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div data-tour="dashboard-stats" className={row1GridClass}>
         <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
         {settings.showStockAlerts && <StockAlertsWidget />}
         <HarvestSummaryWidget />
@@ -178,13 +194,13 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       </div>
 
       {/* Row 2: Action Items & Financial Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={row2GridClass}>
         {settings.showTaskAlerts && <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>}
         <AccountingWidget />
       </div>
 
       {/* Row 3: Operational Data */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={row3GridClass}>
         {settings.showSoilData && <AnalysisWidget />}
         <WorkersActivityWidget />
       </div>
