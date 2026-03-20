@@ -256,9 +256,21 @@ const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
   return null;
 };
 
+/**
+ * Normalize confidence score to 0-1 range.
+ * Handles both decimal (0.4) and percentage (40) formats from the API.
+ */
+function normalizeConfidenceScore(score: number): number {
+  if (score > 1) {
+    return score / 100;
+  }
+  return score;
+}
+
 const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
   const health = output.step8.health_score;
   const confidence = output.confidence;
+  const normalizedConfidence = normalizeConfidenceScore(confidence.normalized_score);
   const yieldPotential = output.step6.yield_potential;
   const alternance = output.step6.alternance;
   const zones = output.step7.zone_summary;
@@ -302,13 +314,13 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {(confidence.normalized_score * 100).toFixed(0)}%
+                {(normalizedConfidence * 100).toFixed(0)}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all"
-                style={{ width: `${confidence.normalized_score * 100}%` }}
+                style={{ width: `${normalizedConfidence * 100}%` }}
               />
             </div>
           </div>
@@ -913,7 +925,7 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
                 <div className="text-right">
                   <div className="text-xs text-gray-400 dark:text-gray-500">Confidence</div>
                   <div className="text-sm font-bold text-gray-900 dark:text-white">
-                    {(record.confidence_score * 100).toFixed(0)}%
+                    {(normalizeConfidenceScore(record.confidence_score) * 100).toFixed(0)}%
                   </div>
                 </div>
               )}
@@ -1497,7 +1509,7 @@ const AICalibrationPage = () => {
             <RecalibrationWizard
               parcelId={parcelId}
               baselineData={reportData}
-              confidenceScore={v2Output?.confidence.normalized_score}
+              confidenceScore={v2Output?.confidence.normalized_score ? normalizeConfidenceScore(v2Output.confidence.normalized_score) : undefined}
               onClose={handleCancelPartialRecalibration}
               onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
             />
@@ -1590,7 +1602,7 @@ const AICalibrationPage = () => {
           calibrationId={reportData.calibration.id}
           parcelId={parcelId}
           healthScore={v2Output.step8.health_score.total}
-          confidence={v2Output.confidence.normalized_score}
+          confidence={normalizeConfidenceScore(v2Output.confidence.normalized_score)}
           onReCalibrate={handleOpenFullRecalibrationWizard}
         />
       )}

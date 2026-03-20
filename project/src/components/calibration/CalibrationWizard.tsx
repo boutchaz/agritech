@@ -337,7 +337,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     await createAnalysesFromWizard(wizardValues);
 
     await startCalibration.mutateAsync({
-      plantation_age: wizardValues.plantation_age,
+      // Only send fields accepted by StartCalibrationDto
       real_tree_count: wizardValues.real_tree_count,
       real_spacing: wizardValues.real_spacing,
       water_source: wizardValues.water_source,
@@ -350,9 +350,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       irrigation_change_date: toMonthDate(wizardValues.irrigation_change_date),
       previous_irrigation_frequency: wizardValues.previous_irrigation_frequency,
       previous_volume_per_tree_liters: wizardValues.previous_volume_per_tree_liters,
-      harvests: wizardValues.harvests,
       harvest_regularity: wizardValues.harvest_regularity,
-      pruning_practiced: wizardValues.pruning_practiced,
       pruning_type: wizardValues.pruning_type,
       last_pruning_date: toMonthDate(wizardValues.last_pruning_date),
       pruning_intensity: wizardValues.pruning_intensity,
