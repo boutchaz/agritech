@@ -86,7 +86,7 @@ export function MotifSelectionStep({
   onMotifDetailChange,
 }: MotifSelectionStepProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="calibration-partial-motif-step">
       <div>
         <h4 className="text-base font-semibold text-gray-900 dark:text-white">Selectionnez le motif du recalibrage</h4>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -103,6 +103,7 @@ export function MotifSelectionStep({
             <button
               key={motif.value}
               type="button"
+              data-testid={`calibration-partial-motif-option-${motif.value}`}
               onClick={() => onSelectMotif(motif.value)}
               className={`rounded-xl border p-4 text-left transition-all ${
                 isSelected

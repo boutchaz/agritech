@@ -27,7 +27,7 @@ export function F3TriggerStep({ parcelId, onProceed, onSnooze }: F3TriggerStepPr
   const [customDays, setCustomDays] = useState<number>(14);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="calibration-annual-wizard-trigger">
       <div className="rounded-xl border border-green-200 dark:border-green-800/30 bg-green-50 dark:bg-green-900/20 p-5">
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-green-100 dark:bg-green-900/40 p-2">

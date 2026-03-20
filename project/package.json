@@ -36,6 +36,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
+    "test:e2e:integration": "playwright test --config=playwright.integration.config.ts",
+    "test:e2e:integration:ui": "playwright test --config=playwright.integration.config.ts --ui",
     "schema:pull": "./scripts/schema.sh pull",
     "schema:push": "./scripts/schema.sh push",
     "schema:diff": "./scripts/schema.sh diff",

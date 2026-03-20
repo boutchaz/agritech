@@ -98,7 +98,10 @@ export function AnnualRecalibrationWizard({
   };
 
   return (
-    <div className="space-y-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+    <div
+      className="space-y-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5"
+      data-testid="calibration-annual-wizard"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage annuel</h3>

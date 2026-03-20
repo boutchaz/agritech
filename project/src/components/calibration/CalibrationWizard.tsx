@@ -384,7 +384,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="calibration-initial-wizard">
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de calibrage initial</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Saisie initiale de la parcelle avant lancement du calibrage IA.</p>
@@ -406,6 +406,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
               <button
                 key={step.number}
                 type="button"
+                data-testid={`calibration-wizard-step-${step.number}`}
                 onClick={() => setStep(step.number)}
                 className={`flex flex-col items-center gap-1.5 rounded-lg p-2 transition-colors ${
                   isActive

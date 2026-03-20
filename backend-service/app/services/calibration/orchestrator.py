@@ -47,6 +47,16 @@ FROST_THRESHOLD_BY_CROP = {
 
 EVERGREEN_CROPS = {"olivier", "agrumes", "avocatier"}
 
+_COMPONENT_MAX_SCORES: dict[str, float] = {
+    "satellite": 30.0,
+    "soil": 20.0,
+    "water": 15.0,
+    "yield": 20.0,
+    "profile": 10.0,
+    "irrigation": 10.0,
+    "coherence": 5.0,
+}
+
 MIN_SATELLITE_IMAGES = 6
 
 
@@ -284,7 +294,10 @@ def run_calibration_pipeline(
             total_score=confidence.total_score,
             normalized_score=confidence.normalized_score,
             components={
-                key: ConfidenceComponent(score=value, max_score=100.0)
+                key: ConfidenceComponent(
+                    score=value,
+                    max_score=_COMPONENT_MAX_SCORES.get(key, 100.0),
+                )
                 for key, value in confidence.components.items()
             },
         ),

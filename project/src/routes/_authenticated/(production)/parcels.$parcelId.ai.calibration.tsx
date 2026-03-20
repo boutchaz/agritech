@@ -207,7 +207,11 @@ function toSeverityLevel(value: string): SeverityLevel {
 const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
   if (phase === 'awaiting_validation') {
     return (
-      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4">
+      <div
+        className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4"
+        data-testid="calibration-phase-banner"
+        data-phase="awaiting_validation"
+      >
         <div className="flex items-center space-x-3">
           <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           <div>
@@ -223,7 +227,11 @@ const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
 
   if (phase === 'awaiting_nutrition_option') {
     return (
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4">
+      <div
+        className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4"
+        data-testid="calibration-phase-banner"
+        data-phase="awaiting_nutrition_option"
+      >
         <div className="flex items-center space-x-3">
           <Leaf className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <div>
@@ -239,7 +247,11 @@ const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
 
   if (phase === 'active') {
     return (
-      <div className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800/30 p-4">
+      <div
+        className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800/30 p-4"
+        data-testid="calibration-phase-banner"
+        data-phase="active"
+      >
         <div className="flex items-center space-x-3">
           <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
           <div>
@@ -276,7 +288,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
   const zones = output.step7.zone_summary;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="calibration-executive-summary">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6">
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Health Score</div>
@@ -941,7 +953,7 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: stri
   const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="calibration-v2-report">
       {hasInsufficientData && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
           <div className="flex items-start space-x-3">
@@ -1318,7 +1330,10 @@ const CalibrationProgressStepper: React.FC<{ progress: CalibrationProgressEvent 
     : ['data_collection', 'satellite_sync', 'raster_extraction', 'gdd_precompute', 'calibration_engine', 'saving_results', 'ai_reports'];
 
   return (
-    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6">
+    <div
+      className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/30 p-6"
+      data-testid="calibration-in-progress"
+    >
       <div className="flex items-center space-x-3 mb-5">
         <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
           <BrainCircuit className="w-6 h-6 text-purple-600 dark:text-purple-400 animate-pulse" />
@@ -1462,10 +1477,12 @@ const AICalibrationPage = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="calibration-page">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Calibration</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white" data-testid="calibration-page-title">
+            AI Calibration
+          </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Manage the AI model calibration for this parcel.
           </p>
@@ -1477,6 +1494,7 @@ const AICalibrationPage = () => {
                 type="button"
                 onClick={handleOpenPartialRecalibration}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                data-testid="calibration-open-partial-recalibration"
               >
                 <GitCompareArrows className="w-4 h-4" />
                 <span>Recalibrage partiel</span>
@@ -1489,6 +1507,7 @@ const AICalibrationPage = () => {
               disabled={isBusy || missingPlantingYear}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
               title={missingPlantingYear ? 'Set planting year first' : undefined}
+              data-testid="calibration-open-full-recalibration"
             >
               {isBusy ? (
                 <BrainCircuit className="w-4 h-4 animate-pulse" />
@@ -1504,7 +1523,10 @@ const AICalibrationPage = () => {
       {phase && <PhaseBanner phase={phase} />}
 
       <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0">
+        <DialogContent
+          className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0"
+          data-testid="calibration-partial-recalibration-dialog"
+        >
           <div className="p-4 sm:p-6">
             <RecalibrationWizard
               parcelId={parcelId}
@@ -1526,7 +1548,10 @@ const AICalibrationPage = () => {
       </Dialog>
 
       {phase === 'active' && !isF3EligibilityLoading && canShowF3Banner && (
-        <div className="rounded-xl border border-green-200 dark:border-green-800/30 bg-green-50 dark:bg-green-900/20 p-4">
+        <div
+          className="rounded-xl border border-green-200 dark:border-green-800/30 bg-green-50 dark:bg-green-900/20 p-4"
+          data-testid="calibration-annual-eligibility-banner"
+        >
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h3 className="font-semibold text-green-900 dark:text-green-100">Recalibrage annuel disponible</h3>
@@ -1538,6 +1563,7 @@ const AICalibrationPage = () => {
               type="button"
               onClick={() => setShowAnnualRecalibrationWizard(true)}
               className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+              data-testid="calibration-start-annual-recalibration"
             >
               Lancer le recalibrage annuel
             </button>
@@ -1615,7 +1641,10 @@ const AICalibrationPage = () => {
       )}
 
       {isFailed && !isCalibrating && (
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/30 p-6">
+        <div
+          className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800/30 p-6"
+          data-testid="calibration-failed-panel"
+        >
           <div className="flex items-start space-x-3">
             <AlertCircle className="w-6 h-6 text-red-500 mt-0.5" />
             <div>

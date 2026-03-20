@@ -81,9 +81,9 @@ export function ImpactPreviewStep({
             <Gauge className="h-4 w-4" />
             <span>Apercu du score de confiance</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round(confidencePreview * 100)}%</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{Math.min(Math.round(confidencePreview * 100), 100)}%</div>
           <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-            <div className="h-full bg-green-500" style={{ width: `${Math.round(confidencePreview * 100)}%` }} />
+            <div className="h-full bg-green-500" style={{ width: `${Math.min(Math.round(confidencePreview * 100), 100)}%` }} />
           </div>
         </div>
       </div>

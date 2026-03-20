@@ -112,7 +112,10 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+      <div
+        className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800"
+        data-testid="calibration-readiness-loading"
+      >
         <p className="text-sm text-gray-500 dark:text-gray-400">Calcul du niveau de confiance en cours...</p>
       </div>
     );
@@ -120,7 +123,10 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 dark:border-red-700 p-4 bg-red-50 dark:bg-red-900/20 space-y-3">
+      <div
+        className="rounded-lg border border-red-200 dark:border-red-700 p-4 bg-red-50 dark:bg-red-900/20 space-y-3"
+        data-testid="calibration-readiness-error"
+      >
         <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         <Button type="button" variant="outline" onClick={fetchReadiness}>
           <RefreshCw className="w-4 h-4" />
@@ -131,12 +137,12 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-testid="calibration-readiness-panel">
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Niveau de confiance estime</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{Math.round((readiness?.confidence_preview ?? 0) * 100)}%</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">{Math.min(Math.round(readiness?.confidence_preview ?? 0), 100)}%</p>
           </div>
           <Button type="button" variant="outline" onClick={fetchReadiness}>
             <RefreshCw className="w-4 h-4" />
@@ -211,6 +217,7 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
           onClick={onLaunchCalibration}
           disabled={!canLaunch || isLaunching || !readiness?.ready}
           className="bg-green-600 hover:bg-green-700 text-white"
+          data-testid="calibration-readiness-launch"
         >
           {isLaunching ? 'Lancement en cours...' : 'Lancer le calibrage'}
         </Button>
