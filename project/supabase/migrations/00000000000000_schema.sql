@@ -498,6 +498,24 @@ CREATE TABLE IF NOT EXISTS parcels (
   is_active BOOLEAN DEFAULT true,
   centroid GEOMETRY(Point, 4326),
   boundary_geom GEOMETRY(Polygon, 4326),
+  -- AI calibration columns
+  ai_enabled BOOLEAN DEFAULT false,
+  ai_phase TEXT DEFAULT 'disabled' CHECK (ai_phase IN ('disabled', 'calibration', 'calibrating', 'awaiting_validation', 'awaiting_nutrition_option', 'active', 'paused')),
+  ai_calibration_id UUID,
+  ai_nutrition_option TEXT DEFAULT 'A',
+  ai_production_target TEXT,
+  -- Water and language
+  water_source TEXT,
+  langue TEXT DEFAULT 'fr',
+  -- Observation-only mode (confidence < 25%)
+  ai_observation_only BOOLEAN NOT NULL DEFAULT false,
+  -- Annual recalibration trigger settings
+  annual_trigger_config JSONB DEFAULT '{}'::jsonb,
+  -- Monitoring operational columns
+  last_satellite_check TIMESTAMPTZ,
+  last_weather_check TIMESTAMPTZ,
+  current_bbch TEXT,
+  current_gdd_cumulative REAL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -507,6 +525,24 @@ CREATE INDEX IF NOT EXISTS idx_parcels_organization ON parcels(organization_id);
 CREATE INDEX IF NOT EXISTS idx_parcels_centroid ON parcels USING GIST(centroid) WHERE centroid IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_parcels_boundary_geom ON parcels USING GIST(boundary_geom) WHERE boundary_geom IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_parcels_crop_type ON parcels(crop_type) WHERE crop_type IS NOT NULL;
+
+-- Composite unique constraint for AI table foreign keys
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'parcels_id_organization_id_key'
+      AND conrelid = 'public.parcels'::regclass
+  ) THEN
+    ALTER TABLE public.parcels
+      ADD CONSTRAINT parcels_id_organization_id_key UNIQUE (id, organization_id);
+  END IF;
+END $$;
+
+COMMENT ON COLUMN parcels.water_source IS 'Water source key: well, dam, canal, municipal, mixed, other';
+COMMENT ON COLUMN parcels.langue IS 'Report language key: fr, ar, ber';
+COMMENT ON COLUMN parcels.ai_observation_only IS 'When true, parcel is in observation-only mode (confidence < 25%). Diagnostics are computed as hypotheses but no alerts or recommendations are generated.';
+COMMENT ON COLUMN parcels.annual_trigger_config IS 'Per-parcel annual recalibration trigger settings (month/day threshold, snooze settings, custom rules)';
 
 -- =====================================================
 -- 6. BILLING CYCLE TABLES - Quotes, Sales Orders, Purchase Orders
@@ -2630,7 +2666,7 @@ CREATE TABLE IF NOT EXISTS performance_alerts (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE CASCADE,
-  alert_type TEXT NOT NULL CHECK (alert_type IN ('yield_underperformance', 'forecast_variance', 'quality_issue', 'cost_overrun', 'revenue_shortfall', 'benchmark_deviation')),
+  alert_type TEXT NOT NULL CHECK (alert_type IN ('yield_underperformance', 'forecast_variance', 'quality_issue', 'cost_overrun', 'revenue_shortfall', 'benchmark_deviation', 'ai_drought_stress', 'ai_frost_risk', 'ai_heat_stress', 'ai_pest_risk', 'ai_nutrient_deficiency', 'ai_yield_warning', 'ai_phenology_alert', 'ai_salinity_alert')),
   severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
   title TEXT NOT NULL,
   message TEXT NOT NULL,
@@ -2642,6 +2678,16 @@ CREATE TABLE IF NOT EXISTS performance_alerts (
   target_value NUMERIC,
   variance_percent NUMERIC,
   recommended_actions TEXT[],
+  -- AI alert columns
+  alert_code TEXT,
+  category TEXT,
+  priority INTEGER DEFAULT 3,
+  entry_threshold NUMERIC,
+  exit_threshold NUMERIC,
+  trigger_data JSONB,
+  satellite_reading_id UUID,
+  is_ai_generated BOOLEAN DEFAULT false,
+  action_delay INTEGER DEFAULT 0,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'resolved', 'dismissed')),
   acknowledged_by UUID REFERENCES auth.users(id),
   acknowledged_at TIMESTAMPTZ,
@@ -2658,6 +2704,7 @@ CREATE INDEX IF NOT EXISTS idx_performance_alerts_parcel ON performance_alerts(p
 CREATE INDEX IF NOT EXISTS idx_performance_alerts_type ON performance_alerts(alert_type);
 CREATE INDEX IF NOT EXISTS idx_performance_alerts_severity ON performance_alerts(severity);
 CREATE INDEX IF NOT EXISTS idx_performance_alerts_status ON performance_alerts(status);
+CREATE INDEX IF NOT EXISTS idx_performance_alerts_is_ai_generated ON public.performance_alerts(is_ai_generated);
 
 -- Deliveries
 CREATE TABLE IF NOT EXISTS deliveries (
@@ -2861,6 +2908,7 @@ CREATE TABLE IF NOT EXISTS product_applications (
   notes TEXT,
   task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
   images TEXT[] DEFAULT NULL,
+  ai_recommendation_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT product_applications_area_positive CHECK (area_treated > 0)
@@ -3457,6 +3505,11 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   geotiff_url TEXT,
   geotiff_expires_at TIMESTAMPTZ,
   metadata JSONB DEFAULT '{}'::jsonb,
+  -- AI baseline tracking columns
+  baseline_position TEXT,
+  is_significant_deviation BOOLEAN DEFAULT false,
+  trend_direction TEXT CHECK (trend_direction IN ('improving', 'stable', 'declining')),
+  trend_duration_days INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'))
@@ -5285,10 +5338,18 @@ CREATE TABLE IF NOT EXISTS weather_daily_data (
   soil_moisture_0_7cm NUMERIC(6, 4),     -- m³/m³
   soil_moisture_7_28cm NUMERIC(6, 4),    -- m³/m³
   source TEXT DEFAULT 'open-meteo-archive',
+  -- GDD columns per crop type
+  gdd_olivier NUMERIC,
+  gdd_agrumes NUMERIC,
+  gdd_avocatier NUMERIC,
+  gdd_palmier_dattier NUMERIC,
+  chill_hours NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (latitude, longitude, date)
 );
+CREATE INDEX IF NOT EXISTS idx_weather_daily_data_lat_lon_date
+  ON public.weather_daily_data(latitude, longitude, date);
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_date ON weather_daily_data(date DESC);
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data(latitude, longitude);
 
@@ -5685,6 +5746,695 @@ ON CONFLICT (crop_type_name, COALESCE(plantation_system_type, ''), index_name) D
   stress_low = EXCLUDED.stress_low,
   critical_low = EXCLUDED.critical_low,
   notes = EXCLUDED.notes;
+
+-- =====================================================
+-- AI & OPERATIONAL ENGINE TABLES
+-- =====================================================
+
+-- Calibrations (AI parcel calibration records)
+CREATE TABLE IF NOT EXISTS public.calibrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  -- Status validated in application code (no CHECK constraint)
+  status TEXT NOT NULL DEFAULT 'pending',
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  baseline_ndvi NUMERIC,
+  baseline_ndre NUMERIC,
+  baseline_ndmi NUMERIC,
+  confidence_score NUMERIC CHECK (confidence_score >= 0 AND confidence_score <= 1),
+  zone_classification JSONB,
+  phenology_stage TEXT,
+  calibration_data JSONB,
+  error_message TEXT,
+  -- Calibration v2 columns
+  health_score NUMERIC CHECK (health_score >= 0 AND health_score <= 100),
+  yield_potential_min NUMERIC,
+  yield_potential_max NUMERIC,
+  data_completeness_score NUMERIC CHECK (data_completeness_score >= 0 AND data_completeness_score <= 100),
+  maturity_phase TEXT CHECK (maturity_phase IN ('juvenile', 'entree_production', 'pleine_production', 'maturite_avancee', 'senescence', 'unknown')),
+  anomaly_count INTEGER DEFAULT 0,
+  calibration_version TEXT DEFAULT 'v2',
+  -- Calibration mode and recalibration support
+  mode_calibrage TEXT DEFAULT 'full',
+  recalibration_motif TEXT,
+  previous_baseline JSONB,
+  campaign_bilan JSONB,
+  -- Localized reports
+  rapport_fr TEXT,
+  rapport_ar TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_calibrations_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+COMMENT ON COLUMN calibrations.mode_calibrage IS 'Calibration mode: full (initial), partial (block-update recalibration), annual (post-campaign recalibration)';
+COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for partial recalibrations';
+COMMENT ON COLUMN calibrations.previous_baseline IS 'Snapshot of validated baseline prior to recalibration';
+COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by annual recalibration flow';
+
+CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_calibrations_status ON public.calibrations(status);
+
+-- AI Recommendations
+CREATE TABLE IF NOT EXISTS public.ai_recommendations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validated', 'rejected', 'executed', 'expired')),
+  constat TEXT NOT NULL,
+  diagnostic TEXT NOT NULL,
+  action TEXT NOT NULL,
+  conditions JSONB,
+  suivi TEXT,
+  crop_type TEXT NOT NULL,
+  alert_code TEXT,
+  priority INTEGER DEFAULT 3,
+  valid_from DATE,
+  valid_until DATE,
+  executed_at TIMESTAMPTZ,
+  execution_notes TEXT,
+  -- Monitoring operational columns
+  evaluation_window_days INTEGER,
+  evaluation_indicator TEXT,
+  expected_response TEXT,
+  actual_response_pct REAL,
+  efficacy TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_ai_recommendations_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_parcel_id ON public.ai_recommendations(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_organization_id ON public.ai_recommendations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_status ON public.ai_recommendations(status);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_executed_efficacy
+  ON public.ai_recommendations(status, executed_at, efficacy);
+
+-- Annual Plans
+CREATE TABLE IF NOT EXISTS public.annual_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
+  year INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'validated', 'active', 'archived')),
+  crop_type TEXT NOT NULL,
+  variety TEXT,
+  plan_data JSONB,
+  validated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (parcel_id, year),
+  UNIQUE (id, organization_id),
+  CONSTRAINT fk_annual_plans_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
+
+-- Plan Interventions
+CREATE TABLE IF NOT EXISTS public.plan_interventions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  annual_plan_id UUID NOT NULL,
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),
+  week INTEGER CHECK (week >= 1 AND week <= 5),
+  intervention_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  product TEXT,
+  dose TEXT,
+  unit TEXT,
+  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'executed', 'skipped', 'delayed')),
+  executed_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_plan_interventions_plan_org
+    FOREIGN KEY (annual_plan_id, organization_id)
+    REFERENCES public.annual_plans(id, organization_id) ON DELETE CASCADE,
+  CONSTRAINT fk_plan_interventions_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_annual_plan_id ON public.plan_interventions(annual_plan_id);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_parcel_id ON public.plan_interventions(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_organization_id ON public.plan_interventions(organization_id);
+
+-- Crop AI References
+CREATE TABLE IF NOT EXISTS public.crop_ai_references (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  crop_type TEXT NOT NULL UNIQUE CHECK (crop_type IN ('olivier', 'agrumes', 'avocatier', 'palmier_dattier')),
+  version TEXT NOT NULL,
+  reference_data JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Evenements Parcelle (parcel events that may trigger partial recalibration)
+CREATE TABLE IF NOT EXISTS evenements_parcelle (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  date_evenement DATE NOT NULL DEFAULT CURRENT_DATE,
+  description TEXT,
+  donnees JSONB DEFAULT '{}'::jsonb,
+  recalibrage_requis BOOLEAN DEFAULT FALSE,
+  recalibrage_id UUID REFERENCES calibrations(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+COMMENT ON TABLE evenements_parcelle IS 'Parcel events that may trigger partial recalibration';
+COMMENT ON COLUMN evenements_parcelle.type IS 'Event type key: new_water_source, soil_analysis, water_analysis, severe_pruning, removal, disease, frost, drought, other';
+
+CREATE INDEX IF NOT EXISTS idx_evenements_parcelle_parcel ON evenements_parcelle(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_evenements_parcelle_org ON evenements_parcelle(organization_id);
+
+-- Suivis Saison (season tracking for annual recalibration and future ML)
+CREATE TABLE IF NOT EXISTS suivis_saison (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  saison TEXT NOT NULL,
+  rendement_reel_t_ha DECIMAL,
+  rendement_reel_kg_arbre DECIMAL,
+  qualite_recolte TEXT,
+  regularite_percue TEXT,
+  applications JSONB DEFAULT '[]'::jsonb,
+  evenements JSONB DEFAULT '[]'::jsonb,
+  bilan_campagne TEXT,
+  recalibrage_annual_id UUID REFERENCES calibrations(id) ON DELETE SET NULL,
+  cloture_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+COMMENT ON TABLE suivis_saison IS 'Season tracking for annual recalibration and future ML training data';
+COMMENT ON COLUMN suivis_saison.saison IS 'Season identifier, e.g. 2025-2026';
+COMMENT ON COLUMN suivis_saison.regularite_percue IS 'Perceived regularity key: stable, marked_alternance, very_irregular';
+
+CREATE INDEX IF NOT EXISTS idx_suivis_saison_parcel ON suivis_saison(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_suivis_saison_org ON suivis_saison(organization_id);
+
+-- Monitoring Analyses
+CREATE TABLE IF NOT EXISTS public.monitoring_analyses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  analysis_date DATE NOT NULL,
+  spectral_result JSONB,
+  phenology_result JSONB,
+  diagnostic_scenario TEXT,
+  coherence TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (parcel_id, analysis_date),
+  CONSTRAINT fk_monitoring_analyses_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_monitoring_analyses_parcel_date
+  ON public.monitoring_analyses(parcel_id, analysis_date DESC);
+
+-- Weather Daily (per-parcel weather data for monitoring)
+CREATE TABLE IF NOT EXISTS public.weather_daily (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  tmin REAL,
+  tmax REAL,
+  tmoy REAL,
+  precipitation_mm REAL,
+  etp_mm REAL,
+  humidity_pct REAL,
+  wind_kmh REAL,
+  radiation_wm2 REAL,
+  gdd REAL,
+  gdd_cumulative REAL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (parcel_id, date),
+  CONSTRAINT fk_weather_daily_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_weather_daily_parcel_date
+  ON public.weather_daily(parcel_id, date DESC);
+
+-- Weather Forecast (per-parcel forecasts for monitoring)
+CREATE TABLE IF NOT EXISTS public.weather_forecast (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  forecast_date DATE NOT NULL,
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  tmin REAL,
+  tmax REAL,
+  precipitation_mm REAL,
+  wind_kmh REAL,
+  humidity_pct REAL,
+  UNIQUE (parcel_id, forecast_date),
+  CONSTRAINT fk_weather_forecast_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_weather_forecast_parcel_date
+  ON public.weather_forecast(parcel_id, forecast_date);
+
+-- Yield Forecasts
+CREATE TABLE IF NOT EXISTS public.yield_forecasts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  season_year INTEGER NOT NULL,
+  moment TEXT NOT NULL,
+  yield_min REAL,
+  yield_max REAL,
+  yield_central REAL,
+  confidence_pct REAL,
+  alternance_status TEXT,
+  factors JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_yield_forecasts_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_yield_forecasts_parcel_season
+  ON public.yield_forecasts(parcel_id, season_year DESC, created_at DESC);
+
+-- =====================================================
+-- AI TABLE FK CONSTRAINTS (deferred for circular dependencies)
+-- =====================================================
+
+-- parcels.ai_calibration_id -> calibrations
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_parcels_ai_calibration'
+      AND conrelid = 'public.parcels'::regclass
+  ) THEN
+    ALTER TABLE public.parcels
+      ADD CONSTRAINT fk_parcels_ai_calibration
+      FOREIGN KEY (ai_calibration_id) REFERENCES public.calibrations(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_parcels_ai_calibration_org'
+      AND conrelid = 'public.parcels'::regclass
+  ) THEN
+    ALTER TABLE public.parcels
+      ADD CONSTRAINT fk_parcels_ai_calibration_org
+      FOREIGN KEY (ai_calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_ai_recommendations_calibration_org'
+      AND conrelid = 'public.ai_recommendations'::regclass
+  ) THEN
+    ALTER TABLE public.ai_recommendations
+      ADD CONSTRAINT fk_ai_recommendations_calibration_org
+      FOREIGN KEY (calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_annual_plans_calibration_org'
+      AND conrelid = 'public.annual_plans'::regclass
+  ) THEN
+    ALTER TABLE public.annual_plans
+      ADD CONSTRAINT fk_annual_plans_calibration_org
+      FOREIGN KEY (calibration_id, organization_id)
+      REFERENCES public.calibrations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_product_applications_ai_recommendation'
+      AND conrelid = 'public.product_applications'::regclass
+  ) THEN
+    ALTER TABLE public.product_applications
+      ADD CONSTRAINT fk_product_applications_ai_recommendation
+      FOREIGN KEY (ai_recommendation_id) REFERENCES public.ai_recommendations(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'product_applications'
+      AND column_name = 'organization_id'
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_product_applications_ai_recommendation_org'
+      AND conrelid = 'public.product_applications'::regclass
+  ) THEN
+    ALTER TABLE public.product_applications
+      ADD CONSTRAINT fk_product_applications_ai_recommendation_org
+      FOREIGN KEY (ai_recommendation_id, organization_id)
+      REFERENCES public.ai_recommendations(id, organization_id)
+      DEFERRABLE INITIALLY DEFERRED;
+  END IF;
+END $$;
+
+-- =====================================================
+-- AI TABLE TRIGGERS
+-- =====================================================
+
+DROP TRIGGER IF EXISTS trg_calibrations_updated_at ON public.calibrations;
+CREATE TRIGGER trg_calibrations_updated_at
+  BEFORE UPDATE ON public.calibrations
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_ai_recommendations_updated_at ON public.ai_recommendations;
+CREATE TRIGGER trg_ai_recommendations_updated_at
+  BEFORE UPDATE ON public.ai_recommendations
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_annual_plans_updated_at ON public.annual_plans;
+CREATE TRIGGER trg_annual_plans_updated_at
+  BEFORE UPDATE ON public.annual_plans
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_plan_interventions_updated_at ON public.plan_interventions;
+CREATE TRIGGER trg_plan_interventions_updated_at
+  BEFORE UPDATE ON public.plan_interventions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_crop_ai_references_updated_at ON public.crop_ai_references;
+CREATE TRIGGER trg_crop_ai_references_updated_at
+  BEFORE UPDATE ON public.crop_ai_references
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =====================================================
+-- AI TABLE RLS POLICIES
+-- =====================================================
+
+ALTER TABLE IF EXISTS public.calibrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.ai_recommendations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.annual_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.plan_interventions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.crop_ai_references ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.monitoring_analyses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.weather_daily ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.weather_forecast ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.yield_forecasts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evenements_parcelle ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suivis_saison ENABLE ROW LEVEL SECURITY;
+
+-- Calibrations RLS
+DROP POLICY IF EXISTS "org_read_calibrations" ON public.calibrations;
+CREATE POLICY "org_read_calibrations" ON public.calibrations
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_calibrations" ON public.calibrations;
+CREATE POLICY "org_write_calibrations" ON public.calibrations
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_calibrations" ON public.calibrations;
+CREATE POLICY "org_update_calibrations" ON public.calibrations
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_calibrations" ON public.calibrations;
+CREATE POLICY "org_delete_calibrations" ON public.calibrations
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- AI Recommendations RLS
+DROP POLICY IF EXISTS "org_read_ai_recommendations" ON public.ai_recommendations;
+CREATE POLICY "org_read_ai_recommendations" ON public.ai_recommendations
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_ai_recommendations" ON public.ai_recommendations;
+CREATE POLICY "org_write_ai_recommendations" ON public.ai_recommendations
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_ai_recommendations" ON public.ai_recommendations;
+CREATE POLICY "org_update_ai_recommendations" ON public.ai_recommendations
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_ai_recommendations" ON public.ai_recommendations;
+CREATE POLICY "org_delete_ai_recommendations" ON public.ai_recommendations
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Annual Plans RLS
+DROP POLICY IF EXISTS "org_read_annual_plans" ON public.annual_plans;
+CREATE POLICY "org_read_annual_plans" ON public.annual_plans
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_annual_plans" ON public.annual_plans;
+CREATE POLICY "org_write_annual_plans" ON public.annual_plans
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_annual_plans" ON public.annual_plans;
+CREATE POLICY "org_update_annual_plans" ON public.annual_plans
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_annual_plans" ON public.annual_plans;
+CREATE POLICY "org_delete_annual_plans" ON public.annual_plans
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Plan Interventions RLS
+DROP POLICY IF EXISTS "org_read_plan_interventions" ON public.plan_interventions;
+CREATE POLICY "org_read_plan_interventions" ON public.plan_interventions
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_plan_interventions" ON public.plan_interventions;
+CREATE POLICY "org_write_plan_interventions" ON public.plan_interventions
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_plan_interventions" ON public.plan_interventions;
+CREATE POLICY "org_update_plan_interventions" ON public.plan_interventions
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_plan_interventions" ON public.plan_interventions;
+CREATE POLICY "org_delete_plan_interventions" ON public.plan_interventions
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Crop AI References RLS
+DROP POLICY IF EXISTS "read_crop_ai_references" ON public.crop_ai_references;
+CREATE POLICY "read_crop_ai_references" ON public.crop_ai_references
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "write_crop_ai_references" ON public.crop_ai_references;
+CREATE POLICY "write_crop_ai_references" ON public.crop_ai_references
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "update_crop_ai_references" ON public.crop_ai_references;
+CREATE POLICY "update_crop_ai_references" ON public.crop_ai_references
+  FOR UPDATE USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+DROP POLICY IF EXISTS "delete_crop_ai_references" ON public.crop_ai_references;
+CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
+  FOR DELETE USING (auth.role() = 'service_role');
+
+-- Evenements Parcelle RLS
+CREATE POLICY "Users can view events in their organization" ON evenements_parcelle
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+CREATE POLICY "Users can insert events in their organization" ON evenements_parcelle
+  FOR INSERT WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Suivis Saison RLS
+CREATE POLICY "Users can view seasons in their organization" ON suivis_saison
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+CREATE POLICY "Users can manage seasons in their organization" ON suivis_saison
+  FOR ALL USING (
+    organization_id IN (
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- Monitoring Analyses RLS
+DROP POLICY IF EXISTS "org_read_monitoring_analyses" ON public.monitoring_analyses;
+CREATE POLICY "org_read_monitoring_analyses" ON public.monitoring_analyses
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_monitoring_analyses" ON public.monitoring_analyses;
+CREATE POLICY "org_write_monitoring_analyses" ON public.monitoring_analyses
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_monitoring_analyses" ON public.monitoring_analyses;
+CREATE POLICY "org_update_monitoring_analyses" ON public.monitoring_analyses
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_monitoring_analyses" ON public.monitoring_analyses;
+CREATE POLICY "org_delete_monitoring_analyses" ON public.monitoring_analyses
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Weather Daily RLS
+DROP POLICY IF EXISTS "org_read_weather_daily" ON public.weather_daily;
+CREATE POLICY "org_read_weather_daily" ON public.weather_daily
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_weather_daily" ON public.weather_daily;
+CREATE POLICY "org_write_weather_daily" ON public.weather_daily
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_weather_daily" ON public.weather_daily;
+CREATE POLICY "org_update_weather_daily" ON public.weather_daily
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_weather_daily" ON public.weather_daily;
+CREATE POLICY "org_delete_weather_daily" ON public.weather_daily
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Weather Forecast RLS
+DROP POLICY IF EXISTS "org_read_weather_forecast" ON public.weather_forecast;
+CREATE POLICY "org_read_weather_forecast" ON public.weather_forecast
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_weather_forecast" ON public.weather_forecast;
+CREATE POLICY "org_write_weather_forecast" ON public.weather_forecast
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_weather_forecast" ON public.weather_forecast;
+CREATE POLICY "org_update_weather_forecast" ON public.weather_forecast
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_weather_forecast" ON public.weather_forecast;
+CREATE POLICY "org_delete_weather_forecast" ON public.weather_forecast
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- Yield Forecasts RLS
+DROP POLICY IF EXISTS "org_read_yield_forecasts" ON public.yield_forecasts;
+CREATE POLICY "org_read_yield_forecasts" ON public.yield_forecasts
+  FOR SELECT USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_yield_forecasts" ON public.yield_forecasts;
+CREATE POLICY "org_write_yield_forecasts" ON public.yield_forecasts
+  FOR INSERT WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_update_yield_forecasts" ON public.yield_forecasts;
+CREATE POLICY "org_update_yield_forecasts" ON public.yield_forecasts
+  FOR UPDATE USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_delete_yield_forecasts" ON public.yield_forecasts;
+CREATE POLICY "org_delete_yield_forecasts" ON public.yield_forecasts
+  FOR DELETE USING (public.is_organization_member(organization_id));
+
+-- =====================================================
+-- AI TABLE REALTIME PUBLICATION
+-- =====================================================
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.calibrations;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.performance_alerts;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.ai_recommendations;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.plan_interventions;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.monitoring_analyses;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.weather_daily;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.weather_forecast;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.yield_forecasts;
+EXCEPTION WHEN duplicate_object OR undefined_object THEN NULL;
+END $$;
 
 -- =====================================================
 -- END OF SCHEMA

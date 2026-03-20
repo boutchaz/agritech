@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useF3CampaignBilan } from '@/hooks/useF3Recalibration';
+import { useAnnualCampaignBilan } from '@/hooks/useAnnualRecalibration';
 
-interface F3CampaignBilanStepProps {
+interface AnnualCampaignBilanStepProps {
   parcelId: string;
   onReadyForAutoAdvance: () => void;
 }
@@ -14,8 +14,8 @@ function formatDelta(delta: number | null): string {
   return `${sign}${delta.toFixed(0)}%`;
 }
 
-export function F3CampaignBilanStep({ parcelId, onReadyForAutoAdvance }: F3CampaignBilanStepProps) {
-  const { data: bilan, isLoading, isError, refetch, isFetching } = useF3CampaignBilan(parcelId);
+export function AnnualCampaignBilanStep({ parcelId, onReadyForAutoAdvance }: AnnualCampaignBilanStepProps) {
+  const { data: bilan, isLoading, isError, refetch, isFetching } = useAnnualCampaignBilan(parcelId);
 
   useEffect(() => {
     if (bilan && !isLoading) {

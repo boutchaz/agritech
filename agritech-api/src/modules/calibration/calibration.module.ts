@@ -7,7 +7,7 @@ import { CalibrationController } from "./calibration.controller";
 import { CalibrationService } from "./calibration.service";
 import { CalibrationStateMachine } from "./calibration-state-machine";
 import { NutritionOptionService } from "./nutrition-option.service";
-import { F3RecalibrationService } from "./f3-recalibration.service";
+import { AnnualRecalibrationService } from "./annual-recalibration.service";
 
 @Module({
   imports: [
@@ -21,13 +21,13 @@ import { F3RecalibrationService } from "./f3-recalibration.service";
     CalibrationService,
     CalibrationStateMachine,
     NutritionOptionService,
-    F3RecalibrationService,
+    AnnualRecalibrationService,
   ],
   exports: [
     CalibrationService,
     CalibrationStateMachine,
     NutritionOptionService,
-    F3RecalibrationService,
+    AnnualRecalibrationService,
   ],
 })
 export class CalibrationModule {}

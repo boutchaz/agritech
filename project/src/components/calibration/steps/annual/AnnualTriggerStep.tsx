@@ -2,9 +2,9 @@ import { CalendarClock, Clock3, Sprout } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { useF3Eligibility } from '@/hooks/useF3Recalibration';
+import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 
-interface F3TriggerStepProps {
+interface AnnualTriggerStepProps {
   parcelId: string;
   onProceed: () => void;
   onSnooze: (days: number) => void;
@@ -22,8 +22,8 @@ function formatDate(date?: string): string {
   });
 }
 
-export function F3TriggerStep({ parcelId, onProceed, onSnooze }: F3TriggerStepProps) {
-  const { data: eligibility, isLoading } = useF3Eligibility(parcelId);
+export function AnnualTriggerStep({ parcelId, onProceed, onSnooze }: AnnualTriggerStepProps) {
+  const { data: eligibility, isLoading } = useAnnualEligibility(parcelId);
   const [customDays, setCustomDays] = useState<number>(14);
 
   return (
@@ -73,12 +73,12 @@ export function F3TriggerStep({ parcelId, onProceed, onSnooze }: F3TriggerStepPr
         </Button>
 
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50 dark:bg-gray-900/40">
-          <label htmlFor="f3-custom-snooze" className="text-sm font-medium text-gray-700 dark:text-gray-200">
+          <label htmlFor="annual-custom-snooze" className="text-sm font-medium text-gray-700 dark:text-gray-200">
             Rappeler dans X jours
           </label>
           <div className="mt-2 flex items-center gap-2">
             <Input
-              id="f3-custom-snooze"
+              id="annual-custom-snooze"
               type="number"
               min={1}
               max={180}

@@ -1,9 +1,9 @@
 import { Droplets, FlaskRound, Leaf, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { useF3NewAnalyses } from '@/hooks/useF3Recalibration';
+import { useAnnualNewAnalyses } from '@/hooks/useAnnualRecalibration';
 
-interface F3NewAnalysesStepProps {
+interface AnnualNewAnalysesStepProps {
   parcelId: string;
   onContinueIfNone: () => void;
 }
@@ -51,8 +51,8 @@ function analysisFormLink(parcelId: string, type: AnalysisKind): string {
   return `/parcels/${parcelId}/analyse?type=${mappedType}&returnTo=stay`;
 }
 
-export function F3NewAnalysesStep({ parcelId, onContinueIfNone }: F3NewAnalysesStepProps) {
-  const { data: analyses, isLoading } = useF3NewAnalyses(parcelId);
+export function AnnualNewAnalysesStep({ parcelId, onContinueIfNone }: AnnualNewAnalysesStepProps) {
+  const { data: analyses, isLoading } = useAnnualNewAnalyses(parcelId);
 
   const metadata = (analyses ?? {}) as NewAnalysesWithMetadata;
 

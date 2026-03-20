@@ -21,7 +21,7 @@ import { OrganizationGuard } from "../../common/guards/organization.guard";
 import { CalibrationService } from "./calibration.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
-import { F3RecalibrationService } from "./f3-recalibration.service";
+import { AnnualRecalibrationService } from "./annual-recalibration.service";
 
 @ApiTags("calibration")
 @ApiBearerAuth()
@@ -30,7 +30,7 @@ import { F3RecalibrationService } from "./f3-recalibration.service";
 export class CalibrationController {
   constructor(
     private readonly calibrationService: CalibrationService,
-    private readonly f3RecalibrationService: F3RecalibrationService,
+    private readonly annualRecalibrationService: AnnualRecalibrationService,
   ) {}
 
   @Post("start")
@@ -55,7 +55,7 @@ export class CalibrationController {
   @Post("partial")
   @ApiOperation({
     summary:
-      "Start partial recalibration (F2) for a specific data block change",
+      "Start partial recalibration for a specific data block change",
   })
   async startPartialRecalibration(
     @Param("parcelId") parcelId: string,
@@ -73,7 +73,7 @@ export class CalibrationController {
   @Get("readiness")
   @ApiOperation({
     summary:
-      "Check if parcel has enough data for calibration (F1 pre-launch check)",
+      "Check if parcel has enough data for calibration (pre-launch check)",
   })
   @ApiResponse({ status: 200, description: "Readiness check completed" })
   async checkCalibrationReadiness(
@@ -124,7 +124,7 @@ export class CalibrationController {
   }
 
   @Get("history/recalibration")
-  @ApiOperation({ summary: "Get partial recalibration history (F2) for a parcel" })
+  @ApiOperation({ summary: "Get partial recalibration history for a parcel" })
   @ApiResponse({
     status: 200,
     description: "Partial recalibration history retrieved successfully",
@@ -262,29 +262,29 @@ export class CalibrationController {
     return this.calibrationService.getZones(parcelId, organizationId);
   }
 
-  @Get("f3/eligibility")
-  @ApiOperation({ summary: "Check F3 annual recalibration eligibility" })
-  @ApiResponse({ status: 200, description: "F3 eligibility evaluated" })
-  async checkF3Eligibility(
+  @Get("annual/eligibility")
+  @ApiOperation({ summary: "Check annual recalibration eligibility" })
+  @ApiResponse({ status: 200, description: "Annual eligibility evaluated" })
+  async checkAnnualEligibility(
     @Param("parcelId") parcelId: string,
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.f3RecalibrationService.checkF3Eligibility(
+    return this.annualRecalibrationService.checkEligibility(
       parcelId,
       organizationId,
     );
   }
 
-  @Get("f3/missing-tasks")
-  @ApiOperation({ summary: "Detect missing annual tasks before F3" })
+  @Get("annual/missing-tasks")
+  @ApiOperation({ summary: "Detect missing annual tasks before annual recalibration" })
   @ApiResponse({ status: 200, description: "Missing tasks list generated" })
   async getMissingTasks(@Param("parcelId") parcelId: string, @Req() req: Request) {
     const organizationId = this.getOrganizationId(req);
-    return this.f3RecalibrationService.detectMissingTasks(parcelId, organizationId);
+    return this.annualRecalibrationService.detectMissingTasks(parcelId, organizationId);
   }
 
-  @Get("f3/new-analyses")
+  @Get("annual/new-analyses")
   @ApiOperation({ summary: "Check analyses created since latest calibration" })
   @ApiResponse({ status: 200, description: "New analyses availability checked" })
   async checkNewAnalyses(
@@ -306,37 +306,37 @@ export class CalibrationController {
       );
     }
 
-    return this.f3RecalibrationService.checkNewAnalyses(
+    return this.annualRecalibrationService.checkNewAnalyses(
       parcelId,
       organizationId,
       referenceDate,
     );
   }
 
-  @Get("f3/campaign-bilan")
-  @ApiOperation({ summary: "Generate automatic F3 campaign comparison" })
+  @Get("annual/campaign-bilan")
+  @ApiOperation({ summary: "Generate automatic annual campaign comparison" })
   @ApiResponse({ status: 200, description: "Campaign bilan generated" })
   async getCampaignBilan(
     @Param("parcelId") parcelId: string,
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.f3RecalibrationService.generateCampaignBilan(
+    return this.annualRecalibrationService.generateCampaignBilan(
       parcelId,
       organizationId,
     );
   }
 
-  @Post("f3/start")
-  @ApiOperation({ summary: "Start F3 annual post-campaign recalibration" })
-  @ApiResponse({ status: 201, description: "F3 recalibration started" })
+  @Post("annual/start")
+  @ApiOperation({ summary: "Start annual post-campaign recalibration" })
+  @ApiResponse({ status: 201, description: "Annual recalibration started" })
   async startAnnualRecalibration(
     @Param("parcelId") parcelId: string,
     @Body() dto: StartCalibrationDto,
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.f3RecalibrationService.startAnnualRecalibration(
+    return this.annualRecalibrationService.startAnnualRecalibration(
       parcelId,
       organizationId,
       dto,

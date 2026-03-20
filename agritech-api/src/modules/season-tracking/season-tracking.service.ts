@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { F3RecalibrationService } from "../calibration/f3-recalibration.service";
+import { AnnualRecalibrationService } from "../calibration/annual-recalibration.service";
 import { DatabaseService } from "../database/database.service";
 import { NotificationType } from "../notifications/dto/notification.dto";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -23,7 +23,7 @@ export interface SeasonRecord {
   applications: Record<string, unknown>[] | null;
   evenements: Record<string, unknown>[] | null;
   cloture_at: string | null;
-  recalibrage_f3_id: string | null;
+  recalibrage_annual_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -32,7 +32,7 @@ export interface SeasonRecord {
 export class SeasonTrackingService {
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly f3RecalibrationService: F3RecalibrationService,
+    private readonly annualRecalibrationService: AnnualRecalibrationService,
     private readonly notificationsService: NotificationsService,
   ) {}
 
@@ -150,7 +150,7 @@ export class SeasonTrackingService {
       throw new NotFoundException("Season not found");
     }
 
-    await this.handleF3TriggerAfterHarvestCompletion(
+    await this.handleAnnualTriggerAfterHarvestCompletion(
       userId,
       parcelId,
       organizationId,
@@ -160,7 +160,7 @@ export class SeasonTrackingService {
     return closedSeason as SeasonRecord;
   }
 
-  async handleF3TriggerAfterHarvestCompletion(
+  async handleAnnualTriggerAfterHarvestCompletion(
     userId: string,
     parcelId: string,
     organizationId: string,
@@ -169,13 +169,13 @@ export class SeasonTrackingService {
     eligible: boolean;
     snoozed_until?: string;
   }> {
-    const eligibility = await this.f3RecalibrationService.checkF3Eligibility(
+    const eligibility = await this.annualRecalibrationService.checkEligibility(
       parcelId,
       organizationId,
     );
 
     if (!eligibility.eligible) {
-      const snoozedUntil = await this.snoozeF3Reminder(
+      const snoozedUntil = await this.snoozeAnnualReminder(
         parcelId,
         organizationId,
         snoozeDays,
@@ -195,7 +195,7 @@ export class SeasonTrackingService {
         "Votre recolte est-elle completement terminee? Si oui, vous pouvez lancer le recalibrage annuel.",
       data: {
         parcel_id: parcelId,
-        f3_trigger_reason: eligibility.trigger_reason,
+        annual_trigger_reason: eligibility.trigger_reason,
         harvest_date: eligibility.harvest_date,
         days_since_harvest: eligibility.days_since_harvest,
         snooze_available: true,
@@ -205,7 +205,7 @@ export class SeasonTrackingService {
     return { eligible: true };
   }
 
-  async snoozeF3Reminder(
+  async snoozeAnnualReminder(
     parcelId: string,
     organizationId: string,
     days: number,
@@ -218,29 +218,29 @@ export class SeasonTrackingService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcel, error: parcelError } = await supabase
       .from("parcels")
-      .select("f3_trigger_config")
+      .select("annual_trigger_config")
       .eq("id", parcelId)
       .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (parcelError) {
       throw new BadRequestException(
-        `Failed to load parcel F3 trigger config: ${parcelError.message}`,
+        `Failed to load parcel annual trigger config: ${parcelError.message}`,
       );
     }
 
     const currentConfig =
       parcel &&
-      typeof parcel.f3_trigger_config === "object" &&
-      parcel.f3_trigger_config !== null &&
-      !Array.isArray(parcel.f3_trigger_config)
-        ? (parcel.f3_trigger_config as Record<string, unknown>)
+      typeof parcel.annual_trigger_config === "object" &&
+      parcel.annual_trigger_config !== null &&
+      !Array.isArray(parcel.annual_trigger_config)
+        ? (parcel.annual_trigger_config as Record<string, unknown>)
         : {};
 
     const { error: updateError } = await supabase
       .from("parcels")
       .update({
-        f3_trigger_config: {
+        annual_trigger_config: {
           ...currentConfig,
           snoozed_until: snoozedUntil,
         },
@@ -250,7 +250,7 @@ export class SeasonTrackingService {
 
     if (updateError) {
       throw new BadRequestException(
-        `Failed to snooze F3 reminder: ${updateError.message}`,
+        `Failed to snooze annual reminder: ${updateError.message}`,
       );
     }
 

@@ -2,9 +2,9 @@ import { CheckCircle2, ClipboardList, Droplets, Leaf, Scissors, ShieldAlert } fr
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { useF3MissingTasks } from '@/hooks/useF3Recalibration';
+import { useAnnualMissingTasks } from '@/hooks/useAnnualRecalibration';
 
-interface F3MissingTasksStepProps {
+interface AnnualMissingTasksStepProps {
   parcelId: string;
   onContinue: () => void;
 }
@@ -37,8 +37,8 @@ function statusLabel(resolution: TaskResolution): string {
   return 'En attente';
 }
 
-export function F3MissingTasksStep({ parcelId, onContinue }: F3MissingTasksStepProps) {
-  const { data: missingTasks, isLoading } = useF3MissingTasks(parcelId);
+export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTasksStepProps) {
+  const { data: missingTasks, isLoading } = useAnnualMissingTasks(parcelId);
   const [taskStates, setTaskStates] = useState<Record<string, TaskResolution>>({});
   const [quickEntryNotes, setQuickEntryNotes] = useState<Record<string, string>>({});
   const [quickEntryDates, setQuickEntryDates] = useState<Record<string, string>>({});

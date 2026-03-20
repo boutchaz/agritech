@@ -1,9 +1,9 @@
 import { ArrowRight, FileDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useF3CampaignBilan, useStartAnnualRecalibration } from '@/hooks/useF3Recalibration';
+import { useAnnualCampaignBilan, useStartAnnualRecalibration } from '@/hooks/useAnnualRecalibration';
 import { exportCampaignBilanPdf } from '@/lib/export/campaignReportPdf';
 
-interface F3BaselineValidationStepProps {
+interface AnnualBaselineValidationStepProps {
   parcelId: string;
   estimatedCampaignCount?: number;
   onValidated: () => void;
@@ -20,12 +20,12 @@ function safePercentage(value: number): string {
   return `${Math.max(0, Math.min(100, Math.round(value)))}%`;
 }
 
-export function F3BaselineValidationStep({
+export function AnnualBaselineValidationStep({
   parcelId,
   estimatedCampaignCount = 2,
   onValidated,
-}: F3BaselineValidationStepProps) {
-  const { data: bilan, isLoading } = useF3CampaignBilan(parcelId);
+}: AnnualBaselineValidationStepProps) {
+  const { data: bilan, isLoading } = useAnnualCampaignBilan(parcelId);
   const startAnnualRecalibration = useStartAnnualRecalibration(parcelId);
 
   if (isLoading || !bilan) {

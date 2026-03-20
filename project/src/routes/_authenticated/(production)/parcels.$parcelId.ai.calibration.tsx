@@ -87,7 +87,7 @@ import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
-import { useF3Eligibility } from '@/hooks/useF3Recalibration';
+import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -1433,7 +1433,7 @@ const AICalibrationPage = () => {
   const { isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
 
-  const { data: f3Eligibility, isLoading: isF3EligibilityLoading } = useF3Eligibility(
+  const { data: annualEligibility, isLoading: isAnnualEligibilityLoading } = useAnnualEligibility(
     phase === 'active' ? parcelId : '',
   );
 
@@ -1446,7 +1446,7 @@ const AICalibrationPage = () => {
   const isBusy = isCalibrating || isStarting;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage' || !phase;
-  const canShowF3Banner = phase === 'active' && f3Eligibility?.eligible === true;
+  const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
 
@@ -1547,7 +1547,7 @@ const AICalibrationPage = () => {
         </DialogContent>
       </Dialog>
 
-      {phase === 'active' && !isF3EligibilityLoading && canShowF3Banner && (
+      {phase === 'active' && !isAnnualEligibilityLoading && canShowAnnualBanner && (
         <div
           className="rounded-xl border border-green-200 dark:border-green-800/30 bg-green-50 dark:bg-green-900/20 p-4"
           data-testid="calibration-annual-eligibility-banner"

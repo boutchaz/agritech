@@ -3,74 +3,74 @@ import { toast } from 'sonner';
 import {
   calibrationV2Api,
   type CalibrationStatusRecord,
-  type F3CampaignBilanResponse,
-  type F3EligibilityResponse,
-  type F3MissingTask,
-  type F3NewAnalysesResponse,
+  type AnnualCampaignBilanResponse,
+  type AnnualEligibilityResponse,
+  type AnnualMissingTask,
+  type AnnualNewAnalysesResponse,
 } from '@/lib/api/calibration-v2';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from './useAuth';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-export function useF3Eligibility(parcelId: string) {
+export function useAnnualEligibility(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.f3.eligibility(parcelId, currentOrganization?.id),
-    queryFn: async (): Promise<F3EligibilityResponse> => {
+    queryKey: queryKeys.annual.eligibility(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<AnnualEligibilityResponse> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.checkF3Eligibility(parcelId, currentOrganization.id);
+      return calibrationV2Api.checkAnnualEligibility(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
   });
 }
 
-export function useF3MissingTasks(parcelId: string) {
+export function useAnnualMissingTasks(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.f3.missingTasks(parcelId, currentOrganization?.id),
-    queryFn: async (): Promise<F3MissingTask[]> => {
+    queryKey: queryKeys.annual.missingTasks(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<AnnualMissingTask[]> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.getF3MissingTasks(parcelId, currentOrganization.id);
+      return calibrationV2Api.getAnnualMissingTasks(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
   });
 }
 
-export function useF3NewAnalyses(parcelId: string) {
+export function useAnnualNewAnalyses(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.f3.newAnalyses(parcelId, currentOrganization?.id),
-    queryFn: async (): Promise<F3NewAnalysesResponse> => {
+    queryKey: queryKeys.annual.newAnalyses(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<AnnualNewAnalysesResponse> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.checkF3NewAnalyses(parcelId, currentOrganization.id);
+      return calibrationV2Api.checkAnnualNewAnalyses(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
   });
 }
 
-export function useF3CampaignBilan(parcelId: string) {
+export function useAnnualCampaignBilan(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.f3.campaignBilan(parcelId, currentOrganization?.id),
-    queryFn: async (): Promise<F3CampaignBilanResponse> => {
+    queryKey: queryKeys.annual.campaignBilan(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<AnnualCampaignBilanResponse> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.getF3CampaignBilan(parcelId, currentOrganization.id);
+      return calibrationV2Api.getAnnualCampaignBilan(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
@@ -96,16 +96,16 @@ export function useStartAnnualRecalibration(parcelId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.f3.eligibility(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.annual.eligibility(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.f3.missingTasks(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.annual.missingTasks(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.f3.newAnalyses(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.annual.newAnalyses(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.f3.campaignBilan(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.annual.campaignBilan(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibrationV2.status(parcelId, currentOrganization?.id),

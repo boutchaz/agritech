@@ -1,3 +1,8 @@
+---
+sidebar_position: 5
+title: "Date Palm (Palmier Dattier)"
+---
+
 **RÉFÉRENTIEL OPÉRATIONNEL COMPLET**
 
 ## PALMIER DATTIER AU MAROC

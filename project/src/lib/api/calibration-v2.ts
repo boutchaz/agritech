@@ -52,27 +52,27 @@ export interface CalibrationHistoryRecord {
   completed_at: string | null;
 }
 
-export interface F3EligibilityResponse {
+export interface AnnualEligibilityResponse {
   eligible: boolean;
   trigger_reason: "harvest_completed" | "date_reached" | "manual";
   harvest_date?: string;
   days_since_harvest?: number;
 }
 
-export interface F3MissingTask {
+export interface AnnualMissingTask {
   task_type: string;
   period: string;
   message: string;
   action: "quick_entry" | "confirm_not_done" | "ignore";
 }
 
-export interface F3NewAnalysesResponse {
+export interface AnnualNewAnalysesResponse {
   new_soil: boolean;
   new_water: boolean;
   new_foliar: boolean;
 }
 
-export interface F3CampaignBilanResponse {
+export interface AnnualCampaignBilanResponse {
   predicted_yield: { min: number; max: number };
   actual_yield: number | null;
   yield_deviation_pct: number | null;
@@ -229,7 +229,7 @@ export const calibrationV2Api = {
     );
   },
 
-  // F2 — Partial Recalibration
+  // Partial Recalibration
   async startPartialRecalibration(
     parcelId: string,
     dto: PartialRecalibrationDto,
@@ -243,46 +243,46 @@ export const calibrationV2Api = {
     );
   },
 
-  // F3 — Annual Recalibration
-  async checkF3Eligibility(
+  // Annual Recalibration
+  async checkAnnualEligibility(
     parcelId: string,
     organizationId?: string,
-  ): Promise<F3EligibilityResponse> {
-    return apiClient.get<F3EligibilityResponse>(
-      `${BASE_URL}/${parcelId}/calibration/f3/eligibility`,
+  ): Promise<AnnualEligibilityResponse> {
+    return apiClient.get<AnnualEligibilityResponse>(
+      `${BASE_URL}/${parcelId}/calibration/annual/eligibility`,
       {},
       organizationId,
     );
   },
 
-  async getF3MissingTasks(
+  async getAnnualMissingTasks(
     parcelId: string,
     organizationId?: string,
-  ): Promise<F3MissingTask[]> {
-    return apiClient.get<F3MissingTask[]>(
-      `${BASE_URL}/${parcelId}/calibration/f3/missing-tasks`,
+  ): Promise<AnnualMissingTask[]> {
+    return apiClient.get<AnnualMissingTask[]>(
+      `${BASE_URL}/${parcelId}/calibration/annual/missing-tasks`,
       {},
       organizationId,
     );
   },
 
-  async checkF3NewAnalyses(
+  async checkAnnualNewAnalyses(
     parcelId: string,
     organizationId?: string,
-  ): Promise<F3NewAnalysesResponse> {
-    return apiClient.get<F3NewAnalysesResponse>(
-      `${BASE_URL}/${parcelId}/calibration/f3/new-analyses`,
+  ): Promise<AnnualNewAnalysesResponse> {
+    return apiClient.get<AnnualNewAnalysesResponse>(
+      `${BASE_URL}/${parcelId}/calibration/annual/new-analyses`,
       {},
       organizationId,
     );
   },
 
-  async getF3CampaignBilan(
+  async getAnnualCampaignBilan(
     parcelId: string,
     organizationId?: string,
-  ): Promise<F3CampaignBilanResponse> {
-    return apiClient.get<F3CampaignBilanResponse>(
-      `${BASE_URL}/${parcelId}/calibration/f3/campaign-bilan`,
+  ): Promise<AnnualCampaignBilanResponse> {
+    return apiClient.get<AnnualCampaignBilanResponse>(
+      `${BASE_URL}/${parcelId}/calibration/annual/campaign-bilan`,
       {},
       organizationId,
     );
@@ -294,7 +294,7 @@ export const calibrationV2Api = {
     organizationId?: string,
   ): Promise<CalibrationStatusRecord> {
     return apiClient.post<CalibrationStatusRecord>(
-      `${BASE_URL}/${parcelId}/calibration/f3/start`,
+      `${BASE_URL}/${parcelId}/calibration/annual/start`,
       dto,
       {},
       organizationId,

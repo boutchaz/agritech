@@ -1,3 +1,8 @@
+---
+sidebar_position: 1
+title: "Crop Referentials Overview"
+---
+
 # Crop referentials
 
 This folder contains **crop referential** JSON files used for calibration and AI features. Each file holds all reference data for one crop type (varieties, phenology stages, thresholds, nutrition, etc.).

@@ -1,3 +1,8 @@
+---
+sidebar_position: 5
+title: "Development Setup & Commands"
+---
+
 # AGENTS.md - AgriTech Platform
 
 > AI agent reference for this multi-tenant agricultural SaaS monorepo.

@@ -151,15 +151,15 @@ export const queryKeys = {
       ['calibration-v2', organizationId ?? 'none', parcelId, 'history'] as const,
   },
 
-  f3: {
+  annual: {
     eligibility: (parcelId: string, organizationId?: string) =>
-      ['f3', 'eligibility', parcelId, organizationId ?? 'none'] as const,
+      ['annual', 'eligibility', parcelId, organizationId ?? 'none'] as const,
     missingTasks: (parcelId: string, organizationId?: string) =>
-      ['f3', 'missing-tasks', parcelId, organizationId ?? 'none'] as const,
+      ['annual', 'missing-tasks', parcelId, organizationId ?? 'none'] as const,
     newAnalyses: (parcelId: string, organizationId?: string) =>
-      ['f3', 'new-analyses', parcelId, organizationId ?? 'none'] as const,
+      ['annual', 'new-analyses', parcelId, organizationId ?? 'none'] as const,
     campaignBilan: (parcelId: string, organizationId?: string) =>
-      ['f3', 'campaign-bilan', parcelId, organizationId ?? 'none'] as const,
+      ['annual', 'campaign-bilan', parcelId, organizationId ?? 'none'] as const,
   },
 
   /**

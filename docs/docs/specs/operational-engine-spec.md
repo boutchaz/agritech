@@ -1,3 +1,8 @@
+---
+sidebar_position: 8
+title: "Operational Engine Specification"
+---
+
 ## MOTEUR OPÉRATIONNEL IA
 
 Phase 2 --- Diagnostic, Alertes et Recommandations

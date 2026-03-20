@@ -1,3 +1,8 @@
+---
+sidebar_position: 1
+title: "AI Workflow - 12 Phases"
+---
+
 ## WORKFLOW IA
 
 Processus Complet --- Diagnostic et Recommandation

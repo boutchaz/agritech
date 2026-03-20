@@ -4,7 +4,7 @@ import { useForm, type FieldPath } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   calibrationWizardDefaultValues,
-  type CalibrationWizardFormValues as F1CalibrationWizardFormValues,
+  type CalibrationWizardFormValues as FullCalibrationWizardFormValues,
 } from '@/schemas/calibrationWizardSchema';
 import { useStartPartialRecalibration } from '@/hooks/useCalibrationV2';
 import {
@@ -18,7 +18,7 @@ import {
 } from './steps/ImpactPreviewStep';
 import { RecalibrationValidationStep } from './steps/RecalibrationValidationStep';
 
-export type CalibrationWizardFormValues = F1CalibrationWizardFormValues;
+export type CalibrationWizardFormValues = FullCalibrationWizardFormValues;
 
 export type RecalibrationMotif =
   | 'water_source_change'

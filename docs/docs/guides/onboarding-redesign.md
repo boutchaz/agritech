@@ -1,3 +1,8 @@
+---
+sidebar_position: 2
+title: "Onboarding Redesign Plan"
+---
+
 # Onboarding Redesign Plan - "WOW Effect" Edition
 
 ## Current State Analysis

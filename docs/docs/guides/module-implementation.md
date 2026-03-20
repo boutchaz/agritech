@@ -1,3 +1,8 @@
+---
+sidebar_position: 3
+title: "Module Implementation Gap Analysis"
+---
+
 # Module Implementation Gap Analysis
 
 **Generated:** 2026-01-29

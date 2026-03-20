@@ -1,3 +1,8 @@
+---
+sidebar_position: 3
+title: "AI Feature Specifications"
+---
+
 # AgromindIA Feature Specifications
 
 Generated: 2026-03-18

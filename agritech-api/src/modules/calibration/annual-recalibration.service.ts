@@ -12,7 +12,7 @@ interface ParcelStateRow {
   id: string;
   crop_type: string | null;
   ai_phase: string | null;
-  f3_trigger_config?: unknown;
+  annual_trigger_config?: unknown;
 }
 
 interface CalibrationRow {
@@ -62,13 +62,13 @@ interface TriggerConfig {
 }
 
 @Injectable()
-export class F3RecalibrationService {
+export class AnnualRecalibrationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly calibrationService: CalibrationService,
   ) {}
 
-  async checkF3Eligibility(
+  async checkEligibility(
     parcelId: string,
     organizationId: string,
   ): Promise<{
@@ -113,7 +113,7 @@ export class F3RecalibrationService {
       };
     }
 
-    if (this.hasDateTriggerReached(parcel.crop_type, parcel.f3_trigger_config)) {
+    if (this.hasDateTriggerReached(parcel.crop_type, parcel.annual_trigger_config)) {
       return {
         eligible: true,
         trigger_reason: "date_reached",
@@ -373,7 +373,7 @@ export class F3RecalibrationService {
     organizationId: string,
     dto: StartCalibrationDto,
   ): Promise<CalibrationRecord> {
-    const eligibility = await this.checkF3Eligibility(parcelId, organizationId);
+    const eligibility = await this.checkEligibility(parcelId, organizationId);
     const hasValidatedBaseline = await this.hasValidatedBaseline(
       parcelId,
       organizationId,
@@ -467,7 +467,7 @@ export class F3RecalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from("parcels")
-      .select("id, crop_type, ai_phase, f3_trigger_config")
+      .select("id, crop_type, ai_phase, annual_trigger_config")
       .eq("id", parcelId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -794,7 +794,7 @@ export class F3RecalibrationService {
     const nextEvents = [
       ...rawEvents,
       {
-        type: "f3_alternance_projection",
+        type: "annual_alternance_projection",
         date: nowIso,
         alternance_status_next: alternanceStatus,
       },
@@ -825,15 +825,15 @@ export class F3RecalibrationService {
     }
 
     const calibrationData = this.toJsonObject(data.calibration_data);
-    const f3Data = this.toJsonObject(calibrationData.f3);
+    const annualData = this.toJsonObject(calibrationData.annual);
 
     await supabase
       .from("calibrations")
       .update({
         calibration_data: {
           ...calibrationData,
-          f3: {
-            ...f3Data,
+          annual: {
+            ...annualData,
             model_adjustment: {
               required: true,
               deviation_pct: deviationPct,

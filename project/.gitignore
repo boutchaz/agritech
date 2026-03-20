@@ -36,5 +36,6 @@ dist-ssr
 # Playwright
 test-results/
 playwright-report/
+playwright-report-integration/
 tests/
 e2e/.auth/

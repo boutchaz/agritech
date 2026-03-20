@@ -1,3 +1,8 @@
+---
+sidebar_position: 4
+title: "Reference Data Specifications"
+---
+
 # FEATURE SPECS REFERENCE
 
 Reference specifications extracted from crop knowledge-base documents.

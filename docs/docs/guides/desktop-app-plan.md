@@ -1,3 +1,8 @@
+---
+sidebar_position: 7
+title: "Desktop App Implementation Plan"
+---
+
 # Desktop App Plan - AgriTech Platform
 
 > Standalone desktop version using Tauri, with full org data export/import and offline-first architecture.

@@ -1,3 +1,8 @@
+---
+sidebar_position: 4
+title: "Mobile Responsive Guidelines"
+---
+
 # Mobile-Responsive Implementation Prompt
 
 ## Tech Stack

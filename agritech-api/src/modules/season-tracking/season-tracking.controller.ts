@@ -69,7 +69,7 @@ export class SeasonTrackingController {
   }
 
   @Post(":seasonId/close")
-  @ApiOperation({ summary: "Close a season and trigger F3 recalibration" })
+  @ApiOperation({ summary: "Close a season and trigger annual recalibration" })
   @ApiResponse({ status: 200, description: "Season closed successfully" })
   async closeSeason(
     @Param("parcelId") parcelId: string,

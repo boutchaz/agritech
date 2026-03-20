@@ -1,3 +1,8 @@
+---
+sidebar_position: 6
+title: "Platform Overview & Presentation"
+---
+
 # AGRIPROFY - Présentation Complète
 ## Extraction de toutes les informations de la présentation
 

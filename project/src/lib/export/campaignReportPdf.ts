@@ -1,4 +1,4 @@
-import type { F3CampaignBilanResponse } from '@/lib/api/calibration-v2';
+import type { AnnualCampaignBilanResponse } from '@/lib/api/calibration-v2';
 
 function formatNumber(value: number | null | undefined, digits = 1): string {
   if (value == null || Number.isNaN(value)) {
@@ -14,7 +14,7 @@ function formatPercent(value: number | null | undefined, digits = 1): string {
   return `${value.toFixed(digits)}%`;
 }
 
-function buildReportHtml(parcelId: string, bilan: F3CampaignBilanResponse): string {
+function buildReportHtml(parcelId: string, bilan: AnnualCampaignBilanResponse): string {
   const now = new Date();
   const generatedAt = now.toLocaleString('fr-FR');
 
@@ -88,7 +88,7 @@ function buildReportHtml(parcelId: string, bilan: F3CampaignBilanResponse): stri
 </html>`;
 }
 
-export function exportCampaignBilanPdf(parcelId: string, bilan: F3CampaignBilanResponse): void {
+export function exportCampaignBilanPdf(parcelId: string, bilan: AnnualCampaignBilanResponse): void {
   const popup = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=768');
   if (!popup) {
     return;

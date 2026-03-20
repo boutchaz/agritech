@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { F3BaselineValidationStep } from './steps/f3/F3BaselineValidationStep';
-import { F3CampaignBilanStep } from './steps/f3/F3CampaignBilanStep';
-import { F3MissingTasksStep } from './steps/f3/F3MissingTasksStep';
-import { F3NewAnalysesStep } from './steps/f3/F3NewAnalysesStep';
-import { F3TriggerStep } from './steps/f3/F3TriggerStep';
+import { AnnualBaselineValidationStep } from './steps/annual/AnnualBaselineValidationStep';
+import { AnnualCampaignBilanStep } from './steps/annual/AnnualCampaignBilanStep';
+import { AnnualMissingTasksStep } from './steps/annual/AnnualMissingTasksStep';
+import { AnnualNewAnalysesStep } from './steps/annual/AnnualNewAnalysesStep';
+import { AnnualTriggerStep } from './steps/annual/AnnualTriggerStep';
 
 interface AnnualRecalibrationWizardProps {
   parcelId: string;
@@ -63,20 +63,20 @@ export function AnnualRecalibrationWizard({
 
   const renderStep = () => {
     if (currentStep === 1) {
-      return <F3TriggerStep parcelId={parcelId} onProceed={goNext} onSnooze={handleSnooze} />;
+      return <AnnualTriggerStep parcelId={parcelId} onProceed={goNext} onSnooze={handleSnooze} />;
     }
 
     if (currentStep === 2) {
-      return <F3MissingTasksStep parcelId={parcelId} onContinue={goNext} />;
+      return <AnnualMissingTasksStep parcelId={parcelId} onContinue={goNext} />;
     }
 
     if (currentStep === 3) {
-      return <F3NewAnalysesStep parcelId={parcelId} onContinueIfNone={goNext} />;
+      return <AnnualNewAnalysesStep parcelId={parcelId} onContinueIfNone={goNext} />;
     }
 
     if (currentStep === 4) {
       return (
-        <F3CampaignBilanStep
+        <AnnualCampaignBilanStep
           parcelId={parcelId}
           onReadyForAutoAdvance={() => {
             setStep4Ready(true);
@@ -86,7 +86,7 @@ export function AnnualRecalibrationWizard({
     }
 
     return (
-      <F3BaselineValidationStep
+      <AnnualBaselineValidationStep
         parcelId={parcelId}
         estimatedCampaignCount={estimatedCampaignCount}
         onValidated={() => {

@@ -42,7 +42,7 @@ export class StartCalibrationDto {
   })
   @IsOptional()
   @IsString()
-  f3_trigger_reason?: string;
+  annual_trigger_reason?: string;
 
   @ApiPropertyOptional({
     description: "Annual: actual seasonal yield entered by user",
@@ -50,28 +50,28 @@ export class StartCalibrationDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  f3_actual_yield?: number;
+  annual_actual_yield?: number;
 
   @ApiPropertyOptional({
     description: "Annual: unit for actual seasonal yield (kg, tons, etc.)",
   })
   @IsOptional()
   @IsString()
-  f3_actual_yield_unit?: string;
+  annual_actual_yield_unit?: string;
 
   @ApiPropertyOptional({
     description: "Annual: user acknowledges unresolved seasonal tasks",
   })
   @IsOptional()
   @IsBoolean()
-  f3_missing_tasks_acknowledged?: boolean;
+  annual_missing_tasks_acknowledged?: boolean;
 
   @ApiPropertyOptional({
     description: "Annual: optional notes about campaign review before validation",
   })
   @IsOptional()
   @IsString()
-  f3_campaign_notes?: string;
+  annual_campaign_notes?: string;
 
   @ApiPropertyOptional({ description: "Partial: free text for motif=other" })
   @IsOptional()

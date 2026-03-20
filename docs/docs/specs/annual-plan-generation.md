@@ -1,3 +1,8 @@
+---
+sidebar_position: 2
+title: "Annual Plan Generation"
+---
+
 ## GÉNÉRATION DU PLAN ANNUEL
 
 Règles Algorithmiques pour le Moteur IA
