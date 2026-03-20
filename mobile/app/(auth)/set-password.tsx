@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/lib/api';
 import { colors } from '@/constants/theme';
 
 export default function SetPasswordScreen() {
+  const authenticatedHome = '/(drawer)/(tabs)' as Href;
   const { refreshSession } = useAuthStore();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -25,7 +26,7 @@ export default function SetPasswordScreen() {
     try {
       await authApi.changePassword(password);
       await refreshSession();
-      router.replace('/(tabs)');
+      router.replace(authenticatedHome);
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Unable to update password');
     } finally {

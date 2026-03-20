@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/constants/theme';
+import { ThemeProvider } from '@/providers/ThemeProvider';
 import { registerForPushNotifications } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -26,7 +27,7 @@ function CustomSplashScreen() {
   return (
     <View style={styles.splashContainer}>
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>AgriTech</Text>
+        <Text style={styles.logoText}>AgroGina</Text>
         <Text style={styles.logoSubtext}>Field</Text>
       </View>
       <ActivityIndicator size="large" color={colors.white} style={styles.loader} />
@@ -100,6 +101,7 @@ export default function RootLayout() {
   }
 
   return (
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <StatusBar style="auto" />
@@ -117,7 +119,6 @@ export default function RootLayout() {
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="task/[id]"
             options={{
@@ -135,6 +136,7 @@ export default function RootLayout() {
         </Stack>
       </GestureHandlerRootView>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

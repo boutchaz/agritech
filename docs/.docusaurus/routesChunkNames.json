@@ -5,18 +5,26 @@
       "plugin": "138e0e15"
     }
   },
-  "/-bfd": {
+  "/-71d": {
     "__comp": "5e95c892",
     "__context": {
       "plugin": "aba21aa0"
     }
   },
-  "/-bf1": {
+  "/-4bd": {
     "__comp": "a7bd4aaa",
     "__props": "22dd74f7"
   },
-  "/-14b": {
+  "/-3ef": {
     "__comp": "a94703ab"
+  },
+  "/architecture/desktop-app-df2": {
+    "__comp": "17896441",
+    "content": "b688d7d2"
+  },
+  "/architecture/mobile-app-a73": {
+    "__comp": "17896441",
+    "content": "372862f7"
   },
   "/architecture/overview-f3c": {
     "__comp": "17896441",
@@ -25,6 +33,22 @@
   "/database/schema-86d": {
     "__comp": "17896441",
     "content": "a9b4524a"
+  },
+  "/features/ai-calibration-c90": {
+    "__comp": "17896441",
+    "content": "b252d6ea"
+  },
+  "/features/ai-operational-engine-8ec": {
+    "__comp": "17896441",
+    "content": "d1deb27c"
+  },
+  "/features/calibration-v2-validation-report-616": {
+    "__comp": "17896441",
+    "content": "64e177df"
+  },
+  "/features/real-time-7dc": {
+    "__comp": "17896441",
+    "content": "94e78677"
   },
   "/features/satellite-analysis-1b8": {
     "__comp": "17896441",

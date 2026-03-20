@@ -1,0 +1,26 @@
+{
+  "id": "features/ai-calibration",
+  "title": "AI Calibration Engine",
+  "description": "Overview",
+  "source": "@site/docs/features/ai-calibration.md",
+  "sourceDirName": "features",
+  "slug": "/features/ai-calibration",
+  "permalink": "/features/ai-calibration",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Subscriptions & Module System",
+    "permalink": "/features/subscriptions"
+  },
+  "next": {
+    "title": "AI Operational Engine",
+    "permalink": "/features/ai-operational-engine"
+  }
+}

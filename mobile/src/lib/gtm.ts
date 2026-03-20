@@ -104,7 +104,7 @@ async function getDeviceInfo() {
       os_name: Platform.OS,
       os_version: String(Platform.Version),
       app_version: Constants.expoConfig?.version ?? Constants.manifest?.version ?? '1.0.0',
-      app_name: Constants.expoConfig?.name ?? 'AgriTech Field',
+      app_name: Constants.expoConfig?.name ?? 'AgroGina',
       platform: 'mobile',
     };
   } catch {
@@ -115,7 +115,7 @@ async function getDeviceInfo() {
       os_name: Platform.OS,
       os_version: String(Platform.Version),
       app_version: '1.0.0',
-      app_name: 'AgriTech Field',
+      app_name: 'AgroGina',
       platform: 'mobile',
     };
   }

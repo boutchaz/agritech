@@ -11,6 +11,16 @@
           "mainDocId": "intro",
           "docs": [
             {
+              "id": "architecture/desktop-app",
+              "path": "/architecture/desktop-app",
+              "sidebar": "docs"
+            },
+            {
+              "id": "architecture/mobile-app",
+              "path": "/architecture/mobile-app",
+              "sidebar": "docs"
+            },
+            {
               "id": "architecture/overview",
               "path": "/architecture/overview",
               "sidebar": "docs"
@@ -18,6 +28,26 @@
             {
               "id": "database/schema",
               "path": "/database/schema",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/ai-calibration",
+              "path": "/features/ai-calibration",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/ai-operational-engine",
+              "path": "/features/ai-operational-engine",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/calibration-v2-validation-report",
+              "path": "/features/calibration-v2-validation-report",
+              "sidebar": "docs"
+            },
+            {
+              "id": "features/real-time",
+              "path": "/features/real-time",
               "sidebar": "docs"
             },
             {

@@ -16,8 +16,8 @@
   },
   "sidebar": "docs",
   "previous": {
-    "title": "Architecture Overview",
-    "permalink": "/architecture/overview"
+    "title": "Desktop App (Tauri)",
+    "permalink": "/architecture/desktop-app"
   },
   "next": {
     "title": "Satellite Analysis Service",

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
-import { api, authApi, type UserProfile, type Organization, type Farm, type UserAbilities } from '@/lib/api';
+import { api, authApi, farmsApi, type UserProfile, type Organization, type Farm, type UserAbilities } from '@/lib/api';
 import { createAbility, type Ability } from '@/lib/ability';
 import {
   trackAuth,
@@ -115,11 +115,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       });
 
       if (currentOrganization) {
-        // Load both user role (legacy) and CASL abilities (source of truth)
-        await Promise.all([
+        const [, , farms] = await Promise.all([
           get().loadUserRole(),
           get().loadAbilities(),
+          farmsApi.getFarms().catch(() => [] as Farm[]),
         ]);
+        if (farms.length > 0) {
+          set({ currentFarm: farms[0] });
+        }
       }
 
       if (get().biometricEnabled) {
@@ -223,11 +226,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         });
 
         if (currentOrganization) {
-          // Load both user role (legacy) and CASL abilities (source of truth)
-          await Promise.all([
+          const [, , farms] = await Promise.all([
             get().loadUserRole(),
             get().loadAbilities(),
+            farmsApi.getFarms().catch(() => [] as Farm[]),
           ]);
+          if (farms.length > 0 && !get().currentFarm) {
+            set({ currentFarm: farms[0] });
+          }
         }
       } else {
         set({ isLoading: false });
@@ -315,7 +321,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Login to AgriTech',
+      promptMessage: 'Login to AgroGina',
       fallbackLabel: 'Use password',
     });
 

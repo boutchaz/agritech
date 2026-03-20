@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { farmsApi, parcelsApi } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 
 export const farmKeys = {
   all: ['farms'] as const,
@@ -17,10 +18,12 @@ export const parcelKeys = {
 };
 
 export function useFarms() {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: farmKeys.lists(),
     queryFn: () => farmsApi.getFarms(),
     staleTime: 10 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 
@@ -34,10 +37,12 @@ export function useFarm(farmId: string) {
 }
 
 export function useParcels(farmId?: string) {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: parcelKeys.list(farmId),
     queryFn: () => parcelsApi.getParcels(farmId),
     staleTime: 10 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 

@@ -1,0 +1,26 @@
+{
+  "id": "architecture/desktop-app",
+  "title": "Desktop App (Tauri)",
+  "description": "Overview",
+  "source": "@site/docs/architecture/desktop-app.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/desktop-app",
+  "permalink": "/architecture/desktop-app",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Mobile App (Expo/React Native)",
+    "permalink": "/architecture/mobile-app"
+  },
+  "next": {
+    "title": "Database Schema",
+    "permalink": "/database/schema"
+  }
+}

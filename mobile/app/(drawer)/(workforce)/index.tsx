@@ -1,14 +1,17 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, fontSize, spacing } from '@/constants/theme';
+import PageHeader from '@/components/PageHeader';
 
 export default function WorkforceScreen() {
   const { t } = useTranslation(['common', 'navigation']);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{t('domains.workforce', { ns: 'navigation' })}</Text>
-      <Text style={styles.subtitle}>{t('empty.noData', { ns: 'common' })}</Text>
+      <PageHeader title={t('domains.workforce', { ns: 'navigation', defaultValue: 'Workforce' })} onMorePress={() => {}} />
+      <View style={styles.body}>
+        <Text style={styles.subtitle}>{t('empty.noData', { ns: 'common', defaultValue: 'No data available' })}</Text>
+      </View>
     </View>
   );
 }
@@ -16,17 +19,15 @@ export default function WorkforceScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.gray[50],
+  },
+  body: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.gray[50],
     padding: spacing.lg,
   },
-  title: {
-    fontSize: fontSize.lg,
-    color: colors.gray[700],
-  },
   subtitle: {
-    marginTop: spacing.sm,
     fontSize: fontSize.sm,
     color: colors.gray[500],
     textAlign: 'center',

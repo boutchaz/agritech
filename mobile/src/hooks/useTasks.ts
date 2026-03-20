@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi, filesApi, type Task } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 import { scheduleTaskReminder, cancelTaskReminders } from '@/lib/notifications';
 
 export const taskKeys = {
@@ -14,10 +15,12 @@ export const taskKeys = {
 };
 
 export function useMyTasks() {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: taskKeys.myTasks(),
     queryFn: () => tasksApi.getMyTasks(),
     staleTime: 2 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 
@@ -39,10 +42,12 @@ export function useTask(taskId: string) {
 }
 
 export function useTaskStatistics() {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: taskKeys.statistics(),
     queryFn: () => tasksApi.getStatistics(),
     staleTime: 5 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 

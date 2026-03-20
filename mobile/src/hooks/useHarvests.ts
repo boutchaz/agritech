@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { harvestsApi, filesApi, type HarvestRecord } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 
 export const harvestKeys = {
   all: ['harvests'] as const,
@@ -10,10 +11,12 @@ export const harvestKeys = {
 };
 
 export function useHarvests(filters?: { dateFrom?: string; dateTo?: string; farmId?: string }) {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: harvestKeys.list(filters || {}),
     queryFn: () => harvestsApi.getHarvests(filters),
     staleTime: 5 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 

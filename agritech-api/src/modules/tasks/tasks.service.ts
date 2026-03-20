@@ -86,7 +86,6 @@ export class TasksService {
       ? ["pending", "assigned", "in_progress", "completed"]
       : ["pending", "assigned", "in_progress"];
 
-    // Get tasks where user is assigned (via assigned_user_id) or linked to a worker
     const { data: tasks, error } = await client
       .from("tasks")
       .select(
@@ -99,7 +98,6 @@ export class TasksService {
       `,
       )
       .in("organization_id", organizationIds)
-      .or(`assigned_user_id.eq.${userId}`)
       .in("status", statuses)
       .order("scheduled_start", { ascending: true, nullsFirst: false });
 
@@ -107,9 +105,8 @@ export class TasksService {
       throw new Error(`Failed to fetch user tasks: ${error.message}`);
     }
 
-    // Filter to only include tasks where user is directly assigned or assigned via worker
     const userTasks = (tasks || []).filter((task) => {
-      if (task.assigned_user_id === userId) return true;
+      if (task.created_by === userId) return true;
       if (task.worker?.user_id === userId) return true;
       return false;
     });

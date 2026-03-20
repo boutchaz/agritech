@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, spacing, borderRadius, fontSize } from '@/constants/theme';
@@ -29,35 +29,21 @@ export default function LoginScreen() {
   const authenticateWithBiometric = useAuthStore((s) => s.authenticateWithBiometric);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const authenticatedHome = '/(drawer)/(tabs)' as Href;
 
   useEffect(() => {
     if (isAuthenticated) {
       console.log('[Login] User authenticated, redirecting to tabs...');
-      router.replace('/(tabs)');
+      router.replace(authenticatedHome);
     }
-  }, [isAuthenticated, router]);
+  }, [authenticatedHome, isAuthenticated, router]);
 
-  useEffect(() => {
-    checkBiometric();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function checkBiometric() {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-    setHasBiometric(hasHardware && isEnrolled && biometricEnabled);
-
-    if (hasHardware && isEnrolled && biometricEnabled) {
-      handleBiometricLogin();
-    }
-  }
-
-  async function handleBiometricLogin() {
+  const handleBiometricLogin = useCallback(async () => {
     setIsSubmitting(true);
     try {
       const success = await authenticateWithBiometric();
       if (success) {
-        router.replace('/(tabs)');
+        router.replace(authenticatedHome);
       } else {
         Alert.alert('Biometric Failed', 'Please use your email and password.');
       }
@@ -66,7 +52,21 @@ export default function LoginScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  }, [authenticateWithBiometric, authenticatedHome, router]);
+
+  const checkBiometric = useCallback(async () => {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    setHasBiometric(hasHardware && isEnrolled && biometricEnabled);
+
+    if (hasHardware && isEnrolled && biometricEnabled) {
+      await handleBiometricLogin();
+    }
+  }, [biometricEnabled, handleBiometricLogin]);
+
+  useEffect(() => {
+    void checkBiometric();
+  }, [checkBiometric]);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -79,7 +79,7 @@ export default function LoginScreen() {
        console.log('[Login] Attempting sign in...');
        await signIn(email.trim().toLowerCase(), password.trim());
        console.log('[Login] Sign in successful, navigating...');
-       router.replace('/(tabs)');
+       router.replace(authenticatedHome);
     } catch (error) {
       console.error('[Login] Sign in failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed';
@@ -103,8 +103,8 @@ export default function LoginScreen() {
             <View style={styles.logoContainer}>
               <Ionicons name="leaf" size={48} color={colors.white} />
             </View>
-            <Text style={styles.title}>AgriTech Field</Text>
-            <Text style={styles.subtitle}>Farm Worker Mobile App</Text>
+            <Text style={styles.title}>AgroGina</Text>
+            <Text style={styles.subtitle}>Agricultural Operations Mobile App</Text>
           </View>
 
           <View style={styles.form}>

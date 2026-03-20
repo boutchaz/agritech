@@ -1,0 +1,5 @@
+cms                                      |  WARN  Unsupported engine: wanted: {"node":">=20.0.0 <=24.x.x"} (current: {"node":"v25.8.0","pnpm":"9.15.0"})
+
+> agriprofy@0.0.0 type-check /Users/boutchaz/Documents/CodeLovers/agritech/project
+> tsc --noEmit
+

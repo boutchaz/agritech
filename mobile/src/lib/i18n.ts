@@ -36,13 +36,13 @@ if (I18nManager.isRTL !== isRTL) {
   I18nManager.forceRTL(isRTL);
 }
 
-void i18n.use(initReactI18next).init({
+i18n.use(initReactI18next).init({
   resources,
   lng: locale,
   fallbackLng: 'en',
   defaultNS: 'common',
   interpolation: { escapeValue: false },
-  compatibilityJSON: 'v4',
+  compatibilityJSON: 'v3',
 });
 
 export default i18n;

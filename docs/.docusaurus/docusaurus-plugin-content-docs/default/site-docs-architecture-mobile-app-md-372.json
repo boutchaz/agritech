@@ -1,0 +1,26 @@
+{
+  "id": "architecture/mobile-app",
+  "title": "Mobile App (Expo/React Native)",
+  "description": "Overview",
+  "source": "@site/docs/architecture/mobile-app.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/mobile-app",
+  "permalink": "/architecture/mobile-app",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Architecture Overview",
+    "permalink": "/architecture/overview"
+  },
+  "next": {
+    "title": "Desktop App (Tauri)",
+    "permalink": "/architecture/desktop-app"
+  }
+}

@@ -20,7 +20,7 @@
     "permalink": "/getting-started/quick-start"
   },
   "next": {
-    "title": "Database Schema",
-    "permalink": "/database/schema"
+    "title": "Mobile App (Expo/React Native)",
+    "permalink": "/architecture/mobile-app"
   }
 }

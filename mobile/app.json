@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "AgriTech Field",
-    "slug": "agritech-field",
+    "name": "AgroGina",
+    "slug": "agrogina",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "agritech",
+    "scheme": "agrogina",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,17 +15,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.agritech.field",
+      "bundleIdentifier": "com.agrogina.field",
       "infoPlist": {
-        "NSCameraUsageDescription": "AgriTech needs camera access to capture harvest photos and document crop conditions.",
-        "NSLocationWhenInUseUsageDescription": "AgriTech needs location access to record harvest locations and track deliveries.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "AgriTech needs background location for delivery tracking and geofenced clock-in.",
-        "NSFaceIDUsageDescription": "AgriTech uses Face ID for secure and quick authentication.",
-        "NSMicrophoneUsageDescription": "AgriTech needs microphone access for voice notes in the field."
+        "NSCameraUsageDescription": "AgroGina needs camera access to capture harvest photos and document crop conditions.",
+        "NSLocationWhenInUseUsageDescription": "AgroGina needs location access to record harvest locations and track deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "AgroGina needs background location for delivery tracking and geofenced clock-in.",
+        "NSFaceIDUsageDescription": "AgroGina uses Face ID for secure and quick authentication.",
+        "NSMicrophoneUsageDescription": "AgroGina needs microphone access for voice notes in the field."
       }
     },
     "android": {
-      "package": "com.agritech.field",
+      "package": "com.agrogina.field",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#16a34a"
@@ -50,29 +50,30 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AgriTech to access your camera for harvest documentation."
+          "cameraPermission": "Allow AgroGina to access your camera for harvest documentation."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow AgriTech to use your location for field tracking and geofencing.",
+          "locationAlwaysAndWhenInUsePermission": "Allow AgroGina to use your location for field tracking and geofencing.",
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AgriTech to access your photos for documentation."
+          "photosPermission": "Allow AgroGina to access your photos for documentation."
         }
       ],
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow AgriTech to use Face ID for quick login."
+          "faceIDPermission": "Allow AgroGina to use Face ID for quick login."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

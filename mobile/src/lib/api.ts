@@ -5,6 +5,15 @@ import * as Device from 'expo-device';
 import { Config, APP_CONFIG } from '@/constants/config';
 import { trackError } from './gtm';
 
+function resolveOrganizationId(): string | null {
+  try {
+    const mod = require('../stores/authStore');
+    return mod.useAuthStore?.getState()?.currentOrganization?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const ACCESS_TOKEN_KEY = 'agritech_access_token';
 const REFRESH_TOKEN_KEY = 'agritech_refresh_token';
 const ORGANIZATION_ID_KEY = 'agritech_organization_id';
@@ -67,6 +76,9 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = `${Config.API_URL}/api/v1`;
+    if (__DEV__) {
+      console.log(`[API] Base URL: ${this.baseUrl} (env: ${Config.environment})`);
+    }
   }
 
   async initialize(): Promise<void> {
@@ -157,8 +169,13 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    if (this.organizationId) {
-      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    const orgId = this.organizationId || resolveOrganizationId();
+    if (orgId) {
+      (headers as Record<string, string>)['x-organization-id'] = orgId;
+    }
+
+    if (__DEV__) {
+      console.log(`[API] ${options.method || 'GET'} ${url}`, { orgId, orgIdSource: this.organizationId ? 'instance' : 'store', hasToken: !!this.accessToken });
     }
 
     const controller = new AbortController();
@@ -205,6 +222,9 @@ class ApiClient {
         await this.clearTokens();
       }
 
+      if (__DEV__) {
+        console.error(`[API] ERROR ${response.status} ${endpoint}:`, error.message);
+      }
       throw new Error(error.message || 'Request failed');
     }
 
@@ -212,7 +232,12 @@ class ApiClient {
       return {} as T;
     }
 
-    return response.json();
+    const data = await response.json();
+    if (__DEV__) {
+      const preview = JSON.stringify(data).slice(0, 200);
+      console.log(`[API] OK ${endpoint} →`, preview);
+    }
+    return data;
   }
 
   async get<T>(endpoint: string): Promise<T> {
@@ -260,8 +285,9 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    if (this.organizationId) {
-      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    const uploadOrgId = this.organizationId || resolveOrganizationId();
+    if (uploadOrgId) {
+      (headers as Record<string, string>)['x-organization-id'] = uploadOrgId;
     }
 
     const response = await fetch(url, {
@@ -304,8 +330,14 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   logo_url: string | null;
+  currency_code: string;
+  timezone: string;
+  is_active: boolean;
   role: string;
+  role_display_name: string;
+  role_level: number;
 }
 
 export interface Farm {
@@ -403,7 +435,7 @@ export const authApi = {
   changePassword: (newPassword: string) =>
     api.post<{ success: boolean }>('/auth/change-password', { newPassword }),
 
-  getOrganizations: () => api.get<Organization[]>('/auth/organizations'),
+  getOrganizations: () => api.get<Organization[]>('/users/me/organizations'),
 
   getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),
 
@@ -428,13 +460,21 @@ export const tasksApi = {
 
   getTask: (taskId: string) => api.get<Task>(`/tasks/${taskId}`),
 
-  getStatistics: () => api.get<{
-    total: number;
-    pending: number;
-    in_progress: number;
-    completed: number;
-    overdue: number;
-  }>('/tasks/statistics'),
+  getStatistics: async () => {
+    const res = await api.get<{
+      total_tasks: number;
+      completed_tasks: number;
+      in_progress_tasks: number;
+      overdue_tasks: number;
+    }>('/tasks/statistics');
+    return {
+      total: res.total_tasks ?? 0,
+      pending: (res.total_tasks ?? 0) - (res.completed_tasks ?? 0) - (res.in_progress_tasks ?? 0),
+      in_progress: res.in_progress_tasks ?? 0,
+      completed: res.completed_tasks ?? 0,
+      overdue: res.overdue_tasks ?? 0,
+    };
+  },
 
   createTask: (data: Partial<Task>) => api.post<Task>('/tasks', data),
 
@@ -505,23 +545,40 @@ export const harvestsApi = {
 };
 
 export const farmsApi = {
-  getFarms: () => {
-    return api.get<Farm[]>('/farms');
+  getFarms: async (): Promise<Farm[]> => {
+    const res = await api.get<{ success: boolean; farms: Array<Record<string, unknown>> }>('/farms');
+    return (res.farms || []).map((f) => ({
+      id: (f.farm_id as string) || (f.id as string),
+      name: (f.farm_name as string) || (f.name as string) || '',
+      location: (f.farm_location as string | null) ?? null,
+      size: (f.farm_size as number | null) ?? null,
+      size_unit: (f.size_unit as string | null) ?? null,
+    }));
   },
 
-  getFarm: (farmId: string) => {
-    return api.get<Farm>(`/farms/${farmId}`);
+  getFarm: async (farmId: string): Promise<Farm> => {
+    const res = await api.get<{ success: boolean; farm: Record<string, unknown> }>(`/farms/${farmId}`);
+    const f = res.farm || res;
+    return {
+      id: (f.farm_id as string) || (f.id as string),
+      name: (f.farm_name as string) || (f.name as string) || '',
+      location: (f.farm_location as string | null) ?? null,
+      size: (f.farm_size as number | null) ?? null,
+      size_unit: (f.size_unit as string | null) ?? null,
+    };
   },
 };
 
 export const parcelsApi = {
-  getParcels: (farmId?: string) => {
+  getParcels: async (farmId?: string): Promise<Parcel[]> => {
     const query = farmId ? `?farm_id=${farmId}` : '';
-    return api.get<Parcel[]>(`/parcels${query}`);
+    const res = await api.get<{ success: boolean; parcels: Parcel[] }>(`/parcels${query}`);
+    return res.parcels || [];
   },
 
-  getParcel: (parcelId: string) => {
-    return api.get<Parcel>(`/parcels/${parcelId}`);
+  getParcel: async (parcelId: string): Promise<Parcel> => {
+    const res = await api.get<{ success: boolean; parcel: Parcel }>(`/parcels/${parcelId}`);
+    return res.parcel || res;
   },
 };
 

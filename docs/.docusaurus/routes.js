@@ -9,16 +9,28 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', 'bfd'),
+    component: ComponentCreator('/', '71d'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', 'bf1'),
+        component: ComponentCreator('/', '4bd'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '14b'),
+            component: ComponentCreator('/', '3ef'),
             routes: [
+              {
+                path: '/architecture/desktop-app',
+                component: ComponentCreator('/architecture/desktop-app', 'df2'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/architecture/mobile-app',
+                component: ComponentCreator('/architecture/mobile-app', 'a73'),
+                exact: true,
+                sidebar: "docs"
+              },
               {
                 path: '/architecture/overview',
                 component: ComponentCreator('/architecture/overview', 'f3c'),
@@ -28,6 +40,30 @@ export default [
               {
                 path: '/database/schema',
                 component: ComponentCreator('/database/schema', '86d'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/ai-calibration',
+                component: ComponentCreator('/features/ai-calibration', 'c90'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/ai-operational-engine',
+                component: ComponentCreator('/features/ai-operational-engine', '8ec'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/calibration-v2-validation-report',
+                component: ComponentCreator('/features/calibration-v2-validation-report', '616'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/features/real-time',
+                component: ComponentCreator('/features/real-time', '7dc'),
                 exact: true,
                 sidebar: "docs"
               },

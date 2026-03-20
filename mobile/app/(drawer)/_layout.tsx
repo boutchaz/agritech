@@ -77,6 +77,8 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
   const { t } = useTranslation(['auth', 'common', 'navigation']);
   const { can } = useAbility();
   const profile = useAuthStore((state) => state.profile);
+  const role = useAuthStore((state) => state.role);
+  const abilities = useAuthStore((state) => state.abilities);
   const currentOrganization = useAuthStore((state) => state.currentOrganization);
   const signOut = useAuthStore((state) => state.signOut);
 
@@ -86,6 +88,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
   );
 
   const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ');
+  const roleLabel =
+    abilities?.role?.display_name ||
+    (role ? role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()) : null);
 
   async function handleSignOut() {
     Alert.alert(t('logout.title', { ns: 'auth' }), t('logout.confirm', { ns: 'auth' }), [
@@ -108,6 +113,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
       <View style={styles.drawerHeader}>
         <Text style={styles.orgName}>{currentOrganization?.name ?? t('app.name', { ns: 'common' })}</Text>
         <Text style={styles.userName}>{userName || profile?.email || t('selectOrganization', { ns: 'auth' })}</Text>
+        {roleLabel ? <Text style={styles.userRole}>{roleLabel}</Text> : null}
       </View>
 
       <ScrollView style={styles.itemsContainer} contentContainerStyle={styles.itemsContent}>
@@ -188,6 +194,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     fontSize: fontSize.sm,
     color: colors.primary[100],
+  },
+  userRole: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: colors.primary[200],
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   itemsContainer: {
     flex: 1,
