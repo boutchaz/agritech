@@ -545,7 +545,7 @@ export class TasksService {
     const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization and get current status
-    const { data: existingTask } = await client
+    const { data: existingTask, error: findError } = await client
       .from("tasks")
       .select(
         "id, status, assigned_to, start_date, end_date, title, task_type, farm_id, organization_id, due_date, parcel_id",
@@ -555,6 +555,9 @@ export class TasksService {
       .maybeSingle();
 
     if (!existingTask) {
+      this.logger.error(
+        `Task not found: taskId=${taskId}, organizationId=${organizationId}, userId=${userId}, dbError=${findError?.message || 'none'}`,
+      );
       throw new NotFoundException("Task not found");
     }
 
