@@ -19,6 +19,10 @@ import {
   CalendarClock,
   Flame,
   Target,
+  ListChecks,
+  Repeat,
+  GitBranch,
+  Paperclip,
 } from 'lucide-react';
 import { usePaginatedTasks, useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { tasksApi } from '../../lib/api/tasks';
@@ -113,8 +117,10 @@ const TasksList: React.FC<TasksListProps> = ({
   // Calculate enhanced stats
   const stats = {
     pending: allTasksForStats.filter(t => t.status === 'pending').length,
+    assigned: allTasksForStats.filter(t => t.status === 'assigned').length,
     in_progress: allTasksForStats.filter(t => t.status === 'in_progress').length,
     completed: allTasksForStats.filter(t => t.status === 'completed').length,
+    on_hold: allTasksForStats.filter(t => t.status === 'paused').length,
     overdue: allTasksForStats.filter(t => t.status === 'overdue').length,
     dueToday: allTasksForStats.filter(t => t.due_date && isToday(new Date(t.due_date))).length,
     completionRate: allTasksForStats.length > 0
@@ -253,7 +259,7 @@ const TasksList: React.FC<TasksListProps> = ({
       </div>
 
       {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
         {/* Pending */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
           <div className="flex items-center justify-between">
@@ -267,15 +273,28 @@ const TasksList: React.FC<TasksListProps> = ({
           </div>
         </div>
 
-        {/* In Progress */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-500">
+        {/* Assigned */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-400">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.in_progress}</p>
+              <p className="text-xs text-blue-500 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.assigned', 'Assigned')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.assigned}</p>
             </div>
             <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
-              <Play className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
+              <User className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* In Progress */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-purple-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.in_progress}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg hidden sm:block">
+              <Play className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
             </div>
           </div>
         </div>
@@ -293,6 +312,19 @@ const TasksList: React.FC<TasksListProps> = ({
           </div>
         </div>
 
+        {/* On Hold (Paused) */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-amber-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">{t('tasks.stats.onHold', 'On Hold')}</p>
+              <p className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.on_hold}</p>
+            </div>
+            <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg hidden sm:block">
+              <Pause className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600" />
+            </div>
+          </div>
+        </div>
+
         {/* Overdue */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
           <div className="flex items-center justify-between">
@@ -302,19 +334,6 @@ const TasksList: React.FC<TasksListProps> = ({
             </div>
             <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
               <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Due Today */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-orange-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-orange-600 dark:text-orange-400 uppercase tracking-wide truncate">{t('tasks.stats.dueToday', 'Due Today')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.dueToday}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg hidden sm:block">
-              <Flame className="w-4 sm:w-5 h-4 sm:h-5 text-orange-600" />
             </div>
           </div>
         </div>
@@ -420,7 +439,7 @@ const TasksList: React.FC<TasksListProps> = ({
           >
             {t('tasks.listPage.filters.all')}
           </button>
-          {(['pending', 'assigned', 'in_progress', 'completed', 'overdue'] as TaskStatus[]).map(status => (
+          {(['pending', 'assigned', 'in_progress', 'completed', 'paused', 'overdue'] as TaskStatus[]).map(status => (
             <button
               key={status}
               onClick={() => handleStatusFilter(status)}
@@ -552,10 +571,10 @@ const TasksList: React.FC<TasksListProps> = ({
                             </span>
                           )}
                           <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                            {getTaskPriorityLabel(task.priority, i18n.language)}
+                            {getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr')}
                           </span>
                           <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
-                            {getTaskStatusLabel(task.status, i18n.language)}
+                            {getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr')}
                           </span>
                           {/* Due Date Indicator */}
                           {dueDateStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
@@ -619,6 +638,38 @@ const TasksList: React.FC<TasksListProps> = ({
                             <div className="flex items-center gap-1">
                               <MessageSquare className="w-4 h-4" />
                               <span>{task.comment_count}</span>
+                            </div>
+                          )}
+
+                          {/* Checklist indicator */}
+                          {task.checklist && task.checklist.length > 0 && (
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <ListChecks className="w-3.5 h-3.5" />
+                              <span className="text-xs">
+                                {task.checklist.filter((item: any) => item.completed).length}/{task.checklist.length}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Attachment count */}
+                          {task.attachments && task.attachments.length > 0 && (
+                            <div className="flex items-center gap-1 text-gray-500">
+                              <Paperclip className="w-3.5 h-3.5" />
+                              <span className="text-xs">{task.attachments.length}</span>
+                            </div>
+                          )}
+
+                          {/* Recurring indicator */}
+                          {task.repeat_pattern && (
+                            <div className="flex items-center gap-1 text-purple-500" title={`Recurring: ${task.repeat_pattern.frequency}`}>
+                              <Repeat className="w-3.5 h-3.5" />
+                            </div>
+                          )}
+
+                          {/* Parent task indicator */}
+                          {task.parent_task_id && (
+                            <div className="flex items-center gap-1 text-indigo-500" title="Part of recurring series">
+                              <GitBranch className="w-3.5 h-3.5" />
                             </div>
                           )}
                         </div>

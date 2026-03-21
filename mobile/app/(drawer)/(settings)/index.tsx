@@ -86,7 +86,7 @@ export default function SettingsScreen() {
           icon="person-outline"
           title={t('settings.profile', 'Profile')}
           subtitle={user?.email || t('settings.manageProfile', 'Manage your profile')}
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(settings)/profile')}
           themeColors={themeColors}
         />
 
@@ -94,7 +94,7 @@ export default function SettingsScreen() {
           icon="business-outline"
           title={t('settings.organization', 'Organization')}
           subtitle={organization?.name || t('settings.manageOrg', 'Manage organization')}
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(settings)/organization')}
           themeColors={themeColors}
         />
 
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
           icon="people-outline"
           title={t('settings.team', 'Team Members')}
           subtitle={t('settings.teamSubtitle', 'Manage team access')}
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(settings)/team')}
           themeColors={themeColors}
         />
 
@@ -113,7 +113,7 @@ export default function SettingsScreen() {
           icon="globe-outline"
           title={t('settings.language', 'Language')}
           subtitle="English, Fran\u00e7ais, \u0627\u0644\u0639\u0631\u0628\u064a\u0629"
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(settings)/language')}
           themeColors={themeColors}
         />
 

@@ -27,6 +27,10 @@ import {
   CalendarClock,
   GripVertical,
   Loader2,
+  ListChecks,
+  Repeat,
+  GitBranch,
+  Paperclip,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { isToday, isTomorrow, isPast, format } from 'date-fns';
@@ -238,6 +242,48 @@ function SortableTaskCard({ task, lang, onSelect, isDragOverlay }: SortableTaskC
           </div>
         )}
       </div>
+
+      {/* Extra indicators row */}
+      {(
+        (task.checklist && task.checklist.length > 0) ||
+        (task.attachments && task.attachments.length > 0) ||
+        task.repeat_pattern ||
+        task.parent_task_id
+      ) && (
+        <div className="flex flex-wrap items-center gap-2.5 mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          {/* Checklist indicator */}
+          {task.checklist && task.checklist.length > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+              <ListChecks className="w-3.5 h-3.5" />
+              <span className="text-xs">
+                {task.checklist.filter((item: any) => item.completed).length}/{task.checklist.length}
+              </span>
+            </div>
+          )}
+
+          {/* Attachment count */}
+          {task.attachments && task.attachments.length > 0 && (
+            <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+              <Paperclip className="w-3.5 h-3.5" />
+              <span className="text-xs">{task.attachments.length}</span>
+            </div>
+          )}
+
+          {/* Recurring indicator */}
+          {task.repeat_pattern && (
+            <div className="flex items-center gap-1 text-purple-500" title={`Recurring: ${task.repeat_pattern.frequency}`}>
+              <Repeat className="w-3.5 h-3.5" />
+            </div>
+          )}
+
+          {/* Parent task indicator */}
+          {task.parent_task_id && (
+            <div className="flex items-center gap-1 text-indigo-500" title="Part of recurring series">
+              <GitBranch className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

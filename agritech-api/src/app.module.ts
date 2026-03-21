@@ -41,6 +41,7 @@ import { CustomersModule } from "./modules/customers/customers.module";
 import { SuppliersModule } from "./modules/suppliers/suppliers.module";
 import { OrganizationUsersModule } from "./modules/organization-users/organization-users.module";
 import { SatelliteIndicesModule } from "./modules/satellite-indices/satellite-indices.module";
+import { WeatherModule } from "./modules/weather/weather.module";
 import { WorkUnitsModule } from "./modules/work-units/work-units.module";
 import { SoilAnalysesModule } from "./modules/soil-analyses/soil-analyses.module";
 import { AnalysesModule } from "./modules/analyses/analyses.module";
@@ -160,6 +161,7 @@ import { AuditModule } from "./modules/audit/audit.module";
     FarmsModule,
     ParcelsModule,
     SatelliteIndicesModule,
+    WeatherModule,
     SoilAnalysesModule,
     AnalysesModule,
     StructuresModule,
