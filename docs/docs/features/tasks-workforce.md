@@ -5,349 +5,399 @@ title: "Tasks & Workforce"
 
 # Tasks & Workforce
 
-The Tasks & Workforce system covers task lifecycle management, worker profiles, time tracking, piece-work payment tracking, and automated reminders. All endpoints are multi-tenant, scoped by `organization_id`, and protected by JWT authentication with CASL-based permission guards.
+The Tasks & Workforce module is the operational backbone of AgroGina — it connects **what needs to happen** in the field with **who does it**, **how long it takes**, and **how much it costs**. Every task completion can automatically trigger accounting entries, stock deductions, and harvest records.
 
-## Task Management
+## Who Uses This and Why
 
-### Task CRUD
+```mermaid
+mindmap
+  root((Tasks & Workforce))
+    Farm Manager
+      Plan seasonal operations
+      Assign workers to parcels
+      Track costs per task type
+      Monitor overdue tasks
+    Field Worker
+      See my daily tasks
+      Clock in/out with GPS
+      Log piece-work output
+      View my earnings
+    Organization Admin
+      Manage worker payroll
+      Grant platform access
+      Review metayage settlements
+      Export labor reports
+    Agronomist
+      Schedule crop interventions
+      Track product applications
+      Link tasks to AI recommendations
+```
 
-Tasks are managed through the `TasksService` and exposed via `TasksController` at the `/tasks` route. The controller uses `JwtAuthGuard`, `OrganizationGuard`, and `PoliciesGuard` with granular permission decorators (`@CanReadTasks`, `@CanCreateTask`, `@CanUpdateTask`, `@CanDeleteTask`).
+## Task Lifecycle
 
-**Task types:** `planting`, `harvesting`, `irrigation`, `fertilization`, `maintenance`, `general`, `pest_control`, `pruning`, `soil_preparation`
+Every task follows this lifecycle, with automatic side effects at key transitions:
 
-**Priority levels:** `low`, `medium`, `high`, `urgent`
+```mermaid
+stateDiagram-v2
+    [*] --> pending: Task Created
+    pending --> assigned: Worker Assigned
+    assigned --> in_progress: Clock In
+    in_progress --> completed: Mark Complete
+    pending --> cancelled: Cancel
+    assigned --> cancelled: Cancel
+    in_progress --> on_hold: Pause
+    on_hold --> in_progress: Resume
 
-**Statuses:** `pending`, `assigned`, `in_progress`, `completed`, `cancelled`, `on_hold`
+    state completed {
+        [*] --> work_record: Auto-create work record
+        work_record --> journal_entry: If cost > 0
+        work_record --> stock_deduction: If consumables
+        work_record --> harvest_record: If harvest task
+    }
+```
 
-Creating a task sets the initial status to `pending` with `completion_percentage: 0`. The create endpoint also supports upsert behavior -- if an `id` is provided in the DTO, it updates the existing task instead of inserting a new one.
+### What Happens Automatically on Completion
 
-When a new task is created, the system records an adoption milestone (`FIRST_TASK_CREATED`) via `AdoptionService`.
+| Trigger | Auto-Action | Condition |
+|---------|-------------|-----------|
+| Any task completed with assigned worker | Work record created with calculated payment | Always |
+| Task has `actual_cost > 0` | Journal entry created via accounting automation | Cost provided |
+| Task type is fertilization, pest_control, irrigation, planting, soil_preparation | Stock deducted for consumed products | `planned_items` defined |
+| Harvest task completed | Reception batch + lot number generated | Harvest task type |
+| Task status changes | In-app notification sent to assigned worker | Worker has user account |
 
-### Task Fields
+## Task Types and Their Purpose
 
-Each task can include:
+| Type | Typical Use | Auto-Actions |
+|------|------------|--------------|
+| `planting` | New crop establishment | Stock deduction (seeds, seedlings) |
+| `harvesting` | Crop collection | Creates harvest record + reception batch |
+| `irrigation` | Water management | Stock deduction (if fertigation) |
+| `fertilization` | Nutrient application | Stock deduction (fertilizers) |
+| `pest_control` | Disease/pest treatment | Stock deduction (pesticides) |
+| `pruning` | Tree/vine maintenance | — |
+| `soil_preparation` | Plowing, tilling | Stock deduction (soil amendments) |
+| `maintenance` | Equipment, infrastructure | — |
+| `general` | Catch-all | — |
 
-- **Location:** `farm_id` (required), `parcel_id`, `crop_id`, `location_lat`, `location_lng`
-- **Scheduling:** `scheduled_start`, `scheduled_end`, `due_date`, `estimated_duration` (hours)
-- **Assignment:** `assigned_to` (worker ID)
-- **Requirements:** `required_skills` (array), `equipment_required` (array), `weather_dependency` (boolean)
-- **Cost:** `cost_estimate`, `payment_type` (`daily`, `per_unit`, `monthly`, `metayage`, `none`), `work_unit_id`, `units_required`, `rate_per_unit`
-- **Consumables:** `planned_items` -- array of products/materials to consume on completion
+## Task Fields Reference
 
-### Filtering and Pagination
+### Core Fields
 
-`GET /tasks` supports rich filtering via `TaskFiltersDto`:
+- **Location**: `farm_id` (required), `parcel_id`, `crop_id`, `location_lat`, `location_lng`
+- **Scheduling**: `scheduled_start`, `scheduled_end`, `due_date`, `estimated_duration` (hours)
+- **Priority**: `low`, `medium`, `high`, `urgent`
+- **Assignment**: `assigned_to` (worker ID)
+
+### Cost & Payment
+
+- `cost_estimate` — budgeted cost
+- `actual_cost` — recorded on completion (triggers journal entry)
+- `payment_type` — `daily`, `per_unit`, `monthly`, `metayage`, `none`
+- `work_unit_id`, `units_required`, `rate_per_unit` — for piece-work tasks
+
+### Requirements & Consumables
+
+- `required_skills` — array of skill tags
+- `equipment_required` — array of equipment items
+- `weather_dependency` — boolean flag
+- `planned_items` — array of products/materials consumed on completion
+
+## Filtering & Pagination
+
+`GET /tasks` supports rich filtering:
 
 | Parameter | Description |
 |-----------|-------------|
-| `status` | Comma-separated statuses |
-| `priority` | Comma-separated priorities |
+| `status` | Comma-separated: pending, assigned, in_progress, completed, cancelled, on_hold |
+| `priority` | Comma-separated: low, medium, high, urgent |
 | `task_type` | Comma-separated task types |
 | `assigned_to` | Worker UUID |
-| `farm_id` | Farm UUID |
-| `parcel_id` | Parcel UUID |
+| `farm_id` / `parcel_id` | Location filter |
 | `date_from` / `date_to` | Date range on `scheduled_start` |
 | `search` | Free-text search on title and description |
-| `page` / `pageSize` | Pagination (1-based, default 10 per page) |
-| `sortBy` / `sortDir` | Sort field and direction (default: `scheduled_start` desc) |
+| `page` / `pageSize` | Pagination (1-based, default 10) |
+| `sortBy` / `sortDir` | Sort field and direction |
 
-When pagination parameters are provided, the response includes `{ data, total, page, pageSize, totalPages }`. Without pagination, the endpoint returns a flat array.
+Response with pagination: `{ data, total, page, pageSize, totalPages }`
 
 ### My Tasks
 
-`GET /tasks/my-tasks` returns all tasks assigned to or created by the current user across all their organizations. Supports an `includeCompleted` query parameter (default `false`). The service resolves the current user's worker record via the `workers.user_id` foreign key.
+`GET /tasks/my-tasks` returns tasks assigned to the current user across **all their organizations**. Supports `includeCompleted` parameter (default `false`).
 
 ### Task Statistics
 
-`GET /tasks/statistics` returns aggregate statistics for an organization's tasks.
-
-### Task Categories
-
-Tasks can be organized with custom categories scoped to an organization:
-
-- `GET /tasks/categories/all` -- list categories
-- `POST /tasks/categories` -- create a category
-
-### Task Comments
-
-- `GET /tasks/:taskId/comments` -- list comments on a task
-- `POST /tasks/:taskId/comments` -- add a comment
-
-### Task Completion
-
-Two completion flows exist:
-
-1. **Standard completion:** `PATCH /tasks/:taskId/complete` with `CompleteTaskDto`
-2. **Harvest completion:** `POST /tasks/:taskId/complete-with-harvest` with `CompleteHarvestTaskDto` -- completes the task and creates a harvest record in one operation via `ReceptionBatchesService`
-
-When a task status changes to `completed` and has an assigned worker, the system automatically creates a `work_record` entry. It calculates hours worked from `start_date`/`end_date` and payment based on the worker's payment type and rate.
-
-### Status Change Notifications
-
-When a task's status changes, the system sends an in-app notification to the assigned worker (if they have a linked user account) via `NotificationsService`. The notification type is `TASK_STATUS_CHANGED`.
+`GET /tasks/statistics` returns aggregate counts: total, completed, in_progress, overdue, completion_rate, total_cost.
 
 ## Task Assignment System
 
-### Direct Assignment
+### Simple Assignment
 
-Tasks can be assigned to a worker directly via:
+`PATCH /tasks/:taskId/assign` — assigns a single worker. Validates the worker is active. Auto-updates task status from `pending` to `assigned`.
 
-- `PATCH /tasks/:taskId/assign` with `AssignTaskDto` (on the tasks controller)
+### Granular Assignments Module
 
-### Detailed Assignments Module
-
-The `TaskAssignmentsController` provides a more granular assignment system at:
+For complex tasks requiring multiple workers with different roles:
 
 ```
-/api/v1/organizations/:organizationId/tasks/:taskId/assignments
+/api/v1/organizations/:orgId/tasks/:taskId/assignments
 ```
 
-**Assignment roles:** `worker`, `supervisor`, `lead`
+| Operation | Method | Description |
+|-----------|--------|-------------|
+| List assignments | `GET /` | All assignments (excludes removed) |
+| Assign worker | `POST /` | Single worker with role |
+| Bulk assign | `POST /bulk` | Multiple workers at once |
+| Update | `PATCH /:id` | Change status, hours, notes |
+| Remove | `DELETE /:id` | Soft-delete (sets status to `removed`) |
 
-**Assignment statuses:** `assigned`, `working`, `completed`, `removed`
+**Assignment roles**: `worker`, `supervisor`, `lead`
 
-Key operations:
+**Assignment statuses**: `assigned`, `working`, `completed`, `removed`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | List all assignments for a task (excludes `removed`) |
-| `POST` | `/` | Assign a single worker |
-| `POST` | `/bulk` | Assign multiple workers at once |
-| `PATCH` | `/:assignmentId` | Update assignment (status, hours, notes) |
-| `DELETE` | `/:assignmentId` | Soft-delete (sets status to `removed`) |
-
-When an assignment is created for a task with status `pending`, the task is automatically updated to `assigned`.
-
-Re-assigning a previously removed worker reactivates the existing assignment record rather than creating a duplicate.
-
-The service also provides `getWorkerAssignments()` to retrieve all assignments for a specific worker, optionally filtered by status and with task details included.
+Re-assigning a previously removed worker **reactivates** the existing record (no duplicates).
 
 ## Task Templates
 
-The `TaskTemplatesService` allows creating new tasks from existing task records used as templates. Endpoint:
+Create tasks from existing tasks used as templates:
 
 ```
-POST /organizations/:organizationId/task-templates/create-from-template
+POST /organizations/:orgId/task-templates/create-from-template
 ```
 
-The `CreateTaskFromTemplateDto` accepts:
-- `templateId` (required) -- the source task ID
-- `farmId` (optional override)
-- `assignedTo` (optional override)
-- `scheduledDate` (optional override)
+Copies: title, description, type, priority, estimated duration, equipment, dependencies. Accepts overrides for `farmId`, `assignedTo`, `scheduledDate`.
 
-When creating from a template, the system copies:
-- All task fields (title, description, type, priority, estimated duration, equipment, etc.)
-- Task dependencies from the `task_dependencies` table
-- Task equipment from the `task_equipment` table
+### Task Categories & Comments
 
-The new task is created with status `pending`.
-
-An additional endpoint exists for updating task status with optional notes:
-
-```
-POST /organizations/:organizationId/tasks/update-status
-```
-
-Notes are stored as `task_comments`.
-
-## Worker Management
-
-### Worker CRUD
-
-Workers are managed through `WorkersController` at `/organizations/:organizationId/workers`, protected by `@CanReadWorkers`, `@CanCreateWorker`, `@CanUpdateWorker`, `@CanDeleteWorker` permission decorators.
-
-**Worker profile fields:**
-
-- **Identity:** `first_name`, `last_name`, `email`, `phone`, `cin`, `date_of_birth`, `photo_url`
-- **Employment:** `position`, `worker_type`, `is_active`, `farm_id`, `specialties`, `certifications`
-- **Compensation:** `hourly_rate`, `daily_rate`, `monthly_salary`, `payment_method`, `payment_frequency`
-- **Social:** `cnss_number`, `bank_account`, `address`
-- **Metayage (sharecropping):** `metayage_type`, `metayage_percentage`, `calculation_basis`, `metayage_contract_details`
-
-Workers support both soft-delete (deactivation with end date) and hard-delete.
-
-When a worker is created, a `WORKER_ADDED` notification is sent to all other active users in the organization.
-
-### Worker Statistics
-
-`GET /organizations/:organizationId/workers/:workerId/stats` returns:
-- Total work records
-- Total amount paid (from work records + payment records + metayage settlements)
-- Pending payments
-- Total days worked and tasks completed
-
-### Work Records
-
-Each worker has work records tracking daily labor:
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/:workerId/work-records` | List records (filterable by date range) |
-| `POST` | `/:workerId/work-records` | Create a record |
-| `PATCH` | `/:workerId/work-records/:recordId` | Update a record |
-
-There is also a backfill endpoint to retroactively create work records from completed tasks:
-
-```
-POST /organizations/:organizationId/workers/backfill-work-records
-```
-
-### Metayage (Sharecropping) System
-
-The platform supports traditional Moroccan sharecropping arrangements with predefined percentage tiers:
-
-| Type | Default Percentage |
-|------|-------------------|
-| `khammass` | 20% |
-| `rebaa` | 25% |
-| `tholth` | 33.33% |
-
-Custom percentages can override the defaults. The `calculation_basis` can be `gross_revenue` or `net_revenue` (revenue minus charges).
-
-Endpoints:
-
-- `GET /:workerId/metayage-settlements` -- list settlements
-- `POST /:workerId/metayage-settlements` -- create a settlement
-- `POST /:workerId/calculate-metayage-share` -- calculate the worker's share from gross revenue and charges
-
-### Platform Access Provisioning
-
-`POST /:workerId/grant-platform-access` creates a Supabase auth user for the worker, links them to the organization with the `farm_worker` role, and sends a welcome email with a temporary password (expires in 7 days). The flow:
-
-1. Generates a random 16-character password
-2. Creates a Supabase auth user with email confirmation
-3. Creates/upserts a `user_profiles` record
-4. Assigns the `farm_worker` role in `organization_users`
-5. Links the auth user to the worker record via `user_id`
-6. Sends a welcome email via `EmailService`
-
-If any step fails after auth user creation, the auth user is rolled back (deleted).
-
-### Worker Self-Service (Dashboard)
-
-The `WorkersMeController` at `/workers/me` provides endpoints for workers to access their own data without needing organization-level permissions:
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /workers/me` | Current worker profile |
-| `GET /workers/me/tasks` | Tasks assigned to current worker (filterable by status, with limit) |
-| `GET /workers/me/time-logs` | Time logs (filterable by date range, with limit) |
-| `GET /workers/me/statistics` | Performance statistics (tasks breakdown, hours, earnings) |
-
-The statistics response includes:
-- **Tasks:** total, completed, in progress, pending, overdue, completion rate (%)
-- **Time:** total hours, total minutes, total sessions
-- **Payments:** total earnings, pending payments
+- Custom categories per organization: `GET /tasks/categories/all`, `POST /tasks/categories`
+- Comments on tasks: `GET /tasks/:id/comments`, `POST /tasks/:id/comments`
 
 ## Time Tracking
 
-Time tracking is built into the tasks controller with clock-in/clock-out functionality:
+Clock-in/clock-out system with optional GPS validation:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/tasks/:taskId/clock-in` | Start time tracking |
-| `PATCH` | `/tasks/time-logs/:timeLogId/clock-out` | Stop time tracking |
-| `GET` | `/tasks/:taskId/time-logs` | List time logs for a task |
-| `GET` | `/tasks/time-logs/active-session` | Get current user's active session |
-| `POST` | `/tasks/:taskId/clock-in-with-validation` | Clock in with location validation |
-| `POST` | `/tasks/time-logs/auto-clock-out` | Auto-close stale sessions (default: 12 hours) |
+```mermaid
+sequenceDiagram
+    participant W as Worker (Mobile)
+    participant API as API
+    participant DB as Database
 
-Time logs are stored in the `task_time_logs` table with `clock_in`, `clock_out`, `duration_minutes`, and `worker_id` fields.
+    W->>API: POST /tasks/:id/clock-in (with GPS)
+    API->>API: Validate location vs parcel boundary (Haversine)
+    API->>DB: Create time_log (clock_in timestamp)
+    API->>DB: Update task status → in_progress
+    API-->>W: Time log ID
+
+    Note over W: Worker performs task...
+
+    W->>API: PATCH /time-logs/:id/clock-out
+    API->>DB: Set clock_out, calculate duration
+    API-->>W: Duration minutes
+```
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/tasks/:id/clock-in` | POST | Start tracking |
+| `/tasks/:id/clock-in-with-validation` | POST | Start with GPS validation against parcel |
+| `/tasks/time-logs/:id/clock-out` | PATCH | Stop tracking |
+| `/tasks/:id/time-logs` | GET | List time logs for task |
+| `/tasks/time-logs/active-session` | GET | Current user's active session |
+| `/tasks/time-logs/auto-clock-out` | POST | Admin: close stale sessions (default 12h) |
+
+**Location validation** uses the Haversine formula to check if the worker's GPS coordinates are within the parcel boundary.
+
+## Worker Management
+
+### Worker Profiles
+
+Workers have comprehensive profiles covering identity, employment, compensation, and social data:
+
+- **Identity**: name, email, phone, CIN (national ID), date of birth, photo
+- **Employment**: position, worker_type, farm assignment, specialties, certifications
+- **Compensation**: hourly_rate, daily_rate, monthly_salary, payment_method, payment_frequency
+- **Social**: CNSS number, bank account, address
+- **Metayage**: type, percentage, calculation basis, contract details
+
+### Worker Statistics
+
+`GET /workers/:id/stats` returns:
+- Total work records and days worked
+- Total amount paid (work records + payment records + metayage settlements)
+- Pending payments
+- Tasks completed
+
+### Worker Self-Service Dashboard
+
+Workers with platform access can view their own data at `/workers/me`:
+
+| Endpoint | Returns |
+|----------|---------|
+| `GET /workers/me` | Own profile |
+| `GET /workers/me/tasks` | Assigned tasks (filterable by status) |
+| `GET /workers/me/time-logs` | Time logs (filterable by date range) |
+| `GET /workers/me/statistics` | Tasks breakdown, hours, earnings, completion rate |
+
+### Platform Access Provisioning
+
+`POST /workers/:id/grant-platform-access` — gives a field worker their own login:
+
+1. Generates random 16-character temporary password (expires in 7 days)
+2. Creates Supabase auth user
+3. Creates user profile
+4. Assigns `farm_worker` role in organization
+5. Links auth user to worker record
+6. Sends welcome email with credentials
+
+If any step fails after auth user creation, the auth user is rolled back.
+
+## Metayage (Sharecropping) System
+
+Traditional Moroccan sharecropping with predefined tiers:
+
+```mermaid
+flowchart TD
+    A[Worker has metayage contract] --> B{Metayage Type}
+    B -->|Khammass| C[20% share]
+    B -->|Rebaa| D[25% share]
+    B -->|Tholth| E[33.33% share]
+    B -->|Custom| F[Custom percentage]
+
+    C --> G{Calculation Basis}
+    D --> G
+    E --> G
+    F --> G
+
+    G -->|gross_revenue| H[Share = Gross Revenue x %]
+    G -->|net_revenue| I[Share = Gross - Charges x %]
+```
+
+Endpoints:
+- `GET /workers/:id/metayage-settlements` — list settlements
+- `POST /workers/:id/metayage-settlements` — create settlement
+- `POST /workers/:id/calculate-metayage-share` — preview calculation
 
 ## Piece-Work Tracking
 
 ### Work Units
 
-Work units define measurable units of output for piece-work payment. Managed via `WorkUnitsController` at `/work-units`.
+Measurable output units for piece-work payment:
 
-**Unit categories:** `count`, `weight`, `volume`, `area`, `length`
-
-Each work unit has:
-- `code` (unique per organization, stored uppercase)
-- `name`, `name_ar`, `name_fr` (multilingual)
-- `unit_category`, `base_unit`, `conversion_factor`
-- `is_active`, `allow_decimal`, `usage_count`
-
-Work units with `usage_count > 0` cannot be deleted -- they must be deactivated instead.
+- **Categories**: `count`, `weight`, `volume`, `area`, `length`
+- **Multilingual**: `name`, `name_ar`, `name_fr`
+- **Protection**: Units with `usage_count > 0` cannot be deleted
 
 ### Piece-Work Records
 
-Piece-work records track output-based labor at `/organizations/:organizationId/farms/:farmId/piece-work`.
+Track output-based labor at `/organizations/:orgId/farms/:farmId/piece-work`:
 
-Each record links a worker, a work unit, and optionally a task and parcel. The `total_amount` is automatically calculated as `units_completed * rate_per_unit`.
+| Operation | Description |
+|-----------|-------------|
+| Create | Auto-calculates `total_amount = units_completed x rate_per_unit` |
+| Update | Auto-recalculates if units or rate change |
+| Delete | Blocked if payment_status is `paid` |
+| Verify | Marks as `approved`, sets verified_at/verified_by |
 
-**Payment statuses:** `pending` -> `approved` (after verification) -> `paid`
+**Payment lifecycle**: `pending` → `approved` (verified) → `paid`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | List records (filterable by worker, task, parcel, date range, payment status, search) |
-| `GET` | `/:id` | Get single record |
-| `POST` | `/` | Create record (auto-calculates total, increments work unit usage count) |
-| `PATCH` | `/:id` | Update record (auto-recalculates total if units or rate change) |
-| `DELETE` | `/:id` | Delete record (blocked if `payment_status` is `paid`) |
-| `PATCH` | `/:id/verify` | Verify and approve a record |
+## Automated Reminders
 
-## Reminders & Notifications
+```mermaid
+flowchart LR
+    subgraph "Daily at 8:00 UTC"
+        A[Check tasks due tomorrow] --> B{Task still open?}
+        B -->|Yes| C[Send due_soon reminder]
+    end
 
-### Automated Cron Jobs
+    subgraph "Every 6 hours"
+        D[Check overdue tasks] --> E{How overdue?}
+        E -->|1 day| F[Send overdue_1d]
+        E -->|3 days| G[Send overdue_3d]
+    end
 
-The `RemindersService` uses `@nestjs/schedule` to run two recurring jobs:
+    C --> H[In-app notification]
+    C --> I[Email if enabled]
+    F --> H
+    F --> I
+    G --> H
+    G --> I
+```
 
-1. **Due-soon check** (`0 8 * * *` UTC, daily at 8:00 AM): finds tasks due within the next 24 hours that are still in `pending`, `assigned`, or `in_progress` status. Sends a `due_soon` reminder.
+### Deduplication
 
-2. **Overdue check** (`0 */6 * * *` UTC, every 6 hours): finds overdue tasks and sends escalating alerts:
-   - 1 day overdue: `overdue_1d` reminder
-   - 3 days overdue: `overdue_3d` reminder
-
-### Reminder Deduplication
-
-Each reminder is recorded in the `task_reminders` table with `task_id`, `reminder_type`, and `sent_at`. Before sending, the service checks if a reminder of the same type has already been sent for a given task to prevent duplicates.
-
-### Notification Channels
-
-Reminders are delivered through two channels:
-
-- **In-app notifications** via `NotificationsService` (type: `TASK_REMINDER`)
-- **Email** via `EmailService` using templates: `task-due-soon`, `task-due-today`, `task-overdue`, `task-reminder`
+Each reminder is recorded in `task_reminders` with task_id + reminder_type. The system checks before sending to prevent duplicates.
 
 ### User Preferences
 
-Users can control their notification preferences per organization via the `/reminders` endpoints:
+Configurable per user per organization at `/reminders/preferences`:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/reminders/preferences` | Get current preferences |
-| `POST` | `/reminders/preferences` | Update preferences (upsert) |
-| `POST` | `/reminders/test` | Manually trigger reminder checks |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `taskRemindersEnabled` | true | Master toggle |
+| `taskReminder1dBefore` | true | 1-day advance reminder |
+| `taskReminderOnDueDate` | true | Due-date reminder |
+| `taskOverdueAlerts` | true | Overdue escalation |
+| `emailNotifications` | true | Email channel |
+| `pushNotifications` | false | Push channel |
 
-Configurable preferences:
-- `taskRemindersEnabled` -- master toggle
-- `taskReminder1dBefore` -- 1-day advance reminder
-- `taskReminderOnDueDate` -- due-date reminder
-- `taskOverdueAlerts` -- overdue escalation alerts
-- `emailNotifications` -- email channel toggle
-- `pushNotifications` -- push channel toggle
+## Integration Map
 
-If a user has `task_reminders_enabled` set to `false`, all reminders are suppressed. If `email_notifications` is `false`, only in-app notifications are sent.
+```mermaid
+flowchart TD
+    TASKS[Tasks Module]
+    WORKERS[Workers Module]
+    PIECEWORK[Piece-Work]
+
+    TASKS -->|completion triggers| ACCOUNTING[Accounting: Journal Entries]
+    TASKS -->|harvest tasks| RECEPTION[Reception Batches]
+    TASKS -->|consumables| INVENTORY[Inventory: Stock Deduction]
+    TASKS -->|status change| NOTIFICATIONS[Notifications]
+    TASKS -->|first task| ADOPTION[Adoption Milestones]
+    TASKS -->|time logs| TIMEKEEPING[Time Tracking]
+
+    WORKERS -->|work records| PAYROLL[Payment Records]
+    WORKERS -->|metayage| SHARECROP[Metayage Settlements]
+    WORKERS -->|platform access| AUTH[Auth: Supabase Users]
+
+    PIECEWORK -->|verification| APPROVAL[Approval Workflow]
+    PIECEWORK -->|work units| UNITS[Work Unit Registry]
+```
+
+## Mobile Experience
+
+The mobile app provides field workers with:
+
+- **Task list** with status filters (all, pending, in_progress, completed)
+- **Task cards** showing title, priority badge, status badge, location, due date
+- **Clock in/out** with GPS location
+- **Pull-to-refresh** for real-time updates
+- **Photo upload** for task documentation
+- **Local notifications** for due/overdue reminders
+
+## Known Limitations
+
+| Area | Limitation | Workaround |
+|------|-----------|------------|
+| Recurring tasks | Not supported | Create tasks manually or use templates |
+| Worker availability | No schedule/leave system | Check manually before assigning |
+| Skill matching | No auto-validation on assignment | Manual skill verification |
+| Bulk task operations | No bulk create/update/delete | Create individually |
+| Timezone handling | Reminders fire at fixed UTC times | All users see UTC-based timing |
+| My Tasks pagination | No pagination for cross-org query | Could be slow with thousands of tasks |
+| Payment generation | Piece-work doesn't auto-generate payments | Process payments separately |
 
 ## Key File Paths
 
 | Module | Path |
 |--------|------|
-| Tasks service | `agritech-api/src/modules/tasks/tasks.service.ts` |
-| Tasks controller | `agritech-api/src/modules/tasks/tasks.controller.ts` |
-| Task DTOs | `agritech-api/src/modules/tasks/dto/` |
-| Task assignments service | `agritech-api/src/modules/task-assignments/task-assignments.service.ts` |
-| Task assignments controller | `agritech-api/src/modules/task-assignments/task-assignments.controller.ts` |
-| Task templates service | `agritech-api/src/modules/task-templates/task-templates.service.ts` |
-| Task templates controller | `agritech-api/src/modules/task-templates/task-templates.controller.ts` |
-| Workers service | `agritech-api/src/modules/workers/workers.service.ts` |
+| Tasks service | `agritech-api/src/modules/tasks/tasks.service.ts` (1,792 lines) |
+| Tasks controller | `agritech-api/src/modules/tasks/tasks.controller.ts` (349 lines, 20 endpoints) |
+| Task assignments | `agritech-api/src/modules/task-assignments/` |
+| Task templates | `agritech-api/src/modules/task-templates/` |
+| Workers service | `agritech-api/src/modules/workers/workers.service.ts` (1,218 lines) |
 | Workers controller | `agritech-api/src/modules/workers/workers.controller.ts` |
-| Worker self-service controller | `agritech-api/src/modules/workers/workers-me.controller.ts` |
-| Piece-work service | `agritech-api/src/modules/piece-work/piece-work.service.ts` |
-| Piece-work controller | `agritech-api/src/modules/piece-work/piece-work.controller.ts` |
-| Work units service | `agritech-api/src/modules/work-units/work-units.service.ts` |
-| Work units controller | `agritech-api/src/modules/work-units/work-units.controller.ts` |
-| Reminders service | `agritech-api/src/modules/reminders/reminders.service.ts` |
-| Reminders controller | `agritech-api/src/modules/reminders/reminders.controller.ts` |
+| Worker self-service | `agritech-api/src/modules/workers/workers-me.controller.ts` |
+| Piece-work | `agritech-api/src/modules/piece-work/` |
+| Work units | `agritech-api/src/modules/work-units/` |
+| Reminders | `agritech-api/src/modules/reminders/` |
+| Mobile hooks | `mobile/src/hooks/useTasks.ts` |
+| Mobile screen | `mobile/app/(drawer)/(tabs)/tasks.tsx` |

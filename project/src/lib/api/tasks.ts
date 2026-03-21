@@ -171,4 +171,46 @@ export const tasksApi = {
   }): Promise<any> {
     return apiClient.patch<any>(`/api/v1/tasks/time-logs/${timeLogId}/clock-out`, data, {}, organizationId);
   },
+
+  // Checklist API
+  async getChecklist(organizationId: string, taskId: string): Promise<any[]> {
+    return apiClient.get<any[]>(`/api/v1/tasks/${taskId}/checklist`, {}, organizationId);
+  },
+
+  async updateChecklist(organizationId: string, taskId: string, checklist: any[]): Promise<any> {
+    return apiClient.put<any>(`/api/v1/tasks/${taskId}/checklist`, { checklist }, {}, organizationId);
+  },
+
+  async addChecklistItem(organizationId: string, taskId: string, title: string): Promise<any> {
+    return apiClient.post<any>(`/api/v1/tasks/${taskId}/checklist/items`, { title }, {}, organizationId);
+  },
+
+  async toggleChecklistItem(organizationId: string, taskId: string, itemId: string): Promise<any> {
+    return apiClient.patch<any>(`/api/v1/tasks/${taskId}/checklist/items/${itemId}/toggle`, {}, {}, organizationId);
+  },
+
+  async removeChecklistItem(organizationId: string, taskId: string, itemId: string): Promise<any> {
+    return apiClient.delete<any>(`/api/v1/tasks/${taskId}/checklist/items/${itemId}`, {}, organizationId);
+  },
+
+  // Dependencies API
+  async getDependencies(organizationId: string, taskId: string): Promise<any> {
+    return apiClient.get(`/api/v1/tasks/${taskId}/dependencies`, {}, organizationId);
+  },
+
+  async addDependency(organizationId: string, taskId: string, dependsOnTaskId: string, dependencyType?: string, lagDays?: number): Promise<any> {
+    return apiClient.post(`/api/v1/tasks/${taskId}/dependencies`, {
+      depends_on_task_id: dependsOnTaskId,
+      dependency_type: dependencyType || 'finish_to_start',
+      lag_days: lagDays || 0,
+    }, {}, organizationId);
+  },
+
+  async removeDependency(organizationId: string, dependencyId: string): Promise<any> {
+    return apiClient.delete(`/api/v1/tasks/dependencies/${dependencyId}`, {}, organizationId);
+  },
+
+  async isTaskBlocked(organizationId: string, taskId: string): Promise<any> {
+    return apiClient.get(`/api/v1/tasks/${taskId}/blocked`, {}, organizationId);
+  },
 };

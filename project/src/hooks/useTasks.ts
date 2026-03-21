@@ -348,6 +348,125 @@ export function useCompleteTask() {
   });
 }
 
+// =====================================================
+// CHECKLIST HOOKS
+// =====================================================
+
+export function useTaskChecklist(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['task-checklist', currentOrganization?.id, taskId],
+    queryFn: () => tasksApi.getChecklist(currentOrganization!.id, taskId!),
+    enabled: !!currentOrganization?.id && !!taskId,
+  });
+}
+
+export function useAddChecklistItem() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, title }: { taskId: string; title: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.addChecklistItem(currentOrganization.id, taskId, title);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
+    },
+  });
+}
+
+export function useToggleChecklistItem() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, itemId }: { taskId: string; itemId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.toggleChecklistItem(currentOrganization.id, taskId, itemId);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
+    },
+  });
+}
+
+export function useRemoveChecklistItem() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, itemId }: { taskId: string; itemId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.removeChecklistItem(currentOrganization.id, taskId, itemId);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
+    },
+  });
+}
+
+// =====================================================
+// DEPENDENCY HOOKS
+// =====================================================
+
+export function useTaskDependencies(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['task-dependencies', currentOrganization?.id, taskId],
+    queryFn: () => tasksApi.getDependencies(currentOrganization!.id, taskId!),
+    enabled: !!currentOrganization?.id && !!taskId,
+  });
+}
+
+export function useAddDependency() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, dependsOnTaskId, dependencyType, lagDays }: { taskId: string; dependsOnTaskId: string; dependencyType?: string; lagDays?: number }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.addDependency(currentOrganization.id, taskId, dependsOnTaskId, dependencyType, lagDays);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies', currentOrganization?.id, variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies', currentOrganization?.id, variables.dependsOnTaskId] });
+      queryClient.invalidateQueries({ queryKey: ['task-blocked', currentOrganization?.id, variables.taskId] });
+    },
+  });
+}
+
+export function useRemoveDependency() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ dependencyId }: { dependencyId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.removeDependency(currentOrganization.id, dependencyId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-dependencies'] });
+      queryClient.invalidateQueries({ queryKey: ['task-blocked'] });
+    },
+  });
+}
+
+export function useIsTaskBlocked(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['task-blocked', currentOrganization?.id, taskId],
+    queryFn: () => tasksApi.isTaskBlocked(currentOrganization!.id, taskId!),
+    enabled: !!currentOrganization?.id && !!taskId,
+  });
+}
+
 export function useCreateTaskCategory() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();

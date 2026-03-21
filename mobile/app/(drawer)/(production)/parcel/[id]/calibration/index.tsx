@@ -12,9 +12,10 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '@/constants/theme';
+import { spacing, borderRadius, fontSize, fontWeight } from '@/constants/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import PageHeader from '@/components/PageHeader';
-import { Button, Card, LoadingState, ErrorState } from '@/components/ui';
+import { Button, Card, LoadingState } from '@/components/ui';
 import {
   PhaseBanner,
   ExecutiveSummary,
@@ -29,7 +30,6 @@ import {
   useCalibrationReadiness,
   useNutritionSuggestion,
   useStartCalibration,
-  useValidateCalibration,
   useConfirmNutritionOption,
 } from '@/hooks/useCalibration';
 import type { NutritionOption, CalibrationHistoryRecord } from '@/types/calibration';
@@ -37,6 +37,7 @@ import type { NutritionOption, CalibrationHistoryRecord } from '@/types/calibrat
 export default function CalibrationScreen() {
   const { id: parcelId } = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation('common');
+  const { colors: themeColors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
@@ -49,7 +50,6 @@ export default function CalibrationScreen() {
 
   // Mutations
   const startCalibration = useStartCalibration(parcelId);
-  const validateCalibration = useValidateCalibration(parcelId);
   const confirmNutrition = useConfirmNutritionOption(parcelId);
 
   const isLoading = statusLoading || reportLoading || historyLoading || readinessLoading;
@@ -74,15 +74,6 @@ export default function CalibrationScreen() {
       await startCalibration.mutateAsync({});
     } catch (error) {
       console.error('Failed to start calibration:', error);
-    }
-  };
-
-  const handleValidate = async () => {
-    if (!statusData?.id) return;
-    try {
-      await validateCalibration.mutateAsync(statusData.id);
-    } catch (error) {
-      console.error('Failed to validate calibration:', error);
     }
   };
 
@@ -113,7 +104,7 @@ export default function CalibrationScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: themeColors.background }]}
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
@@ -139,9 +130,9 @@ export default function CalibrationScreen() {
       {phase === 'calibrating' && (
         <Card variant="elevated">
           <View style={styles.calibratingContainer}>
-            <ActivityIndicator size="large" color={colors.primary[600]} />
-            <Text style={styles.calibratingText}>{t('calibration.calibrating')}</Text>
-            <Text style={styles.calibratingSubtext}>{t('calibration.calibratingDesc')}</Text>
+            <ActivityIndicator size="large" color={themeColors.brandPrimary} />
+            <Text style={[styles.calibratingText, { color: themeColors.textPrimary }]}>{t('calibration.calibrating')}</Text>
+            <Text style={[styles.calibratingSubtext, { color: themeColors.textSecondary }]}>{t('calibration.calibratingDesc')}</Text>
           </View>
         </Card>
       )}
@@ -170,7 +161,7 @@ export default function CalibrationScreen() {
             disabled={!selectedOption || confirmNutrition.isPending}
           >
             {confirmNutrition.isPending ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color="#fff" />
             ) : (
               t('calibration.confirmNutrition')
             )}
@@ -189,21 +180,21 @@ export default function CalibrationScreen() {
       {/* Quick Actions */}
       <View style={styles.quickActions}>
         <Pressable
-          style={styles.quickActionCard}
-          onPress={() => router.push(`/(drawer)/(production)/parcel/${parcelId}/calibration/wizard`)}
+          style={[styles.quickActionCard, { backgroundColor: themeColors.surfaceLowest }]}
+          onPress={() => router.push(`/(drawer)/(tabs)/production/parcel/${parcelId}/calibration/wizard`)}
         >
-          <Ionicons name="settings-outline" size={24} color={colors.primary[600]} />
-          <Text style={styles.quickActionText}>{t('calibration.partialRecalibration')}</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+          <Ionicons name="settings-outline" size={24} color={themeColors.brandPrimary} />
+          <Text style={[styles.quickActionText, { color: themeColors.textPrimary }]}>{t('calibration.partialRecalibration')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={themeColors.iconSubtle} />
         </Pressable>
 
         <Pressable
-          style={styles.quickActionCard}
-          onPress={() => router.push(`/(drawer)/(production)/parcel/${parcelId}/calibration/annual`)}
+          style={[styles.quickActionCard, { backgroundColor: themeColors.surfaceLowest }]}
+          onPress={() => router.push(`/(drawer)/(tabs)/production/parcel/${parcelId}/calibration/annual`)}
         >
-          <Ionicons name="refresh-outline" size={24} color={colors.primary[600]} />
-          <Text style={styles.quickActionText}>{t('calibration.annualRecalibration')}</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
+          <Ionicons name="refresh-outline" size={24} color={themeColors.brandPrimary} />
+          <Text style={[styles.quickActionText, { color: themeColors.textPrimary }]}>{t('calibration.annualRecalibration')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={themeColors.iconSubtle} />
         </Pressable>
       </View>
     </ScrollView>
@@ -213,7 +204,6 @@ export default function CalibrationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[50],
   },
   content: {
     padding: spacing.md,
@@ -229,12 +219,10 @@ const styles = StyleSheet.create({
   calibratingText: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    color: colors.gray[900],
     marginTop: spacing.md,
   },
   calibratingSubtext: {
     fontSize: fontSize.sm,
-    color: colors.gray[500],
     marginTop: spacing.xs,
     textAlign: 'center',
   },
@@ -244,16 +232,13 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     padding: spacing.md,
     borderRadius: borderRadius.lg,
-    ...shadows.sm,
   },
   quickActionText: {
     flex: 1,
     fontSize: fontSize.base,
     fontWeight: fontWeight.medium,
-    color: colors.gray[800],
     marginLeft: spacing.sm,
   },
 });

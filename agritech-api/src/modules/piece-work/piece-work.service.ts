@@ -285,4 +285,106 @@ export class PieceWorkService {
 
     return data;
   }
+
+  /**
+   * Generate a payment record for an approved piece-work record
+   */
+  async generatePayment(organizationId: string, farmId: string, pieceWorkId: string): Promise<any> {
+    const client = this.databaseService.getAdminClient();
+
+    // Find the piece-work record
+    const record = await this.findOne(pieceWorkId, organizationId);
+
+    // Validate status
+    if (record.payment_status !== 'approved') {
+      throw new BadRequestException(
+        `Piece work record must be in 'approved' status to generate payment. Current status: ${record.payment_status}`,
+      );
+    }
+
+    try {
+      // Create payment record
+      const { data: paymentRecord, error: paymentError } = await client
+        .from('payment_records')
+        .insert({
+          organization_id: organizationId,
+          farm_id: farmId,
+          worker_id: record.worker_id,
+          payment_type: 'piece_work',
+          base_amount: record.total_amount,
+          net_amount: record.total_amount,
+          status: 'pending',
+          period_start: record.work_date,
+          period_end: record.work_date,
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        this.logger.error(`Failed to create payment record: ${paymentError.message}`);
+        throw new BadRequestException(`Failed to create payment record: ${paymentError.message}`);
+      }
+
+      // Update piece-work record payment status
+      const { error: updateError } = await client
+        .from('piece_work_records')
+        .update({ payment_status: 'paid' })
+        .eq('id', pieceWorkId)
+        .eq('organization_id', organizationId);
+
+      if (updateError) {
+        this.logger.error(`Failed to update piece work payment status: ${updateError.message}`);
+        throw new BadRequestException(`Failed to update piece work payment status: ${updateError.message}`);
+      }
+
+      return paymentRecord;
+    } catch (error) {
+      this.logger.error('Error generating payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk generate payments for multiple approved piece-work records
+   */
+  async bulkGeneratePayments(organizationId: string, farmId: string, ids: string[]): Promise<any[]> {
+    const results: any[] = [];
+
+    for (const id of ids) {
+      try {
+        const paymentRecord = await this.generatePayment(organizationId, farmId, id);
+        results.push({ id, success: true, paymentRecord });
+      } catch (error) {
+        results.push({ id, success: false, error: error.message });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Bulk verify multiple piece-work records
+   */
+  async bulkVerify(organizationId: string, farmId: string, ids: string[], verifiedBy: string): Promise<{ count: number }> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('piece_work_records')
+      .update({
+        payment_status: 'approved',
+        verified_at: new Date().toISOString(),
+        verified_by: verifiedBy,
+      })
+      .eq('organization_id', organizationId)
+      .eq('farm_id', farmId)
+      .in('id', ids)
+      .select('id');
+
+    if (error) {
+      this.logger.error(`Failed to bulk verify piece work records: ${error.message}`);
+      throw new BadRequestException(`Failed to bulk verify piece work records: ${error.message}`);
+    }
+
+    return { count: data?.length || 0 };
+  }
 }

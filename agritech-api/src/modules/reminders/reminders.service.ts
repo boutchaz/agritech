@@ -96,6 +96,10 @@ export class RemindersService {
         await this.sendTaskReminder(task, 'overdue_1d');
       } else if (daysOverdue === 3) {
         await this.sendTaskReminder(task, 'overdue_3d');
+      } else if (daysOverdue === 7) {
+        await this.sendTaskReminder(task, 'overdue_7d');
+      } else if (daysOverdue === 14) {
+        await this.sendTaskReminder(task, 'overdue_14d');
       }
     }
 
@@ -188,6 +192,10 @@ export class RemindersService {
         return `Task Overdue: ${task.title}`;
       case 'overdue_3d':
         return `Task 3 Days Overdue: ${task.title}`;
+      case 'overdue_7d':
+        return `Task 1 Week Overdue: ${task.title}`;
+      case 'overdue_14d':
+        return `Task 2 Weeks Overdue: ${task.title}`;
       default:
         return `Task Reminder: ${task.title}`;
     }
@@ -205,6 +213,10 @@ export class RemindersService {
         return `This task was due on ${dueDate} and is now 1 day overdue.`;
       case 'overdue_3d':
         return `This task was due on ${dueDate} and is now 3 days overdue. Immediate action required.`;
+      case 'overdue_7d':
+        return `This task was due on ${dueDate} and is now 1 week overdue. Escalating priority.`;
+      case 'overdue_14d':
+        return `This task was due on ${dueDate} and is now 2 weeks overdue. Requires management attention.`;
       default:
         return `Task due date: ${dueDate}`;
     }
@@ -248,6 +260,8 @@ export class RemindersService {
         return 'task-due-today';
       case 'overdue_1d':
       case 'overdue_3d':
+      case 'overdue_7d':
+      case 'overdue_14d':
         return 'task-overdue';
       default:
         return 'task-reminder';

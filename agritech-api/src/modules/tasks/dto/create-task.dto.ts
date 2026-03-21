@@ -202,4 +202,20 @@ export class CreateTaskDto {
   @ValidateNested({ each: true })
   @Type(() => ConsumedItemDto)
   planned_items?: ConsumedItemDto[];
+
+  @ApiPropertyOptional({ description: 'Recurrence rule', enum: ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] })
+  @IsOptional()
+  @IsIn(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'])
+  recurrence_rule?: string;
+
+  @ApiPropertyOptional({ description: 'Recurrence end date' })
+  @IsOptional()
+  @IsDateString()
+  recurrence_end_date?: string;
+
+  @ApiPropertyOptional({ description: 'Parent task ID for recurring instances' })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  parent_task_id?: string;
 }

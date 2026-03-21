@@ -69,6 +69,7 @@ import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from 
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
+import { Route as AuthenticatedworkforceTasksKanbanRouteImport } from './routes/_authenticated/(workforce)/tasks/kanban'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
 import { Route as AuthenticatedworkforceTasksTaskIdRouteImport } from './routes/_authenticated/(workforce)/tasks/$taskId'
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
@@ -487,6 +488,12 @@ const AuthenticatedworkforceWorkersWorkerIdRoute =
     id: '/$workerId',
     path: '/$workerId',
     getParentRoute: () => AuthenticatedworkforceWorkersRoute,
+  } as any)
+const AuthenticatedworkforceTasksKanbanRoute =
+  AuthenticatedworkforceTasksKanbanRouteImport.update({
+    id: '/kanban',
+    path: '/kanban',
+    getParentRoute: () => AuthenticatedworkforceTasksRoute,
   } as any)
 const AuthenticatedworkforceTasksCalendarRoute =
   AuthenticatedworkforceTasksCalendarRouteImport.update({
@@ -1061,6 +1068,7 @@ export interface FileRoutesByFullPath {
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
@@ -1194,6 +1202,7 @@ export interface FileRoutesByTo {
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
@@ -1332,6 +1341,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/_authenticated/(workforce)/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/_authenticated/(workforce)/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
@@ -1473,6 +1483,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/tasks/$taskId'
     | '/tasks/calendar'
+    | '/tasks/kanban'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
@@ -1606,6 +1617,7 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/tasks/$taskId'
     | '/tasks/calendar'
+    | '/tasks/kanban'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
@@ -1743,6 +1755,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/work-units'
     | '/_authenticated/(workforce)/tasks/$taskId'
     | '/_authenticated/(workforce)/tasks/calendar'
+    | '/_authenticated/(workforce)/tasks/kanban'
     | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
@@ -2217,6 +2230,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workers/$workerId'
       preLoaderRoute: typeof AuthenticatedworkforceWorkersWorkerIdRouteImport
       parentRoute: typeof AuthenticatedworkforceWorkersRoute
+    }
+    '/_authenticated/(workforce)/tasks/kanban': {
+      id: '/_authenticated/(workforce)/tasks/kanban'
+      path: '/kanban'
+      fullPath: '/tasks/kanban'
+      preLoaderRoute: typeof AuthenticatedworkforceTasksKanbanRouteImport
+      parentRoute: typeof AuthenticatedworkforceTasksRoute
     }
     '/_authenticated/(workforce)/tasks/calendar': {
       id: '/_authenticated/(workforce)/tasks/calendar'
@@ -3109,6 +3129,7 @@ const AuthenticatedsettingsSettingsRouteWithChildren =
 interface AuthenticatedworkforceTasksRouteChildren {
   AuthenticatedworkforceTasksTaskIdRoute: typeof AuthenticatedworkforceTasksTaskIdRoute
   AuthenticatedworkforceTasksCalendarRoute: typeof AuthenticatedworkforceTasksCalendarRoute
+  AuthenticatedworkforceTasksKanbanRoute: typeof AuthenticatedworkforceTasksKanbanRoute
   AuthenticatedworkforceTasksIndexRoute: typeof AuthenticatedworkforceTasksIndexRoute
 }
 
@@ -3118,6 +3139,8 @@ const AuthenticatedworkforceTasksRouteChildren: AuthenticatedworkforceTasksRoute
       AuthenticatedworkforceTasksTaskIdRoute,
     AuthenticatedworkforceTasksCalendarRoute:
       AuthenticatedworkforceTasksCalendarRoute,
+    AuthenticatedworkforceTasksKanbanRoute:
+      AuthenticatedworkforceTasksKanbanRoute,
     AuthenticatedworkforceTasksIndexRoute:
       AuthenticatedworkforceTasksIndexRoute,
   }

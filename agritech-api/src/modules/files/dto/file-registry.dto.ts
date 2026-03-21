@@ -16,6 +16,7 @@ export enum EntityType {
   SELLER = 'seller',
   FARM = 'farm',
   PARCEL = 'parcel',
+  TASK = 'task',
 }
 
 export class RegisterFileDto {

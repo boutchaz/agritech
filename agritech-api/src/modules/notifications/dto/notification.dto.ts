@@ -38,6 +38,7 @@ export enum NotificationType {
   MEMBER_REMOVED = "member_removed",
   ROLE_CHANGED = "role_changed",
   WORKER_ADDED = "worker_added",
+  TASK_MENTION = "task_mention",
   GENERAL = "general",
 }
 

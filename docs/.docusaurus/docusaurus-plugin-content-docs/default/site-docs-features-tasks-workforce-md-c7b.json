@@ -1,7 +1,7 @@
 {
   "id": "features/tasks-workforce",
   "title": "Tasks & Workforce",
-  "description": "The Tasks & Workforce system covers task lifecycle management, worker profiles, time tracking, piece-work payment tracking, and automated reminders. All endpoints are multi-tenant, scoped by organization_id, and protected by JWT authentication with CASL-based permission guards.",
+  "description": "The Tasks & Workforce module is the operational backbone of AgroGina — it connects what needs to happen in the field with who does it, how long it takes, and how much it costs. Every task completion can automatically trigger accounting entries, stock deductions, and harvest records.",
   "source": "@site/docs/features/tasks-workforce.md",
   "sourceDirName": "features",
   "slug": "/features/tasks-workforce",

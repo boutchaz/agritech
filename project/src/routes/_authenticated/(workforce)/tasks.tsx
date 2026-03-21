@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useLocation } from '@tanstack/react-router';
-import { CheckSquare, Calendar, Building2 } from 'lucide-react';
+import { CheckSquare, Calendar, Building2, Columns3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
@@ -22,6 +22,7 @@ function TasksLayout() {
   const navItems = [
     { to: '/tasks', label: t('tasks.list'), icon: CheckSquare, tourId: undefined },
     { to: '/tasks/calendar', label: t('tasks.calendar'), icon: Calendar, tourId: 'task-calendar' },
+    { to: '/tasks/kanban', label: t('tasks.kanban', 'Board'), icon: Columns3, tourId: 'task-kanban' },
   ];
 
   return (

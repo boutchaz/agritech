@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,11 +16,15 @@ import {
   PackageCheck,
   Hash,
   MessageSquare,
-  Send,
   Loader2,
   Timer,
 } from 'lucide-react';
-import { useTask, useUpdateTask, useTaskComments, useAddTaskComment } from '@/hooks/useTasks';
+import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
+import TaskAttachments from '@/components/Tasks/TaskAttachments';
+import TaskChecklist from '@/components/Tasks/TaskChecklist';
+import TaskDependencies from '@/components/Tasks/TaskDependencies';
+import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
+import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
 import { useCropsForTask, type Crop } from '@/hooks/useCrops';
 import { useQueryClient } from '@tanstack/react-query';
@@ -69,8 +73,6 @@ function TaskDetailPage() {
 
   // Comments
   const { data: comments = [], isLoading: commentsLoading } = useTaskComments(taskId);
-  const addComment = useAddTaskComment();
-  const [newComment, setNewComment] = useState('');
 
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
@@ -150,7 +152,7 @@ function TaskDetailPage() {
           {t('tasks.detail.notFoundDesc', 'The task may have been deleted or you may not have access.')}
         </p>
         <Button variant="outline" asChild className="mt-4">
-          <Link to="/tasks">{t('tasks.detail.backToList', 'Back to tasks')}</Link>
+          <Link to="/tasks" search={{ editTaskId: undefined }}>{t('tasks.detail.backToList', 'Back to tasks')}</Link>
         </Button>
       </div>
     );
@@ -326,26 +328,12 @@ function TaskDetailPage() {
         setLotNumber(`${parcelCode}${farmCode}-${sequence}${year}`);
         setError(null);
       } else {
-        navigate({ to: '/tasks' });
+        navigate({ to: '/tasks', search: { editTaskId: undefined } });
       }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsActionLoading(false);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!newComment.trim()) return;
-    try {
-      await addComment.mutateAsync({
-        task_id: taskId,
-        comment: newComment.trim(),
-        type: 'comment',
-      } as any);
-      setNewComment('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add comment');
     }
   };
 
@@ -358,7 +346,7 @@ function TaskDetailPage() {
       {/* Back + Header */}
       <div className="flex items-start gap-4">
         <Button variant="ghost" size="icon" asChild className="mt-1 flex-shrink-0">
-          <Link to="/tasks">
+          <Link to="/tasks" search={{ editTaskId: undefined }}>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
@@ -712,6 +700,23 @@ function TaskDetailPage() {
             </div>
           )}
 
+          {/* Attachments Section */}
+          <TaskAttachments
+            taskId={taskId}
+            organizationId={currentOrganization?.id || ''}
+            disabled={task.status === 'cancelled'}
+          />
+
+          {/* Checklist Section */}
+          <TaskChecklist taskId={taskId} disabled={task.status === 'cancelled'} />
+
+          {/* Dependencies Section */}
+          <TaskDependencies
+            taskId={taskId}
+            organizationId={currentOrganization?.id || ''}
+            disabled={task.status === 'cancelled'}
+          />
+
           {/* Comments Section */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -723,33 +728,8 @@ function TaskDetailPage() {
             </h2>
 
             {/* Add Comment */}
-            <div className="flex gap-3 mb-6">
-              <div className="flex-1">
-                <Textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder={t('tasks.detail.addComment', 'Write a comment...')}
-                  rows={2}
-                  className="resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      handleAddComment();
-                    }
-                  }}
-                />
-              </div>
-              <Button
-                onClick={handleAddComment}
-                disabled={!newComment.trim() || addComment.isPending}
-                size="sm"
-                className="self-end"
-              >
-                {addComment.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
+            <div className="mb-6">
+              <TaskCommentInput taskId={taskId} />
             </div>
 
             {/* Comments List */}
@@ -780,8 +760,8 @@ function TaskDetailPage() {
                           })}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                        {comment.comment}
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        <CommentDisplay comment={comment.comment} />
                       </p>
                     </div>
                   </div>

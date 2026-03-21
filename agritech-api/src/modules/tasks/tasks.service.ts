@@ -59,7 +59,7 @@ export class TasksService {
    * Get all tasks assigned to the current user across all organizations
    * @param includeCompleted - If true, includes completed tasks in results
    */
-  async findMyTasks(userId: string, includeCompleted: boolean = false) {
+  async findMyTasks(userId: string, includeCompleted: boolean = false, page?: number, pageSize?: number) {
     const client = this.databaseService.getAdminClient();
 
     // First, get all organizations the user belongs to
@@ -111,7 +111,7 @@ export class TasksService {
       return false;
     });
 
-    return userTasks.map((task) => ({
+    const mapTask = (task: any) => ({
       ...task,
       worker_name: task.worker
         ? `${task.worker.first_name} ${task.worker.last_name}`
@@ -125,7 +125,24 @@ export class TasksService {
       organization_name: Array.isArray(task.organization)
         ? task.organization[0]?.name
         : task.organization?.name,
-    }));
+    });
+
+    if (page !== undefined && pageSize !== undefined) {
+      const total = userTasks.length;
+      const totalPages = Math.ceil(total / pageSize);
+      const from = (page - 1) * pageSize;
+      const paginatedTasks = userTasks.slice(from, from + pageSize);
+
+      return {
+        data: paginatedTasks.map(mapTask),
+        total,
+        page,
+        pageSize,
+        totalPages,
+      };
+    }
+
+    return userTasks.map(mapTask);
   }
 
   async findAll(
@@ -384,6 +401,17 @@ export class TasksService {
       );
     }
 
+    // Generate recurring tasks if recurrence_rule is set
+    if (!isUpdate && createTaskDto.recurrence_rule && task) {
+      try {
+        await this.generateRecurringTasks(organizationId, task, createTaskDto);
+      } catch (recurrenceError) {
+        this.logger.error(
+          `Failed to generate recurring tasks for task ${task.id}: ${recurrenceError.message}`,
+        );
+      }
+    }
+
     return {
       ...task,
       worker_name: task.worker
@@ -396,6 +424,112 @@ export class TasksService {
         ? task.parcel[0]?.name
         : task.parcel?.name,
     };
+  }
+
+  /**
+   * Generate recurring task instances based on recurrence_rule
+   * Creates future tasks up to recurrence_end_date or max 52 instances (1 year)
+   */
+  private async generateRecurringTasks(
+    organizationId: string,
+    parentTask: any,
+    dto: CreateTaskDto,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const rule = dto.recurrence_rule;
+    const maxInstances = 52;
+
+    const endDate = dto.recurrence_end_date
+      ? new Date(dto.recurrence_end_date)
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+
+    const baseDate = dto.scheduled_start
+      ? new Date(dto.scheduled_start)
+      : dto.due_date
+        ? new Date(dto.due_date)
+        : new Date();
+
+    const recurringTasks: any[] = [];
+
+    for (let i = 1; i <= maxInstances; i++) {
+      const nextDate = new Date(baseDate);
+
+      switch (rule) {
+        case 'daily':
+          nextDate.setDate(nextDate.getDate() + i);
+          break;
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + i * 7);
+          break;
+        case 'biweekly':
+          nextDate.setDate(nextDate.getDate() + i * 14);
+          break;
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + i);
+          break;
+        case 'quarterly':
+          nextDate.setMonth(nextDate.getMonth() + i * 3);
+          break;
+        case 'yearly':
+          nextDate.setFullYear(nextDate.getFullYear() + i);
+          break;
+        default:
+          return;
+      }
+
+      if (nextDate > endDate) break;
+
+      const taskRecord: Record<string, any> = {
+        organization_id: organizationId,
+        farm_id: parentTask.farm_id,
+        title: parentTask.title,
+        description: parentTask.description,
+        task_type: parentTask.task_type,
+        priority: parentTask.priority,
+        category_id: parentTask.category_id || null,
+        parcel_id: parentTask.parcel_id || null,
+        crop_id: parentTask.crop_id || null,
+        assigned_to: parentTask.assigned_to || null,
+        estimated_duration: parentTask.estimated_duration,
+        required_skills: parentTask.required_skills,
+        equipment_required: parentTask.equipment_required,
+        weather_dependency: parentTask.weather_dependency ?? false,
+        cost_estimate: parentTask.cost_estimate,
+        notes: parentTask.notes,
+        status: 'pending',
+        completion_percentage: 0,
+        parent_task_id: parentTask.id,
+        recurrence_rule: rule,
+      };
+
+      if (dto.scheduled_start) {
+        taskRecord.scheduled_start = nextDate.toISOString();
+        if (dto.scheduled_end && dto.scheduled_start) {
+          const duration = new Date(dto.scheduled_end).getTime() - new Date(dto.scheduled_start).getTime();
+          taskRecord.scheduled_end = new Date(nextDate.getTime() + duration).toISOString();
+        }
+      }
+      if (dto.due_date) {
+        const dueDateOffset = dto.scheduled_start
+          ? new Date(dto.due_date).getTime() - new Date(dto.scheduled_start).getTime()
+          : 0;
+        taskRecord.due_date = new Date(nextDate.getTime() + dueDateOffset).toISOString().split('T')[0];
+      }
+
+      recurringTasks.push(taskRecord);
+    }
+
+    if (recurringTasks.length > 0) {
+      const { error } = await client.from('tasks').insert(recurringTasks);
+
+      if (error) {
+        throw new Error(`Failed to insert recurring tasks: ${error.message}`);
+      }
+
+      this.logger.log(
+        `Generated ${recurringTasks.length} recurring task instances for parent task ${parentTask.id}`,
+      );
+    }
   }
 
   /**
@@ -627,6 +761,93 @@ export class TasksService {
     }
 
     return { message: "Task deleted successfully" };
+  }
+
+  /**
+   * Bulk create tasks
+   */
+  async bulkCreate(userId: string, organizationId: string, tasks: CreateTaskDto[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const taskRecords = tasks.map((dto) => ({
+      ...dto,
+      organization_id: organizationId,
+      status: "pending",
+      completion_percentage: 0,
+      weather_dependency: dto.weather_dependency ?? false,
+    }));
+
+    const { data, error } = await client
+      .from("tasks")
+      .insert(taskRecords)
+      .select(
+        `
+        *,
+        worker:workers!assigned_to(first_name, last_name),
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `,
+      );
+
+    if (error) {
+      throw new Error(`Failed to bulk create tasks: ${error.message}`);
+    }
+
+    return (data || []).map((task) => ({
+      ...task,
+      worker_name: task.worker
+        ? `${task.worker.first_name} ${task.worker.last_name}`
+        : undefined,
+      farm_name: Array.isArray(task.farm)
+        ? task.farm[0]?.name
+        : task.farm?.name,
+      parcel_name: Array.isArray(task.parcel)
+        ? task.parcel[0]?.name
+        : task.parcel?.name,
+    }));
+  }
+
+  /**
+   * Bulk update status of multiple tasks
+   */
+  async bulkUpdateStatus(userId: string, organizationId: string, taskIds: string[], status: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .update({ status })
+      .eq("organization_id", organizationId)
+      .in("id", taskIds)
+      .select("id, status");
+
+    if (error) {
+      throw new Error(`Failed to bulk update task status: ${error.message}`);
+    }
+
+    return { updated: data?.length || 0, tasks: data || [] };
+  }
+
+  /**
+   * Bulk delete multiple tasks
+   */
+  async bulkDelete(userId: string, organizationId: string, taskIds: string[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .delete()
+      .eq("organization_id", organizationId)
+      .in("id", taskIds)
+      .select("id");
+
+    if (error) {
+      throw new Error(`Failed to bulk delete tasks: ${error.message}`);
+    }
+
+    return { deleted: data?.length || 0 };
   }
 
   /**
@@ -1192,31 +1413,53 @@ export class TasksService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    const { data: tasks, error } = await client
+    const { data: tasks, error, count } = await client
       .from("tasks")
-      .select("*")
+      .select("id, status, due_date, actual_cost", { count: "exact" })
       .eq("organization_id", organizationId);
 
     if (error) {
       throw new Error(`Failed to fetch task statistics: ${error.message}`);
     }
 
-    const total_tasks = tasks?.length || 0;
-    const completed_tasks =
-      tasks?.filter((t) => t.status === "completed").length || 0;
-    const in_progress_tasks =
-      tasks?.filter((t) => t.status === "in_progress").length || 0;
-    const overdue_tasks =
-      tasks?.filter((t) => t.status === "overdue").length || 0;
+    const total_tasks = count || 0;
+    const today = new Date().toISOString().split("T")[0];
+
+    const statusCounts = {
+      pending: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0,
+      on_hold: 0,
+    };
+
+    let overdue_tasks = 0;
+    let total_cost = 0;
+
+    for (const t of tasks || []) {
+      if (t.status in statusCounts) {
+        statusCounts[t.status]++;
+      }
+      // Overdue: due_date is in the past AND status is not completed or cancelled
+      if (
+        t.due_date &&
+        t.due_date < today &&
+        t.status !== "completed" &&
+        t.status !== "cancelled"
+      ) {
+        overdue_tasks++;
+      }
+      total_cost += t.actual_cost || 0;
+    }
 
     return {
       total_tasks,
-      completed_tasks,
-      in_progress_tasks,
+      ...statusCounts,
       overdue_tasks,
       completion_rate:
-        total_tasks > 0 ? (completed_tasks / total_tasks) * 100 : 0,
-      total_cost: tasks?.reduce((sum, t) => sum + (t.actual_cost || 0), 0) || 0,
+        total_tasks > 0 ? (statusCounts.completed / total_tasks) * 100 : 0,
+      total_cost,
     };
   }
 
@@ -1322,6 +1565,7 @@ export class TasksService {
         user_id: userId,
         comment: commentData.comment,
         worker_id: commentData.worker_id || null,
+        type: commentData.type || 'comment',
       })
       .select()
       .single();
@@ -1330,7 +1574,340 @@ export class TasksService {
       throw new BadRequestException(`Failed to add comment: ${error.message}`);
     }
 
+    // Parse @mentions and send notifications
+    // Pattern: @[Display Name](user-uuid)
+    const mentionRegex = /@\[([^\]]+)\]\(([a-f0-9-]{36})\)/g;
+    let match: RegExpExecArray | null;
+    const mentionedUserIds = new Set<string>();
+
+    while ((match = mentionRegex.exec(commentData.comment)) !== null) {
+      const mentionedUserId = match[2];
+      if (mentionedUserId !== userId) {
+        mentionedUserIds.add(mentionedUserId);
+      }
+    }
+
+    // Get the task title and commenter name for the notification
+    if (mentionedUserIds.size > 0) {
+      const { data: task } = await client
+        .from("tasks")
+        .select("title, organization_id")
+        .eq("id", taskId)
+        .maybeSingle();
+
+      const { data: commenter } = await client
+        .from("user_profiles")
+        .select("full_name, email")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const commenterName = commenter?.full_name || commenter?.email || "Someone";
+
+      for (const mentionedId of mentionedUserIds) {
+        try {
+          await this.notificationsService.createNotification({
+            userId: mentionedId,
+            organizationId: task?.organization_id || "",
+            type: NotificationType.TASK_MENTION || NotificationType.TASK_STATUS_CHANGED,
+            title: `${commenterName} mentioned you in "${task?.title || "a task"}"`,
+            message: commentData.comment.replace(/@\[([^\]]+)\]\([a-f0-9-]{36}\)/g, "@$1").substring(0, 200),
+            data: {
+              taskId,
+              commentId: data.id,
+              mentionedBy: userId,
+            },
+          });
+        } catch (notifError) {
+          this.logger.warn(`Failed to send mention notification to ${mentionedId}: ${notifError}`);
+        }
+      }
+    }
+
     return data;
+  }
+
+  // =====================================================
+  // TASK CHECKLIST
+  // =====================================================
+
+  /**
+   * Get checklist for a task
+   */
+  async getChecklist(userId: string, organizationId: string, taskId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .select("checklist")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to fetch checklist: ${error.message}`);
+    if (!data) throw new NotFoundException("Task not found");
+
+    return data.checklist || [];
+  }
+
+  /**
+   * Update entire checklist for a task
+   */
+  async updateChecklist(userId: string, organizationId: string, taskId: string, checklist: any[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Calculate completion percentage from checklist
+    const total = checklist.length;
+    const completed = checklist.filter((item: any) => item.completed).length;
+    const completion_percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const { data, error } = await client
+      .from("tasks")
+      .update({ checklist, completion_percentage })
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .select("checklist, completion_percentage")
+      .single();
+
+    if (error) throw new Error(`Failed to update checklist: ${error.message}`);
+
+    return data;
+  }
+
+  /**
+   * Add a single checklist item
+   */
+  async addChecklistItem(userId: string, organizationId: string, taskId: string, title: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      title,
+      completed: false,
+    };
+
+    const updatedChecklist = [...currentChecklist, newItem];
+    await this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+
+    return newItem;
+  }
+
+  /**
+   * Toggle a checklist item
+   */
+  async toggleChecklistItem(userId: string, organizationId: string, taskId: string, itemId: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+
+    const updatedChecklist = currentChecklist.map((item: any) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          completed: !item.completed,
+          completed_at: !item.completed ? new Date().toISOString() : null,
+          completed_by: !item.completed ? userId : null,
+        };
+      }
+      return item;
+    });
+
+    return this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+  }
+
+  /**
+   * Remove a checklist item
+   */
+  async removeChecklistItem(userId: string, organizationId: string, taskId: string, itemId: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+    const updatedChecklist = currentChecklist.filter((item: any) => item.id !== itemId);
+    return this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+  }
+
+  // =====================================================
+  // TASK DEPENDENCIES
+  // =====================================================
+
+  /**
+   * Get all dependencies for a task (both "depends on" and "required by")
+   */
+  async getDependencies(userId: string, organizationId: string, taskId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Get tasks this task depends on
+    const { data: dependsOn, error: error1 } = await client
+      .from("task_dependencies")
+      .select(`
+        id,
+        depends_on_task_id,
+        dependency_type,
+        lag_days,
+        created_at,
+        depends_on_task:tasks!depends_on_task_id(id, title, status, due_date, priority, assigned_to)
+      `)
+      .eq("task_id", taskId);
+
+    if (error1) throw new Error(`Failed to fetch dependencies: ${error1.message}`);
+
+    // Get tasks that depend on this task (blocked by this)
+    const { data: requiredBy, error: error2 } = await client
+      .from("task_dependencies")
+      .select(`
+        id,
+        task_id,
+        dependency_type,
+        lag_days,
+        created_at,
+        dependent_task:tasks!task_id(id, title, status, due_date, priority, assigned_to)
+      `)
+      .eq("depends_on_task_id", taskId);
+
+    if (error2) throw new Error(`Failed to fetch dependents: ${error2.message}`);
+
+    return {
+      depends_on: (dependsOn || []).map((d: any) => ({
+        id: d.id,
+        task_id: d.depends_on_task_id,
+        title: d.depends_on_task?.title,
+        status: d.depends_on_task?.status,
+        due_date: d.depends_on_task?.due_date,
+        priority: d.depends_on_task?.priority,
+        dependency_type: d.dependency_type,
+        lag_days: d.lag_days,
+      })),
+      required_by: (requiredBy || []).map((d: any) => ({
+        id: d.id,
+        task_id: d.task_id,
+        title: d.dependent_task?.title,
+        status: d.dependent_task?.status,
+        due_date: d.dependent_task?.due_date,
+        priority: d.dependent_task?.priority,
+        dependency_type: d.dependency_type,
+        lag_days: d.lag_days,
+      })),
+    };
+  }
+
+  /**
+   * Add a dependency between tasks
+   */
+  async addDependency(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    dependsOnTaskId: string,
+    dependencyType: string = 'finish_to_start',
+    lagDays: number = 0,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Prevent self-dependency
+    if (taskId === dependsOnTaskId) {
+      throw new BadRequestException("A task cannot depend on itself");
+    }
+
+    // Check for circular dependency
+    const hasCircular = await this.checkCircularDependency(client, dependsOnTaskId, taskId);
+    if (hasCircular) {
+      throw new BadRequestException("Adding this dependency would create a circular reference");
+    }
+
+    // Check if dependency already exists
+    const { data: existing } = await client
+      .from("task_dependencies")
+      .select("id")
+      .eq("task_id", taskId)
+      .eq("depends_on_task_id", dependsOnTaskId)
+      .maybeSingle();
+
+    if (existing) {
+      throw new BadRequestException("This dependency already exists");
+    }
+
+    const { data, error } = await client
+      .from("task_dependencies")
+      .insert({
+        task_id: taskId,
+        depends_on_task_id: dependsOnTaskId,
+        dependency_type: dependencyType,
+        lag_days: lagDays,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to add dependency: ${error.message}`);
+
+    return data;
+  }
+
+  /**
+   * Remove a dependency
+   */
+  async removeDependency(userId: string, organizationId: string, dependencyId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { error } = await client
+      .from("task_dependencies")
+      .delete()
+      .eq("id", dependencyId);
+
+    if (error) throw new Error(`Failed to remove dependency: ${error.message}`);
+
+    return { message: "Dependency removed successfully" };
+  }
+
+  /**
+   * Check if a task is blocked (has unfinished dependencies)
+   */
+  async isTaskBlocked(userId: string, organizationId: string, taskId: string): Promise<{ blocked: boolean; blockers: any[] }> {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data: deps } = await client
+      .from("task_dependencies")
+      .select(`
+        depends_on_task:tasks!depends_on_task_id(id, title, status)
+      `)
+      .eq("task_id", taskId)
+      .eq("dependency_type", "finish_to_start");
+
+    const blockers = (deps || [])
+      .filter((d: any) => d.depends_on_task?.status !== "completed")
+      .map((d: any) => ({
+        id: d.depends_on_task?.id,
+        title: d.depends_on_task?.title,
+        status: d.depends_on_task?.status,
+      }));
+
+    return { blocked: blockers.length > 0, blockers };
+  }
+
+  /**
+   * Check for circular dependencies using BFS
+   */
+  private async checkCircularDependency(client: any, fromTaskId: string, toTaskId: string): Promise<boolean> {
+    const visited = new Set<string>();
+    const queue = [fromTaskId];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === toTaskId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+
+      const { data: deps } = await client
+        .from("task_dependencies")
+        .select("depends_on_task_id")
+        .eq("task_id", current);
+
+      for (const dep of deps || []) {
+        queue.push(dep.depends_on_task_id);
+      }
+    }
+
+    return false;
   }
 
   // =====================================================
