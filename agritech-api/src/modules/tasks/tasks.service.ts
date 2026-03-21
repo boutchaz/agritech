@@ -570,7 +570,7 @@ export class TasksService {
       .select(
         `
         *,
-        worker:workers!assigned_to(first_name, last_name, payment_type, hourly_rate, daily_rate),
+        worker:workers!assigned_to(first_name, last_name, worker_type, daily_rate, per_unit_rate, monthly_salary),
         farm:farms!farm_id(name),
         parcel:parcels!parcel_id(name)
       `,
@@ -685,16 +685,20 @@ export class TasksService {
             new Date(task.actual_start).getTime()) /
           (1000 * 60 * 60)
         : 0;
-    // Calculate payment based on worker payment type
+    // Calculate payment based on worker type
     let totalPayment = 0;
     if (
-      worker.payment_type === "hourly" &&
-      worker.hourly_rate &&
+      worker.worker_type === "daily_worker" &&
+      worker.daily_rate &&
       hoursWorked > 0
     ) {
-      totalPayment = worker.hourly_rate * hoursWorked;
-    } else if (worker.payment_type === "daily" && worker.daily_rate) {
+      // Prorate daily rate by hours (assume 8h day)
+      totalPayment = (worker.daily_rate / 8) * hoursWorked;
+    } else if (worker.worker_type === "daily_worker" && worker.daily_rate) {
       totalPayment = worker.daily_rate;
+    } else if (worker.worker_type === "fixed_salary" && worker.monthly_salary) {
+      // Prorate monthly salary for a single day
+      totalPayment = worker.monthly_salary / 26;
     }
     // Determine work date
     const workDate = task.due_date
@@ -708,12 +712,12 @@ export class TasksService {
         farm_id: farmId,
         organization_id: task.organization_id,
         worker_id: task.assigned_to,
-        worker_type: worker.payment_type,
+        worker_type: worker.worker_type,
         work_date: workDate.toISOString().split("T")[0],
         hours_worked: hoursWorked > 0 ? hoursWorked : null,
         task_description: task.title || "Task completed",
-        hourly_rate: worker.hourly_rate,
-        total_payment: totalPayment > 0 ? totalPayment : null,
+        hourly_rate: worker.daily_rate ? Math.round((worker.daily_rate / 8) * 100) / 100 : null,
+        total_payment: totalPayment > 0 ? Math.round(totalPayment * 100) / 100 : null,
         payment_status: totalPayment > 0 ? "pending" : "not_applicable",
         notes: JSON.stringify({
           task_id: task.id,

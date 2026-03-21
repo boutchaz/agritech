@@ -79,6 +79,13 @@ const NAV_SECTIONS: NavSection[] = [
         labelKey: 'domains.inventory',
         permission: { action: 'read', subject: 'Inventory' },
       },
+      {
+        key: 'pest-alerts',
+        route: '/(drawer)/(pest-alerts)' as Href,
+        icon: 'bug-outline',
+        labelKey: 'domains.pestAlerts',
+        permission: { action: 'read', subject: 'PestAlert' },
+      },
     ],
   },
   {
@@ -383,6 +390,7 @@ export default function DrawerLayout() {
       <Drawer.Screen name="(workforce)" options={{ headerShown: false }} />
       <Drawer.Screen name="(inventory)" options={{ headerShown: false }} />
       <Drawer.Screen name="(accounting)" options={{ headerShown: false }} />
+      <Drawer.Screen name="(pest-alerts)" options={{ headerShown: false }} />
       <Drawer.Screen name="(settings)" options={{ headerShown: false }} />
       <Drawer.Screen name="(misc)" options={{ headerShown: false }} />
     </Drawer>

@@ -89,7 +89,7 @@ export default function HomeScreen() {
   const { t: tAuth } = useTranslation('auth');
 
   const { data: tasks, isLoading: tasksLoading, refetch: refetchTasks } = useMyTasks();
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useTaskStatistics();
+  const { data: stats, refetch: refetchStats } = useTaskStatistics();
   const { data: farms = [], refetch: refetchFarms } = useFarms();
   const { data: parcels = [], refetch: refetchParcels } = useParcels(currentFarm?.id);
 

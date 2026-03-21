@@ -120,7 +120,7 @@ function NotificationItem({
 export default function AlertsScreen() {
   const { t } = useTranslation(['common', 'navigation']);
   const { data: notifications = [], refetch, isRefetching } = useNotifications({});
-  const unreadCount = useUnreadNotificationCount() || 0;
+  const { data: unreadCount = 0 } = useUnreadNotificationCount();
   const markAllAsRead = useMarkAllNotificationsAsRead();
 
   // Group notifications by date

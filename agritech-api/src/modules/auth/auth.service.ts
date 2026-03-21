@@ -271,6 +271,36 @@ export class AuthService {
     };
   }
 
+  /**
+   * Update current user profile (name, phone, avatar)
+   */
+  async updateUserProfile(userId: string, data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) {
+    const client = this.databaseService.getAdminClient();
+
+    const updateData: Record<string, any> = {};
+    if (data.first_name !== undefined) updateData.first_name = data.first_name;
+    if (data.last_name !== undefined) updateData.last_name = data.last_name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.avatar_url !== undefined) updateData.avatar_url = data.avatar_url;
+
+    if (Object.keys(updateData).length === 0) {
+      return this.getUserProfile(userId);
+    }
+
+    const { data: profile, error } = await client
+      .from('user_profiles')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to update profile: ${error.message}`);
+    }
+
+    return profile;
+  }
+
    /**
     * Change current user password and mark password_set
     */

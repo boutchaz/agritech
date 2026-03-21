@@ -458,6 +458,9 @@ export const authApi = {
 
   getProfile: () => api.get<UserProfile>('/auth/me'),
 
+  updateProfile: (data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) =>
+    api.patch<UserProfile>('/auth/me', data),
+
   changePassword: (newPassword: string) =>
     api.post<{ success: boolean }>('/auth/change-password', { newPassword }),
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -136,6 +136,16 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@Request() req) {
     return this.authService.getUserProfile(req.user.id);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(@Request() req, @Body() body: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) {
+    return this.authService.updateUserProfile(req.user.id, body);
   }
 
   @Get('organizations')
