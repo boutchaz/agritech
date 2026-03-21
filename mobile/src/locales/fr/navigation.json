@@ -20,7 +20,8 @@
     "alerts": "Alertes",
     "team": "Équipe",
     "approvals": "Approbations",
-    "finance": "Finance"
+    "finance": "Finance",
+    "pestAlerts": "Ravageurs & Maladies"
   },
   "drawer": {
     "farmManagement": "Gestion Agricole",

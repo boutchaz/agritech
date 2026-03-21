@@ -60,7 +60,7 @@ export default function InventoryScreen() {
           icon="swap-vertical-outline"
           title={t('inventory.entries', 'Stock Movements')}
           subtitle={t('inventory.entriesSubtitle', 'Track stock in/out')}
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(inventory)/entries')}
         />
         <MenuCard
           icon="warning-outline"
@@ -73,7 +73,7 @@ export default function InventoryScreen() {
           icon="business-outline"
           title={t('inventory.warehouses', 'Warehouses')}
           subtitle={t('inventory.warehousesSubtitle', 'Manage storage locations')}
-          onPress={() => {}}
+          onPress={() => router.push('/(drawer)/(inventory)/warehouses')}
         />
       </View>
     </View>

@@ -20,7 +20,8 @@
     "alerts": "Alerts",
     "team": "Team",
     "approvals": "Approvals",
-    "finance": "Finance"
+    "finance": "Finance",
+    "pestAlerts": "Pest & Disease"
   },
   "drawer": {
     "farmManagement": "Farm Management",

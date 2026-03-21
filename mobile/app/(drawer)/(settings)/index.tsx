@@ -112,7 +112,7 @@ export default function SettingsScreen() {
         <MenuCard
           icon="globe-outline"
           title={t('settings.language', 'Language')}
-          subtitle="English, Fran\u00e7ais, \u0627\u0644\u0639\u0631\u0628\u064a\u0629"
+          subtitle="English, Français, العربية"
           onPress={() => router.push('/(drawer)/(settings)/language')}
           themeColors={themeColors}
         />

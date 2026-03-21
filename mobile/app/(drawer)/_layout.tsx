@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'expo-router/drawer';
 import { Redirect, useRouter, usePathname, type Href } from 'expo-router';
@@ -300,12 +300,19 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
         activeOpacity={0.8}
         onPress={() => {
           navigation.closeDrawer();
-          router.push('/(drawer)/(settings)' as Href);
+          router.push('/(drawer)/(settings)/profile' as Href);
         }}
       >
-        <View style={[styles.avatar, { backgroundColor: themeColors.brandPrimary }]}>
-          <Text style={[styles.avatarText, { color: themeColors.onBrand }]}>{initials}</Text>
-        </View>
+        {profile?.avatar_url ? (
+          <Image
+            source={{ uri: profile.avatar_url }}
+            style={{ width: 44, height: 44, borderRadius: 22 }}
+          />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: themeColors.brandPrimary }]}>
+            <Text style={[styles.avatarText, { color: themeColors.onBrand }]}>{initials}</Text>
+          </View>
+        )}
         <View style={styles.headerInfo}>
           <Text style={[styles.userName, { color: themeColors.onBrand }]} numberOfLines={1}>
             {userName || profile?.email || t('selectOrganization', { ns: 'auth' })}

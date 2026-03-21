@@ -20,7 +20,8 @@
     "alerts": "التنبيهات",
     "team": "الفريق",
     "approvals": "الموافقات",
-    "finance": "المالية"
+    "finance": "المالية",
+    "pestAlerts": "الآفات والأمراض"
   },
   "drawer": {
     "farmManagement": "إدارة المزرعة",

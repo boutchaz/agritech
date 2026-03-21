@@ -85,7 +85,7 @@ const SHELLS: Record<RoleShell, TabConfig[]> = {
 
 // All tab screen files must be registered even if hidden for a given role
 const ALL_SCREENS = [
-  'index', 'tasks', 'harvest', 'clock', 'profile',
+  'index', 'tasks', 'harvest', 'clock',
   'operations', 'team', 'alerts',
   'farms-overview', 'finance', 'approvals',
   'notifications',

@@ -7,7 +7,12 @@ import type {
   ExperienceLevelConfig,
   FeatureUsage,
 } from '@/types/experience-level';
-import { EXPERIENCE_LEVELS, hasFeature, suggestLevelUpgrade } from '@/types/experience-level';
+import {
+  EXPERIENCE_LEVELS,
+  hasFeature,
+  suggestLevelUpgrade,
+  normalizeExperienceLevel,
+} from '@/types/experience-level';
 
 interface ExperienceLevelContextValue {
   level: ExperienceLevel;
@@ -48,12 +53,13 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
     if (profile) {
       // @ts-expect-error - experience_level will be added after migration
       const userLevel = profile.experience_level as ExperienceLevel | undefined;
+      const safeLevel = normalizeExperienceLevel(userLevel);
       // @ts-expect-error - dismissed_hints will be added after migration
       const userHints = profile.dismissed_hints as string[] | undefined;
       // @ts-expect-error - feature_usage will be added after migration
       const userUsage = profile.feature_usage as FeatureUsage | undefined;
 
-      setLevelState(userLevel || 'basic');
+      setLevelState(safeLevel);
       setDismissedHints(userHints || []);
       setFeatureUsage(userUsage || {});
       setIsLoading(false);
@@ -158,7 +164,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
 
   const value: ExperienceLevelContextValue = {
     level,
-    config: EXPERIENCE_LEVELS[level],
+    config: EXPERIENCE_LEVELS[normalizeExperienceLevel(level)],
     setLevel,
     hasFeature: checkFeature,
     dismissedHints,

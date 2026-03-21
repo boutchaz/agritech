@@ -101,6 +101,12 @@ export class CreateWorkerDto {
   @Min(0)
   daily_rate?: number;
 
+  @ApiPropertyOptional({ description: 'Per-unit rate for piece work' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  per_unit_rate?: number;
+
   @ApiPropertyOptional({
     description: 'Métayage type',
     enum: ['khammass', 'rebaa', 'tholth', 'custom']
