@@ -4419,6 +4419,12 @@ ALTER TABLE organization_users
 -- Add index for the role_id column
 CREATE INDEX IF NOT EXISTS idx_organization_users_role ON organization_users(role_id);
 
+-- Add FK from organization_users.user_id to user_profiles.id
+-- (both reference auth.users(id); this explicit FK lets Supabase PostgREST resolve the join)
+ALTER TABLE organization_users
+  ADD CONSTRAINT organization_users_user_profile_fkey
+  FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
+
 -- =====================================================
 -- SUBSCRIPTIONS RLS POLICIES
 -- =====================================================

@@ -33,7 +33,7 @@ export class OrganizationUsersService {
         .select(`
           *,
           roles!inner(id, name, display_name),
-          user_profiles!organization_users_user_id_fkey!inner(id, first_name, last_name, email),
+          user_profiles!organization_users_user_profile_fkey!inner(id, first_name, last_name, email),
           workers(id, position, is_active)
         `)
         .eq('organization_id', organizationId);
@@ -179,7 +179,7 @@ export class OrganizationUsersService {
       .select(`
         *,
         roles(id, name, display_name),
-        user_profiles!organization_users_user_id_fkey(id, first_name, last_name, email),
+        user_profiles!organization_users_user_profile_fkey(id, first_name, last_name, email),
         workers(id, position, is_active)
       `)
       .eq('user_id', userId)

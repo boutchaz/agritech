@@ -10,6 +10,7 @@ import WeatherForecast from '../WeatherForecast';
 import { SectionLoader } from '@/components/ui/loader';
 
 interface WeatherAnalyticsViewProps {
+  parcelId?: string;
   parcelBoundary: number[][];
   parcelName: string;
   cropType?: string | null;
@@ -25,6 +26,7 @@ const formatDateInput = (date: Date): string => {
 };
 
 const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
+  parcelId,
   parcelBoundary,
   parcelName,
   cropType,
@@ -38,6 +40,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   const [showCustomDates, setShowCustomDates] = useState(false);
 
   const { data, loading, error } = useWeatherAnalytics({
+    parcelId,
     parcelBoundary,
     timeRange,
     customStartDate: showCustomDates ? customStartDate : undefined,
