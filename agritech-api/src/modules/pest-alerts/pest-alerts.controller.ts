@@ -179,6 +179,31 @@ export class PestAlertsController {
     return this.pestAlertsService.deleteReport(organizationId, reportId);
   }
 
+  @Get('disease-risk/:parcelId')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Get disease risk assessment for a parcel',
+    description: 'Evaluates disease risk based on current weather conditions and crop-specific thresholds',
+  })
+  @ApiParam({
+    name: 'parcelId',
+    description: 'Parcel ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disease risk assessment retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  async getDiseaseRisk(
+    @Request() req,
+    @Param('parcelId') parcelId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.pestAlertsService.getDiseaseRisk(parcelId, organizationId);
+  }
+
   @Post('reports/:id/escalate')
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'Farm'))

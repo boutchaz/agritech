@@ -1,7 +1,7 @@
 {
   "id": "features/subscriptions",
   "title": "Subscriptions & Module System",
-  "description": "The AgriTech Platform uses a subscription-based module system that enables features based on the organization's plan tier. This document covers the implementation of subscriptions, module configuration, and access control.",
+  "description": "The AgroGina Platform uses a subscription-based module system that enables features based on the organization's plan tier. This document covers the implementation of subscriptions, module configuration, and access control.",
   "source": "@site/docs/features/subscriptions.md",
   "sourceDirName": "features",
   "slug": "/features/subscriptions",

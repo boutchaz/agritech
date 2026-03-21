@@ -343,6 +343,25 @@ export class CalibrationController {
     );
   }
 
+  @Get("irrigation-recommendation")
+  @ApiOperation({
+    summary: "Get irrigation recommendation based on Kc × ET0",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Irrigation recommendation computed successfully",
+  })
+  async getIrrigationRecommendation(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getIrrigationRecommendation(
+      parcelId,
+      organizationId,
+    );
+  }
+
   private getOrganizationId(req: Request): string {
     const requestOrganizationId = (
       req as Request & { organizationId?: unknown }

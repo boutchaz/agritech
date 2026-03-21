@@ -180,6 +180,24 @@ export class CropCyclesService {
     return { id };
   }
 
+  private static readonly VALID_CYCLE_TRANSITIONS: Record<string, string[]> = {
+    [CropCycleStatus.PLANNED]: [CropCycleStatus.LAND_PREP, CropCycleStatus.CANCELLED],
+    [CropCycleStatus.LAND_PREP]: [CropCycleStatus.GROWING, CropCycleStatus.CANCELLED],
+    [CropCycleStatus.GROWING]: [CropCycleStatus.HARVESTING, CropCycleStatus.CANCELLED],
+    [CropCycleStatus.HARVESTING]: [CropCycleStatus.COMPLETED],
+    [CropCycleStatus.COMPLETED]: [],
+    [CropCycleStatus.CANCELLED]: [],
+  };
+
+  private validateCycleStatusTransition(currentStatus: string, newStatus: string): void {
+    const allowed = CropCyclesService.VALID_CYCLE_TRANSITIONS[currentStatus] || [];
+    if (!allowed.includes(newStatus)) {
+      throw new ConflictException(
+        `Invalid status transition from '${currentStatus}' to '${newStatus}'. Allowed: ${allowed.join(', ') || 'none'}`,
+      );
+    }
+  }
+
   async updateStatus(id: string, organizationId: string, userId: string, status: CropCycleStatus) {
     const client = this.databaseService.getAdminClient();
 
@@ -187,6 +205,8 @@ export class CropCyclesService {
     if (!existing) {
       throw new NotFoundException('Crop cycle not found');
     }
+
+    this.validateCycleStatusTransition(existing.status, status);
 
     const { data, error } = await client
       .from('crop_cycles')
@@ -202,6 +222,72 @@ export class CropCyclesService {
 
     if (error) {
       this.logger.error(`Failed to update crop cycle status: ${error.message}`);
+      throw error;
+    }
+
+    return data;
+  }
+
+  /**
+   * Recalculate profitability rollup for a crop cycle.
+   * Sums costs and revenues from related tables and updates total_costs,
+   * total_revenue, net_profit, and profit_margin.
+   */
+  async recalculateProfitability(cycleId: string, organizationId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    const existing = await this.findOne(cycleId, organizationId);
+    if (!existing) {
+      throw new NotFoundException('Crop cycle not found');
+    }
+
+    // Sum costs from financial_transactions linked to this cycle
+    const { data: costRows } = await client
+      .from('financial_transactions')
+      .select('amount')
+      .eq('organization_id', organizationId)
+      .eq('crop_cycle_id', cycleId)
+      .eq('transaction_type', 'expense');
+
+    const totalCosts = (costRows ?? []).reduce(
+      (sum, row) => sum + (Number(row.amount) || 0),
+      0,
+    );
+
+    // Sum revenues from financial_transactions linked to this cycle
+    const { data: revenueRows } = await client
+      .from('financial_transactions')
+      .select('amount')
+      .eq('organization_id', organizationId)
+      .eq('crop_cycle_id', cycleId)
+      .eq('transaction_type', 'income');
+
+    const totalRevenue = (revenueRows ?? []).reduce(
+      (sum, row) => sum + (Number(row.amount) || 0),
+      0,
+    );
+
+    const netProfit = totalRevenue - totalCosts;
+    const profitMargin = totalRevenue > 0
+      ? Math.round((netProfit / totalRevenue) * 10000) / 100
+      : 0;
+
+    const { data, error } = await client
+      .from('crop_cycles')
+      .update({
+        total_costs: Math.round(totalCosts * 100) / 100,
+        total_revenue: Math.round(totalRevenue * 100) / 100,
+        net_profit: Math.round(netProfit * 100) / 100,
+        profit_margin: profitMargin,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', cycleId)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to recalculate profitability: ${error.message}`);
       throw error;
     }
 

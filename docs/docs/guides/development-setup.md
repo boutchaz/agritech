@@ -3,7 +3,7 @@ sidebar_position: 5
 title: "Development Setup & Commands"
 ---
 
-# AGENTS.md - AgriTech Platform
+# AGENTS.md - AgroGina Platform
 
 > AI agent reference for this multi-tenant agricultural SaaS monorepo.
 
@@ -244,7 +244,7 @@ const ability = useAbility(); if (ability.can('delete', 'Farm')) { ... }
 ## Desktop App (Tauri)
 
 ### Overview
-The AgriTech Desktop app is a standalone offline-capable application built with **Tauri v1** (Rust backend + web frontend). It allows users to work without internet connection by importing organization data bundles.
+The AgroGina Desktop app is a standalone offline-capable application built with **Tauri v1** (Rust backend + web frontend). It allows users to work without internet connection by importing organization data bundles.
 
 **Location:** `project/src-tauri/`
 
@@ -320,7 +320,7 @@ Users can export their organization data from the web app as an encrypted bundle
 ## Mobile App (Expo/React Native)
 
 ### Overview
-**AgriTech Field** is a mobile companion app built with **Expo SDK 54** for field workers. It provides essential features for daily farm operations.
+**AgroGina Field** is a mobile companion app built with **Expo SDK 54** for field workers. It provides essential features for daily farm operations.
 
 **Location:** `mobile/`
 

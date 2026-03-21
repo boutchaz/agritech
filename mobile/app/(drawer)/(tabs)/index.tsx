@@ -106,7 +106,7 @@ export default function HomeScreen() {
   const initials = profile ? `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}` : 'U';
 
   const modules: ModuleCard[] = [
-    { key: 'production', title: 'Production', icon: 'leaf-outline', route: '/(drawer)/(production)' as Href, permission: 'Parcel' },
+    { key: 'production', title: 'Production', icon: 'leaf-outline', route: '/(drawer)/(tabs)/production' as Href, permission: 'Parcel' },
     { key: 'workforce', title: 'Workforce', icon: 'people-outline', route: '/(drawer)/(workforce)' as Href, permission: 'Task' },
     { key: 'inventory', title: 'Inventory', icon: 'cube-outline', route: '/(drawer)/(inventory)' as Href, permission: 'Inventory' },
     { key: 'accounting', title: 'Accounting', icon: 'wallet-outline', route: '/(drawer)/(accounting)' as Href, permission: 'Invoice' },
@@ -262,7 +262,7 @@ export default function HomeScreen() {
         <View style={s.section}>
           <View style={s.sectionHeaderRow}>
             <Text style={s.sectionTitle}>Field Overview</Text>
-            <TouchableOpacity onPress={() => router.push('/(drawer)/(production)' as Href)}>
+            <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/production' as Href)}>
               <Text style={s.linkText}>View Map</Text>
             </TouchableOpacity>
           </View>
@@ -271,7 +271,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={parcel.id}
                 style={s.fieldCard}
-                onPress={() => router.push(`/(drawer)/(production)/parcel/${parcel.id}` as Href)}
+                onPress={() => router.push(`/(drawer)/(tabs)/production/parcel/${parcel.id}` as Href)}
               >
                 <View style={s.fieldCardTop}>
                   <Ionicons name="map" size={20} color={palette.primary} />

@@ -1,18 +1,19 @@
 {
   "id": "intro",
-  "title": "AgriTech Platform Documentation",
-  "description": "Welcome to the AgriTech Platform - a comprehensive agricultural technology solution built for modern farming operations.",
+  "title": "AgroGina Platform Documentation",
+  "description": "Welcome to the AgroGina Platform - a comprehensive agricultural technology solution built for modern farming operations.",
   "source": "@site/docs/intro.md",
   "sourceDirName": ".",
-  "slug": "/intro",
-  "permalink": "/intro",
+  "slug": "/",
+  "permalink": "/",
   "draft": false,
   "unlisted": false,
   "tags": [],
   "version": "current",
   "sidebarPosition": 1,
   "frontMatter": {
-    "sidebar_position": 1
+    "sidebar_position": 1,
+    "slug": "/"
   },
   "sidebar": "docs",
   "next": {

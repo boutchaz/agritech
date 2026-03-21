@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service';
 import { StrapiService } from './strapi.service';
 
 interface CacheEntry<T> {
@@ -12,7 +13,10 @@ export class ReferenceDataService {
   private readonly cache = new Map<string, CacheEntry<any>>();
   private readonly CACHE_TTL_MS = 60 * 60 * 1000;
 
-  constructor(private readonly strapiService: StrapiService) {}
+  constructor(
+    private readonly strapiService: StrapiService,
+    private readonly databaseService: DatabaseService,
+  ) {}
 
   private getCacheKey(type: string, ...args: (string | undefined)[]): string {
     return `${type}:${args.filter(Boolean).join(':')}`;
@@ -986,5 +990,90 @@ export class ReferenceDataService {
       { id: 'f-cancelled', name: 'Cancelled', name_fr: 'Annulée', value: 'cancelled', color: '#6b7280', is_final: true },
       { id: 'f-returned', name: 'Returned', name_fr: 'Retournée', value: 'returned', color: '#ef4444', is_final: true },
     ];
+  }
+
+  // =====================================================
+  // AGRONOMIC REFERENCE TABLES (DB-backed)
+  // =====================================================
+
+  async getCropIndexThresholds(cropType?: string, system?: string, indexName?: string) {
+    const supabase = this.databaseService.getAdminClient();
+    let query = supabase.from('crop_index_thresholds').select('*');
+
+    if (cropType) {
+      query = query.eq('crop_type_name', cropType);
+    }
+    if (system) {
+      query = query.eq('plantation_system_type', system);
+    }
+    if (indexName) {
+      query = query.eq('index_name', indexName);
+    }
+
+    const { data, error } = await query.order('crop_type_name').order('index_name');
+
+    if (error) {
+      this.logger.error(`Failed to fetch crop index thresholds: ${error.message}`);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async getCropKcCoefficients(cropType?: string) {
+    const supabase = this.databaseService.getAdminClient();
+    let query = supabase.from('crop_kc_coefficients').select('*');
+
+    if (cropType) {
+      query = query.eq('crop_type_name', cropType);
+    }
+
+    const { data, error } = await query.order('crop_type_name').order('phenological_stage_name');
+
+    if (error) {
+      this.logger.error(`Failed to fetch crop Kc coefficients: ${error.message}`);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async getCropMineralExports(cropType?: string, productType?: string) {
+    const supabase = this.databaseService.getAdminClient();
+    let query = supabase.from('crop_mineral_exports').select('*');
+
+    if (cropType) {
+      query = query.eq('crop_type_name', cropType);
+    }
+    if (productType) {
+      query = query.eq('product_type', productType);
+    }
+
+    const { data, error } = await query.order('crop_type_name');
+
+    if (error) {
+      this.logger.error(`Failed to fetch crop mineral exports: ${error.message}`);
+      return [];
+    }
+
+    return data ?? [];
+  }
+
+  async getCropDiseases(cropType?: string) {
+    const supabase = this.databaseService.getAdminClient();
+    let query = supabase.from('crop_diseases').select('*');
+
+    if (cropType) {
+      query = query.eq('crop_type_name', cropType);
+    }
+
+    const { data, error } = await query.order('crop_type_name').order('disease_name');
+
+    if (error) {
+      this.logger.error(`Failed to fetch crop diseases: ${error.message}`);
+      return [];
+    }
+
+    return data ?? [];
   }
 }

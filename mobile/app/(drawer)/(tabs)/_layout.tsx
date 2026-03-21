@@ -1,13 +1,44 @@
 import { Redirect, Tabs } from 'expo-router';
+import { Platform, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, type UserRole } from '@/stores/authStore';
-import { palette } from '@/constants/tokens';
+import { useTheme } from '@/providers/ThemeProvider';
+
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({ name, color }: { name: IconName; color: string }) {
-  return <Ionicons size={22} name={name} color={color} />;
+function TabIcon({ name, color, badge }: { name: IconName; color: string; badge?: number }) {
+  return (
+    <View>
+      <Ionicons size={22} name={name} color={color} />
+      {badge != null && badge > 0 && (
+        <View style={tabStyles.badge}>
+          <Text style={tabStyles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      )}
+    </View>
+  );
 }
+
+const tabStyles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -10,
+    backgroundColor: '#ef4444',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+});
 
 type RoleShell = 'worker' | 'manager' | 'owner';
 
@@ -22,71 +53,80 @@ type TabConfig = {
   name: string;
   title: string;
   icon: IconName;
+  showBadge?: boolean;
 };
 
+// ──────────────────────────────────────────────────────────────
+// Role-based tab shells — max 4 tabs, focused on daily workflow
+// ──────────────────────────────────────────────────────────────
 const SHELLS: Record<RoleShell, TabConfig[]> = {
+  // Worker: daily field work actions
   worker: [
     { name: 'index', title: 'Home', icon: 'home' },
-    { name: 'tasks', title: 'Tasks', icon: 'checkbox' },
-    { name: 'harvest', title: 'Harvest', icon: 'leaf' },
-    { name: 'clock', title: 'Clock', icon: 'time' },
-    { name: 'profile', title: 'Profile', icon: 'person' },
+    { name: 'tasks', title: 'My Tasks', icon: 'checkbox-outline' },
+    { name: 'harvest', title: 'Record', icon: 'leaf' },
+    { name: 'clock', title: 'Clock', icon: 'time-outline' },
   ],
+  // Manager: oversight and coordination
   manager: [
-    { name: 'index', title: 'Overview', icon: 'grid' },
-    { name: 'operations', title: 'Operations', icon: 'construct' },
+    { name: 'index', title: 'Home', icon: 'home' },
+    { name: 'harvest', title: 'Field', icon: 'leaf' },
     { name: 'team', title: 'Team', icon: 'people' },
-    { name: 'harvest', title: 'Harvest', icon: 'leaf' },
-    { name: 'alerts', title: 'Alerts', icon: 'notifications' },
+    { name: 'alerts', title: 'Inbox', icon: 'notifications', showBadge: true },
   ],
+  // Owner: executive view and decisions
   owner: [
-    { name: 'index', title: 'Executive', icon: 'stats-chart' },
+    { name: 'index', title: 'Home', icon: 'stats-chart' },
     { name: 'farms-overview', title: 'Farms', icon: 'business' },
     { name: 'finance', title: 'Finance', icon: 'wallet' },
-    { name: 'approvals', title: 'Approvals', icon: 'checkmark-done' },
-    { name: 'alerts', title: 'Alerts', icon: 'notifications' },
+    { name: 'alerts', title: 'Inbox', icon: 'notifications', showBadge: true },
   ],
 };
 
+// All tab screen files must be registered even if hidden for a given role
 const ALL_SCREENS = [
   'index', 'tasks', 'harvest', 'clock', 'profile',
   'operations', 'team', 'alerts',
   'farms-overview', 'finance', 'approvals',
+  'notifications',
+  // Domain stacks (hidden from tab bar, accessible via drawer)
+  'production',
 ];
 
 export default function TabsLayout() {
   const { isAuthenticated, role } = useAuthStore();
+  const { colors: themeColors, isDark } = useTheme();
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
   }
 
   const shell = resolveShell(role);
-  const visibleTabs = new Set(SHELLS[shell].map((t) => t.name));
+  const tabs = SHELLS[shell];
+  const visibleTabs = new Set(tabs.map((t) => t.name));
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: palette.primary,
-        tabBarInactiveTintColor: palette.outline,
+        tabBarActiveTintColor: themeColors.brandPrimary,
+        tabBarInactiveTintColor: themeColors.iconSubtle,
         tabBarStyle: {
-          backgroundColor: palette.surface,
+          backgroundColor: isDark ? themeColors.surface : themeColors.surfaceLowest,
           borderTopWidth: 0,
-          paddingBottom: 8,
+          paddingBottom: Platform.OS === 'ios' ? 4 : 8,
           paddingTop: 6,
-          height: 64,
+          height: Platform.OS === 'ios' ? 80 : 64,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
-          textTransform: 'uppercase',
-          letterSpacing: 0.8,
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.3,
         },
         headerShown: false,
       }}
     >
       {ALL_SCREENS.map((screenName) => {
-        const tabCfg = SHELLS[shell].find((t) => t.name === screenName);
+        const tabCfg = tabs.find((t) => t.name === screenName);
         const isVisible = visibleTabs.has(screenName);
 
         return (
@@ -97,7 +137,12 @@ export default function TabsLayout() {
               title: tabCfg?.title ?? screenName,
               href: isVisible ? undefined : null,
               tabBarIcon: tabCfg
-                ? ({ color }) => <TabIcon name={tabCfg.icon} color={color} />
+                ? ({ color }) => (
+                    <TabIcon
+                      name={tabCfg.icon}
+                      color={color}
+                    />
+                  )
                 : undefined,
             }}
           />

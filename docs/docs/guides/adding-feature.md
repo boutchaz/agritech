@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Adding a Feature
 
-This guide walks through adding a new feature to the AgriTech Platform.
+This guide walks through adding a new feature to the AgroGina Platform.
 
 ## Overview
 

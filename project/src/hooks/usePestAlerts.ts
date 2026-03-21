@@ -7,6 +7,7 @@ import {
   type PestReportResponseDto,
   type PestDiseaseLibraryItem,
   type EscalateToAlertResponse,
+  type DiseaseRiskResponse,
 } from '../lib/api/pest-alerts';
 
 // =====================================================
@@ -55,6 +56,21 @@ export function usePestReport(organizationId: string | null, reportId: string | 
     },
     enabled: !!reportId && !!organizationId,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch disease risk assessment for a parcel
+ */
+export function useDiseaseRisk(organizationId: string | null, parcelId: string | null) {
+  return useQuery({
+    queryKey: ['pest-alerts', 'disease-risk', parcelId],
+    queryFn: async (): Promise<DiseaseRiskResponse | null> => {
+      if (!organizationId || !parcelId) return null;
+      return pestAlertsApi.getDiseaseRisk(organizationId, parcelId);
+    },
+    enabled: !!organizationId && !!parcelId,
+    staleTime: 10 * 60 * 1000,
   });
 }
 

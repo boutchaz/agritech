@@ -4,7 +4,7 @@ sidebar_position: 13
 
 # Subscriptions & Module System
 
-The AgriTech Platform uses a **subscription-based module system** that enables features based on the organization's plan tier. This document covers the implementation of subscriptions, module configuration, and access control.
+The AgroGina Platform uses a **subscription-based module system** that enables features based on the organization's plan tier. This document covers the implementation of subscriptions, module configuration, and access control.
 
 ## Overview
 

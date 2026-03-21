@@ -3,819 +3,764 @@ sidebar_position: 4
 title: "Citrus (Agrumes)"
 ---
 
-**RÉFÉRENTIEL OPÉRATIONNEL COMPLET**
+# Citrus (Agrumes) -- Referentiel Operationnel Complet
+
+Reference document for the SIMO AI engine covering all operational data needed to manage a citrus parcel from A to Z in Morocco.
+
+```mermaid
+pie title Production Share in Morocco
+    "Orange (60%)" : 60
+    "Clementine (25%)" : 25
+    "Lemon (8%)" : 8
+    "Pomelo (3%)" : 3
+    "Other (4%)" : 4
+```
+
+Morocco is the **2nd largest African citrus producer** and the **1st African citrus exporter**, with approximately **130,000 hectares** under cultivation. The major producing regions are Souss-Massa (35%), Gharb-Loukkos (27%), Oriental (14%), Tadla-Azilal (9%), and Marrakech-Haouz (8%).
+
+---
+
+## 1. Species and Varieties
+
+### Species Overview
+
+```mermaid
+graph TD
+    A[Citrus - Rutaceae Family] --> B[Orange<br/>Citrus sinensis<br/>60% production]
+    A --> C[Small Citrus<br/>Citrus reticulata<br/>25% production]
+    A --> D[Lemon<br/>Citrus limon<br/>8% production]
+    A --> E[Pomelo<br/>Citrus paradisi<br/>3% production]
+
+    B --> B1[Navel Group]
+    B --> B2[Blonde Group]
+    B --> B3[Blood Group]
+
+    C --> C1[Clementine]
+    C --> C2[Mandarin]
+    C --> C3[Tangor]
+
+    D --> D1[Eureka]
+    D --> D2[Lisbon]
+    D --> D3[Verna]
+
+    E --> E1[Star Ruby]
+    E --> E2[Rio Red]
+    E --> E3[Marsh]
+```
+
+### Orange Varieties (Citrus sinensis)
+
+| Variety | Type | Maturity | Caliber | Quality | Export | Notes |
+|---------|------|----------|---------|---------|--------|-------|
+| Naveline | Navel | Nov-Jan | Large | Excellent | Yes | Top export variety |
+| Washington Navel | Navel | Dec-Feb | Very large | Excellent | Yes | Standard Navel |
+| Navelate | Navel | Jan-Mar | Large | Very good | Yes | Late Navel |
+| Salustiana | Blonde | Dec-Mar | Medium | Very good | -- | Industrial juice |
+| Valencia Late | Blonde | Apr-Jun | Medium | Excellent | Yes | Very late season |
+| Maroc Late | Blonde | Mar-Jun | Med-large | Excellent | Yes | Morocco specialty |
+| Sanguinelli | Blood | Jan-Mar | Medium | Good | -- | Niche market |
 
-## AGRUMES AU MAROC
+### Small Citrus Varieties (Clementine and Mandarin)
 
-Orange • Petits agrumes • Citron • Pomelo
+| Variety | Type | Maturity | Seeds | Shelf Life | Notes |
+|---------|------|----------|-------|------------|-------|
+| Clementine Commune | Clementine | Oct-Dec | 0-2 | Medium | Production base |
+| Nules | Clementine | Nov-Dec | 0-1 | Good | Export leader |
+| Marisol | Clementine | Sep-Oct | 0-1 | Low | Very early |
+| Nour | Clementine | Jan-Mar | 0-2 | Good | Late, Moroccan origin |
+| Nadorcott/Afourer | Mandarin | Jan-Apr | 0-3 | Excellent | Premium segment |
+| Ortanique | Tangor | Feb-Apr | 5-15 | Very good | Orange x Tangerine hybrid |
+| Nova | Mandarin | Nov-Jan | 0-3 | Good | Intense aroma |
 
-Fichier indexé pour le moteur IA
+### Lemon Varieties (Citrus limon)
 
-Document central contenant TOUTES les données nécessaires
+| Variety | Type | Maturity | Acidity | Productivity | Notes |
+|---------|------|----------|---------|--------------|-------|
+| Eureka | Lemon | Year-round | High | Good | World standard |
+| Lisbon | Lemon | Nov-May | High | Very good | Rustic, hardy |
+| Verna | Lemon | Feb-Jul | Medium | Good | Few seeds |
+| Meyer | Lemon | Nov-Mar | Low | Medium | Hybrid, less acidic |
+
+### Pomelo Varieties (Citrus paradisi)
 
-pour piloter une parcelle d'agrumes de A à Z
+| Variety | Flesh | Maturity | Size | Taste | Notes |
+|---------|-------|----------|------|-------|-------|
+| Star Ruby | Red | Nov-Mar | Large | Low bitterness | Most planted |
+| Rio Red | Red | Nov-Apr | Large | Low bitterness | Star Ruby alternative |
+| Marsh | Blonde | Nov-Apr | Very large | Slightly bitter | Classic cultivar |
 
-Espèces & Variétés • Porte-greffes • Stades phénologiques • Seuils satellite • NPK & Microéléments • Biostimulants • Irrigation • Phytosanitaire • Récolte & Qualité • Diagnostic • Alertes • Modèle prédictif • Plan annuel
+### Maturity Windows Across the Year
 
-Version 1.0 --- Février 2026
+```mermaid
+gantt
+    title Harvest Calendar by Variety
+    dateFormat  MM
+    axisFormat  %b
 
-**PARTIE A --- DONNÉES DE BASE**
+    section Oranges
+    Naveline           :01, 03
+    Washington Navel   :12, 03
+    Navelate           :01, 04
+    Salustiana         :12, 04
+    Maroc Late         :03, 07
+    Valencia Late      :04, 07
 
-## 1. CLASSIFICATION DES AGRUMES
+    section Clementine
+    Marisol            :09, 11
+    Clem. Commune      :10, 01
+    Nules              :11, 01
+    Nour               :01, 04
+    Nadorcott          :01, 05
 
-### 1.1 Taxonomie et espèces cultivées au Maroc
+    section Lemon
+    Eureka             :01, 13
 
-Les agrumes appartiennent à la famille des Rutaceae, genre Citrus. Le Maroc cultive principalement quatre groupes d'agrumes.
+    section Pomelo
+    Star Ruby          :11, 04
+```
 
-  **Groupe**       **Espèce**                       **Nom commun**          **Part production Maroc**
-  ---------------- -------------------------------- ----------------------- ---------------------------
-  Oranges          Citrus sinensis                  Orange douce            60%
-  Petits agrumes   Citrus reticulata                Mandarine, Clémentine   25%
-  Citrons/Limes    Citrus limon / C. aurantifolia   Citron, Lime            8%
-  Pomelos          Citrus paradisi                  Pomelo, Grapefruit      3%
-  Autres           C. aurantium, C. medica          Bigarade, Cédrat        4%
+---
 
-*\[Source: MAPM, Statistiques agricoles 2024; ASPAM\]*
+## 2. Rootstock Selection
 
-### 1.2 Caractéristiques générales
+The rootstock determines roughly 50% of tree behavior: vigor, cold tolerance, salinity tolerance, limestone tolerance, disease resistance, and fruit quality. The choice is **strategic**.
+
+### Rootstock Comparison
 
-  **Paramètre**             **Valeur**                    **Note**
-  ------------------------- ----------------------------- -------------------------------
-  Famille                   Rutaceae                      Genre Citrus
-  Type                      Arbre fruitier sempervirent   Feuillage persistant
-  Origine                   Asie du Sud-Est               Chine, Inde
-  Durée de vie économique   30-50 ans                     Selon porte-greffe et variété
-  Profondeur racinaire      0.5-1.5 m                     Variable selon porte-greffe
-  Pollinisation             Autofertile majoritairement   Quelques exceptions
+| Rootstock | Vigor | Limestone | Salinity | Phytophthora | Tristeza | Fruit Quality |
+|-----------|-------|-----------|----------|--------------|----------|---------------|
+| Bigaradier | Strong | Excellent | Good | Sensitive | VERY SENSITIVE | Excellent |
+| Citrange Carrizo | Med-strong | Medium | Low | Tolerant | Tolerant | Good |
+| Citrange Troyer | Strong | Medium | Low | Tolerant | Tolerant | Good |
+| Citrumelo | Strong | Low | Medium | Tolerant | Tolerant | Good |
+| Volkameriana | Very strong | Good | Good | Medium | Tolerant | Medium |
+| Macrophylla | Very strong | Good | Good | Medium | Tolerant | Low |
+| M. Cleopatre | Medium | Excellent | Good | Sensitive | Tolerant | Excellent |
+| Poncirus trifoliata | Dwarfing | Very low | Low | Very tolerant | Tolerant | Excellent |
+
+> **TRISTEZA WARNING**: The Tristeza virus (CTV) is present in Morocco. Using Bigaradier as rootstock is HIGH RISK for new plantations. Prefer Citrange Carrizo or Volkameriana depending on soil conditions.
+
+### Rootstock Decision Tree
+
+```mermaid
+flowchart TD
+    START["New Citrus Plantation<br/>Rootstock Selection"] --> Q1{"Is Tristeza CTV<br/>present in the area?"}
+
+    Q1 -->|Yes| NO_BIG["EXCLUDE Bigaradier"]
+    Q1 -->|No / Unknown| Q2
+
+    NO_BIG --> Q3{"Soil type?"}
+    Q2 --> Q3
+
+    Q3 -->|"Limestone soil<br/>pH over 7.5<br/>Active CaCO3 over 8%"| CALC["Recommended:<br/>M. Cleopatre<br/>or Volkameriana"]
+
+    Q3 -->|"Saline soil<br/>EC over 2 dS/m"| SAL["Recommended:<br/>Volkameriana<br/>or Macrophylla"]
 
-### 1.3 Superficie au Maroc
+    Q3 -->|"Heavy / poorly drained"| HEAVY["Recommended:<br/>Citrange Carrizo<br/>or Poncirus"]
 
-Les agrumes couvrent environ 130 000 ha au Maroc, faisant du pays le 2ème producteur africain et le 1er exportateur africain d'agrumes.
+    Q3 -->|"Sandy / well drained"| SAND["Recommended:<br/>Citrange Carrizo<br/>or Citrumelo"]
 
-  **Région**        **Superficie (ha)**   **Part nationale**   **Production dominante**
-  ----------------- --------------------- -------------------- --------------------------------
-  Souss-Massa       45 000                35%                  Clémentine, Orange tardive
-  Gharb-Loukkos     35 000                27%                  Clémentine précoce, Maroc Late
-  Oriental          18 000                14%                  Clémentine, Orange
-  Tadla-Azilal      12 000                9%                   Orange
-  Marrakech-Haouz   10 000                8%                   Orange, Citron
-  Autres            10 000                7%                   Variable
-
-*\[Source: MAPM, 2024; Maroc Citrus\]*
-
-## 2. EXIGENCES PÉDOCLIMATIQUES
-
-### 2.1 Exigences climatiques
-
-  **Paramètre**            **Orange**   **Clémentine**   **Citron**   **Pomelo**
-  ------------------------ ------------ ---------------- ------------ ------------
-  T° optimale (°C)         22-28        20-26            20-30        23-30
-  T° min croissance        13           13               15           15
-  Gel feuilles (°C)        -3 à -5      -3 à -5          -2 à -3      -2
-  Gel fruits (°C)          -2 à -3      -2               -1 à -2      -1
-  Gel mortel arbre         -8 à -10     -8               -5 à -6      -4
-  Besoins froid (h<7°C)   200-400      100-200          0            0
-  Tolérance chaleur        Bonne        Moyenne          Très bonne   Très bonne
-
-Note : La sensibilité au froid dépend fortement du porte-greffe utilisé.
-
-*\[Source: Davies & Albrigo, 1994; Spiegel-Roy & Goldschmidt, 1996\]*
-
-### 2.2 Exigences édaphiques
-
-  **Paramètre**      **Optimal**       **Tolérance**                **Impact si hors limites**
-  ------------------ ----------------- ---------------------------- ----------------------------------
-  pH                 6.0-7.0           5.5-8.0                      Carences Fe, Zn, Mn si pH > 7.5
-  Calcaire actif     < 8%             < 15%                       Chlorose sévère si > 10%
-  CE sol (dS/m)      < 1.5            < 3.0                       Sensibilité variable selon PG
-  Texture            Sablo-limoneux    Tous sauf argileux compact   Asphyxie, Phytophthora
-  Drainage           Bon à excellent   Modéré                       Gommose si mauvais
-  Profondeur utile   > 100 cm         > 60 cm                     Limitation production
-  Nappe phréatique   > 150 cm         > 100 cm                    Asphyxie racinaire
-
-### 2.3 Sensibilité à la salinité par espèce
-
-Les agrumes ont une sensibilité variable à la salinité selon l'espèce et le porte-greffe.
-
-  **Espèce/Porte-greffe**   **Tolérance Cl**   **Tolérance Na**   **Classement**
-  ------------------------- ------------------ ------------------ ---------------------
-  Citron                    Faible             Faible             Très sensible
-  Orange                    Moyenne            Moyenne            Sensible
-  Mandarine/Clémentine      Moyenne            Moyenne            Sensible
-  Pomelo                    Moyenne-bonne      Moyenne            Modérément sensible
-  PG Bigaradier             Bonne              Bonne              Tolérant
-  PG Citrange Carrizo       Faible             Moyenne            Sensible
-  PG Volkameriana           Bonne              Bonne              Tolérant
-  PG Macrophylla            Bonne              Bonne              Tolérant
-
-*\[Source: Maas, 1993; Storey & Walker, 1999\]*
-
-## 3. PORTE-GREFFES
-
-### 3.1 Importance du choix du porte-greffe
-
-Le porte-greffe détermine 50% du comportement de l'arbre : vigueur, tolérance au froid, à la salinité, au calcaire, aux maladies, qualité du fruit. Le choix est STRATÉGIQUE.
-
-### 3.2 Principaux porte-greffes au Maroc
-
-  **Porte-greffe**        **Vigueur**     **Calcaire**   **Salinité**   **Phytophthora**   **Tristeza**    **Qualité fruit**
-  ----------------------- --------------- -------------- -------------- ------------------ --------------- -------------------
-  Bigaradier              Forte           Excellente     Bonne          Sensible           TRÈS sensible   Excellente
-  Citrange Carrizo        Moyenne-forte   Moyenne        Faible         Tolérante          Tolérante       Bonne
-  Citrange Troyer         Forte           Moyenne        Faible         Tolérante          Tolérante       Bonne
-  Citrumelo               Forte           Faible         Moyenne        Tolérante          Tolérante       Bonne
-  Volkameriana            Très forte      Bonne          Bonne          Moyenne            Tolérante       Moyenne
-  Macrophylla             Très forte      Bonne          Bonne          Moyenne            Tolérante       Faible
-  Mandarinier Cléopâtre   Moyenne         Excellente     Bonne          Sensible           Tolérante       Excellente
-  Poncirus trifoliata     Nanisante       Très faible    Faible         Très tolérante     Tolérante       Excellente
-
- **⚠ TRISTEZA AU MAROC**                                                                                                                                                                                   
- Le virus de la Tristeza (CTV) est présent au Maroc. L'utilisation du Bigaradier comme porte-greffe devient RISQUÉE sur nouvelles plantations. Privilégier Citrange Carrizo ou Volkameriana selon le sol. 
-
-### 3.3 Guide de choix selon le sol
-
-  **Type de sol**                  **PG recommandé**              **PG alternatif**   **PG à éviter**
-  -------------------------------- ------------------------------ ------------------- --------------------------
-  Calcaire (pH > 7.5, CA > 8%)   Bigaradier, Mandarinier Cléo   Volkameriana        Poncirus, Citrange
-  Salin (CE > 2 dS/m)             Volkameriana, Macrophylla      Bigaradier          Citrange Carrizo
-  Lourd, mal drainé                Citrange Carrizo               Poncirus            Bigaradier, Volkameriana
-  Sableux, bien drainé             Citrange, Citrumelo            Volkameriana        ---
-  Présence Tristeza                Citrange, Volkameriana         Citrumelo           Bigaradier ❌
-
-*\[Source: Castle et al., 2010; Forner-Giner & Ancillo, 2013\]*
-
-## 4. CATALOGUE DES VARIÉTÉS
-
-### 4.1 Oranges (Citrus sinensis)
-
-  **Variété**        **Type**   **Maturité**   **Calibre**   **Qualité**        **Productivité**   **Note**
-  ------------------ ---------- -------------- ------------- ------------------ ------------------ ------------------
-  Naveline           Navel      Nov-Jan        Gros          Excellente         Moyenne            Export +++
-  Washington Navel   Navel      Déc-Fév        Très gros     Excellente         Moyenne            Standard Navel
-  Navelate           Navel      Jan-Mar        Gros          Très bonne         Bonne              Tardive
-  Salustiana         Blonde     Déc-Mar        Moyen         Très bonne (jus)   Très bonne         Jus industriel
-  Valencia Late      Blonde     Avr-Juin       Moyen         Excellente         Très bonne         Très tardive
-  Maroc Late         Blonde     Mar-Juin       Moyen-gros    Excellente         Très bonne         Spécialité Maroc
-  Sanguinelli        Sanguine   Jan-Mar        Moyen         Bonne              Moyenne            Niche
-
-### 4.2 Petits agrumes (Mandarines et Clémentines)
-
-  **Variété**          **Type**     **Maturité**   **Pépins**   **Calibre**   **Conservation**   **Note**
-  -------------------- ------------ -------------- ------------ ------------- ------------------ -----------------
-  Clémentine Commune   Clémentine   Oct-Déc        0-2          Moyen         Moyenne            Base production
-  Nules                Clémentine   Nov-Déc        0-1          Moyen-gros    Bonne              Export +++
-  Marisol              Clémentine   Sept-Oct       0-1          Moyen         Faible             Très précoce
-  Nour                 Clémentine   Jan-Mar        0-2          Moyen         Bonne              Tardive, Maroc
-  Nadorcott/Afourer    Mandarine    Jan-Avr        0-3          Moyen         Excellente         Premium
-  Ortanique            Tangor       Fév-Avr        5-15         Gros          Très bonne         Hybride OR×Tang
-  Nova                 Mandarine    Nov-Jan        0-3          Moyen         Bonne              Arôme intense
-
-### 4.3 Citrons et Limes
-
-  **Variété**      **Type**   **Maturité**     **Acidité**   **Productivité**   **Note**
-  ---------------- ---------- ---------------- ------------- ------------------ ------------------------
-  Eureka           Citron     Toute l'année   Élevée        Bonne              Standard mondial
-  Lisbon           Citron     Nov-Mai          Élevée        Très bonne         Rustique
-  Verna            Citron     Fév-Juil         Moyenne       Bonne              Espagne, peu de pépins
-  Meyer            Citron     Nov-Mar          Faible        Moyenne            Hybride, moins acide
-  Lime Mexicaine   Lime       Toute l'année   Très élevée   Bonne              Petits fruits
-  Lime Tahiti      Lime       Toute l'année   Élevée        Très bonne         Sans pépins
-
-### 4.4 Pomelos
-
-  **Variété**   **Chair**   **Maturité**   **Calibre**   **Goût**          **Note**
-  ------------- ----------- -------------- ------------- ----------------- -----------------------------
-  Star Ruby     Rouge       Nov-Mar        Gros          Peu amer          Le plus planté
-  Rio Red       Rouge       Nov-Avr        Gros          Peu amer          Alternative Star Ruby
-  Marsh         Blonde      Nov-Avr        Très gros     Légèrement amer   Classique
-  Oroblanco     Blonde      Nov-Fév        Moyen         Doux              Hybride pomelo×pamplemousse
-
-## 5. RENDEMENTS PAR ESPÈCE ET ÂGE
-
-### 5.1 Rendement par âge (T/ha, système intensif irrigué)
-
-  **Espèce**                 **3-4 ans**   **5-7 ans**   **8-12 ans**   **13-20 ans**   **> 20 ans**
-  -------------------------- ------------- ------------- -------------- --------------- ---------------
-  Orange Navel               5-15          20-35         35-50          45-60           40-55
-  Orange blonde (Valencia)   5-15          25-40         40-60          55-80           50-70
-  Clémentine                 5-12          18-30         30-45          40-55           35-50
-  Mandarine Nadorcott        8-15          25-40         40-55          50-70           45-60
-  Citron                     5-10          15-30         30-50          45-70           40-60
-  Pomelo                     5-12          20-35         40-60          55-80           50-70
-
-Note : Ces rendements supposent une irrigation optimale et une nutrition équilibrée. L'alternance peut réduire les rendements de 30-40% certaines années.
-
-### 5.2 Rendement par arbre (kg/arbre, densité 400-500 arb/ha)
-
-  **Espèce**        **5 ans**   **10 ans**   **15 ans**   **20 ans**
-  ----------------- ----------- ------------ ------------ ------------
-  Orange Navel      40-60       80-120       100-140      90-130
-  Orange Valencia   50-80       100-150      130-180      120-160
-  Clémentine        35-55       70-100       90-120       80-110
-  Citron            40-70       80-130       110-160      100-140
-  Pomelo            50-80       100-150      130-180      120-160
-
-*\[Source: INRA Maroc; Données producteurs Souss-Massa\]*
-
-## 6. STADES PHÉNOLOGIQUES
-
-### 6.1 Cycle annuel des agrumes
-
-Les agrumes sont sempervirents avec une production continue de feuilles et souvent plusieurs floraisons par an (citron notamment). Le cycle principal est le suivant :
-
-  **Stade**         **Description**             **Orange (Maroc)**   **Clémentine**   **Citron**   **Signal satellite**
-  ----------------- --------------------------- -------------------- ---------------- ------------ ----------------------
-  Repos hivernal    Ralentissement croissance   Déc-Jan              Déc-Jan          Continu      NDVI stable
-  Flush printemps   Poussée végétative          Fév-Mars             Fév-Mars         Fév-Mars     NDVI ↗
-  Boutons floraux   Différenciation             Mars                 Mars             Variable     Stable
-  Floraison         Anthèse                     Mars-Avr             Mars-Avr         Multiple     NIRv variable
-  Nouaison          Fruit noué                  Avr-Mai              Avr-Mai          Variable     Stable
-  Chute juin        Chute physiologique         Mai-Juin             Mai-Juin         Variable     Normal
-  Grossissement     Croissance fruit            Juin-Oct             Juin-Sept        Continue     NDVI stable haut
-  Flush été         Poussée estivale            Juil-Août            Juil-Août        Continu      NDVI ↗
-  Véraison          Changement couleur          Sept-Oct             Sept-Oct         ---          Léger ↘
-  Maturation        Accumulation sucres         Oct-Déc              Oct-Nov          ---          Stable
-  Flush automne     Poussée automnale           Oct-Nov              Oct-Nov          Continu      NDVI ↗
-
-### 6.2 Coefficients NIRvP par période
-
-  **Période**   **Activité**               **Coef NIRvP**   **Note**
-  ------------- -------------------------- ---------------- -------------------
-  Déc-Jan       Repos relatif              0.70             Activité minimale
-  Fév-Mars      Flush + floraison          1.00             Activité maximale
-  Avr-Mai       Nouaison                   0.90             Transition
-  Juin-Juil     Grossissement I            0.95             Demande élevée
-  Août-Sept     Grossissement II + flush   1.00             Double activité
-  Oct-Nov       Maturation + flush         0.90             Transition
-
-### 6.3 Particularité du citronnier
-
-Le citronnier est remontant : il peut fleurir plusieurs fois par an et porter simultanément des fruits à différents stades. Les principales floraisons sont :
-
--   Floraison principale : Mars-Avril
-
--   Floraison secondaire : Juin-Juillet (si irrigation)
-
--   Floraison automnale : Septembre-Octobre
-
-*\[Source: Spiegel-Roy & Goldschmidt, 1996; Davies & Albrigo, 1994\]*
-
-## 7. SYSTÈMES DE PLANTATION
-
-### 7.1 Caractéristiques des systèmes
-
-  **Paramètre**            **Traditionnel**   **Intensif**      **Super-intensif**
-  ------------------------ ------------------ ----------------- --------------------
-  Densité (arb/ha)         200-300            400-600           800-1200
-  Écartement               7×5 à 8×6 m        5×3 à 6×4 m       4×2 à 5×2.5 m
-  Irrigation               Gravitaire         Goutte-à-goutte   G-à-G haute fréq.
-  Taille                   Légère             Annuelle          Mécanique
-  Entrée production        An 5-6             An 3-4            An 2-3
-  Pleine production        An 10-12           An 6-8            An 5-6
-  Durée vie économique     40-50 ans          25-35 ans         15-20 ans
-  Rendement pleine prod.   20-35 T/ha         40-60 T/ha        50-80 T/ha
-
-### 7.2 Seuils satellite par système
-
-  **Indice**   **Paramètre**   **Traditionnel**   **Intensif**   **Super-intensif**
-  ------------ --------------- ------------------ -------------- --------------------
-  NDVI         Optimal         0.50-0.70          0.60-0.78      0.68-0.85
-  NDVI         Vigilance       < 0.45            < 0.55        < 0.63
-  NDVI         Alerte          < 0.40            < 0.50        < 0.58
-  NIRv         Optimal         0.12-0.28          0.18-0.35      0.22-0.42
-  NIRv         Vigilance       < 0.10            < 0.15        < 0.20
-  NIRv         Alerte          < 0.08            < 0.12        < 0.17
-  NDMI         Optimal         0.18-0.38          0.22-0.42      0.28-0.48
-  NDMI         Vigilance       < 0.14            < 0.18        < 0.24
-  NDMI         Alerte          < 0.10            < 0.14        < 0.20
-
-*\[Source: Calculs basés sur Sentinel-2; Adaptations culture sempervirente\]*
-
-**PARTIE B --- NUTRITION**
-
-## 8. OPTIONS UTILISATEUR
-
-  **Option**   **Nom**                          **Condition**                            **Logique**
-  ------------ -------------------------------- ---------------------------------------- ----------------------------
-  A            Nutrition équilibrée             Analyse sol < 2 ans + eau               Programme complet
-  B            Nutrition foliaire prioritaire   Pas d'analyse sol récente               Foliaire renforcé
-  C            Gestion salinité                 CE eau > 1.5 dS/m OU CE sol > 2 dS/m   Lessivage, engrais adaptés
-
-## 9. BESOINS NUTRITIONNELS
-
-### 9.1 Coefficients d'exportation (kg/T fruits)
-
-  **Élément**   **Orange**   **Clémentine**   **Citron**   **Pomelo**   **Rôle**
-  ------------- ------------ ---------------- ------------ ------------ -------------------------
-  N             1.8-2.2      1.5-2.0          2.0-2.5      1.5-2.0      Croissance, qualité
-  P₂O₅          0.4-0.6      0.3-0.5          0.4-0.6      0.3-0.5      Floraison, enracinement
-  K₂O           2.5-3.5      2.0-3.0          3.0-4.0      2.5-3.5      Qualité, calibre
-  CaO           0.8-1.2      0.6-1.0          0.8-1.2      0.6-1.0      Texture fruit
-  MgO           0.3-0.5      0.2-0.4          0.3-0.5      0.2-0.4      Chlorophylle
-
-*\[Source: Quaggio et al., 1996; Alva et al., 2006\]*
-
-### 9.2 Besoins d'entretien (kg/ha)
-
-  **Système**              **N**     **P₂O₅**   **K₂O**   **Note**
-  ------------------------ --------- ---------- --------- ------------------
-  Jeune (1-3 ans)          40-80     20-40      30-60     Focus croissance
-  Entrée prod. (4-6 ans)   100-150   40-60      80-120    Transition
-  Intensif pleine prod.    180-280   60-100     150-250   Selon rendement
-  Super-intensif           250-400   80-120     200-350   Haute densité
-
-### 9.3 Formule de calcul
-
-Dose\_totale = (Rendement\_cible × Export) + Entretien − Correction\_sol − Correction\_eau
-
-**Exemple : Orange intensive, 50 T/ha cible**
-
-N = (50 × 2.0) + 150 = 250 kg/ha
-
-P₂O₅ = (50 × 0.5) + 50 = 75 kg/ha
-
-K₂O = (50 × 3.0) + 100 = 250 kg/ha
-
-## 10. PROGRAMME NPK PAR STADE
-
-### 10.1 Fractionnement annuel
-
-  **Période**   **Stade**            **N (%)**   **P₂O₅ (%)**   **K₂O (%)**   **Objectif**
-  ------------- -------------------- ----------- -------------- ------------- --------------------
-  Fév           Pré-floraison        15%         40%            10%           Préparer floraison
-  Mars-Avr      Floraison-nouaison   25%         30%            15%           Nouaison
-  Mai-Juin      Post-chute           20%         15%            20%           Grossissement I
-  Juil-Août     Grossissement        20%         10%            25%           Calibre, flush été
-  Sept-Oct      Maturation           10%         5%             20%           Qualité interne
-  Nov           Post-récolte         10%         0%             10%           Reconstitution
-
-### 10.2 Formes d'engrais recommandées
-
-  **Élément**   **Forme recommandée**               **Forme à éviter**     **Raison**
-  ------------- ----------------------------------- ---------------------- ----------------------
-  N             Nitrate calcium, Nitrate ammonium   Urée si pH > 7.5      Volatilisation
-  N             Urée si pH < 7                     ---                    Acceptable sol acide
-  P             MAP, Acide phosphorique             ---                    Solubles
-  K             Sulfate potasse, Nitrate potasse    KCl si CE eau > 1.5   Sensibilité Cl
-  Ca            Nitrate calcium                     ---                    Continu
-  Mg            Sulfate magnésium                   ---                    Soluble
-
- **⚠ CHLORURES ET AGRUMES**                                                                                                                                                       
- Les agrumes sont sensibles aux chlorures, mais moins que l'avocatier. Le KCl peut être utilisé si CE eau < 1.0 dS/m et Cl eau < 100 mg/L. Sinon, utiliser sulfate de potasse. 
-
-### 10.3 Ajustement selon espèce
-
-  **Espèce**        **N**      **K**      **Note spécifique**
-  ----------------- ---------- ---------- -----------------------------
-  Orange Navel      Standard   Standard   Éviter excès N (éclatement)
-  Orange Valencia   +10%       Standard   Production élevée
-  Clémentine        -10%       Standard   Éviter calibre excessif
-  Citron            +15%       +10%       Remontant, besoins continus
-  Pomelo            Standard   +10%       Gros fruits
-
-## 11. MICROÉLÉMENTS
-
-### 11.1 Seuils foliaires de référence
-
-Prélèvement : Feuilles de 4-6 mois sur rameaux non fructifères, Août-Septembre.
-
-  **Élément**   **Unité**   **Carence**   **Suffisant**   **Optimal**   **Excès**
-  ------------- ----------- ------------- --------------- ------------- -------------------
-  N             \%          < 2.20       2.20-2.40       2.40-2.70     > 3.00
-  P             \%          < 0.09       0.09-0.11       0.12-0.17     > 0.20
-  K             \%          < 0.70       0.70-1.00       1.00-1.50     > 2.00
-  Ca            \%          < 2.00       2.00-3.00       3.00-5.00     > 6.00
-  Mg            \%          < 0.20       0.20-0.30       0.30-0.50     > 0.70
-  S             \%          < 0.14       0.14-0.20       0.20-0.40     > 0.50
-  Fe            ppm         < 35         35-60           60-120        > 200
-  Zn            ppm         < 18         18-25           25-100        > 200
-  Mn            ppm         < 18         18-25           25-100        > 500
-  B             ppm         < 20         20-35           35-100        > 150
-  Cu            ppm         < 3          3-5             5-15          > 20
-  Cl            \%          ---           ---             < 0.30       > 0.70 (toxique)
-  Na            \%          ---           ---             < 0.15       > 0.25 (toxique)
-
-*\[Source: Quaggio et al., 2005; Chapman, 1968\]*
-
-### 11.2 Sensibilité aux carences par espèce
-
-  **Espèce**   **Fe**       **Zn**    **Mn**    **B**     **Note**
-  ------------ ------------ --------- --------- --------- -------------------------
-  Orange       Haute        Haute     Moyenne   Moyenne   Sol calcaire = chlorose
-  Clémentine   Très haute   Haute     Moyenne   Moyenne   Très sensible Fe
-  Citron       Moyenne      Haute     Haute     Faible    Plus tolérant
-  Pomelo       Haute        Moyenne   Moyenne   Moyenne   Standard
-
-### 11.3 Doses correctives
-
-  **Élément**   **Produit**        **Dose sol**    **Dose foliaire**    **Fréquence**
-  ------------- ------------------ --------------- -------------------- --------------------
-  Fe            Fe-EDDHA 6%        30-50 g/arbre   ---                  2×/an (Fév, Juin)
-  Fe            Fe-EDTA foliaire   ---             0.1%, 3 L/ha         3-4×/an
-  Zn            Sulfate Zn         ---             0.3%, 1.5 kg Zn/ha   3×/an (flush)
-  Mn            Sulfate Mn         ---             0.25%, 1 kg Mn/ha    2×/an
-  B             Borax              20-30 g/arbre   ---                  1×/an post-récolte
-  B             Acide borique      ---             0.1%, 300 g B/ha     2×/an (floraison)
-
-  ✓ RÈGLE : Sur sol calcaire (pH > 7.5), le programme microéléments (Fe, Zn, Mn) est OBLIGATOIRE, pas optionnel. Prévoir 3-4 applications foliaires + 2 apports Fe-EDDHA au sol.
-
-## 12. GESTION DE LA SALINITÉ
-
-### 12.1 Seuils de tolérance
-
-  **Paramètre**         **Orange/Mandarine**   **Citron**    **Pomelo**    **Action**
-  --------------------- ---------------------- ------------- ------------- ------------
-  CE eau optimal        < 1.0 dS/m            < 0.8 dS/m   < 1.2 dS/m   ---
-  CE eau limite         2.0 dS/m               1.5 dS/m      2.5 dS/m      FL 15-20%
-  CE sol limite         2.5 dS/m               2.0 dS/m      3.0 dS/m      Lessivage
-  Cl eau limite         150 mg/L               100 mg/L      200 mg/L      Brûlures
-  Cl foliaire toxique   0.70%                  0.50%         0.80%         Symptômes
-
-### 12.2 Symptômes toxicité
-
--   Chlorures : Brûlures marginales feuilles (extrémité d'abord), défoliation
-
--   Sodium : Brûlures interveinaires, feuilles bronze
-
--   Bore : Nécrose pointe et marge feuilles âgées
-
-### 12.3 Rôle du porte-greffe
-
-Le porte-greffe joue un rôle majeur dans la tolérance à la salinité. Il filtre partiellement les ions Cl et Na.
-
-  **PG**                  **Exclusion Cl**   **Recommandation si eau saline**
-  ----------------------- ------------------ ----------------------------------
-  Bigaradier              Bonne              ✅ Recommandé
-  Volkameriana            Bonne              ✅ Recommandé
-  Macrophylla             Bonne              ✅ Recommandé
-  Citrange Carrizo        Faible             ❌ À éviter
-  Citrange Troyer         Faible             ❌ À éviter
-  Mandarinier Cléopâtre   Bonne              ✅ Recommandé
-
-*\[Source: Maas, 1993; Levy & Syvertsen, 2004\]*
-
-**PARTIE C --- BIOSTIMULANTS**
-
-## 13. PROGRAMME BIOSTIMULANTS
-
-### 13.1 Calendrier annuel
-
-  **Période**   **Stade**       **Humiques**       **Aminés**   **Algues**   **Objectif**
-  ------------- --------------- ------------------ ------------ ------------ --------------------
-  Fév           Pré-floraison   4 L/ha             ---          3 L/ha       Préparer floraison
-  Mars-Avr      Floraison       ---                4 L/ha       3 L/ha       Nouaison
-  Mai           Chute juin      4 L/ha             4 L/ha       ---          Limiter chute
-  Juil          Grossissement   ---                ---          3 L/ha       Stress chaleur
-  Sept          Maturation      4 L/ha             ---          ---          Qualité
-  Nov           Post-récolte    20 kg/ha granulé   5 L/ha       ---          Reconstitution
-
-### 13.2 Ajustement selon stress
-
-  **Situation**     **Biostimulant prioritaire**   **Dose**      **Fréquence**
-  ----------------- ------------------------------ ------------- ------------------
-  Stress hydrique   Algues (osmoprotection)        +50%          Toutes les 2 sem
-  Stress salin      Algues + Aminés                +50% chaque   Continu
-  Post-gel          Aminés                         ×2            3 applications
-  Sol calcaire      Humiques + Fulviques           Standard      Avec Fe
-  Année OFF         Algues floraison               +50%          3 applications
-
-**PARTIE D --- IRRIGATION**
-
-## 14. BESOINS EN EAU
-
-### 14.1 Coefficients Kc
-
-  **Période**   **Stade**          **Kc jeune**   **Kc adulte**   **Note**
-  ------------- ------------------ -------------- --------------- --------------------
-  Jan-Fév       Repos              0.45           0.65            Demande faible
-  Mars-Avr      Floraison          0.55           0.75            Augmentation
-  Mai-Juin      Grossissement I    0.65           0.85            Demande croissante
-  Juil-Août     Grossissement II   0.70           0.90            Demande maximale
-  Sept-Oct      Maturation         0.60           0.80            Réduction légère
-  Nov-Déc       Récolte/repos      0.50           0.70            Demande réduite
-
-*\[Source: Allen et al., FAO 56; Castel, 1997\]*
-
-### 14.2 Volumes de référence
-
-  **Mois**    **ETo (mm/j)**   **ETc adulte**   **Volume/arbre/j (400 arb/ha)**   **Fréquence**
-  ----------- ---------------- ---------------- --------------------------------- ---------------
-  Jan-Fév     2-3              1.5-2.0          35-50 L                           2×/sem
-  Mars-Avr    3-5              2.5-4.0          60-100 L                          3×/sem
-  Mai-Juin    5-7              4.5-6.0          110-150 L                         4-5×/sem
-  Juil-Août   7-9              6.0-8.0          150-200 L                         5-6×/sem
-  Sept-Oct    4-6              3.5-5.0          85-125 L                          3-4×/sem
-  Nov-Déc     2-4              1.5-3.0          35-75 L                           2×/sem
-
-### 14.3 Pilotage
-
-  **Outil**           **Seuil irrigation**   **Seuil arrêt**   **Note**
-  ------------------- ---------------------- ----------------- --------------------
-  Tensiomètre 30 cm   > 30 cbar             < 12 cbar        Sol moyen
-  Sonde capacitive    VWC < 28%             VWC > 38%        Sol sablo-limoneux
-  NDMI satellite      < P20 (2 passages)    > P35            Latence 5-7j
-
-### 14.4 Stratégie RDI
-
-Le déficit hydrique contrôlé (RDI) peut améliorer la qualité des fruits (°Brix) sans perte significative de rendement.
-
-  **Stade**          **Sensibilité**   **RDI possible**   **Réduction**
-  ------------------ ----------------- ------------------ ---------------
-  Floraison          TRÈS HAUTE        ❌                  0%
-  Nouaison           HAUTE             ❌                  0%
-  Grossissement I    HAUTE             ⚠ Prudence         0-10%
-  Grossissement II   MODÉRÉE           ✅                  15-25%
-  Maturation         FAIBLE            ✅                  25-35%
-
-  ✓ RÈGLE : Le RDI pré-récolte (4-6 semaines avant) augmente le °Brix de 0.5-1.0 point mais réduit le calibre. À utiliser selon objectif commercial (jus vs table).
-
-*\[Source: Ballester et al., 2011; González-Altozano & Castel, 1999\]*
-
-**PARTIE E --- PHYTOSANITAIRE**
-
-## 15. MALADIES ET RAVAGEURS
-
-### 15.1 Maladies principales
-
-**Gommose (Phytophthora spp.)**
-
-  **Paramètre**   **Détail**
-  --------------- ---------------------------------------------------------
-  Agent           Phytophthora citrophthora, P. nicotianae
-  Symptômes       Exsudation gomme au collet, écorce brune, dépérissement
-  Conditions      Sol mal drainé, excès eau, blessures
-  Prévention      Drainage, PG tolérant, point greffe haut
-  Traitement      Phosphonate, Métalaxyl
-
-**Tristeza (CTV)**
-
-  **Paramètre**   **Détail**
-  --------------- -------------------------------------------------------
-  Agent           Citrus Tristeza Virus
-  Vecteur         Pucerons (Toxoptera citricida, Aphis gossypii)
-  Symptômes       Déclin rapide, feuilles jaunes, souche bigaradier +++
-  Prévention      PG tolérant (Citrange, Volkameriana)
-  Traitement      AUCUN curatif, arrachage si sévère
-
- **⚠ TRISTEZA**                                                                                                                                            
- Le virus de la Tristeza est présent au Maroc. Le Bigaradier comme porte-greffe est un RISQUE majeur sur nouvelles plantations. Utiliser des PG tolérants. 
-
-**Alternariose (Alternaria alternata)**
-
-  **Paramètre**        **Détail**
-  -------------------- -----------------------------------
-  Symptômes fruit      Taches brunes, pourriture
-  Symptômes feuilles   Taches nécrotiques
-  Conditions           HR > 80%, pluie
-  Variétés sensibles   Minneola, Nova, Fortune
-  Traitement           Cuivre, Mancozèbe, Difénoconazole
-
-### 15.2 Ravageurs principaux
-
-  **Ravageur**          **Dégâts**                   **Période**        **Seuil**          **Traitement**
-  --------------------- ---------------------------- ------------------ ------------------ ------------------------------
-  Cératite (mouche)     Piqûres fruits, asticots     Véraison-récolte   2% fruits piqués   Spinosad, piégeage
-  Cochenilles           Fumagine, affaiblissement    Toute l'année     Présence           Huile blanche, Spirotetramat
-  Pucerons              Déformation pousses, virus   Printemps          Colonies           Imidaclopride, Spirotetramat
-  Mineuse               Galeries feuilles            Flush végétatif    Présence           Abamectine, Imidaclopride
-  Acariens (araignée)   Feuilles bronze              Été sec            Présence           Abamectine, soufre
-  Thrips                Cicatrices fruits            Floraison          Présence           Spinosad
-
-### 15.3 Calendrier phytosanitaire préventif
-
-  **Période**   **Cible**           **Produit**            **Dose**          **Condition**
-  ------------- ------------------- ---------------------- ----------------- ------------------
-  Jan           Cochenilles hiver   Huile blanche          15-20 L/ha        Systématique
-  Fév-Mars      Gommose préventif   Phosphonate            5 mL/L foliaire   Sol humide
-  Avr           Pucerons            Imidaclopride          Selon produit     Si colonies
-  Mai           Mineuse flush       Abamectine             0.5 L/ha          Si présence
-  Août-Oct      Cératite            Spinosad + attractif   0.2 L/ha          Piégeage + seuil
-  Nov           Cuivre hivernal     Cuivre                 3 kg/ha           Post-récolte
-
-*\[Source: ONSSA Maroc; EPPO guidelines\]*
-
-**PARTIE F --- RÉCOLTE ET QUALITÉ**
-
-## 16. CRITÈRES DE MATURITÉ
-
-### 16.1 Indices de maturité par espèce
-
-  **Espèce**        **Indice principal**   **Valeur minimale**   **Valeur optimale**   **Autre critère**
-  ----------------- ---------------------- --------------------- --------------------- -------------------
-  Orange Navel      Ratio °Brix/Acidité    ≥ 8                   10-14                 Couleur 80%
-  Orange Valencia   Ratio °Brix/Acidité    ≥ 8                   10-16                 °Brix ≥ 10
-  Clémentine        Ratio °Brix/Acidité    ≥ 7                   10-14                 Couleur 100%
-  Citron            Acidité titrable       ≥ 5%                  5-7%                  Jus ≥ 25%
-  Pomelo            Ratio °Brix/Acidité    ≥ 5.5                 6-8                   °Brix ≥ 9
-
-### 16.2 Méthodes de mesure
-
--   °Brix : Réfractomètre sur jus pressé
-
--   Acidité : Titrage NaOH 0.1N, exprimé en % acide citrique
-
--   Ratio : °Brix / Acidité (indice de maturité gustative)
-
--   Couleur : Index colorimétrique ou % surface colorée
-
--   Jus : % masse jus / masse fruit
-
-### 16.3 Fenêtres de récolte optimales
-
-  **Variété**   **Début possible**   **Optimal**   **Fin**     **Note**
-  ------------- -------------------- ------------- ----------- ------------------------
-  Marisol       Mi-sept              Oct           Début nov   Ne pas tarder
-  Clémentine    Début oct            Nov           Début déc   Surveiller granulation
-  Nules         Mi-oct               Nov           Mi-déc      Export
-  Nour          Jan                  Fév           Mars        Tardive
-  Naveline      Nov                  Déc           Jan         Surveiller éclatement
-  Maroc Late    Mars                 Avr-Mai       Juin        Très tardive
-  Valencia      Avr                  Mai           Juin        Peut reverdir
-
-### 16.4 Défauts de qualité à éviter
-
-  **Défaut**              **Cause**                      **Prévention**
-  ----------------------- ------------------------------ -------------------------------------
-  Granulation (sec)       Récolte tardive, K faible      Récolter à temps, K suffisant
-  Éclatement (creasing)   Excès N, stress hydrique       Équilibre N/K, irrigation régulière
-  Petit calibre           Charge excessive, stress eau   Éclaircissage, irrigation
-  Peau épaisse            Excès N                        Réduire N
-  Reverdissement          Récolte tardive (Valencia)     Éthylène si nécessaire
-  Oleocellose             Récolte humide, blessures      Récolter sec, manipulation douce
-
-**PARTIE G --- ALERTES**
-
-## 17. LISTE DES ALERTES AGR-XX
-
-### 17.1 Alertes hydriques
-
-  **Code**   **Alerte**            **Seuil entrée**                       **Seuil sortie**   **Priorité**
-  ---------- --------------------- -------------------------------------- ------------------ --------------
-  AGR-01     Stress hydrique       NDMI < P15 (2 passages) + T > 30°C   NDMI > P30        🔴
-  AGR-02     Excès eau / Gommose   NDMI > P95 + pluie > 40mm/sem        NDMI < P85        🔴
-
-### 17.2 Alertes climatiques
-
-  **Code**   **Alerte**   **Seuil entrée**                           **Seuil sortie**      **Priorité**
-  ---------- ------------ ------------------------------------------ --------------------- --------------
-  AGR-03     Risque gel   Tmin prévue < 0°C                         Tmin > 3°C (3j)      🔴
-  AGR-04     Gel avéré    Tmin < -2°C (orange) ou < 0°C (citron)   ---                   🔴
-  AGR-05     Canicule     Tmax > 40°C (3j) + HR < 30%              Tmax < 37°C (2j)     🟠
-  AGR-06     Vent chaud   T > 38°C + HR < 25% + vent > 30 km/h    Conditions normales   🟠
-
-### 17.3 Alertes sanitaires
-
-  **Code**   **Alerte**           **Seuil entrée**                       **Seuil sortie**   **Priorité**
-  ---------- -------------------- -------------------------------------- ------------------ --------------
-  AGR-07     Conditions Gommose   Sol saturé > 48h + T 18-28°C          Sol ressuyé        🔴
-  AGR-08     Risque Cératite      Véraison + T 20-30°C + piège positif   Récolte terminée   🟠
-  AGR-09     Pression pucerons    Flush + T 18-28°C + colonies           Pas de colonies    🟠
-  AGR-10     Risque Alternaria    HR > 85% + pluie + variété sensible   72h sec            🟠
-
-### 17.4 Alertes nutritionnelles
-
-  **Code**   **Alerte**          **Seuil entrée**                      **Seuil sortie**     **Priorité**
-  ---------- ------------------- ------------------------------------- -------------------- --------------
-  AGR-11     Chlorose ferrique   NDRE < P10 + GCI ↘ + pH sol > 7.5   NDRE > P30          🟡
-  AGR-12     Carence Zn          Feuilles petites mouchetées + flush   Après traitement     🟡
-  AGR-13     Toxicité Cl         Brûlures foliaires + CE eau > 2.5    Lessivage effectué   🔴
-
-### 17.5 Alertes phénologiques
-
-  **Code**   **Alerte**           **Seuil entrée**                           **Seuil sortie**   **Priorité**
-  ---------- -------------------- ------------------------------------------ ------------------ --------------
-  AGR-14     Floraison faible     Floraison détectée < 50% attendue         ---                🟠
-  AGR-15     Chute excessive      Estimation charge < 40% post-nouaison     ---                🟠
-  AGR-16     Maturité récolte     Ratio °Brix/Acidité atteint + couleur      Récolte déclarée   🟢
-  AGR-17     Année OFF probable   Année N-1 très productive + flush faible   ---                🟠
-  AGR-18     Risque granulation   Récolte tardive + K foliaire bas           ---                🟠
-
-### 17.6 Alertes structurelles
-
-  **Code**   **Alerte**              **Seuil entrée**               **Seuil sortie**   **Priorité**
-  ---------- ----------------------- ------------------------------ ------------------ --------------
-  AGR-19     Dépérissement           NIRv ↘ > 20% (4 passages)     Stabilisation      🔴
-  AGR-20     Arbre mort / Tristeza   NDVI < 0.35 + PG bigaradier   ---                🔴
-
-**PARTIE H --- MODÈLE PRÉDICTIF**
-
-## 18. VARIABLES ET LIMITES
-
-### 18.1 Variables du modèle
-
-  **Variable**            **Source**            **Poids**        **Note**
-  ----------------------- --------------------- ---------------- ----------------------
-  Floraison (intensité)   Satellite + terrain   Fort (20-30%)    Difficile à capter
-  Alternance (N-1, N-2)   Historique            Fort (20-30%)    Pattern marqué
-  Conditions floraison    Météo                 Moyen (15-25%)   T, HR, pluie
-  NIRv cumulé             Satellite             Moyen (15-25%)   Santé végétative
-  Stress hydrique         Bilan hydrique        Moyen (10-20%)   Impact calibre
-  Gel (0/1)               Météo                 Fort si = 1      Perte selon sévérité
-  Âge verger              Profil                Ajustement       Courbe production
-
-### 18.2 Précision attendue
-
-  **Système**      **R² attendu**   **MAE**   **Conditions**
-  ---------------- ---------------- --------- ---------------------
-  Traditionnel     0.40-0.55        ±30-45%   Alternance variable
-  Intensif         0.50-0.65        ±20-35%   Meilleur contrôle
-  Super-intensif   0.55-0.70        ±15-30%   Homogène
-
-### 18.3 Particularités par espèce
-
-  **Espèce**        **Prévisibilité**   **Difficulté**                    **Note**
-  ----------------- ------------------- --------------------------------- ---------------------
-  Orange Navel      Moyenne             Alternance, éclatement            Variable
-  Orange Valencia   Bonne               Plus régulière                    Plus prévisible
-  Clémentine        Moyenne             Alternance marquée                Comptage recommandé
-  Citron            Difficile           Remontant, floraisons multiples   Peu prévisible
-  Pomelo            Bonne               Régulière                         Plus prévisible
-
-**PARTIE I --- PLAN ANNUEL**
-
-## 19. CALENDRIER TYPE
-
-### 19.1 Calendrier Orange intensive (50 T/ha cible)
-
-  **Mois**   **NPK (kg/ha)**   **Micro**        **Biostim**        **Phyto**              **Irrigation**
-  ---------- ----------------- ---------------- ------------------ ---------------------- -----------------
-  Jan        N15+P20+K10       Fe-EDDHA         ---                Huile blanche          50 L/arbre/sem
-  Fév        N25+P15+K15       ---              Humiques+Algues    Phosphonate            60 L/arbre/sem
-  Mars       N30+K20           Zn+Mn foliaire   Algues             ---                    80 L/arbre/sem
-  Avr        N25+P10+K15       B floraison      Aminés             Pucerons si présence   100 L/arbre/sem
-  Mai        N20+K25           Zn foliaire      Humiques+Aminés    Mineuse si présence    130 L/arbre/sem
-  Juin       N20+K30           Fe-EDDHA         ---                ---                    160 L/arbre/sem
-  Juil       N15+K30           Zn+Mn foliaire   Algues             ---                    180 L/arbre/sem
-  Août       N15+K25           ---              ---                Cératite début         180 L/arbre/sem
-  Sept       N10+K20           ---              Humiques           Cératite               140 L/arbre/sem
-  Oct        N10+K15           ---              ---                Cératite               100 L/arbre/sem
-  Nov        N15               ---              Humiques granulé   Cuivre                 70 L/arbre/sem
-  Déc        ---               ---              Aminés             ---                    50 L/arbre/sem
-
-N total : ~250 kg/ha, K₂O total : ~250 kg/ha. Ajuster selon analyses.
-
-### 19.2 Points critiques
-
--   Février-Mars : Préparer floraison, première application Fe-EDDHA
-
--   Mars-Avril : Floraison, bore critique, algues pour nouaison
-
--   Mai-Juin : Post-chute, Zn sur flush, surveiller mineuse
-
--   Août-Octobre : Cératite, piégeage et traitement si seuil
-
--   Novembre : Post-récolte, reconstitution, cuivre hivernal
-
-## ANNEXES
-
-**SOURCES ET RÉFÉRENCES**
-
-**Publications scientifiques**
-
-Allen, R.G., et al. (1998). FAO Irrigation and Drainage Paper 56.
-
-Alva, A.K., et al. (2006). Nitrogen best management practice for citrus trees. Scientia Horticulturae, 107, 233-244.
-
-Ballester, C., et al. (2011). Regulated deficit irrigation in clementine trees. Agricultural Water Management, 98, 1419-1428.
-
-Castle, W.S., et al. (2010). Rootstocks for Florida citrus. University of Florida IFAS Extension.
-
-Castel, J.R. (1997). Evapotranspiration of a drip-irrigated clementine citrus tree. Irrigation Science, 17, 117-121.
-
-Chapman, H.D. (1968). The mineral nutrition of citrus. In: Reuther et al. (eds), The Citrus Industry Vol. 2.
-
-Davies, F.S., Albrigo, L.G. (1994). Citrus. CAB International.
-
-Forner-Giner, M.A., Ancillo, G. (2013). Breeding salinity tolerant citrus rootstocks. In: Salt Stress in Plants, Springer.
-
-González-Altozano, P., Castel, J.R. (1999). Regulated deficit irrigation in Clementina de Nules. Journal of Horticultural Science, 74, 706-713.
-
-Levy, Y., Syvertsen, J.P. (2004). Irrigation water quality and salinity effects in citrus trees. Horticultural Reviews, 30, 37-82.
-
-Maas, E.V. (1993). Salinity and citriculture. Tree Physiology, 12, 195-216.
-
-Quaggio, J.A., et al. (1996). Fertilizer application rates in citrus. Fertilizer Research, 43, 51-58.
-
-Quaggio, J.A., et al. (2005). Citrus nutrition. In: Netto et al. (eds), Citrus Production Practices.
-
-Spiegel-Roy, P., Goldschmidt, E.E. (1996). Biology of Citrus. Cambridge University Press.
-
-Storey, R., Walker, R.R. (1999). Citrus and salinity. Scientia Horticulturae, 78, 39-81.
-
-**Institutions**
-
-MAPM - Ministère de l'Agriculture et de la Pêche Maritime, Maroc
-
-ONSSA - Office National de Sécurité Sanitaire des Produits Alimentaires
-
-ASPAM - Association des Producteurs d'Agrumes du Maroc
-
-Maroc Citrus - Interprofession agrumicole
-
-INRA Maroc - Institut National de la Recherche Agronomique
-
-**--- Fin du Référentiel Opérationnel Agrumes v1.0 ---**
-
-Document généré pour le moteur IA SIMO
-
-Février 2026
+    CALC --> CHECK{"Tristeza risk?"}
+    SAL --> CHECK
+    HEAVY --> CHECK
+    SAND --> CHECK
+
+    CHECK -->|"Low risk"| OK["Final selection OK"]
+    CHECK -->|"Risk present"| VERIFY["Verify rootstock is<br/>Tristeza-tolerant"]
+    VERIFY --> OK
+```
+
+### Rootstock Guide by Soil Type
+
+| Soil Condition | Recommended | Alternative | Avoid |
+|----------------|-------------|-------------|-------|
+| Limestone (pH over 7.5, CaCO3 over 8%) | Bigaradier, M. Cleopatre | Volkameriana | Poncirus, Citrange |
+| Saline (EC over 2 dS/m) | Volkameriana, Macrophylla | Bigaradier | Citrange Carrizo |
+| Heavy, poorly drained | Citrange Carrizo | Poncirus | Bigaradier, Volkameriana |
+| Sandy, well drained | Citrange, Citrumelo | Volkameriana | -- |
+| Tristeza presence | Citrange, Volkameriana | Citrumelo | Bigaradier |
+
+---
+
+## 3. Phenological Cycle
+
+Citrus trees are evergreen with continuous leaf production and, for lemons, multiple flowering periods per year.
+
+### Annual Phenological Stages
+
+```mermaid
+gantt
+    title Citrus Phenological Cycle (Orange - Morocco)
+    dateFormat  MM
+    axisFormat  %b
+
+    section Vegetative
+    Winter dormancy       :01, 02
+    Spring flush          :02, 04
+    Summer flush          :07, 09
+    Autumn flush          :10, 12
+
+    section Reproductive
+    Flower buds           :03, 04
+    Flowering             :03, 05
+    Fruit set             :04, 06
+    June drop             :05, 07
+    Fruit growth I        :06, 08
+    Fruit growth II       :08, 10
+    Color break           :09, 11
+    Maturation            :10, 01
+```
+
+### Stage Details with Satellite Signals
+
+| Stage | Description | Orange | Clementine | Lemon | Satellite Signal |
+|-------|-------------|--------|------------|-------|------------------|
+| Winter dormancy | Growth slowdown | Dec-Jan | Dec-Jan | Continuous | NDVI stable |
+| Spring flush | Vegetative push | Feb-Mar | Feb-Mar | Feb-Mar | NDVI rising |
+| Flower buds | Differentiation | Mar | Mar | Variable | Stable |
+| Flowering | Anthesis | Mar-Apr | Mar-Apr | Multiple | NIRv variable |
+| Fruit set | Fruit set | Apr-May | Apr-May | Variable | Stable |
+| June drop | Physiological drop | May-Jun | May-Jun | Variable | Normal |
+| Fruit growth | Fruit expansion | Jun-Oct | Jun-Sep | Continuous | NDVI high stable |
+| Color break | Color change | Sep-Oct | Sep-Oct | -- | Slight decrease |
+| Maturation | Sugar accumulation | Oct-Dec | Oct-Nov | -- | Stable |
+
+### NIRvP Coefficients by Period
+
+```mermaid
+xychart-beta
+    title "NIRvP Coefficient Through the Year"
+    x-axis ["Dec-Jan", "Feb-Mar", "Apr-May", "Jun-Jul", "Aug-Sep", "Oct-Nov"]
+    y-axis "Coefficient" 0.6 --> 1.1
+    bar [0.70, 1.00, 0.90, 0.95, 1.00, 0.90]
+```
+
+| Period | Activity | NIRvP Coef | Note |
+|--------|----------|------------|------|
+| Dec-Jan | Relative dormancy | 0.70 | Minimal activity |
+| Feb-Mar | Flush + flowering | 1.00 | Maximum activity |
+| Apr-May | Fruit set | 0.90 | Transition |
+| Jun-Jul | Fruit growth I | 0.95 | High demand |
+| Aug-Sep | Fruit growth II + flush | 1.00 | Dual activity |
+| Oct-Nov | Maturation + flush | 0.90 | Transition |
+
+### Lemon Specificity -- Remontant Flowering
+
+The lemon tree is remontant: it can flower multiple times per year and carry fruits at different stages simultaneously.
+
+- **Main flowering**: March-April
+- **Secondary flowering**: June-July (if irrigated)
+- **Autumn flowering**: September-October
+
+---
+
+## 4. Satellite Monitoring
+
+### Vegetation Index Thresholds by System
+
+```mermaid
+graph LR
+    subgraph Traditional
+        T_NDVI["NDVI<br/>Optimal: 0.50-0.70<br/>Watch: below 0.45<br/>Alert: below 0.40"]
+        T_NIRV["NIRv<br/>Optimal: 0.12-0.28<br/>Watch: below 0.10<br/>Alert: below 0.08"]
+        T_NDMI["NDMI<br/>Optimal: 0.18-0.38<br/>Watch: below 0.14<br/>Alert: below 0.10"]
+    end
+
+    subgraph Intensive
+        I_NDVI["NDVI<br/>Optimal: 0.60-0.78<br/>Watch: below 0.55<br/>Alert: below 0.50"]
+        I_NIRV["NIRv<br/>Optimal: 0.18-0.35<br/>Watch: below 0.15<br/>Alert: below 0.12"]
+        I_NDMI["NDMI<br/>Optimal: 0.22-0.42<br/>Watch: below 0.18<br/>Alert: below 0.14"]
+    end
+
+    subgraph Super-Intensive
+        S_NDVI["NDVI<br/>Optimal: 0.68-0.85<br/>Watch: below 0.63<br/>Alert: below 0.58"]
+        S_NIRV["NIRv<br/>Optimal: 0.22-0.42<br/>Watch: below 0.20<br/>Alert: below 0.17"]
+        S_NDMI["NDMI<br/>Optimal: 0.28-0.48<br/>Watch: below 0.24<br/>Alert: below 0.20"]
+    end
+```
+
+### Complete Threshold Table
+
+| Index | Parameter | Traditional | Intensive | Super-intensive |
+|-------|-----------|-------------|-----------|-----------------|
+| NDVI | Optimal | 0.50-0.70 | 0.60-0.78 | 0.68-0.85 |
+| NDVI | Watch | below 0.45 | below 0.55 | below 0.63 |
+| NDVI | Alert | below 0.40 | below 0.50 | below 0.58 |
+| NIRv | Optimal | 0.12-0.28 | 0.18-0.35 | 0.22-0.42 |
+| NIRv | Watch | below 0.10 | below 0.15 | below 0.20 |
+| NIRv | Alert | below 0.08 | below 0.12 | below 0.17 |
+| NDMI | Optimal | 0.18-0.38 | 0.22-0.42 | 0.28-0.48 |
+| NDMI | Watch | below 0.14 | below 0.18 | below 0.24 |
+| NDMI | Alert | below 0.10 | below 0.14 | below 0.20 |
+
+### Plantation System Comparison
+
+| Parameter | Traditional | Intensive | Super-intensive |
+|-----------|-------------|-----------|-----------------|
+| Density (trees/ha) | 200-300 | 400-600 | 800-1200 |
+| Spacing | 7x5 to 8x6 m | 5x3 to 6x4 m | 4x2 to 5x2.5 m |
+| Irrigation | Surface | Drip | High-freq drip |
+| First production | Year 5-6 | Year 3-4 | Year 2-3 |
+| Full production | Year 10-12 | Year 6-8 | Year 5-6 |
+| Economic lifespan | 40-50 years | 25-35 years | 15-20 years |
+| Yield at full prod. | 20-35 T/ha | 40-60 T/ha | 50-80 T/ha |
+
+### Yield by Species and Age (T/ha, intensive irrigated)
+
+| Species | 3-4 yrs | 5-7 yrs | 8-12 yrs | 13-20 yrs | 20+ yrs |
+|---------|---------|---------|----------|-----------|---------|
+| Orange Navel | 5-15 | 20-35 | 35-50 | 45-60 | 40-55 |
+| Orange Valencia | 5-15 | 25-40 | 40-60 | 55-80 | 50-70 |
+| Clementine | 5-12 | 18-30 | 30-45 | 40-55 | 35-50 |
+| Mandarin Nadorcott | 8-15 | 25-40 | 40-55 | 50-70 | 45-60 |
+| Lemon | 5-10 | 15-30 | 30-50 | 45-70 | 40-60 |
+| Pomelo | 5-12 | 20-35 | 40-60 | 55-80 | 50-70 |
+
+---
+
+## 5. Nutrition Program
+
+### NPK Export Coefficients (kg per ton of fruit)
+
+| Element | Orange | Clementine | Lemon | Pomelo | Role |
+|---------|--------|------------|-------|--------|------|
+| N | 1.8-2.2 | 1.5-2.0 | 2.0-2.5 | 1.5-2.0 | Growth, quality |
+| P2O5 | 0.4-0.6 | 0.3-0.5 | 0.4-0.6 | 0.3-0.5 | Flowering, rooting |
+| K2O | 2.5-3.5 | 2.0-3.0 | 3.0-4.0 | 2.5-3.5 | Quality, caliber |
+| CaO | 0.8-1.2 | 0.6-1.0 | 0.8-1.2 | 0.6-1.0 | Fruit texture |
+| MgO | 0.3-0.5 | 0.2-0.4 | 0.3-0.5 | 0.2-0.4 | Chlorophyll |
+
+### Maintenance Requirements (kg/ha)
+
+| System | N | P2O5 | K2O | Note |
+|--------|---|------|-----|------|
+| Young (1-3 yrs) | 40-80 | 20-40 | 30-60 | Focus on growth |
+| Entering prod. (4-6 yrs) | 100-150 | 40-60 | 80-120 | Transition |
+| Intensive full prod. | 180-280 | 60-100 | 150-250 | Based on yield |
+| Super-intensive | 250-400 | 80-120 | 200-350 | High density |
+
+### Dosage Formula
+
+```
+Total_dose = (Target_yield x Export) + Maintenance - Soil_correction - Water_correction
+```
+
+**Example: Intensive orange, 50 T/ha target**
+- N = (50 x 2.0) + 150 = 250 kg/ha
+- P2O5 = (50 x 0.5) + 50 = 75 kg/ha
+- K2O = (50 x 3.0) + 100 = 250 kg/ha
+
+### NPK Splitting Schedule
+
+```mermaid
+xychart-beta
+    title "Annual NPK Distribution (%)"
+    x-axis ["Feb", "Mar-Apr", "May-Jun", "Jul-Aug", "Sep-Oct", "Nov"]
+    y-axis "Percentage" 0 --> 45
+    bar [15, 25, 20, 20, 10, 10]
+    bar [40, 30, 15, 10, 5, 0]
+    bar [10, 15, 20, 25, 20, 10]
+```
+
+| Period | Stage | N (%) | P2O5 (%) | K2O (%) | Objective |
+|--------|-------|-------|----------|---------|-----------|
+| Feb | Pre-flowering | 15% | 40% | 10% | Prepare flowering |
+| Mar-Apr | Flowering-fruit set | 25% | 30% | 15% | Fruit set |
+| May-Jun | Post-drop | 20% | 15% | 20% | Growth I |
+| Jul-Aug | Fruit growth | 20% | 10% | 25% | Caliber, summer flush |
+| Sep-Oct | Maturation | 10% | 5% | 20% | Internal quality |
+| Nov | Post-harvest | 10% | 0% | 10% | Recovery |
+
+### Species-Specific Adjustments
+
+| Species | N Factor | K Factor | Specific Note |
+|---------|----------|----------|---------------|
+| Orange Navel | 1.0x (standard) | 1.0x | Avoid N excess (causes cracking) |
+| Orange Valencia | 1.1x (+10%) | 1.0x | Higher production |
+| Clementine | 0.9x (-10%) | 1.0x | Avoid excessive caliber |
+| Lemon | 1.15x (+15%) | 1.1x (+10%) | Remontant, continuous needs |
+| Pomelo | 1.0x (standard) | 1.1x (+10%) | Large fruits |
+
+### Recommended Fertilizer Forms
+
+| Element | Recommended | Conditional | Avoid |
+|---------|-------------|-------------|-------|
+| N | Calcium nitrate, Ammonium nitrate | Urea if pH below 7 | Urea if pH over 7.5 |
+| P | MAP, Phosphoric acid | -- | -- |
+| K | Potassium sulfate, Potassium nitrate | KCl if EC below 1.0 dS/m and Cl below 100 mg/L | KCl if EC over 1.5 |
+
+> **CHLORIDE NOTE**: Citrus are chloride-sensitive (less than avocado). Use potassium sulfate by default. KCl is acceptable only when water EC is below 1.0 dS/m and Cl is below 100 mg/L.
+
+### Foliar Reference Thresholds
+
+Sampling: Leaves 4-6 months old on non-fruiting branches, August-September.
+
+| Element | Unit | Deficiency | Sufficient | Optimal | Excess |
+|---------|------|------------|------------|---------|--------|
+| N | % | below 2.20 | 2.20-2.40 | 2.40-2.70 | over 3.00 |
+| P | % | below 0.09 | 0.09-0.11 | 0.12-0.17 | over 0.20 |
+| K | % | below 0.70 | 0.70-1.00 | 1.00-1.50 | over 2.00 |
+| Ca | % | below 2.00 | 2.00-3.00 | 3.00-5.00 | over 6.00 |
+| Mg | % | below 0.20 | 0.20-0.30 | 0.30-0.50 | over 0.70 |
+| Fe | ppm | below 35 | 35-60 | 60-120 | over 200 |
+| Zn | ppm | below 18 | 18-25 | 25-100 | over 200 |
+| Mn | ppm | below 18 | 18-25 | 25-100 | over 500 |
+| B | ppm | below 20 | 20-35 | 35-100 | over 150 |
+| Cu | ppm | below 3 | 3-5 | 5-15 | over 20 |
+| Cl | % | -- | -- | below 0.30 | over 0.70 (toxic) |
+| Na | % | -- | -- | below 0.15 | over 0.25 (toxic) |
+
+> **RULE**: On limestone soil (pH over 7.5), the microelement program (Fe, Zn, Mn) is MANDATORY, not optional. Plan 3-4 foliar applications plus 2 Fe-EDDHA soil applications.
+
+---
+
+## 6. Irrigation
+
+### Crop Coefficients (Kc) by Period
+
+```mermaid
+xychart-beta
+    title "Kc Evolution Through the Year"
+    x-axis ["Jan-Feb", "Mar-Apr", "May-Jun", "Jul-Aug", "Sep-Oct", "Nov-Dec"]
+    y-axis "Kc" 0.3 --> 1.0
+    line [0.65, 0.75, 0.85, 0.90, 0.80, 0.70]
+    line [0.45, 0.55, 0.65, 0.70, 0.60, 0.50]
+```
+
+| Period | Stage | Kc Young | Kc Adult | Note |
+|--------|-------|----------|----------|------|
+| Jan-Feb | Dormancy | 0.45 | 0.65 | Low demand |
+| Mar-Apr | Flowering | 0.55 | 0.75 | Increasing |
+| May-Jun | Growth I | 0.65 | 0.85 | Rising demand |
+| Jul-Aug | Growth II | 0.70 | 0.90 | Peak demand |
+| Sep-Oct | Maturation | 0.60 | 0.80 | Slight reduction |
+| Nov-Dec | Harvest/dormancy | 0.50 | 0.70 | Reduced demand |
+
+### Reference Volumes
+
+| Month | ETo (mm/d) | ETc Adult | Volume/tree/day (400 trees/ha) | Frequency |
+|-------|------------|-----------|-------------------------------|-----------|
+| Jan-Feb | 2-3 | 1.5-2.0 | 35-50 L | 2x/week |
+| Mar-Apr | 3-5 | 2.5-4.0 | 60-100 L | 3x/week |
+| May-Jun | 5-7 | 4.5-6.0 | 110-150 L | 4-5x/week |
+| Jul-Aug | 7-9 | 6.0-8.0 | 150-200 L | 5-6x/week |
+| Sep-Oct | 4-6 | 3.5-5.0 | 85-125 L | 3-4x/week |
+| Nov-Dec | 2-4 | 1.5-3.0 | 35-75 L | 2x/week |
+
+### Salinity Tolerance Comparison
+
+```mermaid
+graph LR
+    subgraph "Salinity Tolerance (CE eau limit in dS/m)"
+        LEMON["Lemon<br/>1.5 dS/m<br/>MOST SENSITIVE"]
+        ORANGE["Orange/Mandarin<br/>2.0 dS/m<br/>SENSITIVE"]
+        POMELO["Pomelo<br/>2.5 dS/m<br/>MODERATE"]
+    end
+
+    LEMON ---|"more tolerant -->>"| ORANGE ---|"more tolerant -->>"| POMELO
+```
+
+| Parameter | Orange/Mandarin | Lemon | Pomelo |
+|-----------|-----------------|-------|--------|
+| CE water optimal | below 1.0 dS/m | below 0.8 dS/m | below 1.2 dS/m |
+| CE water limit | 2.0 dS/m | 1.5 dS/m | 2.5 dS/m |
+| CE soil limit | 2.5 dS/m | 2.0 dS/m | 3.0 dS/m |
+| Cl water limit | 150 mg/L | 100 mg/L | 200 mg/L |
+| Cl foliar toxic | 0.70% | 0.50% | 0.80% |
+
+### Regulated Deficit Irrigation (RDI)
+
+| Stage | Sensitivity | RDI Possible | Max Reduction |
+|-------|-------------|-------------|---------------|
+| Flowering | VERY HIGH | No | 0% |
+| Fruit set | HIGH | No | 0% |
+| Growth I | HIGH | Caution | 0-10% |
+| Growth II | MODERATE | Yes | 15-25% |
+| Maturation | LOW | Yes | 25-35% |
+
+> **RULE**: Pre-harvest RDI (4-6 weeks before) increases Brix by 0.5-1.0 points but reduces caliber. Use according to commercial objective (juice vs table).
+
+### Rootstock Role in Salinity Management
+
+| Rootstock | Cl Exclusion | Recommendation for Saline Water |
+|-----------|-------------|--------------------------------|
+| Bigaradier | Good | Recommended |
+| Volkameriana | Good | Recommended |
+| Macrophylla | Good | Recommended |
+| M. Cleopatre | Good | Recommended |
+| Citrange Carrizo | Low | Avoid |
+| Citrange Troyer | Low | Avoid |
+
+---
+
+## 7. Phytosanitary Management
+
+### Key Diseases
+
+```mermaid
+flowchart TD
+    DISEASES["Major Citrus Diseases<br/>in Morocco"] --> GOMMOSE["Gommose<br/>(Phytophthora spp.)"]
+    DISEASES --> TRISTEZA["Tristeza<br/>(CTV Virus)"]
+    DISEASES --> ALTERNARIA["Alternariose<br/>(Alternaria alternata)"]
+
+    GOMMOSE --> G_AGENT["Agent: P. citrophthora,<br/>P. nicotianae"]
+    GOMMOSE --> G_COND["Conditions: Poorly drained soil,<br/>excess water, wounds"]
+    GOMMOSE --> G_PREV["Prevention: Drainage,<br/>tolerant rootstock,<br/>high graft point"]
+    GOMMOSE --> G_TREAT["Treatment: Phosphonate,<br/>Metalaxyl"]
+
+    TRISTEZA --> T_AGENT["Agent: Citrus Tristeza Virus"]
+    TRISTEZA --> T_VECT["Vector: Aphids<br/>(Toxoptera citricida,<br/>Aphis gossypii)"]
+    TRISTEZA --> T_PREV["Prevention: Tolerant rootstock<br/>MANDATORY"]
+    TRISTEZA --> T_TREAT["Treatment: NONE curative<br/>Remove if severe"]
+
+    ALTERNARIA --> A_COND["Conditions: RH over 80%,<br/>rain"]
+    ALTERNARIA --> A_VARS["Sensitive: Minneola,<br/>Nova, Fortune"]
+    ALTERNARIA --> A_TREAT["Treatment: Copper,<br/>Mancozeb,<br/>Difenoconazole"]
+```
+
+### Main Pests
+
+| Pest | Damage | Period | Threshold | Treatment |
+|------|--------|--------|-----------|-----------|
+| Mediterranean fruit fly (Ceratitis) | Fruit punctures, maggots | Color break to harvest | 2% fruit damage | Spinosad + trapping |
+| Scale insects | Sooty mold, weakening | Year-round | Presence | White oil, Spirotetramat |
+| Aphids | Shoot distortion, virus vector | Spring | Colonies | Imidacloprid, Spirotetramat |
+| Citrus leafminer | Leaf galleries | Vegetative flush | Presence | Abamectin, Imidacloprid |
+| Spider mites | Bronze leaves | Dry summer | Presence | Abamectin, sulfur |
+| Thrips | Fruit scarring | Flowering | Presence | Spinosad |
+
+### Preventive Phytosanitary Calendar
+
+```mermaid
+gantt
+    title Preventive Treatment Calendar
+    dateFormat  MM
+    axisFormat  %b
+
+    section Fungal
+    White oil - Scale        :01, 02
+    Phosphonate - Gommose    :02, 04
+    Copper - Winter          :11, 12
+
+    section Insects
+    Aphid monitoring         :04, 05
+    Leafminer monitoring     :05, 06
+    Ceratitis - Trapping     :08, 11
+```
+
+| Period | Target | Product | Dose | Condition |
+|--------|--------|---------|------|-----------|
+| Jan | Scale insects (winter) | White oil | 15-20 L/ha | Systematic |
+| Feb-Mar | Gommose prevention | Phosphonate | 5 mL/L foliar | Wet soil |
+| Apr | Aphids | Imidacloprid | Per label | If colonies present |
+| May | Leafminer on flush | Abamectin | 0.5 L/ha | If presence |
+| Aug-Oct | Ceratitis | Spinosad + attractant | 0.2 L/ha | Trapping + threshold |
+| Nov | Winter copper | Copper | 3 kg/ha | Post-harvest |
+
+---
+
+## 8. Alert System
+
+All alert codes used by the SIMO AI engine for citrus parcels.
+
+### Alert Architecture
+
+```mermaid
+flowchart LR
+    ALERTS["AGR Alerts"] --> HYDRIC["Hydric<br/>AGR-01, AGR-02"]
+    ALERTS --> CLIMATE["Climatic<br/>AGR-03 to AGR-06"]
+    ALERTS --> SANITARY["Sanitary<br/>AGR-07 to AGR-10"]
+    ALERTS --> NUTRITION["Nutritional<br/>AGR-11 to AGR-13"]
+    ALERTS --> PHENOLOGY["Phenological<br/>AGR-14 to AGR-18"]
+    ALERTS --> STRUCTURAL["Structural<br/>AGR-19, AGR-20"]
+
+    HYDRIC --> |"URGENT"| U1["Immediate action<br/>required"]
+    CLIMATE --> |"URGENT"| U1
+    SANITARY --> |"PRIORITY"| P1["Action within<br/>48h"]
+    NUTRITION --> |"WATCH"| W1["Monitor and<br/>plan correction"]
+    PHENOLOGY --> |"PRIORITY"| P1
+    STRUCTURAL --> |"URGENT"| U1
+```
+
+### Hydric Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-01 | Water stress | NDMI below P15 (2 passes) + T over 30C | NDMI over P30 | URGENT |
+| AGR-02 | Water excess / Gommose | NDMI over P95 + rain over 40mm/week | NDMI below P85 | URGENT |
+
+### Climatic Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-03 | Frost risk | Tmin forecast below 0C | Tmin over 3C (3 days) | URGENT |
+| AGR-04 | Confirmed frost | Tmin below -2C (orange) or below 0C (lemon) | -- | URGENT |
+| AGR-05 | Heat wave | Tmax over 40C (3 days) + RH below 30% | Tmax below 37C (2 days) | PRIORITY |
+| AGR-06 | Hot wind | T over 38C + RH below 25% + wind over 30 km/h | Normal conditions | PRIORITY |
+
+### Sanitary Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-07 | Gommose conditions | Soil saturated over 48h + T 18-28C | Soil drained | URGENT |
+| AGR-08 | Ceratitis risk | Color break + T 20-30C + positive trap | Harvest complete | PRIORITY |
+| AGR-09 | Aphid pressure | Flush + T 18-28C + colonies | No colonies | PRIORITY |
+| AGR-10 | Alternaria risk | RH over 85% + rain + sensitive variety | 72h dry | PRIORITY |
+
+### Nutritional Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-11 | Iron chlorosis | NDRE below P10 + GCI decreasing + soil pH over 7.5 | NDRE over P30 | WATCH |
+| AGR-12 | Zn deficiency | Small mottled leaves + flush | After treatment | WATCH |
+| AGR-13 | Cl toxicity | Foliar burn + water EC over 2.5 | Leaching done | URGENT |
+
+### Phenological Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-14 | Weak flowering | Detected flowering below 50% expected | -- | PRIORITY |
+| AGR-15 | Excessive drop | Estimated load below 40% post-set | -- | PRIORITY |
+| AGR-16 | Harvest maturity | Brix/Acidity ratio reached + color | Harvest declared | INFO |
+| AGR-17 | Probable OFF year | Year N-1 very productive + weak flush | -- | PRIORITY |
+| AGR-18 | Granulation risk | Late harvest + low foliar K | -- | PRIORITY |
+
+### Structural Alerts
+
+| Code | Alert | Entry Threshold | Exit Threshold | Priority |
+|------|-------|-----------------|----------------|----------|
+| AGR-19 | Tree decline | NIRv decrease over 20% (4 passes) | Stabilization | URGENT |
+| AGR-20 | Dead tree / Tristeza | NDVI below 0.35 + Bigaradier rootstock | -- | URGENT |
+
+---
+
+## 9. Harvest and Quality
+
+### Maturity Indices by Species
+
+```mermaid
+graph TD
+    MATURITY["Maturity Assessment"] --> ORANGE_N["Orange Navel<br/>Brix/Acidity ratio >= 8<br/>Optimal: 10-14<br/>+ 80% color"]
+    MATURITY --> ORANGE_V["Orange Valencia<br/>Brix/Acidity ratio >= 8<br/>Optimal: 10-16<br/>+ Brix >= 10"]
+    MATURITY --> CLEM["Clementine<br/>Brix/Acidity ratio >= 7<br/>Optimal: 10-14<br/>+ 100% color"]
+    MATURITY --> LEM["Lemon<br/>Titratable acidity >= 5%<br/>Optimal: 5-7%<br/>+ Juice >= 25%"]
+    MATURITY --> POM["Pomelo<br/>Brix/Acidity ratio >= 5.5<br/>Optimal: 6-8<br/>+ Brix >= 9"]
+```
+
+### Measurement Methods
+
+- **Brix**: Refractometer on pressed juice
+- **Acidity**: NaOH 0.1N titration, expressed as % citric acid
+- **Ratio**: Brix / Acidity (taste maturity index)
+- **Color**: Colorimetric index or % colored surface
+- **Juice content**: % juice mass / fruit mass
+
+### Optimal Harvest Windows
+
+| Variety | Earliest Start | Optimal | Latest End | Risk if Late |
+|---------|---------------|---------|------------|--------------|
+| Marisol | Mid-Sep | Oct | Early Nov | Quality loss |
+| Clementine Commune | Early Oct | Nov | Early Dec | Granulation |
+| Nules | Mid-Oct | Nov | Mid-Dec | -- |
+| Nour | Jan | Feb | Mar | -- |
+| Naveline | Nov | Dec | Jan | Cracking risk |
+| Maroc Late | Mar | Apr-May | Jun | -- |
+| Valencia Late | Apr | May | Jun | Regreening |
+
+### Quality Defects to Prevent
+
+| Defect | Cause | Prevention |
+|--------|-------|------------|
+| Granulation (dryness) | Late harvest, low K | Harvest on time, adequate K |
+| Cracking (creasing) | N excess, water stress | N/K balance, regular irrigation |
+| Small caliber | Excessive crop load, water stress | Thinning, irrigation |
+| Thick peel | N excess | Reduce N |
+| Regreening | Late harvest (Valencia) | Ethylene if needed |
+| Oleocellosis | Wet harvest, bruising | Harvest dry, gentle handling |
+
+---
+
+## 10. Annual Plan Template
+
+### Monthly Plan -- Intensive Orange (50 T/ha target)
+
+```mermaid
+gantt
+    title Annual Operations Timeline
+    dateFormat  MM
+    axisFormat  %b
+
+    section Nutrition
+    Fe-EDDHA soil           :01, 02
+    Pre-flowering NPK       :02, 03
+    Flowering NPK + Zn/Mn   :03, 05
+    Growth NPK + Zn         :05, 07
+    Fe-EDDHA 2nd            :06, 07
+    Growth NPK + Zn/Mn      :07, 09
+    Maturation NPK          :09, 11
+    Post-harvest N           :11, 12
+
+    section Biostimulants
+    Humics + Seaweed         :02, 03
+    Seaweed flowering        :03, 04
+    Amino acids              :04, 05
+    Humics + Amino           :05, 06
+    Seaweed heat stress      :07, 08
+    Humics maturation        :09, 10
+    Granular humics          :11, 12
+    Amino acids recovery     :12, 01
+
+    section Phytosanitary
+    White oil scales         :01, 02
+    Phosphonate gommose      :02, 03
+    Aphid monitoring         :04, 05
+    Leafminer monitoring     :05, 06
+    Ceratitis campaign       :08, 11
+    Copper treatment         :11, 12
+
+    section Irrigation
+    Low regime               :01, 03
+    Increasing regime        :03, 06
+    Peak regime              :06, 09
+    Decreasing regime        :09, 11
+    Low regime end           :11, 01
+```
+
+### Detailed Monthly Breakdown
+
+| Month | NPK (kg/ha) | Micronutrients | Biostimulants | Phyto | Irrigation (L/tree/week) |
+|-------|-------------|----------------|---------------|-------|--------------------------|
+| Jan | N15+P20+K10 | Fe-EDDHA | -- | White oil | 50 |
+| Feb | N25+P15+K15 | -- | Humics+Seaweed | Phosphonate | 60 |
+| Mar | N30+K20 | Zn+Mn foliar | Seaweed | -- | 80 |
+| Apr | N25+P10+K15 | B flowering | Amino acids | Aphids if present | 100 |
+| May | N20+K25 | Zn foliar | Humics+Amino | Leafminer if present | 130 |
+| Jun | N20+K30 | Fe-EDDHA | -- | -- | 160 |
+| Jul | N15+K30 | Zn+Mn foliar | Seaweed | -- | 180 |
+| Aug | N15+K25 | -- | -- | Ceratitis start | 180 |
+| Sep | N10+K20 | -- | Humics | Ceratitis | 140 |
+| Oct | N10+K15 | -- | -- | Ceratitis | 100 |
+| Nov | N15 | -- | Granular humics | Copper | 70 |
+| Dec | -- | -- | Amino acids | -- | 50 |
+
+**Annual totals**: N approximately 250 kg/ha, K2O approximately 250 kg/ha. Adjust based on soil and foliar analyses.
+
+### Critical Decision Points
+
+1. **February-March**: Prepare flowering, first Fe-EDDHA application, begin biostimulant program
+2. **March-April**: Flowering period -- boron is critical, seaweed for fruit set support
+3. **May-June**: Post-drop management, Zn on new flush, monitor for leafminer
+4. **August-October**: Ceratitis campaign -- trapping and treatment if threshold reached
+5. **November**: Post-harvest recovery -- copper treatment, granular humics, begin reconstitution
+
+---
+
+## References
+
+**Scientific publications**: Allen et al. (1998) FAO 56; Alva et al. (2006); Ballester et al. (2011); Castle et al. (2010); Castel (1997); Chapman (1968); Davies and Albrigo (1994); Forner-Giner and Ancillo (2013); Gonzalez-Altozano and Castel (1999); Levy and Syvertsen (2004); Maas (1993); Quaggio et al. (1996, 2005); Spiegel-Roy and Goldschmidt (1996); Storey and Walker (1999).
+
+**Institutions**: MAPM (Ministry of Agriculture, Morocco), ONSSA, ASPAM, Maroc Citrus, INRA Morocco.
+
+---
+
+*Referentiel Operationnel Agrumes v1.0 -- Generated for SIMO AI Engine -- February 2026*

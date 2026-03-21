@@ -1,7 +1,7 @@
 {
   "id": "referentials/overview",
   "title": "Crop Referentials Overview",
-  "description": "This folder contains crop referential JSON files used for calibration and AI features. Each file holds all reference data for one crop type (varieties, phenology stages, thresholds, nutrition, etc.).",
+  "description": "What Are Crop Referentials?",
   "source": "@site/docs/referentials/overview.md",
   "sourceDirName": "referentials",
   "slug": "/referentials/overview",

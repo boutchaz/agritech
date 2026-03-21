@@ -5,7 +5,7 @@ title: "Accounting & Finance"
 
 # Accounting & Finance
 
-The AgriTech platform includes a full-featured accounting module built on **double-entry bookkeeping** principles. It provides a chart of accounts with multi-country templates, journal entry management, invoice lifecycle handling, financial reporting, cost center tracking, and worker payment processing -- all scoped to individual organizations via multi-tenant isolation.
+The AgroGina platform includes a full-featured accounting module built on **double-entry bookkeeping** principles. It provides a chart of accounts with multi-country templates, journal entry management, invoice lifecycle handling, financial reporting, cost center tracking, and worker payment processing -- all scoped to individual organizations via multi-tenant isolation.
 
 ## Overview
 

@@ -406,6 +406,7 @@ export interface Parcel {
   area_unit: string | null;
   current_crop: string | null;
   status: string;
+  boundary: number[][] | null;
 }
 
 function mapApiParcelRowToParcel(raw: Record<string, unknown>): Parcel {
@@ -427,6 +428,7 @@ function mapApiParcelRowToParcel(raw: Record<string, unknown>): Parcel {
         : isActive
           ? 'active'
           : 'fallow',
+    boundary: Array.isArray(raw.boundary) ? (raw.boundary as number[][]) : null,
   };
 }
 
@@ -535,7 +537,7 @@ export const harvestsApi = {
     const params = new URLSearchParams();
     if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
     if (filters?.dateTo) params.append('dateTo', filters.dateTo);
-    if (filters?.farmId) params.append('farmId', filters.farmId);
+    if (filters?.farmId) params.append('farm_id', filters.farmId);
     const query = params.toString();
     return api.get<{ data: HarvestRecord[]; total: number }>(
       `/organizations/${orgId}/harvests${query ? `?${query}` : ''}`

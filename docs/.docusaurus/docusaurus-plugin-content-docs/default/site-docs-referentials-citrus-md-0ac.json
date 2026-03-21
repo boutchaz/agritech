@@ -1,7 +1,7 @@
 {
   "id": "referentials/citrus",
   "title": "Citrus (Agrumes)",
-  "description": "RÉFÉRENTIEL OPÉRATIONNEL COMPLET",
+  "description": "Reference document for the SIMO AI engine covering all operational data needed to manage a citrus parcel from A to Z in Morocco.",
   "source": "@site/docs/referentials/citrus.md",
   "sourceDirName": "referentials",
   "slug": "/referentials/citrus",

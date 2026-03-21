@@ -174,7 +174,7 @@ export default function AlertsScreen() {
     } else if (data?.harvestId) {
       router.push(`/(drawer)/(tabs)/harvest`);
     } else if (data?.parcelId) {
-      router.push(`/(drawer)/(production)/parcel/${data.parcelId}`);
+      router.push(`/(drawer)/(tabs)/production/parcel/${data.parcelId}`);
     }
   };
 

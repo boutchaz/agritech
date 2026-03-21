@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Architecture Overview
 
-The AgriTech Platform is built as a **multi-tenant SaaS application** using a monorepo structure with pnpm workspaces.
+The AgroGina Platform is built as a **multi-tenant SaaS application** using a monorepo structure with pnpm workspaces.
 
 ## Monorepo Structure
 

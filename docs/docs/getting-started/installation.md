@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Installation
 
-This guide will help you set up the AgriTech Platform development environment on your local machine.
+This guide will help you set up the AgroGina Platform development environment on your local machine.
 
 ## Prerequisites
 

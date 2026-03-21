@@ -5,7 +5,7 @@ title: "Marketplace"
 
 # Marketplace
 
-The AgriTech Marketplace is a B2B e-commerce platform that allows agricultural organizations to list, browse, and trade products. It combines two product sources -- dedicated marketplace listings and inventory items flagged for sale -- into a unified storefront. The system includes seller profiles, shopping carts, quote requests, orders with stock management, and a review system.
+The AgroGina Marketplace is a B2B e-commerce platform that allows agricultural organizations to list, browse, and trade products. It combines two product sources -- dedicated marketplace listings and inventory items flagged for sale -- into a unified storefront. The system includes seller profiles, shopping carts, quote requests, orders with stock management, and a review system.
 
 ## Architecture Overview
 

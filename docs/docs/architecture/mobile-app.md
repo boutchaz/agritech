@@ -6,7 +6,7 @@ sidebar_position: 3
 
 ## Overview
 
-AgriTech Field is a mobile companion app built with Expo SDK 54 for field workers. It provides task management, harvest recording, time tracking, and offline support for daily farm operations.
+AgroGina Field is a mobile companion app built with Expo SDK 54 for field workers. It provides task management, harvest recording, time tracking, and offline support for daily farm operations.
 
 **Location:** `mobile/`
 

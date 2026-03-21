@@ -7,7 +7,7 @@ title: "Database Schema"
 
 ## Overview
 
-The AgriTech platform uses **PostgreSQL** via **Supabase** as its database backend. The schema comprises **120+ tables** organized across 10 domain areas, supporting a multi-tenant SaaS architecture with comprehensive **Row-Level Security (RLS)** policies.
+The AgroGina platform uses **PostgreSQL** via **Supabase** as its database backend. The schema comprises **120+ tables** organized across 10 domain areas, supporting a multi-tenant SaaS architecture with comprehensive **Row-Level Security (RLS)** policies.
 
 Key characteristics:
 

@@ -2119,6 +2119,43 @@ export class CalibrationService {
     system: string,
   ): Promise<NdviThresholds> {
     const supabase = this.databaseService.getAdminClient();
+
+    // 1. Try crop_index_thresholds table first (flat, queryable)
+    const { data: dbThreshold, error: dbError } = await supabase
+      .from("crop_index_thresholds")
+      .select("healthy_min, healthy_max, stress_low, critical_low")
+      .eq("crop_type_name", cropType)
+      .eq("index_name", "NDVI")
+      .eq("plantation_system_type", system)
+      .maybeSingle();
+
+    if (!dbError && dbThreshold) {
+      const healthyMin = this.toNumber(dbThreshold.healthy_min);
+      const healthyMax = this.toNumber(dbThreshold.healthy_max);
+      const stressLow = this.toNumber(dbThreshold.stress_low);
+      const criticalLow = this.toNumber(dbThreshold.critical_low);
+
+      if (
+        healthyMin !== null &&
+        healthyMax !== null &&
+        stressLow !== null &&
+        criticalLow !== null
+      ) {
+        return {
+          optimal: [healthyMin, healthyMax],
+          vigilance: stressLow,
+          alerte: criticalLow,
+        };
+      }
+    }
+
+    if (dbError) {
+      this.logger.warn(
+        `Failed to query crop_index_thresholds for ${cropType}/${system}: ${dbError.message}`,
+      );
+    }
+
+    // 2. Fallback to crop_ai_references JSON path
     const { data, error } = await supabase
       .from("crop_ai_references")
       .select("reference_data")
@@ -2157,6 +2194,7 @@ export class CalibrationService {
       }
     }
 
+    // 3. Hardcoded defaults
     this.logger.warn(
       `No NDVI thresholds for crop "${cropType}" system "${system}", using generic defaults`,
     );
@@ -2899,5 +2937,93 @@ export class CalibrationService {
     }
 
     return null;
+  }
+
+  async getIrrigationRecommendation(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{
+    kc: number;
+    kc_min: number | null;
+    kc_max: number | null;
+    et0: number;
+    etc: number;
+    recommended_volume_m3_per_ha: number;
+    crop_type: string;
+    phenological_stage: string;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // 1. Fetch parcel to get crop_type and phenological stage
+    const { data: parcel, error: parcelError } = await supabase
+      .from("parcels")
+      .select(
+        "id, crop_type, phenological_stage, farm_id, farms(organization_id)",
+      )
+      .eq("id", parcelId)
+      .single();
+
+    if (parcelError || !parcel) {
+      throw new NotFoundException(`Parcel ${parcelId} not found`);
+    }
+
+    const farmOrg = this.extractFarmOrganizationId(parcel.farms);
+    if (!this.matchesOrganization(farmOrg, organizationId)) {
+      throw new NotFoundException(`Parcel ${parcelId} not found`);
+    }
+
+    const cropType = parcel.crop_type ?? "olive";
+    const stage = parcel.phenological_stage ?? "Fruit growth";
+
+    // 2. Query crop_kc_coefficients
+    const { data: kcRow, error: kcError } = await supabase
+      .from("crop_kc_coefficients")
+      .select("kc_value, kc_min, kc_max")
+      .eq("crop_type_name", cropType)
+      .eq("phenological_stage_name", stage)
+      .maybeSingle();
+
+    if (kcError) {
+      this.logger.error(
+        `Failed to fetch Kc for ${cropType}/${stage}: ${kcError.message}`,
+      );
+    }
+
+    const kc = this.toNumber(kcRow?.kc_value) ?? 0.65;
+    const kcMin = this.toNumber(kcRow?.kc_min);
+    const kcMax = this.toNumber(kcRow?.kc_max);
+
+    // 3. Fetch latest ET0 from weather_daily_data
+    const { data: weatherRow, error: weatherError } = await supabase
+      .from("weather_daily_data")
+      .select("et0_fao_evapotranspiration")
+      .eq("parcel_id", parcelId)
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (weatherError) {
+      this.logger.error(
+        `Failed to fetch weather for parcel ${parcelId}: ${weatherError.message}`,
+      );
+    }
+
+    const et0 = this.toNumber(weatherRow?.et0_fao_evapotranspiration) ?? 5.0;
+
+    // 4. Compute ETc and recommended volume
+    const etc = kc * et0;
+    // Convert mm/day to m³/ha/day (1 mm = 10 m³/ha)
+    const recommendedVolume = Math.round(etc * 10 * 100) / 100;
+
+    return {
+      kc,
+      kc_min: kcMin,
+      kc_max: kcMax,
+      et0,
+      etc: Math.round(etc * 100) / 100,
+      recommended_volume_m3_per_ha: recommendedVolume,
+      crop_type: cropType,
+      phenological_stage: stage,
+    };
   }
 }

@@ -48,17 +48,17 @@
       "plugin": "plugin---search-138-688"
     }
   },
-  "/-4e7": {
+  "/-78e": {
     "__comp": "__comp---theme-docs-root-5-e-9-0b6",
     "__context": {
       "plugin": "plugin---aba-d70"
     }
   },
-  "/-e6c": {
+  "/-6c6": {
     "__comp": "__comp---theme-doc-version-roota-7-b-5de",
     "__props": "__props---22-d-307"
   },
-  "/-803": {
+  "/-28b": {
     "__comp": "__comp---theme-doc-roota-94-67a"
   },
   "/architecture/desktop-app-df2": {
@@ -173,10 +173,6 @@
     "__comp": "__comp---theme-doc-item-178-a40",
     "content": "content---guides-platform-overviewa-9-c-4a0"
   },
-  "/intro-32d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---intro-0-e-3-7b8"
-  },
   "/referentials/avocado-e26": {
     "__comp": "__comp---theme-doc-item-178-a40",
     "content": "content---referentials-avocado-353-f1a"
@@ -228,5 +224,9 @@
   "/specs/reference-data-specs-cf5": {
     "__comp": "__comp---theme-doc-item-178-a40",
     "content": "content---specs-reference-data-specs-30-f-f86"
+  },
+  "/-7da": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---0-e-3-279"
   }
 }

@@ -152,7 +152,7 @@
             },
             {
               "id": "intro",
-              "path": "/intro",
+              "path": "/",
               "sidebar": "docs"
             },
             {
@@ -225,7 +225,7 @@
           "sidebars": {
             "docs": {
               "link": {
-                "path": "/intro",
+                "path": "/",
                 "label": "Introduction"
               }
             }

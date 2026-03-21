@@ -6,7 +6,7 @@ sidebar_position: 4
 
 ## Overview
 
-The AgriTech Desktop app is a standalone offline-capable application built with **Tauri v1** (Rust backend + web frontend). It allows users to work without an internet connection by importing organization data bundles exported from the web app.
+The AgroGina Desktop app is a standalone offline-capable application built with **Tauri v1** (Rust backend + web frontend). It allows users to work without an internet connection by importing organization data bundles exported from the web app.
 
 **Location:** `project/src-tauri/`
 

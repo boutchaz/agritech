@@ -32,6 +32,26 @@ export class PaymentRecordsService {
     }
   }
 
+  /**
+   * Compute net_amount from component fields.
+   * Formula: base_amount + bonuses - deductions + overtime_amount - advance_deduction
+   */
+  static computeNetAmount(fields: {
+    base_amount?: number;
+    bonuses?: number;
+    deductions?: number;
+    overtime_amount?: number;
+    advance_deduction?: number;
+  }): number {
+    const result =
+      (fields.base_amount || 0) +
+      (fields.bonuses || 0) -
+      (fields.deductions || 0) +
+      (fields.overtime_amount || 0) -
+      (fields.advance_deduction || 0);
+    return Math.round(result * 100) / 100;
+  }
+
   private ensureValidPeriod(periodStart: string, periodEnd: string) {
     const startDate = new Date(periodStart);
     const endDate = new Date(periodEnd);
@@ -645,6 +665,11 @@ export class PaymentRecordsService {
     const requestedAdvanceDeduction = Number(paymentData.advance_deduction) || 0;
     const finalAdvanceDeduction = Math.max(0, Math.min(requestedAdvanceDeduction, outstandingAdvances, Math.max(0, grossAmount)));
 
+    // Compute net_amount in application layer (was previously a GENERATED column)
+    const finalBaseAmount = Number(metayageSettlement?.worker_share_amount ?? paymentData.base_amount) || 0;
+    const finalOvertimeAmount = Number(paymentData.overtime_amount) || 0;
+    const netAmount = finalBaseAmount + bonusesTotal - deductionsTotal + finalOvertimeAmount - finalAdvanceDeduction;
+
     // Prepare insert data, excluding arrays and setting calculated totals
     const { bonuses: _, deductions: __, ...restData } = paymentData;
     const insertData = {
@@ -653,6 +678,7 @@ export class PaymentRecordsService {
       bonuses: bonusesTotal, // NUMERIC field - total amount
       deductions: deductionsTotal, // NUMERIC field - total amount
       advance_deduction: finalAdvanceDeduction,
+      net_amount: Math.round(netAmount * 100) / 100,
       base_amount: metayageSettlement?.worker_share_amount ?? restData.base_amount,
       gross_revenue: metayageSettlement?.gross_revenue ?? restData.gross_revenue,
       total_charges: metayageSettlement?.total_charges ?? restData.total_charges,

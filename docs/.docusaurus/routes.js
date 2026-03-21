@@ -44,15 +44,15 @@ export default [
   },
   {
     path: '/',
-    component: ComponentCreator('/', '4e7'),
+    component: ComponentCreator('/', '78e'),
     routes: [
       {
         path: '/',
-        component: ComponentCreator('/', 'e6c'),
+        component: ComponentCreator('/', '6c6'),
         routes: [
           {
             path: '/',
-            component: ComponentCreator('/', '803'),
+            component: ComponentCreator('/', '28b'),
             routes: [
               {
                 path: '/architecture/desktop-app',
@@ -223,12 +223,6 @@ export default [
                 sidebar: "docs"
               },
               {
-                path: '/intro',
-                component: ComponentCreator('/intro', '32d'),
-                exact: true,
-                sidebar: "docs"
-              },
-              {
                 path: '/referentials/avocado',
                 component: ComponentCreator('/referentials/avocado', 'e26'),
                 exact: true,
@@ -303,6 +297,12 @@ export default [
               {
                 path: '/specs/reference-data-specs',
                 component: ComponentCreator('/specs/reference-data-specs', 'cf5'),
+                exact: true,
+                sidebar: "docs"
+              },
+              {
+                path: '/',
+                component: ComponentCreator('/', '7da'),
                 exact: true,
                 sidebar: "docs"
               }

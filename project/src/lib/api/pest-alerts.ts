@@ -95,6 +95,32 @@ export interface EscalateToAlertResponse {
   report_id: string;
 }
 
+export interface DiseaseRiskItem {
+  disease_name: string;
+  disease_name_fr: string | null;
+  pathogen_name: string | null;
+  disease_type: string | null;
+  severity: string | null;
+  risk_active: boolean;
+  temperature_range: { min: number | null; max: number | null };
+  humidity_threshold: number | null;
+  treatment_product: string | null;
+  treatment_dose: string | null;
+  treatment_timing: string | null;
+  satellite_signal: string | null;
+}
+
+export interface DiseaseRiskResponse {
+  parcel_id: string;
+  crop_type: string;
+  risks: DiseaseRiskItem[];
+  weather: {
+    temperature: number | null;
+    humidity: number | null;
+    date: string | null;
+  };
+}
+
 // =====================================================
 // API CLIENT
 // =====================================================
@@ -172,6 +198,20 @@ export const pestAlertsApi = {
   async deletePestReport(organizationId: string, reportId: string): Promise<void> {
     return apiClient.delete<void>(
       `${API_BASE}/reports/${reportId}`,
+      {},
+      organizationId
+    );
+  },
+
+  /**
+   * Get disease risk assessment for a parcel
+   */
+  async getDiseaseRisk(
+    organizationId: string,
+    parcelId: string
+  ): Promise<DiseaseRiskResponse> {
+    return apiClient.get<DiseaseRiskResponse>(
+      `${API_BASE}/disease-risk/${parcelId}`,
       {},
       organizationId
     );

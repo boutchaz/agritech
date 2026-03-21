@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Quick Start
 
-Get the AgriTech Platform running locally in about 10 minutes.
+Get the AgroGina Platform running locally in about 10 minutes.
 
 ## 1. Clone and Install
 

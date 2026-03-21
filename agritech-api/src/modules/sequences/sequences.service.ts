@@ -150,4 +150,37 @@ export class SequencesService {
   async generateStockEntryNumber(organizationId: string): Promise<string> {
     return this.generateSequence(organizationId, SequenceType.STOCK_ENTRY);
   }
+
+  /**
+   * Generate lot number for harvest records.
+   * Format: LOT-YYYY-NNNNN or LOT-YYYY-NNNNN-P (partial)
+   */
+  async generateLotNumber(
+    organizationId: string,
+    isPartial = false,
+  ): Promise<string> {
+    const client = this.databaseService.getAdminClient();
+    const year = new Date().getFullYear();
+    const prefix = `LOT-${year}-`;
+
+    try {
+      const { count, error } = await client
+        .from('harvest_records')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', organizationId)
+        .like('lot_number', `${prefix}%`);
+
+      if (error) {
+        this.logger.error(`Failed to count lots for sequence: ${error.message}`);
+        throw new Error(`Failed to generate lot number: ${error.message}`);
+      }
+
+      const nextNumber = (count || 0) + 1;
+      const suffix = isPartial ? '-P' : '';
+      return `${prefix}${nextNumber.toString().padStart(4, '0')}${suffix}`;
+    } catch (error) {
+      this.logger.error(`Lot number generation error: ${error.message}`);
+      throw error;
+    }
+  }
 }

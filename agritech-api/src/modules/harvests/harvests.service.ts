@@ -197,6 +197,11 @@ export class HarvestsService {
     const lotNumber = createHarvestDto.lot_number || 
       await this.generateLotNumber(organizationId, createHarvestDto.parcel_id, isPartial, createHarvestDto.harvest_task_id);
 
+    // Compute estimated_revenue in application layer (no longer a generated column)
+    const estimatedRevenue =
+      (Number(createHarvestDto.quantity) || 0) *
+      (Number(createHarvestDto.expected_price_per_unit) || 0);
+
     // Create harvest record
     const { data: harvest, error } = await client
       .from('harvest_records')
@@ -204,6 +209,7 @@ export class HarvestsService {
         ...createHarvestDto,
         organization_id: organizationId,
         lot_number: lotNumber,
+        estimated_revenue: Math.round(estimatedRevenue * 100) / 100,
         created_by: userId,
         status: 'stored',
       })
@@ -317,9 +323,24 @@ export class HarvestsService {
 
     if (!existing) throw new NotFoundException('Harvest not found');
 
+    // Recompute estimated_revenue if quantity or expected_price_per_unit changed
+    const updateData: Record<string, unknown> = { ...updateHarvestDto };
+    if (updateHarvestDto.quantity !== undefined || updateHarvestDto.expected_price_per_unit !== undefined) {
+      // Fetch current values to merge with partial updates
+      const { data: current } = await client
+        .from('harvest_records')
+        .select('quantity, expected_price_per_unit')
+        .eq('id', harvestId)
+        .single();
+
+      const qty = Number(updateHarvestDto.quantity ?? current?.quantity) || 0;
+      const price = Number(updateHarvestDto.expected_price_per_unit ?? current?.expected_price_per_unit) || 0;
+      updateData.estimated_revenue = Math.round(qty * price * 100) / 100;
+    }
+
     const { data, error } = await client
       .from('harvest_records')
-      .update(updateHarvestDto)
+      .update(updateData)
       .eq('id', harvestId)
       .select()
       .single();

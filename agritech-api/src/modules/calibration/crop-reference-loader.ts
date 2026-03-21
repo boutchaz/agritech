@@ -69,3 +69,29 @@ export function getLocalCropReference(
 export function reloadCropReferences(): void {
   cache = null;
 }
+
+export async function getMineralExportsFromDb(
+  supabase: { from: (table: string) => any },
+  cropType: string,
+  productType?: string,
+): Promise<Record<string, unknown> | null> {
+  let query = supabase
+    .from('crop_mineral_exports')
+    .select('*')
+    .eq('crop_type_name', cropType);
+
+  if (productType) {
+    query = query.eq('product_type', productType);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    logger.warn(
+      `Failed to fetch mineral exports from DB for ${cropType}: ${error.message}`,
+    );
+    return null;
+  }
+
+  return data as Record<string, unknown> | null;
+}

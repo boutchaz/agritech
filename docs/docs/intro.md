@@ -1,14 +1,15 @@
 ---
 sidebar_position: 1
+slug: /
 ---
 
-# AgriTech Platform Documentation
+# AgroGina Platform Documentation
 
-Welcome to the AgriTech Platform - a comprehensive agricultural technology solution built for modern farming operations.
+Welcome to the AgroGina Platform - a comprehensive agricultural technology solution built for modern farming operations.
 
 ## Overview
 
-AgriTech Platform is a multi-tenant SaaS application designed to help farmers manage their operations efficiently. Built with a microservices architecture, it provides:
+AgroGina Platform is a multi-tenant SaaS application designed to help farmers manage their operations efficiently. Built with a microservices architecture, it provides:
 
 - **Farm Management**: Complete parcel, crop, and harvest tracking
 - **Satellite Analysis**: NDVI and other vegetation indices from satellite imagery

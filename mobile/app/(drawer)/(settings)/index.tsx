@@ -1,9 +1,10 @@
 // Settings Hub Screen
-import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '@/constants/theme';
+import { spacing, borderRadius } from '@/constants/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 import PageHeader from '@/components/PageHeader';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -13,35 +14,41 @@ function MenuCard({
   subtitle,
   onPress,
   rightElement,
+  themeColors,
 }: {
   icon: string;
   title: string;
   subtitle: string;
   onPress: () => void;
   rightElement?: React.ReactNode;
+  themeColors: ReturnType<typeof useTheme>['colors'];
 }) {
   return (
-    <Pressable style={styles.menuCard} onPress={onPress}>
-      <View style={styles.menuIconContainer}>
-        <Ionicons name={icon as any} size={24} color={colors.primary[600]} />
+    <Pressable
+      style={[styles.menuCard, { backgroundColor: themeColors.surfaceLowest }]}
+      onPress={onPress}
+    >
+      <View style={[styles.menuIconContainer, { backgroundColor: themeColors.brandContainer + '25' }]}>
+        <Ionicons name={icon as any} size={22} color={themeColors.brandPrimary} />
       </View>
       <View style={styles.menuContent}>
-        <Text style={styles.menuTitle}>{title}</Text>
-        <Text style={styles.menuSubtitle}>{subtitle}</Text>
+        <Text style={[styles.menuTitle, { color: themeColors.textPrimary }]}>{title}</Text>
+        <Text style={[styles.menuSubtitle, { color: themeColors.textSecondary }]}>{subtitle}</Text>
       </View>
-      {rightElement || <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />}
+      {rightElement || <Ionicons name="chevron-forward" size={18} color={themeColors.iconSubtle} />}
     </Pressable>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, themeColors }: { title: string; themeColors: ReturnType<typeof useTheme>['colors'] }) {
   return (
-    <Text style={styles.sectionHeader}>{title}</Text>
+    <Text style={[styles.sectionHeader, { color: themeColors.textTertiary }]}>{title}</Text>
   );
 }
 
 export default function SettingsScreen() {
   const { t } = useTranslation(['common', 'navigation']);
+  const { colors: themeColors } = useTheme();
   const user = useAuthStore((s) => s.user);
   const organization = useAuthStore((s) => s.currentOrganization);
   const signOut = useAuthStore((s) => s.signOut);
@@ -65,21 +72,22 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
       <PageHeader
         title={t('domains.settings', { ns: 'navigation', defaultValue: 'Settings' })}
         onMorePress={() => {}}
       />
 
-      <View style={styles.content}>
-        {/* Profile Section */}
-        <SectionHeader title={t('settings.account', 'Account')} />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {/* Account Section */}
+        <SectionHeader title={t('settings.account', 'Account')} themeColors={themeColors} />
 
         <MenuCard
           icon="person-outline"
           title={t('settings.profile', 'Profile')}
           subtitle={user?.email || t('settings.manageProfile', 'Manage your profile')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -87,6 +95,7 @@ export default function SettingsScreen() {
           title={t('settings.organization', 'Organization')}
           subtitle={organization?.name || t('settings.manageOrg', 'Manage organization')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -94,16 +103,18 @@ export default function SettingsScreen() {
           title={t('settings.team', 'Team Members')}
           subtitle={t('settings.teamSubtitle', 'Manage team access')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         {/* Preferences Section */}
-        <SectionHeader title={t('settings.preferences', 'Preferences')} />
+        <SectionHeader title={t('settings.preferences', 'Preferences')} themeColors={themeColors} />
 
         <MenuCard
           icon="globe-outline"
           title={t('settings.language', 'Language')}
-          subtitle="English, Français, العربية"
+          subtitle="English, Fran\u00e7ais, \u0627\u0644\u0639\u0631\u0628\u064a\u0629"
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -111,6 +122,7 @@ export default function SettingsScreen() {
           title={t('settings.theme', 'Theme')}
           subtitle={t('settings.themeSubtitle', 'Light, Dark, System')}
           onPress={() => router.push('/(drawer)/(settings)/appearance')}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -118,16 +130,18 @@ export default function SettingsScreen() {
           title={t('settings.notifications', 'Notifications')}
           subtitle={t('settings.notificationsSubtitle', 'Configure alerts')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         {/* Support Section */}
-        <SectionHeader title={t('settings.support', 'Support')} />
+        <SectionHeader title={t('settings.support', 'Support')} themeColors={themeColors} />
 
         <MenuCard
           icon="help-circle-outline"
           title={t('settings.help', 'Help Center')}
           subtitle={t('settings.helpSubtitle', 'FAQs and guides')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -135,6 +149,7 @@ export default function SettingsScreen() {
           title={t('settings.feedback', 'Send Feedback')}
           subtitle={t('settings.feedbackSubtitle', 'Report issues or suggest features')}
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         <MenuCard
@@ -142,14 +157,20 @@ export default function SettingsScreen() {
           title={t('settings.about', 'About')}
           subtitle="AgriTech v1.0.0"
           onPress={() => {}}
+          themeColors={themeColors}
         />
 
         {/* Logout */}
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={colors.red[500]} />
-          <Text style={styles.logoutText}>{t('settings.logout', 'Logout')}</Text>
+        <Pressable
+          style={[styles.logoutButton, { backgroundColor: themeColors.errorContainer }]}
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={22} color={themeColors.error} />
+          <Text style={[styles.logoutText, { color: themeColors.error }]}>
+            {t('settings.logout', 'Logout')}
+          </Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -157,34 +178,34 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.gray[50],
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: spacing.md,
+    paddingBottom: spacing.xl + spacing.xl,
   },
   sectionHeader: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.gray[500],
-    marginTop: spacing.md,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: spacing.lg,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    paddingHorizontal: spacing.xs,
   },
   menuCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    ...shadows.sm,
   },
   menuIconContainer: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary[50],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -193,28 +214,24 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   menuTitle: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.gray[900],
+    fontSize: 15,
+    fontWeight: '600',
   },
   menuSubtitle: {
-    fontSize: fontSize.sm,
-    color: colors.gray[500],
+    fontSize: 13,
     marginTop: 2,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.red[50],
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginTop: spacing.xl,
     gap: spacing.sm,
   },
   logoutText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    color: colors.red[500],
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

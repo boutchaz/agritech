@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Satellite Analysis Service
 
-The AgriTech Platform's satellite service provides multi-provider access to Sentinel-2 data through a unified interface, supporting both Google Earth Engine (GEE) and Copernicus Data Space Ecosystem (CDSE/openEO).
+The AgroGina Platform's satellite service provides multi-provider access to Sentinel-2 data through a unified interface, supporting both Google Earth Engine (GEE) and Copernicus Data Space Ecosystem (CDSE/openEO).
 
 ## Overview
 

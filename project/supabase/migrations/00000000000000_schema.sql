@@ -2116,7 +2116,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_user ON workers(user_id) WHERE user_id IS
 -- Work Units (for piece-work tracking)
 CREATE TABLE IF NOT EXISTS work_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   name_ar TEXT,
@@ -2291,12 +2291,7 @@ CREATE TABLE IF NOT EXISTS task_time_logs (
   start_time TIMESTAMPTZ NOT NULL,
   end_time TIMESTAMPTZ,
   break_duration INTEGER DEFAULT 0,
-  total_hours NUMERIC GENERATED ALWAYS AS (
-    CASE
-      WHEN end_time IS NOT NULL THEN GREATEST(0, (EXTRACT(EPOCH FROM (end_time - start_time)) / 3600) - (break_duration::NUMERIC / 60.0))
-      ELSE 0
-    END
-  ) STORED,
+  total_hours NUMERIC DEFAULT 0, -- computed in service layer
   notes TEXT,
   location_lat NUMERIC,
   location_lng NUMERIC,
@@ -2384,7 +2379,8 @@ CREATE TABLE IF NOT EXISTS metayage_settlements (
   harvest_date DATE,
   gross_revenue NUMERIC NOT NULL,
   total_charges NUMERIC DEFAULT 0,
-  net_revenue NUMERIC GENERATED ALWAYS AS (gross_revenue - COALESCE(total_charges, 0)) STORED,
+  net_revenue NUMERIC DEFAULT 0, -- computed in service layer; CHECK allows negative (legitimate loss)
+  CHECK (net_revenue IS NOT NULL),
   worker_percentage NUMERIC NOT NULL,
   worker_share_amount NUMERIC NOT NULL,
   calculation_basis calculation_basis NOT NULL,
@@ -2417,7 +2413,7 @@ CREATE TABLE IF NOT EXISTS payment_records (
   deductions NUMERIC DEFAULT 0,
   overtime_amount NUMERIC DEFAULT 0,
   advance_deduction NUMERIC DEFAULT 0,
-  net_amount NUMERIC GENERATED ALWAYS AS ((((base_amount + bonuses) - deductions) + overtime_amount) - advance_deduction) STORED,
+  net_amount NUMERIC DEFAULT 0,
   days_worked INTEGER DEFAULT 0,
   hours_worked NUMERIC DEFAULT 0,
   tasks_completed INTEGER DEFAULT 0,
@@ -2615,7 +2611,7 @@ CREATE TABLE IF NOT EXISTS harvest_records (
   humidity NUMERIC,
   intended_for TEXT,
   expected_price_per_unit NUMERIC,
-  estimated_revenue NUMERIC GENERATED ALWAYS AS (COALESCE(quantity, 0) * COALESCE(expected_price_per_unit, 0)) STORED,
+  estimated_revenue NUMERIC DEFAULT 0,
   photos JSONB DEFAULT '[]'::jsonb,
   documents JSONB DEFAULT '[]'::jsonb,
   status TEXT DEFAULT 'stored',
@@ -2786,7 +2782,7 @@ CREATE TABLE IF NOT EXISTS delivery_items (
   quantity NUMERIC NOT NULL,
   unit TEXT NOT NULL,
   price_per_unit NUMERIC NOT NULL,
-  total_amount NUMERIC GENERATED ALWAYS AS (quantity * price_per_unit) STORED,
+  total_amount NUMERIC DEFAULT 0, -- computed in service layer
   quality_grade TEXT,
   quality_notes TEXT,
   notes TEXT,
@@ -3213,10 +3209,10 @@ CREATE TABLE IF NOT EXISTS stock_entry_items (
   serial_number TEXT,
   expiry_date DATE,
   cost_per_unit NUMERIC,
-  total_cost NUMERIC GENERATED ALWAYS AS (quantity * COALESCE(cost_per_unit, 0)) STORED,
+  total_cost NUMERIC DEFAULT 0, -- computed in service layer
   system_quantity NUMERIC,
   physical_quantity NUMERIC,
-  variance NUMERIC GENERATED ALWAYS AS (COALESCE(physical_quantity, 0) - COALESCE(system_quantity, 0)) STORED,
+  variance NUMERIC DEFAULT 0, -- computed in service layer
   variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3344,7 +3340,7 @@ CREATE TABLE IF NOT EXISTS stock_valuation (
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   quantity NUMERIC NOT NULL,
   cost_per_unit NUMERIC NOT NULL,
-  total_cost NUMERIC GENERATED ALWAYS AS (quantity * cost_per_unit) STORED,
+  total_cost NUMERIC DEFAULT 0, -- computed in service layer
   valuation_date TIMESTAMPTZ DEFAULT NOW(),
   stock_entry_id UUID REFERENCES stock_entries(id),
   batch_number TEXT,
@@ -3371,7 +3367,7 @@ CREATE TABLE IF NOT EXISTS opening_stock_balances (
   opening_date DATE NOT NULL,
   quantity NUMERIC NOT NULL,
   valuation_rate NUMERIC NOT NULL,
-  total_value NUMERIC GENERATED ALWAYS AS (quantity * valuation_rate) STORED,
+  total_value NUMERIC DEFAULT 0, -- computed in service layer
   batch_number TEXT,
   serial_numbers TEXT[],
   journal_entry_id UUID REFERENCES journal_entries(id),
@@ -3421,7 +3417,7 @@ CREATE TABLE IF NOT EXISTS stock_closing_items (
   warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
   closing_quantity NUMERIC NOT NULL,
   closing_rate NUMERIC NOT NULL,
-  closing_value NUMERIC GENERATED ALWAYS AS (closing_quantity * closing_rate) STORED,
+  closing_value NUMERIC DEFAULT 0, -- computed in service layer
   batch_number TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -9012,6 +9008,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_org_summary_id ON admin_org_summary(
 CREATE INDEX IF NOT EXISTS idx_admin_org_summary_created ON admin_org_summary(created_at);
 CREATE INDEX IF NOT EXISTS idx_admin_org_summary_plan ON admin_org_summary(plan_type);
 
+-- IMPORTANT: This materialized view requires periodic refresh.
+-- Schedule via pg_cron or Supabase Edge Function:
+--   SELECT cron.schedule('refresh-admin-org-summary', '0 */6 * * *',
+--     $$REFRESH MATERIALIZED VIEW CONCURRENTLY admin_org_summary$$);
+
 -- View for daily organization growth
 CREATE OR REPLACE VIEW admin_org_growth WITH (security_invoker = true) AS
 SELECT
@@ -9376,7 +9377,7 @@ CREATE TABLE IF NOT EXISTS marketplace_order_items (
   unit_price NUMERIC(12, 2) NOT NULL,
   unit TEXT, -- Snapshot of unit
   image_url TEXT, -- Snapshot of main image
-  total_price NUMERIC(12, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+  total_price NUMERIC(12, 2) DEFAULT 0, -- computed in service layer
   stock_deducted BOOLEAN DEFAULT false, -- Track if stock was deducted
   stock_movement_id UUID REFERENCES stock_movements(id) ON DELETE SET NULL, -- Link to stock movement
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -11485,11 +11486,7 @@ CREATE TABLE IF NOT EXISTS public.chat_conversations (
   content TEXT NOT NULL,
   language TEXT DEFAULT 'en' CHECK (language IN ('en', 'fr', 'ar')),
   metadata JSONB DEFAULT '{}'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-  -- Ensure user has access to the organization
-  CONSTRAINT chat_conversations_org_user FOREIGN KEY (organization_id, user_id)
-    REFERENCES public.organization_users(organization_id, user_id) ON DELETE CASCADE
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indexes for efficient queries
@@ -11582,12 +11579,8 @@ CREATE TABLE IF NOT EXISTS cost_center_budgets (
   account_id UUID REFERENCES accounts(id) ON DELETE SET NULL,
   budget_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
   actual_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-  variance DECIMAL(15,2) GENERATED ALWAYS AS (budget_amount - actual_amount) STORED,
-  variance_percentage DECIMAL(5,2) GENERATED ALWAYS AS (
-    CASE WHEN budget_amount > 0
-    THEN ROUND(((budget_amount - actual_amount) / budget_amount) * 100, 2)
-    ELSE 0 END
-  ) STORED,
+  variance DECIMAL(15,2) DEFAULT 0, -- computed in service layer
+  variance_percentage DECIMAL(5,2) DEFAULT 0, -- computed in service layer
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -12090,20 +12083,8 @@ BEGIN
 END $$;
 
 -- =====================================================
--- SOFT DELETE PATTERN (OPTIONAL - can be enabled per table)
+-- SOFT DELETE INDEXES (soft delete logic handled in NestJS service layer)
 -- =====================================================
-
--- Function to soft delete records
-CREATE OR REPLACE FUNCTION soft_delete(table_name TEXT, record_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-  EXECUTE FORMAT(
-    'UPDATE %I SET deleted_at = NOW(), is_active = false WHERE id = $1',
-    table_name
-  ) USING record_id;
-  RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql;
 
 -- Indexes for soft delete queries (deleted_at columns are defined in table definitions)
 CREATE INDEX IF NOT EXISTS idx_workers_deleted ON workers(deleted_at) WHERE deleted_at IS NOT NULL;
@@ -12684,38 +12665,11 @@ CREATE TABLE IF NOT EXISTS module_translations (
 
 COMMENT ON TABLE module_translations IS 'Translations for module names, descriptions, and features';
 
--- Create module config cache table
-CREATE TABLE IF NOT EXISTS module_config_cache (
-  cache_key VARCHAR(100) PRIMARY KEY,
-  locale VARCHAR(10) NOT NULL DEFAULT 'en',
-  data JSONB NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-COMMENT ON TABLE module_config_cache IS 'Cached module configuration for performance';
-
--- Create widget to module mapping table
-CREATE TABLE IF NOT EXISTS widget_module_mapping (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  widget_name VARCHAR(100) NOT NULL UNIQUE,
-  module_slug VARCHAR(100) NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-COMMENT ON TABLE widget_module_mapping IS 'Maps dashboard widgets to their owning modules';
-
 -- Enable Row Level Security
 ALTER TABLE module_translations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE module_config_cache ENABLE ROW LEVEL SECURITY;
-ALTER TABLE widget_module_mapping ENABLE ROW LEVEL SECURITY;
 
--- Public read for translations and cache
+-- Public read for translations
 CREATE POLICY "public_read_module_translations" ON module_translations FOR SELECT USING (true);
-CREATE POLICY "public_read_module_config_cache" ON module_config_cache FOR SELECT USING (true);
-CREATE POLICY "public_read_widget_module_mapping" ON widget_module_mapping FOR SELECT USING (true);
 
 -- Admin write policies
 CREATE POLICY "admin_write_module_translations" ON module_translations FOR ALL
@@ -12729,41 +12683,9 @@ WITH CHECK (
   )
 );
 
-CREATE POLICY "admin_write_module_config_cache" ON module_config_cache FOR ALL
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM organization_users ou
-    JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
-      AND ou.is_active = true
-      AND r.name IN ('system_admin')
-  )
-);
-
-CREATE POLICY "admin_write_widget_module_mapping" ON widget_module_mapping FOR ALL
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM organization_users ou
-    JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
-      AND ou.is_active = true
-      AND r.name IN ('system_admin')
-  )
-);
-
 -- Add updated_at triggers
 CREATE TRIGGER update_module_translations_updated_at
 BEFORE UPDATE ON module_translations
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_module_config_cache_updated_at
-BEFORE UPDATE ON module_config_cache
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_widget_module_mapping_updated_at
-BEFORE UPDATE ON widget_module_mapping
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 

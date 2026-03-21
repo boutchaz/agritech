@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius } from '@/constants/theme';
+import { spacing, borderRadius } from '@/constants/theme';
+import { useTheme } from '@/providers/ThemeProvider';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -28,16 +29,19 @@ export default function PageHeader({
 }: PageHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors: themeColors } = useTheme();
 
-  const iconColor = transparent ? colors.white : colors.gray[900];
+  const iconColor = transparent ? '#ffffff' : themeColors.textPrimary;
   const hasRight = (actions && actions.length > 0) || !!onMorePress;
 
   return (
     <View
       style={[
         styles.container,
-        { paddingTop: insets.top },
-        transparent && styles.containerTransparent,
+        {
+          paddingTop: insets.top,
+          backgroundColor: transparent ? 'transparent' : themeColors.background,
+        },
       ]}
     >
       <View style={styles.row}>
@@ -56,7 +60,10 @@ export default function PageHeader({
         </View>
 
         <Text
-          style={[styles.title, transparent && styles.titleTransparent]}
+          style={[
+            styles.title,
+            { color: transparent ? '#ffffff' : themeColors.textPrimary },
+          ]}
           numberOfLines={1}
         >
           {title}
@@ -90,12 +97,7 @@ export default function PageHeader({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.gray[50],
-  },
-  containerTransparent: {
-    backgroundColor: 'transparent',
-  },
+  container: {},
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,10 +120,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '600',
-    color: colors.gray[900],
-  },
-  titleTransparent: {
-    color: colors.white,
   },
   iconBtn: {
     width: 44,

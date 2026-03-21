@@ -4,13 +4,13 @@
  * Modify the docusaurus.config.js file at your site's root instead.
  */
 export default {
-  "title": "AgriTech Platform Documentation",
+  "title": "AgroGina Platform Documentation",
   "tagline": "Comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights",
-  "url": "https://docs.agritech.example.com",
+  "url": "https://docs.agrogina.com",
   "baseUrl": "/",
   "favicon": "img/logo.svg",
-  "organizationName": "agritech",
-  "projectName": "agritech-platform",
+  "organizationName": "agrogina",
+  "projectName": "agrogina-platform",
   "onBrokenLinks": "warn",
   "i18n": {
     "defaultLocale": "en",
@@ -69,9 +69,9 @@ export default {
   ],
   "themeConfig": {
     "navbar": {
-      "title": "AgriTech Platform",
+      "title": "AgroGina Platform",
       "logo": {
-        "alt": "AgriTech Platform",
+        "alt": "AgroGina Platform",
         "src": "img/logo.svg"
       },
       "items": [
@@ -82,7 +82,7 @@ export default {
           "label": "Docs"
         },
         {
-          "href": "https://github.com/agritech/platform",
+          "href": "https://github.com/boutchaz/agritech",
           "label": "GitHub",
           "position": "right"
         }
@@ -110,12 +110,12 @@ export default {
           "items": [
             {
               "label": "GitHub",
-              "href": "https://github.com/agritech/platform"
+              "href": "https://github.com/boutchaz/agritech"
             }
           ]
         }
       ],
-      "copyright": "Copyright © 2026 AgriTech Platform. Built with Docusaurus."
+      "copyright": "Copyright © 2026 AgroGina Platform. Built with Docusaurus."
     },
     "prism": {
       "theme": {

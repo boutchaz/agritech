@@ -1,7 +1,7 @@
 {
   "id": "guides/adding-feature",
   "title": "Adding a Feature",
-  "description": "This guide walks through adding a new feature to the AgriTech Platform.",
+  "description": "This guide walks through adding a new feature to the AgroGina Platform.",
   "source": "@site/docs/guides/adding-feature.md",
   "sourceDirName": "guides",
   "slug": "/guides/adding-feature",

@@ -1,7 +1,7 @@
 {
   "id": "referentials/avocado",
   "title": "Avocado (Avocatier)",
-  "description": "RÉFÉRENTIEL OPÉRATIONNEL COMPLET",
+  "description": "Operational referential for precision avocado management in Morocco",
   "source": "@site/docs/referentials/avocado.md",
   "sourceDirName": "referentials",
   "slug": "/referentials/avocado",

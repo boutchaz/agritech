@@ -60,7 +60,7 @@ export const palette = {
 
 export type ColorMode = 'light' | 'dark';
 
-type SemanticColors = {
+export type SemanticColors = {
   background: string;
   surface: string;
   surfaceLow: string;

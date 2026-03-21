@@ -828,4 +828,69 @@ export class InvoicesService {
       message: `Invoice email sent successfully to ${partyEmail}`,
     };
   }
+
+  /**
+   * Recalculate outstanding_amount and paid_amount from payment_allocations.
+   * Use this to fix drift between stored amounts and actual allocations.
+   */
+  async recalculateOutstanding(
+    invoiceId: string,
+    organizationId: string,
+  ): Promise<{ paid_amount: number; outstanding_amount: number; status: string }> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    const { data: invoice, error: invoiceError } = await supabaseClient
+      .from('invoices')
+      .select('id, grand_total, status')
+      .eq('id', invoiceId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (invoiceError || !invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    const { data: allocations, error: allocError } = await supabaseClient
+      .from('payment_allocations')
+      .select('allocated_amount')
+      .eq('invoice_id', invoiceId);
+
+    if (allocError) {
+      throw new BadRequestException(`Failed to fetch allocations: ${allocError.message}`);
+    }
+
+    const paidAmount = (allocations ?? []).reduce(
+      (sum, a) => sum + Number(a.allocated_amount || 0),
+      0,
+    );
+    const grandTotal = Number(invoice.grand_total) || 0;
+    const outstandingAmount = Math.max(0, grandTotal - paidAmount);
+
+    // Determine correct status based on amounts
+    let status = invoice.status;
+    if (paidAmount >= grandTotal && grandTotal > 0) {
+      status = 'paid';
+    } else if (paidAmount > 0 && paidAmount < grandTotal) {
+      status = 'partially_paid';
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from('invoices')
+      .update({
+        paid_amount: Math.round(paidAmount * 100) / 100,
+        outstanding_amount: Math.round(outstandingAmount * 100) / 100,
+        status,
+      })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      throw new BadRequestException(`Failed to update invoice: ${updateError.message}`);
+    }
+
+    return {
+      paid_amount: Math.round(paidAmount * 100) / 100,
+      outstanding_amount: Math.round(outstandingAmount * 100) / 100,
+      status,
+    };
+  }
 }

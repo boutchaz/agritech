@@ -3,7 +3,7 @@ sidebar_position: 7
 title: "Desktop App Implementation Plan"
 ---
 
-# Desktop App Plan - AgriTech Platform
+# Desktop App Plan - AgroGina Platform
 
 > Standalone desktop version using Tauri, with full org data export/import and offline-first architecture.
 
@@ -11,7 +11,7 @@ title: "Desktop App Implementation Plan"
 
 ## Overview
 
-This document outlines the plan to create a **standalone desktop application** for the AgriTech platform. The desktop app will:
+This document outlines the plan to create a **standalone desktop application** for the AgroGina platform. The desktop app will:
 
 - **Reuse the existing codebase** (same React/Vite frontend)
 - **Export full organization data** from the SaaS version
@@ -95,7 +95,7 @@ This document outlines the plan to create a **standalone desktop application** f
    ```bash
    npx tauri init
    ```
-   - App name: `AgriTech Desktop`
+   - App name: `AgroGina Desktop`
    - Window title: `AgriTech`
    - Dev server URL: `http://localhost:5173`
    - Build output: `../dist`
