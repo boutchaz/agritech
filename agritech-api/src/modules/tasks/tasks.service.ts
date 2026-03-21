@@ -545,19 +545,16 @@ export class TasksService {
     const client = this.databaseService.getAdminClient();
 
     // Verify task belongs to organization and get current status
-    const { data: existingTask, error: findError } = await client
+    const { data: existingTask } = await client
       .from("tasks")
       .select(
-        "id, status, assigned_to, start_date, end_date, title, task_type, farm_id, organization_id, due_date, parcel_id",
+        "id, status, assigned_to, scheduled_start, scheduled_end, title, task_type, farm_id, organization_id, due_date, parcel_id",
       )
       .eq("id", taskId)
       .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (!existingTask) {
-      this.logger.error(
-        `Task not found: taskId=${taskId}, organizationId=${organizationId}, userId=${userId}, dbError=${findError?.message || 'none'}`,
-      );
       throw new NotFoundException("Task not found");
     }
 
@@ -683,9 +680,9 @@ export class TasksService {
     }
     // Calculate hours worked from task duration
     const hoursWorked =
-      task.start_date && task.end_date
-        ? (new Date(task.end_date).getTime() -
-            new Date(task.start_date).getTime()) /
+      task.actual_start && task.actual_end
+        ? (new Date(task.actual_end).getTime() -
+            new Date(task.actual_start).getTime()) /
           (1000 * 60 * 60)
         : 0;
     // Calculate payment based on worker payment type
@@ -702,8 +699,8 @@ export class TasksService {
     // Determine work date
     const workDate = task.due_date
       ? new Date(task.due_date)
-      : task.end_date
-        ? new Date(task.end_date)
+      : task.actual_end
+        ? new Date(task.actual_end)
         : new Date();
     const { error: workRecordError } = await client
       .from("work_records")
