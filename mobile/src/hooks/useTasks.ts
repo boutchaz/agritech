@@ -192,6 +192,66 @@ export function useAddTaskComment() {
       tasksApi.addComment(taskId, content),
     onSuccess: (_, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'comments', taskId] });
     },
+  });
+}
+
+export function useTaskComments(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'comments', taskId],
+    queryFn: () => tasksApi.getComments(taskId),
+    enabled: !!taskId,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useTaskChecklist(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'checklist', taskId],
+    queryFn: () => tasksApi.getChecklist(taskId),
+    enabled: !!taskId,
+  });
+}
+
+export function useToggleChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
+      tasksApi.toggleChecklistItem(taskId, itemId),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    },
+  });
+}
+
+export function useAddChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, title }: { taskId: string; title: string }) =>
+      tasksApi.addChecklistItem(taskId, title),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+    },
+  });
+}
+
+export function useRemoveChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
+      tasksApi.removeChecklistItem(taskId, itemId),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+    },
+  });
+}
+
+export function useTaskDependencies(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'dependencies', taskId],
+    queryFn: () => tasksApi.getDependencies(taskId),
+    enabled: !!taskId,
   });
 }

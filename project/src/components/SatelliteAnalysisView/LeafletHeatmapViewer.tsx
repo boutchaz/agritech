@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { Download, Layers, ZoomIn, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -629,23 +629,6 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           </MapContainer>
         </div>
 
-        {/* Legend and Information (hide in compact mode) */}
-        {!compact && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MousePointer className="w-4 h-4 text-blue-600" />
-              <span className="font-medium text-blue-800">Interactive Map Features</span>
-            </div>
-            <div className="text-sm text-blue-700 space-y-1">
-              <p>• <strong>Real Data:</strong> Actual Sentinel-2 satellite pixel values from Earth Engine</p>
-              <p>• <strong>AOI Boundary:</strong> Black/white dashed line shows the exact field boundary</p>
-              <p>• <strong>Grid Pixels:</strong> Each rectangle represents a {data?.metadata?.sample_scale || 10}m satellite pixel</p>
-              <p>• <strong>Color Scale:</strong> {COLOR_PALETTES[colorPalette || 'red-green'].description}</p>
-              <p>• <strong>Interaction:</strong> Hover over pixels to see exact values and coordinates</p>
-              <p>• <strong>Data Source:</strong> {data?.metadata?.data_source || 'Sentinel-2 Earth Engine'}</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

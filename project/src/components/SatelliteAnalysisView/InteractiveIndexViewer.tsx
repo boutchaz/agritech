@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Download, Layers, ZoomIn, MousePointer, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar, AlertCircle } from 'lucide-react';
+import { Download, Layers, ZoomIn, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar, AlertCircle } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
@@ -980,20 +980,6 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             </div>
           )}
 
-          {/* Interactive Features Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <MousePointer className="w-4 h-4 text-blue-600" />
-              <span className="font-medium text-blue-800">Interactive Features</span>
-            </div>
-            <div className="text-sm text-blue-700 space-y-1">
-              <p>• <strong>Hover:</strong> View exact values and coordinates for each pixel</p>
-              <p>• <strong>Zoom:</strong> Use mouse wheel or zoom controls to examine specific areas</p>
-              <p>• <strong>Pan:</strong> Click and drag to move around the visualization</p>
-              <p>• <strong>Legend:</strong> Click legend items to show/hide data series</p>
-              <p>• <strong>Export:</strong> Download data as JSON</p>
-            </div>
-          </div>
         </div>
       )}
 

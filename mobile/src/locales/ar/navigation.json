@@ -12,7 +12,21 @@
     "inventory": "المخزون",
     "accounting": "المحاسبة",
     "settings": "الإعدادات",
-    "misc": "متفرقات"
+    "misc": "متفرقات",
+    "farms": "مزارعي",
+    "harvest": "الحصاد",
+    "tasks": "المهام",
+    "timeTracking": "تتبع الوقت",
+    "alerts": "التنبيهات",
+    "team": "الفريق",
+    "approvals": "الموافقات",
+    "finance": "المالية"
+  },
+  "drawer": {
+    "farmManagement": "إدارة المزرعة",
+    "operations": "العمليات",
+    "peopleWork": "الموظفون",
+    "business": "الأعمال"
   },
   "screens": {
     "dashboard": "لوحة التحكم",

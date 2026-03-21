@@ -352,7 +352,7 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date: string | null;
   task_type: string | null;
@@ -365,6 +365,8 @@ export interface Task {
   farm?: Farm;
   parcel?: { id: string; name: string };
   assigned_worker?: { id: string; first_name: string; last_name: string };
+  completion_percentage?: number;
+  estimated_duration?: number | null;
 }
 
 export interface HarvestRecord {
@@ -495,15 +497,22 @@ export const tasksApi = {
   getStatistics: async () => {
     const res = await api.get<{
       total_tasks: number;
-      completed_tasks: number;
-      in_progress_tasks: number;
+      pending: number;
+      assigned: number;
+      in_progress: number;
+      completed: number;
+      cancelled: number;
+      on_hold: number;
       overdue_tasks: number;
+      completion_rate: number;
+      total_cost: number;
     }>('/tasks/statistics');
     return {
       total: res.total_tasks ?? 0,
-      pending: (res.total_tasks ?? 0) - (res.completed_tasks ?? 0) - (res.in_progress_tasks ?? 0),
-      in_progress: res.in_progress_tasks ?? 0,
-      completed: res.completed_tasks ?? 0,
+      pending: res.pending ?? 0,
+      assigned: res.assigned ?? 0,
+      in_progress: res.in_progress ?? 0,
+      completed: res.completed ?? 0,
       overdue: res.overdue_tasks ?? 0,
     };
   },
@@ -529,6 +538,21 @@ export const tasksApi = {
 
   addComment: (taskId: string, content: string) =>
     api.post(`/tasks/${taskId}/comments`, { content }),
+
+  getComments: (taskId: string) => api.get<any[]>(`/tasks/${taskId}/comments`),
+
+  getChecklist: (taskId: string) => api.get<any[]>(`/tasks/${taskId}/checklist`),
+
+  addChecklistItem: (taskId: string, title: string) =>
+    api.post(`/tasks/${taskId}/checklist/items`, { title }),
+
+  toggleChecklistItem: (taskId: string, itemId: string) =>
+    api.patch(`/tasks/${taskId}/checklist/items/${itemId}/toggle`, {}),
+
+  removeChecklistItem: (taskId: string, itemId: string) =>
+    api.delete(`/tasks/${taskId}/checklist/items/${itemId}`),
+
+  getDependencies: (taskId: string) => api.get<any>(`/tasks/${taskId}/dependencies`),
 };
 
 export const harvestsApi = {

@@ -51,6 +51,13 @@ const NAV_SECTIONS: NavSection[] = [
     titleKey: 'drawer.farmManagement',
     items: [
       {
+        key: 'farms',
+        route: '/(drawer)/(tabs)/farms-overview' as Href,
+        icon: 'business-outline',
+        labelKey: 'domains.farms',
+        permission: { action: 'read', subject: 'Farm' },
+      },
+      {
         key: 'production',
         route: '/(drawer)/(tabs)/production' as Href,
         icon: 'leaf-outline',
@@ -58,11 +65,44 @@ const NAV_SECTIONS: NavSection[] = [
         permission: { action: 'read', subject: 'Parcel' },
       },
       {
+        key: 'harvest',
+        route: '/(drawer)/(tabs)/harvest' as Href,
+        icon: 'basket-outline',
+        labelKey: 'domains.harvest',
+        permission: { action: 'read', subject: 'Harvest' },
+      },
+      {
         key: 'inventory',
         route: '/(drawer)/(inventory)' as Href,
         icon: 'cube-outline',
         labelKey: 'domains.inventory',
         permission: { action: 'read', subject: 'Inventory' },
+      },
+    ],
+  },
+  {
+    key: 'operations',
+    titleKey: 'drawer.operations',
+    items: [
+      {
+        key: 'tasks',
+        route: '/(drawer)/(tabs)/tasks' as Href,
+        icon: 'checkbox-outline',
+        labelKey: 'domains.tasks',
+        permission: { action: 'read', subject: 'Task' },
+      },
+      {
+        key: 'clock',
+        route: '/(drawer)/(tabs)/clock' as Href,
+        icon: 'time-outline',
+        labelKey: 'domains.timeTracking',
+        permission: { action: 'read', subject: 'Task' },
+      },
+      {
+        key: 'alerts',
+        route: '/(drawer)/(tabs)/alerts' as Href,
+        icon: 'warning-outline',
+        labelKey: 'domains.alerts',
       },
     ],
   },
@@ -77,6 +117,19 @@ const NAV_SECTIONS: NavSection[] = [
         labelKey: 'domains.workforce',
         permission: { action: 'read', subject: 'Task' },
       },
+      {
+        key: 'team',
+        route: '/(drawer)/(tabs)/team' as Href,
+        icon: 'person-add-outline',
+        labelKey: 'domains.team',
+        permission: { action: 'read', subject: 'Worker' },
+      },
+      {
+        key: 'approvals',
+        route: '/(drawer)/(tabs)/approvals' as Href,
+        icon: 'shield-checkmark-outline',
+        labelKey: 'domains.approvals',
+      },
     ],
   },
   {
@@ -90,12 +143,20 @@ const NAV_SECTIONS: NavSection[] = [
         labelKey: 'domains.accounting',
         permission: { action: 'read', subject: 'Invoice' },
       },
+      {
+        key: 'finance',
+        route: '/(drawer)/(tabs)/finance' as Href,
+        icon: 'stats-chart-outline',
+        labelKey: 'domains.finance',
+        permission: { action: 'read', subject: 'Invoice' },
+      },
     ],
   },
 ];
 
 const SECTION_DEFAULTS: Record<string, string> = {
   farm: 'Farm Management',
+  operations: 'Operations',
   people: 'People & Work',
   business: 'Business',
 };
@@ -141,14 +202,21 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
       : null);
 
   function isActive(route: string) {
-    // Check for tabs sub-routes like (tabs)/production
+    // Home tab — only exact match
+    if (route.endsWith('(tabs)')) {
+      return pathname === '/' || pathname === '/index' || pathname === '/(tabs)' || pathname === '/(tabs)/index';
+    }
+    // Tab sub-routes like (tabs)/tasks, (tabs)/harvest, etc.
     if (route.includes('(tabs)/')) {
       const tabSubRoute = route.split('(tabs)/')[1];
-      if (tabSubRoute) return pathname.includes(`/${tabSubRoute}`);
+      if (tabSubRoute) {
+        // Exact match on the tab name segment
+        return pathname === `/${tabSubRoute}` || pathname.startsWith(`/${tabSubRoute}/`);
+      }
     }
-    if (route.endsWith('(tabs)')) return pathname === '/' || pathname === '/(tabs)' || pathname === '/(tabs)/index';
-    const segment = route.match(/\((\w+)\)/)?.[1];
-    return segment ? pathname.includes(`(${segment})`) : false;
+    // Drawer group routes like (accounting), (workforce), etc.
+    const segment = route.match(/\((\w+)\)/g)?.pop()?.replace(/[()]/g, '');
+    return segment ? pathname.includes(segment) : false;
   }
 
   async function handleSignOut() {
@@ -174,8 +242,10 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
         key={item.key}
         style={[
           styles.drawerItem,
-          {
-            backgroundColor: active ? themeColors.brandContainer + '30' : 'transparent',
+          active && {
+            backgroundColor: themeColors.brandPrimary + '15',
+            borderLeftWidth: 3,
+            borderLeftColor: themeColors.brandPrimary,
           },
         ]}
         activeOpacity={0.65}
@@ -188,30 +258,27 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           style={[
             styles.itemIconWrap,
             {
-              backgroundColor: active ? themeColors.brandContainer : themeColors.surfaceContainer,
+              backgroundColor: active ? themeColors.brandPrimary : themeColors.surfaceContainer,
             },
           ]}
         >
           <Ionicons
             name={active ? (item.icon.replace('-outline', '') as IconName) : item.icon}
             size={20}
-            color={active ? themeColors.onBrand : themeColors.iconSubtle}
+            color={active ? '#ffffff' : themeColors.iconSubtle}
           />
         </View>
         <Text
           style={[
             styles.drawerItemLabel,
             {
-              color: active ? themeColors.brandText : themeColors.textPrimary,
-              fontWeight: active ? '600' : '400',
+              color: active ? themeColors.brandPrimary : themeColors.textPrimary,
+              fontWeight: active ? '700' : '400',
             },
           ]}
         >
           {t(item.labelKey, { ns: 'navigation' })}
         </Text>
-        {active && (
-          <View style={[styles.activeIndicator, { backgroundColor: themeColors.brandPrimary }]} />
-        )}
       </TouchableOpacity>
     );
   }
@@ -398,11 +465,6 @@ const styles = StyleSheet.create({
   drawerItemLabel: {
     flex: 1,
     fontSize: 14,
-  },
-  activeIndicator: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

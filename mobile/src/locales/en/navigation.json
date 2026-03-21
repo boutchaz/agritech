@@ -12,7 +12,21 @@
     "inventory": "Inventory",
     "accounting": "Accounting",
     "settings": "Settings",
-    "misc": "Miscellaneous"
+    "misc": "Miscellaneous",
+    "farms": "My Farms",
+    "harvest": "Harvests",
+    "tasks": "Tasks",
+    "timeTracking": "Time Tracking",
+    "alerts": "Alerts",
+    "team": "Team",
+    "approvals": "Approvals",
+    "finance": "Finance"
+  },
+  "drawer": {
+    "farmManagement": "Farm Management",
+    "operations": "Operations",
+    "peopleWork": "People & Work",
+    "business": "Business"
   },
   "screens": {
     "dashboard": "Dashboard",

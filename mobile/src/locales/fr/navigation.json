@@ -12,7 +12,21 @@
     "inventory": "Inventaire",
     "accounting": "Comptabilité",
     "settings": "Paramètres",
-    "misc": "Divers"
+    "misc": "Divers",
+    "farms": "Mes Fermes",
+    "harvest": "Récoltes",
+    "tasks": "Tâches",
+    "timeTracking": "Suivi du Temps",
+    "alerts": "Alertes",
+    "team": "Équipe",
+    "approvals": "Approbations",
+    "finance": "Finance"
+  },
+  "drawer": {
+    "farmManagement": "Gestion Agricole",
+    "operations": "Opérations",
+    "peopleWork": "Personnel",
+    "business": "Gestion"
   },
   "screens": {
     "dashboard": "Tableau de bord",

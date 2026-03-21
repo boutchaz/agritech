@@ -22,9 +22,11 @@ type TaskPriority = Task['priority'];
 
 const STATUS_CONFIG: Record<TaskStatus, { color: string; icon: keyof typeof Ionicons.glyphMap }> = {
   pending: { color: colors.yellow[500], icon: 'time-outline' },
+  assigned: { color: colors.blue[500], icon: 'person-outline' },
   in_progress: { color: colors.blue[500], icon: 'play-circle-outline' },
   completed: { color: colors.primary[500], icon: 'checkmark-circle-outline' },
   cancelled: { color: colors.gray[400], icon: 'close-circle-outline' },
+  on_hold: { color: colors.yellow[600], icon: 'pause-circle-outline' },
 };
 
 const PRIORITY_CONFIG: Record<TaskPriority, { color: string }> = {
