@@ -2283,6 +2283,11 @@ CREATE TABLE IF NOT EXISTS task_comments (
 CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_comments_user ON task_comments(user_id);
 
+-- Explicit FK to user_profiles so PostgREST can resolve the join
+ALTER TABLE task_comments
+  ADD CONSTRAINT task_comments_user_profile_fkey
+  FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
+
 -- Task Time Logs
 CREATE TABLE IF NOT EXISTS task_time_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

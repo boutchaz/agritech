@@ -1536,7 +1536,7 @@ export class TasksService {
       .select(
         `
         *,
-        user:user_profiles!user_id(id, full_name, email),
+        user:user_profiles!task_comments_user_profile_fkey(id, full_name, email),
         worker:workers!worker_id(first_name, last_name)
       `,
       )
