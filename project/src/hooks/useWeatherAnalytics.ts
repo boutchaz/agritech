@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { WeatherAnalyticsData, MonthlyWeatherData, TemperatureTimeSeries } from '../services/weatherClimateService';
+import { weatherClimateService, WeatherAnalyticsData, MonthlyWeatherData, TemperatureTimeSeries } from '../services/weatherClimateService';
 import { apiRequest } from '../lib/api-client';
 
 export type TimeRange = 'last-3-months' | 'last-6-months' | 'last-12-months' | 'ytd' | 'custom';
@@ -13,9 +13,9 @@ interface UseWeatherAnalyticsOptions {
 }
 
 /**
- * Weather analytics hook — calls NestJS /weather/parcel/:id
- * which is the single source of truth (Open-Meteo data fetched server-side).
- * Falls back to client-side weatherClimateService if NestJS is unavailable.
+ * Weather analytics hook.
+ * Tries NestJS GET /weather/parcel/:id first (single source of truth).
+ * Falls back to client-side Open-Meteo if NestJS is unavailable.
  */
 export function useWeatherAnalytics({
   parcelId,
@@ -29,7 +29,7 @@ export function useWeatherAnalytics({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!parcelId || (!parcelBoundary || parcelBoundary.length === 0)) {
+    if (!parcelBoundary || parcelBoundary.length === 0) {
       setData(null);
       setError(null);
       return;
@@ -39,43 +39,43 @@ export function useWeatherAnalytics({
       setLoading(true);
       setError(null);
 
-      try {
-        const { startDate, endDate } = calculateDateRange(timeRange, customStartDate, customEndDate);
+      const { startDate, endDate } = calculateDateRange(timeRange, customStartDate, customEndDate);
 
-        // Call NestJS endpoint (single source of truth)
-        const result = await apiRequest<any>(
-          `/api/v1/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
-        );
+      // Try NestJS first if parcelId is available
+      if (parcelId) {
+        try {
+          const result = await apiRequest<any>(
+            `/api/v1/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
+          );
 
-        if (result && (result.temperature_series || result.daily)) {
-          // Map NestJS response to WeatherAnalyticsData shape
-          const analyticsData: WeatherAnalyticsData = {
-            temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily),
-            monthly_precipitation: result.monthly?.map(mapMonthlyToWeatherData) ?? [],
-            start_date: startDate,
-            end_date: endDate,
-            location: result.location ?? { latitude: 0, longitude: 0 },
-          };
-          setData(analyticsData);
-          return;
+          if (result && (result.temperature_series?.length || result.daily?.length)) {
+            setData({
+              temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily),
+              monthly_precipitation: result.monthly?.map(mapMonthlyToWeatherData) ?? [],
+              start_date: startDate,
+              end_date: endDate,
+              location: result.location ?? { latitude: 0, longitude: 0 },
+            });
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // NestJS not available — fall through to client-side
         }
+      }
 
-        // Fallback to client-side if NestJS returns empty
-        const { weatherClimateService } = await import('../services/weatherClimateService');
-        const fallbackData = await weatherClimateService.getWeatherAnalytics(parcelBoundary, startDate, endDate);
-        setData(fallbackData);
+      // Fallback: client-side Open-Meteo (original approach)
+      try {
+        const analyticsData = await weatherClimateService.getWeatherAnalytics(
+          parcelBoundary,
+          startDate,
+          endDate,
+        );
+        setData(analyticsData);
       } catch (err) {
         console.error('Error fetching weather analytics:', err);
-        // Try fallback
-        try {
-          const { startDate, endDate } = calculateDateRange(timeRange, customStartDate, customEndDate);
-          const { weatherClimateService } = await import('../services/weatherClimateService');
-          const fallbackData = await weatherClimateService.getWeatherAnalytics(parcelBoundary!, startDate, endDate);
-          setData(fallbackData);
-        } catch (fallbackErr) {
-          setError(fallbackErr instanceof Error ? fallbackErr.message : 'Failed to fetch weather analytics');
-          setData(null);
-        }
+        setError(err instanceof Error ? err.message : 'Failed to fetch weather analytics');
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -87,7 +87,6 @@ export function useWeatherAnalytics({
   return { data, loading, error };
 }
 
-// Map NestJS daily to TemperatureTimeSeries (when temperature_series not present)
 function mapDailyToTempSeries(daily: any[]): TemperatureTimeSeries[] {
   if (!daily) return [];
   return daily.map((d: any) => ({
@@ -95,13 +94,12 @@ function mapDailyToTempSeries(daily: any[]): TemperatureTimeSeries[] {
     current_min: d.temperature_min ?? d.temp_min ?? 0,
     current_mean: d.temperature_mean ?? ((d.temp_max ?? 0) + (d.temp_min ?? 0)) / 2,
     current_max: d.temperature_max ?? d.temp_max ?? 0,
-    ltn_min: d.temperature_min ?? d.temp_min ?? 0,
-    ltn_mean: d.temperature_mean ?? ((d.temp_max ?? 0) + (d.temp_min ?? 0)) / 2,
-    ltn_max: d.temperature_max ?? d.temp_max ?? 0,
+    ltn_min: d.ltn_min ?? d.temperature_min ?? d.temp_min ?? 0,
+    ltn_mean: d.ltn_mean ?? d.temperature_mean ?? ((d.temp_max ?? 0) + (d.temp_min ?? 0)) / 2,
+    ltn_max: d.ltn_max ?? d.temperature_max ?? d.temp_max ?? 0,
   }));
 }
 
-// Map NestJS monthly to MonthlyWeatherData
 function mapMonthlyToWeatherData(m: any): MonthlyWeatherData {
   return {
     month: m.month,
