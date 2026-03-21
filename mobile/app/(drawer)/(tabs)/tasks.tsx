@@ -92,11 +92,7 @@ export default function TasksScreen() {
   const [filter, setFilter] = useState<FilterType>('all');
   const { t } = useTranslation();
   const { t: tNav } = useTranslation('navigation');
-  const { data: tasksResponse, isLoading, refetch, isRefetching } = useTasks();
-  // Backend returns Task[] without pagination, or { data: Task[], total } with pagination
-  const tasks: Task[] | undefined = Array.isArray(tasksResponse)
-    ? tasksResponse
-    : tasksResponse?.data;
+  const { data: tasks, isLoading, refetch, isRefetching } = useTasks();
   const { data: statistics } = useTaskStatistics();
 
   const filteredTasks = filter === 'all'
@@ -114,7 +110,7 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title={t('domains.tasks', { ns: 'navigation', defaultValue: 'Tasks' })} showBack={false} />
+      <PageHeader title={t('domains.tasks', { ns: 'navigation', defaultValue: 'Tasks' })} showMenu />
       <View style={styles.filterContainer}>
         {filters.map((f) => (
           <TouchableOpacity

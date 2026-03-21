@@ -991,7 +991,7 @@
         "backToParcels": "Back to parcels",
         "tabs": {
           "overview": "Overview",
-          "soil": "Soil Analysis",
+          "soil": "Analysis",
           "satellite": "Satellite Imagery",
           "weather": "Weather & Climate",
           "production": "Production Intelligence",
@@ -3104,7 +3104,7 @@
     "detail": {
       "tabs": {
         "overview": "Overview",
-        "soil": "Soil Analysis",
+        "soil": "Analysis",
         "satellite": "Satellite",
         "weather": "Weather",
         "production": "Production",

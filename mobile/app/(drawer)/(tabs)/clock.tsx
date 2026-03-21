@@ -186,7 +186,7 @@ export default function ClockScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.gray[50] }}>
-    <PageHeader title="Clock" showBack={false} />
+    <PageHeader title="Clock" showMenu />
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.clockCard}>
         <View style={styles.statusIndicator}>

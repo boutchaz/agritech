@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException,
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
@@ -53,39 +54,31 @@ export class WorkersService {
   /**
    * Get all workers for an organization
    */
-  async findAll(userId: string, organizationId: string, farmId?: string) {
+  async findAll(userId: string, organizationId: string, farmId?: string, page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
-
     const client = this.databaseService.getAdminClient();
-    let query = client
-      .from('workers')
-      .select(`
-        *,
-        organizations!inner(name),
-        farms(name)
-      `)
-      .eq('organization_id', organizationId)
-      .order('last_name', { ascending: true });
 
-    if (farmId) {
-      query = query.eq('farm_id', farmId);
-    }
-
-    const { data: workers, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch workers: ${error.message}`);
-    }
-
-    return (workers || []).map(worker => ({
-      ...worker,
-      organization_name: Array.isArray(worker.organizations)
-        ? worker.organizations[0]?.name
-        : worker.organizations?.name,
-      farm_name: Array.isArray(worker.farms)
-        ? worker.farms[0]?.name
-        : worker.farms?.name,
-    }));
+    return paginate(client, 'workers', {
+      select: '*, organizations!inner(name), farms(name)',
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (farmId) q = q.eq('farm_id', farmId);
+        return q;
+      },
+      page,
+      pageSize,
+      orderBy: 'last_name',
+      ascending: true,
+      map: (worker) => ({
+        ...worker,
+        organization_name: Array.isArray(worker.organizations)
+          ? worker.organizations[0]?.name
+          : worker.organizations?.name,
+        farm_name: Array.isArray(worker.farms)
+          ? worker.farms[0]?.name
+          : worker.farms?.name,
+      }),
+    });
   }
 
   /**

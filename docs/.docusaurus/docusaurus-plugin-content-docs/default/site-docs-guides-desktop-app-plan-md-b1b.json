@@ -19,5 +19,9 @@
   "previous": {
     "title": "Platform Overview & Presentation",
     "permalink": "/guides/platform-overview"
+  },
+  "next": {
+    "title": "Mobile App Store Publishing",
+    "permalink": "/guides/store-publishing"
   }
 }

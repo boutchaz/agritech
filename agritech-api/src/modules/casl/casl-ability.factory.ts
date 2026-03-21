@@ -199,6 +199,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.STOCK_ENTRY);
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
+            can(Action.Manage, Subject.INVENTORY);
             can(Action.Manage, Subject.ANALYSIS);
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);
@@ -577,6 +578,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.STOCK_ITEM);
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
+            can(Action.Manage, Subject.INVENTORY);
             can(Action.Manage, Subject.ANALYSIS);
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);

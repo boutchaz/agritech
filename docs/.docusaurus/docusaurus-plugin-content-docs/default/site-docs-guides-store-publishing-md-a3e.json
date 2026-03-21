@@ -1,0 +1,23 @@
+{
+  "id": "guides/store-publishing",
+  "title": "Mobile App Store Publishing",
+  "description": "Complete guide to building, submitting, and maintaining the AgroGina mobile app on the Apple App Store and Google Play Store using Expo EAS.",
+  "source": "@site/docs/guides/store-publishing.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/store-publishing",
+  "permalink": "/guides/store-publishing",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8,
+    "title": "Mobile App Store Publishing"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Desktop App Implementation Plan",
+    "permalink": "/guides/desktop-app-plan"
+  }
+}

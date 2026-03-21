@@ -186,7 +186,7 @@ export default function ApprovalsScreen() {
     <View style={styles.container}>
       <PageHeader
         title={t('approvals.title', { ns: 'navigation', defaultValue: 'Approvals' })}
-        showBack={false}
+        showMenu
       />
 
       {/* Filter Tabs */}

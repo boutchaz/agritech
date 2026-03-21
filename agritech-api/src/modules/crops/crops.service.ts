@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
+import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { CropFiltersDto, CreateCropDto } from "./dto";
 
 @Injectable()
@@ -46,12 +47,12 @@ export class CropsService {
     const sortDir = filters.sortDir === "desc" ? false : true;
     query = query.order(sortBy, { ascending: sortDir });
 
-    // Apply pagination if specified
-    if (filters.page && filters.pageSize) {
-      const from = (filters.page - 1) * filters.pageSize;
-      const to = from + filters.pageSize - 1;
-      query = query.range(from, to);
-    }
+    // Apply pagination
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || 50;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
 
     const { data, error, count } = await query;
 
@@ -72,19 +73,7 @@ export class CropsService {
       crop_varieties: undefined,
     }));
 
-    // If pagination was requested, return paginated response
-    if (filters.page && filters.pageSize) {
-      return {
-        data: crops,
-        total: count || 0,
-        page: filters.page,
-        pageSize: filters.pageSize,
-        totalPages: Math.ceil((count || 0) / filters.pageSize),
-      };
-    }
-
-    // Otherwise return flat array (backward compatible)
-    return crops;
+    return paginatedResponse(crops, count || 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string) {

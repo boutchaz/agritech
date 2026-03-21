@@ -1,0 +1,84 @@
+name: EAS Build & Submit
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ios
+          - android
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+concurrency:
+  group: eas-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Determine build parameters
+      - name: Set build params
+        id: params
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "platform=all" >> $GITHUB_OUTPUT
+            echo "submit=true" >> $GITHUB_OUTPUT
+          else
+            echo "profile=${{ inputs.profile || 'preview' }}" >> $GITHUB_OUTPUT
+            echo "platform=${{ inputs.platform || 'all' }}" >> $GITHUB_OUTPUT
+            echo "submit=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Build
+      - name: Build app
+        run: eas build --platform ${{ steps.params.outputs.platform }} --profile ${{ steps.params.outputs.profile }} --non-interactive --no-wait
+
+      # Submit to stores (only on production tag builds)
+      - name: Submit to stores
+        if: steps.params.outputs.submit == 'true'
+        run: |
+          echo "⏳ Waiting for builds to complete before submitting..."
+          eas build --platform ${{ steps.params.outputs.platform }} --profile production --non-interactive
+          eas submit --platform ${{ steps.params.outputs.platform }} --profile production --non-interactive

@@ -88,7 +88,7 @@ export default function HarvestScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title="Harvest" showBack={false} />
+      <PageHeader title="Harvest" showMenu />
       {isLoading ? (
         <TaskListSkeleton />
       ) : (

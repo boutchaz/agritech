@@ -8,6 +8,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "agrogina",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8d011fff-336d-4f7a-a3d9-fd1b63149ea7"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -16,6 +22,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.agrogina.field",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "AgroGina needs camera access to capture harvest photos and document crop conditions.",
         "NSLocationWhenInUseUsageDescription": "AgroGina needs location access to record harvest locations and track deliveries.",
@@ -26,21 +33,35 @@
     },
     "android": {
       "package": "com.agrogina.field",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#16a34a"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "CAMERA",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "RECORD_AUDIO",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
-        "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
@@ -80,11 +101,12 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "8d011fff-336d-4f7a-a3d9-fd1b63149ea7"
       },
       "firebaseAnalyticsEnabled": true,
       "ga4MeasurementId": "G-XXXXXXXXXX",
-      "ga4ApiSecret": "your-ga4-api-secret"
+      "ga4ApiSecret": "your-ga4-api-secret",
+      "router": {}
     }
   }
 }

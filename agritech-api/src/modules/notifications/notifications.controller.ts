@@ -26,6 +26,7 @@ import {
   NotificationFiltersDto,
   NotificationType,
 } from './dto/notification.dto';
+import { type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @ApiTags('notifications')
 @ApiBearerAuth('JWT-auth')
@@ -53,7 +54,7 @@ export class NotificationsController {
   async getNotifications(
     @Req() req: any,
     @Query() filters: NotificationFiltersDto,
-  ): Promise<NotificationResponseDto[]> {
+  ): Promise<PaginatedResponse<NotificationResponseDto>> {
     const userId = req.user.id;
     const organizationId = req.headers['x-organization-id'];
     return this.notificationsService.getNotifications(userId, organizationId, filters);

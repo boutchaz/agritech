@@ -12,8 +12,8 @@ import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '@/constants/theme';
 import PageHeader from '@/components/PageHeader';
-import { Card, Badge, Button, LoadingState } from '@/components/ui';
-import { useStockItem, useStockEntries, useDeleteStockItem } from '@/hooks/useInventory';
+import { Card, Badge, LoadingState } from '@/components/ui';
+import { useStockItem, useStockMovements, useDeleteStockItem } from '@/hooks/useInventory';
 
 export default function InventoryItemDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -21,16 +21,14 @@ export default function InventoryItemDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { data: item, isLoading, refetch: refetchItem } = useStockItem(id);
-  const { data: entriesData, refetch: refetchEntries } = useStockEntries({ item_id: id });
+  const { data: movements = [], refetch: refetchMovements } = useStockMovements({ item_id: id });
   const deleteItem = useDeleteStockItem();
-
-  const entries = entriesData?.data || [];
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchItem(), refetchEntries()]);
+    await Promise.all([refetchItem(), refetchMovements()]);
     setRefreshing(false);
-  }, [refetchItem, refetchEntries]);
+  }, [refetchItem, refetchMovements]);
 
   const handleDelete = async () => {
     try {
@@ -45,7 +43,7 @@ export default function InventoryItemDetailScreen() {
     return <LoadingState />;
   }
 
-  const isLowStock = item.current_stock <= item.minimum_stock;
+  const isLowStock = item.minimum_stock > 0 && item.current_stock < item.minimum_stock;
 
   return (
     <ScrollView
@@ -57,7 +55,6 @@ export default function InventoryItemDetailScreen() {
         title={item.name}
         showBack={true}
         actions={[
-          { icon: 'create-outline', onPress: () => {} },
           { icon: 'trash-outline', onPress: handleDelete },
         ]}
       />
@@ -93,15 +90,15 @@ export default function InventoryItemDetailScreen() {
           <Text style={styles.detailLabel}>Minimum Stock</Text>
           <Text style={styles.detailValue}>{item.minimum_stock} {item.unit}</Text>
         </View>
-        {item.unit_cost && (
+        {item.unit_cost != null && (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Unit Cost</Text>
-            <Text style={styles.detailValue}>${item.unit_cost.toFixed(2)}</Text>
+            <Text style={styles.detailValue}>{item.unit_cost.toFixed(2)} MAD</Text>
           </View>
         )}
         {item.sku && (
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>SKU</Text>
+            <Text style={styles.detailLabel}>Item Code</Text>
             <Text style={styles.detailValue}>{item.sku}</Text>
           </View>
         )}
@@ -114,18 +111,6 @@ export default function InventoryItemDetailScreen() {
           <Text style={styles.detailLabel}>Category</Text>
           <Text style={styles.detailValue}>{item.category}</Text>
         </View>
-        {item.supplier && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Supplier</Text>
-            <Text style={styles.detailValue}>{item.supplier}</Text>
-          </View>
-        )}
-        {item.location && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Location</Text>
-            <Text style={styles.detailValue}>{item.location}</Text>
-          </View>
-        )}
         {item.description && (
           <View style={styles.descriptionContainer}>
             <Text style={styles.detailLabel}>Description</Text>
@@ -137,26 +122,41 @@ export default function InventoryItemDetailScreen() {
       {/* Recent Movements */}
       <Card variant="elevated">
         <Text style={styles.cardTitle}>Recent Movements</Text>
-        {entries.length === 0 ? (
+        {movements.length === 0 ? (
           <Text style={styles.emptyText}>No movements recorded</Text>
         ) : (
-          entries.slice(0, 5).map((entry) => (
-            <View key={entry.id} style={styles.movementRow}>
+          movements.slice(0, 5).map((movement) => (
+            <View key={movement.id} style={styles.movementRow}>
               <Ionicons
-                name={entry.entry_type === 'in' ? 'arrow-down' : entry.entry_type === 'out' ? 'arrow-up' : 'swap-vertical'}
+                name={
+                  movement.movement_type === 'IN'
+                    ? 'arrow-down'
+                    : movement.movement_type === 'OUT'
+                      ? 'arrow-up'
+                      : 'swap-vertical'
+                }
                 size={20}
-                color={entry.entry_type === 'in' ? colors.primary[500] : colors.red[500]}
+                color={movement.movement_type === 'IN' ? colors.primary[500] : colors.red[500]}
               />
               <View style={styles.movementInfo}>
                 <Text style={styles.movementType}>
-                  {entry.entry_type === 'in' ? 'Stock In' : entry.entry_type === 'out' ? 'Stock Out' : 'Adjustment'}
+                  {movement.movement_type === 'IN'
+                    ? 'Stock In'
+                    : movement.movement_type === 'OUT'
+                      ? 'Stock Out'
+                      : 'Transfer'}
                 </Text>
                 <Text style={styles.movementDate}>
-                  {new Date(entry.created_at).toLocaleDateString()}
+                  {new Date(movement.movement_date).toLocaleDateString()}
                 </Text>
               </View>
-              <Text style={[styles.movementQty, { color: entry.entry_type === 'in' ? colors.primary[500] : colors.red[500] }]}>
-                {entry.entry_type === 'in' ? '+' : '-'}{entry.quantity}
+              <Text
+                style={[
+                  styles.movementQty,
+                  { color: movement.movement_type === 'IN' ? colors.primary[500] : colors.red[500] },
+                ]}
+              >
+                {movement.movement_type === 'IN' ? '+' : '-'}{movement.quantity}
               </Text>
             </View>
           ))

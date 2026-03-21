@@ -68,7 +68,7 @@ export default function TeamScreen() {
     <View style={styles.container}>
       <PageHeader
         title={t('domains.team', { ns: 'navigation', defaultValue: 'Team' })}
-        showBack={false}
+        showMenu
         actions={[
           {
             icon: 'people-outline' as const,

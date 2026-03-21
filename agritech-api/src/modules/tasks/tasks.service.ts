@@ -19,6 +19,7 @@ import { AdoptionService, MilestoneType } from "../adoption/adoption.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../notifications/dto/notification.dto";
 import { ProductApplicationsService } from "../product-applications/product-applications.service";
+import { paginate, paginatedResponse, emptyPaginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 
 @Injectable()
 export class TasksService {
@@ -76,7 +77,7 @@ export class TasksService {
     }
 
     if (!orgUsers || orgUsers.length === 0) {
-      return [];
+      return emptyPaginatedResponse(page ?? 1, pageSize ?? 50);
     }
 
     const organizationIds = orgUsers.map((ou) => ou.organization_id);
@@ -127,22 +128,12 @@ export class TasksService {
         : task.organization?.name,
     });
 
-    if (page !== undefined && pageSize !== undefined) {
-      const total = userTasks.length;
-      const totalPages = Math.ceil(total / pageSize);
-      const from = (page - 1) * pageSize;
-      const paginatedTasks = userTasks.slice(from, from + pageSize);
+    const effectivePage = page ?? 1;
+    const effectivePageSize = pageSize ?? 50;
+    const from = (effectivePage - 1) * effectivePageSize;
+    const paginatedTasks = userTasks.slice(from, from + effectivePageSize);
 
-      return {
-        data: paginatedTasks.map(mapTask),
-        total,
-        page,
-        pageSize,
-        totalPages,
-      };
-    }
-
-    return userTasks.map(mapTask);
+    return paginatedResponse(paginatedTasks.map(mapTask), userTasks.length, effectivePage, effectivePageSize);
   }
 
   async findAll(
@@ -154,86 +145,37 @@ export class TasksService {
     const client = this.databaseService.getAdminClient();
 
     const page = filters?.page ? parseInt(filters.page, 10) : 1;
-    const pageSize = filters?.pageSize ? parseInt(filters.pageSize, 10) : 10;
+    const pageSize = filters?.pageSize ? parseInt(filters.pageSize, 10) : 50;
     const sortBy = filters?.sortBy || "scheduled_start";
     const sortDir = filters?.sortDir || "desc";
-    const hasPagination =
-      filters?.page !== undefined || filters?.pageSize !== undefined;
 
     const applyFilters = (q: any) => {
-      if (filters?.status) {
-        const statuses = filters.status.split(",");
-        q = q.in("status", statuses);
-      }
-      if (filters?.priority) {
-        const priorities = filters.priority.split(",");
-        q = q.in("priority", priorities);
-      }
-      if (filters?.task_type) {
-        const types = filters.task_type.split(",");
-        q = q.in("task_type", types);
-      }
-      if (filters?.assigned_to) {
-        q = q.eq("assigned_to", filters.assigned_to);
-      }
-      if (filters?.farm_id) {
-        q = q.eq("farm_id", filters.farm_id);
-      }
-      if (filters?.parcel_id) {
-        q = q.eq("parcel_id", filters.parcel_id);
-      }
-      if (filters?.date_from) {
-        q = q.gte("scheduled_start", filters.date_from);
-      }
-      if (filters?.date_to) {
-        q = q.lte("scheduled_start", filters.date_to);
-      }
-      if (filters?.search) {
-        q = q.or(
-          `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
-        );
-      }
+      q = q.eq("organization_id", organizationId);
+      if (filters?.status) q = q.in("status", filters.status.split(","));
+      if (filters?.priority) q = q.in("priority", filters.priority.split(","));
+      if (filters?.task_type) q = q.in("task_type", filters.task_type.split(","));
+      if (filters?.assigned_to) q = q.eq("assigned_to", filters.assigned_to);
+      if (filters?.farm_id) q = q.eq("farm_id", filters.farm_id);
+      if (filters?.parcel_id) q = q.eq("parcel_id", filters.parcel_id);
+      if (filters?.date_from) q = q.gte("scheduled_start", filters.date_from);
+      if (filters?.date_to) q = q.lte("scheduled_start", filters.date_to);
+      if (filters?.search) q = q.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
       return q;
     };
 
-    let query = client
-      .from("tasks")
-      .select(
-        `
+    return paginate(client, "tasks", {
+      select: `
         *,
         worker:workers!assigned_to(first_name, last_name),
         farm:farms!farm_id(name),
         parcel:parcels!parcel_id(name)
       `,
-      )
-      .eq("organization_id", organizationId);
-
-    query = applyFilters(query);
-    query = query.order(sortBy, {
+      filters: applyFilters,
+      page,
+      pageSize,
+      orderBy: sortBy,
       ascending: sortDir === "asc",
-      nullsFirst: false,
-    });
-
-    if (hasPagination) {
-      let countQuery = client
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", organizationId);
-      countQuery = applyFilters(countQuery);
-
-      const { count } = await countQuery;
-
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-
-      const { data: tasks, error } = await query;
-
-      if (error) {
-        throw new Error(`Failed to fetch tasks: ${error.message}`);
-      }
-
-      const mappedTasks = (tasks || []).map((task) => ({
+      map: (task) => ({
         ...task,
         worker_name: task.worker
           ? `${task.worker.first_name} ${task.worker.last_name}`
@@ -244,35 +186,8 @@ export class TasksService {
         parcel_name: Array.isArray(task.parcel)
           ? task.parcel[0]?.name
           : task.parcel?.name,
-      }));
-
-      return {
-        data: mappedTasks,
-        total: count || 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
-      };
-    }
-
-    const { data: tasks, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch tasks: ${error.message}`);
-    }
-
-    return (tasks || []).map((task) => ({
-      ...task,
-      worker_name: task.worker
-        ? `${task.worker.first_name} ${task.worker.last_name}`
-        : undefined,
-      farm_name: Array.isArray(task.farm)
-        ? task.farm[0]?.name
-        : task.farm?.name,
-      parcel_name: Array.isArray(task.parcel)
-        ? task.parcel[0]?.name
-        : task.parcel?.name,
-    }));
+      }),
+    });
   }
 
   /**
@@ -1531,12 +1446,12 @@ export class TasksService {
   async getComments(taskId: string) {
     const client = this.databaseService.getAdminClient();
 
+    // Fetch comments with worker join only (user_profiles has no direct FK from task_comments)
     const { data, error } = await client
       .from("task_comments")
       .select(
         `
         *,
-        user:user_profiles!task_comments_user_profile_fkey(id, full_name, email),
         worker:workers!worker_id(first_name, last_name)
       `,
       )
@@ -1547,9 +1462,24 @@ export class TasksService {
       throw new Error(`Failed to fetch task comments: ${error.message}`);
     }
 
+    // Resolve user names from user_profiles in a batch
+    const userIds = [...new Set((data || []).map((c) => c.user_id).filter(Boolean))];
+    let userMap: Record<string, { full_name?: string; email?: string }> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await client
+        .from("user_profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      if (profiles) {
+        userMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+      }
+    }
+
     return (data || []).map((comment) => ({
       ...comment,
-      user_name: comment.user?.full_name || comment.user?.email,
+      user_name: userMap[comment.user_id]?.full_name || userMap[comment.user_id]?.email || undefined,
       worker_name: comment.worker
         ? `${comment.worker.first_name} ${comment.worker.last_name}`
         : undefined,

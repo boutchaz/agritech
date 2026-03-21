@@ -119,10 +119,11 @@ export function PieceWorkEntry({
     queryKey: ['tasks', currentOrganization?.id, currentFarm?.id],
     queryFn: async () => {
       if (!currentOrganization?.id || !currentFarm?.id) return [];
-      return tasksApi.getAll({
+      const result = await tasksApi.getAll(currentOrganization.id, {
         farm_id: currentFarm.id,
         status: ['assigned', 'in_progress', 'completed'],
-      }, currentOrganization.id);
+      });
+      return result?.data || [];
     },
     enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });

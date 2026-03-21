@@ -315,7 +315,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
         const filters: any = {};
         if (farmId) filters.farm_id = farmId;
         const result = await tasksApi.getAll(currentOrganization.id, filters);
-        return Array.isArray(result) ? result : [];
+        return result?.data || [];
       } catch (error) {
         console.error('Error fetching tasks:', error);
         return [];

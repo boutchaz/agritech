@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 
@@ -34,67 +35,38 @@ export class DeliveriesService {
    * Get all deliveries for an organization with optional filters
    */
   async getAll(userId: string, organizationId: string, filters?: {
-    status?: string; // comma-separated
-    payment_status?: string; // comma-separated
-    delivery_type?: string; // comma-separated
+    status?: string;
+    payment_status?: string;
+    delivery_type?: string;
     farm_id?: string;
     driver_id?: string;
     date_from?: string;
     date_to?: string;
     customer_name?: string;
-  }) {
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    let query = client
-      .from('deliveries')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
-
-    if (filters?.payment_status) {
-      const paymentStatuses = filters.payment_status.split(',');
-      query = query.in('payment_status', paymentStatuses);
-    }
-
-    if (filters?.delivery_type) {
-      const types = filters.delivery_type.split(',');
-      query = query.in('delivery_type', types);
-    }
-
-    if (filters?.farm_id) {
-      query = query.eq('farm_id', filters.farm_id);
-    }
-
-    if (filters?.driver_id) {
-      query = query.eq('driver_id', filters.driver_id);
-    }
-
-    if (filters?.date_from) {
-      query = query.gte('delivery_date', filters.date_from);
-    }
-
-    if (filters?.date_to) {
-      query = query.lte('delivery_date', filters.date_to);
-    }
-
-    if (filters?.customer_name) {
-      query = query.ilike('customer_name', `%${filters.customer_name}%`);
-    }
-
-    query = query.order('delivery_date', { ascending: false });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new BadRequestException(`Failed to fetch deliveries: ${error.message}`);
-    }
-
-    return data || [];
+    return paginate(client, 'deliveries', {
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.status) q = q.in('status', filters.status.split(','));
+        if (filters?.payment_status) q = q.in('payment_status', filters.payment_status.split(','));
+        if (filters?.delivery_type) q = q.in('delivery_type', filters.delivery_type.split(','));
+        if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+        if (filters?.driver_id) q = q.eq('driver_id', filters.driver_id);
+        if (filters?.date_from) q = q.gte('delivery_date', filters.date_from);
+        if (filters?.date_to) q = q.lte('delivery_date', filters.date_to);
+        if (filters?.customer_name) q = q.ilike('customer_name', `%${filters.customer_name}%`);
+        return q;
+      },
+      page: filters?.page || 1,
+      pageSize: filters?.pageSize || 50,
+      orderBy: 'delivery_date',
+      ascending: false,
+    });
   }
 
   /**

@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, ImageBackground } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -81,6 +82,7 @@ type ModuleCard = {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { profile, currentFarm, role, abilities } = useAuthStore();
   const { can } = useAbility();
@@ -154,6 +156,12 @@ export default function HomeScreen() {
             style={[s.heroOverlay, { paddingTop: insets.top + 12 }]}
           >
             <View style={s.heroTopBar}>
+              <TouchableOpacity
+                onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="menu" size={26} color={palette.white} />
+              </TouchableOpacity>
               <View style={s.locationPill}>
                 <Ionicons name="location" size={14} color={palette.white} />
                 <Text style={s.locationText}>{currentFarm?.name || tAuth('selectFarm')}</Text>

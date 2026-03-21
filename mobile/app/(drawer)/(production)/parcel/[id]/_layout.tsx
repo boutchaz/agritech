@@ -26,7 +26,7 @@ type ParcelTab = {
 const PARCEL_TABS: ParcelTab[] = [
   { key: 'index', label: 'Overview', icon: 'grid-outline', route: '' },
   { key: 'agromind', label: 'Agromind IA', icon: 'sparkles-outline', route: '/agromind' },
-  { key: 'soil', label: 'Soil Analysis', icon: 'flask-outline', route: '/soil' },
+  { key: 'soil', label: 'Analysis', icon: 'flask-outline', route: '/soil' },
   { key: 'satellite', label: 'Satellite', icon: 'globe-outline', route: '/satellite' },
   { key: 'weather', label: 'Weather', icon: 'cloud-outline', route: '/weather' },
   { key: 'production', label: 'Production', icon: 'leaf-outline', route: '/production' },

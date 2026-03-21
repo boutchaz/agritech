@@ -28,7 +28,8 @@ export const stockEntriesApi = {
     if (filters?.search) params.append('search', filters.search);
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<StockEntry[]>(url, {}, organizationId);
+    const res = await apiClient.get<{ data: StockEntry[] }>(url, {}, organizationId);
+    return res.data || [];
   },
 
   /**

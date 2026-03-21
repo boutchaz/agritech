@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { CreateSupplierDto, UpdateSupplierDto, SupplierFiltersDto } from './dto';
 
 @Injectable()
@@ -9,46 +10,24 @@ export class SuppliersService {
   /**
    * Get all suppliers with optional filters
    */
-  async findAll(organizationId: string, filters?: SupplierFiltersDto) {
+  async findAll(organizationId: string, filters?: SupplierFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
-    let query = client
-      .from('suppliers')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (filters?.name) {
-      query = query.ilike('name', `%${filters.name}%`);
-    }
-
-    if (filters?.supplier_code) {
-      query = query.eq('supplier_code', filters.supplier_code);
-    }
-
-    if (filters?.supplier_type) {
-      query = query.eq('supplier_type', filters.supplier_type);
-    }
-
-    if (filters?.assigned_to) {
-      query = query.eq('assigned_to', filters.assigned_to);
-    }
-
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    } else {
-      // Default to active suppliers only
-      query = query.eq('is_active', true);
-    }
-
-    query = query.order('name', { ascending: true });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch suppliers: ${error.message}`);
-    }
-
-    return data;
+    return paginate(client, 'suppliers', {
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.name) q = q.ilike('name', `%${filters.name}%`);
+        if (filters?.supplier_code) q = q.eq('supplier_code', filters.supplier_code);
+        if (filters?.supplier_type) q = q.eq('supplier_type', filters.supplier_type);
+        if (filters?.assigned_to) q = q.eq('assigned_to', filters.assigned_to);
+        q = q.eq('is_active', filters?.is_active ?? true);
+        return q;
+      },
+      page: (filters as any)?.page || 1,
+      pageSize: (filters as any)?.pageSize || 50,
+      orderBy: 'name',
+      ascending: true,
+    });
   }
 
   /**

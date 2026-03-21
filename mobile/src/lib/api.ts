@@ -484,7 +484,7 @@ export const authApi = {
 };
 
 export const tasksApi = {
-  getMyTasks: () => api.get<Task[]>('/tasks/my-tasks'),
+  getMyTasks: () => api.get<{ data: Task[]; total: number; page: number; pageSize: number; totalPages: number }>('/tasks/my-tasks'),
 
   getTasks: (filters?: { status?: string; farmId?: string; parcelId?: string }) => {
     const params = new URLSearchParams();
@@ -492,7 +492,7 @@ export const tasksApi = {
     if (filters?.farmId) params.append('farmId', filters.farmId);
     if (filters?.parcelId) params.append('parcelId', filters.parcelId);
     const query = params.toString();
-    return api.get<Task[] | { data: Task[]; total: number }>(`/tasks${query ? `?${query}` : ''}`);
+    return api.get<{ data: Task[]; total: number; page: number; pageSize: number; totalPages: number }>(`/tasks${query ? `?${query}` : ''}`);
   },
 
   getTask: (taskId: string) => api.get<Task>(`/tasks/${taskId}`),

@@ -34,11 +34,11 @@ function WarehouseCard({ warehouse }: { warehouse: Warehouse }) {
               Capacity: {warehouse.capacity} {warehouse.capacity_unit || 'units'}
             </Text>
           )}
-          {warehouse.manager && (
+          {warehouse.city && (
             <>
               <Text style={styles.metaDot}> </Text>
-              <Ionicons name="person-outline" size={12} color={colors.gray[400]} />
-              <Text style={styles.metaText}>{warehouse.manager}</Text>
+              <Ionicons name="location-outline" size={12} color={colors.gray[400]} />
+              <Text style={styles.metaText}>{warehouse.city}</Text>
             </>
           )}
         </View>

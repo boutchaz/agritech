@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
@@ -75,49 +76,27 @@ export class PaymentRecordsService {
     farm_id?: string;
     period_start?: string;
     period_end?: string;
-  }) {
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
-    let query = client
-      .from('payment_summary')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
-
-    if (filters?.payment_type) {
-      const types = filters.payment_type.split(',');
-      query = query.in('payment_type', types);
-    }
-
-    if (filters?.worker_id) {
-      query = query.eq('worker_id', filters.worker_id);
-    }
-
-    if (filters?.farm_id) {
-      query = query.eq('farm_id', filters.farm_id);
-    }
-
-    if (filters?.period_start) {
-      query = query.gte('period_start', filters.period_start);
-    }
-
-    if (filters?.period_end) {
-      query = query.lte('period_end', filters.period_end);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new BadRequestException(`Failed to fetch payment records: ${error.message}`);
-    }
-
-    return data || [];
+    return paginate(client, 'payment_summary', {
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.status) q = q.in('status', filters.status.split(','));
+        if (filters?.payment_type) q = q.in('payment_type', filters.payment_type.split(','));
+        if (filters?.worker_id) q = q.eq('worker_id', filters.worker_id);
+        if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+        if (filters?.period_start) q = q.gte('period_start', filters.period_start);
+        if (filters?.period_end) q = q.lte('period_end', filters.period_end);
+        return q;
+      },
+      page: filters?.page || 1,
+      pageSize: filters?.pageSize || 50,
+      orderBy: 'created_at',
+      ascending: false,
+    });
   }
 
   /**

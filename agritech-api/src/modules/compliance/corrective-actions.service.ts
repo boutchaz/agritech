@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import {
   CreateCorrectiveActionDto,
   UpdateCorrectiveActionDto,
@@ -18,39 +19,28 @@ export class CorrectiveActionsService {
   async findAll(
     organizationId: string,
     filters?: CorrectiveActionFiltersDto,
-  ) {
+  ): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
-    let query = client
-      .from('corrective_actions')
-      .select(`
+
+    return paginate(client, 'corrective_actions', {
+      select: `
         *,
         certification:certifications(id, certification_type, certification_number),
         compliance_check:compliance_checks(id, check_type, check_date, status)
-      `)
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
-
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters?.priority) {
-      query = query.eq('priority', filters.priority);
-    }
-    if (filters?.certification_id) {
-      query = query.eq('certification_id', filters.certification_id);
-    }
-    if (filters?.overdue) {
-      query = query.lt('due_date', new Date().toISOString().split('T')[0]);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      this.logger.error(`Failed to fetch corrective actions: ${error.message}`);
-      throw error;
-    }
-
-    return data || [];
+      `,
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.status) q = q.eq('status', filters.status);
+        if (filters?.priority) q = q.eq('priority', filters.priority);
+        if (filters?.certification_id) q = q.eq('certification_id', filters.certification_id);
+        if (filters?.overdue) q = q.lt('due_date', new Date().toISOString().split('T')[0]);
+        return q;
+      },
+      page: (filters as any)?.page || 1,
+      pageSize: (filters as any)?.pageSize || 50,
+      orderBy: 'created_at',
+      ascending: false,
+    });
   }
 
   async findOne(organizationId: string, actionId: string) {

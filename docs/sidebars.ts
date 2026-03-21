@@ -89,6 +89,7 @@ const sidebars: SidebarsConfig = {
         'guides/development-setup',
         'guides/platform-overview',
         'guides/desktop-app-plan',
+        'guides/store-publishing',
       ],
     },
   ],

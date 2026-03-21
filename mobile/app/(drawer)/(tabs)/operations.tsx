@@ -6,7 +6,7 @@ import { palette } from '@/constants/tokens';
 export default function OperationsScreen() {
   return (
     <View style={styles.container}>
-      <PageHeader title="Operations" showBack={false} />
+      <PageHeader title="Operations" showMenu />
       <View style={styles.body}>
         <Ionicons name="construct-outline" size={56} color={palette.primary + '33'} />
         <Text style={styles.title}>Operations</Text>

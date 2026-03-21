@@ -4,7 +4,6 @@ import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   Task,
   TaskSummary,
-  TaskFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskStatistics,
@@ -41,7 +40,8 @@ export const tasksApi = {
     return apiClient.get<TaskSummary[]>('/api/v1/tasks/my-tasks');
   },
 
-  async getAll(organizationId: string, filters?: TaskFilters): Promise<TaskSummary[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async getAll(organizationId: string, filters?: any): Promise<PaginatedResponse<TaskSummary>> {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -54,27 +54,12 @@ export const tasksApi = {
     }
     const queryString = params.toString();
     const url = queryString ? `/api/v1/tasks?${queryString}` : '/api/v1/tasks';
-    return apiClient.get<TaskSummary[]>(url, {}, organizationId);
+    return apiClient.get<PaginatedResponse<TaskSummary>>(url, {}, organizationId);
   },
 
+  /** @deprecated Use getAll() — backend now always returns PaginatedResponse */
   async getPaginated(organizationId: string, query: PaginatedTaskQuery): Promise<PaginatedResponse<TaskSummary>> {
-    const params = new URLSearchParams();
-    if (query.page) params.append('page', String(query.page));
-    if (query.pageSize) params.append('pageSize', String(query.pageSize));
-    if (query.sortBy) params.append('sortBy', query.sortBy);
-    if (query.sortDir) params.append('sortDir', query.sortDir);
-    if (query.search) params.append('search', query.search);
-    if (query.dateFrom) params.append('date_from', query.dateFrom);
-    if (query.dateTo) params.append('date_to', query.dateTo);
-    if (query.status) params.append('status', query.status);
-    if (query.priority) params.append('priority', query.priority);
-    if (query.task_type) params.append('task_type', query.task_type);
-    if (query.assigned_to) params.append('assigned_to', query.assigned_to);
-    if (query.farm_id) params.append('farm_id', query.farm_id);
-    if (query.parcel_id) params.append('parcel_id', query.parcel_id);
-    const queryString = params.toString();
-    const url = queryString ? `/api/v1/tasks?${queryString}` : '/api/v1/tasks';
-    return apiClient.get<PaginatedResponse<TaskSummary>>(url, {}, organizationId);
+    return this.getAll(organizationId, query);
   },
 
   async getOne(id: string, organizationId?: string): Promise<TaskSummary> {

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { WorkUnitFiltersDto, CreateWorkUnitDto, UpdateWorkUnitDto } from './dto';
 
 @Injectable()
@@ -11,49 +12,22 @@ export class WorkUnitsService {
   /**
    * Get all work units with optional filters
    */
-  async findAll(organizationId: string, filters?: WorkUnitFiltersDto): Promise<any> {
+  async findAll(organizationId: string, filters?: WorkUnitFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
-    try {
-      let query = client
-        .from('work_units')
-        .select('*')
-        .eq('organization_id', organizationId);
-
-      // Apply filters
-      if (filters?.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
-      }
-
-      if (filters?.unit_category) {
-        query = query.eq('unit_category', filters.unit_category);
-      }
-
-      if (filters?.search) {
-        query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
-      }
-
-      // Apply pagination
-      if (filters?.page && filters?.limit) {
-        const offset = (filters.page - 1) * filters.limit;
-        query = query.range(offset, offset + filters.limit - 1);
-      }
-
-      // Default ordering: by unit_category.asc, name.asc
-      query = query.order('unit_category', { ascending: true }).order('name', { ascending: true });
-
-      const { data, error } = await query;
-
-      if (error) {
-        this.logger.error(`Failed to fetch work units: ${error.message}`);
-        throw new BadRequestException(`Failed to fetch work units: ${error.message}`);
-      }
-
-      return data;
-    } catch (error) {
-      this.logger.error('Error fetching work units:', error);
-      throw error;
-    }
+    return paginate(client, 'work_units', {
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+        if (filters?.unit_category) q = q.eq('unit_category', filters.unit_category);
+        if (filters?.search) q = q.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
+        return q;
+      },
+      page: filters?.page || 1,
+      pageSize: (filters as any)?.limit || (filters as any)?.pageSize || 50,
+      orderBy: 'unit_category',
+      ascending: true,
+    });
   }
 
   /**

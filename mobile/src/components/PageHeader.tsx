@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing, borderRadius } from '@/constants/theme';
@@ -15,6 +16,8 @@ type HeaderAction = {
 type PageHeaderProps = {
   title: string;
   showBack?: boolean;
+  /** Show a hamburger menu button that opens the drawer (overrides showBack) */
+  showMenu?: boolean;
   actions?: HeaderAction[];
   onMorePress?: () => void;
   transparent?: boolean;
@@ -23,16 +26,44 @@ type PageHeaderProps = {
 export default function PageHeader({
   title,
   showBack = true,
+  showMenu = false,
   actions,
   onMorePress,
   transparent = false,
 }: PageHeaderProps) {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
 
   const iconColor = transparent ? '#ffffff' : themeColors.textPrimary;
   const hasRight = (actions && actions.length > 0) || !!onMorePress;
+
+  function renderLeftButton() {
+    if (showMenu) {
+      return (
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="menu" size={24} color={iconColor} />
+        </TouchableOpacity>
+      );
+    }
+    if (showBack) {
+      return (
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={iconColor} />
+        </TouchableOpacity>
+      );
+    }
+    return <View style={styles.iconBtn} />;
+  }
 
   return (
     <View
@@ -46,17 +77,7 @@ export default function PageHeader({
     >
       <View style={styles.row}>
         <View style={styles.slot}>
-          {showBack ? (
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => router.back()}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="arrow-back" size={24} color={iconColor} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.iconBtn} />
-          )}
+          {renderLeftButton()}
         </View>
 
         <Text

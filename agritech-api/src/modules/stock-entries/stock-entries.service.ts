@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
@@ -26,50 +27,31 @@ export class StockEntriesService {
   /**
    * Get all stock entries with optional filters
    */
-  async findAll(organizationId: string, filters?: any): Promise<any> {
-    const supabase = this.databaseService.getAdminClient();
+  async findAll(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
+    const client = this.databaseService.getAdminClient();
 
-    let query = supabase
-      .from('stock_entries')
-      .select(`
+    return paginate(client, 'stock_entries', {
+      select: `
         *,
         from_warehouse:warehouses!stock_entries_from_warehouse_id_fkey(id, name),
         to_warehouse:warehouses!stock_entries_to_warehouse_id_fkey(id, name)
-      `)
-      .eq('organization_id', organizationId)
-      .order('entry_date', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    // Apply filters
-    if (filters?.entry_type) {
-      query = query.eq('entry_type', filters.entry_type);
-    }
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
-    }
-    if (filters?.from_date) {
-      query = query.gte('entry_date', filters.from_date);
-    }
-    if (filters?.to_date) {
-      query = query.lte('entry_date', filters.to_date);
-    }
-    if (filters?.warehouse_id) {
-      query = query.or(`from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`);
-    }
-    if (filters?.reference_type) {
-      query = query.eq('reference_type', filters.reference_type);
-    }
-    if (filters?.search) {
-      query = query.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
-    }
-    const { data, error } = await query;
-
-    if (error) {
-      this.logger.error(`Failed to fetch stock entries: ${error.message}`);
-      throw new BadRequestException(`Failed to fetch stock entries: ${error.message}`);
-    }
-
-    return data;
+      `,
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.entry_type) q = q.eq('entry_type', filters.entry_type);
+        if (filters?.status) q = q.eq('status', filters.status);
+        if (filters?.from_date) q = q.gte('entry_date', filters.from_date);
+        if (filters?.to_date) q = q.lte('entry_date', filters.to_date);
+        if (filters?.warehouse_id) q = q.or(`from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`);
+        if (filters?.reference_type) q = q.eq('reference_type', filters.reference_type);
+        if (filters?.search) q = q.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+        return q;
+      },
+      page: filters?.page || 1,
+      pageSize: filters?.pageSize || 50,
+      orderBy: 'entry_date',
+      ascending: false,
+    });
   }
 
   /**

@@ -54,7 +54,8 @@ export const soilAnalysesApi = {
     if (filters?.limit) params.append('limit', String(filters.limit));
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
+    const res = await apiClient.get<{ data: any[] }>(url, {}, organizationId);
+    return res?.data || res || [];
   },
 
   /**

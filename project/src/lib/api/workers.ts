@@ -135,7 +135,8 @@ export const workersApi = {
     requireOrganizationId(organizationId, 'workersApi.getAll');
     // Only include farmId param if it's a non-empty string
     const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
-    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`, {}, organizationId);
+    const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers${params}`, {}, organizationId);
+    return res.data;
   },
 
   /**

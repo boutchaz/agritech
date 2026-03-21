@@ -151,6 +151,11 @@
               "sidebar": "docs"
             },
             {
+              "id": "guides/store-publishing",
+              "path": "/guides/store-publishing",
+              "sidebar": "docs"
+            },
+            {
               "id": "intro",
               "path": "/",
               "sidebar": "docs"

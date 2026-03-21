@@ -23,6 +23,8 @@ import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
 import TaskDependencies from '@/components/Tasks/TaskDependencies';
+import TaskWorklog from '@/components/Tasks/TaskWorklog';
+import TaskAssignee from '@/components/Tasks/TaskAssignee';
 import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
@@ -700,6 +702,13 @@ function TaskDetailPage() {
             </div>
           )}
 
+          {/* Worklog / Time Tracking */}
+          <TaskWorklog
+            taskId={taskId}
+            taskStatus={task.status}
+            assignedWorkerId={task.worker_id}
+          />
+
           {/* Attachments Section */}
           <TaskAttachments
             taskId={taskId}
@@ -773,6 +782,15 @@ function TaskDetailPage() {
 
         {/* Sidebar - Actions */}
         <div className="space-y-6">
+          {/* Assignee */}
+          <TaskAssignee
+            taskId={taskId}
+            organizationId={organizationId}
+            currentAssignee={task.worker_id && task.worker_name ? { id: task.worker_id, name: task.worker_name } : undefined}
+            taskStatus={task.status}
+            farmId={task.farm_id}
+          />
+
           {/* Quick Actions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SoilAnalysisFiltersDto, CreateSoilAnalysisDto, UpdateSoilAnalysisDto } from './dto';
 
 @Injectable()
@@ -12,7 +13,7 @@ export class SoilAnalysesService {
    * Get all soil analyses with optional filters
    * Note: soil_analyses table doesn't have organization_id, so we validate via parcel ownership
    */
-  async findAll(organizationId: string, filters?: SoilAnalysisFiltersDto): Promise<any> {
+  async findAll(organizationId: string, filters?: SoilAnalysisFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     try {
@@ -86,13 +87,18 @@ export class SoilAnalysesService {
                   .map(p => p.id)
               );
 
-              return data.filter((sa: any) => ownedParcelIds.has(sa.parcel_id));
+              const filtered = data.filter((sa: any) => ownedParcelIds.has(sa.parcel_id));
+              const page = filters?.page || 1;
+              const limit = filters?.limit || 50;
+              return paginatedResponse(filtered, filtered.length, page, limit);
             }
           }
         }
       }
 
-      return data;
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 50;
+      return paginatedResponse(data || [], (data || []).length, page, limit);
     } catch (error) {
       this.logger.error('Error fetching soil analyses:', error);
       throw error;

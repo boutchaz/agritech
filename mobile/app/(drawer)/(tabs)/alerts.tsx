@@ -188,7 +188,7 @@ export default function AlertsScreen() {
     <View style={styles.container}>
       <PageHeader
         title={t('alerts.title', { ns: 'navigation', defaultValue: 'Alerts' })}
-        showBack={false}
+        showMenu
         actions={
           unreadCount > 0
             ? [{ icon: 'checkmark-done-outline' as const, onPress: handleMarkAllRead }]

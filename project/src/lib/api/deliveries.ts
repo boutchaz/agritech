@@ -1,5 +1,5 @@
 import { apiClient } from '../api-client';
-import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import { requireOrganizationId } from './createCrudApi';
 import type {
   Delivery,
   DeliverySummary,
@@ -54,7 +54,8 @@ export const deliveriesApi = {
     const queryString = params.toString();
     const url = `/api/v1/organizations/${organizationId}/deliveries${queryString ? `?${queryString}` : ''}`;
 
-    return apiClient.get<DeliverySummary[]>(url);
+    const res = await apiClient.get<{ data: DeliverySummary[] }>(url);
+    return res.data || [];
   },
 
   /**

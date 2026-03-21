@@ -1,6 +1,7 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { DatabaseService } from '../database/database.service';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { NotificationsGateway } from './notifications.gateway';
 import {
   CreateNotificationDto,
@@ -179,9 +180,22 @@ export class NotificationsService {
     userId: string,
     organizationId: string,
     filters: NotificationFiltersDto = {},
-  ): Promise<NotificationResponseDto[]> {
+  ): Promise<PaginatedResponse<NotificationResponseDto>> {
     const client = this.databaseService.getAdminClient();
+    const page = (filters as any).page || 1;
+    const pageSize = filters.limit || 50;
 
+    // Count query
+    let countQuery = client
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+    if (filters.isRead !== undefined) countQuery = countQuery.eq('is_read', filters.isRead);
+    if (filters.type) countQuery = countQuery.eq('type', filters.type);
+    const { count } = await countQuery;
+
+    // Data query
     let query = client
       .from('notifications')
       .select('*')
@@ -197,15 +211,8 @@ export class NotificationsService {
       query = query.eq('type', filters.type);
     }
 
-    if (filters.limit) {
-      query = query.limit(filters.limit);
-    } else {
-      query = query.limit(50);
-    }
-
-    if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1);
-    }
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -214,7 +221,7 @@ export class NotificationsService {
       throw new Error(`Failed to fetch notifications: ${error.message}`);
     }
 
-    return data || [];
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   /**

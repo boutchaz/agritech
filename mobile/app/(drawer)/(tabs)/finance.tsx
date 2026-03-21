@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useCallback } from 'react';
 import { format, isPast } from 'date-fns';
@@ -24,6 +25,7 @@ function formatCurrency(amount: number, currency = 'MAD') {
 
 export default function FinanceScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors: themeColors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
@@ -69,6 +71,13 @@ export default function FinanceScreen() {
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity
+          onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ alignSelf: 'flex-start', marginBottom: 4 }}
+        >
+          <Ionicons name="menu" size={26} color={themeColors.textPrimary} />
+        </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]}>Finance</Text>
         <Text style={[styles.headerSubtitle, { color: themeColors.textSecondary }]}>
           Revenue and invoicing overview

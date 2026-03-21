@@ -58,7 +58,8 @@ export const cropsApi = {
     if (parcelId) filters.parcel_id = parcelId;
 
     const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/crops`, filters as Record<string, unknown>);
-    return apiClient.get<Crop[]>(url);
+    const res = await apiClient.get<{ data: Crop[] }>(url);
+    return res.data || [];
   },
 
   async getById(organizationId: string, cropId: string): Promise<Crop | null> {

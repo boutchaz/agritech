@@ -10,6 +10,7 @@ import {
   Dimensions,
   Modal,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -239,7 +240,7 @@ function MapContent({
   mapHeight: number;
 }) {
   const [tappedValue, setTappedValue] = useState<{ value: number } | null>(null);
-  const [mapType, setMapType] = useState<'none' | 'satellite'>('none');
+  const [mapType, setMapType] = useState<'none' | 'standard' | 'satellite'>(Platform.OS === 'android' ? 'standard' : 'none');
 
   const boundary = useMemo(() => normalizeBoundary(rawBoundary), [rawBoundary]);
 
@@ -331,7 +332,7 @@ function MapContent({
             provider={PROVIDER_DEFAULT}
             style={styles.map}
             initialRegion={region}
-            mapType={mapType === 'satellite' ? 'satellite' : 'none'}
+            mapType={mapType === 'satellite' ? 'satellite' : mapType === 'none' ? 'none' : 'standard'}
             rotateEnabled={false}
             pitchEnabled={false}
             zoomEnabled
@@ -368,7 +369,7 @@ function MapContent({
         </View>
 
         {/* Map type toggle */}
-        <TouchableOpacity style={[styles.mapTypeBtn, { backgroundColor: themeColors.background + 'EE' }]} onPress={() => setMapType((t) => t === 'none' ? 'satellite' : 'none')}>
+        <TouchableOpacity style={[styles.mapTypeBtn, { backgroundColor: themeColors.background + 'EE' }]} onPress={() => setMapType((t) => t === 'satellite' ? (Platform.OS === 'android' ? 'standard' : 'none') : 'satellite')}>
           <Ionicons name={mapType === 'satellite' ? 'map-outline' : 'earth-outline'} size={20} color={themeColors.textPrimary} />
         </TouchableOpacity>
       </View>

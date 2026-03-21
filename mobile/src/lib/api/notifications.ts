@@ -18,7 +18,8 @@ export const notificationsApi = {
     if (filters?.limit) params.append('limit', String(filters.limit));
     if (filters?.offset) params.append('offset', String(filters.offset));
     const query = params.toString();
-    return api.get<Notification[]>(`${BASE_URL}${query ? `?${query}` : ''}`);
+    const res = await api.get<{ data: Notification[] }>(`${BASE_URL}${query ? `?${query}` : ''}`);
+    return res?.data || [];
   },
 
   // Get unread count

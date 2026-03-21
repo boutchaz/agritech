@@ -18,7 +18,11 @@ export function useMyTasks() {
   const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: taskKeys.myTasks(),
-    queryFn: () => tasksApi.getMyTasks(),
+    queryFn: async () => {
+      const res = await tasksApi.getMyTasks();
+      // API may return { data: [...] } or the array directly
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
     staleTime: 2 * 60 * 1000,
     enabled: !!orgId,
   });
@@ -27,7 +31,11 @@ export function useMyTasks() {
 export function useTasks(filters?: { status?: string; farmId?: string; parcelId?: string }) {
   return useQuery({
     queryKey: taskKeys.list(filters || {}),
-    queryFn: () => tasksApi.getTasks(filters),
+    queryFn: async () => {
+      const res = await tasksApi.getTasks(filters);
+      // API may return { data: [...] } or the array directly
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
     staleTime: 2 * 60 * 1000,
   });
 }

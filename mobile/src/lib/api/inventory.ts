@@ -1,84 +1,145 @@
 // Inventory API Client for Mobile App
+// Uses the real backend endpoints: /items, /warehouses, /stock-entries
 import { api } from '../api';
 import type {
-  StockItem,
+  Item,
   StockEntry,
+  StockMovement,
   Warehouse,
-  LowStockAlert,
-  StockItemFilters,
+  ItemFilters,
   StockEntryFilters,
-  CreateStockItemInput,
-  UpdateStockItemInput,
+  StockMovementFilters,
+  CreateItemInput,
+  UpdateItemInput,
   CreateStockEntryInput,
   PaginatedResponse,
 } from '@/types/inventory';
 
-const BASE_URL = '/inventory';
-
 export const inventoryApi = {
-  // Stock Items
-  async getItems(filters?: StockItemFilters): Promise<PaginatedResponse<StockItem>> {
+  // =====================================================
+  // ITEMS — /items
+  // =====================================================
+
+  async getItems(filters?: ItemFilters): Promise<Item[]> {
     const params = new URLSearchParams();
-    if (filters?.category) params.append('category', filters.category);
+    if (filters?.item_group_id) params.append('item_group_id', filters.item_group_id);
     if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
+    if (filters?.is_stock_item !== undefined) params.append('is_stock_item', String(filters.is_stock_item));
     if (filters?.search) params.append('search', filters.search);
-    if (filters?.low_stock) params.append('low_stock', 'true');
     const query = params.toString();
-    const res = await api.get<PaginatedResponse<StockItem>>(`${BASE_URL}/items${query ? `?${query}` : ''}`);
-    return res || { data: [], total: 0 };
+    const res = await api.get<Item[]>(`/items${query ? `?${query}` : ''}`);
+    return res || [];
   },
 
-  async getItem(itemId: string): Promise<StockItem> {
-    return api.get<StockItem>(`${BASE_URL}/items/${itemId}`);
+  async getItemsForSelection(search?: string): Promise<{ id: string; item_code: string; item_name: string; default_unit: string }[]> {
+    const params = new URLSearchParams();
+    params.append('is_stock_item', 'true');
+    if (search) params.append('search', search);
+    const res = await api.get<any[]>(`/items/selection?${params.toString()}`);
+    return res || [];
   },
 
-  async createItem(data: CreateStockItemInput): Promise<StockItem> {
-    return api.post<StockItem>(`${BASE_URL}/items`, data);
+  async getItem(itemId: string): Promise<Item> {
+    return api.get<Item>(`/items/${itemId}`);
   },
 
-  async updateItem(itemId: string, data: UpdateStockItemInput): Promise<StockItem> {
-    return api.patch<StockItem>(`${BASE_URL}/items/${itemId}`, data);
+  async createItem(data: CreateItemInput): Promise<Item> {
+    return api.post<Item>('/items', data);
+  },
+
+  async updateItem(itemId: string, data: UpdateItemInput): Promise<Item> {
+    return api.patch<Item>(`/items/${itemId}`, data);
   },
 
   async deleteItem(itemId: string): Promise<{ message: string }> {
-    return api.delete<{ message: string }>(`${BASE_URL}/items/${itemId}`);
+    return api.delete<{ message: string }>(`/items/${itemId}`);
   },
 
-  // Stock Entries
+  async getStockLevels(itemId?: string): Promise<Record<string, { quantity: number; value: number }>> {
+    const params = new URLSearchParams();
+    if (itemId) params.append('item_id', itemId);
+    const query = params.toString();
+    const res = await api.get<any>(`/items/stock-levels${query ? `?${query}` : ''}`);
+    return res || {};
+  },
+
+  // =====================================================
+  // STOCK ENTRIES — /stock-entries
+  // =====================================================
+
   async getEntries(filters?: StockEntryFilters): Promise<PaginatedResponse<StockEntry>> {
     const params = new URLSearchParams();
-    if (filters?.item_id) params.append('item_id', filters.item_id);
     if (filters?.entry_type) params.append('entry_type', filters.entry_type);
-    if (filters?.date_from) params.append('date_from', filters.date_from);
-    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.warehouse_id) params.append('warehouse_id', filters.warehouse_id);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.pageSize) params.append('pageSize', String(filters.pageSize));
     const query = params.toString();
-    const res = await api.get<PaginatedResponse<StockEntry>>(`${BASE_URL}/entries${query ? `?${query}` : ''}`);
-    return res || { data: [], total: 0 };
+    const res = await api.get<PaginatedResponse<StockEntry>>(
+      `/stock-entries${query ? `?${query}` : ''}`
+    );
+    return res || { data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 };
+  },
+
+  async getEntry(entryId: string): Promise<StockEntry> {
+    return api.get<StockEntry>(`/stock-entries/${entryId}`);
   },
 
   async createEntry(data: CreateStockEntryInput): Promise<StockEntry> {
-    return api.post<StockEntry>(`${BASE_URL}/entries`, data);
+    return api.post<StockEntry>('/stock-entries', data);
   },
 
-  // Warehouses
+  async postEntry(entryId: string): Promise<{ message: string }> {
+    return api.patch<{ message: string }>(`/stock-entries/${entryId}/post`);
+  },
+
+  async cancelEntry(entryId: string): Promise<StockEntry> {
+    return api.patch<StockEntry>(`/stock-entries/${entryId}/cancel`);
+  },
+
+  async deleteEntry(entryId: string): Promise<{ message: string }> {
+    return api.delete<{ message: string }>(`/stock-entries/${entryId}`);
+  },
+
+  // =====================================================
+  // STOCK MOVEMENTS — /stock-entries/movements
+  // =====================================================
+
+  async getMovements(filters?: StockMovementFilters): Promise<StockMovement[]> {
+    const params = new URLSearchParams();
+    if (filters?.item_id) params.append('item_id', filters.item_id);
+    if (filters?.warehouse_id) params.append('warehouse_id', filters.warehouse_id);
+    if (filters?.movement_type) params.append('movement_type', filters.movement_type);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    const query = params.toString();
+    const res = await api.get<StockMovement[]>(
+      `/stock-entries/movements/list${query ? `?${query}` : ''}`
+    );
+    return res || [];
+  },
+
+  // =====================================================
+  // WAREHOUSES — /warehouses
+  // =====================================================
+
   async getWarehouses(): Promise<Warehouse[]> {
-    const res = await api.get<{ data: Warehouse[] }>(`${BASE_URL}/warehouses`);
-    return res?.data || [];
+    const res = await api.get<Warehouse[]>('/warehouses');
+    return res || [];
   },
 
-  async createWarehouse(data: Partial<Warehouse>): Promise<Warehouse> {
-    return api.post<Warehouse>(`${BASE_URL}/warehouses`, data);
+  async getWarehouse(warehouseId: string): Promise<Warehouse> {
+    return api.get<Warehouse>(`/warehouses/${warehouseId}`);
   },
 
-  // Alerts
-  async getLowStockAlerts(): Promise<LowStockAlert[]> {
-    const res = await api.get<{ data: LowStockAlert[] }>(`${BASE_URL}/alerts/low-stock`);
-    return res?.data || [];
-  },
-
-  // Categories
-  async getCategories(): Promise<string[]> {
-    const res = await api.get<{ categories: string[] }>(`${BASE_URL}/categories`);
-    return res?.categories || [];
+  async getWarehouseInventory(warehouseId?: string): Promise<any[]> {
+    const params = new URLSearchParams();
+    if (warehouseId) params.append('warehouse_id', warehouseId);
+    const query = params.toString();
+    const res = await api.get<any[]>(`/warehouses/inventory${query ? `?${query}` : ''}`);
+    return res || [];
   },
 };

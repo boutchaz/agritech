@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useState, useCallback } from 'react';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '@/constants/theme';
 import PageHeader from '@/components/PageHeader';
-import { Card, Badge, EmptyState, LoadingState } from '@/components/ui';
+import { Badge, EmptyState, LoadingState } from '@/components/ui';
 import { StockItemCard } from '@/components/inventory';
 import { useStockItems, useLowStockAlerts } from '@/hooks/useInventory';
 import type { StockItem } from '@/types/inventory';
@@ -23,12 +23,13 @@ export default function InventoryItemsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
-  const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = useStockItems({
-    low_stock: showLowStockOnly || undefined,
-  });
+  const { data: itemsData, isLoading: itemsLoading, refetch: refetchItems } = useStockItems();
   const { data: alerts, refetch: refetchAlerts } = useLowStockAlerts();
 
-  const items = itemsData?.data || [];
+  const allItems = itemsData?.data || [];
+  const items = showLowStockOnly
+    ? allItems.filter((item) => item.minimum_stock > 0 && item.current_stock < item.minimum_stock)
+    : allItems;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
