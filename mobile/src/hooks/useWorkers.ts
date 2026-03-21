@@ -76,11 +76,34 @@ export function useDeleteWorker() {
   });
 }
 
-// Time Logs
+// Grant Platform Access
+export function useGrantPlatformAccess() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ workerId, data }: { workerId: string; data: { email: string; firstName: string; lastName: string } }) =>
+      workersApi.grantPlatformAccess(workerId, data),
+    onSuccess: (_, { workerId }) => {
+      queryClient.invalidateQueries({ queryKey: workforceKeys.worker(workerId) });
+      queryClient.invalidateQueries({ queryKey: workforceKeys.workers() });
+    },
+  });
+}
+
+// Time Logs (requires current user to be a worker — returns empty on failure)
 export function useTimeLogs(filters?: TimeLogFilters) {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
+
   return useQuery({
     queryKey: workforceKeys.timeLogs(filters),
-    queryFn: () => workersApi.getTimeLogs(filters),
+    queryFn: async () => {
+      try {
+        return await workersApi.getTimeLogs(filters);
+      } catch {
+        // User may not be a worker — return empty
+        return { data: [], total: 0 };
+      }
+    },
+    enabled: !!orgId,
     staleTime: 1 * 60 * 1000,
   });
 }

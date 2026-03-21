@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useMyTasks, useTaskStatistics } from '@/hooks/useTasks';
+import { useTasks, useTaskStatistics } from '@/hooks/useTasks';
 import PageHeader from '@/components/PageHeader';
 import { TaskListSkeleton } from '@/components/Skeleton';
 import { colors, spacing, borderRadius, fontSize, shadows } from '@/constants/theme';
@@ -92,8 +92,11 @@ export default function TasksScreen() {
   const [filter, setFilter] = useState<FilterType>('all');
   const { t } = useTranslation();
   const { t: tNav } = useTranslation('navigation');
-
-  const { data: tasks, isLoading, refetch, isRefetching } = useMyTasks();
+  const { data: tasksResponse, isLoading, refetch, isRefetching } = useTasks();
+  // Backend returns Task[] without pagination, or { data: Task[], total } with pagination
+  const tasks: Task[] | undefined = Array.isArray(tasksResponse)
+    ? tasksResponse
+    : tasksResponse?.data;
   const { data: statistics } = useTaskStatistics();
 
   const filteredTasks = filter === 'all'
@@ -111,7 +114,7 @@ export default function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title={t('dashboard.actions.myTasks.title', { defaultValue: 'Tasks' })} showBack={false} />
+      <PageHeader title={t('domains.tasks', { ns: 'navigation', defaultValue: 'Tasks' })} showBack={false} />
       <View style={styles.filterContainer}>
         {filters.map((f) => (
           <TouchableOpacity

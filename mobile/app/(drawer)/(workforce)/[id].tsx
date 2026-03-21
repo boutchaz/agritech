@@ -8,13 +8,23 @@ import {
   RefreshControl,
   Pressable,
   Linking,
+  Alert,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '@/constants/theme';
 import PageHeader from '@/components/PageHeader';
-import { useWorker, useTimeLogs } from '@/hooks/useWorkers';
+import WorkerForm from '@/components/WorkerForm';
+import {
+  useWorker,
+  useTimeLogs,
+  useUpdateWorker,
+  useDeleteWorker,
+  useGrantPlatformAccess,
+} from '@/hooks/useWorkers';
 import type { WorkerType } from '@/types/workforce';
 
 const TYPE_LABELS: Record<WorkerType, string> = {
@@ -35,6 +45,11 @@ export default function WorkerDetailScreen() {
   const { data: worker, isLoading, refetch } = useWorker(id!);
   const { data: timeLogsData } = useTimeLogs({ worker_id: id });
   const [refreshing, setRefreshing] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+
+  const updateWorker = useUpdateWorker(id!);
+  const deleteWorker = useDeleteWorker();
+  const grantAccess = useGrantPlatformAccess();
 
   const timeLogs = timeLogsData?.data || [];
 
@@ -42,6 +57,146 @@ export default function WorkerDetailScreen() {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
+  };
+
+  // ── More menu ──────────────────────────────────────────────
+  const showMoreMenu = () => {
+    const options: string[] = [];
+    const destructiveIndex: number[] = [];
+    const actions: (() => void)[] = [];
+
+    // Grant Platform Access (only if worker has no user_id)
+    if (worker && !(worker as any).user_id) {
+      options.push('Grant Platform Access');
+      actions.push(handleGrantAccess);
+    }
+
+    // Deactivate / Reactivate
+    if (worker?.is_active) {
+      options.push('Deactivate Worker');
+      actions.push(handleDeactivate);
+    } else {
+      options.push('Reactivate Worker');
+      actions.push(handleReactivate);
+    }
+
+    // Delete
+    options.push('Delete Worker');
+    destructiveIndex.push(options.length - 1);
+    actions.push(handleDelete);
+
+    // Cancel
+    options.push('Cancel');
+    const cancelIndex = options.length - 1;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: destructiveIndex[0],
+          cancelButtonIndex: cancelIndex,
+        },
+        (index) => {
+          if (index !== cancelIndex) {
+            actions[index]();
+          }
+        },
+      );
+    } else {
+      // Android fallback using Alert
+      Alert.alert(
+        'Actions',
+        undefined,
+        [
+          ...actions.map((action, i) => ({
+            text: options[i],
+            onPress: action,
+            style: destructiveIndex.includes(i) ? ('destructive' as const) : ('default' as const),
+          })),
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    }
+  };
+
+  const handleGrantAccess = () => {
+    if (!worker) return;
+    Alert.prompt(
+      'Grant Platform Access',
+      `Enter email for ${worker.first_name} ${worker.last_name}:`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Grant',
+          onPress: (email?: string) => {
+            if (!email) return;
+            grantAccess.mutate(
+              {
+                workerId: id!,
+                data: {
+                  email,
+                  firstName: worker.first_name,
+                  lastName: worker.last_name,
+                },
+              },
+              {
+                onSuccess: () => Alert.alert('Success', 'Platform access granted.'),
+                onError: (err: any) => Alert.alert('Error', err?.message || 'Failed to grant access'),
+              },
+            );
+          },
+        },
+      ],
+      'plain-text',
+      worker.email || '',
+    );
+  };
+
+  const handleDeactivate = () => {
+    Alert.alert('Deactivate Worker', 'Are you sure you want to deactivate this worker?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Deactivate',
+        style: 'destructive',
+        onPress: () => {
+          updateWorker.mutate(
+            { is_active: false },
+            {
+              onError: (err: any) => Alert.alert('Error', err?.message || 'Failed to deactivate'),
+            },
+          );
+        },
+      },
+    ]);
+  };
+
+  const handleReactivate = () => {
+    updateWorker.mutate(
+      { is_active: true },
+      {
+        onError: (err: any) => Alert.alert('Error', err?.message || 'Failed to reactivate'),
+      },
+    );
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Worker',
+      'This action cannot be undone. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteWorker.mutate(id!, {
+              onSuccess: () => router.back(),
+              onError: (err: any) => Alert.alert('Error', err?.message || 'Failed to delete worker'),
+            });
+          },
+        },
+      ],
+    );
   };
 
   if (isLoading || !worker) {
@@ -62,7 +217,12 @@ export default function WorkerDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <PageHeader title={`${worker.first_name} ${worker.last_name}`} showBack />
+      <PageHeader
+        title={`${worker.first_name} ${worker.last_name}`}
+        showBack
+        actions={[{ icon: 'create-outline', onPress: () => setShowEditForm(true) }]}
+        onMorePress={showMoreMenu}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -203,6 +363,25 @@ export default function WorkerDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Edit Worker Modal */}
+      <WorkerForm
+        visible={showEditForm}
+        onClose={() => setShowEditForm(false)}
+        isSubmitting={updateWorker.isPending}
+        initialData={worker}
+        isEdit
+        onSubmit={(data) => {
+          updateWorker.mutate(data as any, {
+            onSuccess: () => {
+              setShowEditForm(false);
+            },
+            onError: (err: any) => {
+              Alert.alert('Error', err?.message || 'Failed to update worker');
+            },
+          });
+        }}
+      />
     </View>
   );
 }

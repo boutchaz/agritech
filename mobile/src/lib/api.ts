@@ -492,7 +492,7 @@ export const tasksApi = {
     if (filters?.farmId) params.append('farmId', filters.farmId);
     if (filters?.parcelId) params.append('parcelId', filters.parcelId);
     const query = params.toString();
-    return api.get<{ data: Task[]; total: number }>(`/tasks${query ? `?${query}` : ''}`);
+    return api.get<Task[] | { data: Task[]; total: number }>(`/tasks${query ? `?${query}` : ''}`);
   },
 
   getTask: (taskId: string) => api.get<Task>(`/tasks/${taskId}`),

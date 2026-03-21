@@ -8,13 +8,15 @@ import {
   Pressable,
   RefreshControl,
   TextInput,
+  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '@/constants/theme';
 import PageHeader from '@/components/PageHeader';
-import { useWorkers } from '@/hooks/useWorkers';
+import { useWorkers, useCreateWorker } from '@/hooks/useWorkers';
+import WorkerForm from '@/components/WorkerForm';
 import type { Worker, WorkerType } from '@/types/workforce';
 
 const TYPE_LABELS: Record<WorkerType, string> = {
@@ -88,8 +90,10 @@ export default function WorkersListScreen() {
     (params.type as WorkerType) || 'all'
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const { data: workersData, refetch } = useWorkers();
+  const createWorker = useCreateWorker();
   const workers = workersData?.data || [];
 
   const filtered = useMemo(() => {
@@ -183,6 +187,28 @@ export default function WorkersListScreen() {
             </Text>
           </View>
         }
+      />
+
+      {/* FAB – Add Worker */}
+      <Pressable style={styles.fab} onPress={() => setShowCreateForm(true)}>
+        <Ionicons name="add" size={28} color={colors.white} />
+      </Pressable>
+
+      {/* Create Worker Modal */}
+      <WorkerForm
+        visible={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        isSubmitting={createWorker.isPending}
+        onSubmit={(data) => {
+          createWorker.mutate(data as any, {
+            onSuccess: () => {
+              setShowCreateForm(false);
+            },
+            onError: (err: any) => {
+              Alert.alert('Error', err?.message || 'Failed to create worker');
+            },
+          });
+        }}
       />
     </View>
   );
@@ -329,5 +355,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
     color: colors.gray[500],
+  },
+  fab: {
+    position: 'absolute',
+    bottom: spacing.xl,
+    right: spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.lg,
   },
 });
