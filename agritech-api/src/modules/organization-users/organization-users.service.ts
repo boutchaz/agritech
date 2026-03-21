@@ -27,14 +27,13 @@ export class OrganizationUsersService {
     const client = this.databaseService.getAdminClient();
 
     try {
-      // Build query with joins
+      // Build query with joins (no workers – no direct FK exists)
       let query = client
         .from('organization_users')
         .select(`
           *,
           roles!inner(id, name, display_name),
-          user_profiles!organization_users_user_profile_fkey!inner(id, first_name, last_name, email),
-          workers(id, position, is_active)
+          user_profiles!organization_users_user_profile_fkey!inner(id, first_name, last_name, email)
         `)
         .eq('organization_id', organizationId);
 
@@ -66,12 +65,25 @@ export class OrganizationUsersService {
         throw new BadRequestException(`Failed to fetch organization users: ${error.message}`);
       }
 
-      // Transform data to include full_name
+      // Fetch workers separately (linked via user_id)
+      const userIds = (data || []).map((ou: any) => ou.user_id);
+      let workerMap = new Map<string, any>();
+      if (userIds.length > 0) {
+        const { data: workers } = await client
+          .from('workers')
+          .select('id, user_id, position, is_active')
+          .in('user_id', userIds);
+        workerMap = new Map((workers || []).map((w: any) => [w.user_id, w]));
+      }
+
+      // Transform data to include full_name and worker info
       const transformedData = (data || []).map((ou: any) => {
         const profile = Array.isArray(ou.user_profiles) ? ou.user_profiles[0] : ou.user_profiles;
+        const worker = workerMap.get(ou.user_id) || null;
         return {
           ...ou,
           full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+          workers: worker ? [worker] : [],
         };
       });
 
@@ -179,8 +191,7 @@ export class OrganizationUsersService {
       .select(`
         *,
         roles(id, name, display_name),
-        user_profiles!organization_users_user_profile_fkey(id, first_name, last_name, email),
-        workers(id, position, is_active)
+        user_profiles!organization_users_user_profile_fkey(id, first_name, last_name, email)
       `)
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
@@ -195,11 +206,19 @@ export class OrganizationUsersService {
       throw new NotFoundException('Organization user not found');
     }
 
+    // Fetch worker info separately (no direct FK between organization_users and workers)
+    const { data: worker } = await client
+      .from('workers')
+      .select('id, position, is_active')
+      .eq('user_id', userId)
+      .maybeSingle();
+
     const profile = Array.isArray(data.user_profiles) ? data.user_profiles[0] : data.user_profiles;
 
     return {
       ...data,
       full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+      workers: worker ? [worker] : [],
     };
   }
 

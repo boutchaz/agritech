@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'expo-router/drawer';
 import { Redirect, useRouter, usePathname, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -176,6 +177,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
   const { t } = useTranslation(['auth', 'common', 'navigation']);
   const { can } = useAbility();
   const { colors: themeColors } = useTheme();
+  const insets = useSafeAreaInsets();
   const profile = useAuthStore((state) => state.profile);
   const role = useAuthStore((state) => state.role);
   const abilities = useAuthStore((state) => state.abilities);
@@ -287,7 +289,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
     <View style={[styles.drawerContainer, { backgroundColor: themeColors.background }]}>
       {/* Profile header */}
       <TouchableOpacity
-        style={[styles.drawerHeader, { backgroundColor: themeColors.brandContainer }]}
+        style={[styles.drawerHeader, { backgroundColor: themeColors.brandContainer, paddingTop: insets.top + spacing.md }]}
         activeOpacity={0.8}
         onPress={() => {
           navigation.closeDrawer();
@@ -335,7 +337,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
       </ScrollView>
 
       {/* Bottom: Settings + Logout */}
-      <View style={[styles.bottomSection, { borderTopColor: themeColors.outlineVariant }]}>
+      <View style={[styles.bottomSection, { borderTopColor: themeColors.outlineVariant, paddingBottom: insets.bottom }]}>
         {BOTTOM_ITEMS.map(renderItem)}
 
         <TouchableOpacity
@@ -397,7 +399,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
-    paddingTop: spacing.xl + spacing.lg,
   },
   avatar: {
     width: 44,
