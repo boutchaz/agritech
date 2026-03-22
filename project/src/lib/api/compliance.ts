@@ -476,12 +476,18 @@ export const complianceApi = {
     organizationId: string,
     filters?: { certification_id?: string; status?: string; priority?: string }
   ): Promise<CorrectiveActionPlanResponseDto[]> {
-    const params = filters ? (filters as Record<string, string>) : {};
-    return apiClient.get<CorrectiveActionPlanResponseDto[]>(
-      `${API_BASE}/corrective-actions`,
-      params,
+    const queryParams = new URLSearchParams();
+    if (filters?.certification_id) queryParams.append('certification_id', filters.certification_id);
+    if (filters?.status) queryParams.append('status', filters.status);
+    if (filters?.priority) queryParams.append('priority', filters.priority);
+    queryParams.append('pageSize', '100');
+    const url = `${API_BASE}/corrective-actions?${queryParams.toString()}`;
+    const res = await apiClient.get<{ data: CorrectiveActionPlanResponseDto[] }>(
+      url,
+      {},
       organizationId
     );
+    return res?.data || [];
   },
 
   async getCorrectiveAction(

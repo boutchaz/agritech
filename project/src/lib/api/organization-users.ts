@@ -58,12 +58,14 @@ export const organizationUsersApi = {
   /**
    * Get all organization users with optional filters
    */
-  async getAll(filters?: OrganizationUserFilters, organizationId?: string) {
+  async getAll(filters?: OrganizationUserFilters, organizationId?: string): Promise<OrganizationUser[]> {
     const params = new URLSearchParams();
     if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
+    params.append('pageSize', '100');
 
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
+    const url = `${BASE_URL}?${params.toString()}`;
+    const res = await apiClient.get<{ data: OrganizationUser[] }>(url, {}, organizationId);
+    return res?.data || [];
   },
 
   /**

@@ -133,10 +133,12 @@ export const workersApi = {
    */
   async getAll(filters?: WorkerFilters, organizationId?: string): Promise<Worker[]> {
     requireOrganizationId(organizationId, 'workersApi.getAll');
-    // Only include farmId param if it's a non-empty string
-    const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
-    const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers${params}`, {}, organizationId);
-    return res.data;
+    const params = new URLSearchParams();
+    if (filters?.farmId && filters.farmId.trim()) params.append('farmId', filters.farmId);
+    params.append('pageSize', '100');
+    const queryString = params.toString();
+    const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers?${queryString}`, {}, organizationId);
+    return res.data || [];
   },
 
   /**

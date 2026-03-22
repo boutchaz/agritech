@@ -1,5 +1,5 @@
 import { apiClient } from '../api-client';
-import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import { requireOrganizationId } from './createCrudApi';
 import type {
   PaymentRecord,
   PaymentSummary,
@@ -38,10 +38,12 @@ export const paymentRecordsApi = {
     if (filters?.period_start) params.append('period_start', filters.period_start);
     if (filters?.period_end) params.append('period_end', filters.period_end);
 
+    params.append('pageSize', '100');
     const queryString = params.toString();
-    const url = `/api/v1/organizations/${organizationId}/payment-records${queryString ? `?${queryString}` : ''}`;
+    const url = `/api/v1/organizations/${organizationId}/payment-records?${queryString}`;
 
-    return apiClient.get<PaymentSummary[]>(url);
+    const res = await apiClient.get<{ data: PaymentSummary[] }>(url);
+    return res.data || [];
   },
 
   /**

@@ -26,6 +26,7 @@ export const stockEntriesApi = {
     if (filters?.reference_type) params.append('reference_type', filters.reference_type);
     if (filters?.crop_cycle_id) params.append('crop_cycle_id', filters.crop_cycle_id);
     if (filters?.search) params.append('search', filters.search);
+    params.append('pageSize', '100');
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
     const res = await apiClient.get<{ data: StockEntry[] }>(url, {}, organizationId);

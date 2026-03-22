@@ -55,7 +55,8 @@ export const workUnitsApi = {
     if (filters?.code) params.append('code', filters.code);
     if (filters?.name) params.append('name', filters.name);
 
-    const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
+    params.append('pageSize', '100');
+    const url = `${BASE_URL}?${params.toString()}`;
     const res = await apiClient.get<{ data: any[] }>(url, {}, organizationId);
     return res?.data || res || [];
   },

@@ -89,10 +89,10 @@ export const paymentsApi = {
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
 
-    const queryString = params.toString();
-    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+    params.append('pageSize', '100');
+    const url = `${BASE_URL}?${params.toString()}`;
     const response = await apiClient.get<PaginatedResponse<Payment>>(url, {}, organizationId);
-    return response.data;
+    return response.data || [];
   },
 
   async getPaginated(
