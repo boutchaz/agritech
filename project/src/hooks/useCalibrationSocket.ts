@@ -64,6 +64,9 @@ export function useCalibrationSocket(parcelId: string): void {
       queryClient.invalidateQueries({
         queryKey: ['ai-plan-interventions', parcelId, organizationId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ['ai-recommendations', parcelId, organizationId],
+      });
     };
 
     const handlePhaseChanged = (data: CalibrationPhaseEvent) => {

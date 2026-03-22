@@ -14,6 +14,8 @@ import {
   useConfirmNutritionOption,
 } from '@/hooks/useCalibrationV2';
 import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
+import { useAIPlan } from '@/hooks/useAIPlan';
+import { useAIRecommendations } from '@/hooks/useAIRecommendations';
 import type { CalibrationHistoryRecord } from '@/lib/api/calibration-v2';
 import type {
   CalibrationV2Output,
@@ -81,6 +83,9 @@ import {
   Save,
   GitCompareArrows,
   Eye,
+  ArrowRight,
+  Lightbulb,
+  FileText,
 } from 'lucide-react';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
@@ -1423,13 +1428,15 @@ const AICalibrationPage = () => {
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
-  const { data: diagnostics } = useAIDiagnostics(parcelId);
+  const { data: phase } = useCalibrationPhase(parcelId);
+  const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
   const { isPending: isStartingV1 } = useStartAICalibration();
   const calibrationProgress = useCalibrationProgress(parcelId);
 
-  const { data: phase } = useCalibrationPhase(parcelId);
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
+  const { data: annualPlan } = useAIPlan(parcelId);
+  const { data: aiRecommendations } = useAIRecommendations(parcelId);
   const { isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
 
@@ -1567,6 +1574,57 @@ const AICalibrationPage = () => {
             >
               Lancer le recalibrage annuel
             </button>
+          </div>
+        </div>
+      )}
+
+      {phase === 'active' && (
+        <div className="rounded-xl border border-blue-200 dark:border-blue-800/30 bg-blue-50 dark:bg-blue-900/20 p-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                Suite du processus IA
+              </h3>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                La baseline est active. Verifiez maintenant le plan annuel et les recommandations pour passer du
+                calibrage a l execution terrain.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
+                  Plan annuel: {annualPlan ? `${annualPlan.status} (${annualPlan.year})` : 'en attente'}
+                </span>
+                <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
+                  Recommandations: {aiRecommendations?.length ?? 0}
+                </span>
+              </div>
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                {annualPlan?.status === 'draft'
+                  ? 'Validez le plan annuel pour activer les rappels et le suivi operationnel.'
+                  : aiRecommendations && aiRecommendations.length > 0
+                    ? 'Des recommandations sont disponibles pour validation ou execution.'
+                    : 'Aucune recommandation immediate. Le suivi continu alimentera automatiquement cette file.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => navigate({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } })}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                <FileText className="h-4 w-4" />
+                Ouvrir le plan annuel
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate({ to: '/parcels/$parcelId/ai/recommendations', params: { parcelId } })}
+                className="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-950/30 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-200 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30"
+              >
+                <Lightbulb className="h-4 w-4" />
+                Voir les recommandations
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
