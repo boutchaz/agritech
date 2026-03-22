@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from '@supabase/supabase-js';
+import * as jwt from 'jsonwebtoken';
 import { DatabaseService } from '../database/database.service';
 import { SignupDto } from './dto/signup.dto';
 import { UsersService } from '../users/users.service';
@@ -20,19 +21,14 @@ import { TrialPlanInput } from '../subscriptions/dto/create-trial-subscription.d
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-
-  // In-memory store for exchange codes
-  private exchangeCodes = new Map<string, { userId: string; createdAt: number }>();
-
-  // Clean expired codes every 60 seconds
-  private cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [code, data] of this.exchangeCodes) {
-      if (now - data.createdAt > 30_000) {
-        this.exchangeCodes.delete(code);
-      }
-    }
-  }, 60_000);
+  private readonly alwaysAllowedRedirectOrigins = [
+    'https://marketplace.thebzlab.online',
+    'https://dashboard.thebzlab.online',
+    'https://agritech.thebzlab.online',
+    'https://agritech-dashboard.thebzlab.online',
+    'https://agritech-api.thebzlab.online',
+    'https://agritech-marketplace.thebzlab.online',
+  ];
 
   constructor(
     private databaseService: DatabaseService,
@@ -44,6 +40,60 @@ export class AuthService {
     private caslAbilityFactory: CaslAbilityFactory,
     private subscriptionsService: SubscriptionsService,
   ) { }
+
+  private getAllowedRedirectOrigins(): string[] {
+    const configuredOrigins = [
+      this.configService.get<string>('AUTH_REDIRECT_ALLOWLIST'),
+      this.configService.get<string>('CORS_ORIGIN'),
+      this.configService.get<string>('FRONTEND_URL'),
+    ]
+      .filter(Boolean)
+      .flatMap((value) => value!.split(','))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    return Array.from(
+      new Set([...configuredOrigins, ...this.alwaysAllowedRedirectOrigins]),
+    );
+  }
+
+  private validateRedirectTo(redirectTo: string): string {
+    let parsedUrl: URL;
+
+    try {
+      parsedUrl = new URL(redirectTo);
+    } catch {
+      throw new BadRequestException('Invalid redirect URL');
+    }
+
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new BadRequestException('Invalid redirect URL');
+    }
+
+    const allowedOrigins = this.getAllowedRedirectOrigins();
+    const isDevelopment = this.configService.get<string>('NODE_ENV') !== 'production';
+    const isAllowedDevelopmentOrigin =
+      isDevelopment && ['localhost', '127.0.0.1'].includes(parsedUrl.hostname);
+
+    if (!allowedOrigins.includes(parsedUrl.origin) && !isAllowedDevelopmentOrigin) {
+      this.logger.warn(`Rejected redirect URL outside allowlist: ${redirectTo}`);
+      throw new BadRequestException('Redirect URL is not allowed');
+    }
+
+    return parsedUrl.toString();
+  }
+
+  private getExchangeCodeSecret(): string {
+    const secret =
+      this.configService.get<string>('EXCHANGE_CODE_SECRET') ||
+      this.configService.get<string>('JWT_SECRET');
+
+    if (!secret) {
+      throw new BadRequestException('Exchange code secret is not configured');
+    }
+
+    return secret;
+  }
 
   /**
    * Login - Authenticate user with email and password
@@ -98,12 +148,13 @@ export class AuthService {
 
   async getOAuthUrl(provider: string, redirectTo: string): Promise<{ url: string }> {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const safeRedirectTo = this.validateRedirectTo(redirectTo);
 
     if (!supabaseUrl) {
       throw new BadRequestException('Supabase URL is not configured');
     }
 
-    const url = `${supabaseUrl}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirectTo)}&access_type=offline&prompt=consent`;
+    const url = `${supabaseUrl}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(safeRedirectTo)}&access_type=offline&prompt=consent`;
 
     return { url };
   }
@@ -838,8 +889,9 @@ export class AuthService {
   async forgotPassword(email: string, redirectTo: string) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+    const safeRedirectTo = this.validateRedirectTo(redirectTo);
 
-    this.logger.log(`Password reset requested for email: ${email}, redirectTo: ${redirectTo}`);
+    this.logger.log(`Password reset requested for email: ${email}, redirectTo: ${safeRedirectTo}`);
     this.logger.debug(`Using Supabase URL: ${supabaseUrl}`);
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -860,7 +912,7 @@ export class AuthService {
 
     try {
       const { data, error } = await freshClient.auth.resetPasswordForEmail(email, {
-        redirectTo,
+        redirectTo: safeRedirectTo,
       });
 
       if (error) {
@@ -1029,37 +1081,13 @@ export class AuthService {
   }
 
   /**
-   * Generate one-time exchange code for cross-app authentication
-   * Code expires after 30 seconds and is single-use
+   * Generate a short-lived signed exchange code for cross-app authentication.
+   * The embedded magic-link token keeps the flow stateless across instances.
    */
   async generateExchangeCode(userId: string): Promise<{ code: string; expiresIn: number }> {
-    const { randomUUID } = await import('crypto');
-    const code = randomUUID();
-    this.exchangeCodes.set(code, { userId, createdAt: Date.now() });
-    this.logger.log(`Exchange code generated for user ${userId}`);
-    return { code, expiresIn: 30 };
-  }
-
-  /**
-   * Redeem exchange code for session tokens
-   * Code must be valid, not expired, and is deleted after use
-   */
-  async redeemExchangeCode(code: string): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
-    const entry = this.exchangeCodes.get(code);
-    if (!entry) {
-      throw new UnauthorizedException('Invalid or expired exchange code');
-    }
-
-    if (Date.now() - entry.createdAt > 30_000) {
-      this.exchangeCodes.delete(code);
-      throw new UnauthorizedException('Exchange code expired');
-    }
-
-    this.exchangeCodes.delete(code);
-
     const adminClient = this.databaseService.getAdminClient();
-    const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(entry.userId);
-    
+    const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(userId);
+
     if (userError || !userData?.user?.email) {
       throw new UnauthorizedException('Failed to retrieve user');
     }
@@ -1069,8 +1097,47 @@ export class AuthService {
       email: userData.user.email,
     });
 
-    if (linkError || !linkData) {
-      throw new UnauthorizedException('Failed to create session');
+    const hashedToken = linkData?.properties?.hashed_token;
+    if (linkError || !hashedToken) {
+      throw new UnauthorizedException('Failed to create exchange code');
+    }
+
+    const code = jwt.sign(
+      {
+        sub: userId,
+        type: 'exchange',
+        token_hash: hashedToken,
+      },
+      this.getExchangeCodeSecret(),
+      { expiresIn: 30 },
+    );
+
+    this.logger.log(`Exchange code generated for user ${userId}`);
+    return { code, expiresIn: 30 };
+  }
+
+  /**
+   * Redeem exchange code for session tokens
+   * Code must be valid and not expired. The embedded token hash is single-use.
+   */
+  async redeemExchangeCode(code: string): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
+    let payload: jwt.JwtPayload;
+
+    try {
+      const verified = jwt.verify(code, this.getExchangeCodeSecret());
+      if (typeof verified === 'string') {
+        throw new UnauthorizedException('Invalid or expired exchange code');
+      }
+      payload = verified;
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Invalid or expired exchange code');
+    }
+
+    if (payload.type !== 'exchange' || typeof payload.token_hash !== 'string') {
+      throw new UnauthorizedException('Invalid or expired exchange code');
     }
 
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
@@ -1083,7 +1150,7 @@ export class AuthService {
     });
 
     const { data: sessionData, error: sessionError } = await freshClient.auth.verifyOtp({
-      token_hash: linkData.properties.hashed_token,
+      token_hash: payload.token_hash,
       type: 'magiclink',
     });
 

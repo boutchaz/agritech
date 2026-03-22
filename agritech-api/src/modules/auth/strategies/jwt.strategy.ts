@@ -67,6 +67,7 @@ export class JwtStrategy implements CanActivate {
       // Attach user to request with id, userId, and organizationId
       request.user = {
         ...user,
+        sub: user.id,    // Preserve JWT-style subject for legacy controllers
         userId: user.id, // Add userId alias for backward compatibility
         organizationId,   // Resolved from organization_users table
       };

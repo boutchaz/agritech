@@ -5,6 +5,7 @@ import { RemindersController } from './reminders.controller';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
+import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 
 @Module({
   imports: [
@@ -14,7 +15,7 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
   ],
   controllers: [RemindersController],
-  providers: [RemindersService],
+  providers: [RemindersService, InternalAdminGuard],
   exports: [RemindersService],
 })
 export class RemindersModule {}

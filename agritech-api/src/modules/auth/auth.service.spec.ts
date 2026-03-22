@@ -6,6 +6,9 @@ import { DatabaseService } from '../database/database.service';
 import { UsersService } from '../users/users.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { DemoDataService } from '../demo-data/demo-data.service';
+import { AdoptionService } from '../adoption/adoption.service';
+import { CaslAbilityFactory } from '../casl/casl-ability.factory';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -33,6 +36,9 @@ describe('AuthService', () => {
   let mockUsersService: { createProfile: jest.Mock };
   let mockOrganizationsService: { create: jest.Mock };
   let mockDemoDataService: { seedDemoData: jest.Mock };
+  let mockAdoptionService: { recordMilestone: jest.Mock };
+  let mockCaslAbilityFactory: { getAbilitiesForUser: jest.Mock };
+  let mockSubscriptionsService: { createTrialSubscription: jest.Mock };
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -40,6 +46,10 @@ describe('AuthService', () => {
         SUPABASE_URL: 'https://test.supabase.co',
         SUPABASE_ANON_KEY: 'test-anon-key',
         SUPABASE_SERVICE_ROLE_KEY: 'test-service-key',
+        JWT_SECRET: 'test-jwt-secret',
+        FRONTEND_URL: 'https://agritech-dashboard.thebzlab.online',
+        CORS_ORIGIN: 'https://agritech-dashboard.thebzlab.online,http://localhost:5173',
+        NODE_ENV: 'test',
       };
       return config[key];
     }),
@@ -60,6 +70,15 @@ describe('AuthService', () => {
     mockDemoDataService = {
       seedDemoData: jest.fn().mockResolvedValue(undefined),
     };
+    mockAdoptionService = {
+      recordMilestone: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCaslAbilityFactory = {
+      getAbilitiesForUser: jest.fn().mockResolvedValue([]),
+    };
+    mockSubscriptionsService = {
+      createTrialSubscription: jest.fn().mockResolvedValue(undefined),
+    };
 
     const { createClient } = require('@supabase/supabase-js');
     createClient.mockReturnValue(mockClient);
@@ -72,6 +91,9 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: OrganizationsService, useValue: mockOrganizationsService },
         { provide: DemoDataService, useValue: mockDemoDataService },
+        { provide: AdoptionService, useValue: mockAdoptionService },
+        { provide: CaslAbilityFactory, useValue: mockCaslAbilityFactory },
+        { provide: SubscriptionsService, useValue: mockSubscriptionsService },
       ],
     }).compile();
 
@@ -113,6 +135,67 @@ describe('AuthService', () => {
       await expect(
         service.login('test@example.com', 'wrongpassword'),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('redirect validation', () => {
+    it('should allow OAuth redirects on configured origins', async () => {
+      const result = await service.getOAuthUrl(
+        'google',
+        'https://agritech-dashboard.thebzlab.online/auth/callback',
+      );
+
+      expect(result.url).toContain(
+        encodeURIComponent('https://agritech-dashboard.thebzlab.online/auth/callback'),
+      );
+    });
+
+    it('should reject OAuth redirects outside the allowlist', async () => {
+      await expect(
+        service.getOAuthUrl('google', 'https://evil.example.com/auth/callback'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject password reset redirects outside the allowlist', async () => {
+      await expect(
+        service.forgotPassword('user@example.com', 'https://evil.example.com/reset'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('exchange code', () => {
+    it('should generate and redeem a stateless exchange code', async () => {
+      const mockUser = mockAuthUser({ email: 'exchange@example.com' });
+
+      mockClient.auth.admin.getUserById.mockResolvedValue({
+        data: { user: mockUser },
+        error: null,
+      });
+      mockClient.auth.admin.generateLink.mockResolvedValue({
+        data: { properties: { hashed_token: 'hashed-token-123' } },
+        error: null,
+      });
+      mockClient.auth.verifyOtp.mockResolvedValue({
+        data: {
+          session: {
+            access_token: 'access-token',
+            refresh_token: 'refresh-token',
+            expires_in: 3600,
+          },
+        },
+        error: null,
+      });
+
+      const generated = await service.generateExchangeCode(TEST_IDS.user);
+      const redeemed = await service.redeemExchangeCode(generated.code);
+
+      expect(generated.expiresIn).toBe(30);
+      expect(mockClient.auth.verifyOtp).toHaveBeenCalledWith({
+        token_hash: 'hashed-token-123',
+        type: 'magiclink',
+      });
+      expect(redeemed.access_token).toBe('access-token');
+      expect(redeemed.refresh_token).toBe('refresh-token');
     });
   });
 

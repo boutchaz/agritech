@@ -17,10 +17,11 @@ import {
 import { ReportsService } from './reports.service';
 import { ReportFiltersDto, ReportType } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('reports')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @Controller('organizations/:organizationId/reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

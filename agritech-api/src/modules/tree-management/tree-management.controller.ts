@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TreeManagementService } from './tree-management.service';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import {
   CreateTreeCategoryDto,
   UpdateTreeCategoryDto,
@@ -24,7 +25,7 @@ import {
 @ApiTags('Tree Management')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/tree-management')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class TreeManagementController {
   constructor(private readonly treeManagementService: TreeManagementService) {}
 

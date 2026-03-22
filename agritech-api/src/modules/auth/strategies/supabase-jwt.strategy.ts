@@ -46,7 +46,11 @@ export class SupabaseJwtGuard extends AuthGuard('jwt') {
       return this.authService.validateToken(token)
         .then((user) => {
           // Attach full user to request
-          request.user = user;
+          request.user = {
+            ...user,
+            sub: user.id,
+            userId: user.id,
+          };
           return true;
         })
         .catch((error) => {

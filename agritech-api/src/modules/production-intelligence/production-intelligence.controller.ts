@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProductionIntelligenceService } from './production-intelligence.service';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import {
   YieldHistoryFiltersDto,
   CreateYieldHistoryDto,
@@ -27,7 +28,7 @@ import {
 @ApiTags('Production Intelligence')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/production-intelligence')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class ProductionIntelligenceController {
   constructor(
     private readonly productionIntelligenceService: ProductionIntelligenceService,

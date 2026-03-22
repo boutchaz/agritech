@@ -18,6 +18,8 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RemindersService } from './reminders.service';
 import { UpdateUserPreferencesDto, UserPreferencesResponseDto } from './dto/user-preferences.dto';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 
 @ApiTags('reminders')
 @ApiBearerAuth('JWT-auth')
@@ -32,6 +34,7 @@ export class RemindersController {
   constructor(private readonly remindersService: RemindersService) {}
 
   @Get('preferences')
+  @UseGuards(OrganizationGuard)
   @ApiOperation({ summary: 'Get user notification preferences' })
   @ApiResponse({
     status: 200,
@@ -45,6 +48,7 @@ export class RemindersController {
   }
 
   @Post('preferences')
+  @UseGuards(OrganizationGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update user notification preferences' })
   @ApiResponse({
@@ -62,6 +66,7 @@ export class RemindersController {
   }
 
   @Post('test')
+  @UseGuards(InternalAdminGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Trigger reminder check manually (for testing)' })
   @ApiResponse({

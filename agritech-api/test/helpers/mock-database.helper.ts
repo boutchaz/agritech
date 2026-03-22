@@ -153,10 +153,17 @@ export interface MockSupabaseClient {
     getUser: jest.Mock;
     signInWithPassword: jest.Mock;
     setSession: jest.Mock;
+    resetPasswordForEmail: jest.Mock;
+    refreshSession: jest.Mock;
+    verifyOtp: jest.Mock;
+    exchangeCodeForSession: jest.Mock;
     admin: {
       getUserById: jest.Mock;
       createUser: jest.Mock;
       deleteUser: jest.Mock;
+      updateUserById: jest.Mock;
+      signOut: jest.Mock;
+      generateLink: jest.Mock;
     };
   };
   storage: {
@@ -171,10 +178,17 @@ export const createMockSupabaseClient = (): MockSupabaseClient => ({
     getUser: jest.fn(),
     signInWithPassword: jest.fn(),
     setSession: jest.fn(),
+    resetPasswordForEmail: jest.fn(),
+    refreshSession: jest.fn(),
+    verifyOtp: jest.fn(),
+    exchangeCodeForSession: jest.fn(),
     admin: {
       getUserById: jest.fn(),
       createUser: jest.fn(),
       deleteUser: jest.fn(),
+      updateUserById: jest.fn(),
+      signOut: jest.fn(),
+      generateLink: jest.fn(),
     },
   },
   storage: {
