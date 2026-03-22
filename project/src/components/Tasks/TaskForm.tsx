@@ -184,11 +184,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
     queryFn: async () => {
       if (!organizationId || !formData.farm_id) return [];
       const data = await parcelsApi.getAll({ farm_id: formData.farm_id }, organizationId);
-      // Handle paginated response: { success: true, parcels: [...], total: ... }
-      if (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels)) {
-        return (data as { parcels: any[] }).parcels;
-      }
-      // Fallback for direct array response
       return Array.isArray(data) ? data : [];
     },
     enabled: !!organizationId && !!formData.farm_id,

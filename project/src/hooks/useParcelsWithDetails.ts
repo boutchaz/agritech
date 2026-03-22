@@ -63,13 +63,7 @@ export function useParcelsWithDetails() {
         // Fetch parcels for each farm and combine
         const parcelPromises = farmIds.map(async (farmId) => {
           const data = await parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id);
-          // Handle paginated response: { success: true, parcels: [...] } or direct array
-          if (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels)) {
-            return (data as { parcels: any[] }).parcels;
-          } else if (Array.isArray(data)) {
-            return data;
-          }
-          return [];
+          return Array.isArray(data) ? data : [];
         });
 
         const parcelResults = await Promise.all(parcelPromises);
@@ -131,12 +125,7 @@ export function useFarmParcelsWithDetails(farmId: string | undefined) {
         { farm_id: farmId, organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      // Handle paginated response: { success: true, parcels: [...] } or direct array
-      const parcels = (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels))
-        ? (data as { parcels: any[] }).parcels
-        : Array.isArray(data)
-          ? data
-          : [];
+      const parcels = Array.isArray(data) ? data : [];
 
       // Get farm details using API
       const farm = await farmsApi.getOne(farmId, currentOrganization.id);
