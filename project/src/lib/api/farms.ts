@@ -41,6 +41,14 @@ export const farmsApi = {
   ...baseCrud,
 
   /**
+   * Override getAll — backend returns {success, farms: [...], total}
+   */
+  async getAll(_filters?: FarmFilters, organizationId?: string): Promise<Farm[]> {
+    const res = await apiClient.get<{ farms: Farm[] }>(BASE_URL, {}, organizationId);
+    return res?.farms || [];
+  },
+
+  /**
    * Get related data counts for a farm
    */
   async getRelatedDataCounts(id: string, organizationId?: string) {

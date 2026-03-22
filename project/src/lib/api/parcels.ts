@@ -119,6 +119,18 @@ export const parcelsApi = {
   ...baseCrud,
 
   /**
+   * Override getAll — backend returns {success, parcels: [...]}
+   */
+  async getAll(filters?: ParcelFilters, organizationId?: string): Promise<Parcel[]> {
+    const params = new URLSearchParams();
+    if (filters?.farm_id) params.append('farm_id', filters.farm_id);
+    const queryString = params.toString();
+    const url = `${BASE_URL}${queryString ? `?${queryString}` : ''}`;
+    const res = await apiClient.get<{ parcels: Parcel[] }>(url, {}, organizationId);
+    return res?.parcels || [];
+  },
+
+  /**
    * Delete a parcel (custom implementation needed due to special body format)
    */
   async delete(parcelId: string, farmId: string, organizationId?: string): Promise<{ success: boolean; message?: string }> {
