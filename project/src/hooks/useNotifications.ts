@@ -240,16 +240,19 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   } = useQuery<NotificationData[], Error>({
     queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId, filters, page],
     queryFn: async () => {
-      const { queryString, limit, offset } = queryParams();
+      const { queryString, limit } = queryParams();
 
       const url = `/api/v1/notifications${queryString ? `?${queryString}` : ''}`;
 
-      const result = await apiClient.get(url, {}, organizationId!);
+      const result = await apiClient.get<{ data: NotificationData[] }>(url, {}, organizationId!);
+
+      // Handle paginated response
+      const items = Array.isArray(result) ? result : result?.data || [];
 
       // Check if there's a next page
-      setHasNextPage(result.length === limit);
+      setHasNextPage(items.length === limit);
 
-      return result;
+      return items;
     },
     enabled: !!organizationId && !!user,
     staleTime: 30000, // 30 seconds
