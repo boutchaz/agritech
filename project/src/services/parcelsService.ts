@@ -94,7 +94,7 @@ class ParcelsService {
       {},
       organizationId
     );
-    return result.parcels || [];
+    return (result as any)?.data || (result as any)?.parcels || [];
   }
 
   async createParcel(data: {
