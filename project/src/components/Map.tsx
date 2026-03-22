@@ -295,6 +295,7 @@ const MapComponent: React.FC<MapProps> = ({
   // Always call the hook, but pass farmId which might be undefined
   const addParcelMutation = useAddParcel();
   const updateParcelMutation = useUpdateParcel();
+  const isSavingParcel = addParcelMutation.isPending || updateParcelMutation.isPending;
 
   // Use prop parcels if provided, otherwise empty array
   const parcels = Array.isArray(propParcels) ? propParcels : [];
@@ -1225,7 +1226,7 @@ const MapComponent: React.FC<MapProps> = ({
   };
 
   const handleSaveParcel = async () => {
-    if (!farmId || !parcelName || tempBoundary.length === 0) return;
+    if (!farmId || !parcelName || tempBoundary.length === 0 || isSavingParcel) return;
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
@@ -1783,6 +1784,7 @@ const MapComponent: React.FC<MapProps> = ({
                 </Button>
                 <Button
                   onClick={handleSaveParcel}
+                  disabled={isSavingParcel}
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {t('map.save')}

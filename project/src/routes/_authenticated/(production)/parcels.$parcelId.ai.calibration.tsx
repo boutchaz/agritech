@@ -1452,7 +1452,10 @@ const AICalibrationPage = () => {
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
   const isBusy = isCalibrating || isStarting;
   const isFailed = calibration?.status === 'failed';
-  const isWizardPhase = phase === 'disabled' || phase === 'pret_calibrage' || !phase;
+  const isWizardPhase =
+    phase === 'disabled' ||
+    phase === 'pret_calibrage' ||
+    ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);

@@ -7,6 +7,11 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ParcelsService } from './parcels.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { CalibrationService } from '../calibration/calibration.service';
+import { CalibrationStateMachine } from '../calibration/calibration-state-machine';
+import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -20,6 +25,11 @@ describe('ParcelsService', () => {
   let service: ParcelsService;
   let mockClient: MockSupabaseClient;
   let mockConfigService: jest.Mocked<ConfigService>;
+  let mockSubscriptionsService: { hasValidSubscription: jest.Mock };
+  let mockCalibrationService: { startCalibration: jest.Mock };
+  let mockStateMachine: { transitionPhase: jest.Mock };
+  let mockSatelliteCacheService: { syncParcelSatelliteData: jest.Mock };
+  let mockNotificationsService: { createNotification: jest.Mock };
 
   // ============================================================
   // TEST DATA FIXTURES
@@ -75,6 +85,21 @@ describe('ParcelsService', () => {
     mockConfigService = {
       get: jest.fn(),
     } as any;
+    mockSubscriptionsService = {
+      hasValidSubscription: jest.fn().mockResolvedValue(true),
+    };
+    mockCalibrationService = {
+      startCalibration: jest.fn().mockResolvedValue({ id: 'calibration-1' }),
+    };
+    mockStateMachine = {
+      transitionPhase: jest.fn().mockResolvedValue(undefined),
+    };
+    mockSatelliteCacheService = {
+      syncParcelSatelliteData: jest.fn().mockResolvedValue({ totalPoints: 0 }),
+    };
+    mockNotificationsService = {
+      createNotification: jest.fn().mockResolvedValue(undefined),
+    };
 
     // Mock environment variables
     mockConfigService.get.mockImplementation((key: string) => {
@@ -89,6 +114,11 @@ describe('ParcelsService', () => {
       providers: [
         ParcelsService,
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: SubscriptionsService, useValue: mockSubscriptionsService },
+        { provide: CalibrationService, useValue: mockCalibrationService },
+        { provide: CalibrationStateMachine, useValue: mockStateMachine },
+        { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
 

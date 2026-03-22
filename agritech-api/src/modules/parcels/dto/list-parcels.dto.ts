@@ -64,6 +64,9 @@ export class ParcelDto {
   @ApiProperty({ description: 'Irrigation type', required: false })
   irrigation_type?: string;
 
+  @ApiProperty({ description: 'AI calibration phase', required: false })
+  ai_phase?: string;
+
   @ApiProperty({ description: 'Is active' })
   is_active: boolean;
 
@@ -89,4 +92,3 @@ export class GetParcelResponseDto {
   @ApiProperty({ description: 'Parcel', type: ParcelDto })
   parcel: ParcelDto;
 }
-

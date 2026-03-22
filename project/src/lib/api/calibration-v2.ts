@@ -122,6 +122,13 @@ export interface PartialRecalibrationDto {
   };
 }
 
+interface ParcelPhaseResponse {
+  ai_phase?: string | null;
+  parcel?: {
+    ai_phase?: string | null;
+  } | null;
+}
+
 export const calibrationV2Api = {
   async startCalibration(
     parcelId: string,
@@ -220,12 +227,12 @@ export const calibrationV2Api = {
     parcelId: string,
     organizationId?: string,
   ): Promise<CalibrationPhase> {
-    const parcel = await apiClient.get<{ ai_phase?: string }>(
+    const response = await apiClient.get<ParcelPhaseResponse>(
       `${BASE_URL}/${parcelId}`,
       {},
       organizationId,
     );
-    const aiPhase = parcel?.ai_phase;
+    const aiPhase = response?.ai_phase ?? response?.parcel?.ai_phase;
     if (!aiPhase) {
       return "unknown";
     }

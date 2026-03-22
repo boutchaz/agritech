@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
   InternalServerErrorException,
@@ -11,10 +12,7 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { DeleteParcelDto } from "./dto/delete-parcel.dto";
 import { CreateParcelDto } from "./dto/create-parcel.dto";
 import { UpdateParcelDto } from "./dto/update-parcel.dto";
-import {
-  GetParcelResponseDto,
-  ListParcelsResponseDto,
-} from "./dto/list-parcels.dto";
+import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
@@ -211,6 +209,7 @@ export class ParcelsService {
       { name: "weather_daily", hasOrganizationId: true },
       { name: "weather_forecast", hasOrganizationId: true },
       { name: "yield_forecasts", hasOrganizationId: true },
+      { name: "tasks", hasOrganizationId: true },
       { name: "plan_interventions", hasOrganizationId: true },
       { name: "annual_plans", hasOrganizationId: true },
       { name: "ai_recommendations", hasOrganizationId: true },
@@ -481,6 +480,7 @@ export class ParcelsService {
         rootstock,
         soil_type,
         irrigation_type,
+        ai_phase,
         is_active,
         created_at,
         updated_at,
@@ -561,6 +561,7 @@ export class ParcelsService {
         rootstock,
         soil_type,
         irrigation_type,
+        ai_phase,
         is_active,
         created_at,
         updated_at,
@@ -700,6 +701,7 @@ export class ParcelsService {
       boundary: dto.boundary || null,
       calculated_area: dto.calculated_area || null,
       perimeter: dto.perimeter || null,
+      ai_phase: "disabled",
       langue: dto.langue || "fr",
       is_active: true,
     };
@@ -713,6 +715,17 @@ export class ParcelsService {
 
     if (createError) {
       this.logger.error("Error creating parcel", createError);
+      const isDuplicateParcelName =
+        createError.code === "23505" ||
+        createError.message?.includes("idx_parcels_name_org_farm") ||
+        createError.message?.includes("duplicate key value violates unique constraint");
+
+      if (isDuplicateParcelName) {
+        throw new ConflictException(
+          `A parcel named "${dto.name}" already exists in this farm`,
+        );
+      }
+
       throw new InternalServerErrorException(
         `Failed to create parcel: ${createError.message}`,
       );
