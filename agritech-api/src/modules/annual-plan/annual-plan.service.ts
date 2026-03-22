@@ -481,8 +481,10 @@ export class AnnualPlanService {
     }
 
     if (!data || !this.hasReferenceData(data)) {
-      throw new NotFoundException(
-        `Crop AI references not found for crop type: ${cropType}`,
+      throw new BadRequestException(
+        `No AI referential in crop_ai_references for crop_type "${cropType}". ` +
+          `Load it from the repo referentials (e.g. referentials/DATA_OLIVIER.json → olivier): ` +
+          `cd agritech-api && SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx ts-node scripts/seed-ai-references.ts`,
       );
     }
 
