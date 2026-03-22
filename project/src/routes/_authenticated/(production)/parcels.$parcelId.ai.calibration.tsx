@@ -1767,23 +1767,26 @@ const AICalibrationPage = () => {
 
 
 
-      {phase === 'active' && diagnostics && Array.isArray(diagnostics) && diagnostics.length > 0 && (
+      {phase === 'active' && diagnostics && typeof diagnostics === 'object' && 'scenario_code' in diagnostics && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Diagnostics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {diagnostics.map((diagnostic) => (
-              <div key={diagnostic.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex items-start space-x-3">
-                <AlertCircle className={`w-5 h-5 mt-0.5 ${
-                  diagnostic.severity === 'critical' ? 'text-red-500' :
-                  diagnostic.severity === 'high' ? 'text-orange-500' :
-                  diagnostic.severity === 'medium' ? 'text-yellow-500' : 'text-blue-500'
-                }`} />
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-white capitalize">{diagnostic.diagnostic_type.replace(/_/g, ' ')}</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{diagnostic.description}</p>
-                </div>
-              </div>
-            ))}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
+              <span>Scénario {diagnostics.scenario_code}</span>
+              <span>·</span>
+              <span>
+                Confiance{' '}
+                {Math.round(
+                  diagnostics.confidence <= 1 ? diagnostics.confidence * 100 : diagnostics.confidence,
+                )}
+                %
+              </span>
+            </div>
+            <h4 className="text-lg font-medium text-gray-900 dark:text-white">{diagnostics.scenario}</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{diagnostics.description}</p>
+            {diagnostics.observation_only && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">Mode observation — suivi prudent.</p>
+            )}
           </div>
         </div>
       )}

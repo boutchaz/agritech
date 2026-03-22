@@ -31,7 +31,7 @@ const ParcelAILayout = () => {
     {
       id: 'dashboard',
       to: `/parcels/${parcelId}/ai`,
-      label: 'Dashboard',
+      label: 'Boussole',
       icon: <BrainCircuit className="w-4 h-4" />,
       active: isDashboardActive,
     },

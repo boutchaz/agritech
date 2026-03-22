@@ -13,6 +13,7 @@ export interface AICalibration {
   updated_at: string;
 }
 
+/** Legacy list shape (unused by current diagnostics endpoint). */
 export interface AIDiagnostic {
   id: string;
   parcel_id: string;
@@ -20,6 +21,37 @@ export interface AIDiagnostic {
   severity: 'low' | 'medium' | 'high' | 'critical';
   description: string;
   created_at: string;
+}
+
+export type AiScenarioCode = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+
+export interface AiDiagnosticsIndicators {
+  reading_date: string;
+  baseline_ndvi: number;
+  current_ndvi: number;
+  ndvi_delta: number;
+  ndvi_band: 'above_optimal' | 'optimal' | 'vigilance' | 'alert';
+  ndvi_trend: 'improving' | 'stable' | 'declining';
+  baseline_ndre: number | null;
+  current_ndre: number | null;
+  ndre_delta: number | null;
+  ndre_status: 'high' | 'normal' | 'low';
+  ndre_trend: 'improving' | 'stable' | 'declining';
+  baseline_ndmi: number | null;
+  current_ndmi: number | null;
+  ndmi_delta: number | null;
+  ndmi_trend: 'improving' | 'stable' | 'declining';
+  water_balance: number | null;
+  weather_anomaly: boolean;
+}
+
+export interface AiDiagnosticsResponse {
+  scenario: string;
+  scenario_code: AiScenarioCode;
+  confidence: number;
+  description: string;
+  indicators: AiDiagnosticsIndicators;
+  observation_only?: boolean;
 }
 
 export const aiCalibrationApi = {
@@ -47,7 +79,10 @@ export const aiCalibrationApi = {
     return apiClient.get(`${BASE_URL}/${parcelId}/calibration/zones`, {}, organizationId);
   },
 
-  async getAIDiagnostics(parcelId: string, organizationId?: string): Promise<AIDiagnostic[]> {
+  async getAIDiagnostics(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<AiDiagnosticsResponse> {
     return apiClient.get(`${BASE_URL}/${parcelId}/ai/diagnostics`, {}, organizationId);
   },
 };

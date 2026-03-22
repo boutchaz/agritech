@@ -31,6 +31,11 @@ export interface Parcel {
   water_quantity_per_session?: number | null;
   created_at: string | null;
   updated_at: string | null;
+  /** Agromind / calibration lifecycle (when returned by API). */
+  ai_phase?: string | null;
+  ai_enabled?: boolean | null;
+  ai_observation_only?: boolean | null;
+  ai_nutrition_option?: string | null;
 }
 
 export interface Farm {
@@ -202,6 +207,10 @@ export const useParcelById = (parcelId: string | null | undefined) => {
         water_quantity_per_session: (parcel as any).water_quantity_per_session ?? null,
         created_at: parcel.created_at ?? null,
         updated_at: parcel.updated_at ?? null,
+        ai_phase: (parcel as any).ai_phase ?? null,
+        ai_enabled: (parcel as any).ai_enabled ?? null,
+        ai_observation_only: (parcel as any).ai_observation_only ?? null,
+        ai_nutrition_option: (parcel as any).ai_nutrition_option ?? null,
       };
     },
     enabled: !!parcelId,
