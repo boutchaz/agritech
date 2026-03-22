@@ -273,12 +273,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
       if (!currentOrganization?.id) return [];
 
       const { apiClient } = await import('../../lib/api-client');
-      const data = await apiClient.get<WorkUnit[]>(
-        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+      const res = await apiClient.get<{ data: WorkUnit[] }>(
+        '/api/v1/work-units?is_active=true',
         {},
         currentOrganization.id,
       );
-      return Array.isArray(data) ? data : [];
+      const items = Array.isArray(res) ? res : res?.data || [];
+      return items;
     },
     enabled: !!currentOrganization?.id,
   });
@@ -888,12 +889,13 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
       const { apiClient } = await import('../../lib/api-client');
-      const data = await apiClient.get<WorkUnit[]>(
-        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+      const res = await apiClient.get<{ data: WorkUnit[] }>(
+        '/api/v1/work-units?is_active=true',
         {},
         currentOrganization.id,
       );
-      return Array.isArray(data) ? data : [];
+      const items = Array.isArray(res) ? res : res?.data || [];
+      return items;
     },
     enabled: !!currentOrganization?.id,
   });
