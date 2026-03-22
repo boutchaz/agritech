@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
+import { useAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
 import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
 import {
   useCalibrationReport,
   useCalibrationPhase,
   useCalibrationHistory,
-  useStartCalibrationV2,
   useValidateCalibration,
   useNutritionSuggestion,
   useConfirmNutritionOption,
@@ -64,6 +63,7 @@ import {
   Play,
   AlertCircle,
   Satellite,
+  CloudOff,
   CloudRain,
   CheckCircle2,
   ChevronDown,
@@ -92,6 +92,7 @@ import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
+import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 
 interface CollapsibleSectionProps {
@@ -166,8 +167,6 @@ const CHART_COLORS = {
   gdd: '#f59e0b',
   band: '#22c55e',
 };
-
-const LEGACY_AUTO_START_MIN_AGE_MS = 2 * 60 * 1000;
 
 const DATA_QUALITY_FLAG_LABELS: Record<string, string> = {
   insufficient_satellite_data: 'Limited satellite observations — results may be less reliable',
@@ -795,9 +794,55 @@ const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceCompo
   );
 };
 
-const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ output }) => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
+function getRunSatelliteImages(report: Record<string, unknown> | null | undefined): Array<Record<string, unknown>> {
+  if (!report || !isRecord(report)) {
+    return [];
+  }
+
+  const inputs = isRecord(report.inputs) ? report.inputs : null;
+  const satelliteImages = inputs?.satellite_images;
+  if (!Array.isArray(satelliteImages)) {
+    return [];
+  }
+
+  return satelliteImages.filter(isRecord);
+}
+
+const CalibrationImprovement: React.FC<{
+  output: CalibrationV2Output;
+  report?: Record<string, unknown> | null;
+}> = ({ output, report }) => {
   const flags = output.metadata.data_quality_flags;
   const conf = output.confidence;
+  const satelliteImages = getRunSatelliteImages(report);
+  const runCloudValues = satelliteImages
+    .map((image) => toFiniteNumber(image.cloud_coverage))
+    .filter((value): value is number => value !== null);
+  const averageInputCloudCoverage = runCloudValues.length > 0
+    ? runCloudValues.reduce((sum, value) => sum + value, 0) / runCloudValues.length
+    : null;
+  const retainedImageCount = satelliteImages.length > 0
+    ? Math.max(0, satelliteImages.length - output.step1.filtered_image_count)
+    : output.step1.index_time_series.NDVI?.filter((point) => !point.interpolated).length ?? 0;
+  const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
+  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && output.step1.filtered_image_count === 0;
 
   return (
     <div className="space-y-6">
@@ -808,24 +853,42 @@ const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ out
         <ConfidenceBreakdown components={conf.components} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
           <div className="flex items-center space-x-2 mb-1">
             <Satellite className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Cloud Coverage</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Avg Input Cloud</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {output.step1.cloud_coverage_mean.toFixed(1)}%
+            {(averageInputCloudCoverage ?? output.step1.cloud_coverage_mean).toFixed(1)}%
           </span>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Across cached satellite readings used for this run
+          </p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
           <div className="flex items-center space-x-2 mb-1">
             <BarChart3 className="w-4 h-4 text-green-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Filtered Images</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Usable Images</span>
+          </div>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            {retainedImageCount}
+          </span>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Retained after cloud filtering
+          </p>
+        </div>
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+          <div className="flex items-center space-x-2 mb-1">
+            <CloudOff className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Rejected for Clouds</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
             {output.step1.filtered_image_count}
           </span>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Images above the 20% cloud threshold
+          </p>
         </div>
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
           <div className="flex items-center space-x-2 mb-1">
@@ -837,6 +900,15 @@ const CalibrationImprovement: React.FC<{ output: CalibrationV2Output }> = ({ out
           </span>
         </div>
       </div>
+
+      {hasFlatCloudMetrics && (
+        <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <span className="text-sm text-blue-700 dark:text-blue-300">
+            Cloud metrics are flat for this run because the cached satellite inputs only contain 0% cloud metadata, so the cloud filter had nothing to reject.
+          </span>
+        </div>
+      )}
 
       {flags.length > 0 && (
         <div>
@@ -956,7 +1028,12 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: string) => string; phase?: string }> = ({ output, t, phase }) => {
+const CalibrationV2Report: React.FC<{
+  output: CalibrationV2Output;
+  report?: Record<string, unknown> | null;
+  t: (key: string) => string;
+  phase?: string;
+}> = ({ output, report, t, phase }) => {
   const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
 
   return (
@@ -1020,7 +1097,7 @@ const CalibrationV2Report: React.FC<{ output: CalibrationV2Output; t: (key: stri
         icon={<Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
         defaultOpen={false}
       >
-        <CalibrationImprovement output={output} />
+        <CalibrationImprovement output={output} report={report} />
       </CollapsibleSection>
     </div>
   );
@@ -1427,20 +1504,17 @@ const AICalibrationPage = () => {
   const navigate = useNavigate();
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
-  const hasAttemptedLegacyAutoStartRef = useRef(false);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
   const { data: phase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
-  const { isPending: isStartingV1 } = useStartAICalibration();
   const calibrationProgress = useCalibrationProgress(parcelId);
 
   const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { data: annualPlan } = useAIPlan(parcelId);
   const { data: aiRecommendations } = useAIRecommendations(parcelId);
-  const { mutateAsync: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
 
   const { data: annualEligibility, isLoading: isAnnualEligibilityLoading } = useAnnualEligibility(
@@ -1451,9 +1525,8 @@ const AICalibrationPage = () => {
   const hasV2Report = v2Output !== null;
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
-  const isStarting = isStartingV1 || isStartingV2;
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
-  const isBusy = isCalibrating || isStarting;
+  const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
     phase === 'disabled' ||
@@ -1462,38 +1535,6 @@ const AICalibrationPage = () => {
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
-  const createdAtMs = parcelData?.created_at ? new Date(parcelData.created_at).getTime() : null;
-  const isLegacyParcel =
-    createdAtMs !== null &&
-    Number.isFinite(createdAtMs) &&
-    Date.now() - createdAtMs >= LEGACY_AUTO_START_MIN_AGE_MS;
-  const canLegacyAutoStart =
-    !!parcelData &&
-    !!parcelData.crop_type &&
-    Array.isArray(parcelData.boundary) &&
-    parcelData.boundary.length >= 3 &&
-    !missingPlantingYear &&
-    !calibration &&
-    !hasV2Report &&
-    !isCalibrating &&
-    !isStarting &&
-    (phase === 'disabled' || phase === 'pret_calibrage' || phase === 'unknown' || !phase);
-  const shouldLegacyAutoStart =
-    isLegacyParcel &&
-    canLegacyAutoStart &&
-    !hasAttemptedLegacyAutoStartRef.current;
-
-  useEffect(() => {
-    if (!shouldLegacyAutoStart) {
-      return;
-    }
-
-    hasAttemptedLegacyAutoStartRef.current = true;
-
-    void startCalibrationV2({}).catch(() => {
-      // Leave the manual wizard available if the background launch fails.
-    });
-  }, [shouldLegacyAutoStart, startCalibrationV2]);
 
   const handleOpenPartialRecalibration = () => {
     setIsPartialWizardOpen(true);
@@ -1566,6 +1607,16 @@ const AICalibrationPage = () => {
       </div>
 
       {phase && <PhaseBanner phase={phase} />}
+
+      {hasV2Report && reportData?.report && typeof reportData.report === 'object' && (
+        <CalibrationRunInputsPanel
+          report={reportData.report as Record<string, unknown>}
+          onOpenPartialRecalibration={phase === 'active' ? handleOpenPartialRecalibration : undefined}
+          onOpenFullRecalibration={handleOpenFullRecalibrationWizard}
+          fullRecalibrationDisabled={isBusy || missingPlantingYear}
+          fullRecalibrationTitle={missingPlantingYear ? 'Set planting year first' : undefined}
+        />
+      )}
 
       <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
         <DialogContent
@@ -1679,7 +1730,7 @@ const AICalibrationPage = () => {
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
       )}
 
-      {isWizardPhase && !missingPlantingYear && !isStartingV2 && !shouldLegacyAutoStart && (
+      {isWizardPhase && !missingPlantingYear && (
         <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
       )}
 
@@ -1702,7 +1753,16 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {hasV2Report && !isCalibrating && <CalibrationV2Report output={v2Output} t={t} phase={isObservationOnly ? 'observation' : phase} />}
+      {hasV2Report && !isCalibrating && (
+        <CalibrationV2Report
+          output={v2Output}
+          report={reportData?.report && typeof reportData.report === 'object'
+            ? reportData.report as Record<string, unknown>
+            : null}
+          t={t}
+          phase={isObservationOnly ? 'observation' : phase}
+        />
+      )}
 
       {historyRecords && historyRecords.length > 1 && !isCalibrating && (
         <CollapsibleSection
@@ -1754,7 +1814,7 @@ const AICalibrationPage = () => {
               <button
                 type="button"
                 onClick={handleOpenFullRecalibrationWizard}
-                disabled={isStarting || missingPlantingYear}
+                disabled={missingPlantingYear}
                 className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
               >
                 <Play className="w-4 h-4" />
