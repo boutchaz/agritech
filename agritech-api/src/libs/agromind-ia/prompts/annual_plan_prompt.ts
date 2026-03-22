@@ -5,7 +5,82 @@
 // Version 1.0 — Février 2026
 // ============================================================
 
-import { AnnualPlanInput } from '../interfaces';
+import type { AnnualPlanInput } from '../interfaces';
+
+function formatCalibrationFollowUpBlock(
+  followUp: AnnualPlanInput['calibrationFollowUp'],
+  language: string,
+): string {
+  const none =
+    language === 'fr'
+      ? 'Aucune donnée structurée de suivi calibrage (recommandations du rapport) fournie.'
+      : 'No structured calibration follow-up (report recommendations) provided.';
+  if (!followUp) {
+    return none;
+  }
+  const lines: string[] = [];
+  if (followUp.maturityPhase) {
+    lines.push(
+      language === 'fr'
+        ? `Phase de maturité (calibrage) : ${followUp.maturityPhase}`
+        : `Maturity phase (calibration): ${followUp.maturityPhase}`,
+    );
+  }
+  if (followUp.dataQualityFlags?.length) {
+    lines.push(
+      language === 'fr'
+        ? `Indicateurs qualité des données : ${followUp.dataQualityFlags.join(', ')}`
+        : `Data quality flags: ${followUp.dataQualityFlags.join(', ')}`,
+    );
+  }
+  if (followUp.recommendationsFromCalibrationReport?.length) {
+    const header =
+      language === 'fr'
+        ? 'Recommandations issues du rapport de calibrage :'
+        : 'Recommendations from the calibration report:';
+    lines.push(
+      header,
+      ...followUp.recommendationsFromCalibrationReport.map((r, i) => {
+        const comp =
+          r.component != null && String(r.component).length > 0
+            ? language === 'fr'
+              ? ` — composant: ${r.component}`
+              : ` — component: ${r.component}`
+            : '';
+        return `${i + 1}. [${r.severity} / ${r.type}] ${r.message}${comp}`;
+      }),
+    );
+  }
+  return lines.length > 0 ? lines.join('\n') : none;
+}
+
+function formatActiveRecommendationsBlock(
+  recs: AnnualPlanInput['activeRecommendations'],
+  language: string,
+): string {
+  const none =
+    language === 'fr'
+      ? 'Aucune recommandation active (statuts pending/validated) enregistrée sur la plateforme pour cette parcelle.'
+      : 'No active recommendations (pending/validated) on the platform for this parcel.';
+  if (!recs?.length) {
+    return none;
+  }
+  const header =
+    language === 'fr'
+      ? 'Recommandations actives (alertes / suivi plateforme) :'
+      : 'Active recommendations (platform alerts / follow-up):';
+  return (
+    header +
+    '\n' +
+    recs
+      .map((r, i) =>
+        language === 'fr'
+          ? `${i + 1}. [${r.status}] ${r.type} — ${r.title} (émise: ${r.issuedDate}, échéance: ${r.evaluationDeadline})`
+          : `${i + 1}. [${r.status}] ${r.type} — ${r.title} (issued: ${r.issuedDate}, deadline: ${r.evaluationDeadline})`,
+      )
+      .join('\n')
+  );
+}
 
 // ============================================================
 // SYSTEM PROMPT — IDENTITÉ ET POSTURE DE L'IA
@@ -38,6 +113,11 @@ Le plan annuel N'EST PAS une liste de recommandations ponctuelles.
 C'est le programme de référence de la saison. Les recommandations opérationnelles
 générées en cours de saison AJUSTENT ce plan — elles ne le remplacent pas.
 Chaque ajustement est tracé avec sa justification.
+
+INTÉGRATION OBLIGATOIRE — SUIVI CALIBRAGE ET RECOMMANDATIONS ACTIVES :
+— Le prompt utilisateur peut inclure un bloc « suivi calibrage (rapport) » (phase de maturité, indicateurs qualité des données, recommandations structurées du dernier rapport validé) : tu les traduis en interventions, priorités ou notes de calendrier cohérents avec analyses, baseline et règles ci-dessous.
+— Le prompt peut inclure des « recommandations actives » plateforme (pending/validated) : tu les alignes sur le calendrier (créneaux, suivis, points de contrôle) lorsque c'est pertinent. Tu ne les contredis pas sans raison agronomique forte ; en cas de conflit avec une analyse ou une règle de sécurité du présent prompt, tu privilégies la sécurité agronomique et tu l'expliques brièvement dans planSummary.
+— Dans planSummary, une phrase indique comment le plan tient compte du rapport de calibrage et des recommandations actives (ou confirme qu'il n'y en avait pas si les sections étaient vides).
 
 ---
 
@@ -178,6 +258,16 @@ Statut alternance : ${data.baseline.alternanceStatus}
 Mode gestion sol : ${data.baseline.soilManagementMode}
 
 ====================================================
+1b. SUIVI CALIBRAGE (RAPPORT) — RECOMMANDATIONS & CONTEXTE
+====================================================
+${formatCalibrationFollowUpBlock(data.calibrationFollowUp, language)}
+
+====================================================
+1c. RECOMMANDATIONS ACTIVES (PLATEFORME)
+====================================================
+${formatActiveRecommendationsBlock(data.activeRecommendations, language)}
+
+====================================================
 2. PROFIL DE LA PARCELLE
 ====================================================
 - Culture / Variété : ${data.parcel.cropType ?? data.parcel.treeType ?? 'N/A'} / ${data.parcel.variety ?? 'N/A'}
@@ -215,7 +305,7 @@ Fe=${data.plantAnalysis.iron ?? 'N/A'}ppm | Zn=${data.plantAnalysis.zinc ?? 'N/A
 ====================================================
 Rendements récents :
 ${data.yieldHistory && data.yieldHistory.length > 0
-  ? data.yieldHistory.map((y: any) => `- ${y.year} : ${y.yieldPerHa} T/ha`).join('\n')
+  ? data.yieldHistory.map((y) => `- ${y.year} : ${y.yieldPerHa} T/ha`).join('\n')
   : 'Aucun historique disponible.'}
 
 ETo mensuel historique moyen (mm/jour) :
@@ -338,7 +428,7 @@ Retourne UNIQUEMENT un objet JSON valide avec la structure exacte ci-dessous.
     "note": "Prix indicatifs basés sur le marché marocain 2025-2026"
   },
 
-  "planSummary": "3-4 phrases résumant le plan : rendement cible, programme nutritionnel principal, points d'attention clés et ce qui rend ce plan spécifique à cette parcelle.",
+  "planSummary": "3-4 phrases résumant le plan : rendement cible, programme nutritionnel principal, points d'attention clés, prise en compte explicite du suivi calibrage (rapport) et des recommandations actives plateforme lorsqu'elles étaient fournies.",
 
   "validationRequired": true,
   "validationMessage": "Votre plan annuel est prêt. Vérifiez les paramètres et validez pour activer les rappels et le suivi automatique."
@@ -353,6 +443,7 @@ EXIGENCES CRITIQUES :
 — Le bore floraison est TOUJOURS inclus (deux applications BBCH 51-55 et 65-67)
 — Les traitements mouche ne sont PAS planifiés — ils sont déclenchés par alertes en cours de saison
 — Le plan reste en statut "brouillon" jusqu'à validation utilisateur explicite
+— Intégrer sans les ignorer les blocs 1b (suivi calibrage / rapport) et 1c (recommandations actives) : les refléter dans les interventions, priorités ou notes lorsque c'est cohérent agronomiquement
 — Tout le contenu textuel en ${language === 'fr' ? 'français' : 'anglais'}
 `;
 }

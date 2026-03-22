@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
@@ -145,6 +146,8 @@ const MONTH_NUMBER_TO_LABEL: Record<number, string> = {
 
 @Injectable()
 export class AnnualPlanService {
+  private readonly logger = new Logger(AnnualPlanService.name);
+
   constructor(private readonly databaseService: DatabaseService) {}
 
   async ensurePlan(
@@ -345,7 +348,126 @@ export class AnnualPlanService {
       );
     }
 
-    return data as AnnualPlanRecord;
+    const record = data as AnnualPlanRecord;
+    const interventions = await this.findPlanInterventions(
+      record.id,
+      organizationId,
+    );
+    await this.syncWorkforceTasksFromPlan(
+      { ...record, interventions },
+      record.parcel_id,
+      organizationId,
+    );
+
+    return record;
+  }
+
+  /**
+   * Inserts `tasks` rows for plan interventions that are not already linked
+   * (metadata.annual_plan_intervention_id). Used after calibration activation
+   * and when the farmer confirms the season calendar (validate).
+   */
+  async syncWorkforceTasksFromPlan(
+    annualPlan: AnnualPlanWithInterventions,
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    if (annualPlan.interventions.length === 0) {
+      this.logger.log(
+        `Annual plan ${annualPlan.id} has no interventions to sync as workforce tasks`,
+      );
+      return;
+    }
+
+    const { data: parcel } = await supabase
+      .from('parcels')
+      .select('farm_id')
+      .eq('id', parcelId)
+      .single();
+
+    if (!parcel?.farm_id) {
+      this.logger.warn(
+        `Cannot sync annual plan tasks: parcel ${parcelId} has no farm_id`,
+      );
+      return;
+    }
+
+    const { data: existingTasks, error: existingTasksError } = await supabase
+      .from('tasks')
+      .select('id, metadata')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId);
+
+    if (existingTasksError) {
+      this.logger.warn(
+        `Failed to load existing annual plan tasks for parcel ${parcelId}: ${existingTasksError.message}`,
+      );
+      return;
+    }
+
+    const existingInterventionIds = new Set(
+      ((existingTasks ?? []) as Array<{ metadata?: unknown }>)
+        .map((task) => {
+          const meta = this.asRecord(task.metadata);
+          const id = meta.annual_plan_intervention_id;
+          return typeof id === 'string' ? id : null;
+        })
+        .filter((value): value is string => value !== null),
+    );
+
+    const taskRows = annualPlan.interventions
+      .filter((intervention) => !existingInterventionIds.has(intervention.id))
+      .map((intervention) => {
+        const title = this.formatAnnualPlanTaskTitle(intervention);
+
+        return {
+          farm_id: parcel.farm_id,
+          parcel_id: parcelId,
+          organization_id: organizationId,
+          title,
+          description: this.formatAnnualPlanTaskDescription(intervention),
+          task_type: this.mapAnnualPlanInterventionToTaskType(intervention),
+          priority: this.mapAnnualPlanInterventionPriority(intervention),
+          status: 'pending',
+          due_date: this.buildAnnualPlanTaskDueDate(
+            annualPlan.year,
+            intervention.month,
+            intervention.week,
+          ),
+          metadata: {
+            source: 'annual_plan',
+            annual_plan_id: annualPlan.id,
+            annual_plan_intervention_id: intervention.id,
+            plan_year: annualPlan.year,
+            month: intervention.month,
+            week: intervention.week,
+            intervention_type: intervention.intervention_type,
+            product: intervention.product,
+            dose: intervention.dose,
+            unit: intervention.unit,
+          },
+        };
+      })
+      .filter((row) => row.title.length > 0);
+
+    if (taskRows.length === 0) {
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('tasks').insert(taskRows);
+
+    if (insertError) {
+      this.logger.warn(
+        `Failed to create tasks from annual plan for parcel ${parcelId}: ${insertError.message}`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `Created ${taskRows.length} workforce task(s) from annual plan ${annualPlan.id} for parcel ${parcelId}`,
+    );
   }
 
   async getInterventions(
@@ -729,6 +851,106 @@ export class AnnualPlanService {
       executed_at: null,
       notes: JSON.stringify(definition.components),
     };
+  }
+
+  private formatAnnualPlanTaskTitle(intervention: PlanInterventionRecord): string {
+    const interventionLabel = intervention.intervention_type
+      .split('+')
+      .map((part) => part.replace(/_/g, ' ').trim())
+      .filter((part) => part.length > 0)
+      .join(' / ');
+
+    return interventionLabel.length > 0
+      ? interventionLabel
+      : `Intervention mois ${intervention.month}`;
+  }
+
+  private formatAnnualPlanTaskDescription(
+    intervention: PlanInterventionRecord,
+  ): string | null {
+    const details = [
+      intervention.description,
+      intervention.product ? `Produit: ${intervention.product}` : null,
+      intervention.dose ? `Dose: ${intervention.dose}` : null,
+      intervention.unit ? `Unite: ${intervention.unit}` : null,
+      intervention.notes ? `Reference: ${intervention.notes}` : null,
+    ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+
+    return details.length > 0 ? details.join(' | ') : null;
+  }
+
+  private mapAnnualPlanInterventionToTaskType(
+    intervention: PlanInterventionRecord,
+  ): string {
+    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
+
+    if (normalized.includes('irrig')) {
+      return 'irrigation';
+    }
+    if (
+      normalized.includes('ferti') ||
+      normalized.includes('nutrition') ||
+      normalized.includes('amend')
+    ) {
+      return 'fertilization';
+    }
+    if (normalized.includes('taille') || normalized.includes('prun')) {
+      return 'pruning';
+    }
+    if (
+      normalized.includes('phyto') ||
+      normalized.includes('ravage') ||
+      normalized.includes('pest') ||
+      normalized.includes('maladie')
+    ) {
+      return 'pest_control';
+    }
+    if (
+      normalized.includes('sol') ||
+      normalized.includes('labour') ||
+      normalized.includes('preparation')
+    ) {
+      return 'soil_preparation';
+    }
+    if (normalized.includes('recolte') || normalized.includes('harvest')) {
+      return 'harvesting';
+    }
+
+    return 'maintenance';
+  }
+
+  private mapAnnualPlanInterventionPriority(
+    intervention: PlanInterventionRecord,
+  ): 'low' | 'medium' | 'high' | 'urgent' {
+    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
+
+    if (
+      normalized.includes('stress') ||
+      normalized.includes('urgent') ||
+      normalized.includes('maladie') ||
+      normalized.includes('irrig')
+    ) {
+      return 'high';
+    }
+
+    return 'medium';
+  }
+
+  private buildAnnualPlanTaskDueDate(
+    year: number,
+    month: number,
+    week: number | null,
+  ): string | null {
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      return null;
+    }
+
+    const day = week && week > 0 ? Math.min(28, week * 7) : 1;
+    return new Date(Date.UTC(year, month - 1, day)).toISOString().split('T')[0];
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    return this.isRecord(value) ? value : {};
   }
 
   private sortInterventions(

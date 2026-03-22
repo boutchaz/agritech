@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar, CheckCircle2, Play } from 'lucide-react';
 import type { AIPlanIntervention } from '@/lib/api/ai-plan';
+import { getFarmerPlanInterventionCopy } from '@/lib/planInterventionFarmerCopy';
 import {
   planInterventionStatusLabel,
   planInterventionTitle,
@@ -22,8 +24,12 @@ export function PlanInterventionCard({
   const monthShort = planMonthShort(intervention.month);
   const title = planInterventionTitle(intervention.intervention_type);
   const statusLabel = planInterventionStatusLabel(intervention.status);
-  const canMarkDone =
-    (intervention.status === 'planned' || intervention.status === 'pending') && onExecute;
+  const canMarkDone = intervention.status === 'planned' && onExecute;
+
+  const farmerCopy = useMemo(
+    () => getFarmerPlanInterventionCopy(intervention, t),
+    [intervention, t],
+  );
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -50,7 +56,26 @@ export function PlanInterventionCard({
               {statusLabel}
             </span>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{intervention.description}</p>
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
+            {farmerCopy.intro}
+          </p>
+          {farmerCopy.bullets.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
+              {farmerCopy.bullets.map((line, index) => (
+                <li key={`${intervention.id}-${index}`}>{line}</li>
+              ))}
+            </ul>
+          )}
+          {farmerCopy.technicalLine && (
+            <details className="mt-3 rounded-md border border-gray-100 bg-gray-50/80 px-3 py-2 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-400">
+              <summary className="cursor-pointer font-medium text-gray-600 dark:text-gray-300">
+                {t('plan.calendar.technicalHint')}
+              </summary>
+              <p className="mt-2 whitespace-pre-wrap font-mono text-[11px] leading-relaxed">
+                {farmerCopy.technicalLine}
+              </p>
+            </details>
+          )}
         </div>
       </div>
 

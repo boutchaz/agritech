@@ -9,18 +9,54 @@
   },
   "plan": {
     "layout": {
-      "title": "Season calendar",
-      "subtitle": "Your tasks month by month, based on your parcel data. Use the “Summary” tab to confirm the full calendar.",
-      "tabCalendar": "Calendar",
+      "title": "Your field calendar",
+      "subtitle": "Work is suggested month by month from your crop guide. When it looks right, confirm once under “Summary” so reminders and tasks stay in sync.",
+      "tabCalendar": "By month",
       "tabSummary": "Summary"
     },
     "calendar": {
-      "statusHeading": "Where is your calendar?",
+      "statusHeading": "Calendar status",
       "statusNone": "No calendar yet",
-      "draftHint": "Confirm your calendar in the Summary tab to turn on reminders.",
-      "recalculate": "Recalculate calendar",
+      "draftHint": "Confirm under “Summary” when you agree with the proposal — then reminders and your task list can follow this plan.",
+      "recalculate": "Refresh from crop guide",
       "emptyTitle": "No tasks listed yet",
-      "emptyBody": "If you just finished calibration, wait a moment then tap “Recalculate calendar”. Otherwise open Summary to create or restore your plan."
+      "emptyBody": "If you just finished calibration, wait a moment then tap “Refresh from crop guide”. Otherwise open Summary to create or restore your plan.",
+      "monthIntro": "For {{month}}, the usual focus is:",
+      "emptyMonthGuidance": "{{month}}: nothing specific is listed in the guide for this month — check with your technician if unsure.",
+      "unstructuredMonth": "{{month}}: we could not split this into simple steps. Use the technical line below or ask your agronomist.",
+      "bulletItem": "{{label}} — {{detail}}",
+      "technicalHint": "Technical line (agronomist / support)",
+      "componentKeys": {
+        "npk": "Fertilizer & nutrition",
+        "phyto": "Crop protection (sprays)",
+        "irrigation": "Irrigation",
+        "micro": "Trace elements (micro-nutrients)",
+        "biostim": "Biostimulants",
+        "taille": "Pruning",
+        "recolte": "Harvest",
+        "observation": "Field check",
+        "sol": "Soil work",
+        "eau": "Watering"
+      },
+      "valueHints": {
+        "irrigation": {
+          "faible": "light watering",
+          "tres_faible": "very light watering",
+          "reprise": "restart irrigation after the low season",
+          "progressive": "increase watering gradually",
+          "croissante": "step up watering as the crop grows",
+          "maximum": "peak season watering",
+          "maximum_ou_rdi": "peak watering or regulated deficit (RDI)",
+          "reduction": "reduce watering"
+        },
+        "phyto": {
+          "huile_blanche": "winter oil treatment (follow label & local advice)",
+          "cu_si_taille": "copper around pruning (follow label & local advice)",
+          "cu_si_pluie": "copper if rainy conditions (follow label & local advice)",
+          "mouche_si_seuil": "olive fly treatment if threshold reached",
+          "cu_oeil_paon": "peacock spot treatment — copper (follow label & local advice)"
+        }
+      }
     },
     "summary": {
       "emptyTitle": "Your season calendar is not ready for this parcel yet.",
@@ -231,6 +267,10 @@
   "interventionDefault": "Task",
   "interventionTypeParts": {
     "monthly_monitoring": "Monthly check-in",
+    "npk": "Fertilizer & nutrition",
+    "phyto": "Crop protection",
+    "micro": "Micro-nutrients",
+    "biostim": "Biostimulants",
     "irrigation": "Irrigation",
     "fertilisation": "Fertilization",
     "fertilization": "Fertilization",
@@ -257,6 +297,20 @@
       "10": "Oct",
       "11": "Nov",
       "12": "Dec"
+    },
+    "long": {
+      "1": "January",
+      "2": "February",
+      "3": "March",
+      "4": "April",
+      "5": "May",
+      "6": "June",
+      "7": "July",
+      "8": "August",
+      "9": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December"
     }
   },
   "planIntervention": {

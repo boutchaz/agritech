@@ -267,6 +267,21 @@ export interface AnnualPlanBaseline {
   soilManagementMode: string;
 }
 
+/** Recommendations from calibration v2 output (`output.recommendations`). */
+export interface CalibrationReportRecommendationInput {
+  type: string;
+  severity: string;
+  message: string;
+  component?: string | null;
+}
+
+/** Structured follow-up from the latest completed calibration report. */
+export interface AnnualPlanCalibrationFollowUp {
+  maturityPhase?: string;
+  recommendationsFromCalibrationReport?: CalibrationReportRecommendationInput[];
+  dataQualityFlags?: string[];
+}
+
 export interface AnnualPlanInput {
   parcel: AnnualPlanParcelProfile;
   season: string;
@@ -277,6 +292,10 @@ export interface AnnualPlanInput {
   yieldHistory?: Array<{ year: number; yieldPerHa: number }>;
   historicalETo?: Record<string, number>;
   generationDate?: string;
+  /** Pending/validated rows from `ai_recommendations` for this parcel. */
+  activeRecommendations?: ActiveRecommendation[];
+  /** Maturity phase, report recs, and data-quality flags from calibration v2 output. */
+  calibrationFollowUp?: AnnualPlanCalibrationFollowUp;
 }
 
 // ── 4. Follow-Up Prompt Input ──────────────────────────────

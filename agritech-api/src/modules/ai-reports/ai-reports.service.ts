@@ -1561,6 +1561,72 @@ export class AIReportsService {
       .order('harvest_date', { ascending: false })
       .limit(10);
 
+    const { data: activeRecommendations } = await supabase
+      .from('ai_recommendations')
+      .select('status, action, created_at, valid_until, alert_code')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .in('status', ['pending', 'validated'])
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const metadata =
+      v2Output.metadata &&
+      typeof v2Output.metadata === 'object' &&
+      !Array.isArray(v2Output.metadata)
+        ? (v2Output.metadata as Record<string, unknown>)
+        : {};
+    const rawQualityFlags = metadata.data_quality_flags;
+    const dataQualityFlags = Array.isArray(rawQualityFlags)
+      ? rawQualityFlags.filter((f): f is string => typeof f === 'string')
+      : [];
+
+    const rawCalibrationRecs = v2Output.recommendations;
+    const recommendationsFromCalibrationReport = Array.isArray(rawCalibrationRecs)
+      ? (rawCalibrationRecs as unknown[])
+          .map((item) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) {
+              return null;
+            }
+            const r = item as Record<string, unknown>;
+            const message = typeof r.message === 'string' ? r.message.trim() : '';
+            if (!message) {
+              return null;
+            }
+            return {
+              type: typeof r.type === 'string' ? r.type : 'general',
+              severity: typeof r.severity === 'string' ? r.severity : 'info',
+              message,
+              component:
+                r.component === null
+                  ? null
+                  : typeof r.component === 'string'
+                    ? r.component
+                    : undefined,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null)
+      : [];
+
+    const maturityPhase =
+      typeof calibration.maturity_phase === 'string' && calibration.maturity_phase.trim()
+        ? calibration.maturity_phase.trim()
+        : typeof v2Output.maturity_phase === 'string' && String(v2Output.maturity_phase).trim()
+          ? String(v2Output.maturity_phase).trim()
+          : undefined;
+
+    const calibrationFollowUp =
+      maturityPhase || dataQualityFlags.length > 0 || recommendationsFromCalibrationReport.length > 0
+        ? {
+            maturityPhase,
+            dataQualityFlags: dataQualityFlags.length > 0 ? dataQualityFlags : undefined,
+            recommendationsFromCalibrationReport:
+              recommendationsFromCalibrationReport.length > 0
+                ? recommendationsFromCalibrationReport
+                : undefined,
+          }
+        : undefined;
+
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
     const season =
@@ -1572,10 +1638,11 @@ export class AIReportsService {
     const areaForYield = area > 0 ? area : 1;
     const plantingYear = this.toNumber(parcel.planting_year);
     const density = this.toNumber(parcel.planting_density);
+    const generationDateStr = new Date().toISOString().split('T')[0];
 
     return {
       season,
-      generationDate: new Date().toISOString().split('T')[0],
+      generationDate: generationDateStr,
       parcel: {
         id: parcel.id,
         name: parcel.name ?? 'Parcelle',
@@ -1630,6 +1697,29 @@ export class AIReportsService {
           yieldPerHa: (this.toNumber(record.quantity) || 0) / areaForYield,
         };
       }),
+      activeRecommendations: ((activeRecommendations ?? []) as Array<Record<string, unknown>>).map(
+        (recommendation) => ({
+          status:
+            typeof recommendation.status === 'string' ? recommendation.status : 'pending',
+          type:
+            typeof recommendation.alert_code === 'string'
+              ? recommendation.alert_code
+              : 'general',
+          title:
+            typeof recommendation.action === 'string'
+              ? recommendation.action
+              : 'Recommendation active',
+          issuedDate:
+            typeof recommendation.created_at === 'string'
+              ? recommendation.created_at
+              : generationDateStr,
+          evaluationDeadline:
+            typeof recommendation.valid_until === 'string'
+              ? recommendation.valid_until
+              : generationDateStr,
+        }),
+      ),
+      calibrationFollowUp,
     };
   }
 

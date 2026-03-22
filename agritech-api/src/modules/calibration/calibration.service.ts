@@ -12,7 +12,6 @@ import { AIProvider, AgromindReportType } from "../ai-reports/interfaces";
 import {
   AnnualPlanService,
   AnnualPlanWithInterventions,
-  PlanInterventionRecord,
 } from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
@@ -2187,7 +2186,11 @@ export class CalibrationService {
 
     this.logger.log(`Annual plan generated for parcel ${parcelId}`);
 
-    await this.generateTasksFromAnnualPlan(annualPlan, parcelId, organizationId);
+    await this.annualPlanService.syncWorkforceTasksFromPlan(
+      annualPlan,
+      parcelId,
+      organizationId,
+    );
   }
 
   private normalizeCalibrationMode(mode?: string): CalibrationMode {
@@ -2241,200 +2244,6 @@ export class CalibrationService {
         `Post-activation annual plan generation failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
       );
     }
-  }
-
-  private async generateTasksFromAnnualPlan(
-    annualPlan: AnnualPlanWithInterventions,
-    parcelId: string,
-    organizationId: string,
-  ): Promise<void> {
-    const supabase = this.databaseService.getAdminClient();
-
-    if (annualPlan.interventions.length === 0) {
-      this.logger.log(
-        `Annual plan ${annualPlan.id} has no interventions to generate tasks for`,
-      );
-      return;
-    }
-
-    const { data: parcel } = await supabase
-      .from("parcels")
-      .select("farm_id")
-      .eq("id", parcelId)
-      .single();
-
-    if (!parcel?.farm_id) {
-      return;
-    }
-
-    const { data: existingTasks, error: existingTasksError } = await supabase
-      .from("tasks")
-      .select("id, metadata")
-      .eq("organization_id", organizationId)
-      .eq("parcel_id", parcelId);
-
-    if (existingTasksError) {
-      this.logger.warn(
-        `Failed to load existing annual plan tasks for parcel ${parcelId}: ${existingTasksError.message}`,
-      );
-      return;
-    }
-
-    const existingInterventionIds = new Set(
-      ((existingTasks ?? []) as Array<{ metadata?: unknown }>)
-        .map((task) => this.toJsonObject(task.metadata).annual_plan_intervention_id)
-        .filter((value): value is string => typeof value === "string"),
-    );
-
-    const taskRows = annualPlan.interventions
-      .filter((intervention) => !existingInterventionIds.has(intervention.id))
-      .map((intervention) => {
-        const title = this.formatAnnualPlanTaskTitle(intervention);
-
-        return {
-          farm_id: parcel.farm_id,
-          parcel_id: parcelId,
-          organization_id: organizationId,
-          title,
-          description: this.formatAnnualPlanTaskDescription(intervention),
-          task_type: this.mapAnnualPlanInterventionToTaskType(intervention),
-          priority: this.mapAnnualPlanInterventionPriority(intervention),
-          status: "pending",
-          due_date: this.buildAnnualPlanTaskDueDate(
-            annualPlan.year,
-            intervention.month,
-            intervention.week,
-          ),
-          metadata: {
-            source: "annual_plan",
-            annual_plan_id: annualPlan.id,
-            annual_plan_intervention_id: intervention.id,
-            plan_year: annualPlan.year,
-            month: intervention.month,
-            week: intervention.week,
-            intervention_type: intervention.intervention_type,
-            product: intervention.product,
-            dose: intervention.dose,
-            unit: intervention.unit,
-          },
-        };
-      })
-      .filter((row) => row.title.length > 0);
-
-    if (taskRows.length === 0) {
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from("tasks")
-      .insert(taskRows);
-
-    if (insertError) {
-      this.logger.warn(
-        `Failed to create tasks from annual plan for parcel ${parcelId}: ${insertError.message}`,
-      );
-      return;
-    }
-
-    this.logger.log(
-      `Created ${taskRows.length} tasks from annual plan ${annualPlan.id} for parcel ${parcelId}`,
-    );
-  }
-
-  private formatAnnualPlanTaskTitle(intervention: PlanInterventionRecord): string {
-    const interventionLabel = intervention.intervention_type
-      .split("+")
-      .map((part) => part.replace(/_/g, " ").trim())
-      .filter((part) => part.length > 0)
-      .join(" / ");
-
-    return interventionLabel.length > 0
-      ? interventionLabel
-      : `Intervention mois ${intervention.month}`;
-  }
-
-  private formatAnnualPlanTaskDescription(
-    intervention: PlanInterventionRecord,
-  ): string | null {
-    const details = [
-      intervention.description,
-      intervention.product ? `Produit: ${intervention.product}` : null,
-      intervention.dose ? `Dose: ${intervention.dose}` : null,
-      intervention.unit ? `Unite: ${intervention.unit}` : null,
-      intervention.notes ? `Reference: ${intervention.notes}` : null,
-    ].filter((value): value is string => typeof value === "string" && value.length > 0);
-
-    return details.length > 0 ? details.join(" | ") : null;
-  }
-
-  private mapAnnualPlanInterventionToTaskType(
-    intervention: PlanInterventionRecord,
-  ): string {
-    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
-
-    if (normalized.includes("irrig")) {
-      return "irrigation";
-    }
-    if (
-      normalized.includes("ferti") ||
-      normalized.includes("nutrition") ||
-      normalized.includes("amend")
-    ) {
-      return "fertilization";
-    }
-    if (normalized.includes("taille") || normalized.includes("prun")) {
-      return "pruning";
-    }
-    if (
-      normalized.includes("phyto") ||
-      normalized.includes("ravage") ||
-      normalized.includes("pest") ||
-      normalized.includes("maladie")
-    ) {
-      return "pest_control";
-    }
-    if (
-      normalized.includes("sol") ||
-      normalized.includes("labour") ||
-      normalized.includes("preparation")
-    ) {
-      return "soil_preparation";
-    }
-    if (normalized.includes("recolte") || normalized.includes("harvest")) {
-      return "harvesting";
-    }
-
-    return "maintenance";
-  }
-
-  private mapAnnualPlanInterventionPriority(
-    intervention: PlanInterventionRecord,
-  ): "low" | "medium" | "high" | "urgent" {
-    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
-
-    if (
-      normalized.includes("stress") ||
-      normalized.includes("urgent") ||
-      normalized.includes("maladie") ||
-      normalized.includes("irrig")
-    ) {
-      return "high";
-    }
-
-    return "medium";
-  }
-
-  private buildAnnualPlanTaskDueDate(
-    year: number,
-    month: number,
-    week: number | null,
-  ): string | null {
-    if (!Number.isFinite(month) || month < 1 || month > 12) {
-      return null;
-    }
-
-    const day = week && week > 0 ? Math.min(28, week * 7) : 1;
-    return new Date(Date.UTC(year, month - 1, day)).toISOString().split("T")[0];
   }
 
   async getPercentiles(

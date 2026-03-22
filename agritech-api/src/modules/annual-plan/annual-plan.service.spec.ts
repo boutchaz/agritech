@@ -248,8 +248,14 @@ describe('AnnualPlanService', () => {
       updated_at: '2026-03-12T12:00:00.000Z',
     });
 
+    const interventionsAfterValidate = createInterventionsQuery([]);
+
     let planCallCount = 0;
     mockClient.from.mockImplementation((table: string) => {
+      if (table === 'plan_interventions') {
+        return interventionsAfterValidate;
+      }
+
       if (table !== 'annual_plans') {
         return createMockQueryBuilder();
       }

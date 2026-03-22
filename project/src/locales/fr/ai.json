@@ -9,18 +9,54 @@
   },
   "plan": {
     "layout": {
-      "title": "Calendrier de la saison",
-      "subtitle": "Vos interventions mois par mois, préparées à partir des données de la parcelle. Onglet « Synthèse » pour valider l’ensemble.",
-      "tabCalendar": "Calendrier",
+      "title": "Calendrier au champ",
+      "subtitle": "Les travaux sont proposés mois par mois à partir du guide de votre culture. Quand cela vous convient, confirmez une fois dans « Synthèse » pour aligner rappels et liste de tâches.",
+      "tabCalendar": "Mois par mois",
       "tabSummary": "Synthèse"
     },
     "calendar": {
-      "statusHeading": "Où en est votre calendrier ?",
+      "statusHeading": "État du calendrier",
       "statusNone": "Pas encore de calendrier",
-      "draftHint": "Pensez à confirmer le calendrier dans l’onglet « Synthèse » pour activer le suivi.",
-      "recalculate": "Recalculer le calendrier",
+      "draftHint": "Validez sous « Synthèse » quand l’avis vous convient — les rappels et les tâches suivront ce calendrier.",
+      "recalculate": "Actualiser depuis le guide culture",
       "emptyTitle": "Aucune tâche listée pour l’instant",
-      "emptyBody": "Si vous venez de terminer le calibrage, attendez quelques instants puis utilisez « Recalculer le calendrier ». Sinon, ouvrez la synthèse pour générer ou récupérer le plan."
+      "emptyBody": "Si vous venez de terminer le calibrage, attendez quelques instants puis utilisez « Actualiser depuis le guide culture ». Sinon, ouvrez la synthèse pour générer ou récupérer le plan.",
+      "monthIntro": "Pour {{month}}, l’essentiel prévu :",
+      "emptyMonthGuidance": "{{month}} : rien de précis dans le guide pour ce mois — demandez conseil à votre technicien si besoin.",
+      "unstructuredMonth": "{{month}} : nous n’avons pas pu détailler en étapes simples. Utilisez la ligne technique ci-dessous ou votre agronome.",
+      "bulletItem": "{{label}} — {{detail}}",
+      "technicalHint": "Ligne technique (agronome / support)",
+      "componentKeys": {
+        "npk": "Engrais & nutrition",
+        "phyto": "Protection des végétaux (traitements)",
+        "irrigation": "Irrigation",
+        "micro": "Oligo-éléments",
+        "biostim": "Biostimulants",
+        "taille": "Taille",
+        "recolte": "Récolte",
+        "observation": "Passage au champ",
+        "sol": "Travail du sol",
+        "eau": "Eau"
+      },
+      "valueHints": {
+        "irrigation": {
+          "faible": "arrosage léger",
+          "tres_faible": "très peu d’eau",
+          "reprise": "reprise de l’irrigation après la saison basse",
+          "progressive": "augmenter l’eau progressivement",
+          "croissante": "monter en eau avec la croissance",
+          "maximum": "besoin maximal en eau (pleine saison)",
+          "maximum_ou_rdi": "maximum ou déficit irrigué régulé (RDI)",
+          "reduction": "réduire l’arrosage"
+        },
+        "phyto": {
+          "huile_blanche": "huile blanche d’hiver (respecter l’étiquette et l’avis local)",
+          "cu_si_taille": "cuivre lié à la taille (respecter l’étiquette et l’avis local)",
+          "cu_si_pluie": "cuivre si pluie (respecter l’étiquette et l’avis local)",
+          "mouche_si_seuil": "mouche de l’olive si dépassement de seuil",
+          "cu_oeil_paon": "œil de paon — cuivre (respecter l’étiquette et l’avis local)"
+        }
+      }
     },
     "summary": {
       "emptyTitle": "Votre calendrier de saison n’est pas encore prêt pour cette parcelle.",
@@ -231,6 +267,10 @@
   "interventionDefault": "Intervention",
   "interventionTypeParts": {
     "monthly_monitoring": "Suivi mensuel",
+    "npk": "Engrais & nutrition",
+    "phyto": "Protection des cultures",
+    "micro": "Oligo-éléments",
+    "biostim": "Biostimulants",
     "irrigation": "Irrigation",
     "fertilisation": "Fertilisation",
     "fertilization": "Fertilisation",
@@ -257,6 +297,20 @@
       "10": "oct.",
       "11": "nov.",
       "12": "déc."
+    },
+    "long": {
+      "1": "janvier",
+      "2": "février",
+      "3": "mars",
+      "4": "avril",
+      "5": "mai",
+      "6": "juin",
+      "7": "juillet",
+      "8": "août",
+      "9": "septembre",
+      "10": "octobre",
+      "11": "novembre",
+      "12": "décembre"
     }
   },
   "planIntervention": {
