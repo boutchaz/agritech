@@ -1655,7 +1655,7 @@ export class CalibrationService {
         : {
             check: "satellite_data",
             status: "warning",
-            message: `${satelliteImages.length}/10 images satellite (minimum 10 recommandées — auto-sync disponible)`,
+            message: `${satelliteImages.length}/10 images satellite en cache. Le calibrage peut démarrer et la synchronisation satellite se fera en arrière-plan.`,
           },
     );
 

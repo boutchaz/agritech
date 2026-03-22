@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { farmsApi, parcelsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -52,5 +52,17 @@ export function useParcel(parcelId: string) {
     queryFn: () => parcelsApi.getParcel(parcelId),
     enabled: !!parcelId,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useDeleteParcel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (parcelId: string) => parcelsApi.deleteParcel(parcelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: parcelKeys.all });
+      queryClient.invalidateQueries({ queryKey: farmKeys.all });
+    },
   });
 }

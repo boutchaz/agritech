@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration, useStartAICalibration } from '@/hooks/useAICalibration';
@@ -166,6 +166,8 @@ const CHART_COLORS = {
   gdd: '#f59e0b',
   band: '#22c55e',
 };
+
+const LEGACY_AUTO_START_MIN_AGE_MS = 2 * 60 * 1000;
 
 const DATA_QUALITY_FLAG_LABELS: Record<string, string> = {
   insufficient_satellite_data: 'Limited satellite observations — results may be less reliable',
@@ -1425,6 +1427,7 @@ const AICalibrationPage = () => {
   const navigate = useNavigate();
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
+  const hasAttemptedLegacyAutoStartRef = useRef(false);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
@@ -1437,7 +1440,7 @@ const AICalibrationPage = () => {
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { data: annualPlan } = useAIPlan(parcelId);
   const { data: aiRecommendations } = useAIRecommendations(parcelId);
-  const { isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
+  const { mutateAsync: startCalibrationV2, isPending: isStartingV2 } = useStartCalibrationV2(parcelId);
   const [showAnnualRecalibrationWizard, setShowAnnualRecalibrationWizard] = useState(false);
 
   const { data: annualEligibility, isLoading: isAnnualEligibilityLoading } = useAnnualEligibility(
@@ -1459,6 +1462,38 @@ const AICalibrationPage = () => {
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
+  const createdAtMs = parcelData?.created_at ? new Date(parcelData.created_at).getTime() : null;
+  const isLegacyParcel =
+    createdAtMs !== null &&
+    Number.isFinite(createdAtMs) &&
+    Date.now() - createdAtMs >= LEGACY_AUTO_START_MIN_AGE_MS;
+  const canLegacyAutoStart =
+    !!parcelData &&
+    !!parcelData.crop_type &&
+    Array.isArray(parcelData.boundary) &&
+    parcelData.boundary.length >= 3 &&
+    !missingPlantingYear &&
+    !calibration &&
+    !hasV2Report &&
+    !isCalibrating &&
+    !isStarting &&
+    (phase === 'disabled' || phase === 'pret_calibrage' || phase === 'unknown' || !phase);
+  const shouldLegacyAutoStart =
+    isLegacyParcel &&
+    canLegacyAutoStart &&
+    !hasAttemptedLegacyAutoStartRef.current;
+
+  useEffect(() => {
+    if (!shouldLegacyAutoStart) {
+      return;
+    }
+
+    hasAttemptedLegacyAutoStartRef.current = true;
+
+    void startCalibrationV2({}).catch(() => {
+      // Leave the manual wizard available if the background launch fails.
+    });
+  }, [shouldLegacyAutoStart, startCalibrationV2]);
 
   const handleOpenPartialRecalibration = () => {
     setIsPartialWizardOpen(true);
@@ -1644,7 +1679,7 @@ const AICalibrationPage = () => {
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
       )}
 
-      {isWizardPhase && !missingPlantingYear && (
+      {isWizardPhase && !missingPlantingYear && !isStartingV2 && !shouldLegacyAutoStart && (
         <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
       )}
 

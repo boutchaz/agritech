@@ -110,6 +110,16 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
     });
   }, [readiness]);
 
+  const hasSatelliteBackgroundSyncNotice = useMemo(
+    () =>
+      readiness?.checks?.some(
+        (check) =>
+          check.check === 'satellite_data' &&
+          check.status === 'warning',
+      ) ?? false,
+    [readiness],
+  );
+
   if (isLoading) {
     return (
       <div
@@ -210,6 +220,15 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
           )}
         </div>
       </div>
+
+      {hasSatelliteBackgroundSyncNotice && (
+        <div className="rounded-lg border border-blue-200 dark:border-blue-700 p-4 bg-blue-50 dark:bg-blue-900/20">
+          <p className="text-sm text-blue-800 dark:text-blue-200">
+            L'absence de donnees satellite en cache ne bloque pas le calibrage initial. Si necessaire,
+            la synchronisation satellite sera declenchee automatiquement en arriere-plan apres le lancement.
+          </p>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button

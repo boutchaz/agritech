@@ -258,8 +258,11 @@ class ApiClient {
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+  async delete<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
   async uploadFile(
@@ -643,6 +646,10 @@ export const parcelsApi = {
       throw new Error('Invalid parcel response');
     }
     return mapApiParcelRowToParcel(raw);
+  },
+
+  deleteParcel: async (parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string }; cleanup_summary?: Array<{ table: string; deleted: number }> }> => {
+    return api.delete(`/parcels`, { parcel_id: parcelId, cleanup_related_data: true });
   },
 };
 

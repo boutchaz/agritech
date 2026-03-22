@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import { useLocalSearchParams, Slot } from 'expo-router';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/providers/ThemeProvider';
-import { useParcel, useFarm } from '@/hooks/useFarms';
+import { useParcel, useFarm, useDeleteParcel } from '@/hooks/useFarms';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Toast } from '@/components/ui/Toast';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -39,11 +42,28 @@ export default function ParcelDetailLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { colors: themeColors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
 
   const { data: parcel, isLoading } = useParcel(id);
   const { data: farm } = useFarm(parcel?.farm_id || '');
+  const deleteParcel = useDeleteParcel();
+
+  const handleDeleteConfirm = () => {
+    deleteParcel.mutate(id, {
+      onSuccess: () => {
+        setShowDeleteDialog(false);
+        router.back();
+      },
+      onError: (err) => {
+        setShowDeleteDialog(false);
+        setToast({ visible: true, message: err instanceof Error ? err.message : t('errors.generic', { defaultValue: 'Failed to delete parcel' }), type: 'error' });
+      },
+    });
+  };
 
   // Determine active tab from pathname
   const activeTab = PARCEL_TABS.find((tab) => {
@@ -109,6 +129,13 @@ export default function ParcelDetailLayout() {
             )}
           </View>
         </View>
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => setShowDeleteDialog(true)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="trash-outline" size={20} color={themeColors.error} />
+        </TouchableOpacity>
       </View>
 
       {/* Scrollable tab bar */}
@@ -160,6 +187,29 @@ export default function ParcelDetailLayout() {
 
       {/* Tab content */}
       <Slot />
+
+      <ConfirmDialog
+        visible={showDeleteDialog}
+        onDismiss={() => setShowDeleteDialog(false)}
+        onConfirm={handleDeleteConfirm}
+        title={t('production.deleteParcel', { defaultValue: 'Delete Parcel' })}
+        message={t('production.deleteParcelWarning', {
+          defaultValue: `Are you sure you want to delete "${parcel?.name}"? All related data (calibrations, plans, tasks, harvests, satellite data, weather data) will be permanently removed. This action cannot be undone.`,
+          name: parcel?.name,
+        })}
+        confirmLabel={t('actions.delete', { defaultValue: 'Delete' })}
+        cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}
+        variant="destructive"
+        loading={deleteParcel.isPending}
+        icon="warning-outline"
+      />
+
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }
@@ -181,6 +231,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtn: {
     width: 40,
     height: 40,
     alignItems: 'center',

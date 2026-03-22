@@ -42,3 +42,6 @@ export type { SegmentedControlProps, SegmentedControlOption } from './SegmentedC
 
 export { IconButton } from './IconButton';
 export type { IconButtonProps } from './IconButton';
+
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps } from './ConfirmDialog';
