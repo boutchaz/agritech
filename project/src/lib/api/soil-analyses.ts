@@ -55,7 +55,7 @@ export const soilAnalysesApi = {
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
     const res = await apiClient.get<{ data: any[] }>(url, {}, organizationId);
-    return res?.data || res || [];
+    return res?.data || [];
   },
 
   /**
