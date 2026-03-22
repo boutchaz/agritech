@@ -605,8 +605,9 @@ export const harvestsApi = {
 
 export const farmsApi = {
   getFarms: async (): Promise<Farm[]> => {
-    const res = await api.get<{ success: boolean; farms: Array<Record<string, unknown>> }>('/farms');
-    return (res.farms || []).map((f) => ({
+    const res = await api.get<any>('/farms');
+    const list: Array<Record<string, unknown>> = Array.isArray(res) ? res : (res?.data ?? []);
+    return list.map((f) => ({
       id: (f.farm_id as string) || (f.id as string),
       name: (f.farm_name as string) || (f.name as string) || '',
       location: (f.farm_location as string | null) ?? null,
@@ -616,8 +617,8 @@ export const farmsApi = {
   },
 
   getFarm: async (farmId: string): Promise<Farm> => {
-    const res = await api.get<{ success: boolean; farm: Record<string, unknown> }>(`/farms/${farmId}`);
-    const f = res.farm || res;
+    const res = await api.get<any>(`/farms/${farmId}`);
+    const f = res?.data ?? res;
     return {
       id: (f.farm_id as string) || (f.id as string),
       name: (f.farm_name as string) || (f.name as string) || '',
@@ -631,15 +632,13 @@ export const farmsApi = {
 export const parcelsApi = {
   getParcels: async (farmId?: string): Promise<Parcel[]> => {
     const query = farmId ? `?farm_id=${farmId}` : '';
-    const res = await api.get<{ success: boolean; parcels: Parcel[] }>(`/parcels${query}`);
-    return res.parcels || [];
+    const res = await api.get<any>(`/parcels${query}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   getParcel: async (parcelId: string): Promise<Parcel> => {
-    const res = await api.get<{ success: boolean; parcel?: Record<string, unknown> }>(
-      `/parcels/${parcelId}`,
-    );
-    const raw = res.parcel;
+    const res = await api.get<any>(`/parcels/${parcelId}`);
+    const raw = res?.data ?? res;
     if (!raw || typeof raw !== 'object') {
       throw new Error('Invalid parcel response');
     }

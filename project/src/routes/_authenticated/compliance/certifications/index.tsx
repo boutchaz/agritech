@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Search, Filter, Award } from 'lucide-react';
+import { Search, Filter, Award, Building2 } from 'lucide-react';
 
 import { Input } from '@/components/ui/Input';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/radix-select';
 import { CertificationCard } from '@/components/compliance/CertificationCard';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import { useCertifications } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,18 +44,21 @@ function CertificationsPage() {
   }) || [];
 
   return (
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+            { icon: Award, label: 'Conformité', path: '/compliance' },
+            { icon: Award, label: 'Certifications', isActive: true },
+          ]}
+          title="Certifications"
+          subtitle="Gérez les certifications de votre organisation."
+          actions={<CreateCertificationDialog />}
+        />
+      }
+    >
     <div className="container mx-auto px-4 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Certifications
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez les certifications de votre organisation.
-          </p>
-        </div>
-        <CreateCertificationDialog />
-      </div>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border">
@@ -120,5 +125,6 @@ function CertificationsPage() {
         </div>
       )}
     </div>
+    </PageLayout>
   );
 }

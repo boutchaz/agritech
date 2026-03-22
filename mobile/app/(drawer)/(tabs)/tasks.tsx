@@ -38,8 +38,8 @@ const PRIORITY_CONFIG: Record<TaskPriority, { color: string }> = {
 
 function TaskCard({ task, onPress }: { task: Task; onPress: () => void }) {
   const { t } = useTranslation();
-  const status = STATUS_CONFIG[task.status];
-  const priority = PRIORITY_CONFIG[task.priority];
+  const status = STATUS_CONFIG[task.status] ?? { color: colors.gray[400], icon: 'help-circle-outline' as const };
+  const priority = PRIORITY_CONFIG[task.priority] ?? { color: colors.gray[400] };
 
   return (
     <TouchableOpacity style={styles.taskCard} onPress={onPress}>

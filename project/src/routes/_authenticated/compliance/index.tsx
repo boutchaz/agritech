@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { 
-  Award, 
-  CheckCircle2, 
-  AlertTriangle, 
-  FileText, 
+import {
+  Award,
+  CheckCircle2,
+  AlertTriangle,
+  FileText,
   ArrowRight,
   ShieldCheck,
   ShieldAlert,
   Clock,
   RefreshCw,
+  Building2,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,6 +19,8 @@ import { Progress } from '@/components/ui/progress';
 import { ComplianceChecksList } from '@/components/compliance/ComplianceChecksList';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
 import { ComplianceChecklistDialog } from '@/components/compliance/ComplianceChecklistDialog';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import { useComplianceDashboard, useCorrectiveActionStats } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,25 +37,29 @@ function ComplianceDashboardPage() {
   const { data: capStats } = useCorrectiveActionStats(orgId);
 
   return (
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+            { icon: ShieldCheck, label: 'Conformité & Certifications', isActive: true },
+          ]}
+          title="Conformité & Certifications"
+          subtitle="Gérez vos certifications, audits et contrôles de conformité."
+          actions={
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link to="/compliance/certifications">
+                  Gérer les certifications
+                </Link>
+              </Button>
+              <CreateCertificationDialog />
+            </div>
+          }
+        />
+      }
+    >
     <div className="container mx-auto px-4 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Conformité & Certifications
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gérez vos certifications, audits et contrôles de conformité.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/compliance/certifications">
-              Gérer les certifications
-            </Link>
-          </Button>
-          <CreateCertificationDialog />
-        </div>
-      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -239,5 +246,6 @@ function ComplianceDashboardPage() {
         </Card>
       </div>
     </div>
+    </PageLayout>
   );
 }

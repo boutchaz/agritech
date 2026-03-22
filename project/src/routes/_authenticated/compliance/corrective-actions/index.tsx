@@ -10,6 +10,7 @@ import {
   RefreshCw,
   CircleDot,
   ShieldCheck,
+  Building2,
 } from 'lucide-react';
 
 import { Input } from '@/components/ui/Input';
@@ -23,6 +24,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CorrectiveActionsList } from '@/components/compliance/CorrectiveActionsList';
 import { UpdateActionStatusDialog } from '@/components/compliance/UpdateActionStatusDialog';
+
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import { useCorrectiveActions, useCorrectiveActionStats, useDeleteCorrectiveAction } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -97,17 +101,20 @@ function CorrectiveActionsPage() {
   };
 
   return (
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+            { icon: ShieldAlert, label: 'Conformité', path: '/compliance' },
+            { icon: ShieldAlert, label: 'Actions Correctives', isActive: true },
+          ]}
+          title="Actions Correctives"
+          subtitle="Suivez et gérez les actions correctives issues de vos contrôles de conformité."
+        />
+      }
+    >
     <div className="container mx-auto px-4 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Actions Correctives
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Suivez et gérez les actions correctives issues de vos contrôles de conformité.
-          </p>
-        </div>
-      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard
@@ -229,6 +236,7 @@ function CorrectiveActionsPage() {
         />
       )}
     </div>
+    </PageLayout>
   );
 }
 

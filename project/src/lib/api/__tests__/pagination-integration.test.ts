@@ -584,3 +584,389 @@ describe('whitelist safety — no forbidden query params', () => {
     });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: createCrudApi full CRUD cycle
+// ═══════════════════════════════════════════════════════════════════
+describe('createCrudApi — full CRUD logic', () => {
+  let createCrudApi: typeof import('../createCrudApi').createCrudApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ createCrudApi } = await import('../createCrudApi'));
+  });
+
+  it('getAll preserves all items from paginated data array', async () => {
+    const api = createCrudApi<{ id: string }>('/api/v1/things');
+    const items = [{ id: '1' }, { id: '2' }, { id: '3' }];
+    mockGet.mockResolvedValue({ data: items, total: 3, page: 1, pageSize: 50, totalPages: 1 });
+
+    const result = await api.getAll(undefined, ORG_ID);
+
+    expect(result).toHaveLength(3);
+    expect(result[0].id).toBe('1');
+    expect(result[2].id).toBe('3');
+  });
+
+  it('getAll with filters appends correct query string', async () => {
+    const api = createCrudApi<{ id: string }, unknown, { status?: string; farm_id?: string }>('/api/v1/tasks');
+    mockGet.mockResolvedValue({ data: [] });
+
+    await api.getAll({ status: 'pending', farm_id: 'f1' }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=pending');
+    expect(url).toContain('farm_id=f1');
+    expect(url).not.toContain('organization_id');
+  });
+
+  it('getAll with undefined filter values omits them from URL', async () => {
+    const api = createCrudApi<{ id: string }, unknown, { status?: string; name?: string }>('/api/v1/things');
+    mockGet.mockResolvedValue({ data: [] });
+
+    await api.getAll({ status: 'active', name: undefined }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=active');
+    expect(url).not.toContain('name');
+  });
+
+  it('getOne calls correct URL with ID', async () => {
+    const api = createCrudApi<{ id: string; name: string }>('/api/v1/things');
+    mockGet.mockResolvedValue({ id: 'x1', name: 'Item' });
+
+    const result = await api.getOne('x1', ORG_ID);
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/things/x1', {}, ORG_ID);
+    expect(result).toEqual({ id: 'x1', name: 'Item' });
+  });
+
+  it('create sends POST with data and returns created entity', async () => {
+    const api = createCrudApi<{ id: string; name: string }, { name: string }>('/api/v1/things');
+    mockPost.mockResolvedValue({ id: 'new1', name: 'New Thing' });
+
+    const result = await api.create({ name: 'New Thing' }, ORG_ID);
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/things', { name: 'New Thing' }, {}, ORG_ID);
+    expect(result.id).toBe('new1');
+  });
+
+  it('update sends PATCH with ID and partial data', async () => {
+    const api = createCrudApi<{ id: string; name: string }, { name: string }, Record<string, unknown>, { name?: string }>('/api/v1/things');
+    mockPatch.mockResolvedValue({ id: 'x1', name: 'Updated' });
+
+    const result = await api.update('x1', { name: 'Updated' }, ORG_ID);
+
+    expect(mockPatch).toHaveBeenCalledWith('/api/v1/things/x1', { name: 'Updated' }, {}, ORG_ID);
+    expect(result.name).toBe('Updated');
+  });
+
+  it('delete sends DELETE with correct ID', async () => {
+    const api = createCrudApi<{ id: string }>('/api/v1/things');
+    mockDelete.mockResolvedValue(undefined);
+
+    await api.delete('x1', ORG_ID);
+
+    expect(mockDelete).toHaveBeenCalledWith('/api/v1/things/x1', {}, ORG_ID);
+  });
+
+  it('getAll handles nested data objects correctly', async () => {
+    const api = createCrudApi<{ id: string; farm: { name: string } }>('/api/v1/parcels');
+    mockGet.mockResolvedValue({
+      data: [{ id: 'p1', farm: { name: 'Farm A' } }],
+      total: 1, page: 1, pageSize: 50, totalPages: 1,
+    });
+
+    const result = await api.getAll(undefined, ORG_ID);
+
+    expect(result[0].farm.name).toBe('Farm A');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: tasks API — getAll returns envelope, getMyTasks unwraps
+// ═══════════════════════════════════════════════════════════════════
+describe('tasksApi — response handling logic', () => {
+  let tasksApi: typeof import('../tasks').tasksApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ tasksApi } = await import('../tasks'));
+  });
+
+  it('getAll preserves total/page/pageSize in envelope', async () => {
+    mockGet.mockResolvedValue({
+      data: [{ id: 't1' }],
+      total: 42,
+      page: 3,
+      pageSize: 10,
+      totalPages: 5,
+    });
+
+    const result = await tasksApi.getAll(ORG_ID);
+
+    expect(result.total).toBe(42);
+    expect(result.page).toBe(3);
+    expect(result.pageSize).toBe(10);
+    expect(result.totalPages).toBe(5);
+  });
+
+  it('getAll passes filter values as query params', async () => {
+    mockGet.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 });
+
+    await tasksApi.getAll(ORG_ID, { status: 'pending', priority: 'high' });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=pending');
+    expect(url).toContain('priority=high');
+  });
+
+  it('getAll skips organization_id in query params', async () => {
+    mockGet.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 });
+
+    await tasksApi.getAll(ORG_ID, { organization_id: ORG_ID, status: 'done' });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).not.toContain('organization_id');
+    expect(url).toContain('status=done');
+  });
+
+  it('getAll skips null and undefined filter values', async () => {
+    mockGet.mockResolvedValue({ data: [], total: 0, page: 1, pageSize: 50, totalPages: 0 });
+
+    await tasksApi.getAll(ORG_ID, { status: 'pending', farm_id: null, parcel_id: undefined });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=pending');
+    expect(url).not.toContain('farm_id');
+    expect(url).not.toContain('parcel_id');
+  });
+
+  it('getMyTasks handles large data set', async () => {
+    const items = Array.from({ length: 50 }, (_, i) => ({ id: `t${i}` }));
+    mockGet.mockResolvedValue({ data: items });
+
+    const result = await tasksApi.getMyTasks();
+
+    expect(result).toHaveLength(50);
+  });
+
+  it('getPaginated passes page and pageSize', async () => {
+    mockGet.mockResolvedValue({ data: [], total: 0, page: 2, pageSize: 20, totalPages: 0 });
+
+    await tasksApi.getPaginated(ORG_ID, { page: 2, pageSize: 20 });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('page=2');
+    expect(url).toContain('pageSize=20');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: workers API — filter handling
+// ═══════════════════════════════════════════════════════════════════
+describe('workersApi — filter logic', () => {
+  let workersApi: typeof import('../workers').workersApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ workersApi } = await import('../workers'));
+  });
+
+  it('includes farmId filter when provided', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await workersApi.getAll({ farmId: 'f1' }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('farmId=f1');
+  });
+
+  it('omits farmId when empty string', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await workersApi.getAll({ farmId: '  ' }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).not.toContain('farmId');
+  });
+
+  it('throws when organizationId missing', async () => {
+    await expect(workersApi.getAll(undefined, undefined)).rejects.toThrow('organizationId is required');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: deliveries API — filter params
+// ═══════════════════════════════════════════════════════════════════
+describe('deliveriesApi — filter logic', () => {
+  let deliveriesApi: typeof import('../deliveries').deliveriesApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ deliveriesApi } = await import('../deliveries'));
+  });
+
+  it('joins array status values with comma', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await deliveriesApi.getAll({ status: ['pending', 'completed'] as any }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=pending%2Ccompleted');
+  });
+
+  it('includes all filter params when provided', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await deliveriesApi.getAll({
+      farm_id: 'f1',
+      driver_id: 'd1',
+      customer_name: 'Acme',
+    } as any, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('farm_id=f1');
+    expect(url).toContain('driver_id=d1');
+    expect(url).toContain('customer_name=Acme');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: notifications hook — unwrap and filter
+// ═══════════════════════════════════════════════════════════════════
+describe('useNotifications — data flow', () => {
+  // This tests the logic that was broken: notifications.filter is not a function
+  // The hook must get an array, not the paginated envelope
+
+  it('notificationsApi unwraps .data from paginated response', async () => {
+    // Simulate what useNotifications does internally
+    const mockResponse = {
+      data: [
+        { id: 'n1', is_read: false, type: 'task' },
+        { id: 'n2', is_read: true, type: 'alert' },
+      ],
+      total: 2, page: 1, pageSize: 50, totalPages: 1,
+    };
+
+    // The unwrap logic from useNotifications
+    const items = Array.isArray(mockResponse) ? mockResponse : mockResponse?.data || [];
+
+    expect(items).toHaveLength(2);
+    expect(items.filter).toBeDefined(); // .filter is a function
+    expect(items.filter((n: any) => !n.is_read)).toHaveLength(1);
+  });
+
+  it('handles raw array response (backwards compat)', async () => {
+    const mockResponse = [
+      { id: 'n1', is_read: false },
+    ];
+
+    const items = Array.isArray(mockResponse) ? mockResponse : (mockResponse as any)?.data || [];
+
+    expect(items).toHaveLength(1);
+    expect(items.filter).toBeDefined();
+  });
+
+  it('handles empty/null gracefully', async () => {
+    const items1 = Array.isArray(null) ? null : (null as any)?.data || [];
+    expect(items1).toEqual([]);
+
+    const items2 = Array.isArray({}) ? {} : ({} as any)?.data || [];
+    expect(items2).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: farms/parcels — response mapping
+// ═══════════════════════════════════════════════════════════════════
+describe('farms/parcels — createCrudApi response mapping', () => {
+  let farmsApi: typeof import('../farms').farmsApi;
+  let parcelsApi: typeof import('../parcels').parcelsApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ farmsApi } = await import('../farms'));
+    ({ parcelsApi } = await import('../parcels'));
+  });
+
+  it('farmsApi.getAll returns array from paginated response', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { farm_id: 'f1', farm_name: 'Farm A', farm_size: 100 },
+        { farm_id: 'f2', farm_name: 'Farm B', farm_size: 200 },
+      ],
+      total: 2, page: 1, pageSize: 50, totalPages: 1,
+    });
+
+    const result = await farmsApi.getAll(undefined, ORG_ID);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toHaveProperty('farm_id', 'f1');
+    expect(result[1]).toHaveProperty('farm_name', 'Farm B');
+  });
+
+  it('parcelsApi.getAll returns array from paginated response', async () => {
+    mockGet.mockResolvedValue({
+      data: [
+        { id: 'p1', name: 'Parcel A', area: 10.5, farm_id: 'f1' },
+      ],
+      total: 1, page: 1, pageSize: 50, totalPages: 1,
+    });
+
+    const result = await parcelsApi.getAll({ farm_id: 'f1' }, ORG_ID);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Parcel A');
+    expect(result[0].area).toBe(10.5);
+  });
+
+  it('parcelsApi.getAll passes farm_id filter in URL', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await parcelsApi.getAll({ farm_id: 'f1' }, ORG_ID);
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('farm_id=f1');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// LOGIC TESTS: compliance — corrective actions unwrap
+// ═══════════════════════════════════════════════════════════════════
+describe('complianceApi — corrective actions filters', () => {
+  let complianceApi: typeof import('../compliance').complianceApi;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ({ complianceApi } = await import('../compliance'));
+  });
+
+  it('passes certification_id filter', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await complianceApi.getCorrectiveActions(ORG_ID, { certification_id: 'cert1' });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('certification_id=cert1');
+  });
+
+  it('passes status and priority filters', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await complianceApi.getCorrectiveActions(ORG_ID, { status: 'open', priority: 'high' });
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toContain('status=open');
+    expect(url).toContain('priority=high');
+  });
+
+  it('omits undefined filters', async () => {
+    mockGet.mockResolvedValue({ data: [] });
+
+    await complianceApi.getCorrectiveActions(ORG_ID, {});
+
+    const url = mockGet.mock.calls[0][0] as string;
+    expect(url).toMatch(/corrective-actions$/);
+  });
+});

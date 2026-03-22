@@ -27,16 +27,16 @@ export const inventoryApi = {
     if (filters?.is_stock_item !== undefined) params.append('is_stock_item', String(filters.is_stock_item));
     if (filters?.search) params.append('search', filters.search);
     const query = params.toString();
-    const res = await api.get<Item[]>(`/items${query ? `?${query}` : ''}`);
-    return res || [];
+    const res = await api.get<any>(`/items${query ? `?${query}` : ''}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   async getItemsForSelection(search?: string): Promise<{ id: string; item_code: string; item_name: string; default_unit: string }[]> {
     const params = new URLSearchParams();
     params.append('is_stock_item', 'true');
     if (search) params.append('search', search);
-    const res = await api.get<any[]>(`/items/selection?${params.toString()}`);
-    return res || [];
+    const res = await api.get<any>(`/items/selection?${params.toString()}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   async getItem(itemId: string): Promise<Item> {
@@ -116,10 +116,10 @@ export const inventoryApi = {
     if (filters?.from_date) params.append('from_date', filters.from_date);
     if (filters?.to_date) params.append('to_date', filters.to_date);
     const query = params.toString();
-    const res = await api.get<StockMovement[]>(
+    const res = await api.get<any>(
       `/stock-entries/movements/list${query ? `?${query}` : ''}`
     );
-    return res || [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   // =====================================================
@@ -127,8 +127,8 @@ export const inventoryApi = {
   // =====================================================
 
   async getWarehouses(): Promise<Warehouse[]> {
-    const res = await api.get<Warehouse[]>('/warehouses');
-    return res || [];
+    const res = await api.get<any>('/warehouses');
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   async getWarehouse(warehouseId: string): Promise<Warehouse> {
@@ -139,7 +139,7 @@ export const inventoryApi = {
     const params = new URLSearchParams();
     if (warehouseId) params.append('warehouse_id', warehouseId);
     const query = params.toString();
-    const res = await api.get<any[]>(`/warehouses/inventory${query ? `?${query}` : ''}`);
-    return res || [];
+    const res = await api.get<any>(`/warehouses/inventory${query ? `?${query}` : ''}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 };

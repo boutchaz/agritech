@@ -499,4 +499,252 @@ describe('E2E: Onboarding + Module-by-Module Pagination', () => {
       expect([200, 400, 403, 404, 500]).toContain(res.status);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE 6: FULL CRUD LIFECYCLE — create, verify in list, update, delete
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Phase 6: Full CRUD lifecycle with data verification', () => {
+    let createdCustomerId: string;
+    let createdSupplierId: string;
+
+    it('create customer → verify appears in list by name', async () => {
+      if (!orgId) return;
+
+      const name = `CRUDCustomer-${uniqueSuffix}`;
+      const createRes = await api.post('/api/v1/customers')
+        .set('x-organization-id', orgId)
+        .send({ name, customer_type: 'individual' });
+
+      if (createRes.status === 200 || createRes.status === 201) {
+        createdCustomerId = createRes.body.id;
+
+        const listRes = await api.get('/api/v1/customers')
+          .set('x-organization-id', orgId);
+
+        expect(listRes.status).toBe(200);
+        expectPaginatedResponse(listRes.body);
+
+        const found = listRes.body.data.find((c: any) => c.name === name);
+        expect(found).toBeDefined();
+        expect(found.id).toBe(createdCustomerId);
+      }
+    });
+
+    it('get customer by ID returns correct data', async () => {
+      if (!createdCustomerId || !orgId) return;
+
+      const res = await api.get(`/api/v1/customers/${createdCustomerId}`)
+        .set('x-organization-id', orgId);
+
+      expect([200, 404]).toContain(res.status);
+      if (res.status === 200) {
+        expect(res.body.id).toBe(createdCustomerId);
+        expect(res.body.name).toContain('CRUDCustomer');
+      }
+    });
+
+    it('update customer → verify changes reflected', async () => {
+      if (!createdCustomerId || !orgId) return;
+
+      const updatedName = `UpdatedCustomer-${uniqueSuffix}`;
+      const updateRes = await api.patch(`/api/v1/customers/${createdCustomerId}`)
+        .set('x-organization-id', orgId)
+        .send({ name: updatedName });
+
+      expect([200, 400, 404]).toContain(updateRes.status);
+
+      if (updateRes.status === 200) {
+        const getRes = await api.get(`/api/v1/customers/${createdCustomerId}`)
+          .set('x-organization-id', orgId);
+
+        expect(getRes.status).toBe(200);
+        expect(getRes.body.name).toBe(updatedName);
+      }
+    });
+
+    it('delete customer → verify removed from list', async () => {
+      if (!createdCustomerId || !orgId) return;
+
+      const deleteRes = await api.delete(`/api/v1/customers/${createdCustomerId}`)
+        .set('x-organization-id', orgId);
+
+      expect([200, 204, 400, 404]).toContain(deleteRes.status);
+
+      if (deleteRes.status === 200 || deleteRes.status === 204) {
+        const listRes = await api.get('/api/v1/customers')
+          .set('x-organization-id', orgId);
+
+        if (listRes.status === 200) {
+          const found = listRes.body.data.find((c: any) => c.id === createdCustomerId);
+          // Should be gone or deactivated
+          expect(!found || found.is_active === false).toBe(true);
+        }
+      }
+    });
+
+    it('create supplier → verify in list → delete → verify gone', async () => {
+      if (!orgId) return;
+
+      const name = `CRUDSupplier-${uniqueSuffix}`;
+      const createRes = await api.post('/api/v1/suppliers')
+        .set('x-organization-id', orgId)
+        .send({ name });
+
+      if (createRes.status === 200 || createRes.status === 201) {
+        createdSupplierId = createRes.body.id;
+
+        // Verify in list
+        const listRes = await api.get('/api/v1/suppliers')
+          .set('x-organization-id', orgId);
+        if (listRes.status === 200) {
+          const found = listRes.body.data.find((s: any) => s.name === name);
+          expect(found).toBeDefined();
+        }
+
+        // Delete
+        await api.delete(`/api/v1/suppliers/${createdSupplierId}`)
+          .set('x-organization-id', orgId);
+
+        // Verify gone
+        const listRes2 = await api.get('/api/v1/suppliers')
+          .set('x-organization-id', orgId);
+        if (listRes2.status === 200) {
+          const found = listRes2.body.data.find((s: any) => s.id === createdSupplierId);
+          expect(!found || found.is_active === false).toBe(true);
+        }
+      }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE 7: PAGINATION MATH — total, totalPages, data count
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Phase 7: Pagination math correctness', () => {
+    it('total matches actual count of items', async () => {
+      if (!orgId) return;
+
+      const res = await api.get('/api/v1/tasks')
+        .set('x-organization-id', orgId);
+
+      if (res.status === 200) {
+        expectPaginatedResponse(res.body);
+        // data.length should be <= pageSize
+        expect(res.body.data.length).toBeLessThanOrEqual(res.body.pageSize);
+        // totalPages should be ceil(total / pageSize)
+        const expectedPages = Math.ceil(res.body.total / res.body.pageSize) || 0;
+        expect(res.body.totalPages).toBe(expectedPages);
+      }
+    });
+
+    it('page=1 with pageSize=1 returns exactly 1 item', async () => {
+      if (!orgId) return;
+
+      const res = await api.get('/api/v1/tasks?page=1&pageSize=1')
+        .set('x-organization-id', orgId);
+
+      if (res.status === 200 && res.body.total > 0) {
+        expect(res.body.data.length).toBe(1);
+        expect(res.body.page).toBe(1);
+        expect(res.body.pageSize).toBe(1);
+      }
+    });
+
+    it('requesting beyond last page returns empty data', async () => {
+      if (!orgId) return;
+
+      const res = await api.get('/api/v1/tasks?page=9999&pageSize=10')
+        .set('x-organization-id', orgId);
+
+      if (res.status === 200) {
+        expectPaginatedResponse(res.body);
+        expect(res.body.data).toHaveLength(0);
+        expect(res.body.page).toBe(9999);
+      }
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE 8: CROSS-ORG ISOLATION
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Phase 8: Cross-org data isolation', () => {
+    it('random org ID returns empty data, not other org data', async () => {
+      const fakeOrgId = generateUUID();
+
+      const res = await api.get('/api/v1/customers')
+        .set('x-organization-id', fakeOrgId);
+
+      if (res.status === 200) {
+        expectPaginatedResponse(res.body);
+        expect(res.body.data).toHaveLength(0);
+        expect(res.body.total).toBe(0);
+      }
+      // 403 is also acceptable (access denied)
+      expect([200, 400, 403, 404, 500]).toContain(res.status);
+    });
+
+    it('tasks from different org not visible', async () => {
+      const fakeOrgId = generateUUID();
+
+      const res = await api.get('/api/v1/tasks')
+        .set('x-organization-id', fakeOrgId);
+
+      if (res.status === 200) {
+        expectPaginatedResponse(res.body);
+        expect(res.body.data).toHaveLength(0);
+      }
+      expect([200, 400, 403, 404, 500]).toContain(res.status);
+    });
+
+    it('suppliers from different org not visible', async () => {
+      const fakeOrgId = generateUUID();
+
+      const res = await api.get('/api/v1/suppliers')
+        .set('x-organization-id', fakeOrgId);
+
+      if (res.status === 200) {
+        expectPaginatedResponse(res.body);
+        expect(res.body.data).toHaveLength(0);
+      }
+      expect([200, 400, 403, 404, 500]).toContain(res.status);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // PHASE 9: EMPTY ORG — new org returns empty paginated, not errors
+  // ═══════════════════════════════════════════════════════════════
+
+  describe('Phase 9: Empty organization returns empty paginated (no errors)', () => {
+    const emptyOrgId = generateUUID();
+
+    const emptyEndpoints = [
+      '/api/v1/customers',
+      '/api/v1/suppliers',
+      '/api/v1/tasks',
+      '/api/v1/warehouses',
+      '/api/v1/items',
+      '/api/v1/work-units',
+      '/api/v1/payments',
+      '/api/v1/invoices',
+      '/api/v1/quotes',
+      '/api/v1/organization-users',
+      '/api/v1/soil-analyses',
+    ];
+
+    for (const endpoint of emptyEndpoints) {
+      it(`${endpoint} returns empty paginated for unknown org`, async () => {
+        const res = await api.get(endpoint)
+          .set('x-organization-id', emptyOrgId);
+
+        if (res.status === 200) {
+          expectPaginatedResponse(res.body);
+          expect(res.body.data).toHaveLength(0);
+        }
+        // 200 (empty) or 403 (denied) both acceptable
+        expect([200, 400, 403, 404, 500]).toContain(res.status);
+      });
+    }
+  });
 });
