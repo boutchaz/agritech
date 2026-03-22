@@ -11,6 +11,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { DeleteFarmDto } from './dto/delete-farm.dto';
 import { ImportFarmDto } from './dto/import-farm.dto';
 import { ListFarmsResponseDto, FarmDto } from './dto/list-farms.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
@@ -102,7 +103,7 @@ export class FarmsService {
   async listFarms(
     userId: string,
     organizationId: string,
-  ): Promise<ListFarmsResponseDto> {
+  ): Promise<PaginatedResponse<FarmDto>> {
     this.logger.log(
       `Listing farms for organization ${organizationId}, user ${userId}`,
     );
@@ -130,11 +131,7 @@ export class FarmsService {
       // Return empty list instead of 403 for users without organization membership
       // This supports the onboarding flow where users may not have organization_users record yet
       this.logger.warn(`User ${userId} not found in organization ${organizationId}, returning empty farms list`);
-      return {
-        success: true,
-        farms: [],
-        total: 0,
-      };
+      return paginatedResponse<FarmDto>([], 0, 1, 100);
     }
 
     // Fetch all farms for the organization with parcel counts
@@ -194,11 +191,7 @@ export class FarmsService {
       subparcel_count: 0, // not supported yet
     }));
 
-    return {
-      success: true,
-      farms: farmDtos,
-      total: farmDtos.length,
-    };
+    return paginatedResponse<FarmDto>(farmDtos, farmDtos.length, 1, farmDtos.length || 100);
   }
 
   /**
@@ -210,7 +203,7 @@ export class FarmsService {
     const farmsList = await this.listFarms(userId, organizationId);
 
     // Transform to tree structure (currently just root nodes)
-    const tree = farmsList.farms.map(farm => ({
+    const tree = farmsList.data.map((farm: FarmDto) => ({
       id: farm.farm_id,
       name: farm.farm_name,
       type: farm.farm_type,

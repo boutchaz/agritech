@@ -15,6 +15,7 @@ import {
   GetParcelResponseDto,
   ListParcelsResponseDto,
 } from "./dto/list-parcels.dto";
+import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
 import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
@@ -430,7 +431,7 @@ export class ParcelsService {
     userId: string,
     organizationId: string,
     farmId?: string,
-  ): Promise<ListParcelsResponseDto> {
+  ): Promise<PaginatedResponse<any>> {
     this.logger.log(
       `Listing parcels for organization ${organizationId}${farmId ? `, farm ${farmId}` : ""}`,
     );
@@ -504,10 +505,8 @@ export class ParcelsService {
       throw new InternalServerErrorException("Failed to fetch parcels");
     }
 
-    return {
-      success: true,
-      parcels: parcels || [],
-    };
+    const items = parcels || [];
+    return paginatedResponse(items, items.length, 1, items.length || 100);
   }
 
   async getParcel(

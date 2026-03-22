@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class ItemsService {
@@ -14,31 +15,30 @@ export class ItemsService {
   // ITEM GROUPS
   // =====================================================
 
-  async findAllItemGroups(organizationId: string, filters?: any): Promise<any> {
+  async findAllItemGroups(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 100;
 
-    let query = supabase
-      .from('item_groups')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true });
-
-    if (filters?.parent_group_id !== undefined) {
-      if (filters.parent_group_id === null) {
-        query = query.is('parent_group_id', null);
-      } else {
-        query = query.eq('parent_group_id', filters.parent_group_id);
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.parent_group_id !== undefined) {
+        q = filters.parent_group_id === null
+          ? q.is('parent_group_id', null)
+          : q.eq('parent_group_id', filters.parent_group_id);
       }
-    }
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.search) q = q.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      return q;
+    };
 
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
+    const { count } = await applyFilters(
+      supabase.from('item_groups').select('id', { count: 'exact', head: true })
+    );
 
-    if (filters?.search) {
-      query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-    }
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('item_groups').select('*'));
+    query = query.order('sort_order', { ascending: true }).order('name', { ascending: true }).range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -47,7 +47,7 @@ export class ItemsService {
       throw new BadRequestException(`Failed to fetch item groups: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   async findOneItemGroup(id: string, organizationId: string): Promise<any> {
@@ -157,49 +157,31 @@ export class ItemsService {
   // ITEMS
   // =====================================================
 
-  async findAllItems(organizationId: string, filters?: any): Promise<any> {
+  async findAllItems(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 100;
 
-    let query = supabase
-      .from('items')
-      .select(`
-        *,
-        item_group:item_groups(id, name, code, path)
-      `)
-      .eq('organization_id', organizationId)
-      .order('item_code', { ascending: true });
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.item_group_id) q = q.eq('item_group_id', filters.item_group_id);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.is_sales_item !== undefined) q = q.eq('is_sales_item', filters.is_sales_item);
+      if (filters?.is_purchase_item !== undefined) q = q.eq('is_purchase_item', filters.is_purchase_item);
+      if (filters?.is_stock_item !== undefined) q = q.eq('is_stock_item', filters.is_stock_item);
+      if (filters?.crop_type) q = q.eq('crop_type', filters.crop_type);
+      if (filters?.variety) q = q.eq('variety', filters.variety);
+      if (filters?.search) q = q.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
+      return q;
+    };
 
-    if (filters?.item_group_id) {
-      query = query.eq('item_group_id', filters.item_group_id);
-    }
+    const { count } = await applyFilters(
+      supabase.from('items').select('id', { count: 'exact', head: true })
+    );
 
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
-
-    if (filters?.is_sales_item !== undefined) {
-      query = query.eq('is_sales_item', filters.is_sales_item);
-    }
-
-    if (filters?.is_purchase_item !== undefined) {
-      query = query.eq('is_purchase_item', filters.is_purchase_item);
-    }
-
-    if (filters?.is_stock_item !== undefined) {
-      query = query.eq('is_stock_item', filters.is_stock_item);
-    }
-
-    if (filters?.crop_type) {
-      query = query.eq('crop_type', filters.crop_type);
-    }
-
-    if (filters?.variety) {
-      query = query.eq('variety', filters.variety);
-    }
-
-    if (filters?.search) {
-      query = query.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
-    }
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('items').select(`*, item_group:item_groups(id, name, code, path)`));
+    query = query.order('item_code', { ascending: true }).range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -208,7 +190,7 @@ export class ItemsService {
       throw new BadRequestException(`Failed to fetch items: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   // =====================================================
