@@ -538,6 +538,13 @@ export class AnnualRecalibrationService {
     dto: StartCalibrationDto,
   ): Promise<CalibrationRecord> {
     const eligibility = await this.checkEligibility(parcelId, organizationId);
+
+    if (!eligibility.eligible) {
+      throw new BadRequestException(
+        "Annual recalibration is not eligible yet: record a harvest for the current season or wait until the annual date trigger.",
+      );
+    }
+
     const hasValidatedBaseline = await this.hasValidatedBaseline(
       parcelId,
       organizationId,
@@ -572,7 +579,23 @@ export class AnnualRecalibrationService {
     );
 
     const supabase = this.databaseService.getAdminClient();
-    const currentCalibrationData = this.toJsonObject(calibration.calibration_data);
+    const { data: latestCalibrationRow, error: latestCalibrationError } =
+      await supabase
+        .from("calibrations")
+        .select("calibration_data")
+        .eq("id", calibration.id)
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+
+    if (latestCalibrationError) {
+      throw new BadRequestException(
+        `Failed to load calibration for annual context merge: ${latestCalibrationError.message}`,
+      );
+    }
+
+    const currentCalibrationData = this.toJsonObject(
+      latestCalibrationRow?.calibration_data ?? calibration.calibration_data,
+    );
     const existingRecalibration = this.toJsonObject(
       currentCalibrationData.recalibration,
     );

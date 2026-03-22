@@ -16,7 +16,14 @@ const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
   disabled: ["downloading", "calibrating"],
   downloading: ["pret_calibrage", "disabled"],
   pret_calibrage: ["calibrating", "disabled"],
-  calibrating: ["awaiting_validation", "disabled"],
+  // Recovery after a failed run may return the parcel to the phase it had before calibrating.
+  calibrating: [
+    "awaiting_validation",
+    "disabled",
+    "active",
+    "awaiting_nutrition_option",
+    "pret_calibrage",
+  ],
   awaiting_validation: [
     "awaiting_nutrition_option",
     "active",
@@ -51,15 +58,23 @@ export class CalibrationStateMachine {
     }
 
     const supabase = this.databaseService.getAdminClient();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("parcels")
       .update({ ai_phase: toPhase })
       .eq("id", parcelId)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .eq("ai_phase", fromPhase)
+      .select("id");
 
     if (error) {
       throw new BadRequestException(
         `Failed to transition ai_phase: ${error.message}`,
+      );
+    }
+
+    if (!data?.length) {
+      throw new BadRequestException(
+        `ai_phase transition skipped: parcel is not in "${fromPhase}" (concurrent update or invalid state)`,
       );
     }
 

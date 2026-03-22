@@ -330,7 +330,19 @@ describe('CalibrationService', () => {
     const calibrationUpdateQuery = createMockQueryBuilder();
     calibrationUpdateQuery.update.mockReturnValue(calibrationUpdateQuery);
     calibrationUpdateQuery.eq.mockReturnValue(calibrationUpdateQuery);
-    setupThenableMock(calibrationUpdateQuery, null);
+    calibrationUpdateQuery.select.mockReturnValue(calibrationUpdateQuery);
+    let calibrationMaybeSingleCalls = 0;
+    calibrationUpdateQuery.maybeSingle.mockImplementation(async () => {
+      calibrationMaybeSingleCalls += 1;
+      if (calibrationMaybeSingleCalls === 1) {
+        return mockQueryResult({ status: 'in_progress' });
+      }
+      if (calibrationMaybeSingleCalls === 2) {
+        return mockQueryResult({ calibration_data: {} });
+      }
+      return mockQueryResult({ status: 'in_progress' });
+    });
+    setupThenableMock(calibrationUpdateQuery, [{ id: 'calibration-v2-001' }]);
 
     const parcelUpdateQuery = createMockQueryBuilder();
     parcelUpdateQuery.update.mockReturnValue(parcelUpdateQuery);

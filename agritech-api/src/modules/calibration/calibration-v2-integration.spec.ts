@@ -676,7 +676,7 @@ describe('Calibration V2 integration', () => {
     });
     query.maybeSingle.mockImplementation(async () => mockQueryResult(calibrationState));
 
-    setupThenableMock(query, null);
+    setupThenableMock(query, [{ id: calibrationId }]);
     return query;
   }
 

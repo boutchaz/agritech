@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { CalibrationStateMachine } from './calibration-state-machine';
 import {
   createMockDatabaseService,
@@ -21,7 +22,7 @@ describe('CalibrationStateMachine', () => {
     const parcelUpdateQuery = createMockQueryBuilder();
     parcelUpdateQuery.update.mockReturnValue(parcelUpdateQuery);
     parcelUpdateQuery.eq.mockReturnValue(parcelUpdateQuery);
-    setupThenableMock(parcelUpdateQuery, null);
+    setupThenableMock(parcelUpdateQuery, [{ id: parcelId }]);
 
     mockClient.from.mockImplementation((table: string) => {
       if (table === 'parcels') return parcelUpdateQuery;
@@ -32,6 +33,10 @@ describe('CalibrationStateMachine', () => {
       providers: [
         CalibrationStateMachine,
         { provide: DatabaseService, useValue: mockDatabaseService },
+        {
+          provide: NotificationsGateway,
+          useValue: { emitToOrganization: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -51,6 +56,9 @@ describe('CalibrationStateMachine', () => {
       ['disabled', 'calibrating'],
       ['calibrating', 'awaiting_validation'],
       ['calibrating', 'disabled'],
+      ['calibrating', 'active'],
+      ['calibrating', 'awaiting_nutrition_option'],
+      ['calibrating', 'pret_calibrage'],
       ['awaiting_validation', 'awaiting_nutrition_option'],
       ['awaiting_nutrition_option', 'active'],
       ['active', 'awaiting_nutrition_option'],

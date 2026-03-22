@@ -21,7 +21,7 @@ import { NotificationsGateway } from "../notifications/notifications.gateway";
 import { NotificationType } from "../notifications/dto/notification.dto";
 import { WeatherProvider } from "../chat/providers/weather.provider";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
-import { CalibrationStateMachine } from "./calibration-state-machine";
+import { CalibrationStateMachine, type AiPhase } from "./calibration-state-machine";
 import {
   NutritionOptionService,
   NutritionOptionSuggestion,
@@ -308,6 +308,9 @@ export class CalibrationService {
             variety: parcel.variety,
             planting_system: parcel.system,
           },
+          recovery: {
+            previous_ai_phase: previousPhase,
+          },
         },
       })
       .select("*")
@@ -483,6 +486,9 @@ export class CalibrationService {
             completed_at: baselineCalibration.completed_at,
           },
           updated_blocks: updatedBlocks,
+          recovery: {
+            previous_ai_phase: previousPhase,
+          },
         },
       })
       .select("*")
@@ -520,6 +526,106 @@ export class CalibrationService {
     return calibration as CalibrationRecord;
   }
 
+  private isRecoverableCalibrationPhase(value: string): value is AiPhase {
+    return (
+      value === "disabled" ||
+      value === "pret_calibrage" ||
+      value === "active" ||
+      value === "awaiting_validation" ||
+      value === "awaiting_nutrition_option"
+    );
+  }
+
+  private async markCalibrationRunFailedUnlessAlreadyTerminal(
+    calibrationId: string,
+    organizationId: string,
+    message: string,
+  ): Promise<boolean> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .update({
+        status: "failed",
+        error_message: message,
+      })
+      .eq("id", calibrationId)
+      .eq("organization_id", organizationId)
+      .eq("status", "in_progress")
+      .select("id");
+
+    if (error) {
+      this.logger.error(
+        `Failed to mark calibration ${calibrationId} as failed: ${error.message}`,
+      );
+      return false;
+    }
+
+    return Array.isArray(data) && data.length > 0;
+  }
+
+  private async restoreParcelPhaseAfterCalibrationFailure(
+    parcelId: string,
+    organizationId: string,
+    calibrationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: row, error } = await supabase
+      .from("calibrations")
+      .select("calibration_data")
+      .eq("id", calibrationId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(
+        `Could not load calibration ${calibrationId} for phase recovery: ${error.message}`,
+      );
+    }
+
+    const persistedCalibrationData = this.toJsonObject(row?.calibration_data);
+    const recovery = this.toJsonObject(persistedCalibrationData.recovery);
+    const rawPrevious =
+      typeof recovery.previous_ai_phase === "string"
+        ? recovery.previous_ai_phase
+        : null;
+    const targetPhase: AiPhase =
+      rawPrevious && this.isRecoverableCalibrationPhase(rawPrevious)
+        ? rawPrevious
+        : "disabled";
+
+    try {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "calibrating",
+        targetPhase,
+        organizationId,
+      );
+    } catch (phaseError) {
+      this.logger.warn(
+        `Phase recovery to ${targetPhase} after calibration failure failed for parcel ${parcelId}: ${phaseError instanceof Error ? phaseError.message : String(phaseError)}`,
+      );
+    }
+  }
+
+  private async assertCalibrationStillInProgressForRun(
+    calibrationId: string,
+    organizationId: string,
+  ): Promise<boolean> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .select("status")
+      .eq("id", calibrationId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (error || !data) {
+      return false;
+    }
+
+    return data.status === "in_progress";
+  }
+
   private async runCalibrationInBackground(
     calibrationId: string,
     parcelId: string,
@@ -527,8 +633,6 @@ export class CalibrationService {
     parcel: ParcelContext,
     dto: StartCalibrationDto,
   ): Promise<void> {
-    const supabase = this.databaseService.getAdminClient();
-
     try {
       await Promise.race([
         this.executeCalibration(
@@ -551,44 +655,49 @@ export class CalibrationService {
       const message = error instanceof Error ? error.message : "unknown error";
       this.logger.error(`Calibration ${calibrationId} failed: ${message}`);
 
-      await supabase
-        .from("calibrations")
-        .update({
-          status: "failed",
-          error_message: message,
-        })
-        .eq("id", calibrationId);
-
-      await this.stateMachine.transitionPhase(
-        parcelId,
-        "calibrating",
-        "disabled",
+      const markedFailed = await this.markCalibrationRunFailedUnlessAlreadyTerminal(
+        calibrationId,
         organizationId,
+        message,
       );
 
-      this.notificationsGateway.emitToOrganization(
-        organizationId,
-        "calibration:failed",
-        {
-          parcel_id: parcelId,
-          calibration_id: calibrationId,
-          error_message: message,
-        },
-      );
+      if (markedFailed) {
+        await this.restoreParcelPhaseAfterCalibrationFailure(
+          parcelId,
+          organizationId,
+          calibrationId,
+        );
+      } else {
+        this.logger.warn(
+          `Calibration ${calibrationId} failure handler skipped marking failed (run already completed or not in progress)`,
+        );
+      }
 
-      this.notifyOrganizationUsers(
-        organizationId,
-        NotificationType.CALIBRATION_FAILED,
-        "Calibration échouée",
-        "La calibration de la parcelle a échoué.",
-        {
-          parcel_id: parcelId,
-          calibration_id: calibrationId,
-          error_message: message,
-        },
-      ).catch((err) =>
-        this.logger.warn(`Failed to send calibration failure notification: ${err}`),
-      );
+      if (markedFailed) {
+        this.notificationsGateway.emitToOrganization(
+          organizationId,
+          "calibration:failed",
+          {
+            parcel_id: parcelId,
+            calibration_id: calibrationId,
+            error_message: message,
+          },
+        );
+
+        this.notifyOrganizationUsers(
+          organizationId,
+          NotificationType.CALIBRATION_FAILED,
+          "Calibration échouée",
+          "La calibration de la parcelle a échoué.",
+          {
+            parcel_id: parcelId,
+            calibration_id: calibrationId,
+            error_message: message,
+          },
+        ).catch((err) =>
+          this.logger.warn(`Failed to send calibration failure notification: ${err}`),
+        );
+      }
     }
   }
 
@@ -603,8 +712,6 @@ export class CalibrationService {
     updatedBlocks: Record<string, unknown>,
     previousBaseline: JsonObject,
   ): Promise<void> {
-    const supabase = this.databaseService.getAdminClient();
-
     try {
       await Promise.race([
         this.executePartialRecalibration(
@@ -631,48 +738,53 @@ export class CalibrationService {
       const message = error instanceof Error ? error.message : "unknown error";
       this.logger.error(`Partial recalibration ${calibrationId} failed: ${message}`);
 
-      await supabase
-        .from("calibrations")
-        .update({
-          status: "failed",
-          error_message: message,
-        })
-        .eq("id", calibrationId);
-
-      await this.stateMachine.transitionPhase(
-        parcelId,
-        "calibrating",
-        "disabled",
+      const markedFailed = await this.markCalibrationRunFailedUnlessAlreadyTerminal(
+        calibrationId,
         organizationId,
+        message,
       );
 
-      this.notificationsGateway.emitToOrganization(
-        organizationId,
-        "calibration:failed",
-        {
-          parcel_id: parcelId,
-          calibration_id: calibrationId,
-          error_message: message,
-        },
-      );
-
-      this.notifyOrganizationUsers(
-        organizationId,
-        NotificationType.CALIBRATION_FAILED,
-        "Recalibrage partiel échoué",
-        "Le recalibrage partiel de la parcelle a échoué.",
-        {
-          parcel_id: parcelId,
-          calibration_id: calibrationId,
-          error_message: message,
-          mode_calibrage: "partial",
-          recalibration_motif: motif,
-        },
-      ).catch((err) =>
+      if (markedFailed) {
+        await this.restoreParcelPhaseAfterCalibrationFailure(
+          parcelId,
+          organizationId,
+          calibrationId,
+        );
+      } else {
         this.logger.warn(
-          `Failed to send partial recalibration failure notification: ${err}`,
-        ),
-      );
+          `Partial recalibration ${calibrationId} failure handler skipped marking failed (run already completed or not in progress)`,
+        );
+      }
+
+      if (markedFailed) {
+        this.notificationsGateway.emitToOrganization(
+          organizationId,
+          "calibration:failed",
+          {
+            parcel_id: parcelId,
+            calibration_id: calibrationId,
+            error_message: message,
+          },
+        );
+
+        this.notifyOrganizationUsers(
+          organizationId,
+          NotificationType.CALIBRATION_FAILED,
+          "Recalibrage partiel échoué",
+          "Le recalibrage partiel de la parcelle a échoué.",
+          {
+            parcel_id: parcelId,
+            calibration_id: calibrationId,
+            error_message: message,
+            mode_calibrage: "partial",
+            recalibration_motif: motif,
+          },
+        ).catch((err) =>
+          this.logger.warn(
+            `Failed to send partial recalibration failure notification: ${err}`,
+          ),
+        );
+      }
     }
   }
 
@@ -769,10 +881,32 @@ export class CalibrationService {
 
     emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
 
+    const stillInProgressPartial = await this.assertCalibrationStillInProgressForRun(
+      calibrationId,
+      organizationId,
+    );
+    if (!stillInProgressPartial) {
+      this.logger.warn(
+        `Partial recalibration ${calibrationId} aborted before save (calibration no longer in_progress)`,
+      );
+      return;
+    }
+
+    const { data: existingPartialSnapshot } = await supabase
+      .from("calibrations")
+      .select("calibration_data")
+      .eq("id", calibrationId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+    const existingPartialData = this.toJsonObject(
+      existingPartialSnapshot?.calibration_data,
+    );
+
     const zoneClassification = this.deriveZoneClassification(v2Output);
     const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
     const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
+      ...existingPartialData,
       version: "v2",
       request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
       recalibration: {
@@ -802,41 +936,54 @@ export class CalibrationService {
         : {}),
     };
 
-    const { error: updateCalibrationError } = await supabase
-      .from("calibrations")
-      .update({
-        status: "completed",
-        completed_at: completedAt,
-        mode_calibrage: "partial",
-        recalibration_motif: motif,
-        previous_baseline: previousBaseline,
-        baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-        baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-        baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
-        confidence_score: confidenceScore,
-        zone_classification: zoneClassification,
-        phenology_stage: this.extractPhenologyStage(v2Output),
-        health_score: this.toNumber(v2Output.step8?.health_score?.total),
-        yield_potential_min: this.toNumber(
-          v2Output.step6?.yield_potential?.minimum,
-        ),
-        yield_potential_max: this.toNumber(
-          v2Output.step6?.yield_potential?.maximum,
-        ),
-        data_completeness_score: this.toNumber(v2Output.confidence?.total_score),
-        maturity_phase: v2Output.maturity_phase,
-        anomaly_count: Array.isArray(v2Output.step5?.anomalies)
-          ? v2Output.step5?.anomalies.length
-          : 0,
-        calibration_version: "v2",
-        calibration_data: calibrationData,
-      })
-      .eq("id", calibrationId);
+    const { data: partialCompletedRows, error: updateCalibrationError } =
+      await supabase
+        .from("calibrations")
+        .update({
+          status: "completed",
+          completed_at: completedAt,
+          mode_calibrage: "partial",
+          recalibration_motif: motif,
+          previous_baseline: previousBaseline,
+          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          confidence_score: confidenceScore,
+          zone_classification: zoneClassification,
+          phenology_stage: this.extractPhenologyStage(v2Output),
+          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          yield_potential_min: this.toNumber(
+            v2Output.step6?.yield_potential?.minimum,
+          ),
+          yield_potential_max: this.toNumber(
+            v2Output.step6?.yield_potential?.maximum,
+          ),
+          data_completeness_score: this.toNumber(
+            v2Output.confidence?.total_score,
+          ),
+          maturity_phase: v2Output.maturity_phase,
+          anomaly_count: Array.isArray(v2Output.step5?.anomalies)
+            ? v2Output.step5?.anomalies.length
+            : 0,
+          calibration_version: "v2",
+          calibration_data: calibrationData,
+        })
+        .eq("id", calibrationId)
+        .eq("organization_id", organizationId)
+        .eq("status", "in_progress")
+        .select("id");
 
     if (updateCalibrationError) {
       throw new Error(
         `Failed to update partial recalibration: ${updateCalibrationError.message}`,
       );
+    }
+
+    if (!partialCompletedRows?.length) {
+      this.logger.warn(
+        `Partial recalibration ${calibrationId} completion skipped (calibration no longer in_progress; likely timed out or failed concurrently)`,
+      );
+      return;
     }
 
     emitProgress(4, "ai_reports", "Génération des rapports d'analyse IA...");
@@ -885,7 +1032,9 @@ export class CalibrationService {
       const { error: aiUpdateError } = await supabase
         .from("calibrations")
         .update(bilingualUpdate)
-        .eq("id", calibrationId);
+        .eq("id", calibrationId)
+        .eq("organization_id", organizationId)
+        .eq("status", "completed");
 
       if (aiUpdateError) {
         this.logger.warn(
@@ -903,7 +1052,8 @@ export class CalibrationService {
         ai_enabled: true,
         ai_observation_only: observationMode.observationOnly,
       })
-      .eq("id", parcelId);
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
 
     if (updateParcelError) {
       throw new Error(
@@ -911,20 +1061,26 @@ export class CalibrationService {
       );
     }
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      "calibrating",
-      "awaiting_validation",
-      organizationId,
-    );
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      "awaiting_validation",
-      "active",
-      organizationId,
-    );
+    try {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "calibrating",
+        "awaiting_validation",
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "awaiting_validation",
+        "active",
+        organizationId,
+      );
 
-    await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
+      await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
+    } catch (phaseError) {
+      this.logger.warn(
+        `Partial recalibration ${calibrationId} phase transition or post-activation failed: ${phaseError instanceof Error ? phaseError.message : String(phaseError)}`,
+      );
+    }
 
     this.notifyOrganizationUsers(
       organizationId,
@@ -1143,6 +1299,17 @@ export class CalibrationService {
 
     emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
 
+    const stillInProgress = await this.assertCalibrationStillInProgressForRun(
+      calibrationId,
+      organizationId,
+    );
+    if (!stillInProgress) {
+      this.logger.warn(
+        `Calibration ${calibrationId} aborted before save (calibration no longer in_progress)`,
+      );
+      return;
+    }
+
     const mode = this.normalizeCalibrationMode(dto.mode_calibrage);
     const autoActivate = this.shouldAutoActivateAfterCompletion(
       parcel.aiPhase,
@@ -1152,6 +1319,7 @@ export class CalibrationService {
       .from("calibrations")
       .select("calibration_data")
       .eq("id", calibrationId)
+      .eq("organization_id", organizationId)
       .maybeSingle();
     const existingCalibrationData = this.toJsonObject(
       existingCalibrationSnapshot?.calibration_data,
@@ -1194,40 +1362,51 @@ export class CalibrationService {
         : {}),
     };
 
-    const { error: updateCalibrationError } = await supabase
-      .from("calibrations")
-      .update({
-        status: "completed",
-        completed_at: completedAt,
-        baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-        baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-        baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
-        confidence_score: confidenceScore,
-        zone_classification: zoneClassification,
-        phenology_stage: this.extractPhenologyStage(v2Output),
-        health_score: this.toNumber(v2Output.step8?.health_score?.total),
-        yield_potential_min: this.toNumber(
-          v2Output.step6?.yield_potential?.minimum,
-        ),
-        yield_potential_max: this.toNumber(
-          v2Output.step6?.yield_potential?.maximum,
-        ),
-        data_completeness_score: this.toNumber(
-          v2Output.confidence?.total_score,
-        ),
-        maturity_phase: v2Output.maturity_phase,
-        anomaly_count: Array.isArray(v2Output.step5?.anomalies)
-          ? v2Output.step5?.anomalies.length
-          : 0,
-        calibration_version: "v2",
-        calibration_data: calibrationData,
-      })
-      .eq("id", calibrationId);
+    const { data: completedRows, error: updateCalibrationError } =
+      await supabase
+        .from("calibrations")
+        .update({
+          status: "completed",
+          completed_at: completedAt,
+          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          confidence_score: confidenceScore,
+          zone_classification: zoneClassification,
+          phenology_stage: this.extractPhenologyStage(v2Output),
+          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          yield_potential_min: this.toNumber(
+            v2Output.step6?.yield_potential?.minimum,
+          ),
+          yield_potential_max: this.toNumber(
+            v2Output.step6?.yield_potential?.maximum,
+          ),
+          data_completeness_score: this.toNumber(
+            v2Output.confidence?.total_score,
+          ),
+          maturity_phase: v2Output.maturity_phase,
+          anomaly_count: Array.isArray(v2Output.step5?.anomalies)
+            ? v2Output.step5?.anomalies.length
+            : 0,
+          calibration_version: "v2",
+          calibration_data: calibrationData,
+        })
+        .eq("id", calibrationId)
+        .eq("organization_id", organizationId)
+        .eq("status", "in_progress")
+        .select("id");
 
     if (updateCalibrationError) {
       throw new Error(
         `Failed to update calibration: ${updateCalibrationError.message}`,
       );
+    }
+
+    if (!completedRows?.length) {
+      this.logger.warn(
+        `Calibration ${calibrationId} completion skipped (calibration no longer in_progress; likely timed out or failed concurrently)`,
+      );
+      return;
     }
 
     emitProgress(7, "ai_reports", "Génération des rapports d'analyse IA...");
@@ -1276,7 +1455,9 @@ export class CalibrationService {
       const { error: aiUpdateError } = await supabase
         .from("calibrations")
         .update(bilingualUpdate)
-        .eq("id", calibrationId);
+        .eq("id", calibrationId)
+        .eq("organization_id", organizationId)
+        .eq("status", "completed");
 
       if (aiUpdateError) {
         this.logger.warn(
@@ -1296,7 +1477,8 @@ export class CalibrationService {
     const { error: updateParcelError } = await supabase
       .from("parcels")
       .update(parcelUpdate)
-      .eq("id", parcelId);
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
 
     if (updateParcelError) {
       throw new Error(
@@ -1304,21 +1486,27 @@ export class CalibrationService {
       );
     }
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      "calibrating",
-      "awaiting_validation",
-      organizationId,
-    );
-
-    if (autoActivate) {
+    try {
       await this.stateMachine.transitionPhase(
         parcelId,
+        "calibrating",
         "awaiting_validation",
-        "active",
         organizationId,
       );
-      await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
+
+      if (autoActivate) {
+        await this.stateMachine.transitionPhase(
+          parcelId,
+          "awaiting_validation",
+          "active",
+          organizationId,
+        );
+        await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
+      }
+    } catch (phaseError) {
+      this.logger.warn(
+        `Calibration ${calibrationId} phase transition or post-activation failed: ${phaseError instanceof Error ? phaseError.message : String(phaseError)}`,
+      );
     }
 
     this.notifyOrganizationUsers(
@@ -1783,12 +1971,20 @@ export class CalibrationService {
       );
     }
 
+    const confidenceScoreAtValidation = this.toNumber(
+      existingCalibration.confidence_score,
+    );
     const validatedAt = new Date().toISOString();
     const calibrationData = {
       ...this.toJsonObject(existingCalibration.calibration_data),
       validation: {
         validated: true,
         validated_at: validatedAt,
+        activation_mode:
+          confidenceScoreAtValidation !== null &&
+          confidenceScoreAtValidation < MINIMUM_CONFIDENCE_FOR_ACTIVE
+            ? "observation_only"
+            : "pending_nutrition",
       },
     };
 
@@ -1818,14 +2014,12 @@ export class CalibrationService {
       );
     }
 
-    const confidenceScore = this.toNumber(updatedCalibration.confidence_score);
-
     if (
-      confidenceScore !== null &&
-      confidenceScore < MINIMUM_CONFIDENCE_FOR_ACTIVE
+      confidenceScoreAtValidation !== null &&
+      confidenceScoreAtValidation < MINIMUM_CONFIDENCE_FOR_ACTIVE
     ) {
       this.logger.warn(
-        `Calibration ${calibrationId} confidence ${confidenceScore} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
+        `Calibration ${calibrationId} confidence ${confidenceScoreAtValidation} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
       );
 
       await this.stateMachine.transitionPhase(
@@ -1838,10 +2032,12 @@ export class CalibrationService {
       await supabase
         .from("parcels")
         .update({ ai_enabled: true, ai_observation_only: true })
-        .eq("id", existingCalibration.parcel_id);
+        .eq("id", existingCalibration.parcel_id)
+        .eq("organization_id", organizationId);
 
-      const observationReason = `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
+      const observationReason = `Confidence score (${Math.round(confidenceScoreAtValidation * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
       const currentData = this.toJsonObject(updatedCalibration.calibration_data);
+      const prevValidation = this.toJsonObject(currentData.validation);
 
       await supabase
         .from("calibrations")
@@ -1850,6 +2046,11 @@ export class CalibrationService {
             ...currentData,
             observation_only: true,
             observation_reason: observationReason,
+            validation: {
+              ...prevValidation,
+              validated: true,
+              activation_mode: "observation_only",
+            },
           },
         })
         .eq("id", calibrationId)
@@ -1919,7 +2120,8 @@ export class CalibrationService {
     const { error: updateParcelError } = await supabase
       .from("parcels")
       .update({ ai_nutrition_option: option, ai_enabled: true, ai_observation_only: false })
-      .eq("id", calibration.parcel_id);
+      .eq("id", calibration.parcel_id)
+      .eq("organization_id", organizationId);
 
     if (updateParcelError) {
       throw new BadRequestException(

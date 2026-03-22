@@ -20,6 +20,10 @@ import { CalibrationService } from './calibration.service';
 import { CalibrationStateMachine } from './calibration-state-machine';
 import { NutritionOptionService } from './nutrition-option.service';
 import { AIReportsService } from '../ai-reports/ai-reports.service';
+import { AnnualPlanService } from '../annual-plan/annual-plan.service';
+import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const mockStateMachine = {
   transitionPhase: jest.fn(),
@@ -31,6 +35,22 @@ const mockNutritionOptionService = {
 
 const mockAIReportsService = {
   generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
+};
+
+const mockAnnualPlanService = {
+  ensurePlan: jest.fn(),
+};
+
+const mockSatelliteCacheService = {
+  syncParcelSatelliteData: jest.fn(),
+};
+
+const mockNotificationsService = {
+  createNotification: jest.fn(),
+};
+
+const mockNotificationsGateway = {
+  emitToOrganization: jest.fn(),
 };
 
 describe('Calibration integration', () => {
@@ -57,6 +77,10 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: AIReportsService, useValue: mockAIReportsService },
+        { provide: AnnualPlanService, useValue: mockAnnualPlanService },
+        { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: NotificationsGateway, useValue: mockNotificationsGateway },
         AiDiagnosticsService,
         AiAlertsService,
         { provide: DatabaseService, useValue: mockDatabaseService },
@@ -149,6 +173,7 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
       mockQueryResult({
         id: parcelId,
         crop_type: agromindCalibrationFixture.parcel.crop_type,
+        ai_phase: 'active',
         farms: { organization_id: organizationId },
       }),
     );
