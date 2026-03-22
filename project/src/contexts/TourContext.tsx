@@ -100,8 +100,6 @@ const tourStyles = {
 // Custom Tooltip component for translated step counter
 interface CustomTooltipProps extends TooltipRenderProps {
   t: TFunction;
-  onDismiss?: (tourId: TourId) => void;
-  currentTourId?: TourId | null;
 }
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({
@@ -116,8 +114,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   tooltipProps,
   isLastStep,
   t,
-  onDismiss,
-  currentTourId,
 }) => {
   // Detect mobile for responsive styling
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -190,12 +186,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
             )}
             <button
               {...skipProps}
-              onClick={(e) => {
-                if (onDismiss && currentTourId) {
-                  onDismiss(currentTourId);
-                }
-                skipProps.onClick(e);
-              }}
+              onClick={skipProps.onClick}
               style={{
                 padding: '0.5rem 0.75rem',
                 backgroundColor: 'transparent',
@@ -715,7 +706,7 @@ const setLocalStorageTours = (completed: TourId[], dismissed: TourId[]) => {
   }
 };
 
-const isStale = (): boolean => {
+const _isStale = (): boolean => {
   try {
     const lastSync = localStorage.getItem(LAST_SYNC_KEY);
     if (!lastSync) return true;
@@ -730,9 +721,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasFeature } = useExperienceLevel();
+  const { hasFeature: _hasFeature } = useExperienceLevel();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const loadRequestIdRef = useRef(0);
+  const mutationVersionRef = useRef(0);
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     dismissedTours: [],
@@ -751,10 +743,8 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     loadTourPreferences();
 
     return () => {
-      // Cleanup: abort any pending requests
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      // Invalidate any in-flight preference load for the previous user/render.
+      loadRequestIdRef.current += 1;
     };
   }, [user?.id]);
 
@@ -775,6 +765,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       return;
     }
 
+    const requestId = ++loadRequestIdRef.current;
+    const mutationVersionAtRequestStart = mutationVersionRef.current;
+
     // Start loading
     setTourState(prev => ({
       ...prev,
@@ -788,6 +781,13 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       const preferences = await retryTourApiCall(
         () => tourPreferencesApi.getTourPreferences()
       );
+
+      if (
+        requestId !== loadRequestIdRef.current
+        || mutationVersionAtRequestStart !== mutationVersionRef.current
+      ) {
+        return;
+      }
 
       // Update state and localStorage with backend data
       setTourState(prev => ({
@@ -809,6 +809,13 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load tour preferences';
       console.error('[TourContext] Failed to load from backend, using localStorage fallback:', errorMessage);
 
+      if (
+        requestId !== loadRequestIdRef.current
+        || mutationVersionAtRequestStart !== mutationVersionRef.current
+      ) {
+        return;
+      }
+
       // Fall back to localStorage
       const local = getLocalStorageTours();
       setTourState(prev => ({
@@ -826,6 +833,8 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
    * Save completed tours to backend with localStorage fallback
    */
   const saveCompletedTours = async (tours: TourId[]): Promise<boolean> => {
+    const mutationVersion = ++mutationVersionRef.current;
+
     // Always update localStorage immediately for responsiveness
     setLocalStorageTours(tours, tourState.dismissedTours);
 
@@ -840,6 +849,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         () => tourPreferencesApi.updateTourPreferences({ completed_tours: tours })
       );
 
+      if (mutationVersion !== mutationVersionRef.current) {
+        return true;
+      }
+
       setTourState(prev => ({
         ...prev,
         syncStatus: 'synced',
@@ -850,6 +863,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save completed tours';
       console.error('[TourContext] Failed to save completed tours:', errorMessage);
+
+      if (mutationVersion !== mutationVersionRef.current) {
+        return false;
+      }
 
       setTourState(prev => ({
         ...prev,
@@ -865,7 +882,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   /**
    * Save dismissed tours to backend with localStorage fallback
    */
-  const saveDismissedTours = async (tours: TourId[]): Promise<boolean> => {
+  const _saveDismissedTours = async (tours: TourId[]): Promise<boolean> => {
+    const mutationVersion = ++mutationVersionRef.current;
+
     // Always update localStorage immediately for responsiveness
     setLocalStorageTours(tourState.completedTours, tours);
 
@@ -880,6 +899,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         () => tourPreferencesApi.updateTourPreferences({ dismissed_tours: tours })
       );
 
+      if (mutationVersion !== mutationVersionRef.current) {
+        return true;
+      }
+
       setTourState(prev => ({
         ...prev,
         syncStatus: 'synced',
@@ -890,6 +913,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save dismissed tours';
       console.error('[TourContext] Failed to save dismissed tours:', errorMessage);
+
+      if (mutationVersion !== mutationVersionRef.current) {
+        return false;
+      }
 
       setTourState(prev => ({
         ...prev,
@@ -963,6 +990,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     if (tourState.dismissedTours.includes(tourId)) return;
 
     const newDismissed = [...tourState.dismissedTours, tourId];
+    const mutationVersion = ++mutationVersionRef.current;
 
     // Optimistically update state
     setTourState(prev => ({
@@ -984,6 +1012,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           () => tourPreferencesApi.dismissTour(tourId)
         );
 
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
+
         // Update state with backend response to ensure consistency
         setTourState(prev => ({
           ...prev,
@@ -1002,6 +1034,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to dismiss tour';
         console.error('[TourContext] Failed to sync dismiss to backend:', errorMessage);
+
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
 
         setTourState(prev => ({
           ...prev,
@@ -1080,6 +1116,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const resetTour = useCallback(async (tourId: TourId) => {
     const newCompletedTours = tourState.completedTours.filter(t => t !== tourId);
     const newDismissedTours = tourState.dismissedTours.filter(t => t !== tourId);
+    const mutationVersion = ++mutationVersionRef.current;
 
     // Optimistically update state
     setTourState(prev => ({
@@ -1099,6 +1136,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           () => tourPreferencesApi.resetTour(tourId)
         );
 
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
+
         setTourState(prev => ({
           ...prev,
           completedTours: result.completed_tours as TourId[],
@@ -1116,6 +1157,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         const errorMessage = error instanceof Error ? error.message : 'Failed to reset tour';
         console.error('[TourContext] Failed to sync reset to backend:', errorMessage);
 
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
+
         setTourState(prev => ({
           ...prev,
           syncStatus: 'error',
@@ -1129,6 +1174,8 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
    * Reset all tours - clear all completed and dismissed
    */
   const resetAllTours = useCallback(async () => {
+    const mutationVersion = ++mutationVersionRef.current;
+
     // Optimistically update state
     setTourState(prev => ({
       ...prev,
@@ -1147,6 +1194,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           () => tourPreferencesApi.resetAllTours()
         );
 
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
+
         setTourState(prev => ({
           ...prev,
           completedTours: result.completed_tours as TourId[],
@@ -1163,6 +1214,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Failed to reset all tours';
         console.error('[TourContext] Failed to sync reset-all to backend:', errorMessage);
+
+        if (mutationVersion !== mutationVersionRef.current) {
+          return;
+        }
 
         setTourState(prev => ({
           ...prev,
@@ -1227,8 +1282,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
             <CustomTooltip
               {...props}
               t={t}
-              onDismiss={dismissTour}
-              currentTourId={tourState.currentTour}
             />
           )}
           floaterProps={{

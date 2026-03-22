@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, AlertCircle, CloudOff, Cloud } from 'lucide-react';
+import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, CloudOff, Cloud } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -112,10 +112,10 @@ export const TourHelpButton: React.FC = () => {
   const {
     startTour,
     isTourCompleted,
+    isTourDismissed,
     resetTour,
     resetAllTours,
     isRunning,
-    dismissedTours,
     isLoading,
     syncStatus,
     lastSyncError,
@@ -216,6 +216,8 @@ export const TourHelpButton: React.FC = () => {
               </div>
             ) : tours.map((tour) => {
               const completed = isTourCompleted(tour.id);
+              const dismissed = isTourDismissed(tour.id);
+              const showReset = completed || dismissed;
               
               return (
                 <button
@@ -223,12 +225,24 @@ export const TourHelpButton: React.FC = () => {
                   onClick={() => handleStartTour(tour.id)}
                   className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
                 >
-                  <div className={`p-2 rounded-lg ${completed ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className={`p-2 rounded-lg ${
+                    completed
+                      ? 'bg-emerald-100 text-emerald-600'
+                      : dismissed
+                        ? 'bg-amber-100 text-amber-600'
+                        : 'bg-gray-100 text-gray-600'
+                  }`}>
                     {completed ? <Check className="h-4 w-4" /> : tour.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`font-medium ${completed ? 'text-emerald-700' : 'text-gray-800'}`}>
+                      <span className={`font-medium ${
+                        completed
+                          ? 'text-emerald-700'
+                          : dismissed
+                            ? 'text-amber-700'
+                            : 'text-gray-800'
+                      }`}>
                         {tour.title}
                       </span>
                       {completed && (
@@ -236,11 +250,16 @@ export const TourHelpButton: React.FC = () => {
                           {t('helpCenter.completed')}
                         </span>
                       )}
+                      {!completed && dismissed && (
+                        <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                          {t('helpCenter.dismissed', 'Dismissed')}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-500 truncate">{tour.description}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    {completed && (
+                    {showReset && (
                       <button
                         onClick={(e) => handleResetTour(e, tour.id)}
                         className="p-1 hover:bg-gray-200 rounded transition-colors"
