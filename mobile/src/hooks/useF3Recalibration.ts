@@ -1,4 +1,4 @@
-// Annual (F3) Recalibration Hooks for Mobile App
+// Annual recalibration hooks for Mobile App
 // Adapted from web: project/src/hooks/useAnnualRecalibration.ts
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +16,7 @@ export const annualCalibrationKeys = {
 };
 
 // Check annual recalibration eligibility
-export function useF3Eligibility(parcelId: string) {
+export function useAnnualEligibility(parcelId: string) {
   const orgId = useAuthStore((s) => s.currentOrganization?.id);
 
   return useQuery({
@@ -26,6 +26,8 @@ export function useF3Eligibility(parcelId: string) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
+
+export const useF3Eligibility = useAnnualEligibility;
 
 // Get missing tasks for annual recalibration
 export function useAnnualMissingTasks(parcelId: string) {
@@ -64,7 +66,7 @@ export function useAnnualCampaignBilan(parcelId: string) {
 }
 
 // Start annual recalibration mutation
-export function useStartF3Recalibration(parcelId: string) {
+export function useStartAnnualRecalibration(parcelId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -81,3 +83,5 @@ export function useStartF3Recalibration(parcelId: string) {
     },
   });
 }
+
+export const useStartF3Recalibration = useStartAnnualRecalibration;

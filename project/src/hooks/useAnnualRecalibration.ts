@@ -6,6 +6,7 @@ import {
   type AnnualCampaignBilanResponse,
   type AnnualEligibilityResponse,
   type AnnualMissingTask,
+  type AnnualMissingTaskResolution,
   type AnnualNewAnalysesResponse,
 } from '@/lib/api/calibration-v2';
 import { queryKeys } from '@/lib/query-keys';
@@ -127,6 +128,69 @@ export function useStartAnnualRecalibration(parcelId: string) {
         error instanceof Error
           ? error.message
           : 'Echec du lancement du recalibrage annuel',
+      );
+    },
+  });
+}
+
+export function useResolveAnnualMissingTasks(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (resolutions: AnnualMissingTaskResolution[]) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return calibrationV2Api.resolveAnnualMissingTasks(
+        parcelId,
+        resolutions,
+        currentOrganization.id,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.annual.missingTasks(parcelId, currentOrganization?.id),
+      });
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Echec de l enregistrement des taches annuelles',
+      );
+    },
+  });
+}
+
+export function useSnoozeAnnualReminder(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (days: number) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return calibrationV2Api.snoozeAnnualReminder(
+        parcelId,
+        days,
+        currentOrganization.id,
+      );
+    },
+    onSuccess: (_data, days) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.annual.eligibility(parcelId, currentOrganization?.id),
+      });
+      toast.success(`Rappel programme dans ${days} jour(s).`);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Echec du report du rappel annuel',
       );
     },
   });

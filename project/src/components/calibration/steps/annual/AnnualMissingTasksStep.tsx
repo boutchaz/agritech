@@ -1,8 +1,8 @@
-import { CheckCircle2, ClipboardList, Droplets, Leaf, Scissors, ShieldAlert } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { CheckCircle2, ClipboardList, Droplets, Leaf, Loader2, Scissors, ShieldAlert } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { useAnnualMissingTasks } from '@/hooks/useAnnualRecalibration';
+import { useAnnualMissingTasks, useResolveAnnualMissingTasks } from '@/hooks/useAnnualRecalibration';
 
 interface AnnualMissingTasksStepProps {
   parcelId: string;
@@ -39,21 +39,95 @@ function statusLabel(resolution: TaskResolution): string {
 
 export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTasksStepProps) {
   const { data: missingTasks, isLoading } = useAnnualMissingTasks(parcelId);
+  const resolveMissingTasks = useResolveAnnualMissingTasks(parcelId);
   const [taskStates, setTaskStates] = useState<Record<string, TaskResolution>>({});
   const [quickEntryNotes, setQuickEntryNotes] = useState<Record<string, string>>({});
   const [quickEntryDates, setQuickEntryDates] = useState<Record<string, string>>({});
 
   const tasks = missingTasks ?? [];
 
+  useEffect(() => {
+    if (tasks.length === 0) {
+      return;
+    }
+
+    setTaskStates((previous) => {
+      const nextState = { ...previous };
+      for (const task of tasks) {
+        if (previous[task.task_id]) {
+          continue;
+        }
+
+        if (task.current_resolution === 'completed') {
+          nextState[task.task_id] = 'completed';
+        } else if (task.current_resolution === 'not_done') {
+          nextState[task.task_id] = 'not-done';
+        } else if (task.current_resolution === 'unconfirmed') {
+          nextState[task.task_id] = 'unconfirmed';
+        }
+      }
+      return nextState;
+    });
+
+    setQuickEntryNotes((previous) => {
+      const nextState = { ...previous };
+      for (const task of tasks) {
+        if (!nextState[task.task_id] && task.resolution_notes) {
+          nextState[task.task_id] = task.resolution_notes;
+        }
+      }
+      return nextState;
+    });
+
+    setQuickEntryDates((previous) => {
+      const nextState = { ...previous };
+      for (const task of tasks) {
+        if (!nextState[task.task_id] && task.resolution_date) {
+          nextState[task.task_id] = task.resolution_date;
+        }
+      }
+      return nextState;
+    });
+  }, [tasks]);
+
   const allResolved = useMemo(
     () =>
       tasks.every((task) => {
-        const key = `${task.task_type}-${task.period}`;
-        const state = taskStates[key] ?? 'pending';
+        const state = taskStates[task.task_id] ?? 'pending';
         return state === 'completed' || state === 'not-done' || state === 'unconfirmed';
       }),
     [taskStates, tasks],
   );
+
+  const persistResolutions = async (nextStates?: Record<string, TaskResolution>) => {
+    const source = nextStates ?? taskStates;
+    const resolutions = tasks.flatMap((task) => {
+      const state = source[task.task_id] ?? 'pending';
+      if (state === 'pending' || state === 'quick-entry') {
+        return [];
+      }
+
+      return [
+        {
+          task_id: task.task_id,
+          resolution:
+            state === 'completed'
+              ? 'completed'
+              : state === 'not-done'
+                ? 'not_done'
+                : 'unconfirmed',
+          execution_date: quickEntryDates[task.task_id] || undefined,
+          notes: quickEntryNotes[task.task_id] || undefined,
+        },
+      ];
+    });
+
+    if (resolutions.length === 0) {
+      return;
+    }
+
+    await resolveMissingTasks.mutateAsync(resolutions);
+  };
 
   if (isLoading) {
     return (
@@ -89,7 +163,7 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
 
       <div className="space-y-3">
         {tasks.map((task) => {
-          const taskKey = `${task.task_type}-${task.period}`;
+          const taskKey = task.task_id;
           const state = taskStates[taskKey] ?? 'pending';
           const isQuickEntryOpen = state === 'quick-entry';
 
@@ -190,26 +264,39 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
         <Button
           type="button"
           variant="outline"
-          onClick={() => {
+          onClick={async () => {
             const allUnconfirmed = tasks.reduce<Record<string, TaskResolution>>((accumulator, task) => {
-              accumulator[`${task.task_type}-${task.period}`] = 'unconfirmed';
+              accumulator[task.task_id] = 'unconfirmed';
               return accumulator;
             }, {});
 
-            setTaskStates((previous) => ({ ...previous, ...allUnconfirmed }));
+            const nextState = { ...taskStates, ...allUnconfirmed };
+            setTaskStates(nextState);
+            await persistResolutions(nextState);
             onContinue();
           }}
+          disabled={resolveMissingTasks.isPending}
         >
           Ignorer et continuer
         </Button>
 
         <Button
           type="button"
-          onClick={onContinue}
-          disabled={!allResolved}
+          onClick={async () => {
+            await persistResolutions();
+            onContinue();
+          }}
+          disabled={!allResolved || resolveMissingTasks.isPending}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          Continuer
+          {resolveMissingTasks.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Enregistrement...
+            </>
+          ) : (
+            'Continuer'
+          )}
         </Button>
       </div>
     </div>

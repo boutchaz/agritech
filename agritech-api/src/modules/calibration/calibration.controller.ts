@@ -22,6 +22,8 @@ import { CalibrationService } from "./calibration.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
+import { AnnualSnoozeDto } from "./dto/annual-snooze.dto";
+import { ResolveAnnualMissingTasksDto } from "./dto/resolve-annual-missing-tasks.dto";
 
 @ApiTags("calibration")
 @ApiBearerAuth()
@@ -284,6 +286,22 @@ export class CalibrationController {
     return this.annualRecalibrationService.detectMissingTasks(parcelId, organizationId);
   }
 
+  @Post("annual/missing-tasks/resolve")
+  @ApiOperation({ summary: "Persist annual missing-task review decisions" })
+  @ApiResponse({ status: 200, description: "Missing task review saved" })
+  async resolveMissingTasks(
+    @Param("parcelId") parcelId: string,
+    @Body() dto: ResolveAnnualMissingTasksDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.annualRecalibrationService.saveMissingTaskReview(
+      parcelId,
+      organizationId,
+      dto.resolutions,
+    );
+  }
+
   @Get("annual/new-analyses")
   @ApiOperation({ summary: "Check analyses created since latest calibration" })
   @ApiResponse({ status: 200, description: "New analyses availability checked" })
@@ -340,6 +358,22 @@ export class CalibrationController {
       parcelId,
       organizationId,
       dto,
+    );
+  }
+
+  @Post("annual/snooze")
+  @ApiOperation({ summary: "Snooze the annual recalibration reminder" })
+  @ApiResponse({ status: 200, description: "Annual reminder snoozed" })
+  async snoozeAnnualRecalibration(
+    @Param("parcelId") parcelId: string,
+    @Body() dto: AnnualSnoozeDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.annualRecalibrationService.snoozeAnnualReminder(
+      parcelId,
+      organizationId,
+      dto.days ?? 7,
     );
   }
 

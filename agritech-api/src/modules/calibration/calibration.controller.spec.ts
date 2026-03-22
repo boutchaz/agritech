@@ -2,11 +2,12 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CalibrationController } from './calibration.controller';
 import { CalibrationService } from './calibration.service';
+import { AnnualRecalibrationService } from './annual-recalibration.service';
 import { StartCalibrationDto } from './dto/start-calibration.dto';
 import { Request } from 'express';
 
 const mockCalibrationService = {
-  startCalibrationV2: jest.fn(),
+  startCalibration: jest.fn(),
   getLatestCalibration: jest.fn(),
   getCalibrationReport: jest.fn(),
   validateCalibration: jest.fn(),
@@ -14,6 +15,16 @@ const mockCalibrationService = {
   confirmNutritionOption: jest.fn(),
   getPercentiles: jest.fn(),
   getZones: jest.fn(),
+};
+
+const mockAnnualRecalibrationService = {
+  checkEligibility: jest.fn(),
+  detectMissingTasks: jest.fn(),
+  saveMissingTaskReview: jest.fn(),
+  checkNewAnalyses: jest.fn(),
+  generateCampaignBilan: jest.fn(),
+  startAnnualRecalibration: jest.fn(),
+  snoozeAnnualReminder: jest.fn(),
 };
 
 function makeRequest(parcelId: string, organizationId?: string): Request {
@@ -36,6 +47,10 @@ describe('CalibrationController', () => {
       controllers: [CalibrationController],
       providers: [
         { provide: CalibrationService, useValue: mockCalibrationService },
+        {
+          provide: AnnualRecalibrationService,
+          useValue: mockAnnualRecalibrationService,
+        },
       ],
     })
       .overrideGuard(require('../auth/guards/jwt-auth.guard').JwtAuthGuard)
@@ -47,16 +62,16 @@ describe('CalibrationController', () => {
     controller = module.get<CalibrationController>(CalibrationController);
   });
 
-  describe('startCalibrationV2', () => {
-    it('calls service.startCalibrationV2 with parcelId, organizationId, and dto', async () => {
+  describe('startCalibration', () => {
+    it('calls service.startCalibration with parcelId, organizationId, and dto', async () => {
       const dto: StartCalibrationDto = {};
       const serviceResult = { id: 'cal-v2-001', parcel_id: parcelId, status: 'in_progress' };
-      mockCalibrationService.startCalibrationV2.mockResolvedValue(serviceResult);
+      mockCalibrationService.startCalibration.mockResolvedValue(serviceResult);
 
       const req = makeRequest(parcelId, organizationId);
-      const result = await controller.startCalibrationV2(parcelId, dto, req);
+      const result = await controller.startCalibration(parcelId, dto, req);
 
-      expect(mockCalibrationService.startCalibrationV2).toHaveBeenCalledWith(
+      expect(mockCalibrationService.startCalibration).toHaveBeenCalledWith(
         parcelId,
         organizationId,
         dto,
@@ -327,6 +342,52 @@ describe('CalibrationController', () => {
         'org-001',
       );
       expect(result).toEqual(serviceResult);
+    });
+  });
+
+  describe('annual recalibration endpoints', () => {
+    it('persists missing task review decisions', async () => {
+      const payload = {
+        reviewed_at: '2026-03-22T10:00:00.000Z',
+        resolutions: [{ task_id: 'task-1', resolution: 'completed' }],
+      };
+      mockAnnualRecalibrationService.saveMissingTaskReview.mockResolvedValue(payload);
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.resolveMissingTasks(
+        parcelId,
+        { resolutions: [{ task_id: 'task-1', resolution: 'completed' }] },
+        req,
+      );
+
+      expect(mockAnnualRecalibrationService.saveMissingTaskReview).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+        [{ task_id: 'task-1', resolution: 'completed' }],
+      );
+      expect(result).toEqual(payload);
+    });
+
+    it('snoozes the annual reminder', async () => {
+      mockAnnualRecalibrationService.snoozeAnnualReminder.mockResolvedValue({
+        snoozed_until: '2026-03-29T10:00:00.000Z',
+      });
+
+      const req = makeRequest(parcelId, organizationId);
+      const result = await controller.snoozeAnnualRecalibration(
+        parcelId,
+        { days: 7 },
+        req,
+      );
+
+      expect(mockAnnualRecalibrationService.snoozeAnnualReminder).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+        7,
+      );
+      expect(result).toEqual({
+        snoozed_until: '2026-03-29T10:00:00.000Z',
+      });
     });
   });
 });

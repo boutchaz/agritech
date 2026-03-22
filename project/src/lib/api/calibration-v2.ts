@@ -60,16 +60,30 @@ export interface AnnualEligibilityResponse {
 }
 
 export interface AnnualMissingTask {
+  task_id: string;
   task_type: string;
   period: string;
   message: string;
   action: "quick_entry" | "confirm_not_done" | "ignore";
+  current_resolution?: "completed" | "not_done" | "unconfirmed";
+  resolution_date?: string;
+  resolution_notes?: string;
 }
 
 export interface AnnualNewAnalysesResponse {
   new_soil: boolean;
   new_water: boolean;
   new_foliar: boolean;
+  soil_date?: string;
+  water_date?: string;
+  foliar_date?: string;
+}
+
+export interface AnnualMissingTaskResolution {
+  task_id: string;
+  resolution: "completed" | "not_done" | "unconfirmed";
+  execution_date?: string;
+  notes?: string;
 }
 
 export interface AnnualCampaignBilanResponse {
@@ -266,6 +280,22 @@ export const calibrationV2Api = {
     );
   },
 
+  async resolveAnnualMissingTasks(
+    parcelId: string,
+    resolutions: AnnualMissingTaskResolution[],
+    organizationId?: string,
+  ): Promise<{
+    reviewed_at: string;
+    resolutions: AnnualMissingTaskResolution[];
+  }> {
+    return apiClient.post(
+      `${BASE_URL}/${parcelId}/calibration/annual/missing-tasks/resolve`,
+      { resolutions },
+      {},
+      organizationId,
+    );
+  },
+
   async checkAnnualNewAnalyses(
     parcelId: string,
     organizationId?: string,
@@ -296,6 +326,19 @@ export const calibrationV2Api = {
     return apiClient.post<CalibrationStatusRecord>(
       `${BASE_URL}/${parcelId}/calibration/annual/start`,
       dto,
+      {},
+      organizationId,
+    );
+  },
+
+  async snoozeAnnualReminder(
+    parcelId: string,
+    days: number,
+    organizationId?: string,
+  ): Promise<{ snoozed_until: string }> {
+    return apiClient.post(
+      `${BASE_URL}/${parcelId}/calibration/annual/snooze`,
+      { days },
       {},
       organizationId,
     );

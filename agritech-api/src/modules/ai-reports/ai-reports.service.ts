@@ -1236,12 +1236,233 @@ export class AIReportsService {
   }
 
   private async aggregateOperationalData(
-    _organizationId: string,
-    _parcelId: string,
-    _startDate?: string,
-    _endDate?: string,
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
   ): Promise<ParcelOperationalInput> {
-    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+    const baseData = await this.aggregateParcelData(
+      organizationId,
+      parcelId,
+      startDate,
+      endDate,
+    );
+    const supabase = this.databaseService.getAdminClient();
+    const { defaultStartDate, defaultEndDate } = this.getDefaultDateRange(startDate, endDate);
+
+    const { data: parcel } = await supabase
+      .from('parcels')
+      .select(
+        'id, name, area, area_unit, crop_type, tree_type, variety, rootstock, planting_year, tree_count, planting_system, planting_density, soil_type, irrigation_type, water_source, ai_nutrition_option',
+      )
+      .eq('id', parcelId)
+      .single();
+
+    if (!parcel) {
+      throw new BadRequestException('Parcel not found');
+    }
+
+    const { data: calibration } = await supabase
+      .from('calibrations')
+      .select(
+        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+      )
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!calibration) {
+      throw new BadRequestException(
+        'No completed calibration found - recommendations require calibration first',
+      );
+    }
+
+    const calibrationData =
+      calibration.calibration_data &&
+      typeof calibration.calibration_data === 'object' &&
+      !Array.isArray(calibration.calibration_data)
+        ? (calibration.calibration_data as Record<string, unknown>)
+        : {};
+    const calibrationOutput = this.extractCalibrationOutput(calibrationData);
+    const aiAnalysis = this.extractAiAnalysis(calibrationData);
+    const baselinePercentiles = this.extractCalibrationPercentiles(calibrationOutput);
+
+    const indices = ['NDVI', 'NIRV', 'NIRVP', 'NDMI', 'NDRE', 'MSI', 'EVI', 'MSAVI', 'GCI'];
+    const { data: satelliteSeries } = await supabase
+      .from('satellite_indices_data')
+      .select('date, index_name, mean_value, cloud_coverage_percentage')
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .in('index_name', indices)
+      .order('date', { ascending: false });
+
+    const { data: weatherRows } = await supabase
+      .from('weather_daily_data')
+      .select(
+        'date, temperature_min, temperature_max, temperature_mean, relative_humidity_mean, wind_speed_max, precipitation_sum, et0_fao_evapotranspiration, gdd_olivier, gdd_agrumes, gdd_avocatier, gdd_palmier_dattier, chill_hours',
+      )
+      .eq('parcel_id', parcelId)
+      .gte('date', defaultStartDate)
+      .lte('date', defaultEndDate)
+      .order('date', { ascending: true });
+
+    const { data: recentTasks } = await supabase
+      .from('tasks')
+      .select('created_at, due_date, task_type, title, description, notes')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const { data: activeRecommendations } = await supabase
+      .from('ai_recommendations')
+      .select('status, action, created_at, valid_until, alert_code')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .in('status', ['pending', 'validated'])
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    const currentSatellite = this.buildCurrentSatelliteData(
+      (satelliteSeries ?? []) as Array<{
+        date: string;
+        index_name: string;
+        mean_value: number | string | null;
+        cloud_coverage_percentage?: number | null;
+      }>,
+      baselinePercentiles,
+      defaultEndDate,
+    );
+
+    const cropType =
+      typeof parcel.crop_type === 'string'
+        ? parcel.crop_type
+        : baseData.parcel.cropType;
+    const plantingYear = this.toNumber(parcel.planting_year);
+    const currentYear = new Date().getUTCFullYear();
+
+    return {
+      parcel: {
+        id: parcel.id,
+        name: parcel.name ?? baseData.parcel.name,
+        area: this.toNumber(parcel.area) ?? baseData.parcel.area,
+        areaUnit:
+          typeof parcel.area_unit === 'string' ? parcel.area_unit : baseData.parcel.areaUnit,
+        cropType,
+        treeType:
+          typeof parcel.tree_type === 'string' ? parcel.tree_type : baseData.parcel.treeType,
+        variety:
+          typeof parcel.variety === 'string' ? parcel.variety : baseData.parcel.variety,
+        rootstock:
+          typeof parcel.rootstock === 'string' ? parcel.rootstock : baseData.parcel.rootstock,
+        plantingYear,
+        treeCount: this.toNumber(parcel.tree_count) ?? baseData.parcel.treeCount,
+        plantingSystem:
+          typeof parcel.planting_system === 'string'
+            ? parcel.planting_system
+            : undefined,
+        soilType:
+          typeof parcel.soil_type === 'string' ? parcel.soil_type : baseData.parcel.soilType,
+        irrigationType:
+          typeof parcel.irrigation_type === 'string'
+            ? parcel.irrigation_type
+            : baseData.parcel.irrigationType,
+        waterSource: typeof parcel.water_source === 'string' ? parcel.water_source : undefined,
+        density: this.toNumber(parcel.planting_density),
+        age: plantingYear ? currentYear - plantingYear : undefined,
+        nutritionOption:
+          typeof parcel.ai_nutrition_option === 'string' ? parcel.ai_nutrition_option : 'A',
+        productionTarget: 'huile_qualite',
+      },
+      baseline: {
+        confidenceScore:
+          typeof calibration.confidence_score === 'number'
+            ? Math.round(calibration.confidence_score * 100)
+            : 50,
+        confidenceLevel: this.classifyConfidenceLevel(calibration.confidence_score),
+        healthScore:
+          typeof calibration.health_score === 'number' ? calibration.health_score : 50,
+        yieldPotential: {
+          low:
+            typeof calibration.yield_potential_min === 'number'
+              ? calibration.yield_potential_min
+              : 0,
+          high:
+            typeof calibration.yield_potential_max === 'number'
+              ? calibration.yield_potential_max
+              : 0,
+        },
+        alternanceStatus: this.extractAlternanceStatus(calibrationOutput) ?? 'indetermine',
+        soilManagementMode: this.extractSoilManagementMode(aiAnalysis) ?? 'C',
+        percentiles: baselinePercentiles,
+        phenologyProfile: {
+          detectedStages: this.extractDetectedStages(calibrationOutput),
+        },
+        zoningProfile: {
+          zones: this.extractZoneProfile(calibrationOutput),
+        },
+      },
+      currentSatellite,
+      recentTrends: this.buildRecentSatelliteTrends(
+        (satelliteSeries ?? []) as Array<{
+          date: string;
+          index_name: string;
+          mean_value: number | string | null;
+        }>,
+      ),
+      sameperiodLastYear: await this.fetchSamePeriodLastYearSnapshot(
+        parcelId,
+        defaultEndDate,
+      ),
+      weather: this.buildOperationalWeather(
+        (weatherRows ?? []) as Array<Record<string, unknown>>,
+        cropType,
+      ),
+      phenology: this.buildPhenologyStatus(
+        calibrationOutput,
+        cropType,
+        (weatherRows ?? []) as Array<Record<string, unknown>>,
+        calibration.maturity_phase,
+      ),
+      recentOperations: ((recentTasks ?? []) as Array<Record<string, unknown>>).map((task) => ({
+        date:
+          (typeof task.due_date === 'string' && task.due_date) ||
+          (typeof task.created_at === 'string' ? task.created_at : defaultEndDate),
+        type: typeof task.task_type === 'string' ? task.task_type : 'general',
+        description: typeof task.title === 'string' ? task.title : undefined,
+        product: typeof task.notes === 'string' ? task.notes : undefined,
+      })),
+      inventory: [],
+      activeRecommendations: ((activeRecommendations ?? []) as Array<Record<string, unknown>>).map(
+        (recommendation) => ({
+          status:
+            typeof recommendation.status === 'string' ? recommendation.status : 'pending',
+          type:
+            typeof recommendation.alert_code === 'string'
+              ? recommendation.alert_code
+              : 'general',
+          title:
+            typeof recommendation.action === 'string'
+              ? recommendation.action
+              : 'Recommendation active',
+          issuedDate:
+            typeof recommendation.created_at === 'string'
+              ? recommendation.created_at
+              : defaultEndDate,
+          evaluationDeadline:
+            typeof recommendation.valid_until === 'string'
+              ? recommendation.valid_until
+              : defaultEndDate,
+        }),
+      ),
+      soilAnalysis: baseData.soilAnalysis,
+      waterAnalysis: baseData.waterAnalysis,
+      plantAnalysis: baseData.plantAnalysis,
+    };
   }
 
   private async aggregateAnnualPlanData(
@@ -1542,13 +1763,850 @@ export class AIReportsService {
     return typeof soilMode.recommended === 'string' ? soilMode.recommended : null;
   }
 
+  private extractCalibrationOutput(
+    calibrationData: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return calibrationData.output &&
+      typeof calibrationData.output === 'object' &&
+      !Array.isArray(calibrationData.output)
+      ? (calibrationData.output as Record<string, unknown>)
+      : {};
+  }
+
+  private extractAiAnalysis(
+    calibrationData: Record<string, unknown>,
+  ): Record<string, unknown> {
+    return calibrationData.ai_analysis &&
+      typeof calibrationData.ai_analysis === 'object' &&
+      !Array.isArray(calibrationData.ai_analysis)
+      ? (calibrationData.ai_analysis as Record<string, unknown>)
+      : {};
+  }
+
+  private extractCalibrationPercentiles(
+    calibrationOutput: Record<string, unknown>,
+  ): Record<string, { p10?: number; p25?: number; p50?: number; p75?: number; p90?: number }> {
+    const step3 =
+      calibrationOutput.step3 &&
+      typeof calibrationOutput.step3 === 'object' &&
+      !Array.isArray(calibrationOutput.step3)
+        ? (calibrationOutput.step3 as Record<string, unknown>)
+        : {};
+
+    const source =
+      step3.global_percentiles &&
+      typeof step3.global_percentiles === 'object' &&
+      !Array.isArray(step3.global_percentiles)
+        ? (step3.global_percentiles as Record<string, unknown>)
+        : step3.percentiles &&
+            typeof step3.percentiles === 'object' &&
+            !Array.isArray(step3.percentiles)
+          ? (step3.percentiles as Record<string, unknown>)
+          : {};
+
+    const result: Record<string, { p10?: number; p25?: number; p50?: number; p75?: number; p90?: number }> =
+      {};
+
+    for (const [index, value] of Object.entries(source)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        continue;
+      }
+
+      const entry = value as Record<string, unknown>;
+      result[index.toLowerCase()] = {
+        p10: this.toNumber(entry.p10),
+        p25: this.toNumber(entry.p25),
+        p50: this.toNumber(entry.p50),
+        p75: this.toNumber(entry.p75),
+        p90: this.toNumber(entry.p90),
+      };
+    }
+
+    return result;
+  }
+
+  private classifyConfidenceLevel(value: unknown): string {
+    const numericValue = this.toNumber(value);
+    const normalized =
+      numericValue !== undefined && numericValue <= 1 ? numericValue * 100 : numericValue;
+
+    if (normalized === undefined) {
+      return 'moyenne';
+    }
+    if (normalized >= 75) {
+      return 'elevee';
+    }
+    if (normalized >= 50) {
+      return 'moyenne';
+    }
+    return 'faible';
+  }
+
+  private buildCurrentSatelliteData(
+    rows: Array<{
+      date: string;
+      index_name: string;
+      mean_value: number | string | null;
+      cloud_coverage_percentage?: number | null;
+    }>,
+    percentiles: Record<string, { p10?: number; p25?: number; p50?: number; p75?: number; p90?: number }>,
+    fallbackDate: string,
+  ): ParcelOperationalInput['currentSatellite'] {
+    const latestByIndex = new Map<
+      string,
+      { date: string; value: number; cloudCover?: number | null }
+    >();
+
+    for (const row of rows) {
+      const value = this.toNumber(row.mean_value);
+      if (value === undefined) {
+        continue;
+      }
+
+      const indexKey = row.index_name.toLowerCase();
+      const current = latestByIndex.get(indexKey);
+      if (!current || row.date > current.date) {
+        latestByIndex.set(indexKey, {
+          date: row.date,
+          value,
+          cloudCover: row.cloud_coverage_percentage ?? null,
+        });
+      }
+    }
+
+    const firstEntry = latestByIndex.values().next().value as
+      | { date: string; value: number; cloudCover?: number | null }
+      | undefined;
+
+    const getValue = (key: string) => latestByIndex.get(key)?.value;
+
+    return {
+      date: firstEntry?.date ?? fallbackDate,
+      cloudCover:
+        typeof firstEntry?.cloudCover === 'number' ? firstEntry.cloudCover : undefined,
+      quality:
+        typeof firstEntry?.cloudCover === 'number'
+          ? firstEntry.cloudCover <= 20
+            ? 'bonne'
+            : firstEntry.cloudCover <= 50
+              ? 'moyenne'
+              : 'faible'
+          : undefined,
+      ndvi: getValue('ndvi'),
+      nirv: getValue('nirv'),
+      nirvp: getValue('nirvp'),
+      ndmi: getValue('ndmi'),
+      ndre: getValue('ndre'),
+      msi: getValue('msi'),
+      evi: getValue('evi'),
+      msavi: getValue('msavi'),
+      gci: getValue('gci'),
+      ndviPosition: this.describePercentilePosition(getValue('ndvi'), percentiles.ndvi),
+      nirvPosition: this.describePercentilePosition(getValue('nirv'), percentiles.nirv),
+      nirvpPosition: this.describePercentilePosition(getValue('nirvp'), percentiles.nirvp),
+      ndmiPosition: this.describePercentilePosition(getValue('ndmi'), percentiles.ndmi),
+      ndrePosition: this.describePercentilePosition(getValue('ndre'), percentiles.ndre),
+      msiPosition: this.describePercentilePosition(getValue('msi'), percentiles.msi),
+      eviPosition: this.describePercentilePosition(getValue('evi'), percentiles.evi),
+      msaviPosition: this.describePercentilePosition(getValue('msavi'), percentiles.msavi),
+      gciPosition: this.describePercentilePosition(getValue('gci'), percentiles.gci),
+    };
+  }
+
+  private describePercentilePosition(
+    value: number | undefined,
+    percentileSet?: { p10?: number; p25?: number; p50?: number; p75?: number; p90?: number },
+  ): string | undefined {
+    if (value === undefined || !percentileSet) {
+      return undefined;
+    }
+
+    if (percentileSet.p10 !== undefined && value < percentileSet.p10) {
+      return '< P10';
+    }
+    if (percentileSet.p25 !== undefined && value < percentileSet.p25) {
+      return 'P10-P25';
+    }
+    if (percentileSet.p75 !== undefined && value <= percentileSet.p75) {
+      return 'P25-P75';
+    }
+    if (percentileSet.p90 !== undefined && value <= percentileSet.p90) {
+      return 'P75-P90';
+    }
+    return '> P90';
+  }
+
+  private buildRecentSatelliteTrends(
+    rows: Array<{ date: string; index_name: string; mean_value: number | string | null }>,
+  ): Record<string, unknown> | undefined {
+    if (rows.length === 0) {
+      return undefined;
+    }
+
+    const grouped = new Map<string, Array<{ date: string; value: number }>>();
+    for (const row of rows) {
+      const value = this.toNumber(row.mean_value);
+      if (value === undefined) {
+        continue;
+      }
+      const key = row.index_name.toLowerCase();
+      const current = grouped.get(key) ?? [];
+      current.push({ date: row.date, value });
+      grouped.set(key, current);
+    }
+
+    const summary: Record<string, unknown> = {};
+    for (const [key, values] of grouped.entries()) {
+      const latestThree = values
+        .sort((left, right) => right.date.localeCompare(left.date))
+        .slice(0, 3);
+      summary[key] = latestThree;
+    }
+
+    return Object.keys(summary).length > 0 ? summary : undefined;
+  }
+
+  private async fetchSamePeriodLastYearSnapshot(
+    parcelId: string,
+    endDate: string,
+  ): Promise<Record<string, unknown> | undefined> {
+    const referenceDate = new Date(endDate);
+    if (Number.isNaN(referenceDate.getTime())) {
+      return undefined;
+    }
+
+    const previousYearDate = new Date(referenceDate);
+    previousYearDate.setUTCFullYear(previousYearDate.getUTCFullYear() - 1);
+    const windowEnd = previousYearDate.toISOString().slice(0, 10);
+    const windowStartDate = new Date(previousYearDate);
+    windowStartDate.setUTCDate(windowStartDate.getUTCDate() - 14);
+    const windowStart = windowStartDate.toISOString().slice(0, 10);
+
+    const { data } = await this.databaseService
+      .getAdminClient()
+      .from('satellite_indices_data')
+      .select('date, index_name, mean_value')
+      .eq('parcel_id', parcelId)
+      .gte('date', windowStart)
+      .lte('date', windowEnd)
+      .in('index_name', ['NDVI', 'NIRV', 'NIRVP', 'NDMI', 'NDRE', 'MSI', 'EVI', 'MSAVI', 'GCI'])
+      .order('date', { ascending: false });
+
+    if (!data || data.length === 0) {
+      return undefined;
+    }
+
+    const latestByIndex: Record<string, number> = {};
+    for (const row of data as Array<Record<string, unknown>>) {
+      const indexName =
+        typeof row.index_name === 'string' ? row.index_name.toLowerCase() : null;
+      const value = this.toNumber(row.mean_value);
+      if (!indexName || value === undefined || latestByIndex[indexName] !== undefined) {
+        continue;
+      }
+      latestByIndex[indexName] = value;
+    }
+
+    return {
+      date: (data[0] as Record<string, unknown>).date,
+      values: latestByIndex,
+    };
+  }
+
+  private buildOperationalWeather(
+    rows: Array<Record<string, unknown>>,
+    cropType: string | undefined,
+  ): ParcelOperationalInput['weather'] {
+    const recentRows = rows.slice(-14);
+    const precipitation = recentRows.reduce(
+      (sum, row) => sum + (this.toNumber(row.precipitation_sum) ?? 0),
+      0,
+    );
+    const et0 = recentRows.reduce(
+      (sum, row) => sum + (this.toNumber(row.et0_fao_evapotranspiration) ?? 0),
+      0,
+    );
+
+    return {
+      recent: {
+        tMin: this.averageDefined(recentRows.map((row) => this.toNumber(row.temperature_min))),
+        tMax: this.averageDefined(recentRows.map((row) => this.toNumber(row.temperature_max))),
+        tMean: this.averageDefined(recentRows.map((row) => this.toNumber(row.temperature_mean))),
+        precipitation,
+        consecutiveDryDays: this.countConsecutiveDryDays(recentRows),
+        humidity: this.averageDefined(
+          recentRows.map((row) => this.toNumber(row.relative_humidity_mean)),
+        ),
+        windSpeed: this.averageDefined(
+          recentRows.map((row) => this.toNumber(row.wind_speed_max)),
+        ),
+      },
+      gddCumulativeSeason: rows.reduce(
+        (sum, row) => sum + (this.extractGddValue(row, cropType) ?? 0),
+        0,
+      ),
+      chillingHoursSeason: rows.reduce(
+        (sum, row) => sum + (this.toNumber(row.chill_hours) ?? 0),
+        0,
+      ),
+      waterBalance: Number((precipitation - et0).toFixed(2)),
+      forecast: undefined,
+      forecastAlerts: 'Aucun',
+    };
+  }
+
+  private buildPhenologyStatus(
+    calibrationOutput: Record<string, unknown>,
+    cropType: string | undefined,
+    weatherRows: Array<Record<string, unknown>>,
+    maturityPhase: unknown,
+  ): ParcelOperationalInput['phenology'] {
+    const step4 =
+      calibrationOutput.step4 &&
+      typeof calibrationOutput.step4 === 'object' &&
+      !Array.isArray(calibrationOutput.step4)
+        ? (calibrationOutput.step4 as Record<string, unknown>)
+        : {};
+    const phenology =
+      step4.phenology &&
+      typeof step4.phenology === 'object' &&
+      !Array.isArray(step4.phenology)
+        ? (step4.phenology as Record<string, unknown>)
+        : {};
+
+    return {
+      currentBBCH:
+        typeof phenology.current_stage === 'string'
+          ? phenology.current_stage
+          : typeof maturityPhase === 'string'
+            ? maturityPhase
+            : undefined,
+      description:
+        typeof maturityPhase === 'string' ? maturityPhase : 'stade phenologique estime',
+      currentGDD: weatherRows.reduce(
+        (sum, row) => sum + (this.extractGddValue(row, cropType) ?? 0),
+        0,
+      ),
+      deviationFromBaseline:
+        typeof phenology.deviation_from_baseline === 'string'
+          ? phenology.deviation_from_baseline
+          : 'coherent',
+      nextStage:
+        typeof phenology.next_stage === 'string' ? phenology.next_stage : undefined,
+      daysToNextStage: this.toNumber(phenology.days_to_next_stage),
+    };
+  }
+
+  private extractDetectedStages(
+    calibrationOutput: Record<string, unknown>,
+  ): Array<{
+    stage: string;
+    averageDate: string;
+    interAnnualVariability: string;
+    associatedGDD: number;
+  }> {
+    const step4 =
+      calibrationOutput.step4 &&
+      typeof calibrationOutput.step4 === 'object' &&
+      !Array.isArray(calibrationOutput.step4)
+        ? (calibrationOutput.step4 as Record<string, unknown>)
+        : {};
+    const meanDates =
+      step4.mean_dates &&
+      typeof step4.mean_dates === 'object' &&
+      !Array.isArray(step4.mean_dates)
+        ? (step4.mean_dates as Record<string, unknown>)
+        : {};
+
+    return Object.entries(meanDates)
+      .filter(([, value]) => typeof value === 'string')
+      .map(([stage, value]) => ({
+        stage,
+        averageDate: value as string,
+        interAnnualVariability: 'non_calculee',
+        associatedGDD: 0,
+      }));
+  }
+
+  private extractZoneProfile(
+    calibrationOutput: Record<string, unknown>,
+  ): Array<{ class: string; label: string; percentSurface: number; location: string }> {
+    const step7 =
+      calibrationOutput.step7 &&
+      typeof calibrationOutput.step7 === 'object' &&
+      !Array.isArray(calibrationOutput.step7)
+        ? (calibrationOutput.step7 as Record<string, unknown>)
+        : {};
+    const zoneSummary = Array.isArray(step7.zone_summary) ? step7.zone_summary : [];
+
+    return zoneSummary
+      .filter((zone): zone is Record<string, unknown> => !!zone && typeof zone === 'object')
+      .map((zone) => ({
+        class:
+          typeof zone.class_name === 'string'
+            ? zone.class_name
+            : typeof zone.class === 'string'
+              ? zone.class
+              : 'N/A',
+        label:
+          typeof zone.label === 'string'
+            ? zone.label
+            : typeof zone.class_name === 'string'
+              ? `Zone ${zone.class_name}`
+              : 'Zone',
+        percentSurface: this.toNumber(zone.surface_percent) ?? 0,
+        location:
+          typeof step7.spatial_pattern_type === 'string'
+            ? step7.spatial_pattern_type
+            : 'non precisee',
+      }));
+  }
+
+  private averageDefined(values: Array<number | undefined>): number | undefined {
+    const definedValues = values.filter((value): value is number => value !== undefined);
+    if (definedValues.length === 0) {
+      return undefined;
+    }
+
+    return Number(
+      (definedValues.reduce((sum, value) => sum + value, 0) / definedValues.length).toFixed(2),
+    );
+  }
+
+  private countConsecutiveDryDays(rows: Array<Record<string, unknown>>): number {
+    let count = 0;
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const precipitation = this.toNumber(rows[index].precipitation_sum) ?? 0;
+      if (precipitation > 0.2) {
+        break;
+      }
+      count += 1;
+    }
+    return count;
+  }
+
+  private extractGddValue(
+    row: Record<string, unknown>,
+    cropType: string | undefined,
+  ): number | undefined {
+    const normalizedCropType = cropType?.toLowerCase();
+    if (normalizedCropType === 'agrumes') {
+      return this.toNumber(row.gdd_agrumes);
+    }
+    if (normalizedCropType === 'avocatier') {
+      return this.toNumber(row.gdd_avocatier);
+    }
+    if (normalizedCropType === 'palmier_dattier') {
+      return this.toNumber(row.gdd_palmier_dattier);
+    }
+    return this.toNumber(row.gdd_olivier);
+  }
+
+  private async fetchLatestCompletedCalibration(
+    organizationId: string,
+    parcelId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const { data } = await this.databaseService
+      .getAdminClient()
+      .from('calibrations')
+      .select(
+        'calibration_data, confidence_score, health_score, yield_potential_min, yield_potential_max, maturity_phase',
+      )
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return (data as Record<string, unknown> | null) ?? null;
+  }
+
+  private async fetchSatelliteSnapshotBeforeDate(
+    parcelId: string,
+    referenceDate: string,
+  ): Promise<{ date: string; values: Record<string, number> }> {
+    return this.fetchSatelliteSnapshot(parcelId, referenceDate, 'lte');
+  }
+
+  private async fetchSatelliteSnapshotAfterDate(
+    parcelId: string,
+    referenceDate: string,
+  ): Promise<{ date: string; values: Record<string, number> }> {
+    return this.fetchSatelliteSnapshot(parcelId, referenceDate, 'gte');
+  }
+
+  private async fetchSatelliteSnapshot(
+    parcelId: string,
+    referenceDate: string,
+    direction: 'lte' | 'gte',
+  ): Promise<{ date: string; values: Record<string, number> }> {
+    let query = this.databaseService
+      .getAdminClient()
+      .from('satellite_indices_data')
+      .select('date, index_name, mean_value')
+      .eq('parcel_id', parcelId)
+      .in('index_name', ['NDVI', 'NIRV', 'NIRVP', 'NDMI', 'NDRE', 'MSI', 'EVI', 'MSAVI', 'GCI'])
+      .order('date', { ascending: direction === 'gte' })
+      .limit(30);
+
+    query =
+      direction === 'gte'
+        ? query.gte('date', referenceDate.slice(0, 10))
+        : query.lte('date', referenceDate.slice(0, 10));
+
+    const { data } = await query;
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    if (rows.length === 0) {
+      return {
+        date: referenceDate.slice(0, 10),
+        values: {},
+      };
+    }
+
+    const targetDate =
+      typeof rows[0].date === 'string' ? rows[0].date : referenceDate.slice(0, 10);
+    const values: Record<string, number> = {};
+    for (const row of rows) {
+      if (row.date !== targetDate) {
+        continue;
+      }
+      const indexName =
+        typeof row.index_name === 'string' ? row.index_name.toLowerCase() : null;
+      const value = this.toNumber(row.mean_value);
+      if (indexName && value !== undefined) {
+        values[indexName] = value;
+      }
+    }
+
+    return {
+      date: targetDate,
+      values,
+    };
+  }
+
+  private inferEvaluationWindowDays(
+    indicator: string | null,
+    action: string | null,
+  ): number {
+    const normalizedIndicator = (indicator ?? '').toUpperCase();
+    const normalizedAction = (action ?? '').toLowerCase();
+
+    if (normalizedIndicator === 'NDMI' || normalizedAction.includes('irrig')) {
+      return 7;
+    }
+    if (normalizedIndicator === 'NDRE' || normalizedAction.includes('fert')) {
+      return 14;
+    }
+    return 10;
+  }
+
+  private diffDays(start: string, end: string): number {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.round((endDate.getTime() - startDate.getTime()) / 86_400_000),
+    );
+  }
+
+  private buildSatellitePositions(
+    values: Record<string, number>,
+    percentiles: Record<string, { p10?: number; p25?: number; p50?: number; p75?: number; p90?: number }>,
+  ): Record<string, string> {
+    const positions: Record<string, string> = {};
+    for (const [index, value] of Object.entries(values)) {
+      const description = this.describePercentilePosition(value, percentiles[index]);
+      if (description) {
+        positions[index] = description;
+      }
+    }
+    return positions;
+  }
+
+  private describeFollowUpTrend(
+    before: Record<string, number>,
+    after: Record<string, number>,
+    indicator: string,
+  ): string {
+    const key = indicator.toLowerCase();
+    const beforeValue = before[key];
+    const afterValue = after[key];
+    if (beforeValue === undefined || afterValue === undefined) {
+      return 'Donnees insuffisantes pour qualifier la tendance';
+    }
+
+    const change = afterValue - beforeValue;
+    if (Math.abs(change) < 0.01) {
+      return `${indicator.toUpperCase()} stable`;
+    }
+
+    return change > 0
+      ? `${indicator.toUpperCase()} en amelioration`
+      : `${indicator.toUpperCase()} en degradation`;
+  }
+
+  private buildFollowUpWeatherContext(
+    rows: Array<Record<string, unknown>>,
+  ): PostRecommendationFollowUpInput['weatherContext'] {
+    return {
+      precipitationTotal: rows.reduce(
+        (sum, row) => sum + (this.toNumber(row.precipitation_sum) ?? 0),
+        0,
+      ),
+      tMin: this.averageDefined(rows.map((row) => this.toNumber(row.temperature_min))),
+      tMax: this.averageDefined(rows.map((row) => this.toNumber(row.temperature_max))),
+      confoundingEvents: undefined,
+      cloudCoverageIssues: 'Acceptable',
+    };
+  }
+
+  private buildInferenceData(
+    before: Record<string, number>,
+    after: Record<string, number>,
+    evaluationWindowDays: number,
+  ): PostRecommendationFollowUpInput['inferenceData'] {
+    const ndmiBefore = before.ndmi;
+    const ndmiAfter = after.ndmi;
+    const coherentChangeDetected =
+      ndmiBefore !== undefined && ndmiAfter !== undefined && ndmiAfter > ndmiBefore;
+
+    return {
+      coherentChangeDetected,
+      timingCoherent: evaluationWindowDays >= 7,
+      locationCoherent: true,
+      inferenceConclusion: coherentChangeDetected
+        ? 'Une execution est plausible au vu de la reponse satellite'
+        : 'Aucune inference fiable d execution',
+    };
+  }
+
+  private monthNumberToLabel(month: number): string {
+    const labels = [
+      'janvier',
+      'fevrier',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'aout',
+      'septembre',
+      'octobre',
+      'novembre',
+      'decembre',
+    ];
+
+    return labels[Math.max(0, Math.min(labels.length - 1, month - 1))];
+  }
+
   private async aggregateFollowUpData(
-    _organizationId: string,
-    _parcelId: string,
-    _startDate?: string,
-    _endDate?: string,
+    organizationId: string,
+    parcelId: string,
+    startDate?: string,
+    endDate?: string,
   ): Promise<PostRecommendationFollowUpInput> {
-    throw new BadRequestException('Not yet implemented: requires completed calibration report');
+    const supabase = this.databaseService.getAdminClient();
+    const operationalData = await this.aggregateOperationalData(
+      organizationId,
+      parcelId,
+      startDate,
+      endDate,
+    );
+
+    const { data: recommendation } = await supabase
+      .from('ai_recommendations')
+      .select(
+        'id, status, action, diagnostic, created_at, executed_at, execution_notes, valid_until, evaluation_window_days, evaluation_indicator, expected_response, alert_code, priority',
+      )
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .in('status', ['executed', 'validated', 'pending'])
+      .order('executed_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!recommendation) {
+      throw new BadRequestException(
+        'No recommendation found - follow-up requires at least one recommendation',
+      );
+    }
+
+    const issuedDate =
+      typeof recommendation.created_at === 'string'
+        ? recommendation.created_at
+        : new Date().toISOString();
+    const executedDate =
+      typeof recommendation.executed_at === 'string' ? recommendation.executed_at : undefined;
+    const evaluationWindowDays =
+      this.toNumber(recommendation.evaluation_window_days) ??
+      this.inferEvaluationWindowDays(
+        typeof recommendation.evaluation_indicator === 'string'
+          ? recommendation.evaluation_indicator
+          : null,
+        typeof recommendation.action === 'string' ? recommendation.action : null,
+      );
+    const evaluationAnchor = executedDate ?? issuedDate;
+    const evaluationDeadline = new Date(evaluationAnchor);
+    evaluationDeadline.setUTCDate(evaluationDeadline.getUTCDate() + evaluationWindowDays);
+
+    const calibration = await this.fetchLatestCompletedCalibration(
+      organizationId,
+      parcelId,
+    );
+    const calibrationOutput = this.extractCalibrationOutput(
+      calibration?.calibration_data &&
+        typeof calibration.calibration_data === 'object' &&
+        !Array.isArray(calibration.calibration_data)
+        ? (calibration.calibration_data as Record<string, unknown>)
+        : {},
+    );
+    const percentiles = this.extractCalibrationPercentiles(calibrationOutput);
+
+    const beforeSnapshot = await this.fetchSatelliteSnapshotBeforeDate(
+      parcelId,
+      evaluationAnchor,
+    );
+    const afterSnapshot = await this.fetchSatelliteSnapshotAfterDate(
+      parcelId,
+      evaluationAnchor,
+    );
+
+    const { data: weatherRows } = await supabase
+      .from('weather_daily_data')
+      .select('date, precipitation_sum, temperature_min, temperature_max')
+      .eq('parcel_id', parcelId)
+      .gte('date', evaluationAnchor.slice(0, 10))
+      .lte('date', evaluationDeadline.toISOString().slice(0, 10))
+      .order('date', { ascending: true });
+
+    const { data: remainingInterventions } = await supabase
+      .from('plan_interventions')
+      .select('month, intervention_type, product, dose, unit, status')
+      .eq('organization_id', organizationId)
+      .eq('parcel_id', parcelId)
+      .eq('status', 'planned')
+      .order('month', { ascending: true })
+      .limit(8);
+
+    return {
+      parcel: {
+        name: operationalData.parcel.name,
+      },
+      recommendation: {
+        id: recommendation.id,
+        category:
+          typeof recommendation.alert_code === 'string'
+            ? recommendation.alert_code
+            : 'general',
+        title:
+          typeof recommendation.action === 'string'
+            ? recommendation.action
+            : 'Recommendation sans titre',
+        initialDiagnosis:
+          typeof recommendation.diagnostic === 'string'
+            ? recommendation.diagnostic
+            : 'Diagnostic non disponible',
+        diagnosticConfidence: this.classifyConfidenceLevel(
+          calibration?.confidence_score,
+        ),
+        action: {
+          method:
+            typeof recommendation.action === 'string'
+              ? recommendation.action
+              : undefined,
+        },
+        issuedDate,
+        executedDate,
+        evaluationWindowDays,
+        evaluationDeadline: evaluationDeadline.toISOString().slice(0, 10),
+        followUp: {
+          indicatorToMonitor:
+            typeof recommendation.evaluation_indicator === 'string'
+              ? recommendation.evaluation_indicator
+              : 'NDVI',
+          expectedResponse:
+            typeof recommendation.expected_response === 'string'
+              ? recommendation.expected_response
+              : 'Amelioration progressive attendue',
+        },
+        status:
+          typeof recommendation.status === 'string'
+            ? recommendation.status
+            : 'pending',
+        userNote:
+          typeof recommendation.execution_notes === 'string'
+            ? recommendation.execution_notes
+            : undefined,
+      },
+      satelliteComparison: {
+        beforeDate: beforeSnapshot.date,
+        afterDate: afterSnapshot.date,
+        daysElapsed: this.diffDays(beforeSnapshot.date, afterSnapshot.date),
+        evaluationWindowComplete:
+          new Date(afterSnapshot.date) >= evaluationDeadline,
+        before: beforeSnapshot.values,
+        after: afterSnapshot.values,
+        afterPositions: this.buildSatellitePositions(afterSnapshot.values, percentiles),
+        trendObservation: this.describeFollowUpTrend(
+          beforeSnapshot.values,
+          afterSnapshot.values,
+          typeof recommendation.evaluation_indicator === 'string'
+            ? recommendation.evaluation_indicator
+            : 'NDVI',
+        ),
+      },
+      weatherContext: this.buildFollowUpWeatherContext(
+        (weatherRows ?? []) as Array<Record<string, unknown>>,
+      ),
+      inferenceData: executedDate
+        ? undefined
+        : this.buildInferenceData(
+            beforeSnapshot.values,
+            afterSnapshot.values,
+            evaluationWindowDays,
+          ),
+      seasonProgress: {
+        appliedDoses: {},
+        yieldForecastRevised:
+          operationalData.baseline.yieldPotential.low > 0 ||
+          operationalData.baseline.yieldPotential.high > 0
+            ? Number(
+                (
+                  (operationalData.baseline.yieldPotential.low +
+                    operationalData.baseline.yieldPotential.high) /
+                  2
+                ).toFixed(2),
+              )
+            : undefined,
+        yieldTarget: operationalData.baseline.yieldPotential.high || undefined,
+        remainingInterventions: ((remainingInterventions ?? []) as Array<Record<string, unknown>>).map(
+          (intervention) => ({
+            month: this.monthNumberToLabel(this.toNumber(intervention.month) ?? 1),
+            type:
+              typeof intervention.intervention_type === 'string'
+                ? intervention.intervention_type
+                : 'intervention',
+            product:
+              typeof intervention.product === 'string'
+                ? intervention.product
+                : undefined,
+            dose: this.toNumber(intervention.dose),
+            doseUnit:
+              typeof intervention.unit === 'string' ? intervention.unit : undefined,
+            status:
+              typeof intervention.status === 'string'
+                ? intervention.status
+                : 'planned',
+          }),
+        ),
+      },
+    };
   }
 
   private async aggregateParcelData(

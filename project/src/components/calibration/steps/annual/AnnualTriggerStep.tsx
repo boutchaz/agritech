@@ -7,7 +7,7 @@ import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 interface AnnualTriggerStepProps {
   parcelId: string;
   onProceed: () => void;
-  onSnooze: (days: number) => void;
+  onSnooze: (days: number) => Promise<void> | void;
 }
 
 function formatDate(date?: string): string {
@@ -68,7 +68,7 @@ export function AnnualTriggerStep({ parcelId, onProceed, onSnooze }: AnnualTrigg
           Oui, recolte terminee - Lancer le recalibrage
         </Button>
 
-        <Button type="button" variant="outline" onClick={() => onSnooze(7)}>
+        <Button type="button" variant="outline" onClick={() => void onSnooze(7)}>
           Non, pas encore terminee
         </Button>
 
@@ -89,7 +89,7 @@ export function AnnualTriggerStep({ parcelId, onProceed, onSnooze }: AnnualTrigg
             <Button
               type="button"
               variant="outline"
-              onClick={() => onSnooze(Math.max(1, customDays))}
+              onClick={() => void onSnooze(Math.max(1, customDays))}
             >
               <Clock3 className="h-4 w-4" />
               Programmer le rappel

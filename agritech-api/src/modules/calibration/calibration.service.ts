@@ -9,6 +9,11 @@ import {
 } from "@nestjs/common";
 import { AIReportsService } from "../ai-reports/ai-reports.service";
 import { AIProvider, AgromindReportType } from "../ai-reports/interfaces";
+import {
+  AnnualPlanService,
+  AnnualPlanWithInterventions,
+  PlanInterventionRecord,
+} from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -193,6 +198,7 @@ export class CalibrationService {
     private readonly databaseService: DatabaseService,
     private readonly stateMachine: CalibrationStateMachine,
     private readonly nutritionOptionService: NutritionOptionService,
+    private readonly annualPlanService: AnnualPlanService,
     private readonly satelliteCacheService: SatelliteCacheService,
     private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => NotificationsGateway))
@@ -1881,52 +1887,41 @@ export class CalibrationService {
       `Generating annual plan for parcel ${parcelId} after nutrition option confirmation`,
     );
 
-    await this.aiReportsService.generateReport(organizationId, "system", {
-      parcel_id: parcelId,
-      provider: AIProvider.GEMINI,
-      model: "gemini-2.5-flash",
-      reportType: AgromindReportType.ANNUAL_PLAN,
-      data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
-      data_end_date: new Date().toISOString().split("T")[0],
-    });
+    const annualPlan = await this.annualPlanService.ensurePlan(
+      parcelId,
+      organizationId,
+    );
+
+    try {
+      await this.aiReportsService.generateReport(organizationId, "system", {
+        parcel_id: parcelId,
+        provider: AIProvider.GEMINI,
+        model: "gemini-2.5-flash",
+        reportType: AgromindReportType.ANNUAL_PLAN,
+        data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+        data_end_date: new Date().toISOString().split("T")[0],
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Narrative annual plan report generation failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    }
 
     this.logger.log(`Annual plan generated for parcel ${parcelId}`);
 
-    await this.generateTasksFromAnnualPlan(parcelId, organizationId);
+    await this.generateTasksFromAnnualPlan(annualPlan, parcelId, organizationId);
   }
 
   private async generateTasksFromAnnualPlan(
+    annualPlan: AnnualPlanWithInterventions,
     parcelId: string,
     organizationId: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
 
-    const { data: latestReport } = await supabase
-      .from("ai_reports")
-      .select("id, report_data")
-      .eq("parcel_id", parcelId)
-      .eq("organization_id", organizationId)
-      .eq("report_type", "annual_plan")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!latestReport?.report_data) {
-      this.logger.warn(
-        `No annual plan report found for parcel ${parcelId}, skipping task generation`,
-      );
-      return;
-    }
-
-    const reportData = this.toJsonObject(latestReport.report_data);
-    const calendar =
-      (reportData as Record<string, unknown>)?.calendrier_mensuel ??
-      (reportData as Record<string, unknown>)?.monthly_calendar ??
-      (reportData as Record<string, unknown>)?.tasks;
-
-    if (!Array.isArray(calendar) || calendar.length === 0) {
+    if (annualPlan.interventions.length === 0) {
       this.logger.log(
-        `Annual plan for parcel ${parcelId} has no calendar tasks to generate`,
+        `Annual plan ${annualPlan.id} has no interventions to generate tasks for`,
       );
       return;
     }
@@ -1941,50 +1936,59 @@ export class CalibrationService {
       return;
     }
 
-    const validTaskTypes = new Set([
-      "planting",
-      "harvesting",
-      "irrigation",
-      "fertilization",
-      "maintenance",
-      "general",
-      "pest_control",
-      "pruning",
-      "soil_preparation",
-    ]);
+    const { data: existingTasks, error: existingTasksError } = await supabase
+      .from("tasks")
+      .select("id, metadata")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId);
 
-    const taskRows = calendar
-      .filter(
-        (item: unknown): item is Record<string, unknown> =>
-          typeof item === "object" && item !== null,
-      )
-      .map((item) => {
-        const rawType = String(item.type ?? item.task_type ?? "general");
-        const taskType = validTaskTypes.has(rawType) ? rawType : "general";
+    if (existingTasksError) {
+      this.logger.warn(
+        `Failed to load existing annual plan tasks for parcel ${parcelId}: ${existingTasksError.message}`,
+      );
+      return;
+    }
+
+    const existingInterventionIds = new Set(
+      ((existingTasks ?? []) as Array<{ metadata?: unknown }>)
+        .map((task) => this.toJsonObject(task.metadata).annual_plan_intervention_id)
+        .filter((value): value is string => typeof value === "string"),
+    );
+
+    const taskRows = annualPlan.interventions
+      .filter((intervention) => !existingInterventionIds.has(intervention.id))
+      .map((intervention) => {
+        const title = this.formatAnnualPlanTaskTitle(intervention);
 
         return {
           farm_id: parcel.farm_id,
           parcel_id: parcelId,
           organization_id: organizationId,
-          title: String(item.title ?? item.description ?? item.action ?? ""),
-          description: item.description
-            ? String(item.description)
-            : item.details
-              ? String(item.details)
-              : null,
-          task_type: taskType,
-          priority: String(item.priority ?? "medium"),
-          status: "planned",
-          due_date: item.date_prevue ?? item.due_date ?? item.date ?? null,
+          title,
+          description: this.formatAnnualPlanTaskDescription(intervention),
+          task_type: this.mapAnnualPlanInterventionToTaskType(intervention),
+          priority: this.mapAnnualPlanInterventionPriority(intervention),
+          status: "pending",
+          due_date: this.buildAnnualPlanTaskDueDate(
+            annualPlan.year,
+            intervention.month,
+            intervention.week,
+          ),
           metadata: {
             source: "annual_plan",
-            ai_report_id: latestReport.id,
-            month: item.mois ?? item.month ?? null,
-            dose: item.dose ?? null,
+            annual_plan_id: annualPlan.id,
+            annual_plan_intervention_id: intervention.id,
+            plan_year: annualPlan.year,
+            month: intervention.month,
+            week: intervention.week,
+            intervention_type: intervention.intervention_type,
+            product: intervention.product,
+            dose: intervention.dose,
+            unit: intervention.unit,
           },
         };
       })
-      .filter((row: { title: string }) => row.title && row.title.length > 0);
+      .filter((row) => row.title.length > 0);
 
     if (taskRows.length === 0) {
       return;
@@ -2002,8 +2006,104 @@ export class CalibrationService {
     }
 
     this.logger.log(
-      `Created ${taskRows.length} tasks from annual plan for parcel ${parcelId}`,
+      `Created ${taskRows.length} tasks from annual plan ${annualPlan.id} for parcel ${parcelId}`,
     );
+  }
+
+  private formatAnnualPlanTaskTitle(intervention: PlanInterventionRecord): string {
+    const interventionLabel = intervention.intervention_type
+      .split("+")
+      .map((part) => part.replace(/_/g, " ").trim())
+      .filter((part) => part.length > 0)
+      .join(" / ");
+
+    return interventionLabel.length > 0
+      ? interventionLabel
+      : `Intervention mois ${intervention.month}`;
+  }
+
+  private formatAnnualPlanTaskDescription(
+    intervention: PlanInterventionRecord,
+  ): string | null {
+    const details = [
+      intervention.description,
+      intervention.product ? `Produit: ${intervention.product}` : null,
+      intervention.dose ? `Dose: ${intervention.dose}` : null,
+      intervention.unit ? `Unite: ${intervention.unit}` : null,
+      intervention.notes ? `Reference: ${intervention.notes}` : null,
+    ].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+    return details.length > 0 ? details.join(" | ") : null;
+  }
+
+  private mapAnnualPlanInterventionToTaskType(
+    intervention: PlanInterventionRecord,
+  ): string {
+    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
+
+    if (normalized.includes("irrig")) {
+      return "irrigation";
+    }
+    if (
+      normalized.includes("ferti") ||
+      normalized.includes("nutrition") ||
+      normalized.includes("amend")
+    ) {
+      return "fertilization";
+    }
+    if (normalized.includes("taille") || normalized.includes("prun")) {
+      return "pruning";
+    }
+    if (
+      normalized.includes("phyto") ||
+      normalized.includes("ravage") ||
+      normalized.includes("pest") ||
+      normalized.includes("maladie")
+    ) {
+      return "pest_control";
+    }
+    if (
+      normalized.includes("sol") ||
+      normalized.includes("labour") ||
+      normalized.includes("preparation")
+    ) {
+      return "soil_preparation";
+    }
+    if (normalized.includes("recolte") || normalized.includes("harvest")) {
+      return "harvesting";
+    }
+
+    return "maintenance";
+  }
+
+  private mapAnnualPlanInterventionPriority(
+    intervention: PlanInterventionRecord,
+  ): "low" | "medium" | "high" | "urgent" {
+    const normalized = `${intervention.intervention_type} ${intervention.description}`.toLowerCase();
+
+    if (
+      normalized.includes("stress") ||
+      normalized.includes("urgent") ||
+      normalized.includes("maladie") ||
+      normalized.includes("irrig")
+    ) {
+      return "high";
+    }
+
+    return "medium";
+  }
+
+  private buildAnnualPlanTaskDueDate(
+    year: number,
+    month: number,
+    week: number | null,
+  ): string | null {
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      return null;
+    }
+
+    const day = week && week > 0 ? Math.min(28, week * 7) : 1;
+    return new Date(Date.UTC(year, month - 1, day)).toISOString().split("T")[0];
   }
 
   async getPercentiles(

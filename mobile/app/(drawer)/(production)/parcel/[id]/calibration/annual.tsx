@@ -1,4 +1,4 @@
-// Annual (F3) Recalibration Screen for Mobile
+// Annual recalibration screen for Mobile
 import {
   View,
   Text,
@@ -15,11 +15,11 @@ import { colors, spacing, borderRadius, fontSize, fontWeight } from '@/constants
 import PageHeader from '@/components/PageHeader';
 import { Button, Card, Badge, LoadingState } from '@/components/ui';
 import {
-  useF3Eligibility,
+  useAnnualEligibility,
   useAnnualMissingTasks,
   useAnnualNewAnalyses,
   useAnnualCampaignBilan,
-  useStartF3Recalibration,
+  useStartAnnualRecalibration,
 } from '@/hooks/useF3Recalibration';
 
 function InfoRow({ label, value }: { label: string; value: string | number }) {
@@ -37,13 +37,13 @@ export default function AnnualRecalibrationScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Queries
-  const { data: eligibility, isLoading: eligibilityLoading, refetch: refetchEligibility } = useF3Eligibility(parcelId);
+  const { data: eligibility, isLoading: eligibilityLoading, refetch: refetchEligibility } = useAnnualEligibility(parcelId);
   const { data: missingTasks, isLoading: tasksLoading, refetch: refetchTasks } = useAnnualMissingTasks(parcelId);
   const { data: newAnalyses, isLoading: analysesLoading, refetch: refetchAnalyses } = useAnnualNewAnalyses(parcelId);
   const { data: campaignBilan, isLoading: bilanLoading, refetch: refetchBilan } = useAnnualCampaignBilan(parcelId);
 
   // Mutation
-  const startAnnual = useStartF3Recalibration(parcelId);
+  const startAnnual = useStartAnnualRecalibration(parcelId);
 
   const isLoading = eligibilityLoading || tasksLoading || analysesLoading || bilanLoading;
 

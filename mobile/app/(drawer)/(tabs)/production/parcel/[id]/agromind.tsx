@@ -71,7 +71,7 @@ export default function AgromindTab() {
       key: 'annual',
       icon: 'refresh-outline',
       title: 'Annual Recalibration',
-      subtitle: 'Full F3 recalibration for new season',
+      subtitle: 'Full annual recalibration for new season',
       route: `/(drawer)/(tabs)/production/parcel/${parcelId}/calibration/annual`,
       color: themeColors.info,
       bg: themeColors.infoContainer,

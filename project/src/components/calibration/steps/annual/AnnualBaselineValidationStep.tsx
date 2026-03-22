@@ -124,7 +124,7 @@ export function AnnualBaselineValidationStep({
         <Button
           type="button"
           onClick={async () => {
-            await startAnnualRecalibration.mutateAsync({ trigger: 'f3-annual-wizard' });
+            await startAnnualRecalibration.mutateAsync({ trigger: 'annual-wizard' });
             onValidated();
           }}
           disabled={startAnnualRecalibration.isPending}
@@ -133,12 +133,12 @@ export function AnnualBaselineValidationStep({
           {startAnnualRecalibration.isPending ? (
             <>
               <RefreshCw className="h-4 w-4 animate-spin" />
-              Validation en cours...
+              Lancement en cours...
             </>
           ) : (
             <>
               <ArrowRight className="h-4 w-4" />
-              Valider et mettre a jour le profil de reference
+              Valider et lancer le recalibrage annuel
             </>
           )}
         </Button>

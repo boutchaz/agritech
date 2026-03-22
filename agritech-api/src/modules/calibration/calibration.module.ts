@@ -1,5 +1,6 @@
 import { Module, forwardRef } from "@nestjs/common";
 import { AIReportsModule } from "../ai-reports/ai-reports.module";
+import { AnnualPlanModule } from "../annual-plan/annual-plan.module";
 import { DatabaseModule } from "../database/database.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { SatelliteIndicesModule } from "../satellite-indices/satellite-indices.module";
@@ -13,6 +14,7 @@ import { AnnualRecalibrationService } from "./annual-recalibration.service";
   imports: [
     DatabaseModule,
     forwardRef(() => AIReportsModule),
+    AnnualPlanModule,
     SatelliteIndicesModule,
     NotificationsModule,
   ],

@@ -147,6 +147,36 @@ const MONTH_NUMBER_TO_LABEL: Record<number, string> = {
 export class AnnualPlanService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async ensurePlan(
+    parcelId: string,
+    organizationId: string,
+    year = new Date().getUTCFullYear(),
+  ): Promise<AnnualPlanWithInterventions> {
+    const existingPlan = await this.findPlanByParcelAndYear(
+      parcelId,
+      organizationId,
+      year,
+    );
+
+    if (!existingPlan) {
+      return this.generatePlan(parcelId, organizationId, year);
+    }
+
+    if (existingPlan.status === 'draft') {
+      return this.regeneratePlan(parcelId, organizationId, year);
+    }
+
+    const interventions = await this.findPlanInterventions(
+      existingPlan.id,
+      organizationId,
+    );
+
+    return {
+      ...existingPlan,
+      interventions,
+    };
+  }
+
   async generatePlan(
     parcelId: string,
     organizationId: string,

@@ -59,6 +59,22 @@ interface TriggerConfig {
   month?: number;
   day?: number;
   snoozed_until?: string;
+  missing_task_review?: {
+    reviewed_at?: string;
+    resolutions?: MissingTaskResolution[];
+  };
+}
+
+export type MissingTaskResolutionStatus =
+  | "completed"
+  | "not_done"
+  | "unconfirmed";
+
+export interface MissingTaskResolution {
+  task_id: string;
+  resolution: MissingTaskResolutionStatus;
+  execution_date?: string;
+  notes?: string;
 }
 
 @Injectable()
@@ -131,14 +147,24 @@ export class AnnualRecalibrationService {
     organizationId: string,
   ): Promise<
     Array<{
+      task_id: string;
       task_type: string;
       period: string;
       message: string;
       action: "quick_entry" | "confirm_not_done" | "ignore";
+      current_resolution?: MissingTaskResolutionStatus;
+      resolution_date?: string;
+      resolution_notes?: string;
     }>
   > {
     const supabase = this.databaseService.getAdminClient();
     const seasonRange = await this.getCurrentSeasonRange(parcelId, organizationId);
+    const parcel = await this.getParcelState(parcelId, organizationId);
+    const reviewMap = new Map(
+      this.getStoredMissingTaskReview(parcel.annual_trigger_config).map(
+        (resolution) => [resolution.task_id, resolution],
+      ),
+    );
     const { data, error } = await supabase
       .from("tasks")
       .select("id, task_type, title, status, due_date, scheduled_start, created_at")
@@ -171,46 +197,66 @@ export class AnnualRecalibrationService {
 
       if (taskType === "fertilization") {
         return {
+          task_id: row.id,
           task_type: taskType,
           period,
           message: `Avez-vous realise une application de fertilisants en ${period}?`,
           action: "quick_entry" as const,
+          current_resolution: reviewMap.get(row.id)?.resolution,
+          resolution_date: reviewMap.get(row.id)?.execution_date,
+          resolution_notes: reviewMap.get(row.id)?.notes,
         };
       }
 
       if (taskType === "pest_control") {
         const target = this.extractPestTarget(row.title);
         return {
+          task_id: row.id,
           task_type: taskType,
           period,
           message: `Avez-vous traite contre ${target} cette saison?`,
           action: "quick_entry" as const,
+          current_resolution: reviewMap.get(row.id)?.resolution,
+          resolution_date: reviewMap.get(row.id)?.execution_date,
+          resolution_notes: reviewMap.get(row.id)?.notes,
         };
       }
 
       if (taskType === "irrigation") {
         return {
+          task_id: row.id,
           task_type: taskType,
           period,
           message: `Aucune donnee d'irrigation en ${period}. Arret saisonnier?`,
           action: "confirm_not_done" as const,
+          current_resolution: reviewMap.get(row.id)?.resolution,
+          resolution_date: reviewMap.get(row.id)?.execution_date,
+          resolution_notes: reviewMap.get(row.id)?.notes,
         };
       }
 
       if (taskType === "pruning") {
         return {
+          task_id: row.id,
           task_type: taskType,
           period,
           message: "Avez-vous realise une taille cette saison?",
           action: "quick_entry" as const,
+          current_resolution: reviewMap.get(row.id)?.resolution,
+          resolution_date: reviewMap.get(row.id)?.execution_date,
+          resolution_notes: reviewMap.get(row.id)?.notes,
         };
       }
 
       return {
+        task_id: row.id,
         task_type: taskType,
         period,
         message: "Intervention planifiee non confirmee cette saison.",
         action: "ignore" as const,
+        current_resolution: reviewMap.get(row.id)?.resolution,
+        resolution_date: reviewMap.get(row.id)?.execution_date,
+        resolution_notes: reviewMap.get(row.id)?.notes,
       };
     });
   }
@@ -223,14 +269,17 @@ export class AnnualRecalibrationService {
     new_soil: boolean;
     new_water: boolean;
     new_foliar: boolean;
+    soil_date?: string;
+    water_date?: string;
+    foliar_date?: string;
   }> {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from("analyses")
-      .select("analysis_type")
+      .select("analysis_type, analysis_date")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
-      .gt("created_at", lastCalibrationDate);
+      .gt("analysis_date", lastCalibrationDate);
 
     if (error) {
       throw new BadRequestException(
@@ -238,15 +287,106 @@ export class AnnualRecalibrationService {
       );
     }
 
-    const analysisTypes = new Set(
-      ((data ?? []) as AnalysisRow[]).map((row) => row.analysis_type),
-    );
+    const analyses = (data ?? []) as Array<AnalysisRow & { analysis_date?: string }>;
+    const latestDates = analyses.reduce<Record<string, string>>((accumulator, row) => {
+      if (!row.analysis_date) {
+        return accumulator;
+      }
+
+      const current = accumulator[row.analysis_type];
+      if (!current || row.analysis_date > current) {
+        accumulator[row.analysis_type] = row.analysis_date;
+      }
+
+      return accumulator;
+    }, {});
+
+    const analysisTypes = new Set(analyses.map((row) => row.analysis_type));
 
     return {
       new_soil: analysisTypes.has("soil"),
       new_water: analysisTypes.has("water"),
       new_foliar: analysisTypes.has("plant") || analysisTypes.has("foliar"),
+      soil_date: latestDates.soil,
+      water_date: latestDates.water,
+      foliar_date: latestDates.plant ?? latestDates.foliar,
     };
+  }
+
+  async saveMissingTaskReview(
+    parcelId: string,
+    organizationId: string,
+    resolutions: MissingTaskResolution[],
+  ): Promise<{ reviewed_at: string; resolutions: MissingTaskResolution[] }> {
+    const normalizedResolutions = this.normalizeMissingTaskResolutions(resolutions);
+    const parcel = await this.getParcelState(parcelId, organizationId);
+    const triggerConfig = this.parseTriggerConfig(parcel.annual_trigger_config);
+    const reviewedAt = new Date().toISOString();
+
+    await this.applyMissingTaskResolutionUpdates(
+      parcelId,
+      organizationId,
+      normalizedResolutions,
+    );
+
+    const supabase = this.databaseService.getAdminClient();
+    const { error } = await supabase
+      .from("parcels")
+      .update({
+        annual_trigger_config: {
+          ...triggerConfig,
+          missing_task_review: {
+            reviewed_at: reviewedAt,
+            resolutions: normalizedResolutions,
+          },
+        },
+      })
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
+
+    if (error) {
+      throw new BadRequestException(
+        `Failed to save annual missing task review: ${error.message}`,
+      );
+    }
+
+    return {
+      reviewed_at: reviewedAt,
+      resolutions: normalizedResolutions,
+    };
+  }
+
+  async snoozeAnnualReminder(
+    parcelId: string,
+    organizationId: string,
+    days: number,
+  ): Promise<{ snoozed_until: string }> {
+    const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 7;
+    const parcel = await this.getParcelState(parcelId, organizationId);
+    const triggerConfig = this.parseTriggerConfig(parcel.annual_trigger_config);
+    const snoozedUntilDate = new Date();
+    snoozedUntilDate.setDate(snoozedUntilDate.getDate() + safeDays);
+    const snoozedUntil = snoozedUntilDate.toISOString();
+
+    const { error } = await this.databaseService
+      .getAdminClient()
+      .from("parcels")
+      .update({
+        annual_trigger_config: {
+          ...triggerConfig,
+          snoozed_until: snoozedUntil,
+        },
+      })
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
+
+    if (error) {
+      throw new BadRequestException(
+        `Failed to snooze annual reminder: ${error.message}`,
+      );
+    }
+
+    return { snoozed_until: snoozedUntil };
   }
 
   async generateCampaignBilan(
@@ -392,6 +532,9 @@ export class AnnualRecalibrationService {
 
     const previousBaseline = this.extractPreviousBaseline(latestCompletedCalibration);
     const campaignBilan = await this.generateCampaignBilan(parcelId, organizationId);
+    const missingTaskReview = this.getStoredMissingTaskReview(
+      (await this.getParcelState(parcelId, organizationId)).annual_trigger_config,
+    );
 
     const calibration = await this.calibrationService.startCalibration(
       parcelId,
@@ -415,6 +558,7 @@ export class AnnualRecalibrationService {
         ...existingRecalibration,
         motif: "post_campaign",
         trigger_reason: eligibility.trigger_reason,
+        missing_task_review: missingTaskReview,
       },
       previous_baseline: previousBaseline,
       campaign_bilan: campaignBilan,
@@ -717,7 +861,155 @@ export class AnnualRecalibrationService {
       day: this.toNumber(value.day) ?? undefined,
       snoozed_until:
         typeof value.snoozed_until === "string" ? value.snoozed_until : undefined,
+      missing_task_review:
+        this.isJsonObject(value.missing_task_review) &&
+        Array.isArray(value.missing_task_review.resolutions)
+          ? {
+              reviewed_at:
+                typeof value.missing_task_review.reviewed_at === "string"
+                  ? value.missing_task_review.reviewed_at
+                  : undefined,
+              resolutions: this.normalizeMissingTaskResolutions(
+                value.missing_task_review.resolutions as MissingTaskResolution[],
+              ),
+            }
+          : undefined,
     };
+  }
+
+  private getStoredMissingTaskReview(value: unknown): MissingTaskResolution[] {
+    return this.parseTriggerConfig(value).missing_task_review?.resolutions ?? [];
+  }
+
+  private normalizeMissingTaskResolutions(
+    resolutions: MissingTaskResolution[],
+  ): MissingTaskResolution[] {
+    const normalized = new Map<string, MissingTaskResolution>();
+
+    for (const resolution of resolutions) {
+      if (
+        !resolution ||
+        typeof resolution.task_id !== "string" ||
+        !resolution.task_id.trim() ||
+        !this.isMissingTaskResolutionStatus(resolution.resolution)
+      ) {
+        continue;
+      }
+
+      normalized.set(resolution.task_id, {
+        task_id: resolution.task_id,
+        resolution: resolution.resolution,
+        execution_date:
+          typeof resolution.execution_date === "string" &&
+          resolution.execution_date.trim().length > 0
+            ? resolution.execution_date
+            : undefined,
+        notes:
+          typeof resolution.notes === "string" && resolution.notes.trim().length > 0
+            ? resolution.notes.trim()
+            : undefined,
+      });
+    }
+
+    return Array.from(normalized.values());
+  }
+
+  private isMissingTaskResolutionStatus(
+    value: unknown,
+  ): value is MissingTaskResolutionStatus {
+    return value === "completed" || value === "not_done" || value === "unconfirmed";
+  }
+
+  private async applyMissingTaskResolutionUpdates(
+    parcelId: string,
+    organizationId: string,
+    resolutions: MissingTaskResolution[],
+  ): Promise<void> {
+    const actionableResolutions = resolutions.filter(
+      (resolution) =>
+        resolution.resolution === "completed" ||
+        resolution.resolution === "not_done",
+    );
+
+    if (actionableResolutions.length === 0) {
+      return;
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const { data: tasks, error: fetchError } = await supabase
+      .from("tasks")
+      .select("id, notes")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId)
+      .in(
+        "id",
+        actionableResolutions.map((resolution) => resolution.task_id),
+      );
+
+    if (fetchError) {
+      throw new BadRequestException(
+        `Failed to load annual missing tasks for review: ${fetchError.message}`,
+      );
+    }
+
+    const taskNotesById = new Map(
+      ((tasks ?? []) as Array<{ id: string; notes: string | null }>).map((task) => [
+        task.id,
+        task.notes,
+      ]),
+    );
+
+    for (const resolution of actionableResolutions) {
+      const existingNotes = taskNotesById.get(resolution.task_id) ?? null;
+      const reviewNote = this.buildMissingTaskReviewNote(resolution, existingNotes);
+      const completedDate =
+        resolution.execution_date ?? new Date().toISOString().split("T")[0];
+
+      const updatePayload =
+        resolution.resolution === "completed"
+          ? {
+              status: "completed",
+              completion_percentage: 100,
+              completed_date: completedDate,
+              actual_end: `${completedDate}T00:00:00.000Z`,
+              notes: reviewNote,
+            }
+          : {
+              status: "cancelled",
+              notes: reviewNote,
+            };
+
+      const { error: updateError } = await supabase
+        .from("tasks")
+        .update(updatePayload)
+        .eq("id", resolution.task_id)
+        .eq("organization_id", organizationId)
+        .eq("parcel_id", parcelId);
+
+      if (updateError) {
+        throw new BadRequestException(
+          `Failed to persist missing task review for task ${resolution.task_id}: ${updateError.message}`,
+        );
+      }
+    }
+  }
+
+  private buildMissingTaskReviewNote(
+    resolution: MissingTaskResolution,
+    existingNotes: string | null,
+  ): string {
+    const summary =
+      resolution.resolution === "completed"
+        ? `Annual review: completed on ${resolution.execution_date ?? new Date().toISOString().split("T")[0]}`
+        : "Annual review: marked as not done";
+
+    const noteParts = [
+      existingNotes?.trim() || null,
+      summary,
+      resolution.notes ? `Notes: ${resolution.notes}` : null,
+    ].filter((value): value is string => typeof value === "string" && value.length > 0);
+
+    return noteParts.join("\n");
   }
 
   private deriveTaskPeriod(task: TaskRow): string {

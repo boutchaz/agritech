@@ -6,6 +6,10 @@ import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { DatabaseService } from '../database/database.service';
 import { NutritionOptionService } from './nutrition-option.service';
 import { AIReportsService } from '../ai-reports/ai-reports.service';
+import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { AnnualPlanService } from '../annual-plan/annual-plan.service';
 import {
   createMockDatabaseService,
   createMockQueryBuilder,
@@ -29,6 +33,18 @@ const mockAIReportsService = {
   generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
 };
 
+const mockSatelliteCacheService = {
+  syncParcelSatelliteData: jest.fn(),
+};
+
+const mockNotificationsService = {
+  createNotification: jest.fn(),
+};
+
+const mockNotificationsGateway = {
+  emitToOrganization: jest.fn(),
+};
+
 const organizationId = 'org-001';
 const parcelId = agromindCalibrationFixture.parcel.id;
 const calibrationId = 'calibration-v2-001';
@@ -42,6 +58,17 @@ const parcelBoundary = [
 
 const lookbackBase = new Date();
 lookbackBase.setDate(lookbackBase.getDate() - 730);
+
+const mockAnnualPlanService = {
+  ensurePlan: jest.fn().mockResolvedValue({
+    id: 'plan-001',
+    parcel_id: parcelId,
+    organization_id: organizationId,
+    year: 2026,
+    status: 'draft',
+    interventions: [],
+  }),
+};
 
 const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
 
@@ -128,6 +155,10 @@ describe('Calibration V2 integration', () => {
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: AIReportsService, useValue: mockAIReportsService },
+        { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: NotificationsGateway, useValue: mockNotificationsGateway },
+        { provide: AnnualPlanService, useValue: mockAnnualPlanService },
       ],
     }).compile();
 
@@ -139,10 +170,14 @@ describe('Calibration V2 integration', () => {
     jest.clearAllMocks();
     mockStateMachine.transitionPhase.mockReset();
     mockNutritionOptionService.suggestNutritionOption.mockReset();
+    mockSatelliteCacheService.syncParcelSatelliteData.mockReset();
+    mockNotificationsService.createNotification.mockReset();
+    mockNotificationsGateway.emitToOrganization.mockReset();
+    mockAnnualPlanService.ensurePlan.mockClear();
     delete process.env.SATELLITE_SERVICE_URL;
   });
 
-  it('startCalibrationV2 creates in-progress v2 calibration and transitions to awaiting_validation after background completion', async () => {
+  it('startCalibration creates in-progress v2 calibration and transitions to awaiting_validation after background completion', async () => {
     const state = setupV2StatefulMock('disabled');
     const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
 
@@ -152,7 +187,7 @@ describe('Calibration V2 integration', () => {
       }
     });
 
-    const startResult = await calibrationService.startCalibrationV2(parcelId, organizationId, {});
+    const startResult = await calibrationService.startCalibration(parcelId, organizationId, {});
 
     expect(startResult.status).toBe('in_progress');
     expect((startResult as { calibration_version?: string }).calibration_version).toBe('v2');
@@ -194,7 +229,7 @@ describe('Calibration V2 integration', () => {
       }
     });
 
-    await calibrationService.startCalibrationV2(parcelId, organizationId, {});
+    await calibrationService.startCalibration(parcelId, organizationId, {});
     await flushBackgroundTasks();
 
     expect(state.parcel.ai_phase).toBe('awaiting_validation');
@@ -314,13 +349,13 @@ describe('Calibration V2 integration', () => {
     });
   });
 
-  it('startCalibrationV2 rejects concurrent calibration when ai_phase is calibrating', async () => {
+  it('startCalibration rejects concurrent calibration when ai_phase is calibrating', async () => {
     setupV2StatefulMock('calibrating');
 
-    await expect(calibrationService.startCalibrationV2(parcelId, organizationId, {})).rejects.toThrow(
+    await expect(calibrationService.startCalibration(parcelId, organizationId, {})).rejects.toThrow(
       BadRequestException,
     );
-    await expect(calibrationService.startCalibrationV2(parcelId, organizationId, {})).rejects.toThrow(
+    await expect(calibrationService.startCalibration(parcelId, organizationId, {})).rejects.toThrow(
       'already in progress',
     );
   });
@@ -329,7 +364,7 @@ describe('Calibration V2 integration', () => {
     setupV2StatefulMock('awaiting_validation');
     jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
 
-    const result = await calibrationService.startCalibrationV2(parcelId, organizationId, {});
+    const result = await calibrationService.startCalibration(parcelId, organizationId, {});
 
     expect(result.status).toBe('in_progress');
     expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
@@ -366,7 +401,7 @@ describe('Calibration V2 integration', () => {
     setupV2StatefulMock('active');
     jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
 
-    const result = await calibrationService.startCalibrationV2(parcelId, organizationId, {});
+    const result = await calibrationService.startCalibration(parcelId, organizationId, {});
 
     expect(result.status).toBe('in_progress');
     expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(

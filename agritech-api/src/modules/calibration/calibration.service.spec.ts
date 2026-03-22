@@ -14,6 +14,10 @@ import { agromindCalibrationFixture } from './fixtures/test-fixture';
 import { CalibrationStateMachine } from './calibration-state-machine';
 import { NutritionOptionService } from './nutrition-option.service';
 import { AIReportsService } from '../ai-reports/ai-reports.service';
+import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { AnnualPlanService } from '../annual-plan/annual-plan.service';
 
 const mockAIReportsService = {
   generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
@@ -25,6 +29,22 @@ const mockStateMachine = {
 
 const mockNutritionOptionService = {
   suggestNutritionOption: jest.fn(),
+};
+
+const mockSatelliteCacheService = {
+  syncParcelSatelliteData: jest.fn(),
+};
+
+const mockNotificationsService = {
+  createNotification: jest.fn(),
+};
+
+const mockNotificationsGateway = {
+  emitToOrganization: jest.fn(),
+};
+
+const mockAnnualPlanService = {
+  ensurePlan: jest.fn(),
 };
 
 describe('CalibrationService', () => {
@@ -54,6 +74,10 @@ describe('CalibrationService', () => {
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: AIReportsService, useValue: mockAIReportsService },
+        { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: NotificationsGateway, useValue: mockNotificationsGateway },
+        { provide: AnnualPlanService, useValue: mockAnnualPlanService },
       ],
     }).compile();
 
@@ -65,6 +89,10 @@ describe('CalibrationService', () => {
     jest.clearAllMocks();
     mockStateMachine.transitionPhase.mockReset();
     mockNutritionOptionService.suggestNutritionOption.mockReset();
+    mockSatelliteCacheService.syncParcelSatelliteData.mockReset();
+    mockNotificationsService.createNotification.mockReset();
+    mockNotificationsGateway.emitToOrganization.mockReset();
+    mockAnnualPlanService.ensurePlan.mockReset();
     delete process.env.SATELLITE_SERVICE_URL;
   });
 
@@ -84,7 +112,7 @@ describe('CalibrationService', () => {
     await expect(service.getLatestCalibration(parcelId, organizationId)).resolves.toBeNull();
   });
 
-  it('startCalibrationV2 rejects when parcel is already calibrating', async () => {
+  it('startCalibration rejects when parcel is already calibrating', async () => {
     const parcelQuery = createMockQueryBuilder();
     parcelQuery.select.mockReturnValue(parcelQuery);
     parcelQuery.eq.mockReturnValue(parcelQuery);
@@ -107,11 +135,11 @@ describe('CalibrationService', () => {
     });
 
     await expect(
-      service.startCalibrationV2(parcelId, organizationId, {}),
+      service.startCalibration(parcelId, organizationId, {}),
     ).rejects.toThrow('already in progress');
   });
 
-  it('executeCalibrationV2 assembles full payload and updates calibration + parcel state', async () => {
+  it('runCalibrationInBackground assembles full payload and updates calibration + parcel state', async () => {
     const satelliteQuery = createMockQueryBuilder();
     satelliteQuery.select.mockReturnValue(satelliteQuery);
     satelliteQuery.eq.mockReturnValue(satelliteQuery);
@@ -258,7 +286,7 @@ describe('CalibrationService', () => {
         ),
       );
 
-    await (service as unknown as { executeCalibrationV2: (...args: unknown[]) => Promise<void> }).executeCalibrationV2(
+    await (service as unknown as { runCalibrationInBackground: (...args: unknown[]) => Promise<void> }).runCalibrationInBackground(
       'calibration-v2-001',
       parcelId,
       organizationId,
@@ -316,7 +344,6 @@ describe('CalibrationService', () => {
     expect(parcelUpdateQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({
         ai_calibration_id: 'calibration-v2-001',
-        ai_enabled: true,
       }),
     );
 

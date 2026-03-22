@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useSnoozeAnnualReminder } from '@/hooks/useAnnualRecalibration';
 import { AnnualBaselineValidationStep } from './steps/annual/AnnualBaselineValidationStep';
 import { AnnualCampaignBilanStep } from './steps/annual/AnnualCampaignBilanStep';
 import { AnnualMissingTasksStep } from './steps/annual/AnnualMissingTasksStep';
@@ -34,6 +35,7 @@ export function AnnualRecalibrationWizard({
 }: AnnualRecalibrationWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [step4Ready, setStep4Ready] = useState(false);
+  const snoozeAnnualReminder = useSnoozeAnnualReminder(parcelId);
 
   const goNext = useCallback(() => {
     setCurrentStep((previous) => Math.min(5, previous + 1));
@@ -56,8 +58,8 @@ export function AnnualRecalibrationWizard({
     return () => window.clearTimeout(timeoutId);
   }, [currentStep, step4Ready]);
 
-  const handleSnooze = (days: number) => {
-    toast.success(`Rappel programme dans ${days} jour(s).`);
+  const handleSnooze = async (days: number) => {
+    await snoozeAnnualReminder.mutateAsync(days);
     onClose();
   };
 
@@ -86,14 +88,16 @@ export function AnnualRecalibrationWizard({
     }
 
     return (
-      <AnnualBaselineValidationStep
-        parcelId={parcelId}
-        estimatedCampaignCount={estimatedCampaignCount}
-        onValidated={() => {
-          toast.success('Baseline annuelle mise a jour.');
-          onClose();
-        }}
-      />
+        <AnnualBaselineValidationStep
+          parcelId={parcelId}
+          estimatedCampaignCount={estimatedCampaignCount}
+          onValidated={() => {
+            toast.success(
+              'Recalibrage annuel lance. La baseline sera mise a jour une fois la calibration terminee.',
+            );
+            onClose();
+          }}
+        />
     );
   };
 
