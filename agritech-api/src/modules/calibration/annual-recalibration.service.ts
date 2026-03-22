@@ -320,7 +320,7 @@ export class AnnualRecalibrationService {
   ): Promise<{ reviewed_at: string; resolutions: MissingTaskResolution[] }> {
     const normalizedResolutions = this.normalizeMissingTaskResolutions(resolutions);
     const parcel = await this.getParcelState(parcelId, organizationId);
-    const triggerConfig = this.parseTriggerConfig(parcel.annual_trigger_config);
+    const rawTriggerConfig = this.getRawTriggerConfig(parcel.annual_trigger_config);
     const reviewedAt = new Date().toISOString();
 
     await this.applyMissingTaskResolutionUpdates(
@@ -334,7 +334,7 @@ export class AnnualRecalibrationService {
       .from("parcels")
       .update({
         annual_trigger_config: {
-          ...triggerConfig,
+          ...rawTriggerConfig,
           missing_task_review: {
             reviewed_at: reviewedAt,
             resolutions: normalizedResolutions,
@@ -363,7 +363,7 @@ export class AnnualRecalibrationService {
   ): Promise<{ snoozed_until: string }> {
     const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : 7;
     const parcel = await this.getParcelState(parcelId, organizationId);
-    const triggerConfig = this.parseTriggerConfig(parcel.annual_trigger_config);
+    const rawTriggerConfig = this.getRawTriggerConfig(parcel.annual_trigger_config);
     const snoozedUntilDate = new Date();
     snoozedUntilDate.setDate(snoozedUntilDate.getDate() + safeDays);
     const snoozedUntil = snoozedUntilDate.toISOString();
@@ -373,7 +373,7 @@ export class AnnualRecalibrationService {
       .from("parcels")
       .update({
         annual_trigger_config: {
-          ...triggerConfig,
+          ...rawTriggerConfig,
           snoozed_until: snoozedUntil,
         },
       })
@@ -875,6 +875,10 @@ export class AnnualRecalibrationService {
             }
           : undefined,
     };
+  }
+
+  private getRawTriggerConfig(value: unknown): Record<string, unknown> {
+    return this.isJsonObject(value) ? { ...value } : {};
   }
 
   private getStoredMissingTaskReview(value: unknown): MissingTaskResolution[] {

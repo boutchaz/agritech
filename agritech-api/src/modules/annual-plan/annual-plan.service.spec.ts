@@ -128,6 +128,48 @@ describe('AnnualPlanService', () => {
     );
   });
 
+  it('ensurePlan returns the existing draft plan without regenerating it', async () => {
+    const annualPlanQuery = createLookupQuery({
+      id: planId,
+      parcel_id: parcelId,
+      organization_id: organizationId,
+      calibration_id: 'calibration-001',
+      year: 2026,
+      status: 'draft',
+      crop_type: 'olivier',
+      variety: 'Picholine Marocaine',
+      plan_data: { source: 'manual-edits' },
+      validated_at: null,
+      created_at: '2026-03-12T10:00:00.000Z',
+      updated_at: '2026-03-20T10:00:00.000Z',
+    });
+    const interventionsQuery = createInterventionsQuery([
+      createInterventionRecord(2, 'planned'),
+      createInterventionRecord(1, 'planned'),
+    ]);
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'annual_plans') {
+        return annualPlanQuery;
+      }
+
+      if (table === 'plan_interventions') {
+        return interventionsQuery;
+      }
+
+      return createMockQueryBuilder();
+    });
+
+    const regenerateSpy = jest.spyOn(service, 'regeneratePlan');
+
+    const result = await service.ensurePlan(parcelId, organizationId, 2026);
+
+    expect(regenerateSpy).not.toHaveBeenCalled();
+    expect(result.id).toBe(planId);
+    expect(result.plan_data).toEqual({ source: 'manual-edits' });
+    expect(result.interventions.map((intervention) => intervention.month)).toEqual([1, 2]);
+  });
+
   it('getSummary returns intervention status counts', async () => {
     const annualPlanQuery = createLatestPlanQuery({
       id: planId,

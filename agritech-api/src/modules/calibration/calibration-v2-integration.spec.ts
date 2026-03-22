@@ -412,6 +412,102 @@ describe('Calibration V2 integration', () => {
     );
   });
 
+  it('auto-activates a full recalibration started from an active parcel', async () => {
+    const state = setupV2StatefulMock('active');
+    state.parcel.ai_nutrition_option = 'B';
+    jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
+
+    mockStateMachine.transitionPhase.mockImplementation(async (pid, _from, to, orgId) => {
+      if (pid === parcelId && orgId === organizationId) {
+        state.parcel.ai_phase = to;
+      }
+    });
+
+    await calibrationService.startCalibration(parcelId, organizationId, {});
+    await flushBackgroundTasks();
+
+    expect(state.parcel.ai_phase).toBe('active');
+    expect(
+      (state.calibration.calibration_data as { validation?: { validated?: boolean } }).validation?.validated,
+    ).toBe(true);
+    expect(mockAnnualPlanService.ensurePlan).toHaveBeenCalledWith(
+      parcelId,
+      organizationId,
+    );
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'awaiting_validation',
+      'active',
+      organizationId,
+    );
+  });
+
+  it('auto-activates annual recalibration and triggers annual plan generation', async () => {
+    const state = setupV2StatefulMock('active');
+    state.parcel.ai_nutrition_option = 'A';
+    jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
+
+    mockStateMachine.transitionPhase.mockImplementation(async (pid, _from, to, orgId) => {
+      if (pid === parcelId && orgId === organizationId) {
+        state.parcel.ai_phase = to;
+      }
+    });
+
+    await calibrationService.startCalibration(parcelId, organizationId, {
+      mode_calibrage: 'annual',
+      recalibration_motif: 'post_campaign',
+    });
+    await flushBackgroundTasks();
+
+    expect(state.parcel.ai_phase).toBe('active');
+    expect(state.calibration.mode_calibrage).toBe('annual');
+    expect(
+      (state.calibration.calibration_data as { validation?: { validated?: boolean } }).validation?.validated,
+    ).toBe(true);
+    expect(mockAnnualPlanService.ensurePlan).toHaveBeenCalledWith(
+      parcelId,
+      organizationId,
+    );
+  });
+
+  it('auto-activates partial recalibration after completion', async () => {
+    const state = setupV2StatefulMock('active', {
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      calibration_data: {
+        version: 'v2',
+        output: v2OutputFixture,
+        validation: { validated: true, validated_at: new Date().toISOString() },
+      },
+    });
+    state.parcel.ai_nutrition_option = 'C';
+    jest.spyOn(global, 'fetch').mockImplementation(mockV2FetchImplementation);
+
+    mockStateMachine.transitionPhase.mockImplementation(async (pid, _from, to, orgId) => {
+      if (pid === parcelId && orgId === organizationId) {
+        state.parcel.ai_phase = to;
+      }
+    });
+
+    await calibrationService.startPartialRecalibration(parcelId, organizationId, {
+      mode_calibrage: 'partial',
+      recalibration_motif: 'new_soil_analysis',
+    });
+    await flushBackgroundTasks();
+
+    expect(state.parcel.ai_phase).toBe('active');
+    expect(state.calibration.mode_calibrage).toBe('partial');
+    expect(
+      (state.calibration.calibration_data as { validation?: { validated?: boolean } }).validation?.validated,
+    ).toBe(true);
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'awaiting_validation',
+      'active',
+      organizationId,
+    );
+  });
+
   function setupV2StatefulMock(
     initialAiPhase: string,
     calibrationOverrides?: Record<string, unknown>,

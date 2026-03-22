@@ -162,10 +162,6 @@ export class AnnualPlanService {
       return this.generatePlan(parcelId, organizationId, year);
     }
 
-    if (existingPlan.status === 'draft') {
-      return this.regeneratePlan(parcelId, organizationId, year);
-    }
-
     const interventions = await this.findPlanInterventions(
       existingPlan.id,
       organizationId,

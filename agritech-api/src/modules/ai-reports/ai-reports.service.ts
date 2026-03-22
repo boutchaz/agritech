@@ -2685,11 +2685,11 @@ export class AIReportsService {
     // Fetch tasks/operations
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('date, type, description')
+      .select('due_date, created_at, task_type, title, description')
       .eq('parcel_id', parcelId)
-      .gte('date', defaultStartDate)
-      .lte('date', defaultEndDate)
-      .order('date', { ascending: false })
+      .gte('created_at', defaultStartDate)
+      .lte('created_at', defaultEndDate)
+      .order('created_at', { ascending: false })
       .limit(50);
 
     // Fetch recent harvests (last 2 years for context)
@@ -2893,9 +2893,16 @@ export class AIReportsService {
       },
       weather: await this.fetchWeatherData(parcel.boundary, startDate, endDate),
       tasks: tasks.map((t) => ({
-        date: t.date,
-        type: t.type,
-        description: t.description,
+        date:
+          (typeof t.due_date === 'string' && t.due_date) ||
+          (typeof t.created_at === 'string' ? t.created_at : endDate),
+        type: typeof t.task_type === 'string' ? t.task_type : 'general',
+        description:
+          typeof t.description === 'string'
+            ? t.description
+            : typeof t.title === 'string'
+              ? t.title
+              : undefined,
       })),
       harvests: harvests.map((h) => ({
         date: h.harvest_date,

@@ -139,6 +139,130 @@ describe('CalibrationService', () => {
     ).rejects.toThrow('already in progress');
   });
 
+  it('startCalibration restores the previous parcel phase when calibration creation fails', async () => {
+    const parcelQuery = createMockQueryBuilder();
+    parcelQuery.select.mockReturnValue(parcelQuery);
+    parcelQuery.eq.mockReturnValue(parcelQuery);
+    parcelQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: parcelId,
+        crop_type: agromindCalibrationFixture.parcel.crop_type,
+        planting_system: agromindCalibrationFixture.parcel.system,
+        planting_year: 2015,
+        variety: 'picholine_marocaine',
+        ai_phase: 'active',
+        boundary: parcelBoundary,
+        organization_id: organizationId,
+        farms: { organization_id: organizationId },
+      }),
+    );
+
+    const calibrationInsertQuery = createMockQueryBuilder();
+    calibrationInsertQuery.insert.mockReturnValue(calibrationInsertQuery);
+    calibrationInsertQuery.select.mockReturnValue(calibrationInsertQuery);
+    calibrationInsertQuery.single.mockResolvedValue(
+      mockQueryResult(null, { message: 'insert failed' }),
+    );
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelQuery;
+      if (table === 'calibrations') return calibrationInsertQuery;
+      return createMockQueryBuilder();
+    });
+
+    await expect(
+      service.startCalibration(parcelId, organizationId, {}, { skipReadinessCheck: true }),
+    ).rejects.toThrow('Failed to create calibration: insert failed');
+
+    expect(mockStateMachine.transitionPhase).toHaveBeenNthCalledWith(
+      1,
+      parcelId,
+      'active',
+      'calibrating',
+      organizationId,
+    );
+    expect(mockStateMachine.transitionPhase).toHaveBeenNthCalledWith(
+      2,
+      parcelId,
+      'calibrating',
+      'active',
+      organizationId,
+    );
+  });
+
+  it('startPartialRecalibration restores the previous parcel phase when calibration creation fails', async () => {
+    const parcelQuery = createMockQueryBuilder();
+    parcelQuery.select.mockReturnValue(parcelQuery);
+    parcelQuery.eq.mockReturnValue(parcelQuery);
+    parcelQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: parcelId,
+        crop_type: agromindCalibrationFixture.parcel.crop_type,
+        planting_system: agromindCalibrationFixture.parcel.system,
+        planting_year: 2015,
+        variety: 'picholine_marocaine',
+        ai_phase: 'awaiting_validation',
+        boundary: parcelBoundary,
+        organization_id: organizationId,
+        irrigation_frequency: 'weekly',
+        water_quantity_per_session: 25,
+        water_source: 'well',
+        langue: 'fr',
+        farms: { organization_id: organizationId },
+      }),
+    );
+
+    const calibrationInsertQuery = createMockQueryBuilder();
+    calibrationInsertQuery.insert.mockReturnValue(calibrationInsertQuery);
+    calibrationInsertQuery.select.mockReturnValue(calibrationInsertQuery);
+    calibrationInsertQuery.single.mockResolvedValue(
+      mockQueryResult(null, { message: 'partial insert failed' }),
+    );
+
+    jest
+      .spyOn(service as never, 'getLatestCompletedCalibration' as never)
+      .mockResolvedValue({
+        id: 'baseline-001',
+        status: 'completed',
+        calibration_data: { output: { health_score: 82 } },
+        completed_at: '2026-03-10T10:00:00.000Z',
+      } as never);
+    jest
+      .spyOn(service as never, 'buildUpdatedBlocksForMotif' as never)
+      .mockResolvedValue({ soil_analysis: { ph: 7.1 } } as never);
+    jest
+      .spyOn(service as never, 'runPartialRecalibrationInBackground' as never)
+      .mockResolvedValue(undefined as never);
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelQuery;
+      if (table === 'calibrations') return calibrationInsertQuery;
+      return createMockQueryBuilder();
+    });
+
+    await expect(
+      service.startPartialRecalibration(parcelId, organizationId, {
+        mode_calibrage: 'partial',
+        recalibration_motif: 'new_soil_analysis',
+      }),
+    ).rejects.toThrow('Failed to create partial recalibration: partial insert failed');
+
+    expect(mockStateMachine.transitionPhase).toHaveBeenNthCalledWith(
+      1,
+      parcelId,
+      'awaiting_validation',
+      'calibrating',
+      organizationId,
+    );
+    expect(mockStateMachine.transitionPhase).toHaveBeenNthCalledWith(
+      2,
+      parcelId,
+      'calibrating',
+      'awaiting_validation',
+      organizationId,
+    );
+  });
+
   it('runCalibrationInBackground assembles full payload and updates calibration + parcel state', async () => {
     const satelliteQuery = createMockQueryBuilder();
     satelliteQuery.select.mockReturnValue(satelliteQuery);

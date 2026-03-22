@@ -30,6 +30,7 @@ import { getLocalCropReference } from "./crop-reference-loader";
 
 const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
+const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
 
 type ZoneClassification = "optimal" | "normal" | "stressed";
 type ParcelAiPhase =
@@ -236,6 +237,12 @@ export class CalibrationService {
     options?: { skipReadinessCheck?: boolean },
   ): Promise<CalibrationRecord> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
+    const previousPhase = parcel.aiPhase as
+      | "disabled"
+      | "pret_calibrage"
+      | "active"
+      | "awaiting_validation"
+      | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
       throw new BadRequestException(
@@ -277,11 +284,7 @@ export class CalibrationService {
 
     await this.stateMachine.transitionPhase(
       parcelId,
-      parcel.aiPhase as
-        | "disabled"
-        | "active"
-        | "awaiting_validation"
-        | "awaiting_nutrition_option",
+      previousPhase,
       "calibrating",
       organizationId,
     );
@@ -314,7 +317,7 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "disabled",
+        previousPhase,
         organizationId,
       );
 
@@ -392,6 +395,12 @@ export class CalibrationService {
     }
 
     const parcel = await this.getParcelContext(parcelId, organizationId);
+    const previousPhase = parcel.aiPhase as
+      | "disabled"
+      | "pret_calibrage"
+      | "active"
+      | "awaiting_validation"
+      | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
       throw new BadRequestException(
@@ -438,11 +447,7 @@ export class CalibrationService {
 
     await this.stateMachine.transitionPhase(
       parcelId,
-      parcel.aiPhase as
-        | "disabled"
-        | "active"
-        | "awaiting_validation"
-        | "awaiting_nutrition_option",
+      previousPhase,
       "calibrating",
       organizationId,
     );
@@ -487,7 +492,7 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "disabled",
+        previousPhase,
         organizationId,
       );
 
@@ -684,6 +689,7 @@ export class CalibrationService {
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 5;
+    const completedAt = new Date().toISOString();
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -764,6 +770,8 @@ export class CalibrationService {
     emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
+    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
       version: "v2",
       request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
@@ -783,23 +791,29 @@ export class CalibrationService {
       updated_blocks: updatedBlocks,
       output: v2Output,
       validation: {
-        validated: false,
-        validated_at: null,
+        validated: true,
+        validated_at: completedAt,
       },
+      ...(observationMode.observationOnly
+        ? {
+            observation_only: true,
+            observation_reason: observationMode.observationReason,
+          }
+        : {}),
     };
 
     const { error: updateCalibrationError } = await supabase
       .from("calibrations")
       .update({
         status: "completed",
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
         mode_calibrage: "partial",
         recalibration_motif: motif,
         previous_baseline: previousBaseline,
         baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
         baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
         baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
-        confidence_score: this.toNumber(v2Output.confidence?.normalized_score),
+        confidence_score: confidenceScore,
         zone_classification: zoneClassification,
         phenology_stage: this.extractPhenologyStage(v2Output),
         health_score: this.toNumber(v2Output.step8?.health_score?.total),
@@ -880,12 +894,14 @@ export class CalibrationService {
       }
     }
 
-    emitProgress(5, "finalizing", "Finalisation et transition vers la validation...");
+    emitProgress(5, "finalizing", "Activation de la nouvelle baseline...");
 
     const { error: updateParcelError } = await supabase
       .from("parcels")
       .update({
         ai_calibration_id: calibrationId,
+        ai_enabled: true,
+        ai_observation_only: observationMode.observationOnly,
       })
       .eq("id", parcelId);
 
@@ -901,12 +917,22 @@ export class CalibrationService {
       "awaiting_validation",
       organizationId,
     );
+    await this.stateMachine.transitionPhase(
+      parcelId,
+      "awaiting_validation",
+      "active",
+      organizationId,
+    );
+
+    await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
 
     this.notifyOrganizationUsers(
       organizationId,
       NotificationType.CALIBRATION_COMPLETE,
       "Calibration terminée",
-      "Le recalibrage partiel de la parcelle est terminé et en attente de validation.",
+      observationMode.observationOnly
+        ? "Le recalibrage partiel est terminé. La nouvelle baseline est active en mode observation."
+        : "Le recalibrage partiel est terminé et la nouvelle baseline est active.",
       {
         parcel_id: parcelId,
         calibration_id: calibrationId,
@@ -929,6 +955,7 @@ export class CalibrationService {
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 7;
+    const completedAt = new Date().toISOString();
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -1116,10 +1143,30 @@ export class CalibrationService {
 
     emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
 
+    const mode = this.normalizeCalibrationMode(dto.mode_calibrage);
+    const autoActivate = this.shouldAutoActivateAfterCompletion(
+      parcel.aiPhase,
+      mode,
+    );
+    const { data: existingCalibrationSnapshot } = await supabase
+      .from("calibrations")
+      .select("calibration_data")
+      .eq("id", calibrationId)
+      .maybeSingle();
+    const existingCalibrationData = this.toJsonObject(
+      existingCalibrationSnapshot?.calibration_data,
+    );
     const zoneClassification = this.deriveZoneClassification(v2Output);
+    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
+      ...existingCalibrationData,
       version: "v2",
-      request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      request: {
+        ...this.toJsonObject(existingCalibrationData.request),
+        ...dto,
+        lookback_days: CALIBRATION_LOOKBACK_DAYS,
+      },
       parcel: {
         id: parcel.id,
         crop_type: parcel.cropType,
@@ -1136,20 +1183,26 @@ export class CalibrationService {
       },
       output: v2Output,
       validation: {
-        validated: false,
-        validated_at: null,
+        validated: autoActivate,
+        validated_at: autoActivate ? completedAt : null,
       },
+      ...(observationMode.observationOnly
+        ? {
+            observation_only: true,
+            observation_reason: observationMode.observationReason,
+          }
+        : {}),
     };
 
     const { error: updateCalibrationError } = await supabase
       .from("calibrations")
       .update({
         status: "completed",
-        completed_at: new Date().toISOString(),
+        completed_at: completedAt,
         baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
         baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
         baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
-        confidence_score: this.toNumber(v2Output.confidence?.normalized_score),
+        confidence_score: confidenceScore,
         zone_classification: zoneClassification,
         phenology_stage: this.extractPhenologyStage(v2Output),
         health_score: this.toNumber(v2Output.step8?.health_score?.total),
@@ -1232,11 +1285,17 @@ export class CalibrationService {
       }
     }
 
+    const parcelUpdate: Record<string, unknown> = {
+      ai_calibration_id: calibrationId,
+    };
+    if (autoActivate) {
+      parcelUpdate.ai_enabled = true;
+      parcelUpdate.ai_observation_only = observationMode.observationOnly;
+    }
+
     const { error: updateParcelError } = await supabase
       .from("parcels")
-      .update({
-        ai_calibration_id: calibrationId,
-      })
+      .update(parcelUpdate)
       .eq("id", parcelId);
 
     if (updateParcelError) {
@@ -1252,12 +1311,30 @@ export class CalibrationService {
       organizationId,
     );
 
+    if (autoActivate) {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "awaiting_validation",
+        "active",
+        organizationId,
+      );
+      await this.runPostActivationFlows(calibrationId, parcelId, organizationId);
+    }
+
     this.notifyOrganizationUsers(
       organizationId,
       NotificationType.CALIBRATION_COMPLETE,
       "Calibration terminée",
-      `Le calibrage de la parcelle est terminé et en attente de validation.`,
-      { parcel_id: parcelId, calibration_id: calibrationId },
+      autoActivate
+        ? observationMode.observationOnly
+          ? "Le recalibrage est terminé. La nouvelle baseline est active en mode observation."
+          : "Le recalibrage est terminé et la nouvelle baseline est active."
+        : `Le calibrage de la parcelle est terminé et en attente de validation.`,
+      {
+        parcel_id: parcelId,
+        calibration_id: calibrationId,
+        mode_calibrage: mode,
+      },
     ).catch((err) =>
       this.logger.warn(`Failed to send calibration notification: ${err}`),
     );
@@ -1742,7 +1819,6 @@ export class CalibrationService {
     }
 
     const confidenceScore = this.toNumber(updatedCalibration.confidence_score);
-    const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
 
     if (
       confidenceScore !== null &&
@@ -1910,6 +1986,59 @@ export class CalibrationService {
     this.logger.log(`Annual plan generated for parcel ${parcelId}`);
 
     await this.generateTasksFromAnnualPlan(annualPlan, parcelId, organizationId);
+  }
+
+  private normalizeCalibrationMode(mode?: string): CalibrationMode {
+    if (mode === "partial" || mode === "annual") {
+      return mode;
+    }
+
+    return "full";
+  }
+
+  private shouldAutoActivateAfterCompletion(
+    previousPhase: ParcelAiPhase,
+    mode: CalibrationMode,
+  ): boolean {
+    if (mode === "annual" || mode === "partial") {
+      return true;
+    }
+
+    return previousPhase === "active";
+  }
+
+  private buildObservationModeContext(confidenceScore: number | null): {
+    observationOnly: boolean;
+    observationReason: string | null;
+  } {
+    if (
+      confidenceScore === null ||
+      confidenceScore >= MINIMUM_CONFIDENCE_FOR_ACTIVE
+    ) {
+      return {
+        observationOnly: false,
+        observationReason: null,
+      };
+    }
+
+    return {
+      observationOnly: true,
+      observationReason: `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`,
+    };
+  }
+
+  private async runPostActivationFlows(
+    calibrationId: string,
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    try {
+      await this.generateAnnualPlan(calibrationId, parcelId, organizationId);
+    } catch (error) {
+      this.logger.warn(
+        `Post-activation annual plan generation failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
+      );
+    }
   }
 
   private async generateTasksFromAnnualPlan(
