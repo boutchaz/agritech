@@ -137,10 +137,8 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
 
       try {
         // Use NestJS API instead of direct Supabase call
-        const data = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
-        // API returns { success: true, farms: [...], total: ... }
-        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-          const farmsData = (data as { farms: any[] }).farms;
+        const farmsData = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
+        if (Array.isArray(farmsData) && farmsData.length > 0) {
 
           // Fetch all parcels for this organization to calculate total_area per farm
           let parcelsByFarm: Record<string, { totalArea: number }> = {};
@@ -188,8 +186,7 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
             } as Farm & { total_area?: number };
           });
         }
-        // Fallback for direct array response
-        return Array.isArray(data) ? data : [];
+        return [];
       } catch (error) {
         // Check for session expired error (401)
         if (error instanceof Error && (

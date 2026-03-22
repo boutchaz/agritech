@@ -63,17 +63,10 @@ const ProductApplications: React.FC = () => {
         currentOrganization.id
       );
 
-      // Handle paginated response: { success: true, farms: [...], total: ... }
-      let farms: any[] = [];
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        const farmsData = (data as { farms: any[] }).farms;
-        farms = farmsData.map((farm: any) => ({
-          id: farm.farm_id || farm.id,
-          name: farm.farm_name || farm.name,
-        }));
-      } else if (Array.isArray(data)) {
-        farms = data;
-      }
+      const farms = (data || []).map((farm: any) => ({
+        id: farm.farm_id || farm.id,
+        name: farm.farm_name || farm.name,
+      }));
 
       if (farms && farms.length > 0) {
         setFarmId(farms[0].id);

@@ -45,21 +45,11 @@ function WorkersPage() {
         currentOrganization.id
       );
       
-      // Handle paginated response: { success: true, farms: [...], total: ... }
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        const farmsData = (data as { farms: any[] }).farms;
-        // Map farm_id and farm_name to id and name for compatibility
-        const mappedFarms = farmsData.map((farm: any) => ({
-          id: farm.farm_id || farm.id,
-          name: farm.farm_name || farm.name,
-        }));
-        setFarms(mappedFarms);
-      } else if (Array.isArray(data)) {
-        // Fallback for direct array response
-        setFarms(data);
-      } else {
-        setFarms([]);
-      }
+      const farmsList = (data || []).map((farm: any) => ({
+        id: farm.farm_id || farm.id,
+        name: farm.farm_name || farm.name,
+      }));
+      setFarms(farmsList);
     } catch (error) {
       console.error('Error fetching farms:', error);
       setFarms([]); // Set empty array on error

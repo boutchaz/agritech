@@ -47,13 +47,7 @@ export function useParcelsWithDetails() {
           currentOrganization.id
         );
 
-        // Handle paginated response: { success: true, farms: [...], total: ... }
-        let farms: any[] = [];
-        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-          farms = (data as { farms: any[] }).farms;
-        } else if (Array.isArray(data)) {
-          farms = data;
-        }
+        const farms: any[] = Array.isArray(data) ? data : [];
 
         console.warn('Found farms:', farms?.length || 0);
 

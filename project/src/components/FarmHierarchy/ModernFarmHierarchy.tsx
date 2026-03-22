@@ -132,9 +132,9 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
 
-      const result = await apiClient.get<{ success: boolean; farms: unknown[] }>(url, {}, organizationId);
+      const result = await apiClient.get<{ data: unknown[] }>(url, {}, organizationId);
 
-      const data = result.farms || [];
+      const data = result?.data || [];
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();
