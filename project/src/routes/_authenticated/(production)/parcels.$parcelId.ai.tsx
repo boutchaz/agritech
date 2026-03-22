@@ -1,11 +1,13 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router'
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { BrainCircuit, AlertTriangle, Lightbulb, Calendar, Cloud, Settings } from 'lucide-react'
 
 type AITab = 'dashboard' | 'calibration' | 'alerts' | 'recommendations' | 'plan' | 'weather';
 
 const ParcelAILayout = () => {
+  const { t } = useTranslation('ai')
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const matchRoute = useMatchRoute();
@@ -31,42 +33,42 @@ const ParcelAILayout = () => {
     {
       id: 'dashboard',
       to: `/parcels/${parcelId}/ai`,
-      label: 'Boussole',
+      label: t('tabs.compass'),
       icon: <BrainCircuit className="w-4 h-4" />,
       active: isDashboardActive,
     },
     {
       id: 'calibration',
       to: `/parcels/${parcelId}/ai/calibration`,
-      label: 'Calibration',
+      label: t('tabs.calibration'),
       icon: <Settings className="w-4 h-4" />,
       active: isCalibrationActive,
     },
     {
       id: 'alerts',
       to: `/parcels/${parcelId}/ai/alerts`,
-      label: 'Alerts',
+      label: t('tabs.alerts'),
       icon: <AlertTriangle className="w-4 h-4" />,
       active: isAlertsActive,
     },
     {
       id: 'recommendations',
       to: `/parcels/${parcelId}/ai/recommendations`,
-      label: 'Recommendations',
+      label: t('tabs.recommendations'),
       icon: <Lightbulb className="w-4 h-4" />,
       active: isRecommendationsActive,
     },
     {
       id: 'plan',
       to: `/parcels/${parcelId}/ai/plan`,
-      label: 'Plan annuel',
+      label: t('tabs.plan'),
       icon: <Calendar className="w-4 h-4" />,
       active: isPlanActive,
     },
     {
       id: 'weather',
       to: `/parcels/${parcelId}/ai/weather`,
-      label: 'Weather',
+      label: t('tabs.weather'),
       icon: <Cloud className="w-4 h-4" />,
       active: isWeatherActive,
     },

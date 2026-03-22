@@ -5,16 +5,22 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import enCommon from '../locales/en/common.json';
 import frCommon from '../locales/fr/common.json';
 import arCommon from '../locales/ar/common.json';
+import enAi from '../locales/en/ai.json';
+import frAi from '../locales/fr/ai.json';
+import arAi from '../locales/ar/ai.json';
 
 const resources = {
   en: {
     common: enCommon,
+    ai: enAi,
   },
   fr: {
     common: frCommon,
+    ai: frAi,
   },
   ar: {
     common: arCommon,
+    ai: arAi,
   },
 };
 
@@ -23,9 +29,9 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
+    fallbackLng: ['en', 'fr'],
     defaultNS: 'common',
-    ns: ['common'],
+    ns: ['common', 'ai'],
 
     interpolation: {
       escapeValue: false, // React already escapes values

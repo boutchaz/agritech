@@ -570,7 +570,7 @@ test.describe('Calibration V2 Page', () => {
 
     await expect(page.getByText('Calibration Active')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Executive Summary' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Re-calibrate' })).toBeVisible();
+    await expect(page.getByTestId('calibration-open-full-recalibration')).toBeVisible();
   });
 
   test('should display failed calibration with error message', async ({ authenticatedPage: page }) => {

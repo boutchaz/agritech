@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check } from 'lucide-react';
 import { useForm, type FieldPath, type Resolver } from 'react-hook-form';
@@ -37,23 +38,6 @@ interface WizardStepDefinition {
   status: 'required' | 'recommended' | 'optional';
 }
 
-const STEPS: WizardStepDefinition[] = [
-  { number: 1, title: 'Complements plantation', status: 'required' },
-  { number: 2, title: 'Historique irrigation', status: 'required' },
-  { number: 3, title: 'Analyse sol', status: 'recommended' },
-  { number: 4, title: 'Analyse eau', status: 'recommended' },
-  { number: 5, title: 'Analyse foliaire', status: 'optional' },
-  { number: 6, title: 'Historique recoltes', status: 'recommended' },
-  { number: 7, title: 'Historique cultural', status: 'recommended' },
-  { number: 8, title: 'Validation', status: 'required' },
-];
-
-const STATUS_LABELS: Record<WizardStepDefinition['status'], string> = {
-  required: '● Obligatoire',
-  recommended: '◑ Recommande',
-  optional: '○ Optionnel',
-};
-
 function toMonthDate(value?: string): string | undefined {
   if (!value) {
     return undefined;
@@ -81,8 +65,32 @@ function mapWaterSourceForAnalysis(source: CalibrationWizardFormValues['water_so
 }
 
 export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardProps) {
+  const { t } = useTranslation('ai');
   const { currentOrganization } = useAuth();
   const startCalibration = useStartCalibrationV2(parcelId);
+
+  const STEPS: WizardStepDefinition[] = useMemo(
+    () => [
+      { number: 1, title: t('calibration.wizard.steps.1'), status: 'required' },
+      { number: 2, title: t('calibration.wizard.steps.2'), status: 'required' },
+      { number: 3, title: t('calibration.wizard.steps.3'), status: 'recommended' },
+      { number: 4, title: t('calibration.wizard.steps.4'), status: 'recommended' },
+      { number: 5, title: t('calibration.wizard.steps.5'), status: 'optional' },
+      { number: 6, title: t('calibration.wizard.steps.6'), status: 'recommended' },
+      { number: 7, title: t('calibration.wizard.steps.7'), status: 'recommended' },
+      { number: 8, title: t('calibration.wizard.steps.8'), status: 'required' },
+    ],
+    [t],
+  );
+
+  const STATUS_LABELS: Record<WizardStepDefinition['status'], string> = useMemo(
+    () => ({
+      required: t('calibration.wizard.legendRequired'),
+      recommended: t('calibration.wizard.legendRecommended'),
+      optional: t('calibration.wizard.legendOptional'),
+    }),
+    [t],
+  );
 
   const {
     currentStep,
@@ -201,7 +209,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
 
   const handleSaveAndCompleteLater = () => {
     persistCurrentForm();
-    toast.success('Progression sauvegardee. Vous pouvez reprendre plus tard.');
+    toast.success(t('calibration.wizard.toastProgressSaved'));
   };
 
   const createAnalysesFromWizard = async (wizardValues: CalibrationWizardFormValues) => {
@@ -330,7 +338,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     const wizardValues = form.getValues();
 
     if (!canLaunchByRequiredData) {
-      toast.error('Les champs obligatoires des etapes 1 et 2 doivent etre completes.');
+      toast.error(t('calibration.wizard.toastRequiredStepsError'));
       return;
     }
 
@@ -386,13 +394,15 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   return (
     <div className="space-y-6" data-testid="calibration-initial-wizard">
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de calibrage initial</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Saisie initiale de la parcelle avant lancement du calibrage IA.</p>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('calibration.wizard.title')}</h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          {t('calibration.wizard.subtitle')}
+        </p>
 
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300">
-          <span>● Obligatoire</span>
-          <span>◑ Recommande</span>
-          <span>○ Optionnel</span>
+          <span>{t('calibration.wizard.legendRequired')}</span>
+          <span>{t('calibration.wizard.legendRecommended')}</span>
+          <span>{t('calibration.wizard.legendOptional')}</span>
         </div>
       </div>
 
@@ -452,16 +462,16 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
 
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
           <Button type="button" variant="outline" onClick={handleSaveAndCompleteLater}>
-            Sauvegarder et completer plus tard
+            {t('calibration.wizard.saveLater')}
           </Button>
 
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
-              Precedent
+              {t('calibration.wizard.previous')}
             </Button>
             {currentStep < 8 && (
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
-                Suivant
+                {t('calibration.wizard.next')}
               </Button>
             )}
           </div>

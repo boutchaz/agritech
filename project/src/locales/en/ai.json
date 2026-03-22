@@ -1,0 +1,285 @@
+{
+  "tabs": {
+    "compass": "Compass",
+    "calibration": "Calibration",
+    "alerts": "Alerts",
+    "recommendations": "Tips",
+    "plan": "Season calendar",
+    "weather": "Weather"
+  },
+  "plan": {
+    "layout": {
+      "title": "Season calendar",
+      "subtitle": "Your tasks month by month, based on your parcel data. Use the “Summary” tab to confirm the full calendar.",
+      "tabCalendar": "Calendar",
+      "tabSummary": "Summary"
+    },
+    "calendar": {
+      "statusHeading": "Where is your calendar?",
+      "statusNone": "No calendar yet",
+      "draftHint": "Confirm your calendar in the Summary tab to turn on reminders.",
+      "recalculate": "Recalculate calendar",
+      "emptyTitle": "No tasks listed yet",
+      "emptyBody": "If you just finished calibration, wait a moment then tap “Recalculate calendar”. Otherwise open Summary to create or restore your plan."
+    },
+    "summary": {
+      "emptyTitle": "Your season calendar is not ready for this parcel yet.",
+      "emptyLead": "Usually the calendar is created automatically after smart monitoring is turned on. If not, the button below builds it from your crop and saved data.",
+      "technicalDetailsSummary": "Technical details (support)",
+      "technicalDetailsBody": "Common issue: crop reference missing in the database or crop type not set. A specific error message appears after “Prepare my calendar”.",
+      "prepareCalendar": "Prepare my calendar",
+      "preparing": "Preparing…",
+      "title": "Season summary",
+      "stateLabel": "Status",
+      "confirmCalendar": "Confirm my calendar",
+      "confirming": "Confirming…",
+      "draftBanner": "This is a proposal. Once confirmed, you can follow tasks month by month and get useful reminders.",
+      "statsTotal": "All tasks",
+      "statsDone": "Done",
+      "statsTodo": "Upcoming",
+      "statsProgress": "Progress",
+      "progressLabel": "Progress through the season",
+      "strengthsTitle": "Highlights",
+      "strengthsDone": "{{count}} task(s) already done this season.",
+      "strengthsNone": "No task marked as done yet.",
+      "attentionTitle": "Watch list",
+      "attentionPlanned": "{{count}} task(s) still scheduled in the calendar.",
+      "attentionNone": "Nothing waiting in the calendar for now."
+    }
+  },
+  "calibration": {
+    "page": {
+      "title": "Smart calibration",
+      "subtitle": "The questionnaire and your parcel data help adapt monitoring (tips and calendar).",
+      "partialUpdate": "Targeted update",
+      "fullRecalibration": "Full calibration",
+      "calculating": "Calculating…",
+      "plantingYearTitle": "Set planting year first"
+    },
+    "annualBanner": {
+      "title": "Annual recalibration available",
+      "body": "Your harvest looks finished. Run annual calibration to refresh the season reference.",
+      "cta": "Start annual recalibration"
+    },
+    "observationMode": {
+      "title": "Observation mode",
+      "body": "Confidence is too low for active recommendations. Add soil/water analyses or harvest history to improve accuracy."
+    },
+    "nextStep": {
+      "title": "Next step on your parcel",
+      "body": "Monitoring is on. Review your season calendar and suggested tips to move to field work.",
+      "chipCalendar": "Calendar",
+      "chipCalendarDetail": "complete — see summary",
+      "chipCalendarNotReady": "not ready yet",
+      "chipTips": "Tips",
+      "hintDraft": "Confirm the calendar in the summary to turn on reminders and practical follow-up.",
+      "hintTips": "Tips are ready to read or put into practice.",
+      "hintNoTips": "No new tip for now; ongoing monitoring may suggest some as the season goes on.",
+      "openCalendar": "Open calendar",
+      "openRecommendations": "View tips"
+    },
+    "wizard": {
+      "title": "Step-by-step assistant",
+      "subtitle": "A few questions about your parcel and practices to run your personalized monitoring.",
+      "legendRequired": "● Required",
+      "legendRecommended": "◑ Recommended",
+      "legendOptional": "○ Optional",
+      "saveLater": "Save and finish later",
+      "previous": "Back",
+      "next": "Next",
+      "toastProgressSaved": "Progress saved. You can continue later.",
+      "toastRequiredStepsError": "Complete the required fields in steps 1 and 2 first.",
+      "toastLaunched": "Calibration started.",
+      "steps": {
+        "1": "Plantation details",
+        "2": "Irrigation history",
+        "3": "Soil analysis",
+        "4": "Water analysis",
+        "5": "Foliar analysis",
+        "6": "Harvest history",
+        "7": "Cultural history",
+        "8": "Review & launch"
+      },
+      "stepStatus": {
+        "required": "Required",
+        "recommended": "Recommended",
+        "optional": "Optional"
+      }
+    },
+    "runInputs": {
+      "title": "What was used in the last run",
+      "subtitle": "Summary of what you entered and data already stored (satellite, weather, lab analyses, harvests). For information only — changes go through the assistant.",
+      "editHint": "To update these items and recalculate monitoring, use a {{targeted}} or a {{full}} in the assistant.",
+      "editTargeted": "targeted update",
+      "editFull": "full pass",
+      "btnTargeted": "Targeted update",
+      "btnTargetedTitle": "Partial recalibration",
+      "btnFull": "Re-enter everything",
+      "btnFullTitle": "Full calibration",
+      "metricSatellite": "Satellite images",
+      "metricWeather": "Weather days",
+      "metricAnalyses": "Lab analyses",
+      "metricHarvests": "Harvest records",
+      "parcelHeading": "Parcel (at calculation time)",
+      "culturalHeading": "Practices and history (your entries)",
+      "technicalDetailsSummary": "Technical details (support) — extra parameters",
+      "versionLine": "Calculation version: {{version}}",
+      "jsonExportSummary": "Full technical export (for support)",
+      "valueYes": "Yes",
+      "valueNo": "No",
+      "valueEmpty": "—",
+      "valueElements": "{{count}} item(s)"
+    },
+    "requestFields": {
+      "irrigation_frequency": "Irrigation frequency",
+      "water_source": "Water source",
+      "volume_per_tree_liters": "Volume per tree (L)",
+      "irrigation_type": "Irrigation type",
+      "pruning_type": "Pruning type",
+      "last_pruning_date": "Last pruning",
+      "pruning_intensity": "Pruning intensity",
+      "past_fertilization": "Past fertilization",
+      "fertilization_type": "Fertilizer type",
+      "biostimulants_used": "Biostimulants",
+      "observations": "Notes",
+      "water_source_changed": "Water source changed",
+      "water_source_change_date": "Water source change date",
+      "previous_water_source": "Previous water source",
+      "irrigation_regime_changed": "Irrigation regime changed",
+      "irrigation_change_date": "Irrigation change date",
+      "previous_irrigation_frequency": "Previous frequency",
+      "previous_volume_per_tree_liters": "Previous volume (L)",
+      "harvest_regularity": "Harvest regularity",
+      "mode_calibrage": "Calibration mode",
+      "recalibration_motif": "Recalibration reason",
+      "recalibration_motif_detail": "Reason details",
+      "lookback_days": "History window (days)",
+      "stress_events": "Stress events"
+    }
+  },
+  "compass": {
+    "loading": "Loading compass…",
+    "heroLabel": "Parcel compass",
+    "parcelFallback": "Parcel",
+    "phases": {
+      "active": "AI is running for this parcel — alerts, recommendations, and the plan use your calibration.",
+      "awaiting_validation": "Calibration report is ready. Validate it to unlock operational monitoring.",
+      "awaiting_nutrition_option": "Pick a nutrition option (A, B, or C) to finish activation.",
+      "in_progress": "Data collection and analysis in progress — check back shortly.",
+      "paused": "AI monitoring is paused for this parcel.",
+      "default": "Run calibration to unlock the crop compass (NDVI, stress, intervention plan)."
+    },
+    "observationLimited": "Observation mode — limited recommendations",
+    "calibrateActivate": "Calibration & activation",
+    "scenarioCode": "Scenario {{code}}",
+    "confidencePct": "Confidence {{pct}}%",
+    "scenarioUnavailable": "Scenario unavailable (satellite data or AI phase). Complete calibration or check satellite imagery.",
+    "observationScenarioNote": "Observation mode — the scenario reflects cautious monitoring.",
+    "technicalDetail": "Technical detail (NDVI, trends)",
+    "ndviCurrent": "Current NDVI",
+    "refShort": "Ref.",
+    "ndviTrend": "NDVI trend: {{trend}}",
+    "ndre": "NDRE",
+    "statusLabel": "Status:",
+    "weather": "Weather",
+    "weatherAnomalyYes": "Anomaly detected on the recent window",
+    "weatherAnomalyNo": "No major anomaly reported",
+    "waterBalanceApprox": "Water balance (approx.): {{value}}",
+    "opsSummary": "Operational summary",
+    "activeAlerts": "Active alerts",
+    "recPending": "Tips to address",
+    "zonesLabel": "Zones:",
+    "goFurther": "Go further",
+    "alertsTitle": "Alerts",
+    "alertsBody": "Risks flagged by the model — to handle or resolve.",
+    "weatherCardTitle": "Weather & irrigation",
+    "weatherCardBody": "Climate context for your decisions.",
+    "bands": {
+      "above_optimal": "Above optimal",
+      "optimal": "Optimal",
+      "vigilance": "Watch",
+      "alert": "Alert"
+    },
+    "seasonCalendar": "Season calendar",
+    "tasksDone": "{{done}}/{{total}} tasks done",
+    "reliability": "Monitoring reliability",
+    "calibrationCardTitle": "Calibration",
+    "calibrationCardBody": "Report, validation, nutrition, annual follow-up.",
+    "tipsTitle": "Tips",
+    "tipsBody": "Suggested actions for your parcel — read and apply if you wish.",
+    "calendarCardTitle": "Season calendar",
+    "calendarCardBody": "Tasks month by month, based on your crop and data."
+  },
+  "planStatus": {
+    "draft": "To confirm",
+    "validated": "Confirmed",
+    "active": "In follow-up",
+    "archived": "Past season",
+    "none": "—",
+    "unknown": "—"
+  },
+  "planStatusCalendar": {
+    "none": "No calendar yet"
+  },
+  "interventionStatus": {
+    "planned": "To do",
+    "pending": "To do",
+    "executed": "Done",
+    "skipped": "Skipped",
+    "delayed": "Postponed"
+  },
+  "interventionDefault": "Task",
+  "interventionTypeParts": {
+    "monthly_monitoring": "Monthly check-in",
+    "irrigation": "Irrigation",
+    "fertilisation": "Fertilization",
+    "fertilization": "Fertilization",
+    "taille": "Pruning",
+    "pruning": "Pruning",
+    "protection": "Crop protection",
+    "recolte": "Harvest",
+    "harvest": "Harvest",
+    "traitement": "Treatment",
+    "observation": "Observation",
+    "suivi": "Monitoring"
+  },
+  "months": {
+    "short": {
+      "1": "Jan",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
+    }
+  },
+  "planIntervention": {
+    "markDone": "I did this task",
+    "doneLabel": "Done"
+  },
+  "toasts": {
+    "calendarConfirmed": "Calendar confirmed",
+    "calendarConfirmError": "Could not confirm the calendar",
+    "calendarUpdated": "Calendar updated",
+    "calendarRecalcError": "Could not recalculate the calendar",
+    "calendarReady": "Calendar ready",
+    "ensurePlanError": "Could not create the season calendar",
+    "monitoringStarted": "Monitoring calculation started",
+    "monitoringStartError": "Could not start monitoring calculation",
+    "partialRecalibrationStarted": "Targeted update started",
+    "partialRecalibrationError": "Targeted update failed",
+    "calibrationValidated": "Calibration baseline validated",
+    "calibrationValidateError": "Could not validate calibration",
+    "nutritionConfirmed": "Nutrition option confirmed",
+    "nutritionConfirmError": "Could not confirm nutrition option"
+  },
+  "errors": {
+    "invalidPlanPayload": "The server returned an invalid season plan."
+  }
+}

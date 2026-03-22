@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import i18n from "@/i18n/config";
 import { useAuth } from "./useAuth";
 import {
   calibrationV2Api,
@@ -58,7 +59,7 @@ export function useStartCalibration(parcelId: string) {
         ),
       });
       queryClient.invalidateQueries({ queryKey: ["ai-calibration", parcelId] });
-      toast.success("Calibration lancée");
+      toast.success("Calcul de suivi démarré");
     },
     onError: (error) => {
       toast.error(
@@ -114,13 +115,13 @@ export function useStartPartialRecalibration(parcelId: string) {
           currentOrganization?.id,
         ),
       });
-      toast.success("Recalibrage partiel lance");
+      toast.success(i18n.t("toasts.partialRecalibrationStarted", { ns: "ai" }));
     },
     onError: (error) => {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Echec du recalibrage partiel",
+          : i18n.t("toasts.partialRecalibrationError", { ns: "ai" }),
       );
     },
   });
@@ -206,13 +207,13 @@ export function useValidateCalibration(parcelId: string) {
           currentOrganization?.id,
         ),
       });
-      toast.success("Calibration baseline validated");
+      toast.success(i18n.t("toasts.calibrationValidated", { ns: "ai" }));
     },
     onError: (error) => {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to validate calibration",
+          : i18n.t("toasts.calibrationValidateError", { ns: "ai" }),
       );
     },
   });
@@ -287,13 +288,13 @@ export function useConfirmNutritionOption(parcelId: string) {
           currentOrganization?.id,
         ),
       });
-      toast.success("Nutrition option confirmed");
+      toast.success(i18n.t("toasts.nutritionConfirmed", { ns: "ai" }));
     },
     onError: (error) => {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to confirm nutrition option",
+          : i18n.t("toasts.nutritionConfirmError", { ns: "ai" }),
       );
     },
   });

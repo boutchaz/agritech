@@ -1,0 +1,285 @@
+{
+  "tabs": {
+    "compass": "Boussole",
+    "calibration": "Calibrage",
+    "alerts": "Alertes",
+    "recommendations": "Conseils",
+    "plan": "Calendrier",
+    "weather": "Météo"
+  },
+  "plan": {
+    "layout": {
+      "title": "Calendrier de la saison",
+      "subtitle": "Vos interventions mois par mois, préparées à partir des données de la parcelle. Onglet « Synthèse » pour valider l’ensemble.",
+      "tabCalendar": "Calendrier",
+      "tabSummary": "Synthèse"
+    },
+    "calendar": {
+      "statusHeading": "Où en est votre calendrier ?",
+      "statusNone": "Pas encore de calendrier",
+      "draftHint": "Pensez à confirmer le calendrier dans l’onglet « Synthèse » pour activer le suivi.",
+      "recalculate": "Recalculer le calendrier",
+      "emptyTitle": "Aucune tâche listée pour l’instant",
+      "emptyBody": "Si vous venez de terminer le calibrage, attendez quelques instants puis utilisez « Recalculer le calendrier ». Sinon, ouvrez la synthèse pour générer ou récupérer le plan."
+    },
+    "summary": {
+      "emptyTitle": "Votre calendrier de saison n’est pas encore prêt pour cette parcelle.",
+      "emptyLead": "En général, le calendrier se crée tout seul après l’activation du suivi intelligent. Si ce n’est pas le cas, le bouton ci-dessous le prépare à partir de votre culture et des données déjà enregistrées.",
+      "technicalDetailsSummary": "Détails techniques (support)",
+      "technicalDetailsBody": "Échec fréquent : référentiel de culture manquant en base ou type de culture non renseigné. Un message d’erreur précis s’affiche après « Préparer mon calendrier ».",
+      "prepareCalendar": "Préparer mon calendrier",
+      "preparing": "Préparation…",
+      "title": "Synthèse de la saison",
+      "stateLabel": "État",
+      "confirmCalendar": "Confirmer mon calendrier",
+      "confirming": "Confirmation…",
+      "draftBanner": "C’est une proposition : une fois confirmée, vous pourrez suivre les tâches mois par mois et recevoir les rappels utiles.",
+      "statsTotal": "Tâches au total",
+      "statsDone": "Déjà faites",
+      "statsTodo": "À prévoir",
+      "statsProgress": "Avancement",
+      "progressLabel": "Progression sur la saison",
+      "strengthsTitle": "Points forts",
+      "strengthsDone": "{{count}} tâche(s) déjà réalisée(s) sur la saison.",
+      "strengthsNone": "Aucune tâche marquée comme faite pour le moment.",
+      "attentionTitle": "Points d’attention",
+      "attentionPlanned": "{{count}} tâche(s) encore à prévoir selon le calendrier.",
+      "attentionNone": "Rien de prévu en attente pour l’instant."
+    }
+  },
+  "calibration": {
+    "page": {
+      "title": "Calibrage intelligent",
+      "subtitle": "Le questionnaire et les données de la parcelle permettent d’adapter le suivi (recommandations, calendrier).",
+      "partialUpdate": "Mise à jour ciblée",
+      "fullRecalibration": "Nouveau calibrage complet",
+      "calculating": "Calcul en cours…",
+      "plantingYearTitle": "Indiquez d’abord l’année de plantation"
+    },
+    "annualBanner": {
+      "title": "Recalibrage annuel disponible",
+      "body": "Votre récolte semble terminée. Lancez le recalibrage annuel pour mettre à jour la référence de la saison.",
+      "cta": "Lancer le recalibrage annuel"
+    },
+    "observationMode": {
+      "title": "Mode observation",
+      "body": "Le score de confiance est insuffisant pour des recommandations actives. Ajoutez des analyses de sol/eau ou des historiques de récolte pour améliorer la précision."
+    },
+    "nextStep": {
+      "title": "Prochaine étape sur votre parcelle",
+      "body": "Le suivi est actif. Consultez votre calendrier de saison et les conseils proposés pour passer à la mise en œuvre au champ.",
+      "chipCalendar": "Calendrier",
+      "chipCalendarDetail": "à compléter — voir la synthèse",
+      "chipCalendarNotReady": "pas encore prêt",
+      "chipTips": "Conseils",
+      "hintDraft": "Confirmez le calendrier dans la synthèse pour activer les rappels et le suivi pratique.",
+      "hintTips": "Des conseils sont prêts à être consultés ou mis en œuvre.",
+      "hintNoTips": "Pas de nouveau conseil pour l’instant ; le suivi continu pourra en proposer selon la saison.",
+      "openCalendar": "Ouvrir le calendrier",
+      "openRecommendations": "Voir les recommandations"
+    },
+    "wizard": {
+      "title": "Assistant pas à pas",
+      "subtitle": "Quelques questions sur votre parcelle et vos pratiques pour lancer le calcul du suivi personnalisé.",
+      "legendRequired": "● Obligatoire",
+      "legendRecommended": "◑ Recommandé",
+      "legendOptional": "○ Optionnel",
+      "saveLater": "Sauvegarder et compléter plus tard",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "toastProgressSaved": "Progression sauvegardée. Vous pouvez reprendre plus tard.",
+      "toastRequiredStepsError": "Les champs obligatoires des étapes 1 et 2 doivent être complétés.",
+      "toastLaunched": "Calibrage lancé.",
+      "steps": {
+        "1": "Compléments plantation",
+        "2": "Historique irrigation",
+        "3": "Analyse sol",
+        "4": "Analyse eau",
+        "5": "Analyse foliaire",
+        "6": "Historique récoltes",
+        "7": "Historique cultural",
+        "8": "Validation"
+      },
+      "stepStatus": {
+        "required": "Obligatoire",
+        "recommended": "Recommandé",
+        "optional": "Optionnel"
+      }
+    },
+    "runInputs": {
+      "title": "Ce qui a servi au dernier calcul",
+      "subtitle": "Résumé des informations que vous avez fournies et des données déjà enregistrées (satellite, météo, analyses, récoltes). Affichage informatif : les changements se font via l’assistant.",
+      "editHint": "Pour mettre à jour ces éléments et recalculer le suivi, utilisez une {{targeted}} ou un {{full}} dans l’assistant.",
+      "editTargeted": "mise à jour ciblée",
+      "editFull": "nouveau passage complet",
+      "btnTargeted": "Mise à jour ciblée",
+      "btnTargetedTitle": "Recalibrage partiel",
+      "btnFull": "Tout ressaisir",
+      "btnFullTitle": "Calibrage complet",
+      "metricSatellite": "Images satellite",
+      "metricWeather": "Jours météo",
+      "metricAnalyses": "Analyses labo",
+      "metricHarvests": "Enregistrements récolte",
+      "parcelHeading": "Parcelle (au moment du calcul)",
+      "culturalHeading": "Pratiques et historique (votre saisie)",
+      "technicalDetailsSummary": "Détails techniques (support) — paramètres supplémentaires",
+      "versionLine": "Version du calcul : {{version}}",
+      "jsonExportSummary": "Fichier technique complet (pour le support)",
+      "valueYes": "Oui",
+      "valueNo": "Non",
+      "valueEmpty": "—",
+      "valueElements": "{{count}} élément(s)"
+    },
+    "requestFields": {
+      "irrigation_frequency": "Fréquence d'irrigation",
+      "water_source": "Source d'eau",
+      "volume_per_tree_liters": "Volume par arbre (L)",
+      "irrigation_type": "Type d'irrigation",
+      "pruning_type": "Type de taille",
+      "last_pruning_date": "Dernière taille",
+      "pruning_intensity": "Intensité de taille",
+      "past_fertilization": "Fertilisation passée",
+      "fertilization_type": "Type de fertilisation",
+      "biostimulants_used": "Biostimulants",
+      "observations": "Observations",
+      "water_source_changed": "Changement de source d'eau",
+      "water_source_change_date": "Date du changement d'eau",
+      "previous_water_source": "Source précédente",
+      "irrigation_regime_changed": "Changement de régime d'irrigation",
+      "irrigation_change_date": "Date du changement d'irrigation",
+      "previous_irrigation_frequency": "Fréquence précédente",
+      "previous_volume_per_tree_liters": "Volume précédent (L)",
+      "harvest_regularity": "Régularité des récoltes",
+      "mode_calibrage": "Mode de calibrage",
+      "recalibration_motif": "Motif de recalibrage",
+      "recalibration_motif_detail": "Détail du motif",
+      "lookback_days": "Fenêtre historique (jours)",
+      "stress_events": "Événements de stress"
+    }
+  },
+  "compass": {
+    "loading": "Chargement de la boussole…",
+    "heroLabel": "Boussole parcelle",
+    "parcelFallback": "Parcelle",
+    "phases": {
+      "active": "L'IA suit votre parcelle : alertes, recommandations et plan s'appuient sur votre calibrage.",
+      "awaiting_validation": "Le rapport de calibrage est prêt. Validez-le pour activer le suivi opérationnel.",
+      "awaiting_nutrition_option": "Choisissez l'option nutrition (A, B ou C) pour finaliser l'activation.",
+      "in_progress": "Collecte et analyse des données en cours — revenez dans quelques instants.",
+      "paused": "Le suivi IA est en pause sur cette parcelle.",
+      "default": "Activez le calibrage pour obtenir une boussole culture (NDVI, stress, plan d'interventions)."
+    },
+    "observationLimited": "Mode observation — recommandations limitées",
+    "calibrateActivate": "Calibrage & activation",
+    "scenarioCode": "Scénario {{code}}",
+    "confidencePct": "Confiance {{pct}} %",
+    "scenarioUnavailable": "Scénario indisponible (données satellite ou phase IA). Complétez le calibrage ou vérifiez les images satellite.",
+    "observationScenarioNote": "Données en mode observation — le scénario reflète un suivi prudent.",
+    "technicalDetail": "Détail technique (NDVI, tendances)",
+    "ndviCurrent": "NDVI actuel",
+    "refShort": "Réf.",
+    "ndviTrend": "Tendance NDVI : {{trend}}",
+    "ndre": "NDRE",
+    "statusLabel": "Statut :",
+    "weather": "Météo",
+    "weatherAnomalyYes": "Anomalie détectée sur la fenêtre récente",
+    "weatherAnomalyNo": "Pas d'anomalie majeure signalée",
+    "waterBalanceApprox": "Bilan eau (approx.) : {{value}}",
+    "opsSummary": "Synthèse opérationnelle",
+    "activeAlerts": "Alertes actives",
+    "recPending": "Rec. à traiter",
+    "zonesLabel": "Zones :",
+    "goFurther": "Aller plus loin",
+    "alertsTitle": "Alertes",
+    "alertsBody": "Risques détectés par le modèle — à traiter ou résoudre.",
+    "weatherCardTitle": "Météo & irrigation",
+    "weatherCardBody": "Contexte climatique pour vos décisions.",
+    "bands": {
+      "above_optimal": "Au-dessus du optimal",
+      "optimal": "Optimal",
+      "vigilance": "Vigilance",
+      "alert": "Alerte"
+    },
+    "seasonCalendar": "Calendrier saison",
+    "tasksDone": "{{done}}/{{total}} tâches réalisées",
+    "reliability": "Fiabilité du suivi",
+    "calibrationCardTitle": "Calibrage",
+    "calibrationCardBody": "Rapport, validation, nutrition, relances annuelles.",
+    "tipsTitle": "Conseils",
+    "tipsBody": "Idées d’actions pour la parcelle — à lire et à mettre en œuvre si vous le souhaitez.",
+    "calendarCardTitle": "Calendrier de la saison",
+    "calendarCardBody": "Tâches mois par mois, selon votre culture et vos données."
+  },
+  "planStatus": {
+    "draft": "À confirmer",
+    "validated": "Confirmé",
+    "active": "En suivi",
+    "archived": "Saison passée",
+    "none": "—",
+    "unknown": "—"
+  },
+  "planStatusCalendar": {
+    "none": "Pas encore de calendrier"
+  },
+  "interventionStatus": {
+    "planned": "À faire",
+    "pending": "À faire",
+    "executed": "Réalisée",
+    "skipped": "Non retenue",
+    "delayed": "Reportée"
+  },
+  "interventionDefault": "Intervention",
+  "interventionTypeParts": {
+    "monthly_monitoring": "Suivi mensuel",
+    "irrigation": "Irrigation",
+    "fertilisation": "Fertilisation",
+    "fertilization": "Fertilisation",
+    "taille": "Taille",
+    "pruning": "Taille",
+    "protection": "Protection des cultures",
+    "recolte": "Récolte",
+    "harvest": "Récolte",
+    "traitement": "Traitement",
+    "observation": "Observation",
+    "suivi": "Suivi"
+  },
+  "months": {
+    "short": {
+      "1": "janv.",
+      "2": "févr.",
+      "3": "mars",
+      "4": "avr.",
+      "5": "mai",
+      "6": "juin",
+      "7": "juil.",
+      "8": "août",
+      "9": "sept.",
+      "10": "oct.",
+      "11": "nov.",
+      "12": "déc."
+    }
+  },
+  "planIntervention": {
+    "markDone": "J’ai fait cette tâche",
+    "doneLabel": "Réalisée"
+  },
+  "toasts": {
+    "calendarConfirmed": "Calendrier confirmé",
+    "calendarConfirmError": "Impossible de confirmer le calendrier",
+    "calendarUpdated": "Calendrier mis à jour",
+    "calendarRecalcError": "Impossible de recalculer le calendrier",
+    "calendarReady": "Calendrier prêt",
+    "ensurePlanError": "Impossible de créer le plan annuel",
+    "monitoringStarted": "Calcul de suivi démarré",
+    "monitoringStartError": "Échec du lancement de la calibration",
+    "partialRecalibrationStarted": "Recalibrage partiel lancé",
+    "partialRecalibrationError": "Echec du recalibrage partiel",
+    "calibrationValidated": "Calibrage validé",
+    "calibrationValidateError": "Impossible de valider le calibrage",
+    "nutritionConfirmed": "Option nutrition confirmée",
+    "nutritionConfirmError": "Impossible de confirmer l'option nutrition"
+  },
+  "errors": {
+    "invalidPlanPayload": "Le serveur a renvoyé un plan annuel invalide."
+  }
+}

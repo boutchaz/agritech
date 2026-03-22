@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
   BrainCircuit,
@@ -24,42 +25,24 @@ import type { AiScenarioCode } from '@/lib/api/ai-calibration';
 
 type AIStatusBadgeStatus = ComponentProps<typeof AIStatusBadge>['status'];
 
-function phaseExplanation(
-  phase: string | null | undefined,
-): { fr: string; en: string } {
+type CompassPhaseKey = 'active' | 'awaiting_validation' | 'awaiting_nutrition_option' | 'in_progress' | 'paused' | 'default';
+
+function compassPhaseKey(phase: string | null | undefined): CompassPhaseKey {
   switch (phase) {
     case 'active':
-      return {
-        fr: "L'IA suit votre parcelle : alertes, recommandations et plan s'appuient sur votre calibrage.",
-        en: 'AI is running for this parcel — alerts, recommendations, and the plan use your calibration.',
-      };
+      return 'active';
     case 'awaiting_validation':
-      return {
-        fr: 'Le rapport de calibrage est prêt. Validez-le pour activer le suivi opérationnel.',
-        en: 'Calibration report is ready. Validate it to unlock operational monitoring.',
-      };
+      return 'awaiting_validation';
     case 'awaiting_nutrition_option':
-      return {
-        fr: "Choisissez l'option nutrition (A, B ou C) pour finaliser l'activation.",
-        en: 'Pick a nutrition option (A, B, or C) to finish activation.',
-      };
+      return 'awaiting_nutrition_option';
     case 'calibrating':
     case 'downloading':
     case 'pret_calibrage':
-      return {
-        fr: 'Collecte et analyse des données en cours — revenez dans quelques instants.',
-        en: 'Data collection and analysis in progress — check back shortly.',
-      };
+      return 'in_progress';
     case 'paused':
-      return {
-        fr: 'Le suivi IA est en pause sur cette parcelle.',
-        en: 'AI monitoring is paused for this parcel.',
-      };
+      return 'paused';
     default:
-      return {
-        fr: "Activez le calibrage pour obtenir une boussole culture (NDVI, stress, plan d'interventions).",
-        en: 'Run calibration to unlock the crop compass (NDVI, stress, intervention plan).',
-      };
+      return 'default';
   }
 }
 
@@ -86,26 +69,12 @@ function trendIcon(trend: string) {
   return <Minus className="w-4 h-4 text-slate-500" aria-hidden />;
 }
 
-function bandLabelFr(band: string): string {
-  switch (band) {
-    case 'above_optimal':
-      return 'Au-dessus du optimal';
-    case 'optimal':
-      return 'Optimal';
-    case 'vigilance':
-      return 'Vigilance';
-    case 'alert':
-      return 'Alerte';
-    default:
-      return band;
-  }
-}
-
 export interface AICompassDashboardProps {
   parcelId: string;
 }
 
 export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
+  const { t } = useTranslation('ai');
   const { data: parcel, isLoading: parcelLoading } = useParcelById(parcelId);
   const { data: calibration, isLoading: calLoading } = useAICalibration(parcelId);
 
@@ -149,14 +118,15 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
     return 'disabled';
   })();
 
-  const { fr: phaseFr, en: phaseEn } = phaseExplanation(aiPhase ?? undefined);
+  const phaseKey = compassPhaseKey(aiPhase ?? undefined);
+  const phaseText = t(`compass.phases.${phaseKey}`);
 
   if (loadingEssential) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-900/30">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-          <p className="text-sm text-slate-600 dark:text-slate-400">Chargement de la boussole…</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{t('compass.loading')}</p>
         </div>
       </div>
     );
@@ -179,15 +149,14 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-                Boussole parcelle
+                {t('compass.heroLabel')}
               </p>
               <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {parcel?.name ?? 'Parcelle'}
+                {parcel?.name ?? t('compass.parcelFallback')}
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                {phaseFr}
+                {phaseText}
               </p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">{phaseEn}</p>
               {(parcel?.crop_type || parcel?.variety) && (
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
                   {[parcel.crop_type, parcel.variety].filter(Boolean).join(' · ')}
@@ -199,7 +168,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             <AIStatusBadge status={phaseForBadge} className="text-sm px-3 py-1.5" />
             {parcel?.ai_observation_only && aiPhase === 'active' && (
               <span className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                Mode observation — recommandations limitées
+                {t('compass.observationLimited')}
               </span>
             )}
             {calibrationIncomplete && (
@@ -209,7 +178,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
               >
                 <Settings className="h-4 w-4" aria-hidden />
-                Calibrage & activation
+                {t('compass.calibrateActivate')}
                 <ChevronRight className="h-4 w-4 opacity-80" aria-hidden />
               </Link>
             )}
@@ -226,16 +195,16 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 className={`rounded-xl border-2 p-5 md:p-6 ${scenarioCompassClass(diagnostics.scenario_code)}`}
               >
                 <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wide opacity-90">
-                  <span>Scénario {diagnostics.scenario_code}</span>
+                  <span>{t('compass.scenarioCode', { code: diagnostics.scenario_code })}</span>
                   <span className="opacity-60">·</span>
                   <span>
-                    Confiance{' '}
-                    {Math.round(
-                      (diagnostics.confidence <= 1
-                        ? diagnostics.confidence * 100
-                        : diagnostics.confidence),
-                    )}
-                    %
+                    {t('compass.confidencePct', {
+                      pct: Math.round(
+                        diagnostics.confidence <= 1
+                          ? diagnostics.confidence * 100
+                          : diagnostics.confidence,
+                      ),
+                    })}
                   </span>
                 </div>
                 <h3 className="mt-2 text-lg font-semibold">{diagnostics.scenario}</h3>
@@ -244,14 +213,13 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 </p>
                 {diagnostics.observation_only && (
                   <p className="mt-3 text-xs font-medium opacity-90">
-                    Données en mode observation — le scénario reflète un suivi prudent.
+                    {t('compass.observationScenarioNote')}
                   </p>
                 )}
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-4 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800/40 dark:text-slate-400">
-                Scénario indisponible (données satellite ou phase IA). Complétez le calibrage ou
-                vérifiez les images satellite.
+                {t('compass.scenarioUnavailable')}
               </div>
             )}
           </div>
@@ -264,47 +232,51 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
               <span className="flex items-center justify-between gap-2">
                 <span className="flex items-center gap-2">
                   <BrainCircuit className="h-4 w-4 text-slate-500" aria-hidden />
-                  Détail technique (NDVI, tendances)
+                  {t('compass.technicalDetail')}
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 transition group-open:rotate-90" />
               </span>
             </summary>
             <div className="grid gap-4 border-t border-slate-100 px-4 py-4 text-sm dark:border-slate-700 sm:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/50">
-                <p className="text-xs font-medium uppercase text-slate-500">NDVI actuel</p>
+                <p className="text-xs font-medium uppercase text-slate-500">{t('compass.ndviCurrent')}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
                   {diagnostics.indicators.current_ndvi.toFixed(3)}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Réf. {diagnostics.indicators.baseline_ndvi.toFixed(3)} ·{' '}
-                  {bandLabelFr(diagnostics.indicators.ndvi_band)}
+                  {t('compass.refShort')} {diagnostics.indicators.baseline_ndvi.toFixed(3)} ·{' '}
+                  {t(`compass.bands.${diagnostics.indicators.ndvi_band}`, {
+                    defaultValue: diagnostics.indicators.ndvi_band,
+                  })}
                 </p>
                 <div className="mt-2 flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
                   {trendIcon(diagnostics.indicators.ndvi_trend)}
-                  <span>Tendance NDVI : {diagnostics.indicators.ndvi_trend}</span>
+                  <span>{t('compass.ndviTrend', { trend: diagnostics.indicators.ndvi_trend })}</span>
                 </div>
               </div>
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/50">
-                <p className="text-xs font-medium uppercase text-slate-500">NDRE</p>
+                <p className="text-xs font-medium uppercase text-slate-500">{t('compass.ndre')}</p>
                 <p className="mt-1 text-lg font-semibold tabular-nums">
                   {diagnostics.indicators.current_ndre != null
                     ? diagnostics.indicators.current_ndre.toFixed(3)
                     : '—'}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Statut : {diagnostics.indicators.ndre_status}
+                  {t('compass.statusLabel')} {diagnostics.indicators.ndre_status}
                 </p>
               </div>
               <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/50">
-                <p className="text-xs font-medium uppercase text-slate-500">Météo</p>
+                <p className="text-xs font-medium uppercase text-slate-500">{t('compass.weather')}</p>
                 <p className="mt-1 text-sm font-medium">
                   {diagnostics.indicators.weather_anomaly
-                    ? 'Anomalie détectée sur la fenêtre récente'
-                    : 'Pas d’anomalie majeure signalée'}
+                    ? t('compass.weatherAnomalyYes')
+                    : t('compass.weatherAnomalyNo')}
                 </p>
                 {diagnostics.indicators.water_balance != null && (
                   <p className="mt-1 text-xs text-slate-500">
-                    Bilan eau (approx.) : {diagnostics.indicators.water_balance.toFixed(2)}
+                    {t('compass.waterBalanceApprox', {
+                      value: diagnostics.indicators.water_balance.toFixed(2),
+                    })}
                   </p>
                 )}
               </div>
@@ -316,25 +288,25 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
       {/* KPI row */}
       <section>
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Synthèse opérationnelle
+          {t('compass.opsSummary')}
         </h3>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/60">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Alertes actives</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('compass.activeAlerts')}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
               {alertsLoading ? '…' : alertCount}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/60">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Rec. à traiter
+              {t('compass.recPending')}
             </p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
               {recLoading ? '…' : pendingRecs}
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/60">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Plan annuel</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('compass.seasonCalendar')}</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
               {!diagnosticsEnabled
                 ? '—'
@@ -346,13 +318,16 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             </p>
             {planSummary && planSummary.total_interventions > 0 && (
               <p className="mt-1 text-xs text-slate-500">
-                {planSummary.executed}/{planSummary.total_interventions} interventions réalisées
+                {t('compass.tasksDone', {
+                  done: planSummary.executed,
+                  total: planSummary.total_interventions,
+                })}
               </p>
             )}
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/60">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Confiance calibrage
+              {t('compass.reliability')}
             </p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
               {calibration && typeof calibration.confidence_score === 'number'
@@ -365,7 +340,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             </p>
             {calibration?.zone_classification && (
               <p className="mt-1 text-xs capitalize text-slate-500">
-                Zones : {calibration.zone_classification}
+                {t('compass.zonesLabel')} {calibration.zone_classification}
               </p>
             )}
           </div>
@@ -375,7 +350,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
       {/* Navigation cards */}
       <section>
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          Aller plus loin
+          {t('compass.goFurther')}
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Link
@@ -384,9 +359,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500/60 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-emerald-500/50"
           >
             <Settings className="mb-3 h-8 w-8 text-slate-500 transition group-hover:text-emerald-600 dark:text-slate-400" />
-            <span className="font-semibold text-slate-900 dark:text-white">Calibrage</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.calibrationCardTitle')}</span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Rapport, validation, nutrition, relances annuelles.
+              {t('compass.calibrationCardBody')}
             </span>
           </Link>
           <Link
@@ -402,9 +377,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 </span>
               )}
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">Alertes</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.alertsTitle')}</span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Risques détectés par le modèle — à traiter ou résoudre.
+              {t('compass.alertsBody')}
             </span>
           </Link>
           <Link
@@ -420,9 +395,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 </span>
               )}
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">Recommandations</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.tipsTitle')}</span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Actions proposées par l’IA — validez ou exécutez.
+              {t('compass.tipsBody')}
             </span>
           </Link>
           <Link
@@ -431,9 +406,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
             <Calendar className="mb-3 h-8 w-8 text-blue-500" />
-            <span className="font-semibold text-slate-900 dark:text-white">Plan annuel</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.calendarCardTitle')}</span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Calendrier des interventions liées au plan.
+              {t('compass.calendarCardBody')}
             </span>
           </Link>
           <Link
@@ -442,9 +417,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
             className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-sky-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
             <Cloud className="mb-3 h-8 w-8 text-sky-500" />
-            <span className="font-semibold text-slate-900 dark:text-white">Météo & irrigation</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.weatherCardTitle')}</span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              Contexte climatique pour vos décisions.
+              {t('compass.weatherCardBody')}
             </span>
           </Link>
         </div>

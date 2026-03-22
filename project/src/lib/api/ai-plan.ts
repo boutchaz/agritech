@@ -1,3 +1,4 @@
+import i18n from '@/i18n/config';
 import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/parcels';
@@ -85,7 +86,7 @@ export const aiPlanApi = {
     );
     const plan = normalizePlanPayload(raw);
     if (!plan) {
-      throw new Error('Le serveur a renvoye un plan annuel invalide.');
+      throw new Error(i18n.t('errors.invalidPlanPayload', { ns: 'ai' }));
     }
     return plan;
   },

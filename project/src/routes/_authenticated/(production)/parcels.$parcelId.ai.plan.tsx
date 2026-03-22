@@ -1,7 +1,9 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Calendar, FileText } from 'lucide-react'
 
 const AIPlanLayout = () => {
+  const { t } = useTranslation('ai')
   const { parcelId } = Route.useParams();
   const search = Route.useSearch();
   const matchRoute = useMatchRoute();
@@ -13,8 +15,8 @@ const AIPlanLayout = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Plan annuel</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Calendrier des interventions et taches generees par l'IA.</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('plan.layout.title')}</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{t('plan.layout.subtitle')}</p>
         </div>
         <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
           <Link
@@ -28,7 +30,7 @@ const AIPlanLayout = () => {
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>Calendrier</span>
+            <span>{t('plan.layout.tabCalendar')}</span>
           </Link>
           <Link
             to="/parcels/$parcelId/ai/plan/summary"
@@ -41,7 +43,7 @@ const AIPlanLayout = () => {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Synthese</span>
+            <span>{t('plan.layout.tabSummary')}</span>
           </Link>
         </div>
       </div>

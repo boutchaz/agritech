@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import i18n from '@/i18n/config';
 import { useAuth } from './useAuth';
 import {
   aiPlanApi,
@@ -71,10 +72,12 @@ export function useValidateAIPlan(parcelId: string) {
       queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-summary', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-interventions', parcelId, currentOrganization?.id] });
-      toast.success('Plan annuel valide');
+      toast.success(i18n.t('toasts.calendarConfirmed', { ns: 'ai' }));
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Echec de validation du plan annuel');
+      toast.error(
+        error instanceof Error ? error.message : i18n.t('toasts.calendarConfirmError', { ns: 'ai' }),
+      );
     },
   });
 }
@@ -113,10 +116,12 @@ export function useRegenerateAIPlan() {
       queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-summary', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-interventions', parcelId, currentOrganization?.id] });
-      toast.success('Plan annuel regenere');
+      toast.success(i18n.t('toasts.calendarUpdated', { ns: 'ai' }));
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Echec de regeneration du plan annuel');
+      toast.error(
+        error instanceof Error ? error.message : i18n.t('toasts.calendarRecalcError', { ns: 'ai' }),
+      );
     },
   });
 }
@@ -137,11 +142,11 @@ export function useEnsureAIPlan(parcelId: string) {
       queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-summary', parcelId, currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['ai-plan-interventions', parcelId, currentOrganization?.id] });
-      toast.success('Plan annuel disponible');
+      toast.success(i18n.t('toasts.calendarReady', { ns: 'ai' }));
     },
     onError: (error) => {
       toast.error(
-        error instanceof Error ? error.message : 'Impossible de creer le plan annuel',
+        error instanceof Error ? error.message : i18n.t('toasts.ensurePlanError', { ns: 'ai' }),
       );
     },
   });

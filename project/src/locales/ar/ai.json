@@ -1,0 +1,285 @@
+{
+  "tabs": {
+    "compass": "البوصلة",
+    "calibration": "المعايرة",
+    "alerts": "التنبيهات",
+    "recommendations": "النصائح",
+    "plan": "التقويم",
+    "weather": "الطقس"
+  },
+  "plan": {
+    "layout": {
+      "title": "تقويم الموسم",
+      "subtitle": "مهامك شهراً بشهر وفق بيانات القطعة. استخدم تبويب «الملخص» للموافقة على التقويم كاملاً.",
+      "tabCalendar": "التقويم",
+      "tabSummary": "الملخص"
+    },
+    "calendar": {
+      "statusHeading": "أين وصل تقويمك؟",
+      "statusNone": "لا يوجد تقويم بعد",
+      "draftHint": "يُفضّل تأكيد التقويم في تبويب «الملخص» لتفعيل التذكيرات.",
+      "recalculate": "إعادة حساب التقويم",
+      "emptyTitle": "لا توجد مهام مدرجة حالياً",
+      "emptyBody": "إذا أنهيت المعايرة للتو، انتظر قليلاً ثم اضغط «إعادة حساب التقويم». وإلا افتح الملخص لإنشاء التقويم أو استعادته."
+    },
+    "summary": {
+      "emptyTitle": "تقويم الموسم غير جاهز بعد لهذه القطعة.",
+      "emptyLead": "عادةً يُنشأ التقويم تلقائياً بعد تفعيل المتابعة الذكية. إن لم يحدث، الزر أدناه يجهّزه من ثقافتك والبيانات المحفوظة.",
+      "technicalDetailsSummary": "تفاصيل تقنية (الدعم)",
+      "technicalDetailsBody": "سبب شائع: نقص مرجع المحصول في قاعدة البيانات أو عدم تحديد نوع المحصول. تظهر رسالة خطأ واضحة بعد «تجهيز تقويمي».",
+      "prepareCalendar": "تجهيز تقويمي",
+      "preparing": "جارٍ التجهيز…",
+      "title": "ملخص الموسم",
+      "stateLabel": "الحالة",
+      "confirmCalendar": "تأكيد تقويمي",
+      "confirming": "جارٍ التأكيد…",
+      "draftBanner": "هذا اقتراح: بعد التأكيد يمكنك متابعة المهام شهراً بشهر وتلقي التذكيرات المفيدة.",
+      "statsTotal": "إجمالي المهام",
+      "statsDone": "منجزة",
+      "statsTodo": "قادمة",
+      "statsProgress": "التقدم",
+      "progressLabel": "التقدم خلال الموسم",
+      "strengthsTitle": "نقاط قوة",
+      "strengthsDone": "{{count}} مهمة منجزة في هذا الموسم.",
+      "strengthsNone": "لا توجد مهمة مُعلَمة كمنجزة بعد.",
+      "attentionTitle": "انتباه",
+      "attentionPlanned": "{{count}} مهمة لا تزال مقترحة في التقويم.",
+      "attentionNone": "لا يوجد شيء في الانتظار في التقويم حالياً."
+    }
+  },
+  "calibration": {
+    "page": {
+      "title": "معايرة ذكية",
+      "subtitle": "الاستبيان وبيانات القطعة تساعد على تكييف المتابعة (النصائح والتقويم).",
+      "partialUpdate": "تحديث موجّه",
+      "fullRecalibration": "معايرة كاملة جديدة",
+      "calculating": "جارٍ الحساب…",
+      "plantingYearTitle": "حدّد سنة الزراعة أولاً"
+    },
+    "annualBanner": {
+      "title": "المعايرة السنوية متاحة",
+      "body": "يبدو أن الحصاد انتهى. شغّل المعايرة السنوية لتحديث مرجع الموسم.",
+      "cta": "بدء المعايرة السنوية"
+    },
+    "observationMode": {
+      "title": "وضع المراقبة",
+      "body": "درجة الثقة منخفضة للتوصيات النشطة. أضف تحاليل تربة/ماء أو سجل حصاد لتحسين الدقة."
+    },
+    "nextStep": {
+      "title": "الخطوة التالية على قطعتك",
+      "body": "المتابعة مفعّلة. راجع تقويم الموسم والنصائح المقترحة للانتقال إلى العمل في الحقل.",
+      "chipCalendar": "التقويم",
+      "chipCalendarDetail": "يحتاج إكمالاً — راجع الملخص",
+      "chipCalendarNotReady": "غير جاهز بعد",
+      "chipTips": "نصائح",
+      "hintDraft": "أكّد التقويم في الملخص لتفعيل التذكيرات والمتابعة العملية.",
+      "hintTips": "هناك نصائح جاهزة للاطلاع أو التطبيق.",
+      "hintNoTips": "لا نصيحة جديدة الآن؛ قد تقترح المتابعة نصائح مع تقدم الموسم.",
+      "openCalendar": "فتح التقويم",
+      "openRecommendations": "عرض التوصيات"
+    },
+    "wizard": {
+      "title": "مساعد خطوة بخطوة",
+      "subtitle": "بعض الأسئلة عن قطعتك وممارساتك لتشغيل المتابعة المخصصة.",
+      "legendRequired": "● إلزامي",
+      "legendRecommended": "◑ موصى به",
+      "legendOptional": "○ اختياري",
+      "saveLater": "حفظ ومتابعة لاحقاً",
+      "previous": "السابق",
+      "next": "التالي",
+      "toastProgressSaved": "تم حفظ التقدم. يمكنك المتابعة لاحقاً.",
+      "toastRequiredStepsError": "أكمل الحقول الإلزامية في الخطوتين 1 و2 أولاً.",
+      "toastLaunched": "بدأت المعايرة.",
+      "steps": {
+        "1": "تفاصيل الزراعة",
+        "2": "سجل الري",
+        "3": "تحليل التربة",
+        "4": "تحليل الماء",
+        "5": "تحليل الأوراق",
+        "6": "سجل الحصاد",
+        "7": "التاريخ الثقافي",
+        "8": "المراجعة والتشغيل"
+      },
+      "stepStatus": {
+        "required": "إلزامي",
+        "recommended": "موصى به",
+        "optional": "اختياري"
+      }
+    },
+    "runInputs": {
+      "title": "ما استُخدم في آخر تشغيل",
+      "subtitle": "ملخص لما أدخلته والبيانات المخزّنة (الأقمار، الطقس، التحاليل، الحصاد). للاطلاع فقط — التعديل عبر المساعد.",
+      "editHint": "لتحديث هذه العناصر وإعادة حساب المتابعة، استخدم {{targeted}} أو {{full}} في المساعد.",
+      "editTargeted": "تحديث موجّه",
+      "editFull": "إدخال كامل جديد",
+      "btnTargeted": "تحديث موجّه",
+      "btnTargetedTitle": "معايرة جزئية",
+      "btnFull": "إعادة الإدخال كاملاً",
+      "btnFullTitle": "معايرة كاملة",
+      "metricSatellite": "صور الأقمار",
+      "metricWeather": "أيام الطقس",
+      "metricAnalyses": "تحاليل المختبر",
+      "metricHarvests": "سجلات الحصاد",
+      "parcelHeading": "القطعة (عند الحساب)",
+      "culturalHeading": "الممارسات والتاريخ (إدخالك)",
+      "technicalDetailsSummary": "تفاصيل تقنية (الدعم) — معاملات إضافية",
+      "versionLine": "إصدار الحساب: {{version}}",
+      "jsonExportSummary": "ملف تقني كامل (للدعم)",
+      "valueYes": "نعم",
+      "valueNo": "لا",
+      "valueEmpty": "—",
+      "valueElements": "{{count}} عنصر(ات)"
+    },
+    "requestFields": {
+      "irrigation_frequency": "تواتر الري",
+      "water_source": "مصدر الماء",
+      "volume_per_tree_liters": "الحجم لكل شجرة (ل)",
+      "irrigation_type": "نوع الري",
+      "pruning_type": "نوع التقليم",
+      "last_pruning_date": "آخر تقليم",
+      "pruning_intensity": "شدة التقليم",
+      "past_fertilization": "تسميد سابق",
+      "fertilization_type": "نوع السماد",
+      "biostimulants_used": "محفزات حيوية",
+      "observations": "ملاحظات",
+      "water_source_changed": "تغيير مصدر الماء",
+      "water_source_change_date": "تاريخ تغيير المصدر",
+      "previous_water_source": "المصدر السابق",
+      "irrigation_regime_changed": "تغيير نظام الري",
+      "irrigation_change_date": "تاريخ تغيير الري",
+      "previous_irrigation_frequency": "التواتر السابق",
+      "previous_volume_per_tree_liters": "الحجم السابق (ل)",
+      "harvest_regularity": "انتظام الحصاد",
+      "mode_calibrage": "وضع المعايرة",
+      "recalibration_motif": "سبب إعادة المعايرة",
+      "recalibration_motif_detail": "تفاصيل السبب",
+      "lookback_days": "نافذة التاريخ (أيام)",
+      "stress_events": "أحداث إجهاد"
+    }
+  },
+  "compass": {
+    "loading": "جارٍ تحميل البوصلة…",
+    "heroLabel": "بوصلة القطعة",
+    "parcelFallback": "قطعة",
+    "phases": {
+      "active": "الذكاء الاصطناعي يعمل على قطعتك — التنبيهات والنصائح والخطة تعتمد على معايرتك.",
+      "awaiting_validation": "تقرير المعايرة جاهز. أكّده لتفعيل المتابعة التشغيلية.",
+      "awaiting_nutrition_option": "اختر خيار التغذية (أ، ب أو ج) لإنهاء التفعيل.",
+      "in_progress": "جمع وتحليل البيانات قيد التنفيذ — عُد لاحقاً.",
+      "paused": "متابعة الذكاء الاصطناعي متوقفة لهذه القطعة.",
+      "default": "شغّل المعايرة لفتح بوصلة المحصول (NDVI، الإجهاد، خطة التدخلات)."
+    },
+    "observationLimited": "وضع المراقبة — توصيات محدودة",
+    "calibrateActivate": "المعايرة والتفعيل",
+    "scenarioCode": "سيناريو {{code}}",
+    "confidencePct": "الثقة {{pct}}٪",
+    "scenarioUnavailable": "السيناريو غير متاح (بيانات الأقمار أو مرحلة الذكاء الاصطناعي). أكمل المعايرة أو تحقق من صور الأقمار.",
+    "observationScenarioNote": "بيانات وضع المراقبة — السيناريو يعكس متابعة حذرة.",
+    "technicalDetail": "تفاصيل تقنية (NDVI، الاتجاهات)",
+    "ndviCurrent": "NDVI الحالي",
+    "refShort": "مرجع",
+    "ndviTrend": "اتجاه NDVI: {{trend}}",
+    "ndre": "NDRE",
+    "statusLabel": "الحالة:",
+    "weather": "الطقس",
+    "weatherAnomalyYes": "تم رصد شذوذ في النافذة الأخيرة",
+    "weatherAnomalyNo": "لا شذوذ كبير مُبلَغ عنه",
+    "waterBalanceApprox": "توازن الماء (تقريبي): {{value}}",
+    "opsSummary": "ملخص تشغيلي",
+    "activeAlerts": "تنبيهات نشطة",
+    "recPending": "نصائح للمعالجة",
+    "zonesLabel": "المناطق:",
+    "goFurther": "المزيد",
+    "alertsTitle": "التنبيهات",
+    "alertsBody": "مخاطر أشار إليها النموذج — للمعالجة أو الحل.",
+    "weatherCardTitle": "الطقس والري",
+    "weatherCardBody": "سياق مناخي لقراراتك.",
+    "bands": {
+      "above_optimal": "فوق المثالي",
+      "optimal": "مثالي",
+      "vigilance": "انتباه",
+      "alert": "تنبيه"
+    },
+    "seasonCalendar": "تقويم الموسم",
+    "tasksDone": "{{done}}/{{total}} مهام منجزة",
+    "reliability": "موثوقية المتابعة",
+    "calibrationCardTitle": "المعايرة",
+    "calibrationCardBody": "التقرير، التحقق، التغذية، المتابعة السنوية.",
+    "tipsTitle": "نصائح",
+    "tipsBody": "أفكار لإجراءات على القطعة — للقراءة والتطبيق إن رغبت.",
+    "calendarCardTitle": "تقويم الموسم",
+    "calendarCardBody": "مهام شهراً بشهر حسب محصولك وبياناتك."
+  },
+  "planStatus": {
+    "draft": "بانتظار التأكيد",
+    "validated": "مؤكد",
+    "active": "قيد المتابعة",
+    "archived": "موسم سابق",
+    "none": "—",
+    "unknown": "—"
+  },
+  "planStatusCalendar": {
+    "none": "لا يوجد تقويم بعد"
+  },
+  "interventionStatus": {
+    "planned": "للقيام",
+    "pending": "للقيام",
+    "executed": "منجزة",
+    "skipped": "غير معتمدة",
+    "delayed": "مؤجلة"
+  },
+  "interventionDefault": "تدخل",
+  "interventionTypeParts": {
+    "monthly_monitoring": "متابعة شهرية",
+    "irrigation": "الري",
+    "fertilisation": "التسميد",
+    "fertilization": "التسميد",
+    "taille": "التقليم",
+    "pruning": "التقليم",
+    "protection": "حماية المحاصيل",
+    "recolte": "الحصاد",
+    "harvest": "الحصاد",
+    "traitement": "المعالجة",
+    "observation": "المراقبة",
+    "suivi": "المتابعة"
+  },
+  "months": {
+    "short": {
+      "1": "يناير",
+      "2": "فبراير",
+      "3": "مارس",
+      "4": "أبريل",
+      "5": "مايو",
+      "6": "يونيو",
+      "7": "يوليو",
+      "8": "أغسطس",
+      "9": "سبتمبر",
+      "10": "أكتوبر",
+      "11": "نوفمبر",
+      "12": "ديسمبر"
+    }
+  },
+  "planIntervention": {
+    "markDone": "أنجزت هذه المهمة",
+    "doneLabel": "منجزة"
+  },
+  "toasts": {
+    "calendarConfirmed": "تم تأكيد التقويم",
+    "calendarConfirmError": "تعذر تأكيد التقويم",
+    "calendarUpdated": "تم تحديث التقويم",
+    "calendarRecalcError": "تعذر إعادة حساب التقويم",
+    "calendarReady": "التقويم جاهز",
+    "ensurePlanError": "تعذر إنشاء تقويم الموسم",
+    "monitoringStarted": "بدأ حساب المتابعة",
+    "monitoringStartError": "فشل بدء المعايرة",
+    "partialRecalibrationStarted": "بدأ التحديث الموجّه",
+    "partialRecalibrationError": "فشل التحديث الموجّه",
+    "calibrationValidated": "تم التحقق من خط الأساس للمعايرة",
+    "calibrationValidateError": "تعذر التحقق من المعايرة",
+    "nutritionConfirmed": "تم تأكيد خيار التغذية",
+    "nutritionConfirmError": "تعذر تأكيد خيار التغذية"
+  },
+  "errors": {
+    "invalidPlanPayload": "أعاد الخادم خطة موسم غير صالحة."
+  }
+}

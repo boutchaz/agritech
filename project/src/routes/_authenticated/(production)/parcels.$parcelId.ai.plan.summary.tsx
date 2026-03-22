@@ -1,9 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { FileText, CheckCircle2, Clock3, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAIPlan, useAIPlanSummary, useEnsureAIPlan, useValidateAIPlan } from '@/hooks/useAIPlan';
+import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 
 const AIPlanSummaryPage = () => {
+  const { t } = useTranslation('ai');
   const { parcelId } = Route.useParams();
   const { data: plan, isLoading, error: planError } = useAIPlan(parcelId);
   const {
@@ -27,16 +30,7 @@ const AIPlanSummaryPage = () => {
     ? Math.round((summary.executed / summary.total_interventions) * 100)
     : 0;
 
-  const statusLabel =
-    effectiveStatus === 'draft'
-      ? 'Brouillon'
-      : effectiveStatus === 'validated'
-        ? 'Valide'
-        : effectiveStatus === 'active'
-          ? 'Actif'
-          : effectiveStatus === 'archived'
-            ? 'Archive'
-            : 'Inconnu';
+  const statusLabel = annualPlanStatusLabel(effectiveStatus);
 
   if (!summary) {
     const message =
@@ -44,20 +38,20 @@ const AIPlanSummaryPage = () => {
         ? summaryError.message
         : planError instanceof Error
           ? planError.message
-          : 'Le plan annuel n’a pas encore ete genere pour cette parcelle.';
+          : t('plan.summary.emptyTitle');
 
     return (
       <div className="space-y-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-300">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <div className="min-w-0 flex-1 space-y-3">
-              <p>{message}</p>
-              <p>
-                Le plan annuel est normalement cree a l’activation IA. Si rien n’apparait, la creation a pu echouer
-                (souvent: culture sans referentiel dans <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-950/50">crop_ai_references</code>, ou parcelle sans{' '}
-                <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-950/50">crop_type</code>). Utilisez le bouton ci-dessous pour reessayer ; le message d’erreur indiquera la cause.
-              </p>
+              <p className="font-medium text-amber-950 dark:text-amber-100">{message}</p>
+              <p>{t('plan.summary.emptyLead')}</p>
+              <details className="rounded-md border border-amber-200/80 bg-white/60 dark:border-amber-800/40 dark:bg-amber-950/20 px-3 py-2 text-xs text-amber-900/90 dark:text-amber-200/90">
+                <summary className="cursor-pointer font-medium">{t('plan.summary.technicalDetailsSummary')}</summary>
+                <p className="mt-2">{t('plan.summary.technicalDetailsBody')}</p>
+              </details>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -65,7 +59,7 @@ const AIPlanSummaryPage = () => {
                   disabled={ensurePlan.isPending}
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {ensurePlan.isPending ? 'Creation...' : 'Creer ou recuperer le plan annuel'}
+                  {ensurePlan.isPending ? t('plan.summary.preparing') : t('plan.summary.prepareCalendar')}
                 </Button>
               </div>
             </div>
@@ -81,11 +75,13 @@ const AIPlanSummaryPage = () => {
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex items-center space-x-3">
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" aria-hidden />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Synthese du plan annuel</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Statut: {statusLabel}</p>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('plan.summary.title')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('plan.summary.stateLabel')}: {statusLabel}
+              </p>
             </div>
           </div>
 
@@ -96,42 +92,42 @@ const AIPlanSummaryPage = () => {
               disabled={validatePlan.isPending}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              {validatePlan.isPending ? 'Validation...' : 'Valider le plan'}
+              {validatePlan.isPending ? t('plan.summary.confirming') : t('plan.summary.confirmCalendar')}
             </Button>
           )}
         </div>
 
         {effectiveStatus === 'draft' && (
           <div className="mb-6 flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-800 dark:text-amber-300">
-            <Clock3 className="mt-0.5 h-4 w-4" />
-            <span>
-              Ce plan est en brouillon. Validez-le pour le passer en mode operationnel et declencher les notifications.
-            </span>
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>{t('plan.summary.draftBanner')}</span>
           </div>
         )}
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Interventions totales</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">{t('plan.summary.statsTotal')}</h4>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.total_interventions}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Executees</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">{t('plan.summary.statsDone')}</h4>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.executed}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Planifiees</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">{t('plan.summary.statsTodo')}</h4>
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{summary.planned}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-2">Taux d'execution</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-2">{t('plan.summary.statsProgress')}</h4>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{completionRate}%</p>
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progression annuelle</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('plan.summary.progressLabel')}
+              </span>
               <span className="text-sm text-gray-600 dark:text-gray-400">{completionRate}%</span>
             </div>
             <div className="h-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
@@ -145,25 +141,25 @@ const AIPlanSummaryPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center gap-2 mb-2 text-green-700 dark:text-green-300">
-                <CheckCircle2 className="h-4 w-4" />
-                <h4 className="font-medium">Points forts</h4>
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                <h4 className="font-medium">{t('plan.summary.strengthsTitle')}</h4>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {summary.executed > 0
-                  ? `${summary.executed} interventions executees cette campagne.`
-                  : 'Aucune intervention executee pour le moment.'}
+                  ? t('plan.summary.strengthsDone', { count: summary.executed })
+                  : t('plan.summary.strengthsNone')}
               </p>
             </div>
 
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-300">
-                <AlertTriangle className="h-4 w-4" />
-                <h4 className="font-medium">Points d'attention</h4>
+                <AlertTriangle className="h-4 w-4" aria-hidden />
+                <h4 className="font-medium">{t('plan.summary.attentionTitle')}</h4>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {summary.planned > 0
-                  ? `${summary.planned} interventions restent planifiees.`
-                  : 'Aucune intervention restante planifiee.'}
+                  ? t('plan.summary.attentionPlanned', { count: summary.planned })
+                  : t('plan.summary.attentionNone')}
               </p>
             </div>
           </div>

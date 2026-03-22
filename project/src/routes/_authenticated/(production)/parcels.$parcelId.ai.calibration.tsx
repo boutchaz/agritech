@@ -94,6 +94,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
+import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -1501,6 +1502,7 @@ const CalibrationProgressStepper: React.FC<{ progress: CalibrationProgressEvent 
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
   const { t } = useTranslation();
+  const { t: tAi } = useTranslation('ai');
   const navigate = useNavigate();
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
@@ -1567,10 +1569,10 @@ const AICalibrationPage = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white" data-testid="calibration-page-title">
-            AI Calibration
+            {tAi('calibration.page.title')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Manage the AI model calibration for this parcel.
+            {tAi('calibration.page.subtitle')}
           </p>
         </div>
         {(calibration || hasV2Report) && (
@@ -1583,7 +1585,7 @@ const AICalibrationPage = () => {
                 data-testid="calibration-open-partial-recalibration"
               >
                 <GitCompareArrows className="w-4 h-4" />
-                <span>Recalibrage partiel</span>
+                <span>{tAi('calibration.page.partialUpdate')}</span>
               </button>
             )}
 
@@ -1592,7 +1594,7 @@ const AICalibrationPage = () => {
               onClick={handleOpenFullRecalibrationWizard}
               disabled={isBusy || missingPlantingYear}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              title={missingPlantingYear ? 'Set planting year first' : undefined}
+              title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
               data-testid="calibration-open-full-recalibration"
             >
               {isBusy ? (
@@ -1600,7 +1602,9 @@ const AICalibrationPage = () => {
               ) : (
                 <Play className="w-4 h-4" />
               )}
-              <span>{isCalibrating ? 'Calibrating...' : 'Re-calibrate'}</span>
+              <span>
+                {isCalibrating ? tAi('calibration.page.calculating') : tAi('calibration.page.fullRecalibration')}
+              </span>
             </button>
           </div>
         )}
@@ -1614,7 +1618,7 @@ const AICalibrationPage = () => {
           onOpenPartialRecalibration={phase === 'active' ? handleOpenPartialRecalibration : undefined}
           onOpenFullRecalibration={handleOpenFullRecalibrationWizard}
           fullRecalibrationDisabled={isBusy || missingPlantingYear}
-          fullRecalibrationTitle={missingPlantingYear ? 'Set planting year first' : undefined}
+          fullRecalibrationTitle={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
         />
       )}
 
@@ -1650,9 +1654,9 @@ const AICalibrationPage = () => {
         >
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h3 className="font-semibold text-green-900 dark:text-green-100">Recalibrage annuel disponible</h3>
+              <h3 className="font-semibold text-green-900 dark:text-green-100">{tAi('calibration.annualBanner.title')}</h3>
               <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                Votre recolte semble terminee. Lancez le recalibrage pour mettre a jour votre baseline.
+                {tAi('calibration.annualBanner.body')}
               </p>
             </div>
             <button
@@ -1661,7 +1665,7 @@ const AICalibrationPage = () => {
               className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
               data-testid="calibration-start-annual-recalibration"
             >
-              Lancer le recalibrage annuel
+              {tAi('calibration.annualBanner.cta')}
             </button>
           </div>
         </div>
@@ -1672,31 +1676,30 @@ const AICalibrationPage = () => {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="space-y-2">
               <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                Suite du processus IA
+                {tAi('calibration.nextStep.title')}
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                La baseline est active. Verifiez maintenant le plan annuel et les recommandations pour passer du
-                calibrage a l execution terrain.
+                {tAi('calibration.nextStep.body')}
               </p>
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
-                  Plan annuel:{' '}
+                  {tAi('calibration.nextStep.chipCalendar')}:{' '}
                   {annualPlan?.id
                     ? [annualPlan.status, annualPlan.year].every((v) => v !== undefined && v !== null)
-                      ? `${annualPlan.status} (${annualPlan.year})`
-                      : 'charge incomplet — ouvrir la synthese'
-                    : 'en attente'}
+                      ? `${annualPlanStatusLabel(annualPlan.status)} (${annualPlan.year})`
+                      : tAi('calibration.nextStep.chipCalendarDetail')
+                    : tAi('calibration.nextStep.chipCalendarNotReady')}
                 </span>
                 <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
-                  Recommandations: {aiRecommendations?.length ?? 0}
+                  {tAi('calibration.nextStep.chipTips')}: {aiRecommendations?.length ?? 0}
                 </span>
               </div>
               <p className="text-xs text-blue-700 dark:text-blue-300">
                 {annualPlan?.status === 'draft'
-                  ? 'Validez le plan annuel pour activer les rappels et le suivi operationnel.'
+                  ? tAi('calibration.nextStep.hintDraft')
                   : aiRecommendations && aiRecommendations.length > 0
-                    ? 'Des recommandations sont disponibles pour validation ou execution.'
-                    : 'Aucune recommandation immediate. Le suivi continu alimentera automatiquement cette file.'}
+                    ? tAi('calibration.nextStep.hintTips')
+                    : tAi('calibration.nextStep.hintNoTips')}
               </p>
             </div>
 
@@ -1707,7 +1710,7 @@ const AICalibrationPage = () => {
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 <FileText className="h-4 w-4" />
-                Ouvrir le plan annuel
+                {tAi('calibration.nextStep.openCalendar')}
               </button>
               <button
                 type="button"
@@ -1715,7 +1718,7 @@ const AICalibrationPage = () => {
                 className="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-950/30 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-200 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30"
               >
                 <Lightbulb className="h-4 w-4" />
-                Voir les recommandations
+                {tAi('calibration.nextStep.openRecommendations')}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -1748,10 +1751,9 @@ const AICalibrationPage = () => {
           <div className="flex items-start space-x-3">
             <Eye className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Mode Observation</h3>
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">{tAi('calibration.observationMode.title')}</h3>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                Le score de confiance est insuffisant pour des recommandations actives.
-                Ajoutez des analyses de sol/eau ou des historiques de r&eacute;colte pour am&eacute;liorer la pr&eacute;cision.
+                {tAi('calibration.observationMode.body')}
               </p>
             </div>
           </div>
