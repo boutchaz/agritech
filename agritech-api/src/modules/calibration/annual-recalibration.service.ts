@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import {
   CalibrationRecord,
   CalibrationService,
@@ -79,6 +84,8 @@ export interface MissingTaskResolution {
 
 @Injectable()
 export class AnnualRecalibrationService {
+  private readonly logger = new Logger(AnnualRecalibrationService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly calibrationService: CalibrationService,
@@ -345,6 +352,16 @@ export class AnnualRecalibrationService {
       .eq("organization_id", organizationId);
 
     if (error) {
+      if (this.isMissingAnnualTriggerConfigColumn(error)) {
+        this.logger.warn(
+          `Skipping annual missing task review persistence for parcel ${parcelId}: annual_trigger_config column is unavailable`,
+        );
+        return {
+          reviewed_at: reviewedAt,
+          resolutions: normalizedResolutions,
+        };
+      }
+
       throw new BadRequestException(
         `Failed to save annual missing task review: ${error.message}`,
       );
@@ -381,6 +398,13 @@ export class AnnualRecalibrationService {
       .eq("organization_id", organizationId);
 
     if (error) {
+      if (this.isMissingAnnualTriggerConfigColumn(error)) {
+        this.logger.warn(
+          `Skipping annual reminder snooze persistence for parcel ${parcelId}: annual_trigger_config column is unavailable`,
+        );
+        return { snoozed_until: snoozedUntil };
+      }
+
       throw new BadRequestException(
         `Failed to snooze annual reminder: ${error.message}`,
       );
@@ -616,6 +640,30 @@ export class AnnualRecalibrationService {
       .eq("organization_id", organizationId)
       .maybeSingle();
 
+    if (this.isMissingAnnualTriggerConfigColumn(error)) {
+      const fallbackResult = await supabase
+        .from("parcels")
+        .select("id, crop_type, ai_phase")
+        .eq("id", parcelId)
+        .eq("organization_id", organizationId)
+        .maybeSingle();
+
+      if (fallbackResult.error) {
+        throw new BadRequestException(
+          `Failed to fetch parcel: ${fallbackResult.error.message}`,
+        );
+      }
+
+      if (!fallbackResult.data) {
+        throw new NotFoundException("Parcel not found");
+      }
+
+      return {
+        ...(fallbackResult.data as Omit<ParcelStateRow, "annual_trigger_config">),
+        annual_trigger_config: undefined,
+      };
+    }
+
     if (error) {
       throw new BadRequestException(`Failed to fetch parcel: ${error.message}`);
     }
@@ -625,6 +673,15 @@ export class AnnualRecalibrationService {
     }
 
     return data as ParcelStateRow;
+  }
+
+  private isMissingAnnualTriggerConfigColumn(
+    error: { message?: string; code?: string } | null | undefined,
+  ): boolean {
+    return (
+      error?.code === "42703" ||
+      error?.message?.includes("annual_trigger_config") === true
+    );
   }
 
   private async hasValidatedBaseline(
