@@ -57,7 +57,7 @@ export const cropsApi = {
     if (farmId) filters.farm_id = farmId;
     if (parcelId) filters.parcel_id = parcelId;
 
-    const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/crops`, { ...filters, pageSize: 100 } as Record<string, unknown>);
+    const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/crops`, filters as Record<string, unknown>);
     const res = await apiClient.get<{ data: Crop[] }>(url);
     return res.data || [];
   },

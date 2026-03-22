@@ -19,7 +19,7 @@ export const harvestsApi = {
   async getAll(filters?: HarvestFilters, organizationId?: string): Promise<HarvestSummary[]> {
     requireOrganizationId(organizationId, 'harvestsApi.getAll');
 
-    const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/harvests`, { ...filters, pageSize: 100 } as Record<string, unknown>);
+    const url = buildQueryUrl(`/api/v1/organizations/${organizationId}/harvests`, filters as Record<string, unknown>);
     const response = await apiClient.get<PaginatedResponse<HarvestSummary>>(url);
     return response.data || [];
   },

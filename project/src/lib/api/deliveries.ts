@@ -50,7 +50,6 @@ export const deliveriesApi = {
     if (filters?.date_from) params.append('date_from', filters.date_from);
     if (filters?.date_to) params.append('date_to', filters.date_to);
     if (filters?.customer_name) params.append('customer_name', filters.customer_name);
-    params.append('pageSize', '100');
 
     const queryString = params.toString();
     const url = `/api/v1/organizations/${organizationId}/deliveries${queryString ? `?${queryString}` : ''}`;

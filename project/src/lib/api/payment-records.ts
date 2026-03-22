@@ -38,7 +38,6 @@ export const paymentRecordsApi = {
     if (filters?.period_start) params.append('period_start', filters.period_start);
     if (filters?.period_end) params.append('period_end', filters.period_end);
 
-    params.append('pageSize', '100');
     const queryString = params.toString();
     const url = `/api/v1/organizations/${organizationId}/payment-records?${queryString}`;
 

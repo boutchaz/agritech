@@ -30,7 +30,7 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
     queryKey: ["tasks", organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
-      const res = await tasksApi.getAll(organizationId, { ...filters, pageSize: 100 });
+      const res = await tasksApi.getAll(organizationId, filters);
       return res.data;
     },
     enabled: !!organizationId,

@@ -135,7 +135,6 @@ export const workersApi = {
     requireOrganizationId(organizationId, 'workersApi.getAll');
     const params = new URLSearchParams();
     if (filters?.farmId && filters.farmId.trim()) params.append('farmId', filters.farmId);
-    params.append('pageSize', '100');
     const queryString = params.toString();
     const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers?${queryString}`, {}, organizationId);
     return res.data || [];

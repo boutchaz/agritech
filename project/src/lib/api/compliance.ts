@@ -480,8 +480,8 @@ export const complianceApi = {
     if (filters?.certification_id) queryParams.append('certification_id', filters.certification_id);
     if (filters?.status) queryParams.append('status', filters.status);
     if (filters?.priority) queryParams.append('priority', filters.priority);
-    queryParams.append('pageSize', '100');
-    const url = `${API_BASE}/corrective-actions?${queryParams.toString()}`;
+    const queryString = queryParams.toString();
+    const url = `${API_BASE}/corrective-actions${queryString ? `?${queryString}` : ''}`;
     const res = await apiClient.get<{ data: CorrectiveActionPlanResponseDto[] }>(
       url,
       {},
