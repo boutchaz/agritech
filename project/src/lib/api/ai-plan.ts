@@ -47,9 +47,47 @@ export interface AIPlanSummary {
   skipped: number;
 }
 
+function normalizePlanPayload(raw: unknown): AIPlan | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  if (typeof raw !== 'object') {
+    return null;
+  }
+  const obj = raw as Partial<AIPlan>;
+  if (typeof obj.id !== 'string' || obj.id.length === 0) {
+    return null;
+  }
+  return raw as AIPlan;
+}
+
 export const aiPlanApi = {
   async getAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan | null> {
-    return apiClient.get<AIPlan | null>(`${BASE_URL}/${parcelId}/ai/plan`, {}, organizationId);
+    const raw = await apiClient.get<unknown>(
+      `${BASE_URL}/${parcelId}/ai/plan`,
+      {},
+      organizationId,
+    );
+    return normalizePlanPayload(raw);
+  },
+
+  async ensureAIPlan(
+    parcelId: string,
+    organizationId?: string,
+    year?: number,
+  ): Promise<AIPlan> {
+    const body = year !== undefined ? { year } : {};
+    const raw = await apiClient.post<unknown>(
+      `${BASE_URL}/${parcelId}/ai/plan/ensure`,
+      body,
+      {},
+      organizationId,
+    );
+    const plan = normalizePlanPayload(raw);
+    if (!plan) {
+      throw new Error('Le serveur a renvoye un plan annuel invalide.');
+    }
+    return plan;
   },
 
   async getAIPlanCalendar(parcelId: string, organizationId?: string): Promise<Record<string, unknown>> {

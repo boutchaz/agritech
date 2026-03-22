@@ -47,6 +47,14 @@ describe('AnnualPlan API - Validation Tests', () => {
     expect([200, 201, 400, 403, 404, 500]).toContain(res.status);
   });
 
+  it('should accept ensure request with organization header', async () => {
+    const res = await api.post(`/api/v1/parcels/${parcelId}/ai/plan/ensure`)
+      .set('x-organization-id', testOrgId)
+      .send({ year: 2026 });
+
+    expect([200, 201, 400, 403, 404, 500]).toContain(res.status);
+  });
+
   it('should reject plan request without organization header', async () => {
     const res = await api.get(`/api/v1/parcels/${parcelId}/ai/plan`);
     expect([400, 403, 404, 500]).toContain(res.status);

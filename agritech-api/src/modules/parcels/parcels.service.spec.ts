@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ParcelsService } from './parcels.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-import { CalibrationService } from '../calibration/calibration.service';
 import { CalibrationStateMachine } from '../calibration/calibration-state-machine';
 import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -26,7 +25,6 @@ describe('ParcelsService', () => {
   let mockClient: MockSupabaseClient;
   let mockConfigService: jest.Mocked<ConfigService>;
   let mockSubscriptionsService: { hasValidSubscription: jest.Mock };
-  let mockCalibrationService: { startCalibration: jest.Mock };
   let mockStateMachine: { transitionPhase: jest.Mock };
   let mockSatelliteCacheService: { syncParcelSatelliteData: jest.Mock };
   let mockNotificationsService: { createNotification: jest.Mock };
@@ -88,9 +86,6 @@ describe('ParcelsService', () => {
     mockSubscriptionsService = {
       hasValidSubscription: jest.fn().mockResolvedValue(true),
     };
-    mockCalibrationService = {
-      startCalibration: jest.fn().mockResolvedValue({ id: 'calibration-1' }),
-    };
     mockStateMachine = {
       transitionPhase: jest.fn().mockResolvedValue(undefined),
     };
@@ -115,7 +110,6 @@ describe('ParcelsService', () => {
         ParcelsService,
         { provide: ConfigService, useValue: mockConfigService },
         { provide: SubscriptionsService, useValue: mockSubscriptionsService },
-        { provide: CalibrationService, useValue: mockCalibrationService },
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
         { provide: NotificationsService, useValue: mockNotificationsService },

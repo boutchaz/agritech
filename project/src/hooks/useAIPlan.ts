@@ -120,3 +120,29 @@ export function useRegenerateAIPlan() {
     },
   });
 }
+
+/** Creates the annual plan when missing (e.g. post-activation job failed). Idempotent if a plan already exists. */
+export function useEnsureAIPlan(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<AIPlan> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return aiPlanApi.ensureAIPlan(parcelId, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-plan-summary', parcelId, currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-plan-interventions', parcelId, currentOrganization?.id] });
+      toast.success('Plan annuel disponible');
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : 'Impossible de creer le plan annuel',
+      );
+    },
+  });
+}

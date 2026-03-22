@@ -1680,7 +1680,12 @@ const AICalibrationPage = () => {
               </p>
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
-                  Plan annuel: {annualPlan ? `${annualPlan.status} (${annualPlan.year})` : 'en attente'}
+                  Plan annuel:{' '}
+                  {annualPlan?.id
+                    ? [annualPlan.status, annualPlan.year].every((v) => v !== undefined && v !== null)
+                      ? `${annualPlan.status} (${annualPlan.year})`
+                      : 'charge incomplet — ouvrir la synthese'
+                    : 'en attente'}
                 </span>
                 <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
                   Recommandations: {aiRecommendations?.length ?? 0}

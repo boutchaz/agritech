@@ -2142,7 +2142,7 @@ export class CalibrationService {
         calibration.parcel_id,
         organizationId,
       ).catch((err) =>
-        this.logger.warn(
+        this.logger.error(
           `Annual plan generation failed for parcel ${calibration.parcel_id}: ${err instanceof Error ? err.message : "unknown"}`,
         ),
       );
@@ -2237,7 +2237,7 @@ export class CalibrationService {
     try {
       await this.generateAnnualPlan(calibrationId, parcelId, organizationId);
     } catch (error) {
-      this.logger.warn(
+      this.logger.error(
         `Post-activation annual plan generation failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
       );
     }

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { FileText, CheckCircle2, Clock3, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAIPlan, useAIPlanSummary, useValidateAIPlan } from '@/hooks/useAIPlan';
+import { useAIPlan, useAIPlanSummary, useEnsureAIPlan, useValidateAIPlan } from '@/hooks/useAIPlan';
 
 const AIPlanSummaryPage = () => {
   const { parcelId } = Route.useParams();
@@ -12,6 +12,7 @@ const AIPlanSummaryPage = () => {
     error: summaryError,
   } = useAIPlanSummary(parcelId, true);
   const validatePlan = useValidateAIPlan(parcelId);
+  const ensurePlan = useEnsureAIPlan(parcelId);
 
   if (isLoading || isSummaryLoading) {
     return (
@@ -50,12 +51,23 @@ const AIPlanSummaryPage = () => {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
           <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
+            <div className="min-w-0 flex-1 space-y-3">
               <p>{message}</p>
-              <p className="mt-2">
-                Le plan annuel est genere apres l’activation IA. Rechargez cette page dans quelques secondes si vous venez
-                juste de confirmer l’option nutritionnelle.
+              <p>
+                Le plan annuel est normalement cree a l’activation IA. Si rien n’apparait, la creation a pu echouer
+                (souvent: culture sans referentiel dans <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-950/50">crop_ai_references</code>, ou parcelle sans{' '}
+                <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-950/50">crop_type</code>). Utilisez le bouton ci-dessous pour reessayer ; le message d’erreur indiquera la cause.
               </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={() => ensurePlan.mutate()}
+                  disabled={ensurePlan.isPending}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {ensurePlan.isPending ? 'Creation...' : 'Creer ou recuperer le plan annuel'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

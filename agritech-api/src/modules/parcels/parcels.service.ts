@@ -15,7 +15,6 @@ import { UpdateParcelDto } from "./dto/update-parcel.dto";
 import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
-import { CalibrationService } from "../calibration/calibration.service";
 import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -29,7 +28,6 @@ export class ParcelsService {
   constructor(
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
-    private calibrationService: CalibrationService,
     private stateMachine: CalibrationStateMachine,
     private satelliteCacheService: SatelliteCacheService,
     private notificationsService: NotificationsService,
@@ -786,31 +784,20 @@ export class ParcelsService {
       })
       .then(() => {
         this.logger.log(
-          `Parcel ${parcelId} is now pret_calibrage — auto-starting calibration`,
-        );
-        return this.calibrationService.startCalibration(
-          parcelId,
-          organizationId,
-          {},
-          { skipReadinessCheck: true },
-        );
-      })
-      .then((calibration) => {
-        this.logger.log(
-          `Auto-calibration started for parcel ${parcelId}: calibration ${calibration.id}`,
+          `Parcel ${parcelId} is now pret_calibrage — satellite cache ready; calibration must be launched explicitly (readiness enforced)`,
         );
         return this.notifyOrganizationUsers(
           organizationId,
           NotificationType.SATELLITE_DOWNLOAD_COMPLETE,
-          "Calibrage automatique lancé",
-          "Les données satellite de votre parcelle sont téléchargées et le calibrage a été lancé automatiquement.",
-          { parcel_id: parcelId, calibration_id: calibration.id },
+          "Données satellite prêtes",
+          "Les données satellite de votre parcelle sont en cache. Complétez l’assistant de calibrage et lancez le calibrage lorsque les conditions de préparation sont remplies.",
+          { parcel_id: parcelId },
         );
       })
       .catch(async (err) => {
         const message = err instanceof Error ? err.message : "unknown error";
         this.logger.warn(
-          `Satellite download or auto-calibration failed for parcel ${parcelId}: ${message}`,
+          `Satellite download or pret_calibrage transition failed for parcel ${parcelId}: ${message}`,
         );
         for (const phase of ["pret_calibrage", "downloading"] as const) {
           try {

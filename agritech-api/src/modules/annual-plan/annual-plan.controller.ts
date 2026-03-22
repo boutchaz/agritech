@@ -61,6 +61,29 @@ export class AnnualPlanController {
     return this.annualPlanService.getCalendar(parcelId, organizationId);
   }
 
+  @Post('parcels/:parcelId/ai/plan/ensure')
+  @ApiOperation({
+    summary:
+      'Ensure an annual plan exists for the parcel (creates draft from crop reference if missing)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Annual plan ensured (existing plan returned when already present)',
+  })
+  async ensurePlan(
+    @Param('parcelId') parcelId: string,
+    @Body() body: { year?: number } | undefined,
+    @Req() req: Request,
+  ): Promise<AnnualPlanWithInterventions> {
+    const organizationId = this.getOrganizationId(req);
+
+    return this.annualPlanService.ensurePlan(
+      parcelId,
+      organizationId,
+      this.resolveYear(body?.year),
+    );
+  }
+
   @Get('parcels/:parcelId/ai/plan/summary')
   @ApiOperation({ summary: 'Get annual plan summary statistics for a parcel' })
   @ApiResponse({
