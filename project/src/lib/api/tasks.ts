@@ -37,7 +37,8 @@ export const tasksApi = {
    * Get all tasks assigned to the current user across all organizations
    */
   async getMyTasks(): Promise<TaskSummary[]> {
-    return apiClient.get<TaskSummary[]>('/api/v1/tasks/my-tasks');
+    const res = await apiClient.get<{ data: TaskSummary[] }>('/api/v1/tasks/my-tasks?pageSize=100');
+    return res?.data || [];
   },
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -51,8 +51,10 @@ export const itemsApi = {
     }
     if (filters?.search) params.append('search', filters.search);
 
-    const url = `${BASE_URL}/groups${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<ItemGroup[]>(url, {}, organizationId);
+    params.append('pageSize', '100');
+    const url = `${BASE_URL}/groups?${params.toString()}`;
+    const res = await apiClient.get<{ data: ItemGroup[] }>(url, {}, organizationId);
+    return res?.data || [];
   },
 
   /**
