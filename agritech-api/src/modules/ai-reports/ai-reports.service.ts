@@ -361,19 +361,18 @@ export class AIReportsService {
 
     if (configured) {
       const modelMap: Record<string, string> = {
-        [AIProvider.ZAI]: 'default',
         [AIProvider.GEMINI]: 'gemini-2.5-flash',
         [AIProvider.OPENAI]: 'gpt-4o',
         [AIProvider.GROQ]: 'llama-3.3-70b-versatile',
       };
       return {
         provider: configured.provider,
-        model: modelMap[configured.provider] ?? 'default',
+        model: modelMap[configured.provider] ?? '',
       };
     }
 
-    // Fallback to Platform AI (ZAI) as system default
-    return { provider: AIProvider.ZAI, model: 'default' };
+    // Fallback to Platform AI (ZAI) as system default — empty model lets the provider use its own default
+    return { provider: AIProvider.ZAI, model: '' };
   }
 
   /**
