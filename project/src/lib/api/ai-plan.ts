@@ -125,7 +125,8 @@ export const aiPlanApi = {
     const available = providers.find((p) => p.available);
     const provider = available?.provider ?? 'zai';
 
-    return apiClient.post(
+    // Create the job
+    const job = await apiClient.post<{ id: string; status: string }>(
       '/api/v1/ai-reports/generate',
       {
         parcel_id: parcelId,
@@ -135,5 +136,21 @@ export const aiPlanApi = {
       {},
       organizationId,
     );
+
+    // Poll until complete (max 5 minutes)
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const status = await apiClient.get<{ status: string }>(
+        `/api/v1/ai-reports/jobs/${job.id}`,
+        {},
+        organizationId,
+      );
+      if (status.status === 'completed') return status;
+      if (status.status === 'failed') {
+        throw new Error('AI plan generation failed');
+      }
+    }
+    throw new Error('AI plan generation timed out');
   },
 };
