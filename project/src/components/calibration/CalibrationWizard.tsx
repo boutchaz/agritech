@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check } from 'lucide-react';
@@ -147,13 +147,31 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     mode: 'onBlur',
   });
 
+  const [wizardStoreHydrated, setWizardStoreHydrated] = useState(() =>
+    useCalibrationWizardStore.persist.hasHydrated(),
+  );
+
+  useEffect(() => {
+    if (useCalibrationWizardStore.persist.hasHydrated()) {
+      setWizardStoreHydrated(true);
+      return;
+    }
+    const unsub = useCalibrationWizardStore.persist.onFinishHydration(() => {
+      setWizardStoreHydrated(true);
+    });
+    return unsub;
+  }, []);
+
   useEffect(() => {
     setParcelId(parcelId);
   }, [parcelId, setParcelId]);
 
   useEffect(() => {
+    if (!wizardStoreHydrated) {
+      return;
+    }
     form.reset(prefilledValues);
-  }, [form, prefilledValues]);
+  }, [form, prefilledValues, wizardStoreHydrated]);
 
   const values = form.watch();
 
@@ -169,12 +187,20 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     if (stepNumber < currentStep) {
       return true;
     }
+    // Do not mark later steps complete from prefilled parcel defaults — only steps
+    // already passed (above) or the current step (below) may show a check.
+    if (stepNumber > currentStep) {
+      return false;
+    }
 
     if (stepNumber === 1) {
       return stepOneComplete;
     }
     if (stepNumber === 2) {
       return stepTwoComplete;
+    }
+    if (stepNumber === 8) {
+      return canLaunchByRequiredData;
     }
 
     const fields = WIZARD_STEP_FIELD_PATHS[stepNumber] ?? [];

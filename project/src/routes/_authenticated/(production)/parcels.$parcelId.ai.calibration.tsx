@@ -1738,7 +1738,7 @@ const AICalibrationPage = () => {
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
       )}
 
-      {isWizardPhase && !missingPlantingYear && (
+      {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && (
         <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
       )}
 
