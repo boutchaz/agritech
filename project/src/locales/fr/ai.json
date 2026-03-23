@@ -28,7 +28,8 @@
         "generating": "L'IA calcule votre plan…",
         "saving": "Enregistrement des résultats…",
         "enriching": "Enrichissement avec les doses du guide…",
-        "done": "Plan prêt !"
+        "done": "Plan prêt !",
+        "failed": "Échec de la génération"
       },
       "emptyTitle": "Aucune tâche listée pour l’instant",
       "emptyBody": "Si vous venez de terminer le calibrage, attendez quelques instants puis utilisez « Actualiser depuis le guide culture ». Sinon, ouvrez la synthèse pour générer ou récupérer le plan.",

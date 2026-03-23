@@ -67,7 +67,7 @@ const AIPlanCalendarPage = () => {
         </div>
       </div>
 
-      {isGenerating && (
+      {(isGenerating || (progressStatus !== 'idle' && progress > 0)) && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-700 dark:text-gray-300 font-medium">
@@ -78,12 +78,13 @@ const AIPlanCalendarPage = () => {
               {progressStatus === 'processing' && progress >= 90 && t('plan.calendar.progress.saving')}
               {progressStatus === 'enriching' && t('plan.calendar.progress.enriching')}
               {progressStatus === 'completed' && t('plan.calendar.progress.done')}
+              {progressStatus === 'failed' && t('plan.calendar.progress.failed')}
             </span>
             <span className="text-gray-500 dark:text-gray-400 tabular-nums">{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
             <div
-              className="bg-green-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              className={`h-2.5 rounded-full transition-all duration-500 ease-out ${progressStatus === 'failed' ? 'bg-red-500' : 'bg-green-600'}`}
               style={{ width: `${progress}%` }}
             />
           </div>

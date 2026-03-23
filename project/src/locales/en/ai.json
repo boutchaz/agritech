@@ -28,7 +28,8 @@
         "generating": "AI is computing your plan…",
         "saving": "Saving results…",
         "enriching": "Enriching with crop guide doses…",
-        "done": "Plan ready!"
+        "done": "Plan ready!",
+        "failed": "Generation failed"
       },
       "emptyTitle": "No tasks listed yet",
       "emptyBody": "If you just finished calibration, wait a moment then tap “Refresh from crop guide”. Otherwise open Summary to create or restore your plan.",
