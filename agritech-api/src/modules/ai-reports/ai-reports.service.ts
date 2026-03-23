@@ -357,7 +357,11 @@ export class AIReportsService {
     organizationId: string,
   ): Promise<{ provider: AIProvider; model: string }> {
     const available = await this.getAvailableProviders(organizationId);
-    const configured = available.find((p) => p.available);
+    const allAvailable = available.filter((p) => p.available);
+
+    // Prefer org-configured providers (non-ZAI) over system default
+    const orgProvider = allAvailable.find((p) => p.provider !== AIProvider.ZAI);
+    const configured = orgProvider ?? allAvailable[0];
 
     if (configured) {
       const modelMap: Record<string, string> = {
