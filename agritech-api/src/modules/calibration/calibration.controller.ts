@@ -2,10 +2,12 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -24,6 +26,7 @@ import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { AnnualSnoozeDto } from "./dto/annual-snooze.dto";
 import { ResolveAnnualMissingTasksDto } from "./dto/resolve-annual-missing-tasks.dto";
+import { SaveCalibrationDraftDto } from "./dto/save-calibration-draft.dto";
 
 @ApiTags("calibration")
 @ApiBearerAuth()
@@ -394,6 +397,47 @@ export class CalibrationController {
       parcelId,
       organizationId,
     );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WIZARD DRAFT ENDPOINTS
+  // ═══════════════════════════════════════════════════════════════
+
+  @Get("draft")
+  @ApiOperation({ summary: "Get calibration wizard draft for a parcel" })
+  @ApiResponse({ status: 200, description: "Draft found or null" })
+  async getDraft(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const userId = (req as any).user?.id;
+    return this.calibrationService.getDraft(parcelId, organizationId, userId);
+  }
+
+  @Put("draft")
+  @ApiOperation({ summary: "Save/update calibration wizard draft" })
+  @ApiResponse({ status: 200, description: "Draft saved" })
+  async saveDraft(
+    @Param("parcelId") parcelId: string,
+    @Body() dto: SaveCalibrationDraftDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const userId = (req as any).user?.id;
+    return this.calibrationService.saveDraft(parcelId, organizationId, userId, dto);
+  }
+
+  @Delete("draft")
+  @ApiOperation({ summary: "Delete calibration wizard draft" })
+  @ApiResponse({ status: 200, description: "Draft deleted" })
+  async deleteDraft(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const userId = (req as any).user?.id;
+    return this.calibrationService.deleteDraft(parcelId, organizationId, userId);
   }
 
   private getOrganizationId(req: Request): string {

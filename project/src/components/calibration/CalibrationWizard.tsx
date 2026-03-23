@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { analysesApi } from '@/lib/api/analyses';
 import { useStartCalibrationV2 } from '@/hooks/useCalibrationV2';
 import { useAuth } from '@/hooks/useAuth';
+import { useCalibrationDraft, useSaveCalibrationDraft, useDeleteCalibrationDraft } from '@/hooks/useCalibrationDraft';
 import type { Parcel } from '@/hooks/useParcelsQuery';
 import {
   CalibrationWizardSchema,
@@ -18,6 +19,7 @@ import {
   type CalibrationWizardFormValues,
 } from '@/schemas/calibrationWizardSchema';
 import { useCalibrationWizardStore } from '@/stores/calibrationWizardStore';
+import { SectionLoader } from '@/components/ui/loader';
 import { PlantationStep } from './steps/PlantationStep';
 import { IrrigationStep } from './steps/IrrigationStep';
 import { SoilAnalysisStep } from './steps/SoilAnalysisStep';
@@ -95,10 +97,30 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   const {
     currentStep,
     formData,
+    hydrated,
     setStep,
     setParcelId,
     updateFormData,
+    hydrateFromDraft,
+    reset: resetStore,
   } = useCalibrationWizardStore();
+
+  // Backend draft persistence
+  const { data: backendDraft, isLoading: isDraftLoading } = useCalibrationDraft(parcelId);
+  const saveDraftMutation = useSaveCalibrationDraft(parcelId);
+  const deleteDraftMutation = useDeleteCalibrationDraft(parcelId);
+
+  // Debounced save to backend (1s delay)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSave = useCallback(
+    (step: number, data: Record<string, unknown>) => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveDraftMutation.mutate({ current_step: step, form_data: data });
+      }, 1000);
+    },
+    [saveDraftMutation],
+  );
 
   const prefilledValues = useMemo(() => {
     const estimatedAge = parcelData?.planting_year
@@ -147,31 +169,47 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     mode: 'onBlur',
   });
 
-  const [wizardStoreHydrated, setWizardStoreHydrated] = useState(() =>
-    useCalibrationWizardStore.persist.hasHydrated(),
-  );
-
-  useEffect(() => {
-    if (useCalibrationWizardStore.persist.hasHydrated()) {
-      setWizardStoreHydrated(true);
-      return;
-    }
-    const unsub = useCalibrationWizardStore.persist.onFinishHydration(() => {
-      setWizardStoreHydrated(true);
-    });
-    return unsub;
-  }, []);
-
+  // Set parcel ID in store
   useEffect(() => {
     setParcelId(parcelId);
   }, [parcelId, setParcelId]);
 
+  // Hydrate from backend draft once loaded
   useEffect(() => {
-    if (!wizardStoreHydrated) {
-      return;
+    if (hydrated || isDraftLoading) return;
+    if (backendDraft) {
+      hydrateFromDraft(backendDraft);
+    } else {
+      // No draft on backend — check localStorage for migration
+      const legacyKey = 'agritech-calibration-wizard';
+      try {
+        const raw = localStorage.getItem(legacyKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.state?.parcelId === parcelId && parsed?.state?.formData) {
+            hydrateFromDraft({
+              current_step: parsed.state.currentStep || 1,
+              form_data: parsed.state.formData,
+            });
+            // Migrate to backend
+            saveDraftMutation.mutate({
+              current_step: parsed.state.currentStep || 1,
+              form_data: parsed.state.formData,
+            });
+          }
+          localStorage.removeItem(legacyKey);
+        }
+      } catch { /* ignore migration errors */ }
+      // Mark as hydrated even with no draft
+      hydrateFromDraft({ current_step: 1, form_data: {} });
     }
+  }, [backendDraft, isDraftLoading, hydrated, parcelId, hydrateFromDraft, saveDraftMutation]);
+
+  // Reset form when hydration completes
+  useEffect(() => {
+    if (!hydrated) return;
     form.reset(prefilledValues);
-  }, [form, prefilledValues, wizardStoreHydrated]);
+  }, [form, prefilledValues, hydrated]);
 
   const values = form.watch();
 
@@ -225,17 +263,25 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     }
 
     persistCurrentForm();
-    setStep(Math.min(8, currentStep + 1));
+    const nextStep = Math.min(8, currentStep + 1);
+    setStep(nextStep);
+    debouncedSave(nextStep, form.getValues());
   };
 
   const handlePrevious = () => {
     persistCurrentForm();
-    setStep(Math.max(1, currentStep - 1));
+    const prevStep = Math.max(1, currentStep - 1);
+    setStep(prevStep);
+    debouncedSave(prevStep, form.getValues());
   };
 
   const handleSaveAndCompleteLater = () => {
     persistCurrentForm();
-    toast.success(t('calibration.wizard.toastProgressSaved'));
+    // Save immediately (not debounced)
+    saveDraftMutation.mutate(
+      { current_step: currentStep, form_data: form.getValues() as Record<string, unknown> },
+      { onSuccess: () => toast.success(t('calibration.wizard.toastProgressSaved')) },
+    );
   };
 
   const createAnalysesFromWizard = async (wizardValues: CalibrationWizardFormValues) => {
@@ -395,7 +441,9 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       observations: wizardValues.observations,
     });
 
-    persistCurrentForm();
+    // Clear draft from backend and reset store
+    deleteDraftMutation.mutate();
+    resetStore();
     toast.success('Calibrage lance.');
   };
 
@@ -416,6 +464,11 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       />
     );
   };
+
+  // Show loader while draft is being fetched from backend
+  if (isDraftLoading || !hydrated) {
+    return <SectionLoader />;
+  }
 
   return (
     <div className="space-y-6" data-testid="calibration-initial-wizard">

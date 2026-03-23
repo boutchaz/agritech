@@ -205,6 +205,86 @@ export class CalibrationService {
     private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
+  // ═══════════════════════════════════════════════════════════════
+  // WIZARD DRAFT PERSISTENCE
+  // ═══════════════════════════════════════════════════════════════
+
+  async getDraft(
+    parcelId: string,
+    organizationId: string,
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('calibration_wizard_drafts')
+      .select('id, parcel_id, current_step, form_data, updated_at')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to get wizard draft: ${error.message}`);
+      throw new BadRequestException(`Failed to get wizard draft: ${error.message}`);
+    }
+
+    return data; // null if not found
+  }
+
+  async saveDraft(
+    parcelId: string,
+    organizationId: string,
+    userId: string,
+    dto: { current_step: number; form_data: Record<string, unknown> },
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('calibration_wizard_drafts')
+      .upsert(
+        {
+          parcel_id: parcelId,
+          organization_id: organizationId,
+          user_id: userId,
+          current_step: dto.current_step,
+          form_data: dto.form_data,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'parcel_id,organization_id,user_id' },
+      )
+      .select('id, parcel_id, current_step, form_data, updated_at')
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to save wizard draft: ${error.message}`);
+      throw new BadRequestException(`Failed to save wizard draft: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  async deleteDraft(
+    parcelId: string,
+    organizationId: string,
+    userId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('calibration_wizard_drafts')
+      .delete()
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId);
+
+    if (error) {
+      this.logger.error(`Failed to delete wizard draft: ${error.message}`);
+      throw new BadRequestException(`Failed to delete wizard draft: ${error.message}`);
+    }
+
+    return { success: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+
   private emitCalibrationProgress(
     organizationId: string,
     parcelId: string,

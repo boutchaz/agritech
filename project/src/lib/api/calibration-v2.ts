@@ -350,4 +350,51 @@ export const calibrationV2Api = {
       organizationId,
     );
   },
+
+  // ═══════════════════════════════════════════════════════════════
+  // WIZARD DRAFT
+  // ═══════════════════════════════════════════════════════════════
+
+  async getDraft(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationDraftResponse | null> {
+    return apiClient.get<CalibrationDraftResponse | null>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+      {},
+      organizationId,
+    );
+  },
+
+  async saveDraft(
+    parcelId: string,
+    dto: { current_step: number; form_data: Record<string, unknown> },
+    organizationId?: string,
+  ): Promise<CalibrationDraftResponse> {
+    return apiClient.put<CalibrationDraftResponse>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+      dto,
+      {},
+      organizationId,
+    );
+  },
+
+  async deleteDraft(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<{ success: boolean }> {
+    return apiClient.delete<{ success: boolean }>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+      {},
+      organizationId,
+    );
+  },
 };
+
+export interface CalibrationDraftResponse {
+  id: string;
+  parcel_id: string;
+  current_step: number;
+  form_data: Record<string, unknown>;
+  updated_at: string;
+}
