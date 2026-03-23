@@ -122,8 +122,10 @@ export const aiPlanApi = {
       {},
       organizationId,
     );
-    const available = providers.find((p) => p.available);
-    const provider = available?.provider ?? 'zai';
+    // Prefer org-configured providers (non-zai) over the system default
+    const available = providers.filter((p) => p.available);
+    const orgProvider = available.find((p) => p.provider !== 'zai');
+    const provider = orgProvider?.provider ?? available[0]?.provider ?? 'zai';
 
     // Create the job
     const job = await apiClient.post<{ id: string; status: string }>(
