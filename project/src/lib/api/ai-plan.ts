@@ -116,10 +116,20 @@ export const aiPlanApi = {
   },
 
   async generateAIPlanReport(parcelId: string, organizationId?: string): Promise<unknown> {
+    // Resolve the best available provider
+    const providers = await apiClient.get<Array<{ provider: string; available: boolean }>>(
+      '/api/v1/ai-reports/providers',
+      {},
+      organizationId,
+    );
+    const available = providers.find((p) => p.available);
+    const provider = available?.provider ?? 'zai';
+
     return apiClient.post(
       '/api/v1/ai-reports/generate',
       {
         parcel_id: parcelId,
+        provider,
         reportType: 'annual_plan',
       },
       {},
