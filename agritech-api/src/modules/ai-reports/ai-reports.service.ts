@@ -3260,7 +3260,7 @@ export class AIReportsService {
         title: `Rapport IA - ${reportType} - ${parcelName} - ${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
         status: 'completed',
         generated_at: now.toISOString(),
-        generated_by: userId,
+        generated_by: userId === 'system' ? null : userId,
         metadata: {
           type: 'ai_report',
           report_type: reportType,
