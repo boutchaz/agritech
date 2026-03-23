@@ -2160,8 +2160,20 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
   ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: parcelAiRow } = await supabase
+      .from("parcels")
+      .select("ai_phase, ai_enabled, ai_observation_only")
+      .eq("id", parcelId)
+      .maybeSingle();
+
+    const operationalRecommendationsEligible =
+      parcelAiRow?.ai_phase === "active" &&
+      parcelAiRow?.ai_enabled === true &&
+      parcelAiRow?.ai_observation_only !== true;
+
     this.logger.log(
-      `Generating annual plan for parcel ${parcelId} after nutrition option confirmation`,
+      `Generating annual plan + narrative reports for parcel ${parcelId} (operational reco narrative: ${operationalRecommendationsEligible})`,
     );
 
     const annualPlan = await this.annualPlanService.ensurePlan(
@@ -2169,14 +2181,17 @@ export class CalibrationService {
       organizationId,
     );
 
+    const dataEnd = new Date().toISOString().split("T")[0];
+    const dataStart = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+
     try {
       await this.aiReportsService.generateReport(organizationId, "system", {
         parcel_id: parcelId,
         provider: AIProvider.GEMINI,
         model: "gemini-2.5-flash",
         reportType: AgromindReportType.ANNUAL_PLAN,
-        data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
-        data_end_date: new Date().toISOString().split("T")[0],
+        data_start_date: dataStart,
+        data_end_date: dataEnd,
       });
     } catch (error) {
       this.logger.warn(
@@ -2191,6 +2206,73 @@ export class CalibrationService {
       parcelId,
       organizationId,
     );
+
+    if (operationalRecommendationsEligible) {
+      try {
+        await this.aiReportsService.generateReport(organizationId, "system", {
+          parcel_id: parcelId,
+          provider: AIProvider.GEMINI,
+          model: "gemini-2.5-flash",
+          reportType: AgromindReportType.RECOMMENDATIONS,
+          data_start_date: dataStart,
+          data_end_date: dataEnd,
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Operational recommendations narrative report failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
+        );
+      }
+    }
+  }
+
+  /**
+   * When agronomic profile fields change on an already-active parcel, refresh the template plan
+   * and re-run annual + operational narrative reports (spec: major change → plan refresh).
+   */
+  scheduleAnnualPlanRefreshAfterMajorParcelEdit(
+    parcelId: string,
+    organizationId: string,
+  ): void {
+    setImmediate(() => {
+      void this.runAnnualPlanRefreshAfterMajorParcelEdit(parcelId, organizationId);
+    });
+  }
+
+  private async runAnnualPlanRefreshAfterMajorParcelEdit(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: row, error } = await supabase
+      .from("parcels")
+      .select("ai_phase, ai_enabled, ai_observation_only, ai_calibration_id")
+      .eq("id", parcelId)
+      .maybeSingle();
+
+    if (error || !row) {
+      this.logger.warn(
+        `Skipping annual plan refresh after parcel edit: parcel ${parcelId} not loaded (${error?.message ?? "unknown"})`,
+      );
+      return;
+    }
+
+    if (
+      row.ai_phase !== "active" ||
+      row.ai_enabled !== true ||
+      row.ai_observation_only === true ||
+      typeof row.ai_calibration_id !== "string" ||
+      !row.ai_calibration_id
+    ) {
+      return;
+    }
+
+    try {
+      await this.generateAnnualPlan(row.ai_calibration_id, parcelId, organizationId);
+    } catch (err) {
+      this.logger.warn(
+        `Annual plan refresh after major parcel edit failed for ${parcelId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   private normalizeCalibrationMode(mode?: string): CalibrationMode {

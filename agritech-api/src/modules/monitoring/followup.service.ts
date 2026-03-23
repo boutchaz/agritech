@@ -1,6 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
+import { AIReportsService } from '../ai-reports/ai-reports.service';
+import { AIProvider, AgromindReportType } from '../ai-reports/interfaces';
+
+const FOLLOWUP_REPORT_LOOKBACK_DAYS = 730;
 
 interface ExecutedRecommendationRow {
   id: string;
@@ -33,7 +37,11 @@ interface FollowupSummary {
 export class FollowupService {
   private readonly logger = new Logger(FollowupService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => AIReportsService))
+    private readonly aiReportsService: AIReportsService,
+  ) {}
 
   @Cron('30 6 * * *', { name: 'monitoring-followup-evaluation', timeZone: 'UTC' })
   async evaluateExecutedRecommendations(): Promise<FollowupSummary> {
@@ -137,7 +145,40 @@ export class FollowupService {
       throw new Error(`Failed to update recommendation evaluation: ${error.message}`);
     }
 
+    setImmediate(() => {
+      void this.tryGenerateFollowUpNarrativeReport(
+        recommendation.organization_id,
+        recommendation.parcel_id,
+      );
+    });
+
     return 'evaluated';
+  }
+
+  private getLookbackDate(days: number): string {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().split('T')[0];
+  }
+
+  private async tryGenerateFollowUpNarrativeReport(
+    organizationId: string,
+    parcelId: string,
+  ): Promise<void> {
+    try {
+      await this.aiReportsService.generateReport(organizationId, 'system', {
+        parcel_id: parcelId,
+        provider: AIProvider.GEMINI,
+        model: 'gemini-2.5-flash',
+        reportType: AgromindReportType.FOLLOWUP,
+        data_start_date: this.getLookbackDate(FOLLOWUP_REPORT_LOOKBACK_DAYS),
+        data_end_date: new Date().toISOString().split('T')[0],
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Follow-up narrative report skipped or failed for parcel ${parcelId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   private async fetchExecutedRecommendations(): Promise<ExecutedRecommendationRow[]> {

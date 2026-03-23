@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   BadRequestException,
   ConflictException,
@@ -6,6 +7,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   Logger,
+  forwardRef,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
@@ -16,9 +18,20 @@ import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
+import { CalibrationService } from "../calibration/calibration.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../notifications/dto/notification.dto";
+
+const MAJOR_PARCEL_PROFILE_FIELDS = [
+  "crop_type",
+  "variety",
+  "planting_system",
+  "irrigation_type",
+  "water_source",
+  "density_per_hectare",
+  "plant_count",
+] as const;
 
 @Injectable()
 export class ParcelsService {
@@ -31,6 +44,8 @@ export class ParcelsService {
     private stateMachine: CalibrationStateMachine,
     private satelliteCacheService: SatelliteCacheService,
     private notificationsService: NotificationsService,
+    @Inject(forwardRef(() => CalibrationService))
+    private readonly calibrationService: CalibrationService,
   ) {
     const supabaseUrl = this.configService.get<string>("SUPABASE_URL");
     const supabaseServiceKey = this.configService.get<string>(
@@ -891,6 +906,14 @@ export class ParcelsService {
       );
     }
 
+    const { data: profileBefore } = await this.supabaseAdmin
+      .from("parcels")
+      .select(
+        "crop_type, variety, planting_system, irrigation_type, water_source, density_per_hectare, plant_count, ai_phase, ai_enabled, ai_observation_only, ai_calibration_id",
+      )
+      .eq("id", parcelId)
+      .maybeSingle();
+
     // Prepare update data (only include fields that are provided)
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
@@ -947,7 +970,38 @@ export class ParcelsService {
     }
 
     this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
+
+    if (
+      profileBefore &&
+      this.parcelMajorProfileChanged(updateData, profileBefore) &&
+      profileBefore.ai_phase === "active" &&
+      profileBefore.ai_enabled === true &&
+      profileBefore.ai_observation_only !== true &&
+      typeof profileBefore.ai_calibration_id === "string" &&
+      profileBefore.ai_calibration_id.length > 0
+    ) {
+      this.calibrationService.scheduleAnnualPlanRefreshAfterMajorParcelEdit(
+        parcelId,
+        organizationId,
+      );
+    }
+
     return updatedParcel;
+  }
+
+  private parcelMajorProfileChanged(
+    updateData: Record<string, unknown>,
+    before: Record<string, unknown>,
+  ): boolean {
+    for (const key of MAJOR_PARCEL_PROFILE_FIELDS) {
+      if (updateData[key] === undefined) {
+        continue;
+      }
+      if (updateData[key] !== before[key]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async getParcelApplications(
