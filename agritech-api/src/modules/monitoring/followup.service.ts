@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
 import { AIReportsService } from '../ai-reports/ai-reports.service';
-import { AIProvider, AgromindReportType } from '../ai-reports/interfaces';
+import { AgromindReportType } from '../ai-reports/interfaces';
 
 const FOLLOWUP_REPORT_LOOKBACK_DAYS = 730;
 
@@ -166,10 +166,11 @@ export class FollowupService {
     parcelId: string,
   ): Promise<void> {
     try {
+      const { provider, model } = await this.aiReportsService.resolveProvider(organizationId);
       await this.aiReportsService.generateReport(organizationId, 'system', {
         parcel_id: parcelId,
-        provider: AIProvider.GEMINI,
-        model: 'gemini-2.5-flash',
+        provider,
+        model,
         reportType: AgromindReportType.FOLLOWUP,
         data_start_date: this.getLookbackDate(FOLLOWUP_REPORT_LOOKBACK_DAYS),
         data_end_date: new Date().toISOString().split('T')[0],

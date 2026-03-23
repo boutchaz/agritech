@@ -372,8 +372,8 @@ export class AIReportsService {
       };
     }
 
-    // Fallback to Gemini (system default)
-    return { provider: AIProvider.GEMINI, model: 'gemini-2.5-flash' };
+    // Fallback to Platform AI (ZAI) as system default
+    return { provider: AIProvider.ZAI, model: 'default' };
   }
 
   /**
