@@ -5,10 +5,11 @@ import {
   useAIPlanInterventions,
   useExecuteAIPlanIntervention,
   useRegenerateAIPlan,
+  useGenerateAIPlanReport,
 } from '@/hooks/useAIPlan';
 import { PlanInterventionCard } from '@/components/ai/PlanInterventionCard';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
-import { Calendar, RefreshCw } from 'lucide-react';
+import { Calendar, RefreshCw, Sparkles } from 'lucide-react';
 
 const AIPlanCalendarPage = () => {
   const { t } = useTranslation('ai');
@@ -17,6 +18,7 @@ const AIPlanCalendarPage = () => {
   const { data: interventions, isLoading: isInterventionsLoading } = useAIPlanInterventions(parcelId);
   const { mutate: executeIntervention, isPending: isExecuting } = useExecuteAIPlanIntervention();
   const { mutate: regeneratePlan, isPending: isRegenerating } = useRegenerateAIPlan();
+  const { mutate: generateAIPlan, isPending: isGenerating } = useGenerateAIPlanReport(parcelId);
 
   if (isPlanLoading || isInterventionsLoading) {
     return (
@@ -43,15 +45,26 @@ const AIPlanCalendarPage = () => {
             )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => regeneratePlan(parcelId)}
-          disabled={isRegenerating}
-          className="flex items-center justify-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 text-sm shrink-0"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} aria-hidden />
-          <span>{t('plan.calendar.recalculate')}</span>
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => generateAIPlan()}
+            disabled={isGenerating || isRegenerating}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
+          >
+            <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} aria-hidden />
+            <span>{isGenerating ? t('plan.calendar.aiGenerating') : t('plan.calendar.aiGenerate')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => regeneratePlan(parcelId)}
+            disabled={isRegenerating || isGenerating}
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 text-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} aria-hidden />
+            <span>{t('plan.calendar.recalculate')}</span>
+          </button>
+        </div>
       </div>
 
       {!interventions || interventions.length === 0 ? (

@@ -126,6 +126,35 @@ export function useRegenerateAIPlan() {
   });
 }
 
+/** Triggers AI report generation for the annual plan, then regenerates to enrich with computed doses. */
+export function useGenerateAIPlanReport(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<unknown> => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      // Step 1: Generate AI report
+      await aiPlanApi.generateAIPlanReport(parcelId, currentOrganization.id);
+      // Step 2: Regenerate plan to enrich from the AI report
+      return aiPlanApi.regenerateAIPlan(parcelId, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-plan-summary', parcelId, currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ai-plan-interventions', parcelId, currentOrganization?.id] });
+      toast.success(i18n.t('toasts.aiPlanGenerated', { ns: 'ai' }));
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : i18n.t('toasts.aiPlanGenerateError', { ns: 'ai' }),
+      );
+    },
+  });
+}
+
 /** Creates the annual plan when missing (e.g. post-activation job failed). Idempotent if a plan already exists. */
 export function useEnsureAIPlan(parcelId: string) {
   const { currentOrganization } = useAuth();

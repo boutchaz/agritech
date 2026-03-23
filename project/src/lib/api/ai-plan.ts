@@ -114,4 +114,16 @@ export const aiPlanApi = {
   async regenerateAIPlan(parcelId: string, organizationId?: string): Promise<AIPlan> {
     return apiClient.post(`${BASE_URL}/${parcelId}/ai/plan/regenerate`, {}, {}, organizationId);
   },
+
+  async generateAIPlanReport(parcelId: string, organizationId?: string): Promise<unknown> {
+    return apiClient.post(
+      '/api/v1/ai-reports/generate',
+      {
+        parcel_id: parcelId,
+        reportType: 'annual_plan',
+      },
+      {},
+      organizationId,
+    );
+  },
 };
