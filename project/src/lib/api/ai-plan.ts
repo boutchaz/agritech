@@ -134,7 +134,7 @@ export const aiPlanApi = {
     onProgress?.(5, 'pending');
 
     // Create the job
-    const job = await apiClient.post<{ id: string; status: string }>(
+    const job = await apiClient.post<{ job_id: string; status: string }>(
       '/api/v1/ai-reports/generate',
       {
         parcel_id: parcelId,
@@ -152,7 +152,7 @@ export const aiPlanApi = {
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, 3000));
       const status = await apiClient.get<{ status: string; progress?: number; error_message?: string }>(
-        `/api/v1/ai-reports/jobs/${job.id}`,
+        `/api/v1/ai-reports/jobs/${job.job_id}`,
         {},
         organizationId,
       );
