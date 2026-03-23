@@ -8,7 +8,7 @@ import {
   forwardRef,
 } from "@nestjs/common";
 import { AIReportsService } from "../ai-reports/ai-reports.service";
-import { AIProvider, AgromindReportType } from "../ai-reports/interfaces";
+import { AgromindReportType } from "../ai-reports/interfaces";
 import {
   AnnualPlanService,
   AnnualPlanWithInterventions,
@@ -1656,13 +1656,14 @@ export class CalibrationService {
         `Starting AI calibration analysis (${language}) for calibration ${calibrationId} parcel ${parcelId}`,
       );
 
+      const resolved = await this.aiReportsService.resolveProvider(organizationId);
       const result = await this.aiReportsService.generateReport(
         organizationId,
         "system",
         {
           parcel_id: parcelId,
-          provider: AIProvider.GEMINI,
-          model: "gemini-2.5-flash",
+          provider: resolved.provider,
+          model: resolved.model,
           reportType: AgromindReportType.CALIBRATION,
           language,
           data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
@@ -2264,15 +2265,36 @@ export class CalibrationService {
     const dataEnd = new Date().toISOString().split("T")[0];
     const dataStart = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
 
+    // Resolve provider: org-configured first, then system fallback
+    const { provider, model } = await this.aiReportsService.resolveProvider(organizationId);
+
+    let enrichedPlan = annualPlan;
+
     try {
-      await this.aiReportsService.generateReport(organizationId, "system", {
+      const aiResult = await this.aiReportsService.generateReport(organizationId, "system", {
         parcel_id: parcelId,
-        provider: AIProvider.GEMINI,
-        model: "gemini-2.5-flash",
+        provider,
+        model,
         reportType: AgromindReportType.ANNUAL_PLAN,
         data_start_date: dataStart,
         data_end_date: dataEnd,
       });
+
+      // Enrich plan_interventions with AI-computed doses and products
+      if (aiResult?.sections && typeof aiResult.sections === "object") {
+        try {
+          enrichedPlan = await this.annualPlanService.enrichPlanFromAI(
+            annualPlan.id,
+            parcelId,
+            organizationId,
+            aiResult.sections as Record<string, unknown>,
+          );
+        } catch (enrichError) {
+          this.logger.warn(
+            `AI plan enrichment failed for parcel ${parcelId}, keeping template: ${enrichError instanceof Error ? enrichError.message : "unknown error"}`,
+          );
+        }
+      }
     } catch (error) {
       this.logger.warn(
         `Narrative annual plan report generation failed for parcel ${parcelId}: ${error instanceof Error ? error.message : "unknown error"}`,
@@ -2282,7 +2304,7 @@ export class CalibrationService {
     this.logger.log(`Annual plan generated for parcel ${parcelId}`);
 
     await this.annualPlanService.syncWorkforceTasksFromPlan(
-      annualPlan,
+      enrichedPlan,
       parcelId,
       organizationId,
     );
@@ -2291,8 +2313,8 @@ export class CalibrationService {
       try {
         await this.aiReportsService.generateReport(organizationId, "system", {
           parcel_id: parcelId,
-          provider: AIProvider.GEMINI,
-          model: "gemini-2.5-flash",
+          provider,
+          model,
           reportType: AgromindReportType.RECOMMENDATIONS,
           data_start_date: dataStart,
           data_end_date: dataEnd,

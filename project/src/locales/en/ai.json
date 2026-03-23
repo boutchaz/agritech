@@ -26,6 +26,11 @@
       "unstructuredMonth": "{{month}}: we could not split this into simple steps. Use the technical line below or ask your agronomist.",
       "bulletItem": "{{label}} — {{detail}}",
       "technicalHint": "Technical line (agronomist / support)",
+      "aiIntro": "{{product}} — {{dose}} {{unit}}",
+      "aiIntroGeneric": "{{type}}",
+      "aiBulletMethod": "Application: {{method}}",
+      "aiBulletStage": "Growth stage: BBCH {{stage}}",
+      "aiBulletPriority": "Priority: {{priority}}",
       "componentKeys": {
         "npk": "Fertilizer & nutrition",
         "phyto": "Crop protection (sprays)",
@@ -80,7 +85,12 @@
       "strengthsNone": "No task marked as done yet.",
       "attentionTitle": "Watch list",
       "attentionPlanned": "{{count}} task(s) still scheduled in the calendar.",
-      "attentionNone": "Nothing waiting in the calendar for now."
+      "attentionNone": "Nothing waiting in the calendar for now.",
+      "annualDosesTitle": "Annual doses (kg/ha)",
+      "harvestTitle": "Harvest forecast",
+      "yieldRange": "Estimated yield: {{low}} – {{high}} T/ha",
+      "harvestWindow": "Harvest window: {{start}} → {{end}}",
+      "economicTitle": "Estimated input cost"
     }
   },
   "calibration": {
@@ -281,7 +291,15 @@
     "harvest": "Harvest",
     "traitement": "Treatment",
     "observation": "Observation",
-    "suivi": "Monitoring"
+    "suivi": "Monitoring",
+    "fertigation": "Fertigation",
+    "foliaire": "Foliar spray",
+    "sol": "Soil work",
+    "eau": "Water management",
+    "mecanique": "Mechanical work",
+    "taille": "Pruning",
+    "recolte": "Harvest",
+    "unknown": "Intervention"
   },
   "months": {
     "short": {

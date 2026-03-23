@@ -26,6 +26,11 @@
       "unstructuredMonth": "{{month}}: تعذّر تقسيم الخطة لخطوات بسيطة. راجع السطر التقني أدناه أو استشر مهندسك الزراعي.",
       "bulletItem": "{{label}} — {{detail}}",
       "technicalHint": "تفاصيل تقنية (مهندس / دعم)",
+      "aiIntro": "{{product}} — {{dose}} {{unit}}",
+      "aiIntroGeneric": "{{type}}",
+      "aiBulletMethod": "الطريقة: {{method}}",
+      "aiBulletStage": "مرحلة النمو: BBCH {{stage}}",
+      "aiBulletPriority": "الأولوية: {{priority}}",
       "componentKeys": {
         "npk": "التسميد والتغذية",
         "phyto": "حماية المحصول (مبيدات)",
@@ -80,7 +85,12 @@
       "strengthsNone": "لا توجد مهمة مُعلَمة كمنجزة بعد.",
       "attentionTitle": "انتباه",
       "attentionPlanned": "{{count}} مهمة لا تزال مقترحة في التقويم.",
-      "attentionNone": "لا يوجد شيء في الانتظار في التقويم حالياً."
+      "attentionNone": "لا يوجد شيء في الانتظار في التقويم حالياً.",
+      "annualDosesTitle": "الجرعات السنوية (كغ/هكتار)",
+      "harvestTitle": "توقعات الحصاد",
+      "yieldRange": "المردود المتوقع: {{low}} – {{high}} طن/هكتار",
+      "harvestWindow": "نافذة الحصاد: {{start}} → {{end}}",
+      "economicTitle": "تكلفة المدخلات المقدرة"
     }
   },
   "calibration": {
@@ -281,7 +291,13 @@
     "harvest": "الحصاد",
     "traitement": "المعالجة",
     "observation": "المراقبة",
-    "suivi": "المتابعة"
+    "suivi": "المتابعة",
+    "fertigation": "التسميد بالري",
+    "foliaire": "رش ورقي",
+    "sol": "عمل التربة",
+    "eau": "إدارة المياه",
+    "mecanique": "تدخل ميكانيكي",
+    "unknown": "تدخل"
   },
   "months": {
     "short": {

@@ -26,6 +26,11 @@
       "unstructuredMonth": "{{month}} : nous n’avons pas pu détailler en étapes simples. Utilisez la ligne technique ci-dessous ou votre agronome.",
       "bulletItem": "{{label}} — {{detail}}",
       "technicalHint": "Ligne technique (agronome / support)",
+      "aiIntro": "{{product}} — {{dose}} {{unit}}",
+      "aiIntroGeneric": "{{type}}",
+      "aiBulletMethod": "Application : {{method}}",
+      "aiBulletStage": "Stade phénologique : BBCH {{stage}}",
+      "aiBulletPriority": "Priorité : {{priority}}",
       "componentKeys": {
         "npk": "Engrais & nutrition",
         "phyto": "Protection des végétaux (traitements)",
@@ -80,7 +85,12 @@
       "strengthsNone": "Aucune tâche marquée comme faite pour le moment.",
       "attentionTitle": "Points d’attention",
       "attentionPlanned": "{{count}} tâche(s) encore à prévoir selon le calendrier.",
-      "attentionNone": "Rien de prévu en attente pour l’instant."
+      "attentionNone": "Rien de prévu en attente pour l’instant.",
+      "annualDosesTitle": "Doses annuelles (kg/ha)",
+      "harvestTitle": "Prévision récolte",
+      "yieldRange": "Rendement estimé : {{low}} – {{high}} T/ha",
+      "harvestWindow": "Fenêtre de récolte : {{start}} → {{end}}",
+      "economicTitle": "Coût intrants estimé"
     }
   },
   "calibration": {
@@ -281,7 +291,15 @@
     "harvest": "Récolte",
     "traitement": "Traitement",
     "observation": "Observation",
-    "suivi": "Suivi"
+    "suivi": "Suivi",
+    "fertigation": "Fertigation",
+    "foliaire": "Application foliaire",
+    "sol": "Travail du sol",
+    "eau": "Gestion eau",
+    "mecanique": "Intervention mécanique",
+    "taille": "Taille",
+    "recolte": "Récolte",
+    "unknown": "Intervention"
   },
   "months": {
     "short": {

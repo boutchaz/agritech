@@ -61,6 +61,86 @@ export interface FarmerPlanInterventionCopy {
   technicalLine: string | null;
 }
 
+/** Detect AI-enriched notes (has applicationMethod / stageBBCH / doseUnit). */
+function isAIEnrichedNotes(
+  components: Record<string, string>,
+): boolean {
+  return (
+    'applicationMethod' in components ||
+    'stageBBCH' in components ||
+    'doseUnit' in components
+  );
+}
+
+function buildAIEnrichedCopy(
+  intervention: AIPlanIntervention,
+  components: Record<string, string>,
+  t: PlanT,
+): FarmerPlanInterventionCopy {
+  const technicalLine = intervention.description?.trim() || null;
+
+  // Build intro from product + dose
+  const product = intervention.product ?? components.product;
+  const dose = intervention.dose ?? components.dose;
+  const unit = intervention.unit ?? components.doseUnit;
+
+  const intro = product && dose && unit
+    ? t('plan.calendar.aiIntro', { product, dose, unit })
+    : product
+      ? product
+      : t('plan.calendar.aiIntroGeneric', { type: humanizeToken(intervention.intervention_type) });
+
+  const bullets: string[] = [];
+
+  if (components.applicationMethod) {
+    bullets.push(
+      t('plan.calendar.aiBulletMethod', {
+        method: humanizeToken(components.applicationMethod),
+      }),
+    );
+  }
+
+  if (components.stageBBCH) {
+    bullets.push(
+      t('plan.calendar.aiBulletStage', { stage: components.stageBBCH }),
+    );
+  }
+
+  if (components.applicationConditions) {
+    bullets.push(components.applicationConditions);
+  }
+
+  if (components.priority && components.priority !== 'normale') {
+    bullets.push(
+      t('plan.calendar.aiBulletPriority', {
+        priority: humanizeToken(components.priority),
+      }),
+    );
+  }
+
+  // Show nutrient content if available
+  const nutrient = components.nutrientContent;
+  if (nutrient && nutrient !== '{}' && nutrient !== 'null') {
+    try {
+      const parsed = JSON.parse(nutrient) as Record<string, unknown>;
+      const parts = Object.entries(parsed)
+        .filter(([, v]) => v != null && v !== 0)
+        .map(([k, v]) => `${k}: ${v}`);
+      if (parts.length > 0) {
+        bullets.push(parts.join(' | '));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (components.notes) {
+    bullets.push(components.notes);
+  }
+
+  return { intro, bullets, technicalLine };
+}
+
 export function getFarmerPlanInterventionCopy(
   intervention: AIPlanIntervention,
   t: PlanT,
@@ -69,6 +149,12 @@ export function getFarmerPlanInterventionCopy(
   const components = parsePlanInterventionNotes(intervention.notes);
   const technicalLine = intervention.description?.trim() || null;
 
+  // AI-enriched interventions have detailed structured data
+  if (components && isAIEnrichedNotes(components)) {
+    return buildAIEnrichedCopy(intervention, components, t);
+  }
+
+  // Template fallback (original logic)
   if (!components) {
     if (technicalLine) {
       return {

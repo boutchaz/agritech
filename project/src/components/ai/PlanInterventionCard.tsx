@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, CheckCircle2, Play } from 'lucide-react';
+import { Calendar, CheckCircle2, Beaker, Play } from 'lucide-react';
 import type { AIPlanIntervention } from '@/lib/api/ai-plan';
 import { getFarmerPlanInterventionCopy } from '@/lib/planInterventionFarmerCopy';
 import {
@@ -25,6 +25,7 @@ export function PlanInterventionCard({
   const title = planInterventionTitle(intervention.intervention_type);
   const statusLabel = planInterventionStatusLabel(intervention.status);
   const canMarkDone = intervention.status === 'planned' && onExecute;
+  const hasDose = intervention.dose && intervention.unit;
 
   const farmerCopy = useMemo(
     () => getFarmerPlanInterventionCopy(intervention, t),
@@ -55,7 +56,18 @@ export function PlanInterventionCard({
             >
               {statusLabel}
             </span>
+            {hasDose && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/25 dark:text-emerald-300">
+                <Beaker className="w-3 h-3" aria-hidden />
+                {intervention.dose} {intervention.unit}
+              </span>
+            )}
           </div>
+          {intervention.product && (
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">
+              {intervention.product}
+            </p>
+          )}
           <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed">
             {farmerCopy.intro}
           </p>

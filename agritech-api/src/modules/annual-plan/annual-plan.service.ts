@@ -114,6 +114,40 @@ interface MonthlyPlanDefinition {
   components: Record<string, MonthlyPlanValue>;
 }
 
+/** AI prompt month keys differ from template keys (aou vs aout, sep vs sept, etc.) */
+const AI_MONTH_KEY_TO_NUMBER: Record<string, number> = {
+  jan: 1,
+  fev: 2,
+  mar: 3,
+  avr: 4,
+  mai: 5,
+  jun: 6,
+  jul: 7,
+  aou: 8,
+  sep: 9,
+  oct: 10,
+  nov: 11,
+  dec: 12,
+};
+
+interface AIInterventionJson {
+  id?: string;
+  type?: string;
+  category?: string;
+  month?: string;
+  week?: number | null;
+  stageBBCH?: string;
+  product?: string;
+  dose?: number | string | null;
+  doseUnit?: string;
+  nutrientContent?: Record<string, unknown>;
+  applicationMethod?: string;
+  applicationConditions?: string;
+  priority?: string;
+  status?: string;
+  notes?: string;
+}
+
 const MONTH_KEY_TO_NUMBER: Record<string, number> = {
   jan: 1,
   fev: 2,
@@ -150,6 +184,16 @@ export class AnnualPlanService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  /**
+   * Ensures that an annual plan exists for the given parcel, organization, and year.
+   * If there is no existing plan for the specified parameters, a new draft plan is generated.
+   * If a plan already exists, returns it along with its interventions.
+   *
+   * @param parcelId - The ID of the parcel for which to ensure the annual plan.
+   * @param organizationId - The ID of the organization owning the parcel.
+   * @param year - The year of the annual plan (defaults to current UTC year).
+   * @returns The annual plan with its interventions.
+   */
   async ensurePlan(
     parcelId: string,
     organizationId: string,
@@ -176,6 +220,32 @@ export class AnnualPlanService {
     };
   }
 
+  /**
+   * Generates a new annual plan and its associated interventions for a given parcel, organization, and year.
+   *
+   * Source of Truth:
+   * The plan is generated primarily from the crop reference data ("plan_annuel") linked to the parcel's crop type.
+   * This reference is considered the "source of truth" for defining monthly program structure, interventions, and best practices.
+   * The actual source data is fetched via `findCropReferenceOrThrow`, resulting in a referential model (not user-edited),
+   * which is then transposed to a new annual plan for the designated parcel/year.
+   * The resulting plan references this source in its `plan_data.source` field, and the monthly structure reflects the referential design.
+   * After plan creation, per-month interventions are initialized according to these reference definitions.
+   *
+   * This method will:
+   * - Retrieve the parcel and its crop reference data, throwing an error if not found.
+   * - Use crop reference data to extract the monthly plan definitions that specify interventions/components for each month,
+   *   directly reflecting the referential (source of truth) structure.
+   * - Insert a new draft annual plan record in the `annual_plans` table, including linked plan data, year, and metadata,
+   *   recording its referential origin.
+   * - Insert one `plan_interventions` record per month (according to the extracted calendar), linked to the newly created plan.
+   * - Return the created plan and its (sorted) interventions.
+   *
+   * @param parcelId - The ID of the parcel for which to generate the annual plan.
+   * @param organizationId - The ID of the organization associated with the parcel.
+   * @param year - (Optional) Target year for the plan. Defaults to the current UTC year if not provided.
+   * @returns The created annual plan record with its list of interventions, both structured from crop reference (referential) data.
+   * @throws NotFoundException or BadRequestException if operations fail at any step (parcel not found, reference data missing, DB errors, etc.)
+   */
   async generatePlan(
     parcelId: string,
     organizationId: string,
@@ -197,7 +267,7 @@ export class AnnualPlanService {
         crop_type: parcel.crop_type,
         variety: parcel.variety,
         plan_data: {
-          source: 'plan_annuel',
+          source: 'plan_annuel', // References the referential source for traceability
           generated_at: new Date().toISOString(),
           months: monthlyDefinitions.map((definition) => ({
             month: definition.month,
@@ -554,7 +624,225 @@ export class AnnualPlanService {
       }
     }
 
-    return this.generatePlan(parcelId, organizationId, year);
+    const templatePlan = await this.generatePlan(parcelId, organizationId, year);
+
+    // Try to enrich from the latest AI annual plan report
+    const aiSections = await this.findLatestAIPlanSections(parcelId);
+    if (aiSections) {
+      try {
+        return await this.enrichPlanFromAI(
+          templatePlan.id,
+          parcelId,
+          organizationId,
+          aiSections,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `AI enrichment after regeneration failed for parcel ${parcelId}: ${error instanceof Error ? error.message : 'unknown'}`,
+        );
+      }
+    }
+
+    return templatePlan;
+  }
+
+  /**
+   * Finds the latest AI annual_plan report sections from parcel_reports.
+   */
+  private async findLatestAIPlanSections(
+    parcelId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const { data, error } = await this.databaseService
+      .getAdminClient()
+      .from('parcel_reports')
+      .select('metadata')
+      .eq('parcel_id', parcelId)
+      .eq('status', 'completed')
+      .order('generated_at', { ascending: false })
+      .limit(10);
+
+    if (error || !data) {
+      return null;
+    }
+
+    // Find the most recent annual_plan report
+    for (const row of data) {
+      const meta = this.asRecord(row.metadata);
+      if (meta.report_type === 'annual_plan' && this.isRecord(meta.sections)) {
+        return meta.sections as Record<string, unknown>;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Replaces template plan_interventions with AI-generated ones that carry
+   * real doses, products, BBCH stages, and application details.
+   * Also updates annual_plans.plan_data with AI aggregate data.
+   * Only enriches draft plans — validated/active plans are left untouched.
+   */
+  async enrichPlanFromAI(
+    annualPlanId: string,
+    parcelId: string,
+    organizationId: string,
+    aiPlanJson: Record<string, unknown>,
+  ): Promise<AnnualPlanWithInterventions> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const plan = await this.findPlanByIdOrThrow(annualPlanId, organizationId);
+
+    if (plan.status !== 'draft') {
+      this.logger.log(
+        `Skipping AI enrichment for plan ${annualPlanId}: status is "${plan.status}", not draft`,
+      );
+      const interventions = await this.findPlanInterventions(annualPlanId, organizationId);
+      return { ...plan, interventions };
+    }
+
+    const rawInterventions = aiPlanJson.interventions;
+    if (!Array.isArray(rawInterventions) || rawInterventions.length === 0) {
+      this.logger.warn(
+        `AI plan JSON has no interventions array for plan ${annualPlanId}, keeping template`,
+      );
+      const interventions = await this.findPlanInterventions(annualPlanId, organizationId);
+      return { ...plan, interventions };
+    }
+
+    // Delete existing template interventions
+    const { error: deleteError } = await supabase
+      .from('plan_interventions')
+      .delete()
+      .eq('annual_plan_id', annualPlanId)
+      .eq('organization_id', organizationId);
+
+    if (deleteError) {
+      throw new BadRequestException(
+        `Failed to delete template interventions for AI enrichment: ${deleteError.message}`,
+      );
+    }
+
+    // Map AI interventions to insert rows
+    const insertRows = rawInterventions
+      .filter((item): item is AIInterventionJson => this.isRecord(item))
+      .map((aiIntervention) =>
+        this.buildAIInterventionRow(annualPlanId, parcelId, organizationId, aiIntervention),
+      )
+      .filter((row) => row !== null);
+
+    if (insertRows.length === 0) {
+      this.logger.warn(
+        `No valid AI interventions parsed for plan ${annualPlanId}, regenerating template`,
+      );
+      const templatePlan = await this.generatePlan(parcelId, organizationId, plan.year);
+      return templatePlan;
+    }
+
+    const { data: createdInterventions, error: insertError } = await supabase
+      .from('plan_interventions')
+      .insert(insertRows)
+      .select('*');
+
+    if (insertError) {
+      throw new BadRequestException(
+        `Failed to insert AI interventions: ${insertError.message}`,
+      );
+    }
+
+    // Update plan_data with AI aggregate data
+    const { error: updateError } = await supabase
+      .from('annual_plans')
+      .update({
+        plan_data: {
+          source: 'ai',
+          generated_at: typeof aiPlanJson.generationDate === 'string'
+            ? aiPlanJson.generationDate
+            : new Date().toISOString(),
+          ai_version: aiPlanJson.version ?? null,
+          parameters: this.isRecord(aiPlanJson.parameters) ? aiPlanJson.parameters : null,
+          annualDoses: this.isRecord(aiPlanJson.annualDoses) ? aiPlanJson.annualDoses : null,
+          irrigation: this.isRecord(aiPlanJson.irrigation) ? aiPlanJson.irrigation : null,
+          pruning: this.isRecord(aiPlanJson.pruning) ? aiPlanJson.pruning : null,
+          harvestForecast: this.isRecord(aiPlanJson.harvestForecast) ? aiPlanJson.harvestForecast : null,
+          economicEstimate: this.isRecord(aiPlanJson.economicEstimate) ? aiPlanJson.economicEstimate : null,
+          planSummary: typeof aiPlanJson.planSummary === 'string' ? aiPlanJson.planSummary : null,
+        },
+      })
+      .eq('id', annualPlanId)
+      .eq('organization_id', organizationId);
+
+    if (updateError) {
+      this.logger.warn(
+        `Failed to update plan_data with AI aggregate: ${updateError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `Enriched plan ${annualPlanId} with ${insertRows.length} AI interventions (replaced template)`,
+    );
+
+    return {
+      ...plan,
+      plan_data: {
+        source: 'ai',
+        generated_at: new Date().toISOString(),
+      },
+      interventions: this.sortInterventions(
+        (createdInterventions ?? []) as PlanInterventionRecord[],
+      ),
+    };
+  }
+
+  private buildAIInterventionRow(
+    annualPlanId: string,
+    parcelId: string,
+    organizationId: string,
+    ai: AIInterventionJson,
+  ): Omit<PlanInterventionRecord, 'id' | 'created_at' | 'updated_at'> | null {
+    const monthKey = typeof ai.month === 'string' ? ai.month.toLowerCase() : '';
+    const month = AI_MONTH_KEY_TO_NUMBER[monthKey];
+
+    if (!month) {
+      this.logger.warn(`Skipping AI intervention with unrecognized month: "${ai.month}"`);
+      return null;
+    }
+
+    const product = typeof ai.product === 'string' ? ai.product : null;
+    const dose = ai.dose != null ? String(ai.dose) : null;
+    const unit = typeof ai.doseUnit === 'string' ? ai.doseUnit : null;
+    const interventionType = typeof ai.type === 'string' ? ai.type : 'unknown';
+    const week = typeof ai.week === 'number' && ai.week >= 1 && ai.week <= 4 ? ai.week : null;
+
+    const descParts = [
+      product,
+      dose && unit ? `${dose} ${unit}` : null,
+      typeof ai.applicationMethod === 'string' ? `(${ai.applicationMethod})` : null,
+      typeof ai.stageBBCH === 'string' ? `BBCH ${ai.stageBBCH}` : null,
+    ].filter((p): p is string => p !== null);
+
+    const description = descParts.length > 0
+      ? descParts.join(' — ')
+      : `${MONTH_NUMBER_TO_LABEL[month] ?? ''}: ${interventionType}`;
+
+    // Store the full AI object in notes for frontend parsing
+    const notesPayload: Record<string, unknown> = { ...ai };
+    delete notesPayload.id; // avoid confusion with DB id
+
+    return {
+      annual_plan_id: annualPlanId,
+      parcel_id: parcelId,
+      organization_id: organizationId,
+      month,
+      week,
+      intervention_type: interventionType,
+      description,
+      product,
+      dose,
+      unit,
+      status: 'planned',
+      executed_at: null,
+      notes: JSON.stringify(notesPayload),
+    };
   }
 
   private async findParcelOrThrow(

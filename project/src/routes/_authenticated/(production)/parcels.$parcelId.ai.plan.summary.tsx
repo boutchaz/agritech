@@ -1,9 +1,37 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { FileText, CheckCircle2, Clock3, AlertTriangle } from 'lucide-react';
+import { FileText, CheckCircle2, Clock3, AlertTriangle, Leaf, Droplets, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAIPlan, useAIPlanSummary, useEnsureAIPlan, useValidateAIPlan } from '@/hooks/useAIPlan';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
+
+interface AnnualDoses {
+  N_kg_ha?: number;
+  P2O5_kg_ha?: number;
+  K2O_kg_ha?: number;
+  MgO_kg_ha?: number;
+  calculationDetails?: Record<string, unknown>;
+}
+
+interface HarvestForecast {
+  harvestWindow?: { start?: string; end?: string };
+  yieldForecast?: { low?: number; central?: number; high?: number };
+  productionTarget?: string;
+}
+
+interface EconomicEstimate {
+  totalInputCostDhHa?: number;
+  breakdown?: Record<string, number>;
+}
+
+interface AIPlanData {
+  source?: string;
+  planSummary?: string;
+  annualDoses?: AnnualDoses;
+  harvestForecast?: HarvestForecast;
+  economicEstimate?: EconomicEstimate;
+  irrigation?: Record<string, unknown>;
+}
 
 const AIPlanSummaryPage = () => {
   const { t } = useTranslation('ai');
@@ -137,6 +165,107 @@ const AIPlanSummaryPage = () => {
               />
             </div>
           </div>
+
+          {/* AI Aggregate Data (when plan is AI-enriched) */}
+          {(() => {
+            const planData = plan?.plan_data as AIPlanData | null | undefined;
+            if (!planData || planData.source !== 'ai') return null;
+
+            const doses = planData.annualDoses;
+            const harvest = planData.harvestForecast;
+            const economic = planData.economicEstimate;
+
+            return (
+              <>
+                {/* AI Plan Summary */}
+                {planData.planSummary && (
+                  <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/20 p-4">
+                    <p className="text-sm text-blue-900 dark:text-blue-200 leading-relaxed">
+                      {planData.planSummary}
+                    </p>
+                  </div>
+                )}
+
+                {/* Annual Doses */}
+                {doses && (doses.N_kg_ha || doses.P2O5_kg_ha || doses.K2O_kg_ha) && (
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex items-center gap-2 mb-3 text-green-700 dark:text-green-300">
+                      <Leaf className="h-4 w-4" aria-hidden />
+                      <h4 className="font-medium">{t('plan.summary.annualDosesTitle')}</h4>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {doses.N_kg_ha != null && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">N</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{doses.N_kg_ha}</p>
+                          <p className="text-[10px] text-gray-400">kg/ha</p>
+                        </div>
+                      )}
+                      {doses.P2O5_kg_ha != null && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">P2O5</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{doses.P2O5_kg_ha}</p>
+                          <p className="text-[10px] text-gray-400">kg/ha</p>
+                        </div>
+                      )}
+                      {doses.K2O_kg_ha != null && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">K2O</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{doses.K2O_kg_ha}</p>
+                          <p className="text-[10px] text-gray-400">kg/ha</p>
+                        </div>
+                      )}
+                      {doses.MgO_kg_ha != null && (
+                        <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg text-center">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">MgO</p>
+                          <p className="text-lg font-bold text-gray-900 dark:text-white">{doses.MgO_kg_ha}</p>
+                          <p className="text-[10px] text-gray-400">kg/ha</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Harvest & Economic row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {harvest?.yieldForecast && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      <div className="flex items-center gap-2 mb-2 text-blue-700 dark:text-blue-300">
+                        <Droplets className="h-4 w-4" aria-hidden />
+                        <h4 className="font-medium">{t('plan.summary.harvestTitle')}</h4>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('plan.summary.yieldRange', {
+                          low: harvest.yieldForecast.low ?? '—',
+                          high: harvest.yieldForecast.high ?? '—',
+                        })}
+                      </p>
+                      {harvest.harvestWindow?.start && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('plan.summary.harvestWindow', {
+                            start: harvest.harvestWindow.start,
+                            end: harvest.harvestWindow.end ?? '—',
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {economic?.totalInputCostDhHa != null && (
+                    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                      <div className="flex items-center gap-2 mb-2 text-purple-700 dark:text-purple-300">
+                        <DollarSign className="h-4 w-4" aria-hidden />
+                        <h4 className="font-medium">{t('plan.summary.economicTitle')}</h4>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {economic.totalInputCostDhHa.toLocaleString()} DH/ha
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">

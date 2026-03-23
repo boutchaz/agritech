@@ -17,7 +17,6 @@ import { UpdateParcelDto } from "./dto/update-parcel.dto";
 import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
-import { CalibrationStateMachine } from "../calibration/calibration-state-machine";
 import { CalibrationService } from "../calibration/calibration.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -41,7 +40,6 @@ export class ParcelsService {
   constructor(
     private configService: ConfigService,
     private subscriptionsService: SubscriptionsService,
-    private stateMachine: CalibrationStateMachine,
     private satelliteCacheService: SatelliteCacheService,
     private notificationsService: NotificationsService,
     @Inject(forwardRef(() => CalibrationService))
@@ -761,6 +759,10 @@ export class ParcelsService {
     return newParcel;
   }
 
+  /**
+   * Warm satellite cache after parcel creation. Intentionally does not change
+   * ai_phase — calibration readiness is enforced separately when the user starts calibration.
+   */
   private triggerProactiveSatelliteDownload(
     parcelId: string,
     organizationId: string,
@@ -772,34 +774,15 @@ export class ParcelsService {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - monthsToSync);
 
-    this.stateMachine
-      .transitionPhase(parcelId, "disabled", "downloading", organizationId)
-      .then(() =>
-        this.satelliteCacheService.syncParcelSatelliteData(
-          parcelId,
-          organizationId,
-          undefined,
-          {
-            startDate: startDate.toISOString().split("T")[0],
-            endDate: new Date().toISOString().split("T")[0],
-            indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
-          },
-        ),
-      )
+    void this.satelliteCacheService
+      .syncParcelSatelliteData(parcelId, organizationId, undefined, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+        indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+      })
       .then((syncResult) => {
         this.logger.log(
           `Satellite download completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
-        );
-        return this.stateMachine.transitionPhase(
-          parcelId,
-          "downloading",
-          "pret_calibrage",
-          organizationId,
-        );
-      })
-      .then(() => {
-        this.logger.log(
-          `Parcel ${parcelId} is now pret_calibrage — satellite cache ready; calibration must be launched explicitly (readiness enforced)`,
         );
         return this.notifyOrganizationUsers(
           organizationId,
@@ -809,24 +792,11 @@ export class ParcelsService {
           { parcel_id: parcelId },
         );
       })
-      .catch(async (err) => {
+      .catch((err) => {
         const message = err instanceof Error ? err.message : "unknown error";
         this.logger.warn(
-          `Satellite download or pret_calibrage transition failed for parcel ${parcelId}: ${message}`,
+          `Satellite download failed for parcel ${parcelId}: ${message}`,
         );
-        for (const phase of ["pret_calibrage", "downloading"] as const) {
-          try {
-            await this.stateMachine.transitionPhase(
-              parcelId,
-              phase,
-              "disabled",
-              organizationId,
-            );
-            break;
-          } catch {
-            /* phase mismatch — try next */
-          }
-        }
       });
   }
 

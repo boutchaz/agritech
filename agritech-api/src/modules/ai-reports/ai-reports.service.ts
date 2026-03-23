@@ -349,6 +349,34 @@ export class AIReportsService {
   }
 
   /**
+   * Resolves the best available AI provider for an organization.
+   * Checks org-configured providers first, then falls back to system env vars.
+   * Returns provider enum and model string.
+   */
+  async resolveProvider(
+    organizationId: string,
+  ): Promise<{ provider: AIProvider; model: string }> {
+    const available = await this.getAvailableProviders(organizationId);
+    const configured = available.find((p) => p.available);
+
+    if (configured) {
+      const modelMap: Record<string, string> = {
+        [AIProvider.ZAI]: 'default',
+        [AIProvider.GEMINI]: 'gemini-2.5-flash',
+        [AIProvider.OPENAI]: 'gpt-4o',
+        [AIProvider.GROQ]: 'llama-3.3-70b-versatile',
+      };
+      return {
+        provider: configured.provider,
+        model: modelMap[configured.provider] ?? 'default',
+      };
+    }
+
+    // Fallback to Gemini (system default)
+    return { provider: AIProvider.GEMINI, model: 'gemini-2.5-flash' };
+  }
+
+  /**
    * Validate analysis data - comprehensive calibration and validation
    * Returns detailed status with accuracy scoring and recommendations
    */
