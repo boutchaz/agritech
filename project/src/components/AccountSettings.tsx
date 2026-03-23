@@ -153,7 +153,8 @@ const AccountSettings: React.FC = () => {
     };
 
     fetchProfile();
-  }, [user, t, i18n.language]);
+   
+  }, [user?.id, i18n.language]);
 
   // Handle language change immediately
   const handleLanguageChange = async (newLanguage: string) => {

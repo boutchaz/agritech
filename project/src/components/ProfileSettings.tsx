@@ -95,7 +95,8 @@ const ProfileSettings: React.FC = () => {
     };
 
     fetchProfile();
-  }, [user, t]);
+   
+  }, [user?.id]);
 
   const handleSave = async () => {
     if (!profile || !user) return;

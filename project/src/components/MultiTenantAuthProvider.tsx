@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -607,23 +607,32 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
 
 
 
-  const value = {
-    user: user ? { id: user.id, email: user.email || '' } : null,
-    profile: profile || null,
-    organizations,
-    currentOrganization,
-    farms,
-    currentFarm,
-    userRole,
-    loading,
-    needsOnboarding,
-    setCurrentOrganization: handleSetCurrentOrganization,
-    setCurrentFarm: handleSetCurrentFarm,
-    signOut,
-    refreshUserData,
-    hasRole,
-    isAtLeastRole,
-  };
+  const stableUser = useMemo(
+    () => (user ? { id: user.id, email: user.email || '' } : null),
+    [user?.id, user?.email],
+  );
+
+  const value = useMemo(
+    () => ({
+      user: stableUser,
+      profile: profile || null,
+      organizations,
+      currentOrganization,
+      farms,
+      currentFarm,
+      userRole,
+      loading,
+      needsOnboarding,
+      setCurrentOrganization: handleSetCurrentOrganization,
+      setCurrentFarm: handleSetCurrentFarm,
+      signOut,
+      refreshUserData,
+      hasRole,
+      isAtLeastRole,
+    }),
+     
+    [stableUser, profile, organizations, currentOrganization, farms, currentFarm, userRole, loading, needsOnboarding],
+  );
 
   // Show loading spinner (but not on public routes)
   if (loading && !isPublicRoute) {
