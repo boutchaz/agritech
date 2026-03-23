@@ -45,7 +45,7 @@ export class GroqProvider extends BaseAIProvider {
           model,
           messages: this.buildMessages(request.systemPrompt, request.userPrompt),
           temperature: request.config.temperature ?? 0.7,
-          max_tokens: request.config.maxTokens ?? 4096,
+          max_tokens: request.config.maxTokens ?? 32768,
           response_format: { type: 'json_object' },
         },
         {
