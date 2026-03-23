@@ -21,6 +21,15 @@
       "recalculate": "Actualiser depuis le guide culture",
       "aiGenerate": "Générer le plan IA",
       "aiGenerating": "Génération IA en cours…",
+      "progress": {
+        "pending": "Lancement de la génération…",
+        "collecting": "Collecte des données parcelle…",
+        "analyzing": "Construction de l'analyse agronomique…",
+        "generating": "L'IA calcule votre plan…",
+        "saving": "Enregistrement des résultats…",
+        "enriching": "Enrichissement avec les doses du guide…",
+        "done": "Plan prêt !"
+      },
       "emptyTitle": "Aucune tâche listée pour l’instant",
       "emptyBody": "Si vous venez de terminer le calibrage, attendez quelques instants puis utilisez « Actualiser depuis le guide culture ». Sinon, ouvrez la synthèse pour générer ou récupérer le plan.",
       "monthIntro": "Pour {{month}}, l’essentiel prévu :",

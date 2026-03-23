@@ -3330,7 +3330,7 @@ export class AIReportsService {
     dto: GenerateAIReportDto,
   ) {
     const supabase = this.databaseService.getAdminClient();
-    const JOB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes max for entire job
+    const JOB_TIMEOUT_MS = 8 * 60 * 1000; // 8 minutes max for entire job
     let timeoutId: NodeJS.Timeout | null = null;
     let isCompleted = false;
 
@@ -3514,7 +3514,7 @@ export class AIReportsService {
 
   private async cleanupStuckJobs(organizationId: string): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
-    const STUCK_THRESHOLD_MS = 5 * 60 * 1000;
+    const STUCK_THRESHOLD_MS = 8 * 60 * 1000;
     const cutoffTime = new Date(Date.now() - STUCK_THRESHOLD_MS).toISOString();
 
     try {

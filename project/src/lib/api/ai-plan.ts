@@ -115,7 +115,11 @@ export const aiPlanApi = {
     return apiClient.post(`${BASE_URL}/${parcelId}/ai/plan/regenerate`, {}, {}, organizationId);
   },
 
-  async generateAIPlanReport(parcelId: string, organizationId?: string): Promise<unknown> {
+  async generateAIPlanReport(
+    parcelId: string,
+    organizationId?: string,
+    onProgress?: (progress: number, status: string) => void,
+  ): Promise<unknown> {
     // Resolve the best available provider
     const providers = await apiClient.get<Array<{ provider: string; available: boolean }>>(
       '/api/v1/ai-reports/providers',
@@ -126,6 +130,8 @@ export const aiPlanApi = {
     const available = providers.filter((p) => p.available);
     const orgProvider = available.find((p) => p.provider !== 'zai');
     const provider = orgProvider?.provider ?? available[0]?.provider ?? 'zai';
+
+    onProgress?.(5, 'pending');
 
     // Create the job
     const job = await apiClient.post<{ id: string; status: string }>(
@@ -139,18 +145,21 @@ export const aiPlanApi = {
       organizationId,
     );
 
-    // Poll until complete (max 5 minutes)
-    const maxAttempts = 60;
+    onProgress?.(10, 'processing');
+
+    // Poll until complete (max 8 minutes to match backend timeout)
+    const maxAttempts = 96;
     for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      const status = await apiClient.get<{ status: string }>(
+      await new Promise((r) => setTimeout(r, 3000));
+      const status = await apiClient.get<{ status: string; progress?: number; error_message?: string }>(
         `/api/v1/ai-reports/jobs/${job.id}`,
         {},
         organizationId,
       );
+      onProgress?.(status.progress ?? 10, status.status);
       if (status.status === 'completed') return status;
       if (status.status === 'failed') {
-        throw new Error('AI plan generation failed');
+        throw new Error(status.error_message || 'AI plan generation failed');
       }
     }
     throw new Error('AI plan generation timed out');

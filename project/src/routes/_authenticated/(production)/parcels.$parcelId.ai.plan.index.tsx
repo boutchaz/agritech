@@ -18,7 +18,7 @@ const AIPlanCalendarPage = () => {
   const { data: interventions, isLoading: isInterventionsLoading } = useAIPlanInterventions(parcelId);
   const { mutate: executeIntervention, isPending: isExecuting } = useExecuteAIPlanIntervention();
   const { mutate: regeneratePlan, isPending: isRegenerating } = useRegenerateAIPlan();
-  const { mutate: generateAIPlan, isPending: isGenerating } = useGenerateAIPlanReport(parcelId);
+  const { mutate: generateAIPlan, isPending: isGenerating, progress, progressStatus } = useGenerateAIPlanReport(parcelId);
 
   if (isPlanLoading || isInterventionsLoading) {
     return (
@@ -66,6 +66,29 @@ const AIPlanCalendarPage = () => {
           </button>
         </div>
       </div>
+
+      {isGenerating && (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-700 dark:text-gray-300 font-medium">
+              {progressStatus === 'pending' && t('plan.calendar.progress.pending')}
+              {progressStatus === 'processing' && progress < 50 && t('plan.calendar.progress.collecting')}
+              {progressStatus === 'processing' && progress >= 50 && progress < 70 && t('plan.calendar.progress.analyzing')}
+              {progressStatus === 'processing' && progress >= 70 && progress < 90 && t('plan.calendar.progress.generating')}
+              {progressStatus === 'processing' && progress >= 90 && t('plan.calendar.progress.saving')}
+              {progressStatus === 'enriching' && t('plan.calendar.progress.enriching')}
+              {progressStatus === 'completed' && t('plan.calendar.progress.done')}
+            </span>
+            <span className="text-gray-500 dark:text-gray-400 tabular-nums">{progress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+            <div
+              className="bg-green-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {!interventions || interventions.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">

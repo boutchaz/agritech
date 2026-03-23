@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import i18n from '@/i18n/config';
@@ -130,16 +131,30 @@ export function useRegenerateAIPlan() {
 export function useGenerateAIPlanReport(parcelId: string) {
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
+  const [progress, setProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState<string>('idle');
 
-  return useMutation({
+  const onProgress = useCallback((p: number, status: string) => {
+    setProgress(p);
+    setProgressStatus(status);
+  }, []);
+
+  const mutation = useMutation({
     mutationFn: async (): Promise<unknown> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
+      setProgress(0);
+      setProgressStatus('pending');
       // Step 1: Generate AI report
-      await aiPlanApi.generateAIPlanReport(parcelId, currentOrganization.id);
+      await aiPlanApi.generateAIPlanReport(parcelId, currentOrganization.id, onProgress);
       // Step 2: Regenerate plan to enrich from the AI report
-      return aiPlanApi.regenerateAIPlan(parcelId, currentOrganization.id);
+      setProgress(95);
+      setProgressStatus('enriching');
+      const result = await aiPlanApi.regenerateAIPlan(parcelId, currentOrganization.id);
+      setProgress(100);
+      setProgressStatus('completed');
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-plan', parcelId, currentOrganization?.id] });
@@ -148,11 +163,21 @@ export function useGenerateAIPlanReport(parcelId: string) {
       toast.success(i18n.t('toasts.aiPlanGenerated', { ns: 'ai' }));
     },
     onError: (error) => {
+      setProgressStatus('failed');
       toast.error(
         error instanceof Error ? error.message : i18n.t('toasts.aiPlanGenerateError', { ns: 'ai' }),
       );
     },
+    onSettled: () => {
+      // Reset after a short delay so the user sees 100% before it disappears
+      setTimeout(() => {
+        setProgress(0);
+        setProgressStatus('idle');
+      }, 2000);
+    },
   });
+
+  return { ...mutation, progress, progressStatus };
 }
 
 /** Creates the annual plan when missing (e.g. post-activation job failed). Idempotent if a plan already exists. */

@@ -21,6 +21,15 @@
       "recalculate": "Refresh from crop guide",
       "aiGenerate": "Generate AI plan",
       "aiGenerating": "AI generating…",
+      "progress": {
+        "pending": "Starting generation…",
+        "collecting": "Collecting parcel data…",
+        "analyzing": "Building agronomic analysis…",
+        "generating": "AI is computing your plan…",
+        "saving": "Saving results…",
+        "enriching": "Enriching with crop guide doses…",
+        "done": "Plan ready!"
+      },
       "emptyTitle": "No tasks listed yet",
       "emptyBody": "If you just finished calibration, wait a moment then tap “Refresh from crop guide”. Otherwise open Summary to create or restore your plan.",
       "monthIntro": "For {{month}}, the usual focus is:",
