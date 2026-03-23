@@ -4058,6 +4058,95 @@
         "empty": "Aucun mois trouvé",
         "search": "Rechercher un mois..."
       }
+    },
+    "form": {
+      "editTitle": "Modifier la tâche",
+      "createTitle": "Nouvelle tâche",
+      "titleLabel": "Titre *",
+      "titlePlaceholder": "Ex: Taille des arbres fruitiers",
+      "taskTypeLabel": "Type de tâche *",
+      "taskTypePlaceholder": "Sélectionner type",
+      "priorityLabel": "Priorité *",
+      "priorityPlaceholder": "Sélectionner priorité",
+      "priorities": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      },
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Détails de la tâche...",
+      "farmLabel": "Ferme *",
+      "farmPlaceholder": "Sélectionnez une ferme",
+      "parcelLabel": "Parcelle",
+      "parcelPlaceholder": "Sélectionner parcelle",
+      "parcelPlaceholderNoFarm": "Sélectionnez d'abord une ferme",
+      "parcelNone": "Aucune",
+      "parcelCropInfo": "Culture: {{crop}}",
+      "parcelCropUndefined": "Non définie",
+      "parcelVarietyInfo": "Variété: {{variety}}",
+      "parcelTreeCount": "{{count}} arbres",
+      "parcelRequiredForHarvest": "Sélectionnez une parcelle pour les tâches de récolte",
+      "assignedToLabel": "Assigné à (travailleurs)",
+      "selectedCount": "{{count}} sélectionné(s)",
+      "noWorkersNoFarm": "Aucun travailleur disponible. Sélectionnez une ferme pour filtrer les travailleurs.",
+      "noWorkersForFarm": "Aucun travailleur trouvé pour cette ferme",
+      "workerTypes": {
+        "fixedSalary": "Salarié fixe",
+        "dailyWorker": "Journalier",
+        "metayage": "Métayer"
+      },
+      "multiWorkerHint": "Vous pouvez sélectionner plusieurs travailleurs pour cette tâche",
+      "startDateLabel": "Date début *",
+      "dueDateLabel": "Date limite *",
+      "durationLabel": "Durée (heures)",
+      "paymentSection": "Paiement et Unités de Travail",
+      "fixedSalarySelected": "Salariés fixes sélectionnés - paiement optionnel",
+      "fixedSalaryNote": "<strong>Note:</strong> Les travailleurs à salaire fixe sont déjà rémunérés mensuellement. Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).",
+      "paymentTypeLabel": "Type de paiement",
+      "paymentTypeOptional": "(optionnel)",
+      "paymentTypePlaceholder": "Sélectionner",
+      "paymentTypes": {
+        "none": "Aucun (inclus dans le salaire)",
+        "daily": "Par jour",
+        "perUnit": "À l'unité (Pièce-travail)",
+        "monthly": "Mensuel",
+        "metayage": "Métayage"
+      },
+      "workUnitLabel": "Unité de travail *",
+      "workUnitPlaceholder": "Sélectionner...",
+      "workUnitNone": "Aucune",
+      "unitsEstimatedLabel": "Unités estimées",
+      "unitsEstimatedPlaceholder": "Ex: 100 (optionnel)",
+      "unitsEstimatedHint": "Les unités réelles seront enregistrées à la fin de la tâche",
+      "ratePerUnitLabel": "Tarif par unité (MAD)",
+      "ratePerUnitPlaceholder": "Ex: 5.00 (optionnel)",
+      "estimatedTotal": "Total estimé: {{amount}} MAD",
+      "productsSection": "Produits à utiliser (Stock)",
+      "addProduct": "Ajouter produit",
+      "noProductsAvailable": "Aucun produit disponible en stock. Ajoutez des produits dans Stock > Réceptions.",
+      "productsHint": "Ajoutez les produits qui seront utilisés pour cette tâche. Le stock sera automatiquement déduit à la complétion.",
+      "productLabel": "Produit",
+      "productPlaceholder": "Sélectionner un produit",
+      "productSelectDefault": "-- Sélectionner --",
+      "quantityLabel": "Quantité",
+      "exceedsStock": "Dépasse le stock ({{available}})",
+      "stockDeductionNote": "<strong>Note :</strong> Le stock sera automatiquement déduit lorsque la tâche sera marquée comme complétée.",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Notes additionnelles...",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer",
+      "validation": {
+        "titleRequired": "Le titre est requis",
+        "taskTypeRequired": "Le type de tâche est requis",
+        "priorityRequired": "La priorité est requise",
+        "farmRequired": "La ferme est requise",
+        "startDateRequired": "La date de début est requise",
+        "dueDateRequired": "La date limite est requise",
+        "dueDateAfterStart": "La date limite doit être après la date de début",
+        "parcelRequiredForHarvest": "La parcelle est requise pour les tâches de récolte"
+      }
     }
   },
   "tour": {
@@ -4142,14 +4231,10 @@
         "content": "Générez des rapports détaillés : production, rentabilité, main d'œuvre. Exportez en PDF ou Excel."
       },
       "step14": {
-        "title": "13. Configuration",
-        "content": "Gérez vos clients, fournisseurs, entrepôts et accédez aux paramètres de l'application."
+        "title": "13. Paramètres & Profil",
+        "content": "Accédez à vos paramètres personnels, préférences, configuration de l'organisation et options de déconnexion depuis ce menu."
       },
       "step15": {
-        "title": "14. Votre profil",
-        "content": "Accédez à vos paramètres personnels, préférences et options de déconnexion."
-      },
-      "step16": {
         "title": "Prêt à commencer! 🚀",
         "content": "Vous avez maintenant une vue d'ensemble de toutes les fonctionnalités. Cliquez sur le bouton d'aide (?) en bas à droite pour revoir cette visite ou accéder aux guides de chaque module."
       }

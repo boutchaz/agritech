@@ -265,10 +265,10 @@ class ApiClient {
     });
   }
 
-  async uploadFile(
+  async uploadFile<T = { url: string }>(
     endpoint: string,
     file: { uri: string; name: string; type: string }
-  ): Promise<{ url: string }> {
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const formData = new FormData();
 
@@ -657,6 +657,15 @@ export const filesApi = {
   uploadImage: (uri: string, folder: string = 'general') => {
     const filename = uri.split('/').pop() || 'photo.jpg';
     return api.uploadFile(`/files/upload?folder=${folder}`, {
+      uri,
+      name: filename,
+      type: 'image/jpeg',
+    });
+  },
+
+  uploadAvatar: (uri: string) => {
+    const filename = uri.split('/').pop() || 'avatar.jpg';
+    return api.uploadFile<{ avatar_url: string }>('/users/me/avatar', {
       uri,
       name: filename,
       type: 'image/jpeg',

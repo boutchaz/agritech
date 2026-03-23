@@ -3912,6 +3912,95 @@
         "empty": "لم يتم العثور على شهر",
         "search": "البحث عن شهر..."
       }
+    },
+    "form": {
+      "editTitle": "تعديل المهمة",
+      "createTitle": "مهمة جديدة",
+      "titleLabel": "العنوان *",
+      "titlePlaceholder": "مثال: تقليم أشجار الفاكهة",
+      "taskTypeLabel": "نوع المهمة *",
+      "taskTypePlaceholder": "اختر النوع",
+      "priorityLabel": "الأولوية *",
+      "priorityPlaceholder": "اختر الأولوية",
+      "priorities": {
+        "low": "منخفضة",
+        "medium": "متوسطة",
+        "high": "عالية",
+        "urgent": "عاجلة"
+      },
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "تفاصيل المهمة...",
+      "farmLabel": "المزرعة *",
+      "farmPlaceholder": "اختر مزرعة",
+      "parcelLabel": "القطعة",
+      "parcelPlaceholder": "اختر قطعة",
+      "parcelPlaceholderNoFarm": "اختر مزرعة أولاً",
+      "parcelNone": "لا شيء",
+      "parcelCropInfo": "المحصول: {{crop}}",
+      "parcelCropUndefined": "غير محدد",
+      "parcelVarietyInfo": "الصنف: {{variety}}",
+      "parcelTreeCount": "{{count}} شجرة",
+      "parcelRequiredForHarvest": "اختر قطعة لمهام الحصاد",
+      "assignedToLabel": "مُعيّن إلى (العمال)",
+      "selectedCount": "{{count}} محدد",
+      "noWorkersNoFarm": "لا يوجد عمال متاحون. اختر مزرعة لتصفية العمال.",
+      "noWorkersForFarm": "لم يتم العثور على عمال لهذه المزرعة",
+      "workerTypes": {
+        "fixedSalary": "راتب ثابت",
+        "dailyWorker": "عامل يومي",
+        "metayage": "مزارع بالمشاركة"
+      },
+      "multiWorkerHint": "يمكنك اختيار عدة عمال لهذه المهمة",
+      "startDateLabel": "تاريخ البدء *",
+      "dueDateLabel": "تاريخ الاستحقاق *",
+      "durationLabel": "المدة (ساعات)",
+      "paymentSection": "الدفع ووحدات العمل",
+      "fixedSalarySelected": "موظفو الراتب الثابت محددون - الدفع اختياري",
+      "fixedSalaryNote": "<strong>ملاحظة:</strong> العمال ذوو الراتب الثابت يتقاضون رواتبهم شهرياً. الدفع لهذه المهمة اختياري (مكافأة/علاوة للعمل الاستثنائي).",
+      "paymentTypeLabel": "نوع الدفع",
+      "paymentTypeOptional": "(اختياري)",
+      "paymentTypePlaceholder": "اختر",
+      "paymentTypes": {
+        "none": "لا شيء (مشمول في الراتب)",
+        "daily": "يومي",
+        "perUnit": "بالوحدة (عمل بالقطعة)",
+        "monthly": "شهري",
+        "metayage": "مشاركة"
+      },
+      "workUnitLabel": "وحدة العمل *",
+      "workUnitPlaceholder": "اختر...",
+      "workUnitNone": "لا شيء",
+      "unitsEstimatedLabel": "الوحدات المقدرة",
+      "unitsEstimatedPlaceholder": "مثال: 100 (اختياري)",
+      "unitsEstimatedHint": "سيتم تسجيل الوحدات الفعلية عند إتمام المهمة",
+      "ratePerUnitLabel": "السعر لكل وحدة (درهم)",
+      "ratePerUnitPlaceholder": "مثال: 5.00 (اختياري)",
+      "estimatedTotal": "المجموع التقديري: {{amount}} درهم",
+      "productsSection": "المنتجات المستخدمة (المخزون)",
+      "addProduct": "إضافة منتج",
+      "noProductsAvailable": "لا توجد منتجات متاحة في المخزون. أضف منتجات في المخزون > الاستلامات.",
+      "productsHint": "أضف المنتجات التي ستُستخدم لهذه المهمة. سيتم خصم المخزون تلقائياً عند الإتمام.",
+      "productLabel": "المنتج",
+      "productPlaceholder": "اختر منتجاً",
+      "productSelectDefault": "-- اختر --",
+      "quantityLabel": "الكمية",
+      "exceedsStock": "يتجاوز المخزون ({{available}})",
+      "stockDeductionNote": "<strong>ملاحظة:</strong> سيتم خصم المخزون تلقائياً عندما يتم وضع علامة على المهمة كمكتملة.",
+      "notesLabel": "ملاحظات",
+      "notesPlaceholder": "ملاحظات إضافية...",
+      "cancel": "إلغاء",
+      "saving": "جاري الحفظ...",
+      "save": "حفظ",
+      "validation": {
+        "titleRequired": "العنوان مطلوب",
+        "taskTypeRequired": "نوع المهمة مطلوب",
+        "priorityRequired": "الأولوية مطلوبة",
+        "farmRequired": "المزرعة مطلوبة",
+        "startDateRequired": "تاريخ البدء مطلوب",
+        "dueDateRequired": "تاريخ الاستحقاق مطلوب",
+        "dueDateAfterStart": "يجب أن يكون تاريخ الاستحقاق بعد تاريخ البدء",
+        "parcelRequiredForHarvest": "القطعة مطلوبة لمهام الحصاد"
+      }
     }
   },
   "tour": {
@@ -3996,14 +4085,10 @@
         "content": "أنشئ تقارير مفصلة: الإنتاج، الربحية، العمالة. صدّر إلى PDF أو Excel."
       },
       "step14": {
-        "title": "13. الإعدادات",
-        "content": "أدر عملاءك ومورديك ومستودعاتك وادخل إلى إعدادات التطبيق."
+        "title": "13. الإعدادات والملف الشخصي",
+        "content": "ادخل إلى إعداداتك الشخصية وتفضيلاتك وإعدادات المؤسسة وخيارات تسجيل الخروج من هذه القائمة."
       },
       "step15": {
-        "title": "14. ملفك الشخصي",
-        "content": "ادخل إلى إعداداتك الشخصية وتفضيلاتك وخيارات تسجيل الخروج."
-      },
-      "step16": {
         "title": "جاهز للبدء! 🚀",
         "content": "لديك الآن نظرة عامة على جميع الميزات. انقر على زر المساعدة (؟) في أسفل اليمين لمراجعة هذه الجولة أو الوصول إلى أدلة الوحدات."
       }

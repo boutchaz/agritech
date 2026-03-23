@@ -4240,6 +4240,95 @@
         "empty": "No month found",
         "search": "Search for a month..."
       }
+    },
+    "form": {
+      "editTitle": "Edit Task",
+      "createTitle": "New Task",
+      "titleLabel": "Title *",
+      "titlePlaceholder": "E.g.: Pruning fruit trees",
+      "taskTypeLabel": "Task Type *",
+      "taskTypePlaceholder": "Select type",
+      "priorityLabel": "Priority *",
+      "priorityPlaceholder": "Select priority",
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Task details...",
+      "farmLabel": "Farm *",
+      "farmPlaceholder": "Select a farm",
+      "parcelLabel": "Parcel",
+      "parcelPlaceholder": "Select parcel",
+      "parcelPlaceholderNoFarm": "Select a farm first",
+      "parcelNone": "None",
+      "parcelCropInfo": "Crop: {{crop}}",
+      "parcelCropUndefined": "Not defined",
+      "parcelVarietyInfo": "Variety: {{variety}}",
+      "parcelTreeCount": "{{count}} trees",
+      "parcelRequiredForHarvest": "Select a parcel for harvest tasks",
+      "assignedToLabel": "Assigned to (workers)",
+      "selectedCount": "{{count}} selected",
+      "noWorkersNoFarm": "No workers available. Select a farm to filter workers.",
+      "noWorkersForFarm": "No workers found for this farm",
+      "workerTypes": {
+        "fixedSalary": "Fixed salary",
+        "dailyWorker": "Daily worker",
+        "metayage": "Sharecropper"
+      },
+      "multiWorkerHint": "You can select multiple workers for this task",
+      "startDateLabel": "Start Date *",
+      "dueDateLabel": "Due Date *",
+      "durationLabel": "Duration (hours)",
+      "paymentSection": "Payment and Work Units",
+      "fixedSalarySelected": "Fixed salary employees selected - payment optional",
+      "fixedSalaryNote": "<strong>Note:</strong> Fixed salary workers are already paid monthly. Payment for this task is optional (bonus/premium for exceptional work).",
+      "paymentTypeLabel": "Payment type",
+      "paymentTypeOptional": "(optional)",
+      "paymentTypePlaceholder": "Select",
+      "paymentTypes": {
+        "none": "None (included in salary)",
+        "daily": "Per day",
+        "perUnit": "Per unit (Piece-work)",
+        "monthly": "Monthly",
+        "metayage": "Sharecropping"
+      },
+      "workUnitLabel": "Work Unit *",
+      "workUnitPlaceholder": "Select...",
+      "workUnitNone": "None",
+      "unitsEstimatedLabel": "Estimated units",
+      "unitsEstimatedPlaceholder": "E.g.: 100 (optional)",
+      "unitsEstimatedHint": "Actual units will be recorded when the task is completed",
+      "ratePerUnitLabel": "Rate per unit (MAD)",
+      "ratePerUnitPlaceholder": "E.g.: 5.00 (optional)",
+      "estimatedTotal": "Estimated total: {{amount}} MAD",
+      "productsSection": "Products to Use (Stock)",
+      "addProduct": "Add product",
+      "noProductsAvailable": "No products available in stock. Add products in Stock > Receipts.",
+      "productsHint": "Add the products that will be used for this task. Stock will be automatically deducted upon completion.",
+      "productLabel": "Product",
+      "productPlaceholder": "Select a product",
+      "productSelectDefault": "-- Select --",
+      "quantityLabel": "Quantity",
+      "exceedsStock": "Exceeds stock ({{available}})",
+      "stockDeductionNote": "<strong>Note:</strong> Stock will be automatically deducted when the task is marked as completed.",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Additional notes...",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save",
+      "validation": {
+        "titleRequired": "Title is required",
+        "taskTypeRequired": "Task type is required",
+        "priorityRequired": "Priority is required",
+        "farmRequired": "Farm is required",
+        "startDateRequired": "Start date is required",
+        "dueDateRequired": "Due date is required",
+        "dueDateAfterStart": "Due date must be after start date",
+        "parcelRequiredForHarvest": "Parcel is required for harvesting tasks"
+      }
     }
   },
   "tour": {
@@ -4324,14 +4413,10 @@
         "content": "Generate detailed reports: production, profitability, labor. Export to PDF or Excel."
       },
       "step14": {
-        "title": "13. Settings",
-        "content": "Manage your customers, suppliers, warehouses and access application settings."
+        "title": "13. Settings & Profile",
+        "content": "Access your personal settings, preferences, organization configuration and logout options from this menu."
       },
       "step15": {
-        "title": "14. Your Profile",
-        "content": "Access your personal settings, preferences and logout options."
-      },
-      "step16": {
         "title": "Ready to Start! 🚀",
         "content": "You now have an overview of all features. Click the help button (?) at the bottom right to review this tour or access module guides."
       }

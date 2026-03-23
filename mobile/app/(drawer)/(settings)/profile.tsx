@@ -72,9 +72,9 @@ export default function ProfileScreen() {
   const uploadAvatar = async (uri: string) => {
     setUploadingAvatar(true);
     try {
-      const result = await filesApi.uploadImage(uri, 'avatars');
-      if (result?.url) {
-        await authApi.updateProfile({ avatar_url: result.url });
+      const result = await filesApi.uploadAvatar(uri);
+      if (result?.avatar_url) {
+        await authApi.updateProfile({ avatar_url: result.avatar_url });
         Alert.alert(
           t('settings.success', 'Success'),
           t('settings.avatarUpdated', 'Profile photo updated.'),

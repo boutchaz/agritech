@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
@@ -36,16 +37,16 @@ interface TaskFormProps {
   onSuccess: () => void;
 }
 
-const taskFormSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+const createTaskFormSchema = (t: (key: string) => string) => z.object({
+  title: z.string().min(1, t('tasks.form.validation.titleRequired')),
   description: z.string(),
-  task_type: z.string().min(1, 'Task type is required'),
-  priority: z.string().min(1, 'Priority is required'),
-  farm_id: z.string().min(1, 'Farm is required'),
+  task_type: z.string().min(1, t('tasks.form.validation.taskTypeRequired')),
+  priority: z.string().min(1, t('tasks.form.validation.priorityRequired')),
+  farm_id: z.string().min(1, t('tasks.form.validation.farmRequired')),
   parcel_id: z.string(),
   assigned_to: z.string(),
-  scheduled_start: z.string().min(1, 'Start date is required'),
-  due_date: z.string().min(1, 'Due date is required'),
+  scheduled_start: z.string().min(1, t('tasks.form.validation.startDateRequired')),
+  due_date: z.string().min(1, t('tasks.form.validation.dueDateRequired')),
   estimated_duration: z.number(),
   notes: z.string(),
   payment_type: z.string(),
@@ -55,7 +56,7 @@ const taskFormSchema = z.object({
   crop_id: z.string(),
 });
 
-type TaskFormData = z.infer<typeof taskFormSchema>;
+type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
 
 // Helper to format date for input (YYYY-MM-DD)
 const formatDateForInput = (dateStr: string | null | undefined): string => {
@@ -79,6 +80,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
+  const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -212,7 +215,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     if (data.due_date < data.scheduled_start) {
       setError('due_date', {
         type: 'manual',
-        message: 'Due date must be after start date',
+        message: t('tasks.form.validation.dueDateAfterStart'),
       });
       return;
     }
@@ -220,7 +223,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     if (data.task_type === 'harvesting' && !data.parcel_id) {
       setError('parcel_id', {
         type: 'manual',
-        message: 'Parcel is required for harvesting tasks',
+        message: t('tasks.form.validation.parcelRequiredForHarvest'),
       });
       return;
     }
@@ -313,7 +316,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {task ? 'Modifier la tâche' : 'Nouvelle tâche'}
+            {task ? t('tasks.form.editTitle') : t('tasks.form.createTitle')}
           </h2>
           <button
             onClick={onClose}
@@ -326,13 +329,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
         <form onSubmit={rhfHandleSubmit(onSubmit)} className="p-6 space-y-4">
           {/* Title */}
           <div className="space-y-2">
-            <Label htmlFor="title">Titre *</Label>
+            <Label htmlFor="title">{t('tasks.form.titleLabel')}</Label>
             <Input
               id="title"
               type="text"
               {...register('title')}
               invalid={!!errors.title}
-              placeholder="Ex: Taille des arbres fruitiers"
+              placeholder={t('tasks.form.titlePlaceholder')}
             />
             {errors.title && (
               <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
@@ -342,7 +345,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* Task Type & Priority */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="task_type">Type de tâche *</Label>
+              <Label htmlFor="task_type">{t('tasks.form.taskTypeLabel')}</Label>
               <Select
                 value={formData.task_type}
                 onValueChange={(value) => {
@@ -351,7 +354,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 }}
               >
                 <SelectTrigger id="task_type">
-                  <SelectValue placeholder="Sélectionner type" />
+                  <SelectValue placeholder={t('tasks.form.taskTypePlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(TASK_TYPE_LABELS).map(([value, labels]) => (
@@ -367,7 +370,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priority">Priorité *</Label>
+              <Label htmlFor="priority">{t('tasks.form.priorityLabel')}</Label>
               <Select
                 value={formData.priority}
                 onValueChange={(value) => {
@@ -376,13 +379,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 }}
               >
                 <SelectTrigger id="priority">
-                  <SelectValue placeholder="Sélectionner priorité" />
+                  <SelectValue placeholder={t('tasks.form.priorityPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Basse</SelectItem>
-                  <SelectItem value="medium">Moyenne</SelectItem>
-                  <SelectItem value="high">Haute</SelectItem>
-                  <SelectItem value="urgent">Urgente</SelectItem>
+                  <SelectItem value="low">{t('tasks.form.priorities.low')}</SelectItem>
+                  <SelectItem value="medium">{t('tasks.form.priorities.medium')}</SelectItem>
+                  <SelectItem value="high">{t('tasks.form.priorities.high')}</SelectItem>
+                  <SelectItem value="urgent">{t('tasks.form.priorities.urgent')}</SelectItem>
                 </SelectContent>
               </Select>
               {errors.priority && (
@@ -393,12 +396,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('tasks.form.descriptionLabel')}</Label>
             <Textarea
               id="description"
               {...register('description')}
               rows={3}
-              placeholder="Détails de la tâche..."
+              placeholder={t('tasks.form.descriptionPlaceholder')}
             />
             {errors.description && (
               <p className="text-red-600 text-sm mt-1">{errors.description.message}</p>
@@ -408,7 +411,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           {/* Farm & Parcel */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="farm_id">Ferme *</Label>
+              <Label htmlFor="farm_id">{t('tasks.form.farmLabel')}</Label>
               <Select
                 value={formData.farm_id}
                 onValueChange={(value) => {
@@ -417,7 +420,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 }}
               >
                 <SelectTrigger id="farm_id">
-                  <SelectValue placeholder="Sélectionnez une ferme" />
+                  <SelectValue placeholder={t('tasks.form.farmPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {farms.map(farm => (
@@ -436,7 +439,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             <div className="space-y-2">
               <Label htmlFor="parcel_id" className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                Parcelle {formData.task_type === 'harvesting' && '*'}
+                {t('tasks.form.parcelLabel')} {formData.task_type === 'harvesting' && '*'}
               </Label>
               <Select
                 value={formData.parcel_id || '__none__'}
@@ -448,10 +451,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 disabled={!formData.farm_id}
               >
                 <SelectTrigger id="parcel_id">
-                  <SelectValue placeholder={formData.farm_id ? "Sélectionner parcelle" : "Sélectionnez d'abord une ferme"} />
+                  <SelectValue placeholder={formData.farm_id ? t('tasks.form.parcelPlaceholder') : t('tasks.form.parcelPlaceholderNoFarm')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Aucune</SelectItem>
+                  <SelectItem value="__none__">{t('tasks.form.parcelNone')}</SelectItem>
                   {parcels.map((parcel: Parcel) => (
                     <SelectItem key={parcel.id} value={parcel.id}>
                       <div className="flex items-center gap-2">
@@ -473,14 +476,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </Select>
               {selectedParcel && (
                 <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
-                  🌱 Culture: {selectedParcel.crop_type || 'Non définie'}
-                  {selectedParcel.variety && ` | Variété: ${selectedParcel.variety}`}
-                  {selectedParcel.tree_count && ` | ${selectedParcel.tree_count} arbres`}
+                  🌱 {t('tasks.form.parcelCropInfo', { crop: selectedParcel.crop_type || t('tasks.form.parcelCropUndefined') })}
+                  {selectedParcel.variety && ` | ${t('tasks.form.parcelVarietyInfo', { variety: selectedParcel.variety })}`}
+                  {selectedParcel.tree_count && ` | ${t('tasks.form.parcelTreeCount', { count: selectedParcel.tree_count })}`}
                 </div>
               )}
               {formData.task_type === 'harvesting' && !formData.parcel_id && (
                 <p className="text-xs text-amber-600">
-                  Sélectionnez une parcelle pour les tâches de récolte
+                  {t('tasks.form.parcelRequiredForHarvest')}
                 </p>
               )}
               {errors.parcel_id && (
@@ -493,26 +496,26 @@ const TaskForm: React.FC<TaskFormProps> = ({
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Assigné à (travailleurs)
+              {t('tasks.form.assignedToLabel')}
               {selectedWorkerIds.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 text-xs rounded-full">
-                  {selectedWorkerIds.length} sélectionné{selectedWorkerIds.length > 1 ? 's' : ''}
+                  {t('tasks.form.selectedCount', { count: selectedWorkerIds.length })}
                 </span>
               )}
             </Label>
             {workers.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">
-                {!formData.farm_id 
-                  ? 'Aucun travailleur disponible. Sélectionnez une ferme pour filtrer les travailleurs.'
-                  : 'Aucun travailleur trouvé pour cette ferme'}
+                {!formData.farm_id
+                  ? t('tasks.form.noWorkersNoFarm')
+                  : t('tasks.form.noWorkersForFarm')}
               </p>
             ) : (
               <div className="border rounded-lg max-h-40 overflow-y-auto">
                 {workers.map(worker => {
                   const isFixedSalary = worker.worker_type === 'fixed_salary';
-                  const workerTypeLabel = worker.worker_type === 'fixed_salary' ? 'Salarié fixe' :
-                                         worker.worker_type === 'daily_worker' ? 'Journalier' :
-                                         worker.worker_type === 'metayage' ? 'Métayer' : '';
+                  const workerTypeLabel = worker.worker_type === 'fixed_salary' ? t('tasks.form.workerTypes.fixedSalary') :
+                                         worker.worker_type === 'daily_worker' ? t('tasks.form.workerTypes.dailyWorker') :
+                                         worker.worker_type === 'metayage' ? t('tasks.form.workerTypes.metayage') : '';
                   const isSelected = selectedWorkerIds.includes(worker.id);
                   return (
                   <div
@@ -553,14 +556,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              Vous pouvez sélectionner plusieurs travailleurs pour cette tâche
+              {t('tasks.form.multiWorkerHint')}
             </p>
           </div>
 
           {/* Dates & Duration */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="scheduled_start">Date début *</Label>
+              <Label htmlFor="scheduled_start">{t('tasks.form.startDateLabel')}</Label>
               <Input
                 id="scheduled_start"
                 type="date"
@@ -574,7 +577,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="due_date">Date limite *</Label>
+              <Label htmlFor="due_date">{t('tasks.form.dueDateLabel')}</Label>
               <Input
                 id="due_date"
                 type="date"
@@ -588,7 +591,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estimated_duration">Durée (heures)</Label>
+              <Label htmlFor="estimated_duration">{t('tasks.form.durationLabel')}</Label>
               <Input
                 id="estimated_duration"
                 type="number"
@@ -606,13 +609,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
           <div className="border-t pt-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">
-                Paiement et Unités de Travail
+                {t('tasks.form.paymentSection')}
               </h3>
               {/* Check if any selected workers are fixed salary */}
               {selectedWorkerIds.length > 0 &&
                 workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
                 <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
-                  Salariés fixes sélectionnés - paiement optionnel
+                  {t('tasks.form.fixedSalarySelected')}
                 </span>
               )}
             </div>
@@ -621,10 +624,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {selectedWorkerIds.length > 0 &&
               workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  <strong>Note:</strong> Les travailleurs à salaire fixe sont déjà rémunérés mensuellement.
-                  Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).
-                </p>
+                <p className="text-sm text-blue-700 dark:text-blue-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.fixedSalaryNote') }} />
               </div>
             )}
 
@@ -632,10 +632,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
               {/* Payment Type */}
               <div className="space-y-2">
                 <Label htmlFor="payment_type">
-                  Type de paiement
+                  {t('tasks.form.paymentTypeLabel')}
                   {selectedWorkerIds.length > 0 &&
                     workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length === selectedWorkerIds.length && (
-                    <span className="text-xs text-muted-foreground ml-2">(optionnel)</span>
+                    <span className="text-xs text-muted-foreground ml-2">{t('tasks.form.paymentTypeOptional')}</span>
                   )}
                 </Label>
                 <Select
@@ -646,17 +646,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   }}
                 >
                   <SelectTrigger id="payment_type">
-                    <SelectValue placeholder="Sélectionner" />
+                    <SelectValue placeholder={t('tasks.form.paymentTypePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {selectedWorkerIds.length > 0 &&
                       workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
-                      <SelectItem value="none">Aucun (inclus dans le salaire)</SelectItem>
+                      <SelectItem value="none">{t('tasks.form.paymentTypes.none')}</SelectItem>
                     )}
-                    <SelectItem value="daily">Par jour</SelectItem>
-                    <SelectItem value="per_unit">À l'unité (Pièce-travail)</SelectItem>
-                    <SelectItem value="monthly">Mensuel</SelectItem>
-                    <SelectItem value="metayage">Métayage</SelectItem>
+                    <SelectItem value="daily">{t('tasks.form.paymentTypes.daily')}</SelectItem>
+                    <SelectItem value="per_unit">{t('tasks.form.paymentTypes.perUnit')}</SelectItem>
+                    <SelectItem value="monthly">{t('tasks.form.paymentTypes.monthly')}</SelectItem>
+                    <SelectItem value="metayage">{t('tasks.form.paymentTypes.metayage')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.payment_type && (
@@ -667,7 +667,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               {/* Work Unit (only if payment type is per_unit) */}
               {formData.payment_type === 'per_unit' && (
                 <div className="space-y-2">
-                  <Label htmlFor="work_unit_id">Unité de travail *</Label>
+                  <Label htmlFor="work_unit_id">{t('tasks.form.workUnitLabel')}</Label>
                   <Select
                     value={formData.work_unit_id || '__none__'}
                     onValueChange={(value) => {
@@ -677,10 +677,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     }}
                   >
                     <SelectTrigger id="work_unit_id">
-                      <SelectValue placeholder="Sélectionner..." />
+                      <SelectValue placeholder={t('tasks.form.workUnitPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Aucune</SelectItem>
+                      <SelectItem value="__none__">{t('tasks.form.workUnitNone')}</SelectItem>
                       {workUnits.map((unit: WorkUnit) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.name} ({unit.code})
@@ -699,7 +699,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {formData.payment_type === 'per_unit' && formData.work_unit_id && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="units_required">Unités estimées</Label>
+                  <Label htmlFor="units_required">{t('tasks.form.unitsEstimatedLabel')}</Label>
                   <Input
                     id="units_required"
                     type="number"
@@ -707,10 +707,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     invalid={!!errors.units_required}
                     min="0"
                     step="0.01"
-                    placeholder="Ex: 100 (optionnel)"
+                    placeholder={t('tasks.form.unitsEstimatedPlaceholder')}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Les unités réelles seront enregistrées à la fin de la tâche
+                    {t('tasks.form.unitsEstimatedHint')}
                   </p>
                   {errors.units_required && (
                     <p className="text-red-600 text-sm mt-1">{errors.units_required.message}</p>
@@ -718,7 +718,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="rate_per_unit">Tarif par unité (MAD)</Label>
+                  <Label htmlFor="rate_per_unit">{t('tasks.form.ratePerUnitLabel')}</Label>
                   <Input
                     id="rate_per_unit"
                     type="number"
@@ -726,11 +726,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     invalid={!!errors.rate_per_unit}
                     min="0"
                     step="0.01"
-                    placeholder="Ex: 5.00 (optionnel)"
+                    placeholder={t('tasks.form.ratePerUnitPlaceholder')}
                   />
                   {formData.units_required && formData.rate_per_unit && (
                     <p className="text-xs text-muted-foreground">
-                      Total estimé: {(formData.units_required * formData.rate_per_unit).toFixed(2)} MAD
+                      {t('tasks.form.estimatedTotal', { amount: (formData.units_required * formData.rate_per_unit).toFixed(2) })}
                     </p>
                   )}
                   {errors.rate_per_unit && (
@@ -748,7 +748,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold flex items-center gap-2">
                   <Package className="w-4 h-4" />
-                  Produits à utiliser (Stock)
+                  {t('tasks.form.productsSection')}
                 </h3>
                 <Button
                   type="button"
@@ -758,17 +758,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   disabled={availableProducts.length === 0}
                 >
                   <Plus className="w-3 h-3 mr-1" />
-                  Ajouter produit
+                  {t('tasks.form.addProduct')}
                 </Button>
               </div>
 
               {availableProducts.length === 0 ? (
                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                  Aucun produit disponible en stock. Ajoutez des produits dans Stock &gt; Réceptions.
+                  {t('tasks.form.noProductsAvailable')}
                 </p>
               ) : plannedItems.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Ajoutez les produits qui seront utilisés pour cette tâche. Le stock sera automatiquement déduit à la complétion.
+                  {t('tasks.form.productsHint')}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -777,7 +777,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     return (
                       <div key={index} className="flex items-end gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex-1 space-y-1">
-                          <Label className="text-xs">Produit</Label>
+                          <Label className="text-xs">{t('tasks.form.productLabel')}</Label>
                           <Select
                             value={item.product_id || '__none__'}
                             onValueChange={(value) => {
@@ -787,10 +787,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                             }}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner un produit" />
+                              <SelectValue placeholder={t('tasks.form.productPlaceholder')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__none__">-- Sélectionner --</SelectItem>
+                              <SelectItem value="__none__">{t('tasks.form.productSelectDefault')}</SelectItem>
                               {availableProducts.map((product: InventoryProduct) => (
                                 <SelectItem key={product.id} value={product.id}>
                                   {product.name} ({product.quantity} {product.unit})
@@ -801,7 +801,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         </div>
                         <div className="w-32 space-y-1">
                           <Label className="text-xs">
-                            Quantité {selectedProd ? `(${selectedProd.unit})` : ''}
+                            {t('tasks.form.quantityLabel')} {selectedProd ? `(${selectedProd.unit})` : ''}
                           </Label>
                           <Input
                             type="number"
@@ -817,7 +817,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                           />
                           {selectedProd && item.quantity > selectedProd.quantity && (
                             <p className="text-xs text-red-500">
-                              Dépasse le stock ({selectedProd.quantity})
+                              {t('tasks.form.exceedsStock', { available: selectedProd.quantity })}
                             </p>
                           )}
                         </div>
@@ -840,21 +840,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
               {plannedItems.length > 0 && (
                 <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    <strong>Note :</strong> Le stock sera automatiquement déduit lorsque la tâche sera marquée comme complétée.
-                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.stockDeductionNote') }} />
                 </div>
               )}
             </div>
           )}
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t('tasks.form.notesLabel')}</Label>
             <Textarea
               id="notes"
               {...register('notes')}
               rows={2}
-              placeholder="Notes additionnelles..."
+              placeholder={t('tasks.form.notesPlaceholder')}
             />
             {errors.notes && (
               <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
@@ -869,13 +867,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
               onClick={onClose}
               disabled={isSubmitting}
             >
-              Annuler
+              {t('tasks.form.cancel')}
             </Button>
             <Button
               type="submit"
               disabled={createTask.isPending || updateTask.isPending || isSubmitting}
             >
-              {createTask.isPending || updateTask.isPending || isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+              {createTask.isPending || updateTask.isPending || isSubmitting ? t('tasks.form.saving') : t('tasks.form.save')}
             </Button>
           </div>
         </form>

@@ -13,9 +13,9 @@ vi.mock('lucide-react', () => ({
 describe('AIStatusBadge', () => {
   it('renders active status correctly', () => {
     render(<AIStatusBadge status="active" />);
-    const badge = screen.getByText('Active');
+    const badge = screen.getByText('AI Active');
     expect(badge).toBeDefined();
-    expect(badge.className).toContain('bg-green-100');
+    expect(badge.closest('span')!.className).toContain('bg-green-100');
   });
 
   it('renders completed status correctly', () => {
@@ -34,9 +34,9 @@ describe('AIStatusBadge', () => {
 
   it('renders in_progress status correctly', () => {
     render(<AIStatusBadge status="in_progress" />);
-    const badge = screen.getByText('In Progress');
+    const badge = screen.getByText('Calibrating');
     expect(badge).toBeDefined();
-    expect(badge.className).toContain('bg-blue-100');
+    expect(badge.closest('span')!.className).toContain('bg-blue-100');
   });
 
   it('renders pending status correctly', () => {
@@ -69,7 +69,7 @@ describe('AIStatusBadge', () => {
 
   it('applies custom className', () => {
     render(<AIStatusBadge status="active" className="custom-class" />);
-    const badge = screen.getByText('Active');
-    expect(badge.className).toContain('custom-class');
+    const badge = screen.getByText('AI Active');
+    expect(badge.closest('span')!.className).toContain('custom-class');
   });
 });

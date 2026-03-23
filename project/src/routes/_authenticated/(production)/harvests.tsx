@@ -136,6 +136,7 @@ function HarvestsPage() {
           actions={
             <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
               <button
+                data-tour="harvest-filters"
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
               >

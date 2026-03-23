@@ -348,22 +348,16 @@ const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       placement: 'right',
     },
     {
-      target: '[data-tour="nav-settings"]',
+      target: '[data-tour="user-menu"]',
       title: t('tour.fullApp.step14.title'),
       content: t('tour.fullApp.step14.content'),
-      placement: 'right',
-    },
-    {
-      target: '[data-tour="user-menu"]',
-      title: t('tour.fullApp.step15.title'),
-      content: t('tour.fullApp.step15.content'),
       placement: 'bottom',
     },
     {
       target: 'body',
       placement: 'center',
-      title: t('tour.fullApp.step16.title'),
-      content: t('tour.fullApp.step16.content'),
+      title: t('tour.fullApp.step15.title'),
+      content: t('tour.fullApp.step15.content'),
       disableBeacon: true,
     },
   ],
@@ -597,12 +591,6 @@ const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.infrastructure.step2.title'),
       content: t('tour.infrastructure.step2.content'),
       placement: 'bottom',
-    },
-    {
-      target: '[data-tour="infrastructure-maintenance"]',
-      title: t('tour.infrastructure.step3.title'),
-      content: t('tour.infrastructure.step3.content'),
-      placement: 'left',
     },
   ],
   billing: [

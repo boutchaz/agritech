@@ -227,10 +227,10 @@ describe('useExecuteAIPlanIntervention', () => {
     useExecuteAIPlanIntervention();
 
     const onSuccess = (useMutation as any).mock.calls[0][0].onSuccess;
-    onSuccess({ plan_id: 'plan-123' });
+    onSuccess({ parcel_id: 'parcel-123' });
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['ai-plan-interventions', 'plan-123'],
+      queryKey: ['ai-plan-interventions', 'parcel-123', 'org-123'],
     });
   });
 });
@@ -250,6 +250,7 @@ describe('useRegenerateAIPlan', () => {
     expect(useMutation).toHaveBeenCalledWith({
       mutationFn: expect.any(Function),
       onSuccess: expect.any(Function),
+      onError: expect.any(Function),
     });
   });
 
@@ -293,10 +294,13 @@ describe('useRegenerateAIPlan', () => {
     onSuccess(null, 'parcel-123');
 
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['ai-plan', 'parcel-123'],
+      queryKey: ['ai-plan', 'parcel-123', 'org-123'],
     });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['ai-plan-interventions', 'parcel-123'],
+      queryKey: ['ai-plan-summary', 'parcel-123', 'org-123'],
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['ai-plan-interventions', 'parcel-123', 'org-123'],
     });
   });
 });

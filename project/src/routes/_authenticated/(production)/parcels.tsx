@@ -75,7 +75,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
     const newSearch: { farmId: string | undefined } = {
       farmId: undefined
     };
-    const currentFarmId = search.farmId || null;
+    const currentFarmId = search.farmId || "";
 
     if (selectedFarmId !== "") {
       newSearch.farmId = selectedFarmId;
@@ -95,7 +95,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
       });
     }
 
-  }, [selectedFarmId]);
+  }, [selectedFarmId, search.farmId, navigate]);
 
   // Farms and parcels are loaded automatically via React Query hooks
   // No manual fetching needed

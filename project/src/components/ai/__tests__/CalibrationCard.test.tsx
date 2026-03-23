@@ -17,11 +17,8 @@ describe('CalibrationCard', () => {
     parcel_id: 'parcel-123',
     status: 'completed',
     confidence_score: 0.85,
-    zone_classification: {
-      healthy: 45,
-      stressed: 30,
-      critical: 25,
-    },
+    zone_classification: 'optimal',
+    error_message: null,
     created_at: '2023-10-01T10:00:00Z',
     updated_at: '2023-10-02T10:00:00Z',
   };
@@ -30,14 +27,7 @@ describe('CalibrationCard', () => {
     render(<CalibrationCard calibration={mockCalibration} />);
 
     expect(screen.getByText('85.0%')).toBeDefined();
-
-    expect(screen.getByText('healthy')).toBeDefined();
-    expect(screen.getByText('45')).toBeDefined();
-    expect(screen.getByText('stressed')).toBeDefined();
-    expect(screen.getByText('30')).toBeDefined();
-    expect(screen.getByText('critical')).toBeDefined();
-    expect(screen.getByText('25')).toBeDefined();
-
+    expect(screen.getByText('optimal')).toBeDefined();
     expect(screen.getByText('Completed')).toBeDefined();
 
     const dateStr = new Date(mockCalibration.updated_at).toLocaleDateString();
@@ -47,10 +37,10 @@ describe('CalibrationCard', () => {
   it('renders empty zone classification correctly', () => {
     const emptyCalibration = {
       ...mockCalibration,
-      zone_classification: {},
+      zone_classification: null as unknown as string,
     };
     render(<CalibrationCard calibration={emptyCalibration} />);
-    
+
     expect(screen.getByText('No zones classified yet')).toBeDefined();
   });
 });
