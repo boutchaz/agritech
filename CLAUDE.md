@@ -1,3 +1,183 @@
+<!-- BEGIN PROJECT RULES -->
+
+# AgroGina — Project Conventions
+
+## Tech Stack
+- **Monorepo**: pnpm workspaces
+- **Frontend** (`project/`): React + TanStack Router (file-based) + TanStack Query + Zustand + Tailwind + shadcn/ui
+- **Backend** (`agritech-api/`): NestJS 11 + Supabase (PostgreSQL) + CASL + class-validator
+- **Satellite** (`backend-service/`): FastAPI + Google Earth Engine + OpenEO
+- **Testing**: Vitest (unit), Playwright (E2E + API integration)
+- **i18n**: i18next — 3 languages (en, fr, ar), 5 namespaces (common, ai, stock, compliance, accounting)
+- **DB**: Supabase PostgreSQL with RLS, declarative schema, generated TypeScript types
+
+## Architecture Rules
+
+### Multi-Tenancy (CRITICAL)
+- Every query MUST filter by `organization_id` — no exceptions
+- Backend: extract org from `req.headers['x-organization-id']`
+- Frontend: get org from `useAuth()` hook → pass to every API call
+- DB: every table with user data MUST have RLS policies using `is_organization_member()`
+- Never expose data across organizations
+
+### Authorization Stack
+- Guards order: `JwtAuthGuard` → `OrganizationGuard` → `PoliciesGuard`
+- Use `@CheckPolicies((ability) => ability.can(Action.Read, 'Subject'))` for fine-grained control
+- Roles: system_admin > organization_admin > farm_manager > farm_worker > day_laborer > viewer
+- Check subscription limits for create operations
+
+## Frontend Conventions
+
+### File Naming
+- Routes: `kebab-case.tsx` (e.g., `cost-center-management.tsx`)
+- Components: `PascalCase.tsx` (e.g., `TaskForm.tsx`)
+- Hooks: `camelCase.ts` with `use` prefix (e.g., `useWorkers.ts`)
+- API services: `camelCase.ts` (e.g., `workers.ts` in `src/lib/api/`)
+- Types: `PascalCase` inside `camelCase.ts` files
+
+### Data Fetching Pattern
+```typescript
+// Query hook — always include orgId in key, always guard with enabled
+export const useFeature = (organizationId: string | null) => {
+  return useQuery({
+    queryKey: ['feature', organizationId],
+    queryFn: () => featureApi.getAll(organizationId!),
+    enabled: !!organizationId,
+  });
+};
+
+// Mutation — always invalidate related queries
+export const useCreateFeature = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => featureApi.create(data, data.organization_id),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['feature', variables.organization_id] });
+    },
+  });
+};
+```
+
+### Forms (ALWAYS react-hook-form + zod)
+```typescript
+// Schema with i18n — create factory function with t()
+const createSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('validation.required')),
+});
+type FormData = z.infer<ReturnType<typeof createSchema>>;
+
+// Hook setup
+const schema = useMemo(() => createSchema(t), [t]);
+const form = useForm<FormData>({ resolver: zodResolver(schema) });
+```
+
+### UI Components
+- Use shadcn/ui from `@/components/ui/` (Button, Card, Dialog, Input, Select, Badge, etc.)
+- Use `FormField` wrapper for label + input + error display
+- Icons from `lucide-react`
+- Toasts via `sonner` — `toast.success()` / `toast.error()`
+- Class merging with `cn()` from `@/lib/utils`
+- Dark mode: always include `dark:` variants
+
+### Translations
+- Always use `t('key', 'Fallback text')` — never hardcode user-facing strings
+- Namespace: default is `common`, use `useTranslation('namespace')` for others
+- Add keys to all 3 languages: `src/locales/{en,fr,ar}/`
+
+### Route Files
+```typescript
+import { createFileRoute } from '@tanstack/react-router';
+export const Route = createFileRoute('/_authenticated/(group)/path')({
+  component: PageComponent,
+});
+function PageComponent() { /* ... */ }
+```
+
+### State Management
+- **Server state**: TanStack Query (queries + mutations)
+- **Client state**: Zustand stores in `src/stores/`
+- **Auth**: `useAuth()` hook → `{ organizationId, user, currentOrganization }`
+
+### Loading / Empty / Error States
+```typescript
+{isLoading ? (
+  <div className="flex items-center justify-center h-64">...</div>
+) : data?.length ? (
+  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{/* items */}</div>
+) : (
+  <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed">
+    {/* empty state with CTA */}
+  </div>
+)}
+```
+
+## Backend Conventions (NestJS)
+
+### Module Structure
+```
+modules/feature-name/
+├── feature-name.controller.ts
+├── feature-name.service.ts
+├── feature-name.module.ts
+└── dto/
+    ├── create-feature.dto.ts
+    ├── update-feature.dto.ts
+    └── list-features.dto.ts
+```
+
+### Controller Pattern
+- `@ApiTags('feature')` + `@ApiBearerAuth()` + `@UseGuards(JwtAuthGuard, PoliciesGuard)`
+- Extract org: `const organizationId = req.headers['x-organization-id']`
+- Pass `req.user.id` and `organizationId` to service methods
+- Full Swagger decorators: `@ApiOperation`, `@ApiResponse`
+
+### Service Pattern
+- Inject `DatabaseService` or create Supabase admin client in constructor
+- Use `this.supabaseAdmin.from('table')` for queries
+- Use `paginatedResponse()` helper for list endpoints
+- Logger: `private readonly logger = new Logger(ServiceName.name)`
+- Transactions: use `databaseService.executeInPgTransaction()` for multi-table ops
+
+### DTOs
+- `class-validator` decorators: `@IsString()`, `@IsUUID()`, `@IsOptional()`, etc.
+- Always include `@ApiProperty()` / `@ApiPropertyOptional()` for Swagger
+- Extend `PaginatedQueryDto` for list endpoints
+
+### Pagination
+- Use shared `PaginatedQueryDto` from `src/common/dto/paginated-query.dto.ts`
+- Return via `paginatedResponse(data, total, page, pageSize)`
+
+## Database Conventions
+
+### Schema Changes
+- Edit the declarative schema: `project/supabase/migrations/00000000000000_schema.sql`
+- Use idempotent SQL: `CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`
+- Always add RLS policies for new tables
+- Always include `organization_id` column for tenant data
+- Always add `created_at` / `updated_at` timestamps with trigger
+
+### After Schema Changes
+```bash
+cd project && npm run db:reset && npm run db:generate-types
+```
+
+### RLS Policy Template
+```sql
+ALTER TABLE new_table ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access" ON new_table
+  FOR ALL USING (is_organization_member(organization_id));
+```
+
+## Git Conventions
+- Branch from `develop`, PR to `develop`
+- Main branch: `main` (production)
+- Commit format: `type(scope): description` — types: feat, fix, refactor, docs, test, chore
+- Always run `tsc --noEmit` before committing frontend changes
+
+---
+
+<!-- END PROJECT RULES -->
+
 <!-- BEGIN BYTEROVER RULES -->
 
 # Workflow Instruction

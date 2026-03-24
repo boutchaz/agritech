@@ -3102,7 +3102,13 @@ Determine which modules are relevant based on the query's intent and content. Re
 - Consider the current season and phenological stages when making timing recommendations
 - When interpreting satellite indices, relate them to recent farm tasks, weather, and crop stage
 - If the user asks for something that requires actions you cannot perform, explain what needs to be done briefly
-- **Remember: Users want quick answers, not long explanations unless they specifically ask for details**`;
+- **Remember: Users want quick answers, not long explanations unless they specifically ask for details**
+
+**CRITICAL — Language Rule:**
+- You MUST reply in the EXACT language specified in the user prompt's language instruction.
+- Supported languages: English (en), French (fr), Arabic (ar).
+- Your ENTIRE response must be in that language — do not mix languages.
+- If the user writes in a different language than the one specified, still respond in the specified language.`;
   }
 
   private buildUserPrompt(
@@ -3113,10 +3119,10 @@ Determine which modules are relevant based on the query's intent and content. Re
   ): string {
     const langInstruction =
       language === 'fr'
-        ? 'Répondre en français.'
+        ? '⚠️ LANGUE OBLIGATOIRE : Répondre UNIQUEMENT en français. Toute la réponse doit être en français.'
         : language === 'ar'
-        ? 'الرد باللغة العربية.'
-        : 'Respond in English.';
+        ? '⚠️ اللغة الإلزامية: يجب الرد باللغة العربية فقط. يجب أن تكون الإجابة بالكامل باللغة العربية.'
+        : '⚠️ REQUIRED LANGUAGE: Respond ONLY in English. The entire response must be in English.';
 
     // Check if weather forecast is available (no string matching - AI already routed to weather agent)
     const hasWeatherForecast = context.satelliteWeather?.weather_forecast?.available && 
