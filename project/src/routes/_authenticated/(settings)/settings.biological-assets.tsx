@@ -1,19 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { BiologicalAssetsManagement } from '@/components/settings/BiologicalAssetsManagement';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 
-function BiologicalAssetsSettingsPage() {
-  return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
-      <BiologicalAssetsManagement />
-    </div>
-  );
+function BiologicalAssetsRedirect() {
+  return <Navigate to="/biological-assets" replace />;
 }
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/biological-assets')({
-  component: withRouteProtection(
-    BiologicalAssetsSettingsPage,
-    'read',
-    'BiologicalAsset'
-  ),
+  component: BiologicalAssetsRedirect,
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { formatCurrency, type TaxBreakdownItem } from '@/lib/taxCalculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 interface TaxBreakdownProps {
   taxBreakdown: TaxBreakdownItem[];
@@ -13,7 +14,7 @@ interface TaxBreakdownProps {
  */
 export const TaxBreakdown: React.FC<TaxBreakdownProps> = ({
   taxBreakdown,
-  currency = 'MAD',
+  currency = DEFAULT_CURRENCY,
   className = '',
 }) => {
   if (taxBreakdown.length === 0) {
@@ -71,7 +72,7 @@ export const InvoiceTotalsDisplay: React.FC<InvoiceTotalsDisplayProps> = ({
   taxTotal,
   grandTotal,
   taxBreakdown = [],
-  currency = 'MAD',
+  currency = DEFAULT_CURRENCY,
   className = '',
 }) => {
   return (
@@ -138,7 +139,7 @@ export const LineItemTaxDisplay: React.FC<LineItemTaxDisplayProps> = ({
   taxAmount,
   taxRate,
   taxName,
-  currency = 'MAD',
+  currency = DEFAULT_CURRENCY,
   compact = false,
 }) => {
   if (taxAmount === 0) {

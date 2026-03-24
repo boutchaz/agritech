@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 import { quoteRequestsApi } from '../../lib/api/quote-requests';
 import {
   Mail,
@@ -251,7 +252,7 @@ export function QuoteRequestsSent() {
                       <div className="flex items-center gap-2">
                         <DollarSign className="h-5 w-5 text-green-700 dark:text-green-400" />
                         <span className="font-semibold text-lg text-green-700 dark:text-green-400">
-                          {quote.quoted_price.toLocaleString()} {quote.quoted_currency || 'MAD'}
+                          {quote.quoted_price.toLocaleString()} {quote.quoted_currency || DEFAULT_CURRENCY}
                         </span>
                         {quote.unit_of_measure && (
                           <span className="text-sm text-gray-600 dark:text-gray-400">/ {quote.unit_of_measure}</span>
@@ -265,7 +266,7 @@ export function QuoteRequestsSent() {
                     </div>
                     {quote.requested_quantity && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        Total estimé: <strong>{(quote.quoted_price * quote.requested_quantity).toLocaleString()} {quote.quoted_currency || 'MAD'}</strong>
+                        Total estimé: <strong>{(quote.quoted_price * quote.requested_quantity).toLocaleString()} {quote.quoted_currency || DEFAULT_CURRENCY}</strong>
                       </p>
                     )}
                     {quote.seller_response && (

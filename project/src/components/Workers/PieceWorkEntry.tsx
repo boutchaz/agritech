@@ -27,6 +27,7 @@ import {
 import { format } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -434,7 +435,7 @@ export function PieceWorkEntry({
                     {t('workers.pieceWork.fields.totalAmount')}:
                   </span>
                   <span className="text-lg font-bold">
-                    {currentOrganization?.currency || 'MAD'} {totalAmount.toFixed(2)}
+                    {currentOrganization?.currency || DEFAULT_CURRENCY} {totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -637,7 +638,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
                   </div>
                   <div>
                     <DollarSign className="inline h-3 w-3 mr-1" />
-                    {record.total_amount.toFixed(2)} {currentOrganization?.currency || 'MAD'}
+                    {record.total_amount.toFixed(2)} {currentOrganization?.currency || DEFAULT_CURRENCY}
                   </div>
                   {record.quality_rating && (
                     <div>

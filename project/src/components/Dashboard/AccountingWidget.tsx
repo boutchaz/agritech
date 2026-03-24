@@ -4,6 +4,7 @@ import { Receipt, ChevronRight, TrendingUp, TrendingDown, AlertCircle, CheckCirc
 import { useInvoices, useInvoiceStats } from '../../hooks/useInvoices';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 const AccountingWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ const AccountingWidget: React.FC = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-MA', {
       style: 'currency',
-      currency: 'MAD',
+      currency: DEFAULT_CURRENCY,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);

@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/label';
 import { DollarSign, Calendar, Send } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 
 interface QuoteResponseDialogProps {
   open: boolean;
@@ -31,7 +32,7 @@ export function QuoteResponseDialog({
   const [quotedPrice, setQuotedPrice] = useState<string>(
     quote.item?.standard_rate?.toString() || quote.listing?.price?.toString() || ''
   );
-  const [currency, setCurrency] = useState('MAD');
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [response, setResponse] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [submitting, setSubmitting] = useState(false);

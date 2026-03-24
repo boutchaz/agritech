@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
-import type { Currency } from '../utils/currencies';
+import { DEFAULT_CURRENCY, type Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
 import AIProvidersSettings from './settings/AIProvidersSettings';
 import { getMarketplaceUrl } from '@/lib/marketplace-link';
@@ -498,7 +498,7 @@ const OrganizationSettings: React.FC = () => {
             {t('organization.sections.regionalSettings')}
           </h3>
           <CurrencySelector
-            value={orgData.currency || 'MAD'}
+            value={orgData.currency || DEFAULT_CURRENCY}
             onChange={handleCurrencyChange}
             disabled={saving}
           />

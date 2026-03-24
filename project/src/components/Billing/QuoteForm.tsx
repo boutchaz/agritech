@@ -24,6 +24,7 @@ import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
 import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
 import { calculateInvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
@@ -715,7 +716,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 taxTotal={totals.tax_total}
                 grandTotal={totals.grand_total}
                 taxBreakdown={totals.tax_breakdown}
-                currency={currentOrganization?.currency || 'MAD'}
+                currency={currentOrganization?.currency || DEFAULT_CURRENCY}
               />
             </div>
           )}

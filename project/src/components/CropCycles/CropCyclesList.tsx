@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/useAuth";
+import { DEFAULT_CURRENCY } from "@/utils/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
@@ -132,7 +133,7 @@ export function CropCyclesList() {
     "farm_manager",
     "farm_worker",
   ]);
-  const currencySymbol = (currentOrganization as any)?.currency_symbol || "MAD";
+  const currencySymbol = (currentOrganization as any)?.currency_symbol || DEFAULT_CURRENCY;
 
   const { data: cropCycles = [], isLoading } = useCropCycles({
     campaign_id: filterCampaignId || undefined,

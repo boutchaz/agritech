@@ -37,6 +37,7 @@ import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_a
 import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './routes/_authenticated/(production)/farm-hierarchy'
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
+import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
 import { Route as AuthenticatedmiscUtilitiesRouteImport } from './routes/_authenticated/(misc)/utilities'
 import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_authenticated/(misc)/notifications'
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
@@ -301,6 +302,12 @@ const AuthenticatedproductionCampaignsRoute =
   AuthenticatedproductionCampaignsRouteImport.update({
     id: '/(production)/campaigns',
     path: '/campaigns',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedproductionBiologicalAssetsRoute =
+  AuthenticatedproductionBiologicalAssetsRouteImport.update({
+    id: '/(production)/biological-assets',
+    path: '/biological-assets',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedmiscUtilitiesRoute =
@@ -997,6 +1004,7 @@ export interface FileRoutesByFullPath {
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
@@ -1134,6 +1142,7 @@ export interface FileRoutesByTo {
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
@@ -1270,6 +1279,7 @@ export interface FileRoutesById {
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
   '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
@@ -1412,6 +1422,7 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/notifications'
     | '/utilities'
+    | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
     | '/farm-hierarchy'
@@ -1549,6 +1560,7 @@ export interface FileRouteTypes {
     | '/marketplace'
     | '/notifications'
     | '/utilities'
+    | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
     | '/farm-hierarchy'
@@ -1684,6 +1696,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(misc)/marketplace'
     | '/_authenticated/(misc)/notifications'
     | '/_authenticated/(misc)/utilities'
+    | '/_authenticated/(production)/biological-assets'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
     | '/_authenticated/(production)/farm-hierarchy'
@@ -2005,6 +2018,13 @@ declare module '@tanstack/react-router' {
       path: '/campaigns'
       fullPath: '/campaigns'
       preLoaderRoute: typeof AuthenticatedproductionCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(production)/biological-assets': {
+      id: '/_authenticated/(production)/biological-assets'
+      path: '/biological-assets'
+      fullPath: '/biological-assets'
+      preLoaderRoute: typeof AuthenticatedproductionBiologicalAssetsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(misc)/utilities': {
@@ -3180,6 +3200,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
   AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
+  AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
@@ -3232,6 +3253,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedmiscMarketplaceRouteWithChildren,
   AuthenticatedmiscNotificationsRoute: AuthenticatedmiscNotificationsRoute,
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
+  AuthenticatedproductionBiologicalAssetsRoute:
+    AuthenticatedproductionBiologicalAssetsRoute,
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
     AuthenticatedproductionCropCyclesRouteWithChildren,

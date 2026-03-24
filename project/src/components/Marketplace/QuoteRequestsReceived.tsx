@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 import { quoteRequestsApi, QuoteRequest } from '../../lib/api/quote-requests';
 import {
   Mail,
@@ -287,7 +288,7 @@ export function QuoteRequestsReceived() {
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                       <DollarSign className="h-5 w-5" />
                       <span className="font-semibold text-lg">
-                        {quote.quoted_price.toLocaleString()} {quote.quoted_currency || 'MAD'}
+                        {quote.quoted_price.toLocaleString()} {quote.quoted_currency || DEFAULT_CURRENCY}
                       </span>
                       {quote.unit_of_measure && <span className="text-sm">/ {quote.unit_of_measure}</span>}
                     </div>

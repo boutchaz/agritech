@@ -306,6 +306,7 @@
     "campaigns": "Campaigns",
     "cropCycles": "Crop Cycles",
     "chat": "AI Assistant",
+    "biologicalAssets": "Biological Assets",
     "compliance": "Compliance",
     "certifications": "Certifications",
     "correctiveActions": "Corrective Actions",
@@ -1578,7 +1579,14 @@
       "files": "File Management",
       "filesDescription": "Manage files and detect orphans",
       "dangerZone": "Danger Zone",
-      "dangerZoneDescription": "Manage demo data and critical actions"
+      "dangerZoneDescription": "Manage demo data and critical actions",
+      "sections": {
+        "personal": "Personal",
+        "organization": "Organization",
+        "accounting": "Accounting & Finance",
+        "content": "Content & Display",
+        "system": "System"
+      }
     }
   },
   "account": {

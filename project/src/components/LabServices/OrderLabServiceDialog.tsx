@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParcels } from '@/hooks/useParcels';
 import { useCreateLabServiceOrder } from '@/hooks/useLabServices';
 import { toast } from 'sonner';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 const orderSchema = z.object({
   farm_id: z.string().uuid('Sélectionnez une ferme'),
@@ -67,7 +68,7 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
         farm_id: data.farm_id,
         parcel_id: data.parcel_id || null,
         quoted_price: service.price,
-        currency: service.currency || 'MAD',
+        currency: service.currency || DEFAULT_CURRENCY,
         notes: data.notes,
         status: 'pending',
       });

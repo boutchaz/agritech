@@ -13,6 +13,7 @@ import { useInvoices } from '@/hooks/useInvoices';
 import type { Payment } from '@/hooks/useAccountingPayments';
 import { useAllocatePayment } from '@/hooks/useAccountingPayments';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 interface PaymentAllocationDialogProps {
   payment: Payment;
@@ -150,7 +151,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                 <option value="">{t('dialogs.paymentAllocation.selectInvoice')}</option>
                 {eligibleInvoices.map((invoice) => (
                   <option key={invoice.id} value={invoice.id}>
-                    {invoice.invoice_number} — {t('dialogs.paymentAllocation.remaining')} {Number(invoice.outstanding_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: invoice.currency_code || 'MAD' })}
+                    {invoice.invoice_number} — {t('dialogs.paymentAllocation.remaining')} {Number(invoice.outstanding_amount ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: invoice.currency_code || DEFAULT_CURRENCY })}
                   </option>
                 ))}
               </select>
@@ -163,7 +164,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                   <span>
                     {Number(selectedInvoice.outstanding_amount ?? 0).toLocaleString('fr-FR', {
                       style: 'currency',
-                      currency: selectedInvoice.currency_code || 'MAD',
+                      currency: selectedInvoice.currency_code || DEFAULT_CURRENCY,
                     })}
                   </span>
                 </div>
@@ -172,7 +173,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                   <span>
                     {Number(payment.amount).toLocaleString('fr-FR', {
                       style: 'currency',
-                      currency: payment.currency_code || 'MAD',
+                      currency: payment.currency_code || DEFAULT_CURRENCY,
                     })}
                   </span>
                 </div>
@@ -193,7 +194,7 @@ export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {t('dialogs.paymentAllocation.maxAllocatable')}: {maxAllocatable.toLocaleString('fr-FR', {
                     style: 'currency',
-                    currency: selectedInvoice.currency_code || 'MAD',
+                    currency: selectedInvoice.currency_code || DEFAULT_CURRENCY,
                   })}
                 </p>
               </FormField>

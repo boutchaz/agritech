@@ -112,6 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       "/harvests",
       "/reception-batches",
       "/quality-control",
+      "/biological-assets",
     ]),
   );
   const [showCompliance, setShowCompliance] = useState(() =>
@@ -165,6 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         "/harvests",
         "/reception-batches",
         "/quality-control",
+        "/biological-assets",
       ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
     ) {
       setShowProduction(true);
@@ -850,6 +852,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                         isActive={currentPath === "/quality-control"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="BiologicalAsset">
+                      <PopoverNavItem
+                        path="/biological-assets"
+                        label={t("nav.biologicalAssets", "Biological Assets")}
+                        isActive={currentPath === "/biological-assets"}
+                      />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -929,6 +938,19 @@ const Sidebar: React.FC<SidebarProps> = ({
                           }
                         >
                           {renderText(t("nav.qualityControl"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="BiologicalAsset">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/biological-assets",
+                          )}
+                          onClick={(e) =>
+                            handleNavigation("/biological-assets", e)
+                          }
+                        >
+                          {renderText(t("nav.biologicalAssets", "Biological Assets"))}
                         </Button>
                       </ProtectedNavItem>
                     </>

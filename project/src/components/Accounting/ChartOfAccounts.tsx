@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { seedChartOfAccounts, type SupportedCountry } from '@/lib/seed-chart-of-accounts';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import {
   Table,
   TableBody,
@@ -59,7 +60,7 @@ const accountFormSchema = z.object({
 
 type AccountFormData = z.infer<typeof accountFormSchema>;
 
-const getInitialFormData = (orgCurrency: string = 'MAD'): AccountFormData => ({
+const getInitialFormData = (orgCurrency: string = DEFAULT_CURRENCY): AccountFormData => ({
   code: '',
   name: '',
   account_type: 'Asset',
@@ -113,7 +114,7 @@ export const ChartOfAccounts: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: getInitialFormData(currentOrganization?.currency || 'MAD'),
+    defaultValues: getInitialFormData(currentOrganization?.currency || DEFAULT_CURRENCY),
   });
 
   useEffect(() => {
@@ -126,12 +127,12 @@ export const ChartOfAccounts: React.FC = () => {
         parent_id: editingAccount.parent_id,
         is_group: editingAccount.is_group ?? false,
         is_active: editingAccount.is_active ?? true,
-        currency_code: currentOrganization?.currency || editingAccount.currency_code || 'MAD',
+        currency_code: currentOrganization?.currency || editingAccount.currency_code || DEFAULT_CURRENCY,
         allow_cost_center: editingAccount.allow_cost_center ?? true,
         description: editingAccount.description || '',
       });
     } else {
-      reset(getInitialFormData(currentOrganization?.currency || 'MAD'));
+      reset(getInitialFormData(currentOrganization?.currency || DEFAULT_CURRENCY));
     }
   }, [editingAccount, reset, currentOrganization]);
 
@@ -235,7 +236,7 @@ export const ChartOfAccounts: React.FC = () => {
     setIsSeeding(true);
     try {
       const countryCode: SupportedCountry = 'MAR';
-      const currency = (currentOrganization.currency || 'MAD') as 'MAD' | 'EUR' | 'USD' | 'GBP';
+      const currency = (currentOrganization.currency || DEFAULT_CURRENCY) as 'MAD' | 'EUR' | 'USD' | 'GBP';
 
       const result = await seedChartOfAccounts(
         currentOrganization.id,
@@ -317,7 +318,7 @@ export const ChartOfAccounts: React.FC = () => {
             </Badge>
           </TableCell>
           <TableCell className="text-center">
-            {currentOrganization?.currency || account.currency_code || 'MAD'}
+            {currentOrganization?.currency || account.currency_code || DEFAULT_CURRENCY}
           </TableCell>
           <TableCell className="text-center">
             {account.is_active ? (
@@ -565,7 +566,7 @@ export const ChartOfAccounts: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span>{t('accountingModule.accounts.form.level', { number: level + 1 })}</span>
                         <span>•</span>
-                        <span>{account.currency_code || currentOrganization?.currency || 'MAD'}</span>
+                        <span>{account.currency_code || currentOrganization?.currency || DEFAULT_CURRENCY}</span>
                         <span>•</span>
                         <Badge variant="outline" className="text-xs">
                           {account.is_group ? t('accountingModule.accounts.accountKinds.group') : t('accountingModule.accounts.accountKinds.ledger')}

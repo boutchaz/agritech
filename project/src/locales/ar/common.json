@@ -306,6 +306,7 @@
     "campaigns": "الحملات الزراعية",
     "cropCycles": "دورات المحاصيل",
     "chat": "المساعد الذكي",
+    "biologicalAssets": "الأصول البيولوجية",
     "compliance": "الامتثال",
     "certifications": "الشهادات",
     "correctiveActions": "الإجراءات التصحيحية",
@@ -1562,7 +1563,14 @@
       "files": "إدارة الملفات",
       "filesDescription": "إدارة الملفات واكتشاف الملفات المعزولة",
       "dangerZone": "منطقة الخطر",
-      "dangerZoneDescription": "إدارة البيانات التجريبية والإجراءات الحرجة"
+      "dangerZoneDescription": "إدارة البيانات التجريبية والإجراءات الحرجة",
+      "sections": {
+        "personal": "شخصي",
+        "organization": "المنظمة",
+        "accounting": "المحاسبة والمالية",
+        "content": "المحتوى والعرض",
+        "system": "النظام"
+      }
     }
   },
   "account": {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../utils/currencies';
 import { productApplicationsApi, ProductApplication } from '../lib/api/product-applications';
 import { inventoryApi, InventoryProduct } from '../lib/api/inventory';
 import { parcelsApi, Parcel } from '../lib/api/parcels';
@@ -18,7 +19,7 @@ const ProductApplications: React.FC = () => {
   const [_selectedProduct, setSelectedProduct] = useState<string>('');
   const [farmId, setFarmId] = useState<string | null>(null);
 
-  const currency = currentOrganization?.currency || 'MAD';
+  const currency = currentOrganization?.currency || DEFAULT_CURRENCY;
 
   const [newApplication, setNewApplication] = useState({
     product_id: '',

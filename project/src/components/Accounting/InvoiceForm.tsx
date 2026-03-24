@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { DEFAULT_CURRENCY } from "@/utils/currencies";
 import { getLocalDate, getLocalDateOffset } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,7 +152,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
   });
 
   // Get organization currency (default to MAD if not set)
-  const currencySymbol = currentOrganization?.currency_symbol || "MAD";
+  const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
   // Filter accounts for dropdown
   const expenseAccounts = accounts.filter(

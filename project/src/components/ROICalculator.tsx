@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Calculator, TrendingUp, Sprout, Mail, ArrowRight, Check, Users, Droplets } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -114,7 +115,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
   const formatCurrency = (value: number) =>
     value.toLocaleString('fr-MA', {
       style: 'currency',
-      currency: 'MAD',
+      currency: DEFAULT_CURRENCY,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });

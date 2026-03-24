@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -69,7 +70,7 @@ export function CampaignManagement() {
   const createMutation = useCreateCampaign();
   const updateMutation = useUpdateCampaign();
 
-  const currencySymbol = currentOrganization?.currency_symbol || 'MAD';
+  const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
   const form = useForm<CampaignFormData>({
     resolver: zodResolver(campaignSchema),

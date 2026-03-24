@@ -1,6 +1,12 @@
+export type RoleName = 'system_admin' | 'organization_admin' | 'farm_manager' | 'farm_worker' | 'day_laborer' | 'viewer';
+
+export const ALL_ROLES: RoleName[] = ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'];
+export const ADMIN_ROLES: RoleName[] = ['system_admin', 'organization_admin'];
+export const ADMIN_AND_MANAGER_ROLES: RoleName[] = ['system_admin', 'organization_admin', 'farm_manager'];
+
 export interface Role {
   id: string;
-  name: 'system_admin' | 'organization_admin' | 'farm_manager' | 'farm_worker' | 'day_laborer' | 'viewer';
+  name: RoleName;
   display_name: string;
   description?: string;
   level: number;

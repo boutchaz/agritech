@@ -479,6 +479,11 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   overdue: 'bg-red-100 text-red-800',
 };
 
+/**
+ * Task types that consume inventory products (fertilizers, pesticides, seeds, etc.)
+ */
+export const STOCK_CONSUMING_TASK_TYPES = ['fertilization', 'pest_control', 'irrigation', 'planting', 'soil_preparation'] as const;
+
 // Helper functions
 export function getTaskTypeLabel(type: TaskType, lang: 'en' | 'fr' = 'fr'): string {
   return TASK_TYPE_LABELS[type][lang];

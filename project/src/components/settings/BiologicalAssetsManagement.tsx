@@ -12,6 +12,7 @@ import {
   Beef,
 
 } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -278,7 +279,7 @@ export function BiologicalAssetsManagement() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(amount);
+    return new Intl.NumberFormat('fr-MA', { style: 'currency', currency: DEFAULT_CURRENCY }).format(amount);
   };
 
   if (!canManage) {

@@ -6,6 +6,9 @@
  * - Extended warehouse properties for reception centers
  */
 
+import type { QualityGrade } from './harvests';
+export type { QualityGrade } from './harvests';
+
 export type ReceptionType =
   | 'general'
   | 'olivier'
@@ -13,15 +16,6 @@ export type ReceptionType =
   | 'laitier'
   | 'fruiter'
   | 'legumier';
-
-export type QualityGrade =
-  | 'A'
-  | 'B'
-  | 'C'
-  | 'Extra'
-  | 'First'
-  | 'Second'
-  | 'Third';
 
 export type ReceptionDecision =
   | 'pending'

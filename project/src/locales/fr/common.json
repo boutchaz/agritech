@@ -306,6 +306,7 @@
     "campaigns": "Campagnes",
     "cropCycles": "Cycles de Culture",
     "chat": "Assistant IA",
+    "biologicalAssets": "Actifs Biologiques",
     "compliance": "Conformité",
     "certifications": "Certifications",
     "correctiveActions": "Actions correctives",
@@ -1573,7 +1574,14 @@
       "files": "Gestion des Fichiers",
       "filesDescription": "Gérer les fichiers et détecter les orphelins",
       "dangerZone": "Zone de Danger",
-      "dangerZoneDescription": "Gérer les données de démo et actions critiques"
+      "dangerZoneDescription": "Gérer les données de démo et actions critiques",
+      "sections": {
+        "personal": "Personnel",
+        "organization": "Organisation",
+        "accounting": "Comptabilité & Finance",
+        "content": "Contenu & Affichage",
+        "system": "Système"
+      }
     }
   },
   "account": {

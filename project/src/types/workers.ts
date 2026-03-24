@@ -211,6 +211,12 @@ export interface WorkerFormData {
   notes?: string;
 }
 
+// Tuple constants for use in Zod schemas and other validations
+export const WORKER_TYPES = ['fixed_salary', 'daily_worker', 'metayage'] as const;
+export const PAYMENT_FREQUENCIES = ['monthly', 'daily', 'per_task', 'harvest_share'] as const;
+export const METAYAGE_TYPES = ['khammass', 'rebaa', 'tholth', 'custom'] as const;
+export const CALCULATION_BASES = ['gross_revenue', 'net_revenue'] as const;
+
 // Constants for dropdown options
 export const WORKER_TYPE_OPTIONS: {
   value: WorkerType;

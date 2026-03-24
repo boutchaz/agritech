@@ -13,7 +13,7 @@ import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
 import { inventoryApi, type InventoryProduct } from '../../lib/api/inventory';
 import type { Task, CreateTaskRequest, TaskType } from '../../types/tasks';
-import { TASK_TYPE_LABELS } from '../../types/tasks';
+import { TASK_TYPE_LABELS, STOCK_CONSUMING_TASK_TYPES } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
 import type { Parcel } from '../../lib/api/parcels';
 import { Input } from '../ui/Input';
@@ -170,8 +170,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const workUnits = Array.isArray(workUnitsData) ? workUnitsData : [];
 
   // Task types that can consume inventory products
-  const STOCK_TASK_TYPES = ['fertilization', 'pest_control', 'irrigation', 'planting', 'soil_preparation'];
-  const showProductSection = STOCK_TASK_TYPES.includes(formData.task_type);
+  const showProductSection = (STOCK_CONSUMING_TASK_TYPES as readonly string[]).includes(formData.task_type);
 
   // Fetch available products from inventory
   const { data: availableProducts = [] } = useQuery({
@@ -252,7 +251,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
 
       // Add planned items for stock-consuming task types
-      if (plannedItems.length > 0 && STOCK_TASK_TYPES.includes(data.task_type)) {
+      if (plannedItems.length > 0 && (STOCK_CONSUMING_TASK_TYPES as readonly string[]).includes(data.task_type)) {
         cleanedData.planned_items = plannedItems.filter(item => item.product_id && item.quantity > 0);
       }
       if (task) {

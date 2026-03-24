@@ -22,6 +22,7 @@ import {
 } from '@/hooks/useProductionIntelligence';
 import { useNavigate } from '@tanstack/react-router';
 import { formatCurrency } from '@/lib/taxCalculations';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { YieldHistoryForm } from './YieldHistoryForm';
 import { BenchmarkForm } from './BenchmarkForm';
 import { HarvestForecastForm } from './HarvestForecastForm';
@@ -160,7 +161,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(totalRevenue, currentOrganization?.currency || 'MAD')}
+              {formatCurrency(totalRevenue, currentOrganization?.currency || DEFAULT_CURRENCY)}
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               From {performanceSummary.reduce((sum, p) => sum + p.total_harvests, 0)} harvests
@@ -177,7 +178,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(totalProfit, currentOrganization?.currency || 'MAD')}
+              {formatCurrency(totalProfit, currentOrganization?.currency || DEFAULT_CURRENCY)}
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               {avgProfitMargin.toFixed(1)}% avg margin
@@ -340,7 +341,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                             +{parcel.avg_variance_percent.toFixed(1)}% vs target
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
-                            Profit: {formatCurrency(parcel.total_profit, currentOrganization?.currency || 'MAD')}
+                            Profit: {formatCurrency(parcel.total_profit, currentOrganization?.currency || DEFAULT_CURRENCY)}
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
                             Margin: {parcel.avg_profit_margin.toFixed(1)}%
@@ -401,10 +402,10 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                           </Badge>
                         </td>
                         <td className="py-3 text-right">
-                          {formatCurrency(parcel.total_revenue, currentOrganization?.currency || 'MAD')}
+                          {formatCurrency(parcel.total_revenue, currentOrganization?.currency || DEFAULT_CURRENCY)}
                         </td>
                         <td className="py-3 text-right">
-                          {formatCurrency(parcel.total_profit, currentOrganization?.currency || 'MAD')}
+                          {formatCurrency(parcel.total_profit, currentOrganization?.currency || DEFAULT_CURRENCY)}
                         </td>
                         <td className="py-3 text-right">{parcel.avg_profit_margin.toFixed(1)}%</td>
                       </tr>
@@ -528,13 +529,13 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Est. Revenue</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(forecast.estimated_revenue || 0, currentOrganization?.currency || 'MAD')}
+                        {formatCurrency(forecast.estimated_revenue || 0, currentOrganization?.currency || DEFAULT_CURRENCY)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Est. Profit</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(forecast.estimated_profit || 0, currentOrganization?.currency || 'MAD')}
+                        {formatCurrency(forecast.estimated_profit || 0, currentOrganization?.currency || DEFAULT_CURRENCY)}
                       </p>
                     </div>
                   </div>

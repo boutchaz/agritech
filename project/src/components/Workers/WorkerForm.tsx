@@ -11,6 +11,10 @@ import {
   METAYAGE_TYPE_OPTIONS,
   CALCULATION_BASIS_OPTIONS,
   PAYMENT_FREQUENCY_OPTIONS,
+  WORKER_TYPES,
+  PAYMENT_FREQUENCIES,
+  METAYAGE_TYPES,
+  CALCULATION_BASES,
 } from "../../types/workers";
 import { useCreateWorker, useUpdateWorker } from "../../hooks/useWorkers";
 import { useCurrency } from "../../hooks/useCurrency";
@@ -47,7 +51,7 @@ const createWorkerSchema = (t: any) =>
         .or(z.literal("")),
       address: z.string().optional(),
       date_of_birth: z.string().optional(),
-      worker_type: z.enum(["fixed_salary", "daily_worker", "metayage"]),
+      worker_type: z.enum(WORKER_TYPES),
       position: z.string().optional(),
       hire_date: z.string(),
       farm_id: z.string().optional(),
@@ -57,14 +61,14 @@ const createWorkerSchema = (t: any) =>
       daily_rate: z.number().positive().optional(),
       per_unit_rate: z.number().positive().optional(),
       metayage_type: z
-        .enum(["khammass", "rebaa", "tholth", "custom"])
+        .enum(METAYAGE_TYPES)
         .optional(),
       metayage_percentage: z.number().min(0).max(50).optional(),
-      calculation_basis: z.enum(["gross_revenue", "net_revenue"]).optional(),
+      calculation_basis: z.enum(CALCULATION_BASES).optional(),
       specialties: z.array(z.string()).optional(),
       certifications: z.array(z.string()).optional(),
       payment_frequency: z
-        .enum(["monthly", "daily", "per_task", "harvest_share"])
+        .enum(PAYMENT_FREQUENCIES)
         .optional(),
       bank_account: z.string().optional(),
       payment_method: z.string().optional(),

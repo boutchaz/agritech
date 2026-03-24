@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
 import { workersApi } from '../lib/api/workers';
 import { useAuth } from '../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../utils/currencies';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, type FieldErrors, type Resolver, type SubmitHandler } from 'react-hook-form';
 import { FormField } from './ui/FormField';
@@ -44,7 +45,7 @@ const EmployeeManagement: React.FC = () => {
 
   const farmId = currentFarm?.id;
   const organizationId = currentOrganization?.id;
-  const currency = currentOrganization?.currency || 'MAD';
+  const currency = currentOrganization?.currency || DEFAULT_CURRENCY;
 
   const emptyDefaults: EmployeeFormValues = useMemo(() => ({
     first_name: '',

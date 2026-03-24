@@ -30,6 +30,7 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { usePurchaseTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '../../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { QuickCreateItem } from './QuickCreateItem';
@@ -556,7 +557,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                 taxTotal={totals.tax_total}
                 grandTotal={totals.grand_total}
                 taxBreakdown={totals.tax_breakdown}
-                currency={currentOrganization?.currency || 'MAD'}
+                currency={currentOrganization?.currency || DEFAULT_CURRENCY}
               />
             </CardContent>
           </Card>

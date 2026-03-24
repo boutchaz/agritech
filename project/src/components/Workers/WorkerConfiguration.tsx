@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -35,6 +36,7 @@ import { workersApi } from '@/lib/api/workers';
 import { workUnitsApi } from '@/lib/api/work-units';
 
 import type { WorkUnit } from '@/types/work-units';
+import { WORKER_TYPES } from '@/types/workers';
 
 // =====================================================
 // TYPES
@@ -64,7 +66,7 @@ interface WorkerPaymentConfig {
 // =====================================================
 
 const workerPaymentSchema = z.object({
-  worker_type: z.enum(['fixed_salary', 'daily_worker', 'metayage']),
+  worker_type: z.enum(WORKER_TYPES),
   payment_frequency: z.enum(['monthly', 'daily', 'per_task', 'harvest_share', 'per_unit']),
 
   daily_rate: z.number().nonnegative().optional(),
@@ -260,7 +262,7 @@ export function WorkerConfiguration({
               render={({ field }) => (
                 <div>
                   <label className="text-sm font-medium">
-                    {t('workers.configuration.fields.ratePerUnit', { currency: currentOrganization?.currency || 'MAD' })}
+                    {t('workers.configuration.fields.ratePerUnit', { currency: currentOrganization?.currency || DEFAULT_CURRENCY })}
                   </label>
                   <Input
                     {...field}
@@ -284,7 +286,7 @@ export function WorkerConfiguration({
             <p className="text-sm text-blue-800">
               <strong>{t('workers.configuration.examples.label')}:</strong> {t('workers.configuration.examples.pieceWork', {
                 rate: form.watch('rate_per_unit') || '5',
-                currency: currentOrganization?.currency || 'MAD',
+                currency: currentOrganization?.currency || DEFAULT_CURRENCY,
                 total: (form.watch('rate_per_unit') || 5) * 100
               })}
             </p>
@@ -315,7 +317,7 @@ export function WorkerConfiguration({
             render={({ field }) => (
               <div>
                 <label className="text-sm font-medium">
-                  {t('workers.configuration.fields.dailyRate', { currency: currentOrganization?.currency || 'MAD' })}
+                  {t('workers.configuration.fields.dailyRate', { currency: currentOrganization?.currency || DEFAULT_CURRENCY })}
                 </label>
                 <Input
                   {...field}
@@ -359,7 +361,7 @@ export function WorkerConfiguration({
             render={({ field }) => (
               <div>
                 <label className="text-sm font-medium">
-                  {t('workers.configuration.fields.monthlySalary', { currency: currentOrganization?.currency || 'MAD' })}
+                  {t('workers.configuration.fields.monthlySalary', { currency: currentOrganization?.currency || DEFAULT_CURRENCY })}
                 </label>
                 <Input
                   {...field}
@@ -425,7 +427,7 @@ export function WorkerConfiguration({
             <p className="text-sm text-orange-800">
               <strong>{t('workers.configuration.examples.label')}:</strong> {t('workers.configuration.examples.metayage', {
                 revenue: '10,000',
-                currency: currentOrganization?.currency || 'MAD',
+                currency: currentOrganization?.currency || DEFAULT_CURRENCY,
                 percentage: form.watch('metayage_percentage') || 30,
                 earnings: ((form.watch('metayage_percentage') || 30) / 100) * 10000
               })}

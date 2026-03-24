@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { useAuthStore } from '@/stores/authStore';
 import { storageApi } from '@/lib/api/storage';
 import { tasksApi } from '@/lib/api/tasks';
@@ -73,7 +74,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
       farm_id: farmId,
       parcel_id: parcelId,
       application_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD for date input
-      currency: currentOrganization?.currency || 'MAD',
+      currency: currentOrganization?.currency || DEFAULT_CURRENCY,
       quantity_used: 0,
       area_treated: 0,
       images: [],
@@ -116,7 +117,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
         farm_id: farmId,
         parcel_id: parcelId,
         application_date: new Date().toISOString().split('T')[0],
-        currency: currentOrganization?.currency || 'MAD',
+        currency: currentOrganization?.currency || DEFAULT_CURRENCY,
         quantity_used: 0,
         area_treated: 0,
         images: [],
@@ -529,7 +530,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
 
           {/* Cost */}
           <div className="space-y-2">
-            <Label htmlFor="cost">{t('parcels.index.cost')} ({currentOrganization?.currency || 'MAD'})</Label>
+            <Label htmlFor="cost">{t('parcels.index.cost')} ({currentOrganization?.currency || DEFAULT_CURRENCY})</Label>
             <Input
               id="cost"
               type="number"

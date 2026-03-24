@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useStockMovements } from '@/hooks/useStockEntries';
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -223,7 +224,7 @@ export default function StockReportsDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentOrganization?.currency || 'MAD'} {stats.totalValue.toFixed(2)}
+              {currentOrganization?.currency || DEFAULT_CURRENCY} {stats.totalValue.toFixed(2)}
             </div>
             <p className="text-xs text-gray-500 mt-1">{t('reports.cards.inventoryValue')}</p>
           </CardContent>
