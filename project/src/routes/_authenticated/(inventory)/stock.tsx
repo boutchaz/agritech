@@ -8,28 +8,26 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { cn } from '@/lib/utils';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 const AppContent: React.FC = () => {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const router = useRouter();
   const { location } = useRouterState();
-  const isRTL = i18n.language === 'ar';
+  const isRTL = isRTLLocale(i18n.language);
 
   const tabs = useMemo(
-    () => {
-      const tabItems = [
-        { value: 'items', label: t('stock.tabs.items'), to: '/stock/items' },
-        { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
-        { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory' },
-        { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries' },
-        { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
-        { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
-      ];
-      // Reverse tabs for RTL languages so they flow from right to left
-      return isRTL ? [...tabItems].reverse() : tabItems;
-    },
-    [t, isRTL],
+    () => [
+      { value: 'items', label: t('stock.tabs.items'), to: '/stock/items' },
+      { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
+      { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory' },
+      { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries' },
+      { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
+      { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
+    ],
+    [t],
   );
 
   const activeTab = useMemo(() => {
@@ -77,23 +75,36 @@ const AppContent: React.FC = () => {
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
-          <TabsList className="w-full justify-start overflow-x-auto sm:overflow-visible whitespace-nowrap rounded-lg">
-            {tabs.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="flex-shrink-0"
-                data-tour={
-                  tab.value === 'items' ? 'stock-items' :
-                  tab.value === 'entries' ? 'stock-movements' :
-                  tab.value === 'inventory' ? 'stock-warehouses' :
-                  undefined
-                }
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div
+            className={cn(
+              'flex w-full min-w-0',
+              isRTL ? 'justify-end' : 'justify-start',
+            )}
+          >
+            <TabsList
+              dir={isRTL ? 'rtl' : 'ltr'}
+              className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+            >
+              {tabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="shrink-0"
+                  data-tour={
+                    tab.value === 'items'
+                      ? 'stock-items'
+                      : tab.value === 'entries'
+                        ? 'stock-movements'
+                        : tab.value === 'inventory'
+                          ? 'stock-warehouses'
+                          : undefined
+                  }
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
         </Tabs>
 
         <div className="mt-6">

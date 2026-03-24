@@ -141,7 +141,7 @@ export default function StockEntryForm({
   referenceId,
   referenceNumber,
 }: StockEntryFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const isMobile = useIsMobile();
   const createEntry = useCreateStockEntry();

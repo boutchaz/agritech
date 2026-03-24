@@ -308,7 +308,33 @@
     "chat": "AI Assistant",
     "compliance": "Compliance",
     "certifications": "Certifications",
-    "correctiveActions": "Corrective Actions"
+    "correctiveActions": "Corrective Actions",
+    "marketplace": "Marketplace",
+    "receivedRequests": "Received Requests",
+    "sentRequests": "Sent Requests",
+    "viewMarketplace": "View Marketplace"
+  },
+  "sidebar": {
+    "collapse": "Collapse",
+    "expand": "Expand sidebar"
+  },
+  "orgSwitcher": {
+    "organizations": "Organizations",
+    "orgSettings": "Organization Settings",
+    "manageTeam": "Manage Team",
+    "signOut": "Sign Out",
+    "backToOrganizations": "← Back to organizations",
+    "farms": "Farms - {{orgName}}",
+    "manager": "Manager: {{name}}",
+    "noFarms": "No farms found",
+    "createFirstFarm": "Create your first farm",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Administrator",
+      "manager": "Manager",
+      "member": "Member",
+      "viewer": "Viewer"
+    }
   },
   "stock": {
     "title": "Stock Management",
@@ -1544,7 +1570,23 @@
       "fiscalYears": "Fiscal Years",
       "fiscalYearsDescription": "Manage fiscal years and accounting periods",
       "biologicalAssets": "Biological Assets",
-      "biologicalAssetsDescription": "Manage orchards, livestock and perennial assets"
+      "biologicalAssetsDescription": "Manage orchards, livestock and perennial assets",
+      "costCenters": "Cost Centers",
+      "costCentersDescription": "Manage cost centers for expense tracking",
+      "accountMappings": "Account Mappings",
+      "accountMappingsDescription": "Configure automatic journal entry mappings",
+      "files": "File Management",
+      "filesDescription": "Manage files and detect orphans",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDescription": "Manage demo data and critical actions"
+    }
+  },
+  "account": {
+    "title": "Account Settings",
+    "tabs": {
+      "profile": "Profile",
+      "preferences": "Preferences",
+      "security": "Security"
     }
   },
   "profile": {
@@ -1819,7 +1861,56 @@
       "mostPopular": "Most Popular",
       "currentPlan": "Current Plan",
       "contactSales": "Contact Sales",
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "upgrade": "Upgrade",
+      "downgrade": "Downgrade",
+      "hectares": "Hectares",
+      "hectaresUpTo": "up to {{max}}",
+      "hectaresAbove": ">{{min}}",
+      "users": "Users",
+      "support": "Support",
+      "sla": "SLA",
+      "slaIncluded": "Included",
+      "slaNotIncluded": "Not included",
+      "pricePerHa": "{{price}} MAD/ha/year (HT)"
+    },
+    "processing": "Processing...",
+    "contractInputs": "Contract Inputs",
+    "contractedHectares": "Contracted hectares",
+    "billingCycle": "Billing cycle",
+    "billingCycles": {
+      "monthly": "Monthly",
+      "semiannual": "Semiannual",
+      "annual": "Annual"
+    },
+    "billedCycle": "Billed {{cycle}}",
+    "currentContract": "Current Contract",
+    "usageLimits": "Usage and Limits",
+    "contractTimeline": "Contract Timeline",
+    "timeline": {
+      "start": "Start",
+      "end": "End",
+      "renewalNotice": "Renewal notice",
+      "daysBeforeEnd": "{{days}} days before end"
+    },
+    "details": {
+      "status": "Status",
+      "contractedHectares": "Contracted hectares",
+      "includedUsers": "Included users",
+      "unlimited": "Unlimited",
+      "contractEnd": "Contract end",
+      "nextBilling": "Next billing"
+    },
+    "billingManagementTitle": "Billing Management",
+    "billingManagementDescription": "Open checkout with your current contract context to update payment and invoice settings.",
+    "manageBilling": "Manage Billing",
+    "addons": {
+      "title": "Add-ons",
+      "active": "Active",
+      "buy": "Buy",
+      "noAddons": "No addon modules configured.",
+      "coreModules": "Included core modules",
+      "perMonth": "${{price}}/mo"
     },
     "errors": {
       "noOrganization": "No organization selected. Please select an organization first.",
@@ -4157,7 +4248,18 @@
     "loading": "Loading...",
     "list": "List",
     "calendar": "Calendar",
+    "kanban": "Board",
     "navigation": "Tasks navigation",
+    "kanbanTitle": "Task Board",
+    "kanbanSubtitle": "Drag tasks between columns to update their status",
+    "kanbanEmpty": "No tasks",
+    "kanbanError": "Failed to load tasks.",
+    "kanbanDueOverdue": "Overdue",
+    "kanbanDueToday": "Today",
+    "kanbanDueTomorrow": "Tomorrow",
+    "kanbanRecurring": "Recurring: {{frequency}}",
+    "kanbanSubtask": "Part of recurring series",
+    "kanbanSaving": "Saving...",
     "stats": {
       "pending": "Pending",
       "inProgress": "In Progress",
@@ -5691,6 +5793,75 @@
       "creatingOrg": "Creating organization...",
       "activatingTrial": "Activating trial...",
       "complete": "Complete!"
+    }
+  },
+  "modulesSettings": {
+    "title": "Modules",
+    "subtitle": "Enable or disable modules according to your needs. Disabled modules will not appear in the navigation.",
+    "loading": "Loading modules...",
+    "error": "Error loading modules. Please try again.",
+    "currentPlan": "Current plan: {{plan}}",
+    "allModulesAvailable": "All modules are available",
+    "modulesAvailable": "{{count}} modules available",
+    "viewSubscription": "View subscription",
+    "activeCount": "{{active}}/{{total}} active",
+    "noModulesInCategory": "No modules available in this category.",
+    "upgrade": "Upgrade →",
+    "upgradePrompt": "This module is not available in your current plan. Would you like to see upgrade options?",
+    "configurationOf": "Configuration of {{name}}",
+    "noSettings": "No specific settings available for this module",
+    "treeManagement": "Tree type management",
+    "farmManagementSettings": "Farm Management Settings",
+    "generalSettings": "General settings",
+    "pruningNotifications": "Pruning notifications",
+    "diseaseAlerts": "Disease alerts",
+    "harvestForecasts": "Harvest forecasts",
+    "sections": {
+      "agriculture": "Agriculture",
+      "agricultureDesc": "Agricultural production modules",
+      "elevage": "Livestock",
+      "elevageDesc": "Livestock and animal management modules",
+      "functional": "Functional Modules",
+      "functionalDesc": "Management, accounting, stock, HR, analytics..."
+    },
+    "categories": {
+      "core": "Core Module",
+      "production": "Production",
+      "operations": "Operations",
+      "hr": "Human Resources",
+      "inventory": "Inventory & Stock",
+      "sales": "Sales",
+      "purchasing": "Purchasing",
+      "accounting": "Accounting",
+      "analytics": "Analytics"
+    },
+    "activityModules": {
+      "arbres_fruitiers": "Fruit Trees",
+      "aeroponie": "Aeroponics",
+      "hydroponie": "Hydroponics",
+      "maraichage": "Market Gardening",
+      "myciculture": "Mushroom Farming",
+      "pisciculture": "Fish Farming",
+      "bovin": "Cattle",
+      "ovin": "Sheep",
+      "camelin": "Camels",
+      "caprin": "Goats",
+      "aviculture": "Poultry",
+      "couveuses": "Hatchery"
+    },
+    "activityDescriptions": {
+      "arbres_fruitiers": "Apple trees, citrus, pomegranates, avocados...",
+      "aeroponie": "Soilless aeroponic cultivation",
+      "hydroponie": "Hydroponic cultivation in aqueous medium",
+      "maraichage": "Vegetable and market garden crops",
+      "myciculture": "Mushroom cultivation",
+      "pisciculture": "Fish farming",
+      "bovin": "Cattle breeding",
+      "ovin": "Sheep breeding",
+      "camelin": "Camel breeding",
+      "caprin": "Goat breeding",
+      "aviculture": "Poultry farming",
+      "couveuses": "Chicks, broilers, laying hens"
     }
   }
 }

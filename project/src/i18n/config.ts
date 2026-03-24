@@ -8,19 +8,37 @@ import arCommon from '../locales/ar/common.json';
 import enAi from '../locales/en/ai.json';
 import frAi from '../locales/fr/ai.json';
 import arAi from '../locales/ar/ai.json';
+import enStock from '../locales/en/stock.json';
+import frStock from '../locales/fr/stock.json';
+import arStock from '../locales/ar/stock.json';
+import enCompliance from '../locales/en/compliance.json';
+import frCompliance from '../locales/fr/compliance.json';
+import arCompliance from '../locales/ar/compliance.json';
+import enAccounting from '../locales/en/accounting.json';
+import frAccounting from '../locales/fr/accounting.json';
+import arAccounting from '../locales/ar/accounting.json';
 
 const resources = {
   en: {
     common: enCommon,
     ai: enAi,
+    stock: enStock,
+    compliance: enCompliance,
+    accounting: enAccounting,
   },
   fr: {
     common: frCommon,
     ai: frAi,
+    stock: frStock,
+    compliance: frCompliance,
+    accounting: frAccounting,
   },
   ar: {
     common: arCommon,
     ai: arAi,
+    stock: arStock,
+    compliance: arCompliance,
+    accounting: arAccounting,
   },
 };
 
@@ -31,7 +49,7 @@ i18n
     resources,
     fallbackLng: ['en', 'fr'],
     defaultNS: 'common',
-    ns: ['common', 'ai'],
+    ns: ['common', 'ai', 'stock', 'compliance', 'accounting'],
 
     interpolation: {
       escapeValue: false, // React already escapes values

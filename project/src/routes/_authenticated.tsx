@@ -14,6 +14,7 @@ import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
+import { isRTLLocale } from '../lib/is-rtl-locale'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -43,7 +44,7 @@ function AuthenticatedLayout() {
   const { i18n } = useTranslation()
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [activeModule, setActiveModule] = useState('dashboard')
-  const isRTL = i18n.language === 'ar'
+  const isRTL = isRTLLocale(i18n.language)
   const { style: sidebarStyle } = useSidebarMargin(isRTL)
 
   // Track user activity for live dashboard concurrent users

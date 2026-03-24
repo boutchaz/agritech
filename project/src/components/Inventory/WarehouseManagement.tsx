@@ -63,7 +63,7 @@ interface WarehouseFormProps {
 }
 
 function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -438,7 +438,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 }
 
 export default function WarehouseManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: warehouses = [], isLoading, error, refetch } = useWarehouses();

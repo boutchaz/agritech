@@ -27,7 +27,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { Module } from "../types";
-import LanguageSwitcher from "./LanguageSwitcher";
 import { useAuth } from "../hooks/useAuth";
 import { appConfig } from "../config/app";
 import { getMarketplaceUrl } from "@/lib/marketplace-link";
@@ -37,6 +36,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
+import { isRTLLocale } from "../lib/is-rtl-locale";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface SidebarProps {
@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
   const { t, i18n } = useTranslation("common");
   const { currentOrganization } = useAuth();
-  const isRTL = i18n.language === "ar";
+  const isRTL = isRTLLocale(i18n.language);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
@@ -480,7 +480,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 isCollapsed && "lg:hidden",
               )}
             >
-              <LanguageSwitcher />
               <Button
                 variant="ghost"
                 size="icon"
@@ -1275,18 +1274,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div className="hidden lg:block">
                     <CollapsedSectionPopover
                       icon={ShoppingBag}
-                      title="Marketplace"
+                      title={t("nav.marketplace")}
                     >
                       <PopoverNavItem
                         path="/marketplace/quote-requests/received"
-                        label="Demandes reçues"
+                        label={t("nav.receivedRequests")}
                         isActive={
                           currentPath === "/marketplace/quote-requests/received"
                         }
                       />
                       <PopoverNavItem
                         path="/marketplace/quote-requests/sent"
-                        label="Demandes envoyées"
+                        label={t("nav.sentRequests")}
                         isActive={
                           currentPath === "/marketplace/quote-requests/sent"
                         }
@@ -1305,7 +1304,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           )}
                         >
                           <div className="flex items-center w-full">
-                            <span className="flex-1">Voir la marketplace</span>
+                            <span className="flex-1">{t("nav.viewMarketplace")}</span>
                             <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </Button>
@@ -1326,7 +1325,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         )}
                       >
                         {renderIcon(ShoppingBag)}
-                        {renderSectionTitle("Marketplace")}
+                        {renderSectionTitle(t("nav.marketplace"))}
                       </div>
                       {renderChevron(showMarketplace)}
                     </Button>
@@ -1345,7 +1344,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             )
                           }
                         >
-                          {renderText("Demandes reçues")}
+                          {renderText(t("nav.receivedRequests"))}
                         </Button>
                         <Button
                           variant="ghost"
@@ -1359,7 +1358,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             )
                           }
                         >
-                          {renderText("Demandes envoyées")}
+                          {renderText(t("nav.sentRequests"))}
                         </Button>
                         <button
                           onClick={async () => {
@@ -1379,7 +1378,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                               )}
                             >
                               <span className="flex-1">
-                                {renderText("Voir la marketplace")}
+                                {renderText(t("nav.viewMarketplace"))}
                               </span>
                               <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                             </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { 
   ArrowLeft, 
@@ -15,6 +16,7 @@ import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComplianceChecksList } from '@/components/compliance/ComplianceChecksList';
 import { EditCertificationDialog } from '@/components/compliance/EditCertificationDialog';
@@ -40,6 +42,7 @@ export const Route = createFileRoute('/_authenticated/compliance/certifications/
 });
 
 function CertificationDetailPage() {
+  const { t } = useTranslation('compliance');
   const { certId } = Route.useParams();
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
@@ -58,13 +61,89 @@ function CertificationDetailPage() {
 
   if (isLoadingCert) {
     return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-4 bg-muted rounded w-1/4" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="md:col-span-2 h-64 bg-muted rounded" />
-            <div className="h-64 bg-muted rounded" />
+      <div className="container mx-auto px-4 py-6 space-y-8">
+        {/* Header skeleton */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-md" />
+            <div>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-32 mt-2" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-28 rounded-md" />
+            <Skeleton className="h-10 w-24 rounded-md" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Main content skeleton */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Details card */}
+            <div className="rounded-lg border bg-card p-6 space-y-4">
+              <Skeleton className="h-6 w-48" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <div>
+                    <Skeleton className="h-4 w-32 mb-1" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <div>
+                    <Skeleton className="h-4 w-28 mb-1" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Checks table skeleton */}
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-44" />
+              <div className="rounded-md border">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-10" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar skeleton */}
+          <div className="space-y-6">
+            <div className="rounded-lg border bg-card p-6 space-y-4">
+              <Skeleton className="h-6 w-36" />
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                    <Skeleton className="h-8 w-8 rounded" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-9 w-full rounded-md" />
+            </div>
+            <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 p-6 space-y-3">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-9 w-full rounded-md mt-2" />
+            </div>
           </div>
         </div>
       </div>
@@ -74,16 +153,16 @@ function CertificationDetailPage() {
   if (!certification) {
     return (
       <div className="container mx-auto px-4 py-6 text-center">
-        <h2 className="text-xl font-bold">Certification introuvable</h2>
+        <h2 className="text-xl font-bold">{t('certifications.certificationNotFound')}</h2>
         <Button asChild className="mt-4">
-          <Link to="/compliance/certifications">Retour à la liste</Link>
+          <Link to="/compliance/certifications">{t('certifications.backToList')}</Link>
         </Button>
       </div>
     );
   }
 
   const handleDelete = () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette certification ?')) {
+    if (confirm(t('certifications.deleteCertificationConfirm'))) {
       if (!currentOrganization) return;
       deleteCertification.mutate(
         { organizationId: currentOrganization.id, certificationId: certId },
@@ -118,13 +197,13 @@ function CertificationDetailPage() {
   const getStatusLabel = (status: CertificationStatus) => {
     switch (status) {
       case CertificationStatus.ACTIVE:
-        return 'Active';
+        return t('status.active');
       case CertificationStatus.EXPIRED:
-        return 'Expirée';
+        return t('status.expired');
       case CertificationStatus.PENDING_RENEWAL:
-        return 'Renouvellement';
+        return t('status.pendingRenewal');
       case CertificationStatus.SUSPENDED:
-        return 'Suspendue';
+        return t('status.suspended');
       default:
         return status;
     }
@@ -162,7 +241,7 @@ function CertificationDetailPage() {
             disabled={deleteCertification.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            Supprimer
+            {t('certifications.delete')}
           </Button>
           <EditCertificationDialog certification={certification} />
         </div>
@@ -173,21 +252,21 @@ function CertificationDetailPage() {
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Détails de la certification</CardTitle>
+              <CardTitle>{t('certifications.certificationDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
                   <Building className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Organisme certificateur</p>
+                    <p className="text-sm font-medium">{t('certifications.issuingBody')}</p>
                     <p className="text-sm text-muted-foreground">{certification.issuing_body}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Période de validité</p>
+                    <p className="text-sm font-medium">{t('certifications.validityPeriod')}</p>
                     <p className="text-sm text-muted-foreground">
                       Du {format(new Date(certification.issued_date), 'dd MMM yyyy', { locale: fr })} au {format(new Date(certification.expiry_date), 'dd MMM yyyy', { locale: fr })}
                     </p>
@@ -196,8 +275,8 @@ function CertificationDetailPage() {
                 <div className="flex items-start gap-3 md:col-span-2">
                   <Award className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Portée (Scope)</p>
-                    <p className="text-sm text-muted-foreground">{certification.scope || 'Non spécifié'}</p>
+                    <p className="text-sm font-medium">{t('certifications.scope')}</p>
+                    <p className="text-sm text-muted-foreground">{certification.scope || t('certifications.notSpecified')}</p>
                   </div>
                 </div>
               </div>
@@ -206,7 +285,7 @@ function CertificationDetailPage() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Contrôles de conformité</h2>
+              <h2 className="text-xl font-semibold">{t('certifications.complianceChecks')}</h2>
               <CreateComplianceCheckDialog certificationId={certId} />
             </div>
             <ComplianceChecksList checks={certificationChecks} isLoading={isLoadingChecks} />
@@ -216,7 +295,7 @@ function CertificationDetailPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-orange-500" />
-                <h2 className="text-xl font-semibold">Actions Correctives</h2>
+                <h2 className="text-xl font-semibold">{t('correctiveActions.title')}</h2>
                 {certCorrectiveActions.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {certCorrectiveActions.length}
@@ -239,7 +318,7 @@ function CertificationDetailPage() {
               }}
               onDelete={(action) => {
                 if (!currentOrganization) return;
-                if (confirm('Supprimer cette action corrective ?')) {
+                if (confirm(t('correctiveActions.deleteShortConfirm'))) {
                   deleteCorrectiveAction.mutate({
                     organizationId: currentOrganization.id,
                     actionId: action.id,
@@ -265,7 +344,7 @@ function CertificationDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Documents & Preuves</CardTitle>
+              <CardTitle>{t('certifications.documentsAndEvidence')}</CardTitle>
             </CardHeader>
             <CardContent>
               {certification.documents && certification.documents.length > 0 ? (
@@ -281,7 +360,7 @@ function CertificationDetailPage() {
                         size="icon" 
                         className="h-8 w-8"
                         onClick={() => handleDownloadDocument(doc.url)}
-                        title="Ouvrir le document"
+                        title={t('certifications.openDocument')}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -290,7 +369,7 @@ function CertificationDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground text-sm border-2 border-dashed rounded-md">
-                  Aucun document associé
+                  {t('certifications.noDocuments')}
                 </div>
               )}
               <div className="mt-4">
@@ -301,7 +380,7 @@ function CertificationDetailPage() {
 
           <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
             <CardHeader>
-              <CardTitle className="text-blue-800 dark:text-blue-300 text-sm">Prochain Audit</CardTitle>
+              <CardTitle className="text-blue-800 dark:text-blue-300 text-sm">{t('certifications.nextAudit')}</CardTitle>
             </CardHeader>
             <CardContent>
               {certification.audit_schedule?.next_audit_date ? (
@@ -311,18 +390,18 @@ function CertificationDetailPage() {
                   </div>
                   {certification.audit_schedule.auditor_name && (
                     <p className="text-xs text-blue-700 dark:text-blue-400">
-                      Auditeur: {certification.audit_schedule.auditor_name}
+                      {t('certifications.auditor') + ':'} {certification.audit_schedule.auditor_name}
                     </p>
                   )}
                   {certification.audit_schedule.audit_frequency && (
                     <p className="text-xs text-blue-700 dark:text-blue-400">
-                      Fréquence: {certification.audit_schedule.audit_frequency}
+                      {t('certifications.frequency') + ':'} {certification.audit_schedule.audit_frequency}
                     </p>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Aucun audit planifié
+                  {t('certifications.noAuditScheduled')}
                 </p>
               )}
               <div className="mt-4">

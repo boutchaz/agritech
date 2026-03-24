@@ -17,7 +17,7 @@ export default function FarmStockLevels({
   farm_id,
   showWarehouseDetails = true,
 }: FarmStockLevelsProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const navigate = useNavigate();
   const { format: formatCurrency } = useCurrency();
 

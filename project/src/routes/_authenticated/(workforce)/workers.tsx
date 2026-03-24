@@ -16,9 +16,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageLoader, SectionLoader } from '@/components/ui/loader';
 import { farmsApi } from '@/lib/api/farms';
+import { cn } from '@/lib/utils';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 function WorkersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = isRTLLocale(i18n.language);
   const { currentOrganization, currentFarm } = useAuth();
   const { can } = useCan();
   const location = useLocation();
@@ -171,32 +174,46 @@ function WorkersPage() {
                 <div className="mt-3 sm:mt-0 sm:ml-4 flex-shrink-0">
                   <Link to="/settings/users">
                     <Button variant="default" size="sm" className="whitespace-nowrap w-full sm:w-auto">
-                      <Settings className="w-4 h-4 mr-2" />
+                      <Settings className="h-4 w-4 me-2" />
                       {t('workers.banner.usersButton')}
                     </Button>
                   </Link>
                 </div>
               </Alert>
 
-              {/* Tabs with shadcn/ui */}
+              {/* Tabs — RTL: bar aligned end + dir on list (same pattern as /stock) */}
               <Tabs defaultValue="list" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 h-auto">
-                  <TabsTrigger value="list" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
-                    <Users className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
-                    <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="payments" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
-                    <Banknote className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
-                    <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="calculator" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4" data-tour="worker-payments">
-                    <Calculator className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
-                    <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
-                  </TabsTrigger>
-                </TabsList>
+                <div
+                  className={cn(
+                    'flex w-full min-w-0',
+                    isRTL ? 'justify-end' : 'justify-start',
+                  )}
+                >
+                  <TabsList
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+                  >
+                    <TabsTrigger value="list" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
+                      <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="payments" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
+                      <Banknote className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="calculator"
+                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                      data-tour="worker-payments"
+                    >
+                      <Calculator className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="list" className="mt-4 sm:mt-6">
                   <WorkersList

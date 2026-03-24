@@ -46,7 +46,7 @@ const formatCurrency = (amount: number): string => {
 };
 
 const AppContent: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
   const { data: accountSummary, isLoading: isSummaryLoading } = useAccountSummary();
@@ -79,7 +79,7 @@ const AppContent: React.FC = () => {
 
   const kpiCards = [
     {
-      label: t('accounting.reports.totalAssets', 'Total Assets'),
+      label: t('reports.totalAssets', 'Total Assets'),
       value: kpis.totalAssets,
       icon: Landmark,
       color: 'text-blue-600 dark:text-blue-400',
@@ -87,7 +87,7 @@ const AppContent: React.FC = () => {
       borderColor: 'border-blue-200 dark:border-blue-800/50',
     },
     {
-      label: t('accounting.reports.totalLiabilities', 'Total Liabilities'),
+      label: t('reports.totalLiabilities', 'Total Liabilities'),
       value: kpis.totalLiabilities,
       icon: TrendingDown,
       color: 'text-red-600 dark:text-red-400',
@@ -95,7 +95,7 @@ const AppContent: React.FC = () => {
       borderColor: 'border-red-200 dark:border-red-800/50',
     },
     {
-      label: t('accounting.reports.totalEquity', 'Total Equity'),
+      label: t('reports.totalEquity', 'Total Equity'),
       value: kpis.totalEquity,
       icon: Wallet,
       color: 'text-emerald-600 dark:text-emerald-400',
@@ -103,7 +103,7 @@ const AppContent: React.FC = () => {
       borderColor: 'border-emerald-200 dark:border-emerald-800/50',
     },
     {
-      label: t('accounting.reports.totalRevenue', 'Total Revenue'),
+      label: t('reports.totalRevenue', 'Total Revenue'),
       value: kpis.totalRevenue,
       icon: DollarSign,
       color: 'text-amber-600 dark:text-amber-400',
@@ -115,7 +115,7 @@ const AppContent: React.FC = () => {
   const reports: ReportCard[] = [
     {
       id: 'balance-sheet',
-      title: t('accounting.reports.balanceSheet', 'Balance Sheet'),
+      title: t('reports.balanceSheet', 'Balance Sheet'),
       description: t(
         'accounting.reports.balanceSheetDesc',
         'View your financial position with assets, liabilities, and equity at a point in time.'
@@ -128,7 +128,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'profit-loss',
-      title: t('accounting.reports.profitLoss', 'Profit & Loss'),
+      title: t('reports.profitLoss', 'Profit & Loss'),
       description: t(
         'accounting.reports.profitLossDesc',
         'Analyze revenue, expenses, and profitability over any period.'
@@ -141,7 +141,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'trial-balance',
-      title: t('accounting.reports.trialBalance', 'Trial Balance'),
+      title: t('reports.trialBalance', 'Trial Balance'),
       description: t(
         'accounting.reports.trialBalanceDesc',
         'Verify your ledger with a complete list of all account balances.'
@@ -154,7 +154,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'general-ledger',
-      title: t('accounting.reports.generalLedger', 'General Ledger'),
+      title: t('reports.generalLedger', 'General Ledger'),
       description: t(
         'accounting.reports.generalLedgerDesc',
         'View detailed transaction history and running balances for every account.'
@@ -167,7 +167,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'cash-flow',
-      title: t('accounting.reports.cashFlow', 'Cash Flow'),
+      title: t('reports.cashFlow', 'Cash Flow'),
       description: t(
         'accounting.reports.cashFlowDesc',
         'Track cash inflows and outflows across operating, investing, and financing activities.'
@@ -180,7 +180,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'aged-receivables',
-      title: t('accounting.reports.agedReceivables', 'Aged Receivables'),
+      title: t('reports.agedReceivables', 'Aged Receivables'),
       description: t(
         'accounting.reports.agedReceivablesDesc',
         'Track outstanding invoices and customer payment aging buckets.'
@@ -193,7 +193,7 @@ const AppContent: React.FC = () => {
     },
     {
       id: 'aged-payables',
-      title: t('accounting.reports.agedPayables', 'Aged Payables'),
+      title: t('reports.agedPayables', 'Aged Payables'),
       description: t(
         'accounting.reports.agedPayablesDesc',
         'Monitor outstanding bills and supplier payment aging buckets.'
@@ -229,10 +229,10 @@ const AppContent: React.FC = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: FileSpreadsheet, label: t('accounting.reports.title', 'Financial Reports'), isActive: true },
+            { icon: FileSpreadsheet, label: t('reports.title', 'Financial Reports'), isActive: true },
           ]}
-          title={t('accounting.reports.title', 'Financial Reports')}
-          subtitle={t('accounting.reports.subtitle', 'Access comprehensive financial reports and analytics')}
+          title={t('reports.title', 'Financial Reports')}
+          subtitle={t('reports.subtitle', 'Access comprehensive financial reports and analytics')}
         />
       }
     >
@@ -273,7 +273,7 @@ const AppContent: React.FC = () => {
         {/* Reports Grid */}
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('accounting.reports.allReports', 'All Reports')}
+            {t('reports.allReports', 'All Reports')}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {reports.map((report) => {
@@ -308,7 +308,7 @@ const AppContent: React.FC = () => {
                         handleViewReport(report.path);
                       }}
                     >
-                      {t('accounting.reports.viewReport', 'View Report')}
+                      {t('reports.viewReport', 'View Report')}
                       <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
                     </Button>
                   </CardContent>

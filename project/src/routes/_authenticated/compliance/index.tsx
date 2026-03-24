@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import {
   Award,
@@ -31,6 +32,7 @@ export const Route = createFileRoute('/_authenticated/compliance/')({
 });
 
 function ComplianceDashboardPage() {
+  const { t } = useTranslation('compliance');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id || null;
   const { data: stats, isLoading } = useComplianceDashboard(orgId);
@@ -42,15 +44,15 @@ function ComplianceDashboardPage() {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
-            { icon: ShieldCheck, label: 'Conformité & Certifications', isActive: true },
+            { icon: ShieldCheck, label: t('breadcrumb.complianceCertifications'), isActive: true },
           ]}
-          title="Conformité & Certifications"
-          subtitle="Gérez vos certifications, audits et contrôles de conformité."
+          title={t('dashboard.title')}
+          subtitle={t('dashboard.subtitle')}
           actions={
             <div className="flex gap-2">
               <Button variant="outline" asChild>
                 <Link to="/compliance/certifications">
-                  Gérer les certifications
+                  {t('dashboard.manageCertifications')}
                 </Link>
               </Button>
               <CreateCertificationDialog />
@@ -66,7 +68,7 @@ function ComplianceDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Score Global
+              {t('dashboard.globalScore')}
             </CardTitle>
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -79,7 +81,7 @@ function ComplianceDashboardPage() {
               className="h-2 mt-2" 
             />
             <p className="text-xs text-muted-foreground mt-2">
-              Moyenne des derniers contrôles
+              {t('dashboard.averageRecentChecks')}
             </p>
           </CardContent>
         </Card>
@@ -87,14 +89,14 @@ function ComplianceDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Certifications Actives
+              {t('dashboard.activeCertifications')}
             </CardTitle>
             <Award className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.certifications.active || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Sur {stats?.certifications.total || 0} certifications totales
+              {t('dashboard.outOfTotal', { total: stats?.certifications.total || 0 })}
             </p>
           </CardContent>
         </Card>
@@ -102,14 +104,14 @@ function ComplianceDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Expirent Bientôt
+              {t('dashboard.expiringSoon')}
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.certifications.expiring_soon || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Dans les 30 prochains jours
+              {t('dashboard.inNext30Days')}
             </p>
           </CardContent>
         </Card>
@@ -117,14 +119,14 @@ function ComplianceDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Non-conformités
+              {t('dashboard.nonCompliances')}
             </CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.checks.non_compliant_count || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Points nécessitant attention
+              {t('dashboard.pointsNeedingAttention')}
             </p>
           </CardContent>
         </Card>
@@ -133,9 +135,9 @@ function ComplianceDashboardPage() {
       {/* Recent Checks */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Derniers Contrôles</h2>
+          <h2 className="text-xl font-semibold tracking-tight">{t('dashboard.recentChecks')}</h2>
           <Button variant="ghost" size="sm" className="gap-1">
-            Voir tout <ArrowRight className="h-4 w-4" />
+            {t('dashboard.viewAll')} <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
         <ComplianceChecksList 
@@ -151,12 +153,12 @@ function ComplianceDashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-orange-500" />
-                <CardTitle className="text-lg">Actions Correctives</CardTitle>
+                <CardTitle className="text-lg">{t('dashboard.correctiveActions')}</CardTitle>
                 <Badge variant="secondary">{capStats.total}</Badge>
               </div>
               <Button variant="ghost" size="sm" className="gap-1" asChild>
                 <Link to="/compliance/corrective-actions">
-                  Voir tout <ArrowRight className="h-4 w-4" />
+                  {t('dashboard.viewAll')} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
@@ -167,28 +169,28 @@ function ComplianceDashboardPage() {
                 <Clock className="h-4 w-4 text-gray-500" />
                 <div>
                   <div className="text-lg font-bold">{capStats.open}</div>
-                  <div className="text-xs text-muted-foreground">Ouvertes</div>
+                  <div className="text-xs text-muted-foreground">{t('dashboard.open')}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4 text-blue-500" />
                 <div>
                   <div className="text-lg font-bold">{capStats.in_progress}</div>
-                  <div className="text-xs text-muted-foreground">En cours</div>
+                  <div className="text-xs text-muted-foreground">{t('dashboard.inProgress')}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-500" />
                 <div>
                   <div className="text-lg font-bold text-red-600">{capStats.overdue}</div>
-                  <div className="text-xs text-muted-foreground">En retard</div>
+                  <div className="text-xs text-muted-foreground">{t('dashboard.overdue')}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                 <div>
                   <div className="text-lg font-bold">{Math.round(capStats.resolution_rate)}%</div>
-                  <div className="text-xs text-muted-foreground">Taux de résolution</div>
+                  <div className="text-xs text-muted-foreground">{t('dashboard.resolutionRate')}</div>
                 </div>
               </div>
             </div>
@@ -200,28 +202,28 @@ function ComplianceDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Préparation Audit</CardTitle>
+            <CardTitle>{t('dashboard.auditPreparation')}</CardTitle>
             <CardDescription>
-              Liste des documents requis pour votre prochain audit GlobalGAP.
+              {t('dashboard.auditPreparationDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>Registre phytosanitaire à jour</span>
+                <span>{t('dashboard.phytosanitaryRegister')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>Analyses d'eau (moins de 6 mois)</span>
+                <span>{t('dashboard.waterAnalysis')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                <span>Formation sécurité des travailleurs</span>
+                <span>{t('dashboard.workerSafetyTraining')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span>Plan de gestion des déchets</span>
+                <span>{t('dashboard.wasteManagementPlan')}</span>
               </div>
             </div>
             <div className="mt-4">
@@ -232,16 +234,16 @@ function ComplianceDashboardPage() {
 
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader>
-            <CardTitle className="text-primary">Besoin d'aide ?</CardTitle>
+            <CardTitle className="text-primary">{t('dashboard.needHelp')}</CardTitle>
             <CardDescription>
-              Nos experts peuvent vous accompagner dans vos démarches de certification.
+              {t('dashboard.needHelpDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Obtenez un pré-audit blanc ou une assistance pour la mise en conformité de vos parcelles.
+              {t('dashboard.needHelpDetails')}
             </p>
-            <Button>Contacter un expert</Button>
+            <Button>{t('dashboard.contactExpert')}</Button>
           </CardContent>
         </Card>
       </div>

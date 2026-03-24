@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import DayLaborerManagement from '@/components/DayLaborerManagement'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { Loader2 } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -35,7 +36,10 @@ const AppContent: React.FC = () => {
             </span>
           )}
         </div>
-        <OrganizationSwitcher />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrganizationSwitcher />
+          <LanguageSwitcher />
+        </div>
       </div>
       <DayLaborerManagement />
     </PageLayout>

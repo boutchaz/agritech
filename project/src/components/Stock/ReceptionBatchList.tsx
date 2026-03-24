@@ -106,7 +106,7 @@ export default function ReceptionBatchList({
   onViewClick,
   onEditClick,
 }: ReceptionBatchListProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const [filterStatus, setFilterStatus] = useState<ReceptionBatchStatus | 'all'>('all');
   const [filterDecision, setFilterDecision] = useState<ReceptionDecision | 'all'>('all');

@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Edit } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -27,10 +28,10 @@ import { DatePicker } from '@/components/ui/DatePicker';
 
 import { useUpdateCertification } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  CertificationType, 
+import {
+  CertificationType,
   CertificationStatus,
-  type CertificationResponseDto 
+  type CertificationResponseDto
 } from '@/lib/api/compliance';
 import { format } from 'date-fns';
 
@@ -54,6 +55,7 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
   const [open, setOpen] = useState(false);
   const { currentOrganization } = useAuth();
   const updateCertification = useUpdateCertification();
+  const { t } = useTranslation('compliance');
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -108,30 +110,30 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
       <DialogTrigger asChild>
         <Button>
           <Edit className="mr-2 h-4 w-4" />
-          Modifier
+          {t('dialogs.editCertification.button')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Modifier la certification</DialogTitle>
+          <DialogTitle>{t('dialogs.editCertification.title')}</DialogTitle>
           <DialogDescription>
-            Mettez à jour les informations de cette certification.
+            {t('dialogs.editCertification.description')}
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
             name="certification_type"
             render={({ field }) => (
-              <FormField 
-                label="Type de certification" 
+              <FormField
+                label={t('dialogs.createCertification.certType')}
                 error={form.formState.errors.certification_type?.message}
                 required
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un type" />
+                    <SelectValue placeholder={t('dialogs.createCertification.selectType')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(CertificationType).map((type) => (
@@ -147,12 +149,12 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
             control={form.control}
             name="certification_number"
             render={({ field }) => (
-              <FormField 
-                label="Numéro de certification" 
+              <FormField
+                label={t('dialogs.createCertification.certNumber')}
                 error={form.formState.errors.certification_number?.message}
                 required
               >
-                <Input placeholder="ex: CERT-2024-001" {...field} />
+                <Input placeholder={t('dialogs.createCertification.certNumberPlaceholder')} {...field} />
               </FormField>
             )}
           />
@@ -161,12 +163,12 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
             control={form.control}
             name="issuing_body"
             render={({ field }) => (
-              <FormField 
-                label="Organisme certificateur" 
+              <FormField
+                label={t('dialogs.createCertification.issuingBody')}
                 error={form.formState.errors.issuing_body?.message}
                 required
               >
-                <Input placeholder="ex: Bureau Veritas" {...field} />
+                <Input placeholder={t('dialogs.createCertification.issuingBodyPlaceholder')} {...field} />
               </FormField>
             )}
           />
@@ -176,15 +178,15 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
               control={form.control}
               name="issued_date"
               render={({ field }) => (
-                <FormField 
-                  label="Date d'émission" 
+                <FormField
+                  label={t('dialogs.createCertification.issuedDate')}
                   error={form.formState.errors.issued_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -194,15 +196,15 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
               control={form.control}
               name="expiry_date"
               render={({ field }) => (
-                <FormField 
-                  label="Date d'expiration" 
+                <FormField
+                  label={t('dialogs.createCertification.expiryDate')}
                   error={form.formState.errors.expiry_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -213,20 +215,20 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
             control={form.control}
             name="status"
             render={({ field }) => (
-              <FormField 
-                label="Statut" 
+              <FormField
+                label={t('dialogs.createCertification.status')}
                 error={form.formState.errors.status?.message}
                 required
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un statut" />
+                    <SelectValue placeholder={t('dialogs.createCertification.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={CertificationStatus.ACTIVE}>Active</SelectItem>
-                    <SelectItem value={CertificationStatus.PENDING_RENEWAL}>Renouvellement</SelectItem>
-                    <SelectItem value={CertificationStatus.EXPIRED}>Expirée</SelectItem>
-                    <SelectItem value={CertificationStatus.SUSPENDED}>Suspendue</SelectItem>
+                    <SelectItem value={CertificationStatus.ACTIVE}>{t('status.active')}</SelectItem>
+                    <SelectItem value={CertificationStatus.PENDING_RENEWAL}>{t('status.pendingRenewal')}</SelectItem>
+                    <SelectItem value={CertificationStatus.EXPIRED}>{t('status.expired')}</SelectItem>
+                    <SelectItem value={CertificationStatus.SUSPENDED}>{t('status.suspended')}</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
@@ -237,13 +239,13 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
             control={form.control}
             name="scope"
             render={({ field }) => (
-              <FormField 
-                label="Portée (Scope)" 
+              <FormField
+                label={t('dialogs.editCertification.scope')}
                 error={form.formState.errors.scope?.message}
               >
-                <Textarea 
-                  placeholder="ex: Production de fruits et légumes - Fermes A, B, C" 
-                  {...field} 
+                <Textarea
+                  placeholder={t('dialogs.editCertification.scopePlaceholder')}
+                  {...field}
                   rows={3}
                 />
               </FormField>
@@ -252,13 +254,13 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
+              {t('dialogs.editCertification.cancel')}
             </Button>
             <Button type="submit" disabled={updateCertification.isPending}>
               {updateCertification.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Enregistrer
+              {t('dialogs.editCertification.save')}
             </Button>
           </div>
         </form>

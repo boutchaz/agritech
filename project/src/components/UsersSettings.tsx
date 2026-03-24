@@ -11,6 +11,7 @@ import { LimitWarning } from './authorization/LimitWarning';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { organizationUsersApi } from '../lib/api/organization-users';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 interface OrganizationUser {
   id: string;
@@ -43,6 +44,8 @@ const UsersSettings: React.FC = () => {
   const { currentOrganization, user: currentUser, userRole } = useAuth();
   const { can } = useCan();
   const { t, i18n } = useTranslation();
+  const isRTL = isRTLLocale(i18n.language);
+  const dateLocale = isRTL ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US';
 
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -347,11 +350,11 @@ const UsersSettings: React.FC = () => {
         currentCount={users.length}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-start text-sm text-gray-600 sm:text-base dark:text-gray-400">
           {t('users.description')}
         </p>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="shrink-0 text-start text-sm text-gray-500 dark:text-gray-400">
           {t('users.count', { count: users.length })}
         </div>
       </div>
@@ -429,7 +432,7 @@ const UsersSettings: React.FC = () => {
                       </span>
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {t('users.table.joinedOn')}: {new Date(user.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US')}
+                      {t('users.table.joinedOn')}: {new Date(user.created_at).toLocaleDateString(dateLocale)}
                     </div>
                   </div>
                 </div>
@@ -489,28 +492,43 @@ const UsersSettings: React.FC = () => {
         </div>
 
         {/* Desktop Table Layout */}
-        <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="hidden overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 md:block">
+          <table
+            className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+            dir={isRTL ? 'rtl' : 'ltr'}
+          >
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                >
                   {t('users.table.user')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                >
                   {t('users.table.role')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                >
                   {t('users.table.status')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
+                >
                   {t('users.table.joinedOn')}
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-end text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                   {t('users.table.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {users.map((user) => {
                 const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
                 const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -519,9 +537,9 @@ const UsersSettings: React.FC = () => {
 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
                           {user.profile?.avatar_url ? (
                             <img
                               src={user.profile.avatar_url}
@@ -534,44 +552,44 @@ const UsersSettings: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                            {fullName}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+                            <span className="truncate">{fullName}</span>
                             {user.user_id === currentUser?.id && (
-                              <span className="ml-2 text-xs text-gray-500">({t('users.you')})</span>
+                              <span className="shrink-0 text-xs text-gray-500">({t('users.you')})</span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="truncate text-sm text-gray-500 dark:text-gray-400">
                             {user.profile?.email}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="flex items-center gap-2">
                         {getRoleIcon(user.role.name)}
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleColor(user.role.name)}`}>
+                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getRoleColor(user.role.name)}`}>
                           {user.role.display_name}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5
                         ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                           'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
                       >
                         {user.is_active ? t('users.status.active') : t('users.status.inactive')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(user.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US', {
+                    <td className="whitespace-nowrap px-6 py-4 text-start text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(user.created_at).toLocaleDateString(dateLocale, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
                         {canModify && (
                           <>
                             {/* Role Dropdown */}
@@ -792,7 +810,7 @@ const UsersSettings: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(i18n.language === 'ar' ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US') })}
+                    {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(dateLocale) })}
                   </p>
                 </div>
 

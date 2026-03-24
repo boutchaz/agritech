@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { useFarms } from '../hooks/useParcelsQuery';
 import type { AuthFarm } from '../contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { headerToolbarTextTriggerClass } from '@/lib/header-toolbar';
+
+const DROPDOWN_WIDTH = 256; // w-64
 
 interface FarmSwitcherProps {
   currentFarmId?: string;
@@ -16,8 +20,10 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
   const { t } = useTranslation('common');
   const { farms, currentFarm, setCurrentFarm, loading, currentOrganization } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [alignEnd, setAlignEnd] = useState(true);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Fetch farms with size data from API
   const { data: richFarms = [] } = useFarms(currentOrganization?.id);
 
   const handleAddFarm = () => {
@@ -26,21 +32,17 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
   };
 
   const handleFarmSelect = (farm: AuthFarm) => {
-    // Update context
     setCurrentFarm(farm);
-    // Call prop callback if provided (for backward compatibility)
     if (onFarmChange) {
       onFarmChange(farm.id);
     }
     setIsOpen(false);
   };
 
-  // Determine which farm ID is selected
   const selectedFarmId = currentFarmId || currentFarm?.id;
 
-  // Merge auth farms with rich farm data (size from API)
-  const enrichedFarms = farms.map(farm => {
-    const richFarm = richFarms.find(f => f.id === farm.id);
+  const enrichedFarms = farms.map((farm) => {
+    const richFarm = richFarms.find((f) => f.id === farm.id);
     return {
       ...farm,
       size:
@@ -51,46 +53,97 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
     };
   });
 
+  useLayoutEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    const updateAlign = () => {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const pad = 16;
+      const overflowsRight = rect.left + DROPDOWN_WIDTH > vw - pad;
+      const inRightHalf = rect.left > vw / 2;
+      setAlignEnd(overflowsRight || inRightHalf);
+    };
+
+    updateAlign();
+    window.addEventListener('resize', updateAlign);
+    window.addEventListener('scroll', updateAlign, true);
+    return () => {
+      window.removeEventListener('resize', updateAlign);
+      window.removeEventListener('scroll', updateAlign, true);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
   if (loading) {
     return (
-      <div className="h-10 w-48 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
+      <div className="h-10 w-48 shrink-0 animate-pulse rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800" />
     );
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
+        type="button"
+        ref={buttonRef}
+        title={currentFarm?.name || t('farmSwitcher.selectFarm')}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"
+        className={cn(headerToolbarTextTriggerClass, 'max-w-[200px] justify-between sm:max-w-[220px]')}
       >
-        <span className="text-sm font-medium truncate max-w-[150px]">
+        <span className="min-w-0 flex-1 truncate text-start">
           {currentFarm?.name || t('farmSwitcher.selectFarm')}
         </span>
-        <ChevronDown className="h-4 w-4 text-gray-500" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 border border-gray-200 dark:border-gray-700">
+        <div
+          className={`absolute top-full z-[200] mt-2 w-64 max-w-[min(16rem,calc(100vw-1.5rem))] rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 ${
+            alignEnd ? 'end-0' : 'start-0'
+          }`}
+        >
           <div className="py-1">
             {enrichedFarms.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+              <div className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
                 {t('farmSwitcher.noFarmsAvailable')}
               </div>
             ) : (
-              enrichedFarms.map(farm => (
+              enrichedFarms.map((farm) => (
                 <button
                   key={farm.id}
+                  type="button"
                   onClick={() => handleFarmSelect(farm)}
-                  className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between ${
+                  className={`flex w-full items-center justify-between px-4 py-2.5 text-start text-sm transition-colors ${
                     farm.id === selectedFarmId
-                      ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      ? 'bg-green-50 font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{farm.name}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{farm.name}</div>
                     {(farm.location || farm.size) && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         {farm.location && <span>{farm.location}</span>}
                         {farm.location && farm.size && <span> • </span>}
                         {farm.size && <span>{Number(farm.size).toFixed(2)} ha</span>}
@@ -98,17 +151,18 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
                     )}
                   </div>
                   {farm.id === selectedFarmId && (
-                    <Check className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0 ml-2" />
+                    <Check className="ms-2 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                   )}
                 </button>
               ))
             )}
-            <div className="border-t border-gray-200 dark:border-gray-700 mt-1">
+            <div className="mt-1 border-t border-gray-200 dark:border-gray-700">
               <button
+                type="button"
                 onClick={handleAddFarm}
-                className="w-full text-left px-4 py-2.5 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center space-x-2 transition-colors"
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-start text-sm text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-4 w-4 shrink-0" />
                 <span>{t('farmSwitcher.addFarm')}</span>
               </button>
             </div>

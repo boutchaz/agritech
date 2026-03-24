@@ -54,7 +54,7 @@ const itemGroupSchema = z.object({
 type ItemGroupFormData = z.infer<typeof itemGroupSchema>;
 
 export default function ItemGroupsManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { data: itemGroups = [], isLoading } = useItemGroups({ is_active: true });
   const createItemGroup = useCreateItemGroup();

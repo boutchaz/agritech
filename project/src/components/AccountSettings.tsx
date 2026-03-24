@@ -33,6 +33,7 @@ import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useTranslation } from 'react-i18next';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
 
@@ -166,9 +167,9 @@ const AccountSettings: React.FC = () => {
     await i18n.changeLanguage(newLanguage);
 
     // Set document direction for RTL languages
-    if (newLanguage === 'ar') {
+    if (isRTLLocale(newLanguage)) {
       document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
+      document.documentElement.lang = newLanguage.split('-')[0] || 'ar';
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = newLanguage;

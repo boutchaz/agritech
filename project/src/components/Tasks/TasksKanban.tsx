@@ -44,7 +44,7 @@ import {
   TASK_PRIORITY_COLORS,
 } from '@/types/tasks';
 import { cn } from '@/lib/utils';
-import { SectionLoader } from '@/components/ui/loader';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // --- Constants ---
 
@@ -88,7 +88,7 @@ interface TasksKanbanProps {
 
 // --- Due date helper ---
 
-function getDueDateIndicator(dueDate: string | undefined | null) {
+function getDueDateIndicator(dueDate: string | undefined | null, t: (key: string, fallback?: string) => string) {
   if (!dueDate) return null;
   const due = new Date(dueDate);
   const today = new Date();
@@ -97,7 +97,7 @@ function getDueDateIndicator(dueDate: string | undefined | null) {
 
   if (isPast(due) && !isToday(due)) {
     return {
-      label: 'Overdue',
+      label: t('tasks.kanbanDueOverdue'),
       colorClass: 'text-red-600 dark:text-red-400',
       bgClass: 'bg-red-50 dark:bg-red-900/20',
       Icon: AlertCircle,
@@ -105,7 +105,7 @@ function getDueDateIndicator(dueDate: string | undefined | null) {
   }
   if (isToday(due)) {
     return {
-      label: 'Today',
+      label: t('tasks.kanbanDueToday'),
       colorClass: 'text-orange-600 dark:text-orange-400',
       bgClass: 'bg-orange-50 dark:bg-orange-900/20',
       Icon: Flame,
@@ -113,7 +113,7 @@ function getDueDateIndicator(dueDate: string | undefined | null) {
   }
   if (isTomorrow(due)) {
     return {
-      label: 'Tomorrow',
+      label: t('tasks.kanbanDueTomorrow'),
       colorClass: 'text-amber-600 dark:text-amber-400',
       bgClass: 'bg-amber-50 dark:bg-amber-900/20',
       Icon: CalendarClock,
@@ -122,16 +122,70 @@ function getDueDateIndicator(dueDate: string | undefined | null) {
   return null;
 }
 
+// --- Kanban Skeleton ---
+
+function KanbanSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div>
+        <Skeleton className="h-8 w-48 mb-1" />
+        <Skeleton className="h-4 w-80" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {KANBAN_COLUMNS.map((status) => (
+          <div
+            key={status}
+            className={cn(
+              'flex flex-col bg-gray-50 dark:bg-gray-900/50 rounded-lg border-t-4 min-h-[400px]',
+              COLUMN_BORDER_COLORS[status],
+            )}
+          >
+            <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <Skeleton className="w-2.5 h-2.5 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <Skeleton className="h-5 w-6 rounded-full" />
+            </div>
+            <div className="flex-1 p-2 space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex gap-1.5">
+                    <Skeleton className="h-5 w-14 rounded" />
+                    <Skeleton className="h-5 w-16 rounded" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton className="h-3.5 w-3.5 rounded" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton className="h-3.5 w-3.5 rounded" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // --- Sortable Task Card ---
 
 interface SortableTaskCardProps {
   task: TaskSummary;
   lang: string;
+  t: (key: string, options?: any) => string;
   onSelect?: (taskId: string) => void;
   isDragOverlay?: boolean;
 }
 
-function SortableTaskCard({ task, lang, onSelect, isDragOverlay }: SortableTaskCardProps) {
+function SortableTaskCard({ task, lang, t, onSelect, isDragOverlay }: SortableTaskCardProps) {
   const {
     attributes,
     listeners,
@@ -215,7 +269,7 @@ function SortableTaskCard({ task, lang, onSelect, isDragOverlay }: SortableTaskC
 
         {/* Due date */}
         {task.due_date && task.status !== 'completed' && (() => {
-          const indicator = getDueDateIndicator(task.due_date);
+          const indicator = getDueDateIndicator(task.due_date, t);
           const locale = lang.startsWith('fr') ? fr : lang.startsWith('ar') ? ar : enUS;
           return (
             <div className={cn(
@@ -271,14 +325,14 @@ function SortableTaskCard({ task, lang, onSelect, isDragOverlay }: SortableTaskC
 
           {/* Recurring indicator */}
           {task.repeat_pattern && (
-            <div className="flex items-center gap-1 text-purple-500" title={`Recurring: ${task.repeat_pattern.frequency}`}>
+            <div className="flex items-center gap-1 text-purple-500" title={t('tasks.kanbanRecurring', { frequency: task.repeat_pattern.frequency })}>
               <Repeat className="w-3.5 h-3.5" />
             </div>
           )}
 
           {/* Parent task indicator */}
           {task.parent_task_id && (
-            <div className="flex items-center gap-1 text-indigo-500" title="Part of recurring series">
+            <div className="flex items-center gap-1 text-indigo-500" title={t('tasks.kanbanSubtask')}>
               <GitBranch className="w-3.5 h-3.5" />
             </div>
           )}
@@ -317,13 +371,13 @@ interface KanbanColumnProps {
   status: TaskStatus;
   tasks: TaskSummary[];
   lang: string;
+  t: (key: string, options?: any) => string;
   onSelectTask?: (taskId: string) => void;
   isDropTarget: boolean;
   isInvalidDrop: boolean;
 }
 
-function KanbanColumn({ status, tasks, lang, onSelectTask, isDropTarget, isInvalidDrop }: KanbanColumnProps) {
-  const { t } = useTranslation();
+function KanbanColumn({ status, tasks, lang, t, onSelectTask, isDropTarget, isInvalidDrop }: KanbanColumnProps) {
   const taskIds = useMemo(() => tasks.map((t) => t.id), [tasks]);
 
   return (
@@ -354,7 +408,7 @@ function KanbanColumn({ status, tasks, lang, onSelectTask, isDropTarget, isInval
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-sm text-gray-400 dark:text-gray-500">
-              {t('tasks.kanbanEmpty', 'No tasks')}
+              {t('tasks.kanbanEmpty')}
             </div>
           ) : (
             tasks.map((task) => (
@@ -362,6 +416,7 @@ function KanbanColumn({ status, tasks, lang, onSelectTask, isDropTarget, isInval
                 key={task.id}
                 task={task}
                 lang={lang}
+                t={t}
                 onSelect={onSelectTask}
               />
             ))
@@ -439,12 +494,10 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
     }
 
     // Determine which column we're over
-    // The over target could be a task card (which has status in data) or the column droppable
     const overData = over.data?.current as { status?: TaskStatus } | undefined;
     if (overData?.status) {
       setOverColumnStatus(overData.status);
     } else {
-      // Try to find the task and its status
       const overTask = allTasks.find((t) => t.id === over.id);
       if (overTask) {
         setOverColumnStatus(overTask.status);
@@ -466,13 +519,11 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
       // Determine target status
       let targetStatus: TaskStatus | null = null;
 
-      // Check if dropped over a task card
       const overTask = allTasks.find((t) => t.id === over.id);
       if (overTask) {
         targetStatus = overTask.status;
       }
 
-      // Check if dropped over a column (via data attribute)
       const overData = over.data?.current as { status?: TaskStatus } | undefined;
       if (overData?.status) {
         targetStatus = overData.status;
@@ -513,7 +564,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
   // --- Render ---
 
   if (isLoading) {
-    return <SectionLoader />;
+    return <KanbanSkeleton />;
   }
 
   if (isError) {
@@ -521,7 +572,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
       <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
         <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
         <p className="text-gray-600 dark:text-gray-400">
-          {t('tasks.kanbanError', 'Failed to load tasks.')}
+          {t('tasks.kanbanError')}
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
           {(error as Error)?.message}
@@ -536,16 +587,16 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('tasks.kanbanTitle', 'Task Board')}
+            {t('tasks.kanbanTitle')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('tasks.kanbanSubtitle', 'Drag tasks between columns to update their status')}
+            {t('tasks.kanbanSubtitle')}
           </p>
         </div>
         {updateTask.isPending && (
           <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
             <Loader2 className="w-4 h-4 animate-spin" />
-            {t('common.saving', 'Saving...')}
+            {t('tasks.kanbanSaving')}
           </div>
         )}
       </div>
@@ -575,6 +626,7 @@ const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask 
                 status={status}
                 tasks={columnData[status]}
                 lang={lang}
+                t={t}
                 onSelectTask={onSelectTask}
                 isDropTarget={isDropTarget}
                 isInvalidDrop={isInvalidDrop}

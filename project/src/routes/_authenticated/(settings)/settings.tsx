@@ -3,6 +3,7 @@ import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SettingsLayout from '@/components/SettingsLayout'
 import { ArrowLeft, Home } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
@@ -54,8 +55,9 @@ const SettingsLayoutComponent: React.FC = () => {
             >
               <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             </button>
-            <div className="flex-shrink-0">
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
               <OrganizationSwitcher />
+              <LanguageSwitcher />
             </div>
           </div>
         </div>

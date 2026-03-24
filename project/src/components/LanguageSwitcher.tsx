@@ -1,16 +1,29 @@
-import React, { useEffect, useState, useRef } from 'react';
+import type React from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Languages } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { cn } from '@/lib/utils';
+import { headerToolbarIconTriggerClass, headerToolbarTextTriggerClass } from '@/lib/header-toolbar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const LanguageSwitcher: React.FC = () => {
+type LanguageSwitcherProps = {
+  /** Icon-only trigger; use in tight headers (e.g. next to org switcher on mobile). */
+  compact?: boolean;
+};
+
+const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -18,26 +31,23 @@ const LanguageSwitcher: React.FC = () => {
     { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
   ];
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    const currentLang = i18n.language;
+    if (isRTLLocale(currentLang)) {
+      document.documentElement.dir = 'rtl';
+      document.documentElement.lang = currentLang.split('-')[0] || 'ar';
+    } else {
+      document.documentElement.dir = 'ltr';
+      document.documentElement.lang = currentLang;
+    }
+  }, [i18n.language]);
 
   const changeLanguage = async (lng: string) => {
-    // Change language immediately in UI
     await i18n.changeLanguage(lng);
 
-    // Set document direction for RTL languages
-    if (lng === 'ar') {
+    if (isRTLLocale(lng)) {
       document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
+      document.documentElement.lang = lng.split('-')[0] || 'ar';
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = lng;
@@ -53,62 +63,51 @@ const LanguageSwitcher: React.FC = () => {
     }
   };
 
-  // Set initial direction on mount
-  useEffect(() => {
-    const currentLang = i18n.language;
-    if (currentLang === 'ar') {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    } else {
-      document.documentElement.dir = 'ltr';
-      document.documentElement.lang = currentLang;
-    }
-  }, [i18n.language]);
-
-  const isRTL = i18n.language === 'ar';
-
-  const handleLanguageChange = async (lng: string) => {
-    await changeLanguage(lng);
-    setIsOpen(false);
-  };
+  const currentNative =
+    languages.find((lang) => lang.code === i18n.language)?.nativeName || 'English';
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors border border-gray-200 dark:border-gray-600"
-        title="Change language"
-      >
-        <Languages className="h-5 w-5" />
-        <span className="text-sm font-medium">
-          {languages.find(lang => lang.code === i18n.language)?.nativeName || 'English'}
-        </span>
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-[100] start-0"
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            compact ? headerToolbarIconTriggerClass : cn(headerToolbarTextTriggerClass, 'max-w-[220px]'),
+          )}
+          title={`Change language — ${currentNative}`}
+          aria-label={`Change language, current: ${currentNative}`}
         >
-          <div className="py-1">
-            {languages.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => handleLanguageChange(lang.code)}
-                className={`block w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                  isRTL ? 'text-right' : 'text-left'
-                } ${
-                  i18n.language === lang.code
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 font-medium'
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                {lang.nativeName}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+          <Languages className="h-5 w-5 shrink-0" />
+          {!compact && <span className="min-w-0 flex-1 truncate text-start">{currentNative}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        collisionPadding={12}
+        className={cn(
+          'z-[200] w-48 max-w-[min(12rem,calc(100vw-1.5rem))] border-gray-200 dark:border-gray-700 dark:bg-gray-800',
+        )}
+      >
+        {languages.map((lang) => (
+          <DropdownMenuItem
+            key={lang.code}
+            className={cn(
+              'cursor-pointer justify-start px-4 py-2 text-start',
+              i18n.language === lang.code
+                ? 'bg-green-50 font-medium text-green-600 dark:bg-green-900/20 dark:text-green-400'
+                : 'text-gray-700 dark:text-gray-300',
+            )}
+            onSelect={() => {
+              void changeLanguage(lang.code);
+            }}
+          >
+            {lang.nativeName}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

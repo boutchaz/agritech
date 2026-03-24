@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 const PreferencesSettings: React.FC = () => {
   const { i18n, t } = useTranslation();
@@ -33,9 +34,9 @@ const PreferencesSettings: React.FC = () => {
     await i18n.changeLanguage(newLanguage);
     
     // Set document direction for RTL languages
-    if (newLanguage === 'ar') {
+    if (isRTLLocale(newLanguage)) {
       document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
+      document.documentElement.lang = newLanguage.split('-')[0] || 'ar';
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = newLanguage;
@@ -88,9 +89,9 @@ const PreferencesSettings: React.FC = () => {
       if (i18n.language !== language) {
         await i18n.changeLanguage(language);
         // Set document direction
-        if (language === 'ar') {
+        if (isRTLLocale(language)) {
           document.documentElement.dir = 'rtl';
-          document.documentElement.lang = 'ar';
+          document.documentElement.lang = language.split('-')[0] || 'ar';
         } else {
           document.documentElement.dir = 'ltr';
           document.documentElement.lang = language;

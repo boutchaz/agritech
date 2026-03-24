@@ -10,7 +10,7 @@ interface ItemFarmUsageProps {
 }
 
 export default function ItemFarmUsage({ item_id, showDetails = true }: ItemFarmUsageProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const navigate = useNavigate();
 
   const { data: usageData, isLoading } = useItemFarmUsage(item_id);

@@ -11,25 +11,8 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useModules, useUpdateModule } from '../hooks/useModules';
 import { isModuleAvailableForPlan, getPlanDetails } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import type { OrganizationModule } from '../lib/api/modules';
-
-// ============================================================================
-// Display names for activity modules (DB stores snake_case names)
-// ============================================================================
-const MODULE_DISPLAY_NAMES: Record<string, string> = {
-  arbres_fruitiers: 'Arbres fruitiers',
-  aeroponie: 'Aéroponie',
-  hydroponie: 'Hydroponie',
-  maraichage: 'Maraîchage',
-  myciculture: 'Myciculture',
-  pisciculture: 'Pisciculture',
-  bovin: 'Bovin',
-  ovin: 'Ovin',
-  camelin: 'Camelin',
-  caprin: 'Caprin',
-  aviculture: 'Aviculture',
-  couveuses: 'Couveuses',
-};
 
 // Icon mapping for activity modules
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -47,39 +30,11 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
   couveuses: Bird,
 };
 
-// Descriptions for modules
-const MODULE_DESCRIPTIONS: Record<string, string> = {
-  arbres_fruitiers: 'Pommiers, agrumes, grenadiers, avocatiers...',
-  aeroponie: 'Culture aéroponique sans sol',
-  hydroponie: 'Culture hydroponique en milieu aqueux',
-  maraichage: 'Cultures légumières et maraîchères',
-  myciculture: 'Culture de champignons',
-  pisciculture: 'Élevage de poissons',
-  bovin: 'Élevage de bovins',
-  ovin: 'Élevage de moutons',
-  camelin: 'Élevage de camelins',
-  caprin: 'Élevage de caprins',
-  aviculture: 'Élevage de volailles',
-  couveuses: 'Poussins, poulet de chair, poules pondeuses',
-};
-
-// Category display names for functional modules
-const FUNCTIONAL_CATEGORY_LABELS: Record<string, string> = {
-  core: 'Module Core',
-  production: 'Production',
-  operations: 'Opérations',
-  hr: 'Ressources Humaines',
-  inventory: 'Inventaire & Stock',
-  sales: 'Ventes',
-  purchasing: 'Approvisionnement',
-  accounting: 'Comptabilité',
-  analytics: 'Analytique',
-};
-
 // ============================================================================
 // Main component
 // ============================================================================
 const ModulesSettings: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
   const [showFunctional, setShowFunctional] = useState(false);
   const { data: subscription } = useSubscription();
@@ -108,7 +63,7 @@ const ModulesSettings: React.FC = () => {
     if (!currentActive) {
       const moduleRecord = modules.find((item) => item.id === moduleId);
       if (!moduleRecord || !isModuleAvailableForPlan(moduleRecord, subscription)) {
-        if (confirm('Ce module n\'est pas disponible dans votre plan actuel. Voulez-vous voir les options de mise à niveau?')) {
+        if (confirm(t('modulesSettings.upgradePrompt'))) {
           navigate({ to: '/settings/subscription' });
         }
         return;
@@ -139,7 +94,7 @@ const ModulesSettings: React.FC = () => {
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg flex items-center space-x-2">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <p className="text-red-600 dark:text-red-400">
-            Erreur lors du chargement des modules. Veuillez réessayer.
+            {t('modulesSettings.error')}
           </p>
         </div>
       </div>
@@ -153,11 +108,11 @@ const ModulesSettings: React.FC = () => {
         <div className="flex items-center space-x-3 mb-2">
           <Boxes className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Modules
+            {t('modulesSettings.title')}
           </h2>
         </div>
         <p className="text-gray-600 dark:text-gray-400">
-          Activez ou désactivez les modules selon vos besoins. Les modules désactivés n&apos;apparaîtront pas dans la navigation.
+          {t('modulesSettings.subtitle')}
         </p>
       </div>
 
@@ -166,19 +121,19 @@ const ModulesSettings: React.FC = () => {
         <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-center justify-between">
           <div>
             <p className="font-medium text-blue-900 dark:text-blue-100">
-              Plan actuel: {getPlanDetails((subscription.formula || subscription.plan_type)!).name}
+              {t('modulesSettings.currentPlan', { plan: getPlanDetails((subscription.formula || subscription.plan_type)!).name })}
             </p>
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
               {getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.includes('*')
-                ? 'Tous les modules sont disponibles'
-                : `${getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length} modules disponibles`}
+                ? t('modulesSettings.allModulesAvailable')
+                : t('modulesSettings.modulesAvailable', { count: getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length })}
             </p>
           </div>
           <button
             onClick={() => navigate({ to: '/settings/subscription' })}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
           >
-            <span>Voir l&apos;abonnement</span>
+            <span>{t('modulesSettings.viewSubscription')}</span>
             <ExternalLink className="h-4 w-4" />
           </button>
         </div>
@@ -188,9 +143,9 @@ const ModulesSettings: React.FC = () => {
       {/* Agriculture Section */}
       {/* ================================================================ */}
       <CategorySection
-        title="Agriculture"
+        title={t('modulesSettings.sections.agriculture')}
         icon={Wheat}
-        description="Modules de production agricole"
+        description={t('modulesSettings.sections.agricultureDesc')}
         accentColor="green"
         modules={agricultureModules}
         subscription={subscription}
@@ -202,9 +157,9 @@ const ModulesSettings: React.FC = () => {
       {/* Élevage Section */}
       {/* ================================================================ */}
       <CategorySection
-        title="Élevage"
+        title={t('modulesSettings.sections.elevage')}
         icon={Bird}
-        description="Modules d'élevage et de gestion animale"
+        description={t('modulesSettings.sections.elevageDesc')}
         accentColor="amber"
         modules={elevageModules}
         subscription={subscription}
@@ -225,10 +180,10 @@ const ModulesSettings: React.FC = () => {
               <Settings2 className="h-5 w-5 text-gray-500" />
               <div className="text-left">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Modules fonctionnels
+                  {t('modulesSettings.sections.functional')}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Gestion, comptabilité, stock, RH, analytique...
+                  {t('modulesSettings.sections.functionalDesc')}
                 </p>
               </div>
             </div>
@@ -245,7 +200,7 @@ const ModulesSettings: React.FC = () => {
                 {Object.entries(functionalByCategory).map(([category, categoryModules]) => (
                   <div key={category}>
                     <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                      {FUNCTIONAL_CATEGORY_LABELS[category] || category}
+                      {t(`modulesSettings.categories.${category}`, category)}
                     </h4>
                     <div className="space-y-2">
                       {categoryModules.map((module) => (
@@ -290,6 +245,7 @@ const CategorySection: React.FC<{
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onModuleClick: (module: OrganizationModule) => void;
 }> = ({ title, icon: Icon, description, accentColor, modules, subscription, onToggle, onModuleClick }) => {
+  const { t } = useTranslation();
   const activeCount = modules.filter(m => m.is_active).length;
 
   const colorClasses = accentColor === 'green'
@@ -323,7 +279,7 @@ const CategorySection: React.FC<{
             </div>
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorClasses.badge}`}>
-            {activeCount}/{modules.length} actifs
+            {t('modulesSettings.activeCount', { active: activeCount, total: modules.length })}
           </span>
         </div>
       </div>
@@ -332,7 +288,7 @@ const CategorySection: React.FC<{
       <div className="p-5 bg-white dark:bg-gray-800">
         {modules.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-            Aucun module disponible dans cette catégorie.
+            {t('modulesSettings.noModulesInCategory')}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -363,11 +319,12 @@ const ActivityModuleCard: React.FC<{
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onClick: () => void;
 }> = ({ module, subscription, accentColor, onToggle, onClick }) => {
+  const { t } = useTranslation();
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
   const Icon = MODULE_ICONS[module.name] || Boxes;
-  const displayName = MODULE_DISPLAY_NAMES[module.name] || module.name;
-  const displayDesc = MODULE_DESCRIPTIONS[module.name] || module.description;
+  const displayName = t(`modulesSettings.activityModules.${module.name}`, module.name);
+  const displayDesc = t(`modulesSettings.activityDescriptions.${module.name}`, module.description);
 
   const activeClasses = accentColor === 'green'
     ? 'border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-900/10'
@@ -437,7 +394,7 @@ const ActivityModuleCard: React.FC<{
           }}
           className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 mt-2"
         >
-          Mettre à niveau →
+          {t('modulesSettings.upgrade')}
         </button>
       )}
     </div>
@@ -498,6 +455,8 @@ const ModuleSettingsPanel: React.FC<{
   module: OrganizationModule;
   onClose: () => void;
 }> = ({ module, onClose }) => {
+  const { t } = useTranslation();
+
   const renderModuleSettings = () => {
     switch (module.name) {
       case 'arbres_fruitiers':
@@ -505,7 +464,7 @@ const ModuleSettingsPanel: React.FC<{
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                Gestion des types d&apos;arbres
+                {t('modulesSettings.treeManagement')}
               </h3>
               <TreeManagement />
             </div>
@@ -515,23 +474,23 @@ const ModuleSettingsPanel: React.FC<{
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Paramètres de Gestion de Ferme</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('modulesSettings.farmManagementSettings')}</h3>
               <TreeManagement />
             </div>
             <div className="border-t pt-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Paramètres généraux</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('modulesSettings.generalSettings')}</h3>
               <div className="space-y-3">
                 <label className="flex items-center space-x-2">
                   <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                  <span>Notifications de taille</span>
+                  <span>{t('modulesSettings.pruningNotifications')}</span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                  <span>Alertes de maladies</span>
+                  <span>{t('modulesSettings.diseaseAlerts')}</span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input type="checkbox" className="rounded border-gray-300" defaultChecked />
-                  <span>Prévisions de récolte</span>
+                  <span>{t('modulesSettings.harvestForecasts')}</span>
                 </label>
               </div>
             </div>
@@ -540,19 +499,19 @@ const ModuleSettingsPanel: React.FC<{
       default:
         return (
           <div className="text-gray-500 dark:text-gray-400">
-            Aucun paramètre spécifique disponible pour ce module
+            {t('modulesSettings.noSettings')}
           </div>
         );
     }
   };
 
-  const displayName = MODULE_DISPLAY_NAMES[module.name] || module.name;
+  const displayName = t(`modulesSettings.activityModules.${module.name}`, module.name);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Configuration de {displayName}
+          {t('modulesSettings.configurationOf', { name: displayName })}
         </h3>
         <button
           onClick={onClose}

@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { Award, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -13,6 +14,8 @@ interface CertificationCardProps {
 }
 
 export function CertificationCard({ certification }: CertificationCardProps) {
+  const { t } = useTranslation('compliance');
+
   const getStatusColor = (status: CertificationStatus) => {
     switch (status) {
       case CertificationStatus.ACTIVE:
@@ -46,13 +49,13 @@ export function CertificationCard({ certification }: CertificationCardProps) {
   const getStatusLabel = (status: CertificationStatus) => {
     switch (status) {
       case CertificationStatus.ACTIVE:
-        return 'Active';
+        return t('status.active');
       case CertificationStatus.EXPIRED:
-        return 'Expirée';
+        return t('status.expired');
       case CertificationStatus.PENDING_RENEWAL:
-        return 'Renouvellement';
+        return t('status.pendingRenewal');
       case CertificationStatus.SUSPENDED:
-        return 'Suspendue';
+        return t('status.suspended');
       default:
         return status;
     }
@@ -84,17 +87,17 @@ export function CertificationCard({ certification }: CertificationCardProps) {
       <CardContent className="flex-1 pb-3">
         <div className="space-y-2 text-sm">
           <div className="flex justify-between py-1 border-b border-border/50">
-            <span className="text-muted-foreground">Organisme:</span>
+            <span className="text-muted-foreground">{t('certifications.organism')}</span>
             <span className="font-medium">{certification.issuing_body}</span>
           </div>
           <div className="flex justify-between py-1 border-b border-border/50">
-            <span className="text-muted-foreground">Émise le:</span>
+            <span className="text-muted-foreground">{t('certifications.issuedOn')}</span>
             <span className="font-medium">
               {format(new Date(certification.issued_date), 'dd MMM yyyy', { locale: fr })}
             </span>
           </div>
           <div className="flex justify-between py-1">
-            <span className="text-muted-foreground">Expire le:</span>
+            <span className="text-muted-foreground">{t('certifications.expiresOn')}</span>
             <span className={`font-medium ${
               new Date(certification.expiry_date) < new Date() ? 'text-red-600 dark:text-red-400' : ''
             }`}>
@@ -106,7 +109,7 @@ export function CertificationCard({ certification }: CertificationCardProps) {
       <CardFooter className="pt-0">
         <Button asChild variant="outline" className="w-full">
           <Link to="/compliance/certifications/$certId" params={{ certId: certification.id }}>
-            Voir détails
+            {t('certifications.viewDetails')}
           </Link>
         </Button>
       </CardFooter>

@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import EmployeeManagement from '@/components/EmployeeManagement'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { PageLoader } from '@/components/ui/loader'
 
 const AppContent: React.FC = () => {
@@ -26,7 +27,10 @@ const AppContent: React.FC = () => {
             </span>
           )}
         </div>
-        <OrganizationSwitcher />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrganizationSwitcher />
+          <LanguageSwitcher />
+        </div>
       </div>
       <EmployeeManagement />
     </PageLayout>

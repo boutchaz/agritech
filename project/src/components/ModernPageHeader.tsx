@@ -5,6 +5,7 @@ import { Search, X, Home as HomeIcon } from 'lucide-react';
 import OrganizationSwitcher from './OrganizationSwitcher';
 import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
+import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 
 interface BreadcrumbItem {
@@ -110,8 +111,9 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
           </nav>
           <div className="flex flex-col justify-center gap-1 flex-shrink-0">
             <div className="flex items-center gap-1">
-              <NotificationBell />
               <OrganizationSwitcher compact />
+              <LanguageSwitcher compact />
+              <NotificationBell />
             </div>
           </div>
         </div>
@@ -130,7 +132,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
           {/* Top Section - Breadcrumbs & Organization */}
           <div className="flex items-center justify-between py-1.5">
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1 text-xs flex-1 mr-3 min-h-[1.25rem]" aria-label="Breadcrumb">
+            <nav className="flex items-center gap-1 text-xs flex-1 me-3 min-h-[1.25rem]" aria-label="Breadcrumb">
               {breadcrumbs.map((item, index) => {
                 const Icon = item.icon;
                 const isLast = index === breadcrumbs.length - 1;
@@ -165,9 +167,10 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
             </nav>
 
             {/* Organization Switcher & Notifications */}
-            <div className="flex-shrink-0 flex items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-2">
               <FarmSwitcher currentFarmId={currentFarmId || ''} onFarmChange={handleFarmChange} />
               <OrganizationSwitcher />
+              <LanguageSwitcher />
               <NotificationBell />
             </div>
           </div>

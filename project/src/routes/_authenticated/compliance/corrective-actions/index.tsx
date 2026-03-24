@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   Search,
@@ -40,24 +41,25 @@ export const Route = createFileRoute('/_authenticated/compliance/corrective-acti
   component: CorrectiveActionsPage,
 });
 
-const statusLabels: Record<CorrectiveActionStatus, string> = {
-  [CorrectiveActionStatus.OPEN]: 'Ouverte',
-  [CorrectiveActionStatus.IN_PROGRESS]: 'En cours',
-  [CorrectiveActionStatus.RESOLVED]: 'Résolue',
-  [CorrectiveActionStatus.VERIFIED]: 'Vérifiée',
-  [CorrectiveActionStatus.OVERDUE]: 'En retard',
-};
-
-const priorityLabels: Record<CorrectiveActionPriority, string> = {
-  [CorrectiveActionPriority.CRITICAL]: 'Critique',
-  [CorrectiveActionPriority.HIGH]: 'Haute',
-  [CorrectiveActionPriority.MEDIUM]: 'Moyenne',
-  [CorrectiveActionPriority.LOW]: 'Basse',
-};
-
 function CorrectiveActionsPage() {
+  const { t } = useTranslation('compliance');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id || null;
+
+  const statusLabels: Record<CorrectiveActionStatus, string> = {
+    [CorrectiveActionStatus.OPEN]: t('status.open'),
+    [CorrectiveActionStatus.IN_PROGRESS]: t('status.inProgress'),
+    [CorrectiveActionStatus.RESOLVED]: t('status.resolved'),
+    [CorrectiveActionStatus.VERIFIED]: t('status.verified'),
+    [CorrectiveActionStatus.OVERDUE]: t('status.overdue'),
+  };
+
+  const priorityLabels: Record<CorrectiveActionPriority, string> = {
+    [CorrectiveActionPriority.CRITICAL]: t('priority.critical'),
+    [CorrectiveActionPriority.HIGH]: t('priority.high'),
+    [CorrectiveActionPriority.MEDIUM]: t('priority.medium'),
+    [CorrectiveActionPriority.LOW]: t('priority.low'),
+  };
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -92,7 +94,7 @@ function CorrectiveActionsPage() {
 
   const handleDelete = (action: CorrectiveActionPlanResponseDto) => {
     if (!currentOrganization) return;
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette action corrective ?')) {
+    if (confirm(t('correctiveActions.deleteConfirm'))) {
       deleteAction.mutate({
         organizationId: currentOrganization.id,
         actionId: action.id,
@@ -106,11 +108,11 @@ function CorrectiveActionsPage() {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
-            { icon: ShieldAlert, label: 'Conformité', path: '/compliance' },
-            { icon: ShieldAlert, label: 'Actions Correctives', isActive: true },
+            { icon: ShieldAlert, label: t('breadcrumb.compliance'), path: '/compliance' },
+            { icon: ShieldAlert, label: t('breadcrumb.correctiveActions'), isActive: true },
           ]}
-          title="Actions Correctives"
-          subtitle="Suivez et gérez les actions correctives issues de vos contrôles de conformité."
+          title={t('correctiveActions.title')}
+          subtitle={t('correctiveActions.subtitle')}
         />
       }
     >
@@ -118,31 +120,31 @@ function CorrectiveActionsPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatCard
-          title="Ouvertes"
+          title={t('status.open')}
           value={stats?.open ?? 0}
           icon={CircleDot}
           iconColor="text-gray-600"
         />
         <StatCard
-          title="En cours"
+          title={t('status.inProgress')}
           value={stats?.in_progress ?? 0}
           icon={RefreshCw}
           iconColor="text-blue-600"
         />
         <StatCard
-          title="En retard"
+          title={t('status.overdue')}
           value={stats?.overdue ?? 0}
           icon={AlertTriangle}
           iconColor="text-red-600"
         />
         <StatCard
-          title="Résolues"
+          title={t('status.resolved')}
           value={stats?.resolved ?? 0}
           icon={CheckCircle2}
           iconColor="text-green-600"
         />
         <StatCard
-          title="Vérifiées"
+          title={t('status.verified')}
           value={stats?.verified ?? 0}
           icon={ShieldCheck}
           iconColor="text-emerald-600"
@@ -159,10 +161,10 @@ function CorrectiveActionsPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
-                    Taux de résolution
+                    {t('correctiveActions.resolutionRate')}
                   </p>
                   <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                    {stats.resolved + stats.verified} sur {stats.total} actions traitées
+                    {t('correctiveActions.actionsProcessed', { resolved: stats.resolved + stats.verified, total: stats.total })}
                   </p>
                 </div>
               </div>
@@ -178,7 +180,7 @@ function CorrectiveActionsPage() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par constat, action, responsable..."
+            placeholder={t('correctiveActions.searchPlaceholder')}
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -189,11 +191,11 @@ function CorrectiveActionsPage() {
             <SelectTrigger className="w-[160px]">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <SelectValue placeholder="Statut" />
+                <SelectValue placeholder={t('table.status')} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="all">{t('correctiveActions.allStatuses')}</SelectItem>
               {Object.entries(statusLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>{label}</SelectItem>
               ))}
@@ -204,11 +206,11 @@ function CorrectiveActionsPage() {
             <SelectTrigger className="w-[150px]">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
-                <SelectValue placeholder="Priorité" />
+                <SelectValue placeholder={t('correctiveActions.priority')} />
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes priorités</SelectItem>
+              <SelectItem value="all">{t('correctiveActions.allPriorities')}</SelectItem>
               {Object.entries(priorityLabels).map(([value, label]) => (
                 <SelectItem key={value} value={value}>{label}</SelectItem>
               ))}

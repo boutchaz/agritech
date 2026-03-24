@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import {
   Dialog,
   DialogContent,
@@ -52,39 +53,40 @@ import type {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-// Zod schema for reception batch form
-const receptionBatchSchema = z.object({
-  warehouse_id: z.string().min(1, 'L\'entrepôt est requis'),
-  harvest_id: z.string().optional(),
-  parcel_id: z.string().min(1, 'La parcelle est requise'),
-  crop_id: z.string().optional(),
-  culture_type: z.string().optional(),
+// Zod schema factory that accepts t function for translated validation messages
+const createReceptionBatchSchema = (t: (key: string) => string) =>
+  z.object({
+    warehouse_id: z.string().min(1, t('receptionBatches.form.validation.warehouseRequired')),
+    harvest_id: z.string().optional(),
+    parcel_id: z.string().min(1, t('receptionBatches.form.validation.parcelRequired')),
+    crop_id: z.string().optional(),
+    culture_type: z.string().optional(),
 
-  reception_date: z.string().min(1, 'La date de réception est requise'),
-  reception_time: z.string().optional(),
+    reception_date: z.string().min(1, t('receptionBatches.form.validation.dateRequired')),
+    reception_time: z.string().optional(),
 
-  // Weight & Quantity
-  weight: z.number().min(0.001, 'Le poids doit être positif'),
-  weight_unit: z.string().min(1, 'L\'unité de poids est requise'),
-  quantity: z.number().optional(),
-  quantity_unit: z.string().optional(),
+    // Weight & Quantity
+    weight: z.number().min(0.001, t('receptionBatches.form.validation.weightPositive')),
+    weight_unit: z.string().min(1, t('receptionBatches.form.validation.weightUnitRequired')),
+    quantity: z.number().optional(),
+    quantity_unit: z.string().optional(),
 
-  // Quality Control
-  quality_grade: z.enum(['Extra', 'A', 'B', 'C', 'First', 'Second', 'Third']).optional(),
-  quality_score: z.number().min(1).max(10).optional(),
-  quality_notes: z.string().optional(),
-  humidity_percentage: z.number().min(0).max(100).optional(),
-  maturity_level: z.string().optional(),
-  temperature: z.number().optional(),
-  moisture_content: z.number().min(0).max(100).optional(),
+    // Quality Control
+    quality_grade: z.enum(['Extra', 'A', 'B', 'C', 'First', 'Second', 'Third']).optional(),
+    quality_score: z.number().min(1).max(10).optional(),
+    quality_notes: z.string().optional(),
+    humidity_percentage: z.number().min(0).max(100).optional(),
+    maturity_level: z.string().optional(),
+    temperature: z.number().optional(),
+    moisture_content: z.number().min(0).max(100).optional(),
 
-  // Personnel & Producer
-  received_by: z.string().optional(),
-  producer_name: z.string().optional(),
-  supplier_id: z.string().optional(),
-});
+    // Personnel & Producer
+    received_by: z.string().optional(),
+    producer_name: z.string().optional(),
+    supplier_id: z.string().optional(),
+  });
 
-type ReceptionBatchFormData = z.infer<typeof receptionBatchSchema>;
+type ReceptionBatchFormData = z.infer<ReturnType<typeof createReceptionBatchSchema>>;
 
 interface ReceptionBatchFormProps {
   open: boolean;
@@ -101,6 +103,7 @@ export default function ReceptionBatchForm({
   defaultParcelId,
   batchToEdit,
 }: ReceptionBatchFormProps) {
+  const { t } = useTranslation('stock');
   const { currentOrganization, user } = useAuth();
   const createBatch = useCreateReceptionBatch();
   const updateBatch = useUpdateReceptionBatch();
@@ -112,6 +115,8 @@ export default function ReceptionBatchForm({
   const [showQualityControl, setShowQualityControl] = useState(false);
 
   const isEditMode = !!batchToEdit;
+
+  const receptionBatchSchema = useMemo(() => createReceptionBatchSchema(t), [t]);
 
   const form = useForm<ReceptionBatchFormData>({
     resolver: zodResolver(receptionBatchSchema),
@@ -262,12 +267,12 @@ export default function ReceptionBatchForm({
 
   const onSubmit = async (data: ReceptionBatchFormData) => {
     if (!currentOrganization?.id) {
-      toast.error('Aucune organisation sélectionnée');
+      toast.error(t('receptionBatches.form.toast.noOrganization'));
       return;
     }
 
     if (warehouses.length === 0) {
-      toast.error('Aucun entrepôt disponible. Veuillez d\'abord créer un entrepôt.');
+      toast.error(t('receptionBatches.form.toast.noWarehouses'));
       return;
     }
 
@@ -326,15 +331,15 @@ export default function ReceptionBatchForm({
            });
          } catch (_qcError: any) {
            // Quality control error but don't fail the entire operation
-           toast.warning('Lot créé mais contrôle qualité non enregistré');
+           toast.warning(t('receptionBatches.form.toast.createdWithQualityWarning'));
          }
       }
 
-      toast.success(isEditMode ? 'Lot de réception mis à jour avec succès' : 'Lot de réception créé avec succès');
+      toast.success(isEditMode ? t('receptionBatches.form.toast.updated') : t('receptionBatches.form.toast.created'));
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
-      toast.error(`Échec ${isEditMode ? 'de la mise à jour' : 'de la création'} du lot: ${error.message}`);
+      toast.error(`${t(isEditMode ? 'receptionBatches.form.toast.updateError' : 'receptionBatches.form.toast.createError')}: ${error.message}`);
     }
   };
 
@@ -346,12 +351,12 @@ export default function ReceptionBatchForm({
             <div className="p-2 bg-white/20 rounded-lg">
               <Package className="w-6 h-6" />
             </div>
-            {isEditMode ? 'Modifier le lot de réception' : 'Nouveau lot de réception'}
+            {isEditMode ? t('receptionBatches.form.editTitle') : t('receptionBatches.form.createTitle')}
           </DialogTitle>
           <p className="text-blue-100 text-sm mt-1">
-            {isEditMode 
-              ? 'Modifiez les informations du lot de réception'
-              : 'Enregistrez la réception d\'une récolte avec pesée et contrôle qualité'}
+            {isEditMode
+              ? t('receptionBatches.form.editDescription')
+              : t('receptionBatches.form.createDescription')}
           </p>
         </DialogHeader>
 
@@ -360,11 +365,11 @@ export default function ReceptionBatchForm({
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
               <Layers className="w-5 h-5 text-amber-600" />
-              <h3 className="font-medium text-amber-800">Lien avec une récolte (optionnel)</h3>
+              <h3 className="font-medium text-amber-800">{t('receptionBatches.form.harvestLink')}</h3>
             </div>
             <div>
               <Label htmlFor="harvest_id" className="text-sm text-amber-700">
-                Récolte associée
+                {t('receptionBatches.form.harvestLabel')}
               </Label>
               <Select
                 value={form.watch('harvest_id') || '_none'}
@@ -372,19 +377,19 @@ export default function ReceptionBatchForm({
                 disabled={harvestsLoading}
               >
                 <SelectTrigger className="mt-1 bg-white">
-                  <SelectValue placeholder={harvestsLoading ? "Chargement des récoltes..." : "Sélectionner une récolte"} />
+                  <SelectValue placeholder={harvestsLoading ? t('receptionBatches.form.loadingHarvests') : t('receptionBatches.form.selectHarvest')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_none">Aucune (Réception directe)</SelectItem>
+                  <SelectItem value="_none">{t('receptionBatches.form.noHarvest')}</SelectItem>
                   {harvests.map((harvest) => (
                     <SelectItem key={harvest.id} value={harvest.id}>
-                      {harvest.harvest_date ? new Date(harvest.harvest_date).toLocaleDateString('fr-FR') : 'Sans date'} - {harvest.crop_name || 'Culture inconnue'} ({harvest.quantity} {harvest.unit})
+                      {harvest.harvest_date ? new Date(harvest.harvest_date).toLocaleDateString('fr-FR') : t('receptionBatches.form.noDate')} - {harvest.crop_name || t('receptionBatches.form.unknownCrop')} ({harvest.quantity} {harvest.unit})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-amber-600 mt-1">
-                La sélection d'une récolte remplira automatiquement la parcelle et la quantité.
+                {t('receptionBatches.form.harvestAutoFillHint')}
               </p>
             </div>
           </div>
@@ -393,7 +398,7 @@ export default function ReceptionBatchForm({
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-5 h-5 text-gray-600" />
-              <h3 className="font-medium text-gray-800">Localisation</h3>
+              <h3 className="font-medium text-gray-800">{t('receptionBatches.form.locationSection')}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +406,7 @@ export default function ReceptionBatchForm({
               <div>
                 <Label htmlFor="warehouse_id" className="text-sm font-medium flex items-center gap-2">
                   <Warehouse className="w-4 h-4 text-blue-600" />
-                  Entrepôt de réception *
+                  {t('receptionBatches.form.warehouseLabel')}
                 </Label>
                 <Select
                   value={form.watch('warehouse_id') || ''}
@@ -409,12 +414,12 @@ export default function ReceptionBatchForm({
                   disabled={warehousesLoading}
                 >
                   <SelectTrigger className="mt-1 bg-white">
-                    <SelectValue placeholder={warehousesLoading ? "Chargement..." : "Sélectionner un entrepôt"} />
+                    <SelectValue placeholder={warehousesLoading ? t('receptionBatches.form.loadingWarehouses') : t('receptionBatches.form.selectWarehouse')} />
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        Aucun entrepôt disponible
+                        {t('receptionBatches.form.noWarehouses')}
                       </SelectItem>
                     ) : (
                       warehouses.map((warehouse) => (
@@ -436,10 +441,10 @@ export default function ReceptionBatchForm({
               {/* Parcel */}
               <div>
                 <Label htmlFor="parcel_id" className="text-sm font-medium">
-                  Parcelle d'origine *
+                  {t('receptionBatches.form.parcelLabel')}
                   {selectedHarvestId && (
                     <span className="ml-2 text-xs text-gray-500 font-normal">
-                      (auto-rempli depuis la récolte)
+                      {t('receptionBatches.form.parcelAutoFilled')}
                     </span>
                   )}
                 </Label>
@@ -452,12 +457,12 @@ export default function ReceptionBatchForm({
                     "mt-1",
                     selectedHarvestId ? "bg-gray-100" : "bg-white"
                   )}>
-                    <SelectValue placeholder={parcelsLoading ? "Chargement..." : "Sélectionner une parcelle"} />
+                    <SelectValue placeholder={parcelsLoading ? t('receptionBatches.form.loadingParcels') : t('receptionBatches.form.selectParcel')} />
                   </SelectTrigger>
                   <SelectContent>
                     {parcels.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        {parcelsLoading ? "Chargement..." : "Aucune parcelle disponible"}
+                        {parcelsLoading ? t('receptionBatches.form.loadingParcels') : t('receptionBatches.form.noParcels')}
                       </SelectItem>
                     ) : (
                       parcels.map((parcel) => (
@@ -480,12 +485,12 @@ export default function ReceptionBatchForm({
               {/* Culture Type (auto-filled) */}
               <div className="md:col-span-2">
                 <Label htmlFor="culture_type" className="text-sm font-medium text-gray-500">
-                  Type de culture (auto-rempli)
+                  {t('receptionBatches.form.cropTypeLabel')}
                 </Label>
                 <Input
                   id="culture_type"
                   {...form.register('culture_type')}
-                  placeholder="Sera rempli automatiquement depuis la parcelle"
+                  placeholder={t('receptionBatches.form.cropTypeHint')}
                   className="mt-1 bg-gray-100"
                   readOnly
                 />
@@ -497,14 +502,14 @@ export default function ReceptionBatchForm({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-600" />
-              <h3 className="font-medium text-blue-800">Détails de la réception</h3>
+              <h3 className="font-medium text-blue-800">{t('receptionBatches.form.detailsSection')}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Reception Date */}
               <div>
                 <Label htmlFor="reception_date" className="text-sm font-medium">
-                  Date de réception *
+                  {t('receptionBatches.form.receptionDateLabel')}
                 </Label>
                 <Input
                   type="date"
@@ -517,7 +522,7 @@ export default function ReceptionBatchForm({
               {/* Reception Time */}
               <div>
                 <Label htmlFor="reception_time" className="text-sm font-medium">
-                  Heure de réception
+                  {t('receptionBatches.form.receptionTimeLabel')}
                 </Label>
                 <Input
                   type="time"
@@ -531,7 +536,7 @@ export default function ReceptionBatchForm({
               <div>
                 <Label htmlFor="weight" className="text-sm font-medium flex items-center gap-2">
                   <Scale className="w-4 h-4 text-blue-600" />
-                  Poids brut *
+                  {t('receptionBatches.form.grossWeightLabel')}
                 </Label>
                 <div className="flex gap-2 mt-1">
                   <Input
@@ -551,7 +556,7 @@ export default function ReceptionBatchForm({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="kg">kg</SelectItem>
-                      <SelectItem value="ton">Tonne</SelectItem>
+                      <SelectItem value="ton">{t('receptionBatches.form.weightUnit')}</SelectItem>
                       <SelectItem value="lb">lb</SelectItem>
                     </SelectContent>
                   </Select>
@@ -566,7 +571,7 @@ export default function ReceptionBatchForm({
               {/* Quantity (optional) */}
               <div>
                 <Label htmlFor="quantity" className="text-sm font-medium">
-                  Quantité (optionnel)
+                  {t('receptionBatches.form.quantityLabel')}
                 </Label>
                 <div className="flex gap-2 mt-1">
                   <Input
@@ -574,13 +579,13 @@ export default function ReceptionBatchForm({
                     step="1"
                     id="quantity"
                     {...form.register('quantity', { valueAsNumber: true })}
-                    placeholder="Nombre d'unités"
+                    placeholder={t('receptionBatches.form.quantityUnit')}
                     className="flex-1 bg-white"
                   />
                   <Input
                     id="quantity_unit"
                     {...form.register('quantity_unit')}
-                    placeholder="caisses, pièces..."
+                    placeholder={t('receptionBatches.form.quantityPlaceholder')}
                     className="w-32 bg-white"
                   />
                 </div>
@@ -592,19 +597,19 @@ export default function ReceptionBatchForm({
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-4">
               <User className="w-5 h-5 text-purple-600" />
-              <h3 className="font-medium text-purple-800">Personnel & Producteur</h3>
+              <h3 className="font-medium text-purple-800">{t('receptionBatches.form.personnelSection')}</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Producer Name */}
               <div>
                 <Label htmlFor="producer_name" className="text-sm font-medium">
-                  Nom du producteur
+                  {t('receptionBatches.form.producerNameLabel')}
                 </Label>
                 <Input
                   id="producer_name"
                   {...form.register('producer_name')}
-                  placeholder="Nom du producteur/agriculteur"
+                  placeholder={t('receptionBatches.form.producerNamePlaceholder')}
                   className="mt-1 bg-white"
                 />
               </div>
@@ -612,19 +617,19 @@ export default function ReceptionBatchForm({
               {/* Received By */}
               <div>
                 <Label htmlFor="received_by" className="text-sm font-medium">
-                  Réceptionné par
+                  {t('receptionBatches.form.receivedByLabel')}
                 </Label>
                 <Select
                   value={form.watch('received_by') || ''}
                   onValueChange={(value) => form.setValue('received_by', value)}
                 >
                   <SelectTrigger className="mt-1 bg-white">
-                    <SelectValue placeholder="Sélectionner un utilisateur" />
+                    <SelectValue placeholder={t('receptionBatches.form.selectUser')} />
                   </SelectTrigger>
                   <SelectContent>
                     {assignableUsers.length === 0 ? (
                       <SelectItem value="_none" disabled>
-                        Aucun utilisateur disponible
+                        {t('receptionBatches.form.noUsers')}
                       </SelectItem>
                     ) : (
                       assignableUsers.map((u) => (
@@ -649,9 +654,9 @@ export default function ReceptionBatchForm({
             >
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-green-600" />
-                <h3 className="font-medium text-green-800">Contrôle qualité</h3>
+                <h3 className="font-medium text-green-800">{t('receptionBatches.form.qualitySection')}</h3>
                 <span className="text-xs text-green-600 bg-green-200 px-2 py-0.5 rounded-full">
-                  Optionnel
+                  {t('receptionBatches.form.qualityOptional')}
                 </span>
               </div>
               {showQualityControl ? (
@@ -667,7 +672,7 @@ export default function ReceptionBatchForm({
                   {/* Quality Grade */}
                   <div>
                     <Label htmlFor="quality_grade" className="text-sm font-medium">
-                      Grade de qualité
+                      {t('receptionBatches.form.qualityGradeLabel')}
                     </Label>
                     <Select
                       value={form.watch('quality_grade') || ''}
@@ -676,16 +681,16 @@ export default function ReceptionBatchForm({
                       }
                     >
                       <SelectTrigger className="mt-1 bg-white">
-                        <SelectValue placeholder="Sélectionner" />
+                        <SelectValue placeholder={t('receptionBatches.form.qualityGradePlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Extra">Extra</SelectItem>
-                        <SelectItem value="A">Catégorie A</SelectItem>
-                        <SelectItem value="First">Premier choix</SelectItem>
-                        <SelectItem value="B">Catégorie B</SelectItem>
-                        <SelectItem value="Second">Deuxième choix</SelectItem>
-                        <SelectItem value="C">Catégorie C</SelectItem>
-                        <SelectItem value="Third">Troisième choix</SelectItem>
+                        <SelectItem value="A">{t('receptionBatches.form.qualityGrades.A')}</SelectItem>
+                        <SelectItem value="First">{t('receptionBatches.form.qualityGrades.first_choice')}</SelectItem>
+                        <SelectItem value="B">{t('receptionBatches.form.qualityGrades.B')}</SelectItem>
+                        <SelectItem value="Second">{t('receptionBatches.form.qualityGrades.second_choice')}</SelectItem>
+                        <SelectItem value="C">{t('receptionBatches.form.qualityGrades.C')}</SelectItem>
+                        <SelectItem value="Third">{t('receptionBatches.form.qualityGrades.third_choice')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -693,7 +698,7 @@ export default function ReceptionBatchForm({
                   {/* Quality Score */}
                   <div>
                     <Label htmlFor="quality_score" className="text-sm font-medium">
-                      Score qualité (1-10)
+                      {t('receptionBatches.form.qualityScoreLabel')}
                     </Label>
                     <Input
                       type="number"
@@ -710,12 +715,12 @@ export default function ReceptionBatchForm({
                   {/* Maturity Level */}
                   <div>
                     <Label htmlFor="maturity_level" className="text-sm font-medium">
-                      Niveau de maturité
+                      {t('receptionBatches.form.maturityLabel')}
                     </Label>
                     <Input
                       id="maturity_level"
                       {...form.register('maturity_level')}
-                      placeholder="Mûr, semi-mûr, vert..."
+                      placeholder={t('receptionBatches.form.maturityPlaceholder')}
                       className="mt-1 bg-white"
                     />
                   </div>
@@ -726,7 +731,7 @@ export default function ReceptionBatchForm({
                   <div>
                     <Label htmlFor="humidity_percentage" className="text-sm font-medium flex items-center gap-2">
                       <Droplet className="w-4 h-4 text-blue-500" />
-                      Humidité (%)
+                      {t('receptionBatches.form.humidityLabel')}
                     </Label>
                     <Input
                       type="number"
@@ -743,7 +748,7 @@ export default function ReceptionBatchForm({
                   {/* Moisture Content */}
                   <div>
                     <Label htmlFor="moisture_content" className="text-sm font-medium">
-                      Teneur en eau (%)
+                      {t('receptionBatches.form.moistureLabel')}
                     </Label>
                     <Input
                       type="number"
@@ -761,14 +766,14 @@ export default function ReceptionBatchForm({
                   <div>
                     <Label htmlFor="temperature" className="text-sm font-medium flex items-center gap-2">
                       <Thermometer className="w-4 h-4 text-red-500" />
-                      Température (°C)
+                      {t('receptionBatches.form.temperatureLabel')}
                     </Label>
                     <Input
                       type="number"
                       step="0.1"
                       id="temperature"
                       {...form.register('temperature', { valueAsNumber: true })}
-                      placeholder="Température en °C"
+                      placeholder={t('receptionBatches.form.temperaturePlaceholder')}
                       className="mt-1 bg-white"
                     />
                   </div>
@@ -777,12 +782,12 @@ export default function ReceptionBatchForm({
                 {/* Quality Notes */}
                 <div>
                   <Label htmlFor="quality_notes" className="text-sm font-medium">
-                    Notes qualité
+                    {t('receptionBatches.form.qualityNotesLabel')}
                   </Label>
                   <Textarea
                     id="quality_notes"
                     {...form.register('quality_notes')}
-                    placeholder="Observations sur la qualité, défauts constatés, remarques..."
+                    placeholder={t('receptionBatches.form.qualityNotesPlaceholder')}
                     rows={3}
                     className="mt-1 bg-white"
                   />
@@ -797,7 +802,7 @@ export default function ReceptionBatchForm({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Annuler
+              {t('receptionBatches.form.cancel')}
             </Button>
             <Button
               type="submit"
@@ -807,12 +812,12 @@ export default function ReceptionBatchForm({
               {(createBatch.isPending || updateBatch.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {isEditMode ? 'Mise à jour...' : 'Création en cours...'}
+                  {isEditMode ? t('receptionBatches.form.updating') : t('receptionBatches.form.creating')}
                 </>
               ) : (
                 <>
                   <ClipboardCheck className="w-4 h-4 mr-2" />
-                  {isEditMode ? 'Mettre à jour' : 'Créer le lot de réception'}
+                  {isEditMode ? t('receptionBatches.form.update') : t('receptionBatches.form.create')}
                 </>
               )}
             </Button>

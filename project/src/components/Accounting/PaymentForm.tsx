@@ -18,9 +18,9 @@ const getPaymentSchema = (t: (key: string) => string) => z.object({
   payment_type: z.enum(['receive', 'pay']),
   party_type: z.enum(['customer', 'supplier']).nullable().optional(),
   party_id: z.string().nullable().optional(),
-  party_name: z.string().min(1, t('accounting.payments.form.validation.partyNameRequired')),
-  payment_date: z.string().min(1, t('accounting.payments.form.validation.paymentDateRequired')),
-  amount: z.coerce.number().min(0.01, t('accounting.payments.form.validation.amountMin')),
+  party_name: z.string().min(1, t('payments.form.validation.partyNameRequired')),
+  payment_date: z.string().min(1, t('payments.form.validation.paymentDateRequired')),
+  amount: z.coerce.number().min(0.01, t('payments.form.validation.amountMin')),
   payment_method: z.enum(['cash', 'bank_transfer', 'check', 'mobile_money']),
   bank_account_id: z.string().nullable().optional(),
   reference_number: z.string().nullable().optional(),
@@ -37,7 +37,7 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, onCancel }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();
   const { data: customers = [] } = useCustomers();
@@ -91,7 +91,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       }
       onSuccess?.();
     } catch (error) {
-      console.error(t('accounting.payments.form.errors.saveFailed'), error);
+      console.error(t('payments.form.errors.saveFailed'), error);
     }
   };
 
@@ -102,14 +102,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Payment Type */}
         <div>
-          <Label htmlFor="payment_type">{t('accounting.payments.form.fields.paymentType')}</Label>
+          <Label htmlFor="payment_type">{t('payments.form.fields.paymentType')}</Label>
           <NativeSelect
             id="payment_type"
             {...form.register('payment_type')}
             disabled={!!payment}
           >
-            <option value="receive">{t('accounting.payments.form.paymentTypes.received')}</option>
-            <option value="pay">{t('accounting.payments.form.paymentTypes.made')}</option>
+            <option value="receive">{t('payments.form.paymentTypes.received')}</option>
+            <option value="pay">{t('payments.form.paymentTypes.made')}</option>
           </NativeSelect>
           {form.formState.errors.payment_type && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_type.message}</p>
@@ -118,7 +118,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
         {/* Payment Date */}
         <div>
-          <Label htmlFor="payment_date">{t('accounting.payments.form.fields.paymentDate')}</Label>
+          <Label htmlFor="payment_date">{t('payments.form.fields.paymentDate')}</Label>
           <Input
             id="payment_date"
             type="date"
@@ -133,13 +133,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       {/* Party Selection */}
       <div>
         <Label htmlFor="party_id">
-          {watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer') : t('accounting.payments.form.fields.supplier')} ({t('accounting.payments.form.fields.optional')})
+          {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} ({t('payments.form.fields.optional')})
         </Label>
         <NativeSelect
           id="party_id"
           {...form.register('party_id')}
         >
-          <option value="">-- {t('accounting.payments.form.actions.select')} {watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer') : t('accounting.payments.form.fields.supplier')} --</option>
+          <option value="">-- {t('payments.form.actions.select')} {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} --</option>
           {(watchPaymentType === 'receive' ? customers : suppliers).map((party) => (
             <option key={party.id} value={party.id}>
               {party.name}
@@ -150,11 +150,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
       {/* Party Name (manual entry if no party selected) */}
       <div>
-        <Label htmlFor="party_name">{t('accounting.payments.form.fields.partyName')}</Label>
+        <Label htmlFor="party_name">{t('payments.form.fields.partyName')}</Label>
         <Input
           id="party_name"
           {...form.register('party_name')}
-          placeholder={`${t('accounting.payments.form.actions.enter')} ${watchPaymentType === 'receive' ? t('accounting.payments.form.fields.customer').toLowerCase() : t('accounting.payments.form.fields.supplier').toLowerCase()} ${t('accounting.payments.form.fields.name').toLowerCase()}`}
+          placeholder={`${t('payments.form.actions.enter')} ${watchPaymentType === 'receive' ? t('payments.form.fields.customer').toLowerCase() : t('payments.form.fields.supplier').toLowerCase()} ${t('payments.form.fields.name').toLowerCase()}`}
           disabled={!!watchPartyId}
         />
         {form.formState.errors.party_name && (
@@ -165,7 +165,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Amount */}
         <div>
-          <Label htmlFor="amount">{t('accounting.payments.form.fields.amount')} (MAD)</Label>
+          <Label htmlFor="amount">{t('payments.form.fields.amount')} (MAD)</Label>
           <Input
             id="amount"
             type="number"
@@ -179,15 +179,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
         {/* Payment Method */}
         <div>
-          <Label htmlFor="payment_method">{t('accounting.payments.form.fields.paymentMethod')}</Label>
+          <Label htmlFor="payment_method">{t('payments.form.fields.paymentMethod')}</Label>
           <NativeSelect
             id="payment_method"
             {...form.register('payment_method')}
           >
-            <option value="cash">{t('accounting.payments.form.methods.cash')}</option>
-            <option value="bank_transfer">{t('accounting.payments.form.methods.bankTransfer')}</option>
-            <option value="check">{t('accounting.payments.form.methods.check')}</option>
-            <option value="mobile_money">{t('accounting.payments.form.methods.mobileMoney')}</option>
+            <option value="cash">{t('payments.form.methods.cash')}</option>
+            <option value="bank_transfer">{t('payments.form.methods.bankTransfer')}</option>
+            <option value="check">{t('payments.form.methods.check')}</option>
+            <option value="mobile_money">{t('payments.form.methods.mobileMoney')}</option>
           </NativeSelect>
           {form.formState.errors.payment_method && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_method.message}</p>
@@ -197,21 +197,21 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
 
       {/* Reference Number */}
       <div>
-        <Label htmlFor="reference_number">{t('accounting.payments.form.fields.referenceNumber')} ({t('accounting.payments.form.fields.optional')})</Label>
+        <Label htmlFor="reference_number">{t('payments.form.fields.referenceNumber')} ({t('payments.form.fields.optional')})</Label>
         <Input
           id="reference_number"
           {...form.register('reference_number')}
-          placeholder={t('accounting.payments.form.placeholders.referenceNumber')}
+          placeholder={t('payments.form.placeholders.referenceNumber')}
         />
       </div>
 
       {/* Remarks */}
       <div>
-        <Label htmlFor="remarks">{t('accounting.payments.form.fields.remarks')} ({t('accounting.payments.form.fields.optional')})</Label>
+        <Label htmlFor="remarks">{t('payments.form.fields.remarks')} ({t('payments.form.fields.optional')})</Label>
         <Textarea
           id="remarks"
           {...form.register('remarks')}
-          placeholder={t('accounting.payments.form.placeholders.remarks')}
+          placeholder={t('payments.form.placeholders.remarks')}
           rows={3}
         />
       </div>
@@ -219,14 +219,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       {/* Status (for editing only) */}
       {payment && (
         <div>
-          <Label htmlFor="status">{t('accounting.payments.form.fields.status')}</Label>
+          <Label htmlFor="status">{t('payments.form.fields.status')}</Label>
           <NativeSelect
             id="status"
             {...form.register('status')}
           >
-            <option value="draft">{t('accounting.payments.form.statuses.draft')}</option>
-            <option value="submitted">{t('accounting.payments.form.statuses.submitted')}</option>
-            <option value="cancelled">{t('accounting.payments.form.statuses.cancelled')}</option>
+            <option value="draft">{t('payments.form.statuses.draft')}</option>
+            <option value="submitted">{t('payments.form.statuses.submitted')}</option>
+            <option value="cancelled">{t('payments.form.statuses.cancelled')}</option>
           </NativeSelect>
         </div>
       )}
@@ -235,12 +235,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, on
       <div className="flex justify-end gap-2 pt-4 border-t">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-            {t('accounting.payments.form.buttons.cancel')}
+            {t('payments.form.buttons.cancel')}
           </Button>
         )}
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {payment ? t('accounting.payments.form.buttons.update') : t('accounting.payments.form.buttons.create')}
+          {payment ? t('payments.form.buttons.update') : t('payments.form.buttons.create')}
         </Button>
       </div>
     </form>

@@ -305,7 +305,36 @@
     "qualityControl": "مراقبة الجودة",
     "campaigns": "الحملات الزراعية",
     "cropCycles": "دورات المحاصيل",
-    "chat": "المساعد الذكي"
+    "chat": "المساعد الذكي",
+    "compliance": "الامتثال",
+    "certifications": "الشهادات",
+    "correctiveActions": "الإجراءات التصحيحية",
+    "marketplace": "السوق",
+    "receivedRequests": "الطلبات المستلمة",
+    "sentRequests": "الطلبات المرسلة",
+    "viewMarketplace": "عرض السوق"
+  },
+  "sidebar": {
+    "collapse": "طي",
+    "expand": "توسيع القائمة"
+  },
+  "orgSwitcher": {
+    "organizations": "المنظمات",
+    "orgSettings": "إعدادات المنظمة",
+    "manageTeam": "إدارة الفريق",
+    "signOut": "تسجيل الخروج",
+    "backToOrganizations": "→ العودة إلى المنظمات",
+    "farms": "المزارع - {{orgName}}",
+    "manager": "المدير: {{name}}",
+    "noFarms": "لم يتم العثور على مزارع",
+    "createFirstFarm": "أنشئ مزرعتك الأولى",
+    "roles": {
+      "owner": "مالك",
+      "admin": "مدير",
+      "manager": "مشرف",
+      "member": "عضو",
+      "viewer": "مشاهد"
+    }
   },
   "stock": {
     "title": "إدارة المخزون",
@@ -1525,7 +1554,23 @@
       "fiscalYears": "السنوات المالية",
       "fiscalYearsDescription": "إدارة السنوات المالية وفترات المحاسبة",
       "biologicalAssets": "الأصول البيولوجية",
-      "biologicalAssetsDescription": "إدارة البساتين والماشية والأصول المستدامة"
+      "biologicalAssetsDescription": "إدارة البساتين والماشية والأصول المستدامة",
+      "costCenters": "مراكز التكلفة",
+      "costCentersDescription": "إدارة مراكز التكلفة لتتبع النفقات",
+      "accountMappings": "ربط الحسابات",
+      "accountMappingsDescription": "تكوين ربط القيود اليومية التلقائية",
+      "files": "إدارة الملفات",
+      "filesDescription": "إدارة الملفات واكتشاف الملفات المعزولة",
+      "dangerZone": "منطقة الخطر",
+      "dangerZoneDescription": "إدارة البيانات التجريبية والإجراءات الحرجة"
+    }
+  },
+  "account": {
+    "title": "إعدادات الحساب",
+    "tabs": {
+      "profile": "الملف الشخصي",
+      "preferences": "التفضيلات",
+      "security": "الأمان"
     }
   },
   "profile": {
@@ -1800,7 +1845,56 @@
       "mostPopular": "الأكثر شعبية",
       "currentPlan": "الخطة الحالية",
       "contactSales": "اتصل بالمبيعات",
-      "getStarted": "ابدأ"
+      "getStarted": "ابدأ",
+      "upgrade": "ترقية",
+      "downgrade": "تخفيض",
+      "hectares": "هكتارات",
+      "hectaresUpTo": "حتى {{max}}",
+      "hectaresAbove": ">{{min}}",
+      "users": "المستخدمون",
+      "support": "الدعم",
+      "sla": "اتفاقية مستوى الخدمة",
+      "slaIncluded": "مشمول",
+      "slaNotIncluded": "غير مشمول",
+      "pricePerHa": "{{price}} درهم/هكتار/سنة (قبل الضريبة)"
+    },
+    "processing": "جاري المعالجة...",
+    "contractInputs": "بيانات العقد",
+    "contractedHectares": "الهكتارات المتعاقد عليها",
+    "billingCycle": "دورة الفوترة",
+    "billingCycles": {
+      "monthly": "شهري",
+      "semiannual": "نصف سنوي",
+      "annual": "سنوي"
+    },
+    "billedCycle": "فوترة {{cycle}}",
+    "currentContract": "العقد الحالي",
+    "usageLimits": "الاستخدام والحدود",
+    "contractTimeline": "الجدول الزمني للعقد",
+    "timeline": {
+      "start": "البداية",
+      "end": "النهاية",
+      "renewalNotice": "إشعار التجديد",
+      "daysBeforeEnd": "{{days}} يوماً قبل الانتهاء"
+    },
+    "details": {
+      "status": "الحالة",
+      "contractedHectares": "الهكتارات المتعاقد عليها",
+      "includedUsers": "المستخدمون المشمولون",
+      "unlimited": "غير محدود",
+      "contractEnd": "نهاية العقد",
+      "nextBilling": "الفوترة القادمة"
+    },
+    "billingManagementTitle": "إدارة الفوترة",
+    "billingManagementDescription": "افتح صفحة الدفع مع سياق عقدك الحالي لتحديث إعدادات الدفع والفواتير.",
+    "manageBilling": "إدارة الفوترة",
+    "addons": {
+      "title": "الإضافات",
+      "active": "نشط",
+      "buy": "شراء",
+      "noAddons": "لا توجد وحدات إضافية مُعدّة.",
+      "coreModules": "الوحدات الأساسية المضمنة",
+      "perMonth": "{{price}} $/شهر"
     },
     "errors": {
       "noOrganization": "لم يتم اختيار منظمة. يرجى اختيار منظمة أولاً.",
@@ -3857,7 +3951,18 @@
     "loading": "جاري التحميل...",
     "list": "قائمة",
     "calendar": "التقويم",
+    "kanban": "لوحة",
     "navigation": "تنقل المهام",
+    "kanbanTitle": "لوحة المهام",
+    "kanbanSubtitle": "اسحب المهام بين الأعمدة لتحديث حالتها",
+    "kanbanEmpty": "لا توجد مهام",
+    "kanbanError": "فشل تحميل المهام.",
+    "kanbanDueOverdue": "متأخرة",
+    "kanbanDueToday": "اليوم",
+    "kanbanDueTomorrow": "غداً",
+    "kanbanRecurring": "متكررة: {{frequency}}",
+    "kanbanSubtask": "جزء من سلسلة متكررة",
+    "kanbanSaving": "جاري الحفظ...",
     "stats": {
       "pending": "قيد الانتظار",
       "inProgress": "قيد التنفيذ",
@@ -5344,6 +5449,75 @@
       "creatingOrg": "جاري إنشاء المؤسسة...",
       "activatingTrial": "جاري تفعيل التجربة...",
       "complete": "اكتمل!"
+    }
+  },
+  "modulesSettings": {
+    "title": "الوحدات",
+    "subtitle": "قم بتفعيل أو تعطيل الوحدات حسب احتياجاتك. الوحدات المعطلة لن تظهر في التنقل.",
+    "loading": "جاري تحميل الوحدات...",
+    "error": "خطأ في تحميل الوحدات. يرجى المحاولة مرة أخرى.",
+    "currentPlan": "الخطة الحالية: {{plan}}",
+    "allModulesAvailable": "جميع الوحدات متاحة",
+    "modulesAvailable": "{{count}} وحدات متاحة",
+    "viewSubscription": "عرض الاشتراك",
+    "activeCount": "{{active}}/{{total}} نشط",
+    "noModulesInCategory": "لا توجد وحدات متاحة في هذه الفئة.",
+    "upgrade": "ترقية ←",
+    "upgradePrompt": "هذه الوحدة غير متاحة في خطتك الحالية. هل تريد رؤية خيارات الترقية؟",
+    "configurationOf": "إعدادات {{name}}",
+    "noSettings": "لا توجد إعدادات محددة لهذه الوحدة",
+    "treeManagement": "إدارة أنواع الأشجار",
+    "farmManagementSettings": "إعدادات إدارة المزرعة",
+    "generalSettings": "الإعدادات العامة",
+    "pruningNotifications": "إشعارات التقليم",
+    "diseaseAlerts": "تنبيهات الأمراض",
+    "harvestForecasts": "توقعات الحصاد",
+    "sections": {
+      "agriculture": "الزراعة",
+      "agricultureDesc": "وحدات الإنتاج الزراعي",
+      "elevage": "تربية الماشية",
+      "elevageDesc": "وحدات تربية وإدارة الحيوانات",
+      "functional": "الوحدات الوظيفية",
+      "functionalDesc": "الإدارة، المحاسبة، المخزون، الموارد البشرية، التحليلات..."
+    },
+    "categories": {
+      "core": "الوحدة الأساسية",
+      "production": "الإنتاج",
+      "operations": "العمليات",
+      "hr": "الموارد البشرية",
+      "inventory": "المخزون والتخزين",
+      "sales": "المبيعات",
+      "purchasing": "المشتريات",
+      "accounting": "المحاسبة",
+      "analytics": "التحليلات"
+    },
+    "activityModules": {
+      "arbres_fruitiers": "أشجار الفاكهة",
+      "aeroponie": "الزراعة الهوائية",
+      "hydroponie": "الزراعة المائية",
+      "maraichage": "زراعة الخضروات",
+      "myciculture": "زراعة الفطر",
+      "pisciculture": "تربية الأسماك",
+      "bovin": "الأبقار",
+      "ovin": "الأغنام",
+      "camelin": "الإبل",
+      "caprin": "الماعز",
+      "aviculture": "الدواجن",
+      "couveuses": "الحضانات"
+    },
+    "activityDescriptions": {
+      "arbres_fruitiers": "التفاح، الحمضيات، الرمان، الأفوكادو...",
+      "aeroponie": "زراعة هوائية بدون تربة",
+      "hydroponie": "زراعة مائية في وسط مائي",
+      "maraichage": "محاصيل الخضروات والبستنة",
+      "myciculture": "زراعة الفطر",
+      "pisciculture": "تربية الأسماك",
+      "bovin": "تربية الأبقار",
+      "ovin": "تربية الأغنام",
+      "camelin": "تربية الإبل",
+      "caprin": "تربية الماعز",
+      "aviculture": "تربية الدواجن",
+      "couveuses": "الكتاكيت، دجاج اللحم، الدجاج البياض"
     }
   }
 }

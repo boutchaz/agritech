@@ -30,7 +30,7 @@ export default function ProductImageUpload({
   maxImages = 5,
   disabled = false,
 }: ProductImageUploadProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);

@@ -48,7 +48,7 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 export default function SupplierManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { data: suppliers = [], isLoading, error, refetch } = useSuppliers();
   const createSupplier = useCreateSupplier();

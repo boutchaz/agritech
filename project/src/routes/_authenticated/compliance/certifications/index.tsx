@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createFileRoute } from '@tanstack/react-router';
 import { Search, Filter, Award, Building2 } from 'lucide-react';
 
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/radix-select';
 import { CertificationCard } from '@/components/compliance/CertificationCard';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLayout } from '@/components/PageLayout';
 
@@ -24,6 +26,7 @@ export const Route = createFileRoute('/_authenticated/compliance/certifications/
 });
 
 function CertificationsPage() {
+  const { t } = useTranslation('compliance');
   const { currentOrganization } = useAuth();
   const { data: certifications, isLoading } = useCertifications(currentOrganization?.id || null);
   
@@ -49,11 +52,11 @@ function CertificationsPage() {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
-            { icon: Award, label: 'Conformité', path: '/compliance' },
-            { icon: Award, label: 'Certifications', isActive: true },
+            { icon: Award, label: t('breadcrumb.compliance'), path: '/compliance' },
+            { icon: Award, label: t('breadcrumb.certifications'), isActive: true },
           ]}
-          title="Certifications"
-          subtitle="Gérez les certifications de votre organisation."
+          title={t('certifications.title')}
+          subtitle={t('certifications.subtitle')}
           actions={<CreateCertificationDialog />}
         />
       }
@@ -65,7 +68,7 @@ function CertificationsPage() {
         <div className="relative flex-1 w-full">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par type, numéro, organisme..."
+            placeholder={t('certifications.searchPlaceholder')}
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -80,7 +83,7 @@ function CertificationsPage() {
               </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="all">{t('certifications.allTypes')}</SelectItem>
               {Object.values(CertificationType).map((type) => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
@@ -89,14 +92,14 @@ function CertificationsPage() {
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Statut" />
+              <SelectValue placeholder={t('table.status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous statuts</SelectItem>
-              <SelectItem value={CertificationStatus.ACTIVE}>Active</SelectItem>
-              <SelectItem value={CertificationStatus.PENDING_RENEWAL}>Renouvellement</SelectItem>
-              <SelectItem value={CertificationStatus.EXPIRED}>Expirée</SelectItem>
-              <SelectItem value={CertificationStatus.SUSPENDED}>Suspendue</SelectItem>
+              <SelectItem value="all">{t('certifications.allStatuses')}</SelectItem>
+              <SelectItem value={CertificationStatus.ACTIVE}>{t('status.active')}</SelectItem>
+              <SelectItem value={CertificationStatus.PENDING_RENEWAL}>{t('status.pendingRenewal')}</SelectItem>
+              <SelectItem value={CertificationStatus.EXPIRED}>{t('status.expired')}</SelectItem>
+              <SelectItem value={CertificationStatus.SUSPENDED}>{t('status.suspended')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -106,7 +109,33 @@ function CertificationsPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-48 bg-muted/50 rounded-lg animate-pulse" />
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 w-9 rounded-lg" />
+                  <div>
+                    <Skeleton className="h-5 w-28 mb-1" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between py-1">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div className="flex justify-between py-1">
+                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <div className="flex justify-between py-1">
+                  <Skeleton className="h-4 w-18" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+              <Skeleton className="h-9 w-full rounded-md" />
+            </div>
           ))}
         </div>
       ) : filteredCertifications.length > 0 ? (
@@ -118,9 +147,9 @@ function CertificationsPage() {
       ) : (
         <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
           <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Aucune certification trouvée</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('certifications.noCertificationsFound')}</h3>
           <p className="text-muted-foreground mt-1">
-            Essayez de modifier vos filtres ou créez une nouvelle certification.
+            {t('certifications.noCertificationsHint')}
           </p>
         </div>
       )}

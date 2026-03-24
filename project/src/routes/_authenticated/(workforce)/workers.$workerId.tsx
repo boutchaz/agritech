@@ -45,9 +45,12 @@ import WorkerPaymentDialog from "@/components/Workers/WorkerPaymentDialog";
 import type { PaymentType } from "@/types/payments";
 
 import { paymentRecordsApi } from "@/lib/api/payment-records";
+import { cn } from "@/lib/utils";
+import { isRTLLocale } from "@/lib/is-rtl-locale";
 
 function WorkerDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = isRTLLocale(i18n.language);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { workerId } = Route.useParams();
@@ -339,24 +342,45 @@ function WorkerDetailPage() {
       </div>
 
       <Tabs defaultValue="info" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="info">
-            {t("workers.detail.tabs.info")}
-          </TabsTrigger>
-          <TabsTrigger value="payments">
-            {t("workers.detail.tabs.payments")}
-          </TabsTrigger>
-          <TabsTrigger value="workRecords">
-            {t("workers.detail.tabs.workRecords")}
-          </TabsTrigger>
-          {/* Show settlements tab if worker is metayage OR if there are settlements to display */}
-          {(worker.worker_type === "metayage" ||
-            (settlements && settlements.length > 0)) && (
-            <TabsTrigger value="settlements">
-              {t("workers.detail.tabs.settlements")}
-            </TabsTrigger>
+        <div
+          className={cn(
+            "flex w-full min-w-0",
+            isRTL ? "justify-end" : "justify-start",
           )}
-        </TabsList>
+        >
+          <TabsList
+            dir={isRTL ? "rtl" : "ltr"}
+            className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+          >
+            <TabsTrigger
+              value="info"
+              className="shrink-0 px-2 text-center text-xs sm:px-3 sm:text-sm"
+            >
+              {t("workers.detail.tabs.info")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="payments"
+              className="shrink-0 px-2 text-center text-xs sm:px-3 sm:text-sm"
+            >
+              {t("workers.detail.tabs.payments")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="workRecords"
+              className="shrink-0 px-2 text-center text-xs sm:px-3 sm:text-sm"
+            >
+              {t("workers.detail.tabs.workRecords")}
+            </TabsTrigger>
+            {(worker.worker_type === "metayage" ||
+              (settlements && settlements.length > 0)) && (
+              <TabsTrigger
+                value="settlements"
+                className="shrink-0 px-2 text-center text-xs sm:px-3 sm:text-sm"
+              >
+                {t("workers.detail.tabs.settlements")}
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         <TabsContent value="info" className="mt-4">
           <div className="grid md:grid-cols-2 gap-6">

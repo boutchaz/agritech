@@ -71,7 +71,7 @@ interface StockEntryListProps {
 }
 
 export default function StockEntryList({ onCreateClick, onViewClick }: StockEntryListProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const [filters, setFilters] = useState<StockEntryFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmAction, setConfirmAction] = useState<{

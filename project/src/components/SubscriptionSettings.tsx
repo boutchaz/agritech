@@ -154,13 +154,13 @@ const SubscriptionSettings: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Contract Inputs
+            {t('subscription.contractInputs')}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                Contracted hectares
+                {t('subscription.contractedHectares')}
               </label>
               <input
                 type="number"
@@ -175,7 +175,7 @@ const SubscriptionSettings: React.FC = () => {
 
             <div>
               <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                Billing cycle
+                {t('subscription.billingCycle')}
               </label>
               <select
                 value={billingInterval}
@@ -184,9 +184,9 @@ const SubscriptionSettings: React.FC = () => {
                 }
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-green-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               >
-                <option value="monthly">Monthly</option>
-                <option value="semiannual">Semiannual</option>
-                <option value="annual">Annual</option>
+                <option value="monthly">{t('subscription.billingCycles.monthly')}</option>
+                <option value="semiannual">{t('subscription.billingCycles.semiannual')}</option>
+                <option value="annual">{t('subscription.billingCycles.annual')}</option>
               </select>
             </div>
           </div>
@@ -218,7 +218,7 @@ const SubscriptionSettings: React.FC = () => {
               >
                 {isCurrentPlan && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-bold rounded-full">
-                    Current Plan
+                    {t('subscription.plans.currentPlan')}
                   </div>
                 )}
 
@@ -255,29 +255,29 @@ const SubscriptionSettings: React.FC = () => {
                   {purchasePlan.isPending && selectedFormula === plan.id
                     ? t('subscription.processing', 'Processing...')
                     : isCurrentPlan
-                      ? 'Current Plan'
+                      ? t('subscription.plans.currentPlan')
                       : isUpgrade
-                        ? 'Upgrade'
+                        ? t('subscription.plans.upgrade')
                         : isDowngrade
-                          ? 'Downgrade'
-                          : t('subscription.plans.getStarted', 'Get Started')}
+                          ? t('subscription.plans.downgrade')
+                          : t('subscription.plans.getStarted')}
                 </button>
 
                 <div className="mt-5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p>
-                    Hectares:{' '}
+                    {t('subscription.plans.hectares')}:{' '}
                     {plan.limits.maxHectaresInclusive
-                      ? `up to ${plan.limits.maxHectaresInclusive}`
-                      : `>${plan.limits.minHectaresExclusive || 0}`}
+                      ? t('subscription.plans.hectaresUpTo', { max: plan.limits.maxHectaresInclusive })
+                      : t('subscription.plans.hectaresAbove', { min: plan.limits.minHectaresExclusive || 0 })}
                   </p>
                   <p>
-                    Users:{' '}
+                    {t('subscription.plans.users')}:{' '}
                     {plan.limits.includedUsers === null
-                      ? 'Unlimited'
+                      ? t('subscription.details.unlimited')
                       : plan.limits.includedUsers}
                   </p>
-                  <p>Support: {plan.supportLevel}</p>
-                  <p>SLA: {plan.slaAvailable ? 'Included' : 'Not included'}</p>
+                  <p>{t('subscription.plans.support')}: {plan.supportLevel}</p>
+                  <p>{t('subscription.plans.sla')}: {plan.slaAvailable ? t('subscription.plans.slaIncluded') : t('subscription.plans.slaNotIncluded')}</p>
                 </div>
               </div>
             );
@@ -337,7 +337,7 @@ const SubscriptionSettings: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Current Contract
+            {t('subscription.currentContract')}
           </h3>
 
           {plan && (
@@ -360,35 +360,35 @@ const SubscriptionSettings: React.FC = () => {
                     HT: {pricingPreview.cycleHt.toLocaleString()} + TVA: {pricingPreview.cycleTva.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    Billed {effectiveCycle}
+                    {t('subscription.billedCycle', { cycle: t(`subscription.billingCycles.${effectiveCycle}`) })}
                   </p>
                 </div>
               )}
 
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Status</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.status')}</span>
                   <span className="font-medium capitalize text-gray-900 dark:text-white">
                     {subscription?.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Contracted hectares</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.contractedHectares')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {subscription?.contracted_hectares ?? '-'} ha
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Included users</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.includedUsers')}</span>
                   <span className="font-medium text-gray-900 dark:text-white">
                     {subscription?.included_users === null
-                      ? 'Unlimited'
+                      ? t('subscription.details.unlimited')
                       : subscription?.included_users ?? '-'}
                   </span>
                 </div>
                 {subscription?.contract_end_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Contract end</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.contractEnd')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
                       {new Date(subscription.contract_end_at).toLocaleDateString()}
                     </span>
@@ -396,7 +396,7 @@ const SubscriptionSettings: React.FC = () => {
                 )}
                 {subscription?.next_billing_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Next billing</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.nextBilling')}</span>
                     <span className="font-medium text-gray-900 dark:text-white">
                       {new Date(subscription.next_billing_at).toLocaleDateString()}
                     </span>
@@ -409,13 +409,13 @@ const SubscriptionSettings: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Usage and Limits
+            {t('subscription.usageLimits')}
           </h3>
 
           <div className="space-y-4">
             <UsageBar
               icon={<LandPlot className="h-5 w-5 text-gray-500" />}
-              label="Hectares"
+              label={t('subscription.plans.hectares')}
               current={usage?.hectares_count || 0}
               limit={subscription?.contracted_hectares || 0}
             />
@@ -446,12 +446,12 @@ const SubscriptionSettings: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Contract Timeline
+            {t('subscription.contractTimeline')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <TimelineItem
               icon={<Calendar className="h-4 w-4" />}
-              label="Start"
+              label={t('subscription.timeline.start')}
               value={
                 subscription?.contract_start_at
                   ? new Date(subscription.contract_start_at).toLocaleDateString()
@@ -460,7 +460,7 @@ const SubscriptionSettings: React.FC = () => {
             />
             <TimelineItem
               icon={<Calendar className="h-4 w-4" />}
-              label="End"
+              label={t('subscription.timeline.end')}
               value={
                 subscription?.contract_end_at
                   ? new Date(subscription.contract_end_at).toLocaleDateString()
@@ -469,19 +469,19 @@ const SubscriptionSettings: React.FC = () => {
             />
             <TimelineItem
               icon={<Calendar className="h-4 w-4" />}
-              label="Renewal notice"
-              value={`${subscription?.renewal_notice_days || 60} days before end`}
+              label={t('subscription.timeline.renewalNotice')}
+              value={t('subscription.timeline.daysBeforeEnd', { days: subscription?.renewal_notice_days || 60 })}
             />
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Billing Management
+            {t('subscription.billingManagementTitle')}
           </h3>
 
           <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-            Open checkout with your current contract context to update payment and invoice settings.
+            {t('subscription.billingManagementDescription')}
           </p>
 
           <button
@@ -494,8 +494,8 @@ const SubscriptionSettings: React.FC = () => {
           >
             <span>
               {purchasePlan.isPending
-                ? t('subscription.processing', 'Processing...')
-                : 'Manage Billing'}
+                ? t('subscription.processing')
+                : t('subscription.manageBilling')}
             </span>
             <ExternalLink className="h-4 w-4" />
           </button>
@@ -503,7 +503,7 @@ const SubscriptionSettings: React.FC = () => {
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Add-ons
+            {t('subscription.addons.title')}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {addonModules.map((module) => {
@@ -519,32 +519,32 @@ const SubscriptionSettings: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {module.name}
                     </p>
-                    <p className="text-xs text-gray-500">${module.priceMonthly || 0}/mo</p>
+                    <p className="text-xs text-gray-500">{t('subscription.addons.perMonth', { price: module.priceMonthly || 0 })}</p>
                   </div>
                   {isActive ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                      Active
+                      {t('subscription.addons.active')}
                     </span>
                   ) : (
                     <button
                       onClick={() => purchaseAddon.mutate(module.id)}
                       className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
-                      Buy
+                      {t('subscription.addons.buy')}
                     </button>
                   )}
                 </div>
               );
             })}
             {addonModules.length === 0 && (
-              <p className="text-sm text-gray-500">No addon modules configured.</p>
+              <p className="text-sm text-gray-500">{t('subscription.addons.noAddons')}</p>
             )}
           </div>
 
           {coreModules.length > 0 && (
             <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
               <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                Included core modules
+                {t('subscription.addons.coreModules')}
               </h4>
               <div className="flex flex-wrap gap-2">
                 {coreModules.map((module) => (

@@ -122,8 +122,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1 sm:mb-2">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+          <div className="mb-1 flex items-center gap-2.5 sm:mb-2">
+            <Users className="h-5 w-5 shrink-0 text-blue-600 sm:h-6 sm:w-6" />
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {t('workers.list.title')}
             </h1>
@@ -193,23 +193,23 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative sm:col-span-2 lg:col-span-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:h-5 sm:w-5" />
             <input
               type="text"
               placeholder={t('workers.list.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
+              className="w-full rounded-lg border border-gray-300 py-2 pe-3 ps-9 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:ps-10"
             />
           </div>
 
           {/* Type Filter */}
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+            <Filter className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:h-5 sm:w-5" />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as WorkerType | 'all')}
-              className="w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white appearance-none text-sm"
+              className="w-full appearance-none rounded-lg border border-gray-300 py-2 pe-3 ps-9 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:ps-10"
             >
               <option value="all">{t('workers.filters.allTypes')}</option>
               <option value="fixed_salary">{t('workers.filters.fixedSalary')}</option>
@@ -266,7 +266,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
+          <span className="ms-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
         </div>
       ) : filteredWorkers.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 sm:p-12 text-center">
@@ -373,7 +373,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700 rtl:flex-row-reverse" onClick={(e) => e.stopPropagation()}>
                   <Can I="create" a="Payment">
                     <button
                       onClick={() => handlePayWorker(worker)}
@@ -429,28 +429,28 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.worker')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.type')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.compensation')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.farm')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.cnss')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.status')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.platformAccess')}
                     </th>
-                    <th className="px-4 xl:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-4 xl:px-6 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.actions')}
                     </th>
                   </tr>
@@ -543,8 +543,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                           </div>
                         )}
                       </td>
-                      <td className="px-4 xl:px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-4 xl:px-6 py-4 text-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1 rtl:flex-row-reverse">
                           <Can I="create" a="Payment">
                             <button
                               onClick={() => handlePayWorker(worker)}

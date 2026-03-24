@@ -17,7 +17,7 @@ export default function LowStockAlerts({
   maxItems = 10,
   showActions = true,
 }: LowStockAlertsProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const navigate = useNavigate();
   const { format: formatCurrency } = useCurrency();
 

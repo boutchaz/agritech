@@ -1,0 +1,80 @@
+{
+  "reports": {
+    "title": "Rapports Financiers",
+    "subtitle": "Accédez à des rapports financiers et analyses complets",
+    "allReports": "Tous les Rapports",
+    "viewReport": "Voir le Rapport",
+    "totalAssets": "Total des Actifs",
+    "totalLiabilities": "Total des Passifs",
+    "totalEquity": "Total des Capitaux Propres",
+    "totalRevenue": "Chiffre d'Affaires Total",
+    "balanceSheet": "Bilan",
+    "balanceSheetDesc": "Consultez votre situation financière avec les actifs, passifs et capitaux propres à une date donnée.",
+    "profitLoss": "Compte de Résultat",
+    "profitLossDesc": "Analysez les revenus, les dépenses et la rentabilité sur n'importe quelle période.",
+    "trialBalance": "Balance Générale",
+    "trialBalanceDesc": "Vérifiez votre grand livre avec une liste complète de tous les soldes de comptes.",
+    "generalLedger": "Grand Livre",
+    "generalLedgerDesc": "Consultez l'historique détaillé des transactions et les soldes courants de chaque compte.",
+    "cashFlow": "Flux de Trésorerie",
+    "cashFlowDesc": "Suivez les entrées et sorties de trésorerie à travers les activités opérationnelles, d'investissement et de financement.",
+    "agedReceivables": "Balance Âgée Clients",
+    "agedReceivablesDesc": "Suivez les factures impayées et les tranches d'ancienneté des paiements clients.",
+    "agedPayables": "Balance Âgée Fournisseurs",
+    "agedPayablesDesc": "Surveillez les factures en attente et les tranches d'ancienneté des paiements fournisseurs."
+  },
+  "payments": {
+    "form": {
+      "validation": {
+        "partyNameRequired": "Le nom du tiers est requis",
+        "paymentDateRequired": "La date de paiement est requise",
+        "amountMin": "Le montant doit être d'au moins 0,01"
+      },
+      "errors": {
+        "saveFailed": "Échec de l'enregistrement du paiement"
+      },
+      "fields": {
+        "paymentType": "Type de Paiement",
+        "paymentDate": "Date de Paiement",
+        "customer": "Client",
+        "supplier": "Fournisseur",
+        "optional": "Facultatif",
+        "partyName": "Nom du Tiers",
+        "name": "nom",
+        "amount": "Montant",
+        "paymentMethod": "Mode de Paiement",
+        "referenceNumber": "Numéro de Référence",
+        "remarks": "Remarques",
+        "status": "Statut"
+      },
+      "paymentTypes": {
+        "received": "Paiement Reçu",
+        "made": "Paiement Effectué"
+      },
+      "actions": {
+        "select": "Sélectionner",
+        "enter": "Saisir"
+      },
+      "methods": {
+        "cash": "Espèces",
+        "bankTransfer": "Virement Bancaire",
+        "check": "Chèque",
+        "mobileMoney": "Mobile Money"
+      },
+      "placeholders": {
+        "referenceNumber": "ex. CHQ-001, VIR-2024-001",
+        "remarks": "Notes supplémentaires sur ce paiement"
+      },
+      "statuses": {
+        "draft": "Brouillon",
+        "submitted": "Soumis",
+        "cancelled": "Annulé"
+      },
+      "buttons": {
+        "cancel": "Annuler",
+        "update": "Mettre à jour le Paiement",
+        "create": "Créer le Paiement"
+      }
+    }
+  }
+}

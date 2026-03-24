@@ -120,7 +120,7 @@ interface ItemVariantsDialogProps {
 }
 
 function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess?: () => void }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
   const [groupName, setGroupName] = useState('');
@@ -225,7 +225,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 }
 
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -874,7 +874,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
 }
 
 function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const { data: variants = [], isLoading } = useItemVariants(item?.id || null);
@@ -1305,7 +1305,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
 }
 
 export default function ItemManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const [selectedFarm, setSelectedFarm] = useState<string>('all');

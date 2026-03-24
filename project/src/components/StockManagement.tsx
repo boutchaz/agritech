@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Plus,
   Package,
@@ -156,6 +157,7 @@ interface StockManagementProps {
 }
 
 const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
+  const { t } = useTranslation('stock');
   const { currentOrganization, currentFarm } = useAuth();
   const { symbol: currencySymbol } = useCurrency();
   const [products, setProducts] = useState<Product[]>([]);
@@ -228,7 +230,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       setSuppliers(data || []);
     } catch (error) {
       console.error("Error fetching suppliers:", error);
-      setError("Failed to fetch suppliers");
+      setError(t('stockManagement.toast.fetchSuppliersFailed'));
     }
   };
 
@@ -243,7 +245,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       setWarehouses(data || []);
     } catch (error) {
       console.error("Error fetching warehouses:", error);
-      setError("Failed to fetch warehouses");
+      setError(t('stockManagement.toast.fetchWarehousesFailed'));
     }
   };
 
@@ -337,7 +339,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             supplier.id === editingSupplierId ? data : supplier,
           ),
         );
-        toast.success("Supplier updated successfully");
+        toast.success(t('stockManagement.toast.supplierUpdated'));
       } else {
         const data = await suppliersApi.create(
           {
@@ -348,7 +350,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         );
 
         setSuppliers([...suppliers, data]);
-        toast.success("Supplier created successfully");
+        toast.success(t('stockManagement.toast.supplierCreated'));
       }
 
       closeSupplierModal();
@@ -356,7 +358,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     } catch (error) {
       console.error("Error saving supplier:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to save supplier";
+        error instanceof Error ? error.message : t('stockManagement.toast.supplierSaveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -365,7 +367,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir archiver ce fournisseur ?")) return;
+    if (!confirm(t('stockManagement.toast.supplierArchiveConfirm'))) return;
     if (!currentOrganization) return;
 
     try {
@@ -376,11 +378,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         closeSupplierModal();
       }
       setError(null);
-      toast.success("Supplier archived successfully");
+      toast.success(t('stockManagement.toast.supplierArchived'));
     } catch (error) {
       console.error("Error deleting supplier:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to delete supplier";
+        error instanceof Error ? error.message : t('stockManagement.toast.supplierArchiveFailed');
       setError(message);
       toast.error(message);
     }
@@ -411,7 +413,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             warehouse.id === editingWarehouseId ? data : warehouse,
           ),
         );
-        toast.success("Warehouse updated successfully");
+        toast.success(t('stockManagement.toast.warehouseUpdated'));
       } else {
         const data = await warehousesApi.create(
           payload,
@@ -419,7 +421,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         );
 
         setWarehouses([...warehouses, data]);
-        toast.success("Warehouse created successfully");
+        toast.success(t('stockManagement.toast.warehouseCreated'));
       }
 
       closeWarehouseModal();
@@ -427,7 +429,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     } catch (error) {
       console.error("Error saving warehouse:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to save warehouse";
+        error instanceof Error ? error.message : t('stockManagement.toast.warehouseSaveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -436,7 +438,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteWarehouse = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir archiver cet entrepôt ?")) return;
+    if (!confirm(t('stockManagement.toast.warehouseArchiveConfirm'))) return;
     if (!currentOrganization) return;
 
     try {
@@ -447,11 +449,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         closeWarehouseModal();
       }
       setError(null);
-      toast.success("Warehouse archived successfully");
+      toast.success(t('stockManagement.toast.warehouseArchived'));
     } catch (error) {
       console.error("Error deleting warehouse:", error);
       const message =
-        error instanceof Error ? error.message : "Failed to delete warehouse";
+        error instanceof Error ? error.message : t('stockManagement.toast.warehouseArchiveFailed');
       setError(message);
       toast.error(message);
     }
@@ -470,7 +472,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion du Stock
+          {t('stockManagement.title')}
         </h2>
       </div>
 
@@ -484,7 +486,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouveau Fournisseur</span>
+            <span>{t('stockManagement.newSupplier')}</span>
           </button>
         )}
         {activeTab === "warehouses" && (
@@ -493,7 +495,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouvel Entrepôt</span>
+            <span>{t('stockManagement.newWarehouse')}</span>
           </button>
         )}
       </div>
@@ -517,7 +519,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <Input
               type="text"
-              placeholder="Rechercher un fournisseur..."
+              placeholder={t('stockManagement.searchSupplier')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -573,7 +575,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             onClick={() => openEditSupplierModal(supplier)}
                           >
                             <Pencil className="mr-2 h-4 w-4" />
-                            Modifier
+                            {t('stockManagement.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -581,7 +583,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Archiver
+                            {t('stockManagement.archive')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -591,7 +593,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       {supplier.contact_person && (
                         <div>
                           <span className="text-gray-500 dark:text-gray-400 block text-xs">
-                            Contact
+                            {t('stockManagement.supplierTable.contact')}
                           </span>
                           <span className="text-gray-900 dark:text-white">
                             {supplier.contact_person}
@@ -600,7 +602,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       )}
                       <div>
                         <span className="text-gray-500 dark:text-gray-400 block text-xs">
-                          Localisation
+                          {t('stockManagement.supplierTable.location')}
                         </span>
                         <span className="text-gray-900 dark:text-white">
                           {supplier.city && supplier.country
@@ -641,10 +643,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 <div className="text-center py-12">
                   <Users className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    Aucun fournisseur
+                    {t('stockManagement.noSuppliers')}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Commencez par ajouter un nouveau fournisseur.
+                    {t('stockManagement.noSuppliersHint')}
                   </p>
                 </div>
               )}
@@ -656,16 +658,16 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Fournisseur
+                      {t('stockManagement.supplierTable.supplier')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Contact
+                      {t('stockManagement.supplierTable.contact')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Localisation
+                      {t('stockManagement.supplierTable.location')}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
+                      {t('stockManagement.supplierTable.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -743,7 +745,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                                 onClick={() => openEditSupplierModal(supplier)}
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Modifier
+                                {t('stockManagement.edit')}
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
@@ -753,7 +755,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                                 className="text-red-600 focus:text-red-600"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Archiver
+                                {t('stockManagement.archive')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -767,10 +769,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 <div className="text-center py-12">
                   <Users className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    Aucun fournisseur
+                    {t('stockManagement.noSuppliers')}
                   </h3>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Commencez par ajouter un nouveau fournisseur.
+                    {t('stockManagement.noSuppliersHint')}
                   </p>
                 </div>
               )}
@@ -787,7 +789,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <Input
               type="text"
-              placeholder="Rechercher un entrepôt..."
+              placeholder={t('stockManagement.searchWarehouse')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -800,19 +802,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Entrepôt
+                    {t('stockManagement.warehouseTable.warehouse')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Capacité
+                    {t('stockManagement.warehouseTable.capacity')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Responsable
+                    {t('stockManagement.warehouseTable.manager')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Conditions
+                    {t('stockManagement.warehouseTable.conditions')}
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
+                    {t('stockManagement.warehouseTable.actions')}
                   </th>
                 </tr>
               </thead>
@@ -869,16 +871,16 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         <div className="text-xs space-y-1">
                           {warehouse.temperature_controlled && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                              Température contrôlée
+                              {t('stockManagement.tempControlled')}
                             </span>
                           )}
                           {warehouse.humidity_controlled && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Humidité contrôlée
+                              {t('stockManagement.humidityControlled')}
                             </span>
                           )}
                           <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                            Sécurité: {warehouse.security_level}
+                            {t('stockManagement.security')}{warehouse.security_level}
                           </div>
                         </div>
                       </td>
@@ -897,7 +899,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               onClick={() => openEditWarehouseModal(warehouse)}
                             >
                               <Pencil className="mr-2 h-4 w-4" />
-                              Modifier
+                              {t('stockManagement.edit')}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -907,7 +909,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               className="text-red-600 focus:text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Archiver
+                              {t('stockManagement.archive')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -921,10 +923,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <div className="text-center py-12">
                 <Warehouse className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                  Aucun entrepôt
+                  {t('stockManagement.noWarehouses')}
                 </h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Commencez par ajouter un nouvel entrepôt.
+                  {t('stockManagement.noWarehousesHint')}
                 </p>
               </div>
             )}
@@ -1695,8 +1697,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {editingSupplierId
-                  ? "Modifier le fournisseur"
-                  : "Nouveau Fournisseur"}
+                  ? t('stockManagement.supplierForm.editTitle')
+                  : t('stockManagement.supplierForm.createTitle')}
               </h3>
               <button
                 onClick={closeSupplierModal}
@@ -1709,7 +1711,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <FormField
-                    label="Nom du fournisseur *"
+                    label={t('stockManagement.supplierForm.name')}
                     htmlFor="supplier_name"
                     required
                   >
@@ -1727,7 +1729,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
                 <div>
                   <FormField
-                    label="Personne de contact"
+                    label={t('stockManagement.supplierForm.contactPerson')}
                     htmlFor="supplier_contact"
                   >
                     <Input
@@ -1745,7 +1747,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Email" htmlFor="supplier_email">
+                  <FormField label={t('stockManagement.supplierForm.email')} htmlFor="supplier_email">
                     <Input
                       id="supplier_email"
                       type="email"
@@ -1761,7 +1763,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Téléphone" htmlFor="supplier_phone">
+                  <FormField label={t('stockManagement.supplierForm.phone')} htmlFor="supplier_phone">
                     <Input
                       id="supplier_phone"
                       type="tel"
@@ -1777,7 +1779,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Adresse" htmlFor="supplier_address">
+                  <FormField label={t('stockManagement.supplierForm.address')} htmlFor="supplier_address">
                     <Input
                       id="supplier_address"
                       type="text"
@@ -1793,7 +1795,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Ville" htmlFor="supplier_city">
+                  <FormField label={t('stockManagement.supplierForm.city')} htmlFor="supplier_city">
                     <Input
                       id="supplier_city"
                       type="text"
@@ -1806,7 +1808,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Code postal" htmlFor="supplier_postal">
+                  <FormField label={t('stockManagement.supplierForm.postalCode')} htmlFor="supplier_postal">
                     <Input
                       id="supplier_postal"
                       type="text"
@@ -1822,7 +1824,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Pays" htmlFor="supplier_country">
+                  <FormField label={t('stockManagement.supplierForm.country')} htmlFor="supplier_country">
                     <Input
                       id="supplier_country"
                       type="text"
@@ -1838,7 +1840,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Site web" htmlFor="supplier_website">
+                  <FormField label={t('stockManagement.supplierForm.website')} htmlFor="supplier_website">
                     <Input
                       id="supplier_website"
                       type="url"
@@ -1854,7 +1856,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Numéro TVA" htmlFor="supplier_tax">
+                  <FormField label={t('stockManagement.supplierForm.taxId')} htmlFor="supplier_tax">
                     <Input
                       id="supplier_tax"
                       type="text"
@@ -1871,9 +1873,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
                 <div>
                   <FormField
-                    label="Conditions de paiement"
+                    label={t('stockManagement.supplierForm.paymentTerms')}
                     htmlFor="supplier_payment"
-                    helper="Ex: Net 30, COD, etc."
+                    helper={t('stockManagement.supplierForm.paymentTermsPlaceholder')}
                   >
                     <Input
                       id="supplier_payment"
@@ -1885,13 +1887,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                           payment_terms: e.target.value,
                         })
                       }
-                      placeholder="Net 30, COD, etc."
+                      placeholder={t('stockManagement.supplierForm.paymentTermsPlaceholder')}
                     />
                   </FormField>
                 </div>
 
                 <div className="col-span-2">
-                  <FormField label="Notes" htmlFor="supplier_notes">
+                  <FormField label={t('stockManagement.supplierForm.notes')} htmlFor="supplier_notes">
                     <Textarea
                       id="supplier_notes"
                       value={newSupplier.notes}
@@ -1913,7 +1915,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 onClick={closeSupplierModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
-                Annuler
+                {t('stockManagement.supplierForm.cancel')}
               </button>
               <button
                 onClick={handleSubmitSupplier}
@@ -1921,10 +1923,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingSupplier
-                  ? "Enregistrement..."
+                  ? t('stockManagement.supplierForm.saving')
                   : editingSupplierId
-                    ? "Mettre à jour"
-                    : "Ajouter"}
+                    ? t('stockManagement.supplierForm.update')
+                    : t('stockManagement.supplierForm.add')}
               </button>
             </div>
           </div>
@@ -1937,7 +1939,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingWarehouseId ? "Modifier l’entrepôt" : "Nouvel Entrepôt"}
+                {editingWarehouseId ? t('stockManagement.warehouseForm.editTitle') : t('stockManagement.warehouseForm.createTitle')}
               </h3>
               <button
                 onClick={closeWarehouseModal}
@@ -1950,7 +1952,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <FormField
-                    label="Nom de l'entrepôt *"
+                    label={t('stockManagement.warehouseForm.name')}
                     htmlFor="warehouse_name"
                     required
                   >
@@ -1970,7 +1972,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div className="col-span-2">
-                  <FormField label="Description" htmlFor="warehouse_desc">
+                  <FormField label={t('stockManagement.warehouseForm.description')} htmlFor="warehouse_desc">
                     <Textarea
                       id="warehouse_desc"
                       value={newWarehouse.description}
@@ -1986,7 +1988,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Emplacement" htmlFor="warehouse_location">
+                  <FormField label={t('stockManagement.warehouseForm.location')} htmlFor="warehouse_location">
                     <Input
                       id="warehouse_location"
                       type="text"
@@ -2002,7 +2004,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Adresse" htmlFor="warehouse_address">
+                  <FormField label={t('stockManagement.warehouseForm.address')} htmlFor="warehouse_address">
                     <Input
                       id="warehouse_address"
                       type="text"
@@ -2018,7 +2020,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Ville" htmlFor="warehouse_city">
+                  <FormField label={t('stockManagement.warehouseForm.city')} htmlFor="warehouse_city">
                     <Input
                       id="warehouse_city"
                       type="text"
@@ -2034,7 +2036,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Code postal" htmlFor="warehouse_postal">
+                  <FormField label={t('stockManagement.warehouseForm.postalCode')} htmlFor="warehouse_postal">
                     <Input
                       id="warehouse_postal"
                       type="text"
@@ -2050,7 +2052,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 </div>
 
                 <div>
-                  <FormField label="Capacité" htmlFor="warehouse_capacity">
+                  <FormField label={t('stockManagement.warehouseForm.capacity')} htmlFor="warehouse_capacity">
                     <Input
                       id="warehouse_capacity"
                       type="number"
@@ -2068,7 +2070,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
                 <div>
                   <FormField
-                    label="Unité de capacité"
+                    label={t('stockManagement.warehouseForm.capacityUnit')}
                     htmlFor="warehouse_capacity_unit"
                   >
                     <Select
@@ -2081,16 +2083,16 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         })
                       }
                     >
-                      <option value="m3">Mètres cubes (m³)</option>
-                      <option value="m2">Mètres carrés (m²)</option>
-                      <option value="kg">Kilogrammes</option>
-                      <option value="t">Tonnes</option>
+                      <option value="m3">{t('stockManagement.warehouseForm.capacityUnits.m3')}</option>
+                      <option value="m2">{t('stockManagement.warehouseForm.capacityUnits.m2')}</option>
+                      <option value="kg">{t('stockManagement.warehouseForm.capacityUnits.kg')}</option>
+                      <option value="t">{t('stockManagement.warehouseForm.capacityUnits.ton')}</option>
                     </Select>
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Responsable" htmlFor="warehouse_manager">
+                  <FormField label={t('stockManagement.warehouseForm.manager')} htmlFor="warehouse_manager">
                     <Input
                       id="warehouse_manager"
                       type="text"
@@ -2107,7 +2109,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
                 <div>
                   <FormField
-                    label="Téléphone du responsable"
+                    label={t('stockManagement.warehouseForm.managerPhone')}
                     htmlFor="warehouse_manager_phone"
                   >
                     <Input
@@ -2126,7 +2128,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
                 <div>
                   <FormField
-                    label="Niveau de sécurité"
+                    label={t('stockManagement.warehouseForm.securityLevel')}
                     htmlFor="warehouse_security"
                   >
                     <Select
@@ -2139,10 +2141,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         })
                       }
                     >
-                      <option value="basic">Basique</option>
-                      <option value="standard">Standard</option>
-                      <option value="high">Élevé</option>
-                      <option value="maximum">Maximum</option>
+                      <option value="basic">{t('stockManagement.warehouseForm.securityLevels.basic')}</option>
+                      <option value="standard">{t('stockManagement.warehouseForm.securityLevels.standard')}</option>
+                      <option value="high">{t('stockManagement.warehouseForm.securityLevels.high')}</option>
+                      <option value="maximum">{t('stockManagement.warehouseForm.securityLevels.maximum')}</option>
                     </Select>
                   </FormField>
                 </div>
@@ -2166,7 +2168,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         htmlFor="temperature_controlled"
                         className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
                       >
-                        Température contrôlée
+                        {t('stockManagement.warehouseForm.tempControlled')}
                       </label>
                     </div>
 
@@ -2187,7 +2189,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         htmlFor="humidity_controlled"
                         className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
                       >
-                        Humidité contrôlée
+                        {t('stockManagement.warehouseForm.humidityControlled')}
                       </label>
                     </div>
                   </div>
@@ -2200,7 +2202,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 onClick={closeWarehouseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
-                Annuler
+                {t('stockManagement.warehouseForm.cancel')}
               </button>
               <button
                 onClick={handleSubmitWarehouse}
@@ -2208,10 +2210,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingWarehouse
-                  ? "Enregistrement..."
+                  ? t('stockManagement.warehouseForm.saving')
                   : editingWarehouseId
-                    ? "Mettre à jour"
-                    : "Ajouter"}
+                    ? t('stockManagement.warehouseForm.update')
+                    : t('stockManagement.warehouseForm.add')}
               </button>
             </div>
           </div>
@@ -2223,7 +2225,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Ajuster la quantité
+                {t('stockManagement.adjustQuantity.title')}
               </h3>
               <button
                 onClick={closeAdjustQuantityModal}
@@ -2234,13 +2236,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Produit :{" "}
+                {t('stockManagement.adjustQuantity.product')}{" "}
                 <span className="font-medium text-gray-900 dark:text-white">
                   {selectedProduct.item_name || selectedProduct.name}
                 </span>
               </p>
               <div className="grid grid-cols-1 gap-4">
-                <FormField label="Type d'ajustement" htmlFor="adjustment_type">
+                <FormField label={t('stockManagement.adjustQuantity.adjustmentType')} htmlFor="adjustment_type">
                   <Select
                     id="adjustment_type"
                     value={quantityAdjustment.type}
@@ -2253,12 +2255,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       })
                     }
                   >
-                    <option value="increase">Augmenter le stock</option>
-                    <option value="decrease">Diminuer le stock</option>
+                    <option value="increase">{t('stockManagement.adjustQuantity.increase')}</option>
+                    <option value="decrease">{t('stockManagement.adjustQuantity.decrease')}</option>
                   </Select>
                 </FormField>
                 <FormField
-                  label="Quantité"
+                  label={t('stockManagement.adjustQuantity.quantity')}
                   htmlFor="adjustment_amount"
                   required
                 >
@@ -2278,9 +2280,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   />
                 </FormField>
                 <FormField
-                  label="Motif"
+                  label={t('stockManagement.adjustQuantity.reason')}
                   htmlFor="adjustment_reason"
-                  helper="Optionnel, utile pour l'audit."
+                  helper={t('stockManagement.adjustQuantity.reasonHint')}
                 >
                   <Textarea
                     id="adjustment_reason"
@@ -2301,14 +2303,14 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                 onClick={closeAdjustQuantityModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
-                Annuler
+                {t('stockManagement.adjustQuantity.cancel')}
               </button>
               <button
                 onClick={handleAdjustQuantity}
                 disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isAdjustingQuantity ? "Enregistrement..." : "Appliquer"}
+                {isAdjustingQuantity ? t('stockManagement.adjustQuantity.saving') : t('stockManagement.adjustQuantity.apply')}
               </button>
             </div>
           </div>

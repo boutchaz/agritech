@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -39,22 +40,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const checkTypeLabels: Record<ComplianceCheckType, string> = {
-  [ComplianceCheckType.PESTICIDE_USAGE]: 'Utilisation pesticides',
-  [ComplianceCheckType.TRACEABILITY]: 'Traçabilité',
-  [ComplianceCheckType.WORKER_SAFETY]: 'Sécurité travailleurs',
-  [ComplianceCheckType.RECORD_KEEPING]: 'Tenue des registres',
-  [ComplianceCheckType.ENVIRONMENTAL]: 'Environnement',
-  [ComplianceCheckType.QUALITY_CONTROL]: 'Contrôle qualité',
-};
-
-const statusLabels: Record<ComplianceCheckStatus, string> = {
-  [ComplianceCheckStatus.COMPLIANT]: 'Conforme',
-  [ComplianceCheckStatus.NON_COMPLIANT]: 'Non conforme',
-  [ComplianceCheckStatus.NEEDS_REVIEW]: 'À revoir',
-  [ComplianceCheckStatus.IN_PROGRESS]: 'En cours',
-};
-
 interface CreateComplianceCheckDialogProps {
   certificationId: string;
 }
@@ -63,6 +48,23 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
   const [open, setOpen] = useState(false);
   const { currentOrganization } = useAuth();
   const createCheck = useCreateComplianceCheck();
+  const { t } = useTranslation('compliance');
+
+  const checkTypeLabels: Record<ComplianceCheckType, string> = {
+    [ComplianceCheckType.PESTICIDE_USAGE]: t('checkType.pesticideUsage'),
+    [ComplianceCheckType.TRACEABILITY]: t('checkType.traceability'),
+    [ComplianceCheckType.WORKER_SAFETY]: t('checkType.workerSafety'),
+    [ComplianceCheckType.RECORD_KEEPING]: t('checkType.recordKeeping'),
+    [ComplianceCheckType.ENVIRONMENTAL]: t('checkType.environmental'),
+    [ComplianceCheckType.QUALITY_CONTROL]: t('checkType.qualityControl'),
+  };
+
+  const statusLabels: Record<ComplianceCheckStatus, string> = {
+    [ComplianceCheckStatus.COMPLIANT]: t('status.compliant'),
+    [ComplianceCheckStatus.NON_COMPLIANT]: t('status.nonCompliant'),
+    [ComplianceCheckStatus.NEEDS_REVIEW]: t('status.needsReview'),
+    [ComplianceCheckStatus.IN_PROGRESS]: t('status.inProgress'),
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,8 +86,8 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
           status: values.status,
           auditor_name: values.auditor_name,
           score: values.score ? parseInt(values.score, 10) : undefined,
-          next_check_date: values.next_check_date 
-            ? new Date(values.next_check_date).toISOString() 
+          next_check_date: values.next_check_date
+            ? new Date(values.next_check_date).toISOString()
             : undefined,
         },
       },
@@ -103,30 +105,30 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          Nouveau contrôle
+          {t('dialogs.createCheck.button')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
-          <DialogTitle>Nouveau contrôle de conformité</DialogTitle>
+          <DialogTitle>{t('dialogs.createCheck.title')}</DialogTitle>
           <DialogDescription>
-            Enregistrez un nouveau contrôle ou audit pour cette certification.
+            {t('dialogs.createCheck.description')}
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
             name="check_type"
             render={({ field }) => (
-              <FormField 
-                label="Type de contrôle" 
+              <FormField
+                label={t('dialogs.createCheck.checkType')}
                 error={form.formState.errors.check_type?.message}
                 required
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un type" />
+                    <SelectValue placeholder={t('dialogs.createCertification.selectType')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(checkTypeLabels).map(([value, label]) => (
@@ -143,15 +145,15 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
               control={form.control}
               name="check_date"
               render={({ field }) => (
-                <FormField 
-                  label="Date du contrôle" 
+                <FormField
+                  label={t('dialogs.createCheck.checkDate')}
                   error={form.formState.errors.check_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -161,14 +163,14 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
               control={form.control}
               name="status"
               render={({ field }) => (
-                <FormField 
-                  label="Résultat" 
+                <FormField
+                  label={t('dialogs.createCheck.result')}
                   error={form.formState.errors.status?.message}
                   required
                 >
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Statut" />
+                      <SelectValue placeholder={t('table.status')} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(statusLabels).map(([value, label]) => (
@@ -186,11 +188,11 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
               control={form.control}
               name="auditor_name"
               render={({ field }) => (
-                <FormField 
-                  label="Auditeur" 
+                <FormField
+                  label={t('dialogs.createCheck.auditor')}
                   error={form.formState.errors.auditor_name?.message}
                 >
-                  <Input placeholder="Nom de l'auditeur" {...field} />
+                  <Input placeholder={t('dialogs.createCheck.auditorPlaceholder')} {...field} />
                 </FormField>
               )}
             />
@@ -199,16 +201,16 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
               control={form.control}
               name="score"
               render={({ field }) => (
-                <FormField 
-                  label="Score (%)" 
+                <FormField
+                  label={t('dialogs.createCheck.score')}
                   error={form.formState.errors.score?.message}
                 >
-                  <Input 
-                    type="number" 
-                    min={0} 
-                    max={100} 
-                    placeholder="0-100" 
-                    {...field} 
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    placeholder="0-100"
+                    {...field}
                   />
                 </FormField>
               )}
@@ -219,14 +221,14 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
             control={form.control}
             name="next_check_date"
             render={({ field }) => (
-              <FormField 
-                label="Prochain contrôle prévu" 
+              <FormField
+                label={t('dialogs.createCheck.nextCheckDate')}
                 error={form.formState.errors.next_check_date?.message}
               >
                 <DatePicker
                   value={field.value}
                   onChange={field.onChange}
-                  placeholder="Choisir date (optionnel)"
+                  placeholder={t('dialogs.createCheck.selectDateOptional')}
                 />
               </FormField>
             )}
@@ -234,13 +236,13 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
+              {t('dialogs.createCheck.cancel')}
             </Button>
             <Button type="submit" disabled={createCheck.isPending}>
               {createCheck.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Créer
+              {t('dialogs.createCheck.create')}
             </Button>
           </div>
         </form>

@@ -308,7 +308,33 @@
     "chat": "Assistant IA",
     "compliance": "Conformité",
     "certifications": "Certifications",
-    "correctiveActions": "Actions correctives"
+    "correctiveActions": "Actions correctives",
+    "marketplace": "Marketplace",
+    "receivedRequests": "Demandes reçues",
+    "sentRequests": "Demandes envoyées",
+    "viewMarketplace": "Voir la marketplace"
+  },
+  "sidebar": {
+    "collapse": "Réduire",
+    "expand": "Développer la barre latérale"
+  },
+  "orgSwitcher": {
+    "organizations": "Organisations",
+    "orgSettings": "Paramètres de l'organisation",
+    "manageTeam": "Gérer l'équipe",
+    "signOut": "Se déconnecter",
+    "backToOrganizations": "← Retour aux organisations",
+    "farms": "Fermes - {{orgName}}",
+    "manager": "Gestionnaire: {{name}}",
+    "noFarms": "Aucune ferme trouvée",
+    "createFirstFarm": "Créez votre première ferme",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "manager": "Gestionnaire",
+      "member": "Membre",
+      "viewer": "Lecteur"
+    }
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -1539,7 +1565,23 @@
       "fiscalYears": "Années Fiscales",
       "fiscalYearsDescription": "Gérer les années fiscales et les périodes comptables",
       "biologicalAssets": "Actifs Biologiques",
-      "biologicalAssetsDescription": "Gérer les vergers, le bétail et les actifs pérennes"
+      "biologicalAssetsDescription": "Gérer les vergers, le bétail et les actifs pérennes",
+      "costCenters": "Centres de Coûts",
+      "costCentersDescription": "Gérer les centres de coûts pour le suivi des dépenses",
+      "accountMappings": "Correspondance des Comptes",
+      "accountMappingsDescription": "Configurer les correspondances automatiques des écritures comptables",
+      "files": "Gestion des Fichiers",
+      "filesDescription": "Gérer les fichiers et détecter les orphelins",
+      "dangerZone": "Zone de Danger",
+      "dangerZoneDescription": "Gérer les données de démo et actions critiques"
+    }
+  },
+  "account": {
+    "title": "Paramètres du Compte",
+    "tabs": {
+      "profile": "Profil",
+      "preferences": "Préférences",
+      "security": "Sécurité"
     }
   },
   "profile": {
@@ -1814,7 +1856,56 @@
       "mostPopular": "Le plus populaire",
       "currentPlan": "Plan actuel",
       "contactSales": "Contacter les ventes",
-      "getStarted": "Commencer"
+      "getStarted": "Commencer",
+      "upgrade": "Passer au supérieur",
+      "downgrade": "Passer à l'inférieur",
+      "hectares": "Hectares",
+      "hectaresUpTo": "jusqu'à {{max}}",
+      "hectaresAbove": ">{{min}}",
+      "users": "Utilisateurs",
+      "support": "Support",
+      "sla": "SLA",
+      "slaIncluded": "Inclus",
+      "slaNotIncluded": "Non inclus",
+      "pricePerHa": "{{price}} MAD/ha/an (HT)"
+    },
+    "processing": "Traitement en cours...",
+    "contractInputs": "Paramètres du contrat",
+    "contractedHectares": "Hectares contractuels",
+    "billingCycle": "Cycle de facturation",
+    "billingCycles": {
+      "monthly": "Mensuel",
+      "semiannual": "Semestriel",
+      "annual": "Annuel"
+    },
+    "billedCycle": "Facturé {{cycle}}",
+    "currentContract": "Contrat actuel",
+    "usageLimits": "Utilisation et limites",
+    "contractTimeline": "Chronologie du contrat",
+    "timeline": {
+      "start": "Début",
+      "end": "Fin",
+      "renewalNotice": "Préavis de renouvellement",
+      "daysBeforeEnd": "{{days}} jours avant la fin"
+    },
+    "details": {
+      "status": "Statut",
+      "contractedHectares": "Hectares contractuels",
+      "includedUsers": "Utilisateurs inclus",
+      "unlimited": "Illimité",
+      "contractEnd": "Fin du contrat",
+      "nextBilling": "Prochaine facturation"
+    },
+    "billingManagementTitle": "Gestion de la facturation",
+    "billingManagementDescription": "Ouvrez le paiement avec le contexte de votre contrat actuel pour mettre à jour les paramètres de paiement et de facture.",
+    "manageBilling": "Gérer la facturation",
+    "addons": {
+      "title": "Modules complémentaires",
+      "active": "Actif",
+      "buy": "Acheter",
+      "noAddons": "Aucun module complémentaire configuré.",
+      "coreModules": "Modules de base inclus",
+      "perMonth": "{{price}} $/mois"
     },
     "errors": {
       "noOrganization": "Aucune organisation sélectionnée. Veuillez d'abord sélectionner une organisation.",
@@ -3975,7 +4066,18 @@
     "loading": "Chargement...",
     "list": "Liste",
     "calendar": "Calendrier",
+    "kanban": "Tableau",
     "navigation": "Navigation des tâches",
+    "kanbanTitle": "Tableau des Tâches",
+    "kanbanSubtitle": "Glissez les tâches entre les colonnes pour mettre à jour leur statut",
+    "kanbanEmpty": "Aucune tâche",
+    "kanbanError": "Échec du chargement des tâches.",
+    "kanbanDueOverdue": "En retard",
+    "kanbanDueToday": "Aujourd'hui",
+    "kanbanDueTomorrow": "Demain",
+    "kanbanRecurring": "Récurrent : {{frequency}}",
+    "kanbanSubtask": "Fait partie d'une série récurrente",
+    "kanbanSaving": "Enregistrement...",
     "stats": {
       "pending": "En attente",
       "inProgress": "En cours",
@@ -5509,6 +5611,75 @@
       "creatingOrg": "Création de l'organisation...",
       "activatingTrial": "Activation de l'essai...",
       "complete": "Terminé!"
+    }
+  },
+  "modulesSettings": {
+    "title": "Modules",
+    "subtitle": "Activez ou désactivez les modules selon vos besoins. Les modules désactivés n'apparaîtront pas dans la navigation.",
+    "loading": "Chargement des modules...",
+    "error": "Erreur lors du chargement des modules. Veuillez réessayer.",
+    "currentPlan": "Plan actuel : {{plan}}",
+    "allModulesAvailable": "Tous les modules sont disponibles",
+    "modulesAvailable": "{{count}} modules disponibles",
+    "viewSubscription": "Voir l'abonnement",
+    "activeCount": "{{active}}/{{total}} actifs",
+    "noModulesInCategory": "Aucun module disponible dans cette catégorie.",
+    "upgrade": "Mettre à niveau →",
+    "upgradePrompt": "Ce module n'est pas disponible dans votre plan actuel. Voulez-vous voir les options de mise à niveau ?",
+    "configurationOf": "Configuration de {{name}}",
+    "noSettings": "Aucun paramètre spécifique disponible pour ce module",
+    "treeManagement": "Gestion des types d'arbres",
+    "farmManagementSettings": "Paramètres de Gestion de Ferme",
+    "generalSettings": "Paramètres généraux",
+    "pruningNotifications": "Notifications de taille",
+    "diseaseAlerts": "Alertes de maladies",
+    "harvestForecasts": "Prévisions de récolte",
+    "sections": {
+      "agriculture": "Agriculture",
+      "agricultureDesc": "Modules de production agricole",
+      "elevage": "Élevage",
+      "elevageDesc": "Modules d'élevage et de gestion animale",
+      "functional": "Modules fonctionnels",
+      "functionalDesc": "Gestion, comptabilité, stock, RH, analytique..."
+    },
+    "categories": {
+      "core": "Module Core",
+      "production": "Production",
+      "operations": "Opérations",
+      "hr": "Ressources Humaines",
+      "inventory": "Inventaire & Stock",
+      "sales": "Ventes",
+      "purchasing": "Approvisionnement",
+      "accounting": "Comptabilité",
+      "analytics": "Analytique"
+    },
+    "activityModules": {
+      "arbres_fruitiers": "Arbres fruitiers",
+      "aeroponie": "Aéroponie",
+      "hydroponie": "Hydroponie",
+      "maraichage": "Maraîchage",
+      "myciculture": "Myciculture",
+      "pisciculture": "Pisciculture",
+      "bovin": "Bovin",
+      "ovin": "Ovin",
+      "camelin": "Camelin",
+      "caprin": "Caprin",
+      "aviculture": "Aviculture",
+      "couveuses": "Couveuses"
+    },
+    "activityDescriptions": {
+      "arbres_fruitiers": "Pommiers, agrumes, grenadiers, avocatiers...",
+      "aeroponie": "Culture aéroponique sans sol",
+      "hydroponie": "Culture hydroponique en milieu aqueux",
+      "maraichage": "Cultures légumières et maraîchères",
+      "myciculture": "Culture de champignons",
+      "pisciculture": "Élevage de poissons",
+      "bovin": "Élevage de bovins",
+      "ovin": "Élevage de moutons",
+      "camelin": "Élevage de camelins",
+      "caprin": "Élevage de caprins",
+      "aviculture": "Élevage de volailles",
+      "couveuses": "Poussins, poulet de chair, poules pondeuses"
     }
   }
 }

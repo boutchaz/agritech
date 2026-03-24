@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -28,13 +29,6 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { useCreateCorrectiveAction } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { CorrectiveActionPriority } from '@/lib/api/compliance';
-
-const priorityLabels: Record<CorrectiveActionPriority, string> = {
-  [CorrectiveActionPriority.CRITICAL]: 'Critique',
-  [CorrectiveActionPriority.HIGH]: 'Haute',
-  [CorrectiveActionPriority.MEDIUM]: 'Moyenne',
-  [CorrectiveActionPriority.LOW]: 'Basse',
-};
 
 const formSchema = z.object({
   finding_description: z.string().min(1, 'Le constat est requis'),
@@ -64,6 +58,14 @@ export function CreateCorrectiveActionDialog({
   const [open, setOpen] = useState(false);
   const { currentOrganization } = useAuth();
   const createAction = useCreateCorrectiveAction();
+  const { t } = useTranslation('compliance');
+
+  const priorityLabels: Record<CorrectiveActionPriority, string> = {
+    [CorrectiveActionPriority.CRITICAL]: t('priority.critical'),
+    [CorrectiveActionPriority.HIGH]: t('priority.high'),
+    [CorrectiveActionPriority.MEDIUM]: t('priority.medium'),
+    [CorrectiveActionPriority.LOW]: t('priority.low'),
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -124,14 +126,14 @@ export function CreateCorrectiveActionDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Plus className="mr-2 h-4 w-4" />
-          Nouvelle action corrective
+          {t('dialogs.createAction.button')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>Créer une action corrective</DialogTitle>
+          <DialogTitle>{t('dialogs.createAction.title')}</DialogTitle>
           <DialogDescription>
-            Définissez une action corrective suite à un constat de non-conformité.
+            {t('dialogs.createAction.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,12 +143,12 @@ export function CreateCorrectiveActionDialog({
             name="finding_description"
             render={({ field }) => (
               <FormField
-                label="Constat / Non-conformité"
+                label={t('dialogs.createAction.finding')}
                 error={form.formState.errors.finding_description?.message}
                 required
               >
                 <Textarea
-                  placeholder="Décrivez le constat ou la non-conformité identifiée..."
+                  placeholder={t('dialogs.createAction.findingPlaceholder')}
                   rows={2}
                   {...field}
                 />
@@ -160,10 +162,10 @@ export function CreateCorrectiveActionDialog({
               name="requirement_code"
               render={({ field }) => (
                 <FormField
-                  label="Code exigence"
+                  label={t('dialogs.createAction.requirementCode')}
                   error={form.formState.errors.requirement_code?.message}
                 >
-                  <Input placeholder="ex: CB 5.2.1" {...field} />
+                  <Input placeholder={t('dialogs.createAction.requirementCodePlaceholder')} {...field} />
                 </FormField>
               )}
             />
@@ -173,13 +175,13 @@ export function CreateCorrectiveActionDialog({
               name="priority"
               render={({ field }) => (
                 <FormField
-                  label="Priorité"
+                  label={t('dialogs.createAction.priority')}
                   error={form.formState.errors.priority?.message}
                   required
                 >
                   <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder={t('dialogs.createAction.selectPriority')} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(priorityLabels).map(([value, label]) => (
@@ -197,12 +199,12 @@ export function CreateCorrectiveActionDialog({
             name="action_description"
             render={({ field }) => (
               <FormField
-                label="Action corrective"
+                label={t('dialogs.createAction.action')}
                 error={form.formState.errors.action_description?.message}
                 required
               >
                 <Textarea
-                  placeholder="Décrivez l'action à entreprendre pour corriger la non-conformité..."
+                  placeholder={t('dialogs.createAction.actionPlaceholder')}
                   rows={2}
                   {...field}
                 />
@@ -216,11 +218,11 @@ export function CreateCorrectiveActionDialog({
               name="responsible_person"
               render={({ field }) => (
                 <FormField
-                  label="Responsable"
+                  label={t('dialogs.createAction.responsible')}
                   error={form.formState.errors.responsible_person?.message}
                   required
                 >
-                  <Input placeholder="Nom du responsable" {...field} />
+                  <Input placeholder={t('dialogs.createAction.responsiblePlaceholder')} {...field} />
                 </FormField>
               )}
             />
@@ -230,14 +232,14 @@ export function CreateCorrectiveActionDialog({
               name="due_date"
               render={({ field }) => (
                 <FormField
-                  label="Date limite"
+                  label={t('dialogs.createAction.dueDate')}
                   error={form.formState.errors.due_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -249,11 +251,11 @@ export function CreateCorrectiveActionDialog({
             name="notes"
             render={({ field }) => (
               <FormField
-                label="Notes"
+                label={t('dialogs.createAction.notes')}
                 error={form.formState.errors.notes?.message}
               >
                 <Textarea
-                  placeholder="Notes ou commentaires additionnels (optionnel)..."
+                  placeholder={t('dialogs.createAction.notesPlaceholder')}
                   rows={2}
                   {...field}
                 />
@@ -263,13 +265,13 @@ export function CreateCorrectiveActionDialog({
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
+              {t('dialogs.createAction.cancel')}
             </Button>
             <Button type="submit" disabled={createAction.isPending}>
               {createAction.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Créer l&apos;action
+              {t('dialogs.createAction.create')}
             </Button>
           </div>
         </form>

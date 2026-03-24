@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +24,7 @@ interface InventoryStockLevel {
 }
 
 export default function InventoryStock() {
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -154,9 +156,9 @@ export default function InventoryStock() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Inventory Stock</h2>
+          <h2 className="text-2xl font-bold">{t('inventoryStock.title')}</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            View stock levels across all warehouses
+            {t('inventoryStock.subtitle')}
           </p>
         </div>
       </div>
@@ -166,7 +168,7 @@ export default function InventoryStock() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by item code, name, or warehouse..."
+            placeholder={t('inventoryStock.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -177,7 +179,7 @@ export default function InventoryStock() {
           onChange={(e) => setSelectedWarehouse(e.target.value)}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
-          <option value="all">All Warehouses</option>
+          <option value="all">{t('inventoryStock.allWarehouses')}</option>
           {warehouses.map((wh) => (
             <option key={wh.id} value={wh.id}>
               {wh.name}
@@ -192,28 +194,28 @@ export default function InventoryStock() {
           <thead className="bg-gray-50 dark:bg-gray-800 border-b">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Item Code
+                {t('inventoryStock.table.itemCode')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Item Name
+                {t('inventoryStock.table.itemName')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Group
+                {t('inventoryStock.table.group')}
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Warehouse
+                {t('inventoryStock.table.warehouse')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Quantity
+                {t('inventoryStock.table.quantity')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Value
+                {t('inventoryStock.table.value')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Status
+                {t('inventoryStock.table.status')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Actions
+                {t('inventoryStock.table.actions')}
               </th>
             </tr>
           </thead>
@@ -222,8 +224,8 @@ export default function InventoryStock() {
               <tr>
                 <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                   {items.length === 0
-                    ? 'No stock items found. Create items first.'
-                    : 'No stock levels found. Make stock entries to see inventory.'}
+                    ? t('inventoryStock.noItemsFound')
+                    : t('inventoryStock.noStockLevels')}
                 </td>
               </tr>
             ) : (
@@ -251,12 +253,12 @@ export default function InventoryStock() {
                     {row.total_quantity === 0 ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                         <AlertTriangle className="w-3 h-3 mr-1" />
-                        Out of Stock
+                        {t('inventoryStock.outOfStock')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        In Stock
+                        {t('inventoryStock.inStock')}
                       </span>
                     )}
                   </td>
@@ -268,7 +270,7 @@ export default function InventoryStock() {
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <ExternalLink className="w-4 h-4 mr-1" />
-                      View Item
+                      {t('inventoryStock.viewItem')}
                     </Button>
                   </td>
                 </tr>

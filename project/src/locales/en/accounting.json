@@ -1,0 +1,80 @@
+{
+  "reports": {
+    "title": "Financial Reports",
+    "subtitle": "Access comprehensive financial reports and analytics",
+    "allReports": "All Reports",
+    "viewReport": "View Report",
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities",
+    "totalEquity": "Total Equity",
+    "totalRevenue": "Total Revenue",
+    "balanceSheet": "Balance Sheet",
+    "balanceSheetDesc": "View your financial position with assets, liabilities, and equity at a point in time.",
+    "profitLoss": "Profit & Loss",
+    "profitLossDesc": "Analyze revenue, expenses, and profitability over any period.",
+    "trialBalance": "Trial Balance",
+    "trialBalanceDesc": "Verify your ledger with a complete list of all account balances.",
+    "generalLedger": "General Ledger",
+    "generalLedgerDesc": "View detailed transaction history and running balances for every account.",
+    "cashFlow": "Cash Flow",
+    "cashFlowDesc": "Track cash inflows and outflows across operating, investing, and financing activities.",
+    "agedReceivables": "Aged Receivables",
+    "agedReceivablesDesc": "Track outstanding invoices and customer payment aging buckets.",
+    "agedPayables": "Aged Payables",
+    "agedPayablesDesc": "Monitor outstanding bills and supplier payment aging buckets."
+  },
+  "payments": {
+    "form": {
+      "validation": {
+        "partyNameRequired": "Party name is required",
+        "paymentDateRequired": "Payment date is required",
+        "amountMin": "Amount must be at least 0.01"
+      },
+      "errors": {
+        "saveFailed": "Failed to save payment"
+      },
+      "fields": {
+        "paymentType": "Payment Type",
+        "paymentDate": "Payment Date",
+        "customer": "Customer",
+        "supplier": "Supplier",
+        "optional": "Optional",
+        "partyName": "Party Name",
+        "name": "name",
+        "amount": "Amount",
+        "paymentMethod": "Payment Method",
+        "referenceNumber": "Reference Number",
+        "remarks": "Remarks",
+        "status": "Status"
+      },
+      "paymentTypes": {
+        "received": "Payment Received",
+        "made": "Payment Made"
+      },
+      "actions": {
+        "select": "Select",
+        "enter": "Enter"
+      },
+      "methods": {
+        "cash": "Cash",
+        "bankTransfer": "Bank Transfer",
+        "check": "Check",
+        "mobileMoney": "Mobile Money"
+      },
+      "placeholders": {
+        "referenceNumber": "e.g. CHK-001, TRF-2024-001",
+        "remarks": "Additional notes about this payment"
+      },
+      "statuses": {
+        "draft": "Draft",
+        "submitted": "Submitted",
+        "cancelled": "Cancelled"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "update": "Update Payment",
+        "create": "Create Payment"
+      }
+    }
+  }
+}

@@ -30,7 +30,7 @@ interface StockEntryDetailProps {
 }
 
 export default function StockEntryDetail({ entryId, open, onOpenChange }: StockEntryDetailProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { data: entry, isLoading } = useStockEntry(entryId);
   const { format: formatCurrency } = useCurrency();
 

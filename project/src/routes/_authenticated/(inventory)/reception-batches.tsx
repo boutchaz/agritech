@@ -10,7 +10,7 @@ import { Building2, ClipboardCheck } from 'lucide-react';
 import type { ReceptionBatch } from '@/types/reception';
 
 function ReceptionBatchesPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);

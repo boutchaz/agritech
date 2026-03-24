@@ -14,6 +14,7 @@ import {
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { headerToolbarIconTriggerClass } from '@/lib/header-toolbar';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
@@ -318,13 +319,13 @@ export function NotificationBell() {
       }
     }}>
       <PopoverTrigger asChild>
-        <Button
+        <button
+          type="button"
           ref={bellRef}
-          variant="ghost"
-          size="icon"
           className={cn(
-            'relative h-9 w-9 transition-transform',
-            isBellAnimating && 'bell-shake'
+            headerToolbarIconTriggerClass,
+            'relative transition-transform',
+            isBellAnimating && 'bell-shake',
           )}
           aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
         >
@@ -333,17 +334,16 @@ export function NotificationBell() {
             <>
               <span
                 className={cn(
-                  'absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white',
-                  unreadCount > 0 && 'glow-pulse'
+                  'absolute -end-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white',
+                  unreadCount > 0 && 'glow-pulse',
                 )}
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
-              {/* Pulse ring effect */}
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
+              <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
             </>
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent
         className="w-80 p-0 glass-morphism"
