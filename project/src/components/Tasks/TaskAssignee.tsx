@@ -4,6 +4,7 @@ import { UserCircle, Search, X, Loader2, Check } from 'lucide-react';
 import { useActiveWorkers } from '@/hooks/useWorkers';
 import { useAssignTask } from '@/hooks/useTasks';
 import { Button } from '@/components/ui/button';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface TaskAssigneeProps {
   taskId: string;
@@ -100,11 +101,11 @@ export default function TaskAssignee({
         <div className="flex items-center justify-between">
           {currentAssignee ? (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                  {getInitials(currentAssignee.name)}
-                </span>
-              </div>
+              <UserAvatar
+                firstName={currentAssignee.name.split(' ')[0]}
+                lastName={currentAssignee.name.split(' ').slice(1).join(' ') || null}
+                size="md"
+              />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">
                   {currentAssignee.name}
@@ -200,12 +201,12 @@ export default function TaskAssignee({
                             : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                            {getInitials(name)}
-                          </span>
-                        </div>
-                        <div className="flex-1 text-left min-w-0">
+                        <UserAvatar
+                          firstName={worker.first_name}
+                          lastName={worker.last_name}
+                          size="sm"
+                        />
+                        <div className="flex-1 text-start min-w-0">
                           <p className="font-medium text-gray-900 dark:text-white truncate">
                             {name}
                           </p>

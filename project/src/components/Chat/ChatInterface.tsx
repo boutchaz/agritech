@@ -7,8 +7,10 @@ import { useSendMessage, useChatHistory, useClearChatHistory } from '@/hooks/use
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
-import { Send, Mic, MicOff, Loader2, Trash2, Bot, User, Volume2, VolumeX } from 'lucide-react';
+import { Send, Mic, MicOff, Loader2, Trash2, Bot, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/hooks/useAuth';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface ChatMessage {
   id: string;
@@ -19,6 +21,7 @@ interface ChatMessage {
 
 export function ChatInterface() {
   const { t, i18n } = useTranslation();
+  const { profile, user } = useAuth();
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { data: history, isLoading: isLoadingHistory } = useChatHistory();
   const { mutate: clearHistory } = useClearChatHistory();
@@ -531,9 +534,13 @@ If the problem persists, please contact support.`;
                   </div>
                 </div>
                 {message.role === 'user' && (
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-secondary-foreground" />
-                  </div>
+                  <UserAvatar
+                    src={profile?.avatar_url}
+                    firstName={profile?.first_name}
+                    lastName={profile?.last_name}
+                    email={user?.email}
+                    size="sm"
+                  />
                 )}
               </div>
             ))}

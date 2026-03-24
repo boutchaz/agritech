@@ -35,7 +35,9 @@ import { Select } from '@/components/ui/Select';
 import { useTranslation } from 'react-i18next';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface UserProfile {
   id: string;
@@ -86,7 +88,10 @@ const AccountSettings: React.FC = () => {
   // Avatar state
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Notifications state
   const [notifications, setNotifications] = useState({
@@ -273,11 +278,11 @@ const AccountSettings: React.FC = () => {
       setProfile((prev) => prev ? { ...prev, avatar_url } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success(t('profile.toast.photoUpdated', 'Profile photo updated'));
     } catch (err) {
       console.error('Error uploading avatar:', err);
       setAvatarError(t('profile.errors.uploadError'));
+      toast.error(t('profile.toast.photoUpdateFailed', 'Failed to update photo'));
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -299,14 +304,81 @@ const AccountSettings: React.FC = () => {
       setProfile((prev) => prev ? { ...prev, avatar_url: undefined } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success(t('profile.toast.photoRemoved', 'Profile photo removed'));
     } catch (err) {
       console.error('Error removing avatar:', err);
       setAvatarError(t('profile.errors.removeError'));
+      toast.error(t('profile.toast.photoRemoveFailed', 'Failed to remove photo'));
     } finally {
       setUploadingAvatar(false);
     }
+  };
+
+  // Camera capture
+  const openCamera = async () => {
+    setAvatarError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+      });
+      streamRef.current = stream;
+      setShowCamera(true);
+      // Wait for video element to mount, then attach stream
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
+    } catch {
+      setAvatarError(t('profile.errors.cameraAccessDenied', 'Camera access denied. Please allow camera permissions.'));
+    }
+  };
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Crop to center square
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob || !user) return;
+        stopCamera();
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+        setUploadingAvatar(true);
+        try {
+          const { avatar_url } = await usersApi.uploadAvatar(file);
+          setProfile((prev) => (prev ? { ...prev, avatar_url } : prev));
+          queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
+          toast.success(t('profile.toast.photoUpdated', 'Profile photo updated'));
+        } catch (err) {
+          console.error('Error uploading captured photo:', err);
+          setAvatarError(t('profile.errors.uploadError'));
+          toast.error(t('profile.toast.photoUpdateFailed', 'Failed to update photo'));
+        } finally {
+          setUploadingAvatar(false);
+        }
+      },
+      'image/jpeg',
+      0.9,
+    );
   };
 
   // Get role badge styles
@@ -434,26 +506,22 @@ const AccountSettings: React.FC = () => {
               </h3>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                 <div className="relative w-24 h-24 flex-shrink-0">
-                  {profile?.avatar_url ? (
-                    <>
-                      <img
-                        src={profile.avatar_url}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover"
-                      />
-                      <button
-                        onClick={handleRemoveAvatar}
-                        disabled={uploadingAvatar}
-                        className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={t('profile.removePhoto')}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                      <User className="h-10 w-10 text-gray-400" />
-                    </div>
+                  <UserAvatar
+                    src={profile?.avatar_url}
+                    firstName={profile?.first_name}
+                    lastName={profile?.last_name}
+                    email={user?.email}
+                    size="xl"
+                  />
+                  {profile?.avatar_url && (
+                    <button
+                      onClick={handleRemoveAvatar}
+                      disabled={uploadingAvatar}
+                      className="absolute -top-1 -end-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={t('profile.removePhoto')}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   )}
                   {uploadingAvatar && (
                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
@@ -470,15 +538,25 @@ const AccountSettings: React.FC = () => {
                     className="hidden"
                     disabled={uploadingAvatar}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <span>{t('profile.changePhoto')}</span>
-                  </button>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Camera className="h-4 w-4" />
+                      <span>{t('profile.uploadPhoto', 'Upload')}</span>
+                    </button>
+                    <button
+                      onClick={openCamera}
+                      disabled={uploadingAvatar}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Camera className="h-4 w-4" />
+                      <span>{t('profile.takePhoto', 'Take Photo')}</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-start">
                     {t('profile.photoFormats')}
                   </p>
                   {avatarError && (
@@ -843,6 +921,48 @@ const AccountSettings: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Camera Capture Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {t('profile.takePhoto', 'Take Photo')}
+              </h3>
+              <button
+                onClick={stopCamera}
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="relative bg-black aspect-square">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+            </div>
+            <div className="flex items-center justify-center gap-4 p-4">
+              <button
+                onClick={stopCamera}
+                className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                {t('app.cancel', 'Cancel')}
+              </button>
+              <button
+                onClick={capturePhoto}
+                className="px-6 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+              >
+                {t('profile.capture', 'Capture')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

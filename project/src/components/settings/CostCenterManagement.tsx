@@ -351,9 +351,9 @@ export function CostCenterManagement() {
                                 {farms.find((f: { id: string }) => f.id === costCenter.farm_id)?.name || 'Farm'}
                               </span>
                               {costCenter.parcel_id && (
-                                <Badge variant="outline" className="ml-1 text-xs">
-                                  <MapPin className="h-2 w-2 mr-1" />
-                                  Parcel
+                                <Badge variant="outline" className="ms-1 text-xs">
+                                  <MapPin className="h-2 w-2 me-1" />
+                                  {t('costCenters.form.parcel')}
                                 </Badge>
                               )}
                             </div>

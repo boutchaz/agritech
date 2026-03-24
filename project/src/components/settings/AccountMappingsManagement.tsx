@@ -61,47 +61,15 @@ import {
 } from '@/hooks/useAccountMappings';
 import { useAccounts } from '@/hooks/useAccounts';
 
-// Mapping type options
-const FALLBACK_MAPPING_TYPES = [
-  { value: 'cost_type', label: 'Cost Type' },
-  { value: 'revenue_type', label: 'Revenue Type' },
-  { value: 'harvest_sale', label: 'Harvest Sale' },
-  { value: 'cash', label: 'Cash/Bank' },
-];
+// Mapping type value list
+const MAPPING_TYPE_VALUES = ['cost_type', 'revenue_type', 'harvest_sale', 'cash'];
 
-// Common mapping keys
-const FALLBACK_MAPPING_KEYS: Record<string, { value: string; label: string }[]> = {
-  cost_type: [
-    { value: 'planting', label: 'Planting' },
-    { value: 'harvesting', label: 'Harvesting' },
-    { value: 'irrigation', label: 'Irrigation' },
-    { value: 'fertilization', label: 'Fertilization' },
-    { value: 'pesticide', label: 'Pesticide Application' },
-    { value: 'pruning', label: 'Pruning' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'transport', label: 'Transport' },
-    { value: 'labor', label: 'Labor' },
-    { value: 'materials', label: 'Materials' },
-    { value: 'utilities', label: 'Utilities' },
-    { value: 'other', label: 'Other' },
-  ],
-  revenue_type: [
-    { value: 'product_sales', label: 'Product Sales' },
-    { value: 'service_income', label: 'Service Income' },
-    { value: 'other_income', label: 'Other Income' },
-  ],
-  harvest_sale: [
-    { value: 'market', label: 'Market Sale' },
-    { value: 'export', label: 'Export Sale' },
-    { value: 'wholesale', label: 'Wholesale' },
-    { value: 'direct', label: 'Direct Sale' },
-    { value: 'processing', label: 'Processing' },
-  ],
-  cash: [
-    { value: 'bank', label: 'Bank Account' },
-    { value: 'cash', label: 'Cash' },
-    { value: 'petty_cash', label: 'Petty Cash' },
-  ],
+// Common mapping key values by type
+const MAPPING_KEY_VALUES: Record<string, string[]> = {
+  cost_type: ['planting', 'harvesting', 'irrigation', 'fertilization', 'pesticide', 'pruning', 'maintenance', 'transport', 'labor', 'materials', 'utilities', 'other'],
+  revenue_type: ['product_sales', 'service_income', 'other_income'],
+  harvest_sale: ['market', 'export', 'wholesale', 'direct', 'processing'],
+  cash: ['bank', 'cash', 'petty_cash'],
 };
 
 // Validation schema
@@ -120,6 +88,7 @@ const toLabel = (value: string) =>
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+
 
 export function AccountMappingsManagement() {
   const { hasRole, currentOrganization } = useAuth();
@@ -161,34 +130,28 @@ export function AccountMappingsManagement() {
 
   const selectedMappingType = form.watch('mapping_type');
   const selectedMappingKey = form.watch('mapping_key');
+  const tLabel = (value: string) => t(`accountMappings.labels.${value}`, toLabel(value));
+
   const mappingTypeOptions = useMemo(() => {
-    if (mappingOptions?.types?.length) {
-      return mappingOptions.types.map((type) => ({
-        value: type,
-        label: toLabel(type),
-      }));
-    }
-    return FALLBACK_MAPPING_TYPES;
-  }, [mappingOptions?.types]);
+    const types = mappingOptions?.types?.length ? mappingOptions.types : MAPPING_TYPE_VALUES;
+    return types.map((type: string) => ({
+      value: type,
+      label: tLabel(type),
+    }));
+  }, [mappingOptions?.types, t]);
 
   const availableKeys = useMemo(() => {
     const keysFromOptions = mappingOptions?.keys_by_type?.[selectedMappingType];
-    if (keysFromOptions?.length) {
-      const options = keysFromOptions.map((key) => ({
-        value: key,
-        label: toLabel(key),
-      }));
-      if (selectedMappingKey && !keysFromOptions.includes(selectedMappingKey)) {
-        options.push({ value: selectedMappingKey, label: toLabel(selectedMappingKey) });
-      }
-      return options;
+    const keyValues = keysFromOptions?.length ? keysFromOptions : (MAPPING_KEY_VALUES[selectedMappingType] || []);
+    const options = keyValues.map((key: string) => ({
+      value: key,
+      label: tLabel(key),
+    }));
+    if (selectedMappingKey && !keyValues.includes(selectedMappingKey)) {
+      options.push({ value: selectedMappingKey, label: tLabel(selectedMappingKey) });
     }
-    const fallback = FALLBACK_MAPPING_KEYS[selectedMappingType] || [];
-    if (selectedMappingKey && !fallback.find((k) => k.value === selectedMappingKey)) {
-      return [...fallback, { value: selectedMappingKey, label: toLabel(selectedMappingKey) }];
-    }
-    return fallback;
-  }, [mappingOptions?.keys_by_type, selectedMappingKey, selectedMappingType]);
+    return options;
+  }, [mappingOptions?.keys_by_type, selectedMappingKey, selectedMappingType, t]);
 
   const handleOpenDialog = (mapping?: AccountMapping) => {
     if (mapping) {
@@ -316,16 +279,12 @@ export function AccountMappingsManagement() {
 
   // Get label for mapping type
   const getMappingTypeLabel = (type: string) => {
-    return mappingTypeOptions.find((t) => t.value === type)?.label || type;
+    return mappingTypeOptions.find((opt) => opt.value === type)?.label || tLabel(type);
   };
 
   // Get label for mapping key
-  const getMappingKeyLabel = (type: string, key: string) => {
-    const keys = mappingOptions?.keys_by_type?.[type];
-    if (keys?.length) {
-      return keys.includes(key) ? toLabel(key) : key;
-    }
-    return FALLBACK_MAPPING_KEYS[type]?.find((k) => k.value === key)?.label || key;
+  const getMappingKeyLabel = (_type: string, key: string) => {
+    return tLabel(key);
   };
 
   if (!isAdmin) {

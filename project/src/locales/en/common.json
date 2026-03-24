@@ -1596,6 +1596,9 @@
     "success": "Profile saved successfully",
     "cancel": "Cancel",
     "changePhoto": "Change photo",
+    "uploadPhoto": "Upload",
+    "takePhoto": "Take Photo",
+    "capture": "Capture",
     "photoFormats": "Accepted formats: JPG, PNG (max 2MB)",
     "sections": {
       "personalInfo": "Personal Information",
@@ -1661,7 +1664,13 @@
       "uploadError": "Error uploading photo. Please try again.",
       "removeError": "Error removing photo. Please try again."
     },
-    "removePhoto": "Remove photo"
+    "removePhoto": "Remove photo",
+    "toast": {
+      "photoUpdated": "Profile photo updated",
+      "photoUpdateFailed": "Failed to update photo",
+      "photoRemoved": "Profile photo removed",
+      "photoRemoveFailed": "Failed to remove photo"
+    }
   },
   "preferences": {
     "title": "Preferences",
@@ -4433,6 +4442,88 @@
       }
     }
   },
+  "dangerZone": {
+    "title": "Danger Zone",
+    "subtitle": "Irreversible actions on your organization's data",
+    "adminOnly": "Only administrators can access this section.",
+    "stats": {
+      "title": "Data Statistics",
+      "totalRecords": "Total records",
+      "farms": "Farms",
+      "parcels": "Parcels",
+      "workers": "Workers",
+      "tasks": "Tasks",
+      "harvest_records": "Harvests",
+      "reception_batches": "Reception batches",
+      "warehouses": "Warehouses",
+      "items": "Items",
+      "item_groups": "Item groups",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "quotes": "Quotes",
+      "sales_orders": "Sales orders",
+      "purchase_orders": "Purchase orders",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "journal_entries": "Journal entries",
+      "utilities": "Utilities",
+      "costs": "Costs",
+      "revenues": "Revenues",
+      "structures": "Structures",
+      "cost_centers": "Cost centers",
+      "stock_entries": "Stock entries"
+    },
+    "exportImport": {
+      "title": "Export / Import Data",
+      "description": "Back up all your data in a JSON file or restore from a previous backup.",
+      "exportTitle": "Export",
+      "exportDescription": "Download all your organization's data in a JSON file.",
+      "exportButton": "Export Data",
+      "exportSuccess": "Export successful!",
+      "exportError": "Error during export",
+      "importTitle": "Import",
+      "importDescription": "Restore your data from a previously exported JSON file.",
+      "importSelectFile": "Select a File",
+      "importConfirmTitle": "Confirm import",
+      "importFile": "File:",
+      "importExportDate": "Export date:",
+      "importWarning": "<strong>Warning:</strong> Importing will add data to the existing content. Identifiers will be regenerated and relationships preserved.",
+      "importConfirmButton": "Confirm Import",
+      "importSuccess": "Import successful! {{count}} records imported.",
+      "importError": "An error occurred during import.",
+      "invalidJsonFile": "Invalid JSON file"
+    },
+    "demoData": {
+      "title": "Demo Data",
+      "description": "Generate demo data to explore the platform features. This will create farms, parcels, workers, tasks, harvests, invoices and more.",
+      "generateButton": "Generate Demo Data",
+      "confirmGenerate": "Are you sure you want to generate demo data?",
+      "existingDataNote": "Note: You already have {{count}} records. New data will be added.",
+      "generateSuccess": "Demo data generated successfully!"
+    },
+    "deleteDemoOnly": {
+      "title": "Delete Demo Data Only",
+      "description": "Deletes only the demo-generated data while keeping your personal data.",
+      "button": "Delete Demo Data",
+      "confirmMessage": "Confirm deletion of demo data only.",
+      "success": "Demo data deleted.",
+      "successCount": "Demo data deleted. Total deleted: {{count}} records.",
+      "error": "An error occurred while deleting demo data."
+    },
+    "deleteAll": {
+      "title": "Delete All Data",
+      "warning": "<strong>Warning!</strong> This action will permanently delete all your organization's data, including farms, parcels, workers, tasks, harvests, invoices and all other data. This action is <strong>irreversible</strong>.",
+      "noData": "No data to delete. Your organization is empty.",
+      "button": "Delete All Data",
+      "confirmPrompt": "To confirm, type your organization name: <strong>{{name}}</strong>",
+      "confirmPlaceholder": "Type the organization name",
+      "confirmButton": "Delete Permanently",
+      "success": "All data has been deleted. Total deleted: {{count}} records.",
+      "error": "An error occurred while deleting data."
+    },
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
   "tour": {
     "buttons": {
       "back": "Previous",
@@ -5862,6 +5953,185 @@
       "caprin": "Goat breeding",
       "aviculture": "Poultry farming",
       "couveuses": "Chicks, broilers, laying hens"
+    }
+  },
+  "costCenters": {
+    "title": "Cost Centers",
+    "description": "Manage cost centers for expense tracking and profitability analysis.",
+    "addNew": "Add Cost Center",
+    "searchPlaceholder": "Search by code or name...",
+    "filterStatus": "Filter by status",
+    "allStatus": "All Status",
+    "activeOnly": "Active Only",
+    "inactiveOnly": "Inactive Only",
+    "listTitle": "Cost Center List",
+    "listDescription": "Total: {{count}} cost centers",
+    "loading": "Loading cost centers...",
+    "noSearchResults": "No cost centers found matching your search.",
+    "empty": "No cost centers yet. Create your first one to get started.",
+    "noPermission": "You do not have permission to manage cost centers.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activated": "Cost center activated",
+    "deactivated": "Cost center deactivated",
+    "toggleFailed": "Failed to update cost center status",
+    "table": {
+      "code": "Code",
+      "name": "Name",
+      "parent": "Parent",
+      "location": "Location",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "create": {
+      "title": "Create Cost Center",
+      "description": "Add a new cost center for expense tracking.",
+      "success": "Cost center created successfully",
+      "failed": "Failed to create cost center"
+    },
+    "edit": {
+      "title": "Edit Cost Center",
+      "description": "Update the cost center details.",
+      "success": "Cost center updated successfully",
+      "failed": "Failed to update cost center"
+    },
+    "update": {
+      "success": "Cost center updated successfully",
+      "failed": "Failed to update cost center"
+    },
+    "delete": {
+      "title": "Delete Cost Center",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone. If this cost center has associated journal entries, deletion will fail.",
+      "success": "Cost center deleted successfully",
+      "failed": "Failed to delete cost center. It may have associated journal entries."
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g., CC001",
+      "name": "Name",
+      "namePlaceholder": "e.g., North Field Operations",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief description of this cost center...",
+      "parent": "Parent Cost Center",
+      "parentPlaceholder": "Select parent (optional)",
+      "noParent": "No parent (top level)",
+      "parentHelp": "Organize cost centers hierarchically for roll-up reporting.",
+      "farm": "Farm",
+      "farmPlaceholder": "Select farm (optional)",
+      "noFarm": "No farm",
+      "farmHelp": "Link this cost center to a specific farm for tracking.",
+      "parcel": "Parcel",
+      "parcelPlaceholder": "Select parcel (optional)",
+      "noParcel": "No parcel",
+      "parcelHelp": "Further narrow down to a specific parcel for granular tracking.",
+      "active": "Active",
+      "activeHelp": "Inactive cost centers cannot be used in new transactions.",
+      "update": "Update",
+      "create": "Create"
+    },
+    "accountMappings": {
+      "title": "Account Mappings",
+      "description": "Configure how business events map to GL accounts for automatic journal entries.",
+      "noPermission": "You do not have permission to manage account mappings.",
+      "initializeDefaults": "Initialize Defaults",
+      "addNew": "Add Mapping",
+      "infoTitle": "How Account Mappings Work",
+      "infoDescription": "Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.",
+      "searchPlaceholder": "Search by key or account...",
+      "filterType": "Filter by type",
+      "filterStatus": "Status",
+      "allTypes": "All Types",
+      "allStatus": "All Status",
+      "activeOnly": "Active",
+      "inactiveOnly": "Inactive",
+      "loading": "Loading account mappings...",
+      "noSearchResults": "No mappings found matching your filters.",
+      "empty": "No account mappings configured. Click \"Initialize Defaults\" to set up standard mappings, or add them manually.",
+      "typeCount": "{{count}} mappings",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "activated": "Account mapping activated",
+      "deactivated": "Account mapping deactivated",
+      "toggleFailed": "Failed to update mapping status",
+      "table": {
+        "key": "Key",
+        "account": "Account",
+        "description": "Description",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "create": {
+        "title": "Create Account Mapping",
+        "description": "Map a business event to a GL account.",
+        "success": "Account mapping created successfully",
+        "failed": "Failed to create account mapping"
+      },
+      "edit": {
+        "title": "Edit Account Mapping",
+        "description": "Update the account mapping details.",
+        "success": "Account mapping updated successfully",
+        "failed": "Failed to update account mapping"
+      },
+      "update": {
+        "success": "Account mapping updated successfully",
+        "failed": "Failed to update account mapping"
+      },
+      "delete": {
+        "title": "Delete Account Mapping",
+        "description": "Are you sure you want to delete the mapping for \"{{key}}\"? This will not affect existing journal entries, but new automatic entries will fail without this mapping.",
+        "success": "Account mapping deleted successfully",
+        "failed": "Failed to delete account mapping"
+      },
+      "initialize": {
+        "success": "Initialized {{count}} default mappings",
+        "failed": "Failed to initialize default mappings"
+      },
+      "form": {
+        "type": "Mapping Type",
+        "typePlaceholder": "Select mapping type",
+        "key": "Mapping Key",
+        "keyPlaceholder": "Select mapping key",
+        "account": "GL Account",
+        "accountPlaceholder": "Select account",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional description...",
+        "active": "Active",
+        "activeHelp": "Inactive mappings are ignored during journal creation.",
+        "update": "Update",
+        "create": "Create"
+      },
+      "labels": {
+        "cost_type": "Cost Type",
+        "revenue_type": "Revenue Type",
+        "harvest_sale": "Harvest Sale",
+        "cash": "Cash/Bank",
+        "planting": "Planting",
+        "harvesting": "Harvesting",
+        "irrigation": "Irrigation",
+        "fertilization": "Fertilization",
+        "pesticide": "Pesticide Application",
+        "pruning": "Pruning",
+        "maintenance": "Maintenance",
+        "transport": "Transport",
+        "labor": "Labor",
+        "materials": "Materials",
+        "utilities": "Utilities",
+        "other": "Other",
+        "product_sales": "Product Sales",
+        "service_income": "Service Income",
+        "other_income": "Other Income",
+        "market": "Market Sale",
+        "export": "Export Sale",
+        "wholesale": "Wholesale",
+        "direct": "Direct Sale",
+        "processing": "Processing",
+        "bank": "Bank Account",
+        "petty_cash": "Petty Cash"
+      }
     }
   }
 }

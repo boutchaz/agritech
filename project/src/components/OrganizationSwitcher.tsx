@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { Building, ChevronDown, Check, Settings, Users, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import UserAvatar from '@/components/ui/UserAvatar';
 import {
   headerToolbarTextTriggerClass,
   headerToolbarTightTriggerClass,
@@ -35,7 +36,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
 
   const [isOpen, setIsOpen] = useState(false);
   const [showFarms, setShowFarms] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<'left' | 'right'>('left');
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -69,18 +70,35 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
     if (!isOpen || !buttonRef.current) return;
 
     const updatePosition = () => {
-      if (!buttonRef.current) return;
+      if (!buttonRef.current || !dropdownRef.current) return;
       const buttonRect = buttonRef.current.getBoundingClientRect();
+      const parentRect = dropdownRef.current.getBoundingClientRect();
       const windowWidth = window.innerWidth;
-      const dropdownWidth = 320;
+      const dropdownWidth = Math.min(320, windowWidth - 24);
+      const margin = 12;
 
-      if (buttonRect.left > windowWidth / 2) {
-        setDropdownPosition('right');
-      } else if (buttonRect.left + dropdownWidth > windowWidth - 20) {
-        setDropdownPosition('right');
+      // Calculate where the dropdown's left edge would be if right-aligned to button
+      const rightAlignedLeft = buttonRect.right - dropdownWidth;
+      // Calculate where the dropdown's right edge would be if left-aligned to button
+      const leftAlignedRight = buttonRect.left + dropdownWidth;
+
+      let left: number;
+
+      if (rightAlignedLeft >= margin) {
+        // Right-align: dropdown ends at button's right edge
+        left = buttonRect.right - dropdownWidth - parentRect.left;
+      } else if (leftAlignedRight <= windowWidth - margin) {
+        // Left-align: dropdown starts at button's left edge
+        left = buttonRect.left - parentRect.left;
       } else {
-        setDropdownPosition('left');
+        // Center in viewport as fallback
+        left = (windowWidth - dropdownWidth) / 2 - parentRect.left;
       }
+
+      setDropdownStyle({
+        left: `${left}px`,
+        width: `${dropdownWidth}px`,
+      });
     };
 
     updatePosition();
@@ -182,9 +200,10 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
       </button>
 
       {isOpen && (
-        <div className={`absolute top-full z-[200] mt-2 w-full max-h-[80vh] min-w-[260px] max-w-[calc(100vw-0.75rem)] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 sm:max-w-[calc(100vw-2rem)] sm:w-80 ${
-          dropdownPosition === 'right' ? 'end-0' : 'start-0'
-        }`}>
+        <div
+          className="absolute top-full z-[200] mt-2 max-h-[80vh] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          style={dropdownStyle}
+        >
           {/* User Info */}
           <button
             type="button"
@@ -192,12 +211,13 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
             className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
-                  {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
-                  {profile?.last_name?.[0] || ''}
-                </span>
-              </div>
+              <UserAvatar
+                src={profile?.avatar_url}
+                firstName={profile?.first_name}
+                lastName={profile?.last_name}
+                email={user?.email}
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900 dark:text-white">
                   {profile?.first_name && profile?.last_name

@@ -8,6 +8,7 @@ import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
 import { Can, useCan } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { organizationUsersApi } from '../lib/api/organization-users';
@@ -392,19 +393,14 @@ const UsersSettings: React.FC = () => {
             return (
               <div key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <div className="flex items-start gap-3">
-                  <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
-                    {user.profile?.avatar_url ? (
-                      <img
-                        src={user.profile.avatar_url}
-                        alt={fullName}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {initials}
-                      </span>
-                    )}
-                  </div>
+                  <UserAvatar
+                    src={user.profile?.avatar_url}
+                    firstName={user.profile?.first_name}
+                    lastName={user.profile?.last_name}
+                    email={user.profile?.email}
+                    size="md"
+                    className="flex-shrink-0 h-12 w-12"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-gray-900 dark:text-white truncate">
@@ -539,18 +535,14 @@ const UsersSettings: React.FC = () => {
                   <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
-                          {user.profile?.avatar_url ? (
-                            <img
-                              src={user.profile.avatar_url}
-                              alt={fullName}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              {initials}
-                            </span>
-                          )}
+                        <div className="shrink-0">
+                          <UserAvatar
+                            src={user.profile?.avatar_url}
+                            firstName={user.profile?.first_name}
+                            lastName={user.profile?.last_name}
+                            email={user.profile?.email}
+                            size="md"
+                          />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">

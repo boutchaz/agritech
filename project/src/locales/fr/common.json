@@ -1591,6 +1591,9 @@
     "success": "Profil sauvegardé avec succès",
     "cancel": "Annuler",
     "changePhoto": "Changer la photo",
+    "uploadPhoto": "Télécharger",
+    "takePhoto": "Prendre une photo",
+    "capture": "Capturer",
     "photoFormats": "Formats acceptés: JPG, PNG (max 2MB)",
     "sections": {
       "personalInfo": "Informations personnelles",
@@ -1656,7 +1659,13 @@
       "uploadError": "Erreur lors du téléversement de la photo. Veuillez réessayer.",
       "removeError": "Erreur lors de la suppression de la photo. Veuillez réessayer."
     },
-    "removePhoto": "Supprimer la photo"
+    "removePhoto": "Supprimer la photo",
+    "toast": {
+      "photoUpdated": "Photo de profil mise à jour",
+      "photoUpdateFailed": "Échec de la mise à jour de la photo",
+      "photoRemoved": "Photo de profil supprimée",
+      "photoRemoveFailed": "Échec de la suppression de la photo"
+    }
   },
   "preferences": {
     "title": "Préférences",
@@ -4251,6 +4260,88 @@
       }
     }
   },
+  "dangerZone": {
+    "title": "Zone de Danger",
+    "subtitle": "Actions irréversibles sur les données de votre organisation",
+    "adminOnly": "Seuls les administrateurs peuvent accéder à cette section.",
+    "stats": {
+      "title": "Statistiques des Données",
+      "totalRecords": "Enregistrements au total",
+      "farms": "Fermes",
+      "parcels": "Parcelles",
+      "workers": "Travailleurs",
+      "tasks": "Tâches",
+      "harvest_records": "Récoltes",
+      "reception_batches": "Lots de réception",
+      "warehouses": "Entrepôts",
+      "items": "Articles",
+      "item_groups": "Groupes d'articles",
+      "customers": "Clients",
+      "suppliers": "Fournisseurs",
+      "quotes": "Devis",
+      "sales_orders": "Bons de commande",
+      "purchase_orders": "Bons d'achat",
+      "invoices": "Factures",
+      "payments": "Paiements",
+      "journal_entries": "Écritures comptables",
+      "utilities": "Charges fixes",
+      "costs": "Coûts",
+      "revenues": "Revenus",
+      "structures": "Infrastructures",
+      "cost_centers": "Centres de coût",
+      "stock_entries": "Mouvements de stock"
+    },
+    "exportImport": {
+      "title": "Exporter / Importer les Données",
+      "description": "Sauvegardez toutes vos données dans un fichier JSON ou restaurez-les à partir d'une sauvegarde précédente.",
+      "exportTitle": "Exporter",
+      "exportDescription": "Téléchargez toutes les données de votre organisation dans un fichier JSON.",
+      "exportButton": "Exporter les Données",
+      "exportSuccess": "Exportation réussie !",
+      "exportError": "Erreur lors de l'exportation",
+      "importTitle": "Importer",
+      "importDescription": "Restaurez vos données à partir d'un fichier JSON exporté précédemment.",
+      "importSelectFile": "Sélectionner un Fichier",
+      "importConfirmTitle": "Confirmer l'importation",
+      "importFile": "Fichier :",
+      "importExportDate": "Date d'export :",
+      "importWarning": "<strong>Attention :</strong> L'importation ajoutera les données au contenu existant. Les identifiants seront régénérés et les relations préservées.",
+      "importConfirmButton": "Confirmer l'Importation",
+      "importSuccess": "Importation réussie ! {{count}} enregistrements importés.",
+      "importError": "Une erreur s'est produite lors de l'importation.",
+      "invalidJsonFile": "Fichier JSON invalide"
+    },
+    "demoData": {
+      "title": "Données de Démonstration",
+      "description": "Générez des données de démonstration pour explorer les fonctionnalités de la plateforme. Cela créera des fermes, parcelles, travailleurs, tâches, récoltes, factures et plus encore.",
+      "generateButton": "Générer les Données de Démo",
+      "confirmGenerate": "Êtes-vous sûr de vouloir générer les données de démonstration ?",
+      "existingDataNote": "Note : Vous avez déjà {{count}} enregistrements. Les nouvelles données seront ajoutées.",
+      "generateSuccess": "Données de démonstration générées avec succès !"
+    },
+    "deleteDemoOnly": {
+      "title": "Supprimer les Données de Démo Uniquement",
+      "description": "Supprime uniquement les données générées par la démonstration, tout en conservant vos données personnelles.",
+      "button": "Supprimer les Données de Démo",
+      "confirmMessage": "Confirmez la suppression des données de démonstration uniquement.",
+      "success": "Les données de démonstration ont été supprimées.",
+      "successCount": "Données de démonstration supprimées. Total supprimé : {{count}} enregistrements.",
+      "error": "Une erreur s'est produite lors de la suppression des données de démo."
+    },
+    "deleteAll": {
+      "title": "Supprimer Toutes les Données",
+      "warning": "<strong>Attention !</strong> Cette action supprimera définitivement toutes les données de votre organisation, incluant les fermes, parcelles, travailleurs, tâches, récoltes, factures et toutes les autres données. Cette action est <strong>irréversible</strong>.",
+      "noData": "Aucune donnée à supprimer. Votre organisation est vide.",
+      "button": "Supprimer Toutes les Données",
+      "confirmPrompt": "Pour confirmer, tapez le nom de votre organisation : <strong>{{name}}</strong>",
+      "confirmPlaceholder": "Tapez le nom de l'organisation",
+      "confirmButton": "Supprimer Définitivement",
+      "success": "Toutes les données ont été supprimées. Total supprimé : {{count}} enregistrements.",
+      "error": "Une erreur s'est produite lors de la suppression des données."
+    },
+    "confirm": "Confirmer",
+    "cancel": "Annuler"
+  },
   "tour": {
     "buttons": {
       "back": "Précédent",
@@ -5680,6 +5771,185 @@
       "caprin": "Élevage de caprins",
       "aviculture": "Élevage de volailles",
       "couveuses": "Poussins, poulet de chair, poules pondeuses"
+    }
+  },
+  "costCenters": {
+    "title": "Centres de Coûts",
+    "description": "Gérez les centres de coûts pour le suivi des dépenses et l'analyse de rentabilité.",
+    "addNew": "Ajouter un Centre de Coûts",
+    "searchPlaceholder": "Rechercher par code ou nom...",
+    "filterStatus": "Filtrer par statut",
+    "allStatus": "Tous les Statuts",
+    "activeOnly": "Actifs Uniquement",
+    "inactiveOnly": "Inactifs Uniquement",
+    "listTitle": "Liste des Centres de Coûts",
+    "listDescription": "Total : {{count}} centres de coûts",
+    "loading": "Chargement des centres de coûts...",
+    "noSearchResults": "Aucun centre de coûts trouvé correspondant à votre recherche.",
+    "empty": "Aucun centre de coûts. Créez le premier pour commencer.",
+    "noPermission": "Vous n'avez pas la permission de gérer les centres de coûts.",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "activated": "Centre de coûts activé",
+    "deactivated": "Centre de coûts désactivé",
+    "toggleFailed": "Échec de la mise à jour du statut du centre de coûts",
+    "table": {
+      "code": "Code",
+      "name": "Nom",
+      "parent": "Parent",
+      "location": "Emplacement",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "create": {
+      "title": "Créer un Centre de Coûts",
+      "description": "Ajoutez un nouveau centre de coûts pour le suivi des dépenses.",
+      "success": "Centre de coûts créé avec succès",
+      "failed": "Échec de la création du centre de coûts"
+    },
+    "edit": {
+      "title": "Modifier le Centre de Coûts",
+      "description": "Mettez à jour les détails du centre de coûts.",
+      "success": "Centre de coûts mis à jour avec succès",
+      "failed": "Échec de la mise à jour du centre de coûts"
+    },
+    "update": {
+      "success": "Centre de coûts mis à jour avec succès",
+      "failed": "Échec de la mise à jour du centre de coûts"
+    },
+    "delete": {
+      "title": "Supprimer le Centre de Coûts",
+      "description": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action est irréversible. Si ce centre de coûts a des écritures comptables associées, la suppression échouera.",
+      "success": "Centre de coûts supprimé avec succès",
+      "failed": "Échec de la suppression du centre de coûts. Il peut avoir des écritures comptables associées."
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "ex. CC001",
+      "name": "Nom",
+      "namePlaceholder": "ex. Opérations Champ Nord",
+      "description": "Description",
+      "descriptionPlaceholder": "Brève description de ce centre de coûts...",
+      "parent": "Centre de Coûts Parent",
+      "parentPlaceholder": "Sélectionner un parent (facultatif)",
+      "noParent": "Aucun parent (niveau supérieur)",
+      "parentHelp": "Organisez les centres de coûts hiérarchiquement pour les rapports consolidés.",
+      "farm": "Ferme",
+      "farmPlaceholder": "Sélectionner une ferme (facultatif)",
+      "noFarm": "Aucune ferme",
+      "farmHelp": "Liez ce centre de coûts à une ferme spécifique pour le suivi.",
+      "parcel": "Parcelle",
+      "parcelPlaceholder": "Sélectionner une parcelle (facultatif)",
+      "noParcel": "Aucune parcelle",
+      "parcelHelp": "Précisez davantage vers une parcelle spécifique pour un suivi granulaire.",
+      "active": "Actif",
+      "activeHelp": "Les centres de coûts inactifs ne peuvent pas être utilisés dans de nouvelles transactions.",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    },
+    "accountMappings": {
+      "title": "Correspondances de comptes",
+      "description": "Configurez comment les événements métier correspondent aux comptes du grand livre pour la création automatique d'écritures.",
+      "noPermission": "Vous n'avez pas la permission de gérer les correspondances de comptes.",
+      "initializeDefaults": "Initialiser les valeurs par défaut",
+      "addNew": "Ajouter une correspondance",
+      "infoTitle": "Comment fonctionnent les correspondances de comptes",
+      "infoDescription": "Les correspondances de comptes relient les événements métier (comme l'achèvement de tâches ou la vente de récoltes) à des comptes du grand livre spécifiques. Lorsqu'une tâche est terminée ou qu'une récolte est vendue, le système crée automatiquement des écritures comptables à l'aide de ces correspondances.",
+      "searchPlaceholder": "Rechercher par clé ou compte...",
+      "filterType": "Filtrer par type",
+      "filterStatus": "Statut",
+      "allTypes": "Tous les types",
+      "allStatus": "Tous les statuts",
+      "activeOnly": "Actif",
+      "inactiveOnly": "Inactif",
+      "loading": "Chargement des correspondances de comptes...",
+      "noSearchResults": "Aucune correspondance trouvée pour vos filtres.",
+      "empty": "Aucune correspondance de comptes configurée. Cliquez sur « Initialiser les valeurs par défaut » pour configurer les correspondances standard, ou ajoutez-les manuellement.",
+      "typeCount": "{{count}} correspondances",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "activated": "Correspondance de compte activée",
+      "deactivated": "Correspondance de compte désactivée",
+      "toggleFailed": "Échec de la mise à jour du statut de la correspondance",
+      "table": {
+        "key": "Clé",
+        "account": "Compte",
+        "description": "Description",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "create": {
+        "title": "Créer une correspondance de compte",
+        "description": "Associer un événement métier à un compte du grand livre.",
+        "success": "Correspondance de compte créée avec succès",
+        "failed": "Échec de la création de la correspondance de compte"
+      },
+      "edit": {
+        "title": "Modifier la correspondance de compte",
+        "description": "Mettre à jour les détails de la correspondance de compte.",
+        "success": "Correspondance de compte mise à jour avec succès",
+        "failed": "Échec de la mise à jour de la correspondance de compte"
+      },
+      "update": {
+        "success": "Correspondance de compte mise à jour avec succès",
+        "failed": "Échec de la mise à jour de la correspondance de compte"
+      },
+      "delete": {
+        "title": "Supprimer la correspondance de compte",
+        "description": "Êtes-vous sûr de vouloir supprimer la correspondance pour « {{key}} » ? Cela n'affectera pas les écritures existantes, mais les nouvelles écritures automatiques échoueront sans cette correspondance.",
+        "success": "Correspondance de compte supprimée avec succès",
+        "failed": "Échec de la suppression de la correspondance de compte"
+      },
+      "initialize": {
+        "success": "{{count}} correspondances par défaut initialisées",
+        "failed": "Échec de l'initialisation des correspondances par défaut"
+      },
+      "form": {
+        "type": "Type de correspondance",
+        "typePlaceholder": "Sélectionner le type de correspondance",
+        "key": "Clé de correspondance",
+        "keyPlaceholder": "Sélectionner la clé de correspondance",
+        "account": "Compte du grand livre",
+        "accountPlaceholder": "Sélectionner un compte",
+        "description": "Description",
+        "descriptionPlaceholder": "Description facultative...",
+        "active": "Actif",
+        "activeHelp": "Les correspondances inactives sont ignorées lors de la création des écritures.",
+        "update": "Mettre à jour",
+        "create": "Créer"
+      },
+      "labels": {
+        "cost_type": "Type de coût",
+        "revenue_type": "Type de revenu",
+        "harvest_sale": "Vente de récolte",
+        "cash": "Caisse/Banque",
+        "planting": "Plantation",
+        "harvesting": "Récolte",
+        "irrigation": "Irrigation",
+        "fertilization": "Fertilisation",
+        "pesticide": "Application de pesticides",
+        "pruning": "Taille",
+        "maintenance": "Entretien",
+        "transport": "Transport",
+        "labor": "Main-d'œuvre",
+        "materials": "Matériaux",
+        "utilities": "Services publics",
+        "other": "Autre",
+        "product_sales": "Ventes de produits",
+        "service_income": "Revenus de services",
+        "other_income": "Autres revenus",
+        "market": "Vente au marché",
+        "export": "Vente à l'export",
+        "wholesale": "Vente en gros",
+        "direct": "Vente directe",
+        "processing": "Transformation",
+        "bank": "Compte bancaire",
+        "petty_cash": "Petite caisse"
+      }
     }
   }
 }
