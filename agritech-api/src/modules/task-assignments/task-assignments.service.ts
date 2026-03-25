@@ -107,6 +107,8 @@ export class TaskAssignmentsService {
         organization_id: organizationId,
         role: dto.role || 'worker',
         assigned_by: userId,
+        payment_included_in_salary: dto.payment_included_in_salary ?? false,
+        bonus_amount: dto.bonus_amount ?? null,
         notes: dto.notes,
       })
       .select(`

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,8 +18,10 @@ import {
   MessageSquare,
   Loader2,
   Timer,
+  Banknote,
 } from 'lucide-react';
 import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
+import { useTaskAssignments } from '@/hooks/useTaskAssignments';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
 import TaskDependencies from '@/components/Tasks/TaskDependencies';
@@ -72,6 +74,32 @@ function TaskDetailPage() {
   const [showHarvestForm, setShowHarvestForm] = useState(false);
   const [completionType, setCompletionType] = useState<'complete' | 'partial'>('complete');
   const [lotNumber, setLotNumber] = useState<string>('');
+
+  // Per-unit form
+  const [showPerUnitForm, setShowPerUnitForm] = useState(false);
+  const [perUnitData, setPerUnitData] = useState({ units_completed: 0, rate_per_unit: 0, notes: '' });
+  const [workerUnits, setWorkerUnits] = useState<Record<string, number>>({});
+
+  // Per-worker units for harvest tasks with per-unit payment
+  const [harvestWorkerUnits, setHarvestWorkerUnits] = useState<Record<string, number>>({});
+  const [harvestRatePerUnit, setHarvestRatePerUnit] = useState<number>(0);
+
+  // Task assignments (multi-worker)
+  const { data: taskAssignments = [] } = useTaskAssignments(task?.id);
+  // Include primary worker if not already in assignments (legacy tasks)
+  const allWorkers = React.useMemo(() => {
+    if (!task) return taskAssignments;
+    const primaryInAssignments = task.worker_id && taskAssignments.some(a => a.worker_id === task.worker_id);
+    if (task.worker_id && !primaryInAssignments) {
+      const primaryWorker = {
+        worker_id: task.worker_id,
+        worker: { id: task.worker_id, first_name: task.worker_name?.split(' ')[0] || '', last_name: task.worker_name?.split(' ').slice(1).join(' ') || '' },
+      } as any;
+      return [primaryWorker, ...taskAssignments];
+    }
+    return taskAssignments;
+  }, [taskAssignments, task?.worker_id, task?.worker_name]);
+  const hasMultipleWorkers = allWorkers.length > 1;
 
   // Comments
   const { data: comments = [], isLoading: commentsLoading } = useTaskComments(taskId);
@@ -161,6 +189,7 @@ function TaskDetailPage() {
   }
 
   const isHarvestingTask = task.task_type === 'harvesting';
+  const isPerUnitTask = task.payment_type === 'per_unit';
   const canStart = task.status === 'pending' || task.status === 'assigned';
   const canPause = task.status === 'in_progress';
   const canResume = task.status === 'paused';
@@ -244,9 +273,17 @@ function TaskDetailPage() {
     }
 
     if (isHarvestingTask) {
+      setHarvestRatePerUnit(task.rate_per_unit || 0);
       setShowHarvestForm(true);
       return;
     }
+
+    if (isPerUnitTask) {
+      setPerUnitData({ units_completed: task.units_required || 0, rate_per_unit: task.rate_per_unit || 0, notes: '' });
+      setShowPerUnitForm(true);
+      return;
+    }
+
     try {
       setIsActionLoading(true);
       setError(null);
@@ -255,6 +292,53 @@ function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
     } catch (err: any) {
       setError(err.message || t('tasks.detail.errors.complete', 'Failed to complete task'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleCompletePerUnit = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (perUnitData.rate_per_unit <= 0) {
+      setError('Veuillez entrer le tarif par unité');
+      return;
+    }
+    if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
+      setError('Veuillez entrer le nombre d\'unités complétées');
+      return;
+    }
+    if (hasMultipleWorkers && Object.values(workerUnits).every(v => v <= 0)) {
+      setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+      return;
+    }
+    try {
+      setIsActionLoading(true);
+      setError(null);
+
+      const worker_completions = hasMultipleWorkers
+        ? allWorkers.map(a => ({
+            worker_id: a.worker_id,
+            units_completed: workerUnits[a.worker_id] ?? 0,
+          }))
+        : undefined;
+
+      const totalUnits = hasMultipleWorkers
+        ? Object.values(workerUnits).reduce((s, v) => s + v, 0)
+        : perUnitData.units_completed;
+
+      await tasksApi.complete(taskOrganizationId, task.id, {
+        units_completed: totalUnits,
+        rate_per_unit: perUnitData.rate_per_unit,
+        actual_cost: totalUnits * perUnitData.rate_per_unit,
+        notes: perUnitData.notes || undefined,
+        ...(worker_completions ? { worker_completions } : {}),
+      } as any);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
+      queryClient.invalidateQueries({ queryKey: ['work-records'] });
+      navigate({ to: '/tasks', search: { editTaskId: undefined } });
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsActionLoading(false);
     }
@@ -280,6 +364,15 @@ function TaskDetailPage() {
       return;
     }
 
+    // Validate per-worker units for per-unit harvest tasks with multiple workers
+    if (isPerUnitTask && hasMultipleWorkers) {
+      const totalUnits = Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0);
+      if (totalUnits <= 0) {
+        setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+        return;
+      }
+    }
+
     try {
       setIsActionLoading(true);
       setError(null);
@@ -290,13 +383,23 @@ function TaskDetailPage() {
         ? harvestData.crop_id
         : undefined;
 
-      const requestPayload: CompleteHarvestTaskRequest & { lot_number: string; is_partial: boolean } = {
+      // Build workers array: for per-unit tasks, include quantity_picked per worker
+      const workersPayload = (isPerUnitTask && hasMultipleWorkers)
+        ? allWorkers.map(a => ({
+            worker_id: a.worker_id,
+            hours_worked: 0,
+            quantity_picked: harvestWorkerUnits[a.worker_id] ?? 0,
+          }))
+        : (harvestData.workers || []);
+
+      const requestPayload: CompleteHarvestTaskRequest & { lot_number: string; is_partial: boolean; rate_per_unit?: number } = {
         harvest_date: harvestData.harvest_date || new Date().toISOString().split('T')[0],
         quantity: harvestData.quantity || 0,
         unit: harvestData.unit || 'kg',
-        workers: harvestData.workers || [],
+        workers: workersPayload,
         lot_number: lotNumber,
         is_partial: completionType === 'partial',
+        ...(isPerUnitTask && harvestRatePerUnit > 0 ? { rate_per_unit: harvestRatePerUnit } : {}),
         quality_grade: harvestData.quality_grade,
         quality_score: harvestData.quality_score,
         quality_notes: harvestData.quality_notes,
@@ -323,6 +426,7 @@ function TaskDetailPage() {
 
       if (completionType === 'partial') {
         setHarvestData({ ...harvestData, quantity: 0, harvest_notes: '' });
+        setHarvestWorkerUnits({}); // reset per-worker units for next day's entry
         const year = new Date().getFullYear();
         const parcelCode = task.parcel_id ? `P${task.parcel_id.slice(-2).toUpperCase()}` : 'PX';
         const farmCode = task.farm_id ? `F${task.farm_id.slice(-2).toUpperCase()}` : 'FX';
@@ -425,13 +529,32 @@ function TaskDetailPage() {
                 </div>
               )}
 
-              {task.worker_name && (
+              {(taskAssignments.length > 0 || task.worker_name) && (
                 <div className="space-y-1">
                   <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.assignedTo', 'Assigned to')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    {task.worker_name}
-                  </p>
+                  {taskAssignments.length > 0 ? (
+                    <div className="space-y-1">
+                      {/* Show all assignment workers */}
+                      {taskAssignments.map(a => (
+                        <p key={a.worker_id} className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          {a.worker?.first_name} {a.worker?.last_name}
+                        </p>
+                      ))}
+                      {/* Also show primary worker if not already in assignments */}
+                      {task.worker_name && task.worker_id && !taskAssignments.some(a => a.worker_id === task.worker_id) && (
+                        <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          {task.worker_name}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {task.worker_name}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -675,6 +798,69 @@ function TaskDetailPage() {
                 </div>
               </div>
 
+              {/* Per-worker unit inputs for per-unit payment harvest tasks */}
+              {isPerUnitTask && hasMultipleWorkers && (
+                <div className="space-y-3 border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Paiement à l'unité ({harvestData.unit || 'unités'})
+                  </p>
+
+                  {/* Rate per unit input */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">Tarif par unité (MAD) :</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={harvestRatePerUnit || ''}
+                      onChange={(e) => setHarvestRatePerUnit(parseFloat(e.target.value) || 0)}
+                      placeholder="Ex: 30"
+                      className="w-28 bg-white dark:bg-gray-800"
+                    />
+                  </div>
+
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    Indiquez le nombre d'unités accomplies par chaque travailleur.
+                  </p>
+                  {allWorkers.map(a => {
+                    const units = harvestWorkerUnits[a.worker_id] ?? 0;
+                    const rate = harvestRatePerUnit;
+                    return (
+                      <div key={a.worker_id} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 w-36 truncate">
+                          {a.worker?.first_name} {a.worker?.last_name}
+                        </span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={units || ''}
+                          onChange={(e) => setHarvestWorkerUnits(prev => ({
+                            ...prev,
+                            [a.worker_id]: parseFloat(e.target.value) || 0,
+                          }))}
+                          placeholder="0"
+                          className="w-28"
+                        />
+                        {units > 0 && rate > 0 && (
+                          <span className="text-xs text-green-600 font-medium">
+                            = {(units * rate).toFixed(2)} MAD
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {harvestRatePerUnit > 0 && Object.values(harvestWorkerUnits).some(v => v > 0) && (
+                    <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-700">
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Total paiements :</span>
+                      <span className="font-bold text-green-600">
+                        {(Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0) * harvestRatePerUnit).toFixed(2)} MAD
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="harvest_notes">Notes</Label>
                 <Textarea
@@ -687,7 +873,7 @@ function TaskDetailPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
-                <Button variant="outline" onClick={() => { setShowHarvestForm(false); setCompletionType('complete'); setLotNumber(''); }}>
+                <Button variant="outline" onClick={() => { setShowHarvestForm(false); setCompletionType('complete'); setLotNumber(''); setHarvestWorkerUnits({}); setHarvestRatePerUnit(0); }}>
                   Annuler
                 </Button>
                 <Button
@@ -818,7 +1004,7 @@ function TaskDetailPage() {
                 </Button>
               )}
 
-              {canComplete && !showHarvestForm && (
+              {canComplete && !showHarvestForm && !showPerUnitForm && (
                 <Button onClick={handleCompleteTask} disabled={isActionLoading} className="w-full bg-green-600 hover:bg-green-700">
                   {isHarvestingTask ? (
                     <>
@@ -832,6 +1018,98 @@ function TaskDetailPage() {
                     </>
                   )}
                 </Button>
+              )}
+
+              {/* Per-unit completion form */}
+              {showPerUnitForm && (
+                <div className="border-t dark:border-gray-700 pt-4 space-y-4">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-green-600" />
+                    Paiement à l'unité
+                  </h3>
+                  <div className="space-y-2">
+                    <Label>Tarif par unité (MAD) *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={perUnitData.rate_per_unit || ''}
+                      onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
+                      placeholder="Ex: 5.00"
+                    />
+                  </div>
+                  {hasMultipleWorkers ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                      {allWorkers.map(a => (
+                        <div key={a.worker_id} className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate">
+                            {a.worker?.first_name} {a.worker?.last_name}
+                          </span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={workerUnits[a.worker_id] ?? ''}
+                            onChange={(e) => setWorkerUnits(prev => ({
+                              ...prev,
+                              [a.worker_id]: parseFloat(e.target.value) || 0,
+                            }))}
+                            placeholder="0"
+                            className="w-28"
+                          />
+                          {(workerUnits[a.worker_id] ?? 0) > 0 && perUnitData.rate_per_unit > 0 && (
+                            <span className="text-xs text-green-600 font-medium">
+                              = {((workerUnits[a.worker_id] ?? 0) * perUnitData.rate_per_unit).toFixed(2)} MAD
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Unités complétées *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={perUnitData.units_completed || ''}
+                        onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
+                        placeholder="Ex: 100"
+                      />
+                    </div>
+                  )}
+                  {perUnitData.rate_per_unit > 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-green-800 dark:text-green-200">Total</span>
+                        <span className="font-bold text-green-600">
+                          {hasMultipleWorkers
+                            ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
+                            : (perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      value={perUnitData.notes}
+                      onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
+                      rows={2}
+                      placeholder="Notes sur le travail effectué..."
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setShowPerUnitForm(false)} className="flex-1">
+                      Annuler
+                    </Button>
+                    <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1 bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      {isActionLoading ? 'En cours...' : 'Confirmer'}
+                    </Button>
+                  </div>
+                </div>
               )}
 
               {task.status === 'completed' && (

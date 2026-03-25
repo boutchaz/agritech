@@ -230,6 +230,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
         period_start: periodStart,
         period_end: periodEnd,
         base_amount: calculatedPayment.base_amount,
+        task_bonus: (calculatedPayment as any).task_bonus ?? 0,
         advance_deduction: calculatedPayment.advance_deductions,
         days_worked: calculatedPayment.days_worked,
         hours_worked: calculatedPayment.hours_worked,
@@ -520,6 +521,16 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                   </h4>
 
                   <div className="space-y-2 text-sm">
+                    {/* Show "already paid" notice if base salary was already paid */}
+                    {(calculatedPayment as any).already_paid_base > 0 && (
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
+                        <span>✓ Salaire de base déjà payé :</span>
+                        <span>{formatCurrency((calculatedPayment as any).already_paid_base)}</span>
+                      </div>
+                    )}
+
+                    {/* Only show base amount if > 0 */}
+                    {calculatedPayment.base_amount > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">
                         {t("dialogs.workerPayment.baseAmount")}:
@@ -528,33 +539,56 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                         {formatCurrency(calculatedPayment.base_amount)}
                       </span>
                     </div>
-
-                    {calculatedPayment.days_worked > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.daysWorked")}:
-                        </span>
-                        <span>{calculatedPayment.days_worked}</span>
-                      </div>
                     )}
 
-                    {calculatedPayment.hours_worked > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.hoursWorked")}:
-                        </span>
-                        <span>{calculatedPayment.hours_worked}h</span>
-                      </div>
-                    )}
+                    {/* Per-unit/days breakdown: only show if base salary is not already paid */}
+                    {calculatedPayment.base_amount > 0 && (calculatedPayment as any).units_completed > 0 ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Unités complétées :
+                          </span>
+                          <span>{(calculatedPayment as any).units_completed}</span>
+                        </div>
+                        {(calculatedPayment as any).rate_per_unit != null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Taux par unité :
+                            </span>
+                            <span>{formatCurrency((calculatedPayment as any).rate_per_unit)}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : calculatedPayment.base_amount > 0 ? (
+                      <>
+                        {calculatedPayment.days_worked > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.daysWorked")}:
+                            </span>
+                            <span>{calculatedPayment.days_worked}</span>
+                          </div>
+                        )}
 
-                    {calculatedPayment.tasks_completed > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.tasksCompleted")}:
-                        </span>
-                        <span>{calculatedPayment.tasks_completed}</span>
-                      </div>
-                    )}
+                        {calculatedPayment.hours_worked > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.hoursWorked")}:
+                            </span>
+                            <span>{calculatedPayment.hours_worked}h</span>
+                          </div>
+                        )}
+
+                        {calculatedPayment.tasks_completed > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.tasksCompleted")}:
+                            </span>
+                            <span>{calculatedPayment.tasks_completed}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
 
                     {calculatedPayment.overtime_amount > 0 && (
                       <div className="flex justify-between text-blue-600 dark:text-blue-400">
@@ -562,6 +596,13 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                         <span>
                           {formatCurrency(calculatedPayment.overtime_amount)}
                         </span>
+                      </div>
+                    )}
+
+                    {(calculatedPayment as any).task_bonus > 0 && (
+                      <div className="flex justify-between text-purple-600 dark:text-purple-400">
+                        <span>+ Tâches supplémentaires :</span>
+                        <span>{formatCurrency((calculatedPayment as any).task_bonus)}</span>
                       </div>
                     )}
 

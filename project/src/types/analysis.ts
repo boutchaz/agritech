@@ -66,6 +66,12 @@ export interface SoilAnalysisData {
   k2o_meq?: number;
   na2o_meq?: number;
 
+  // Anions
+  sulfates_ppm?: number;
+
+  // Sampling metadata
+  sampling_depth?: string;
+
   // Soil health indicators
   salinity_level?: number; // EC dS/m
   electrical_conductivity?: number;
@@ -188,11 +194,24 @@ export interface WaterAnalysisData {
   cadmium_ppm?: number;
   mercury_ppm?: number;
 
-  // Heavy metals (ppb)
+  // Heavy metals / trace elements (ppb)
   lead_ppb?: number;
   cadmium_ppb?: number;
   arsenic_ppb?: number;
   mercury_ppb?: number;
+  nickel_ppb?: number;
+  chromium_ppb?: number;
+  cobalt_ppb?: number;
+  silver_ppb?: number;
+  barium_ppb?: number;
+  vanadium_ppb?: number;
+  molybdenum_ppb?: number;
+  selenium_ppb?: number;
+  lithium_ppb?: number;
+  aluminum_ppb?: number;
+  gold_ppb?: number;
+  antimony_ppb?: number;
+  bismuth_ppb?: number;
 
   // Water quality indicators
   sar?: number; // Sodium Adsorption Ratio

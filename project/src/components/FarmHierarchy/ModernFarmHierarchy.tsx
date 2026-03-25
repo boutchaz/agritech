@@ -114,8 +114,8 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   });
 
   useEffect(() => {
-    if (showAddForm && addFormRef.current) {
-      addFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (showAddForm) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [showAddForm]);
 
@@ -132,9 +132,9 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
 
-      const result = await apiClient.get<{ data: unknown[] }>(url, {}, organizationId);
+      const result = await apiClient.get<{ data: unknown[]; farms: unknown[] }>(url, {}, organizationId);
 
-      const data = result?.data || [];
+      const data = result?.data || result?.farms || [];
 
       // Build tree structure
       const farmMap = new Map<string, FarmNode>();

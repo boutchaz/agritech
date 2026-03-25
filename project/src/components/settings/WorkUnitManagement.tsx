@@ -35,8 +35,6 @@ import { workUnitsApi } from '@/lib/api/work-units';
 
 import type {
   WorkUnit,
-  WorkUnitInsertDto,
-  WorkUnitUpdateDto,
   UnitCategory,
 } from '@/types/work-units';
 import { UNIT_CATEGORIES } from '@/types/work-units';
@@ -46,7 +44,7 @@ import { UNIT_CATEGORIES } from '@/types/work-units';
 // =====================================================
 
 // Base schema type (validation messages will be added dynamically)
-const baseWorkUnitSchema = z.object({
+const _baseWorkUnitSchema = z.object({
   code: z.string().min(1).max(20).toUpperCase(),
   name: z.string().min(1).max(100),
   name_ar: z.string().max(100).optional(),
@@ -58,7 +56,7 @@ const baseWorkUnitSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-type WorkUnitFormData = z.infer<typeof baseWorkUnitSchema>;
+type WorkUnitFormData = z.infer<typeof _baseWorkUnitSchema>;
 
 // =====================================================
 // MAIN COMPONENT
@@ -610,7 +608,7 @@ export function WorkUnitManagement() {
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
                 <Check className="h-4 w-4 mr-2" />
-                {editingUnit ? t('workUnits.update') : t('workUnits.create')}
+                {editingUnit ? t('workUnits.updateLabel') : t('workUnits.createLabel')}
               </Button>
             </div>
           </form>

@@ -78,6 +78,12 @@ export interface ActivityHeatmapPoint {
     intensity: number;
     activityType: string;
     count: number;
+    farmId?: string;
+    farmName?: string;
+    parcelName?: string;
+    isActiveFarm?: boolean;
+    status?: string;
+    isIdle?: boolean;
 }
 
 export interface FeatureUsage {
@@ -124,6 +130,46 @@ export class DashboardService {
 
     private get supabaseAdmin() {
         return this.databaseService.getAdminClient();
+    }
+
+    /** In-memory geocoding cache: location string → {lat, lng} */
+    private readonly geocodeCache = new Map<string, { lat: number; lng: number }>();
+
+    /**
+     * Geocode a location string via OpenStreetMap Nominatim (free, no API key).
+     * Results are cached in-memory for the lifetime of the service instance.
+     */
+    private async geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
+        if (!query?.trim()) return null;
+
+        const key = query.trim().toLowerCase();
+        if (this.geocodeCache.has(key)) return this.geocodeCache.get(key)!;
+
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+            const res = await fetch(url, {
+                signal: controller.signal,
+                headers: { 'User-Agent': 'AgriTech-Platform/1.0' }, // Nominatim requires a UA
+            });
+            clearTimeout(timeout);
+
+            if (!res.ok) return null;
+            const data = await res.json() as any[];
+            if (!data?.[0]) return null;
+
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            if (isNaN(lat) || isNaN(lng)) return null;
+
+            const coords = { lat, lng };
+            this.geocodeCache.set(key, coords);
+            return coords;
+        } catch {
+            return null;
+        }
     }
 
     /**
@@ -500,7 +546,7 @@ export class DashboardService {
      * Get concurrent users (users active within the last 5 minutes)
      */
     private async getConcurrentUsers(organizationId: string): Promise<{ total: number; users: ConcurrentUser[] }> {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
         // Query organization_users joined with profiles
         const { data: orgUsers, error } = await this.supabaseAdmin
@@ -525,30 +571,33 @@ export class DashboardService {
             return { total: 0, users: [] };
         }
 
-        // Filter users who have been active recently (using updated_at or last_login)
-        const activeUsers: ConcurrentUser[] = (orgUsers || [])
-            .filter(ou => {
-                const profile = ou.profiles as any;
-                const lastActivity = profile?.updated_at || ou.last_login;
-                return lastActivity && new Date(lastActivity) >= new Date(fiveMinutesAgo);
-            })
+        // Show all active members, prioritize those active in last 24h
+        const allUsers: ConcurrentUser[] = (orgUsers || [])
             .map(ou => {
                 const profile = ou.profiles as any;
+                const lastActivity = profile?.updated_at || ou.last_login || new Date(0).toISOString();
                 return {
                     id: ou.user_id,
                     name: profile?.full_name || 'Unknown User',
                     email: profile?.email || '',
                     role: ou.role || 'member',
-                    lastActivity: profile?.updated_at || ou.last_login || new Date().toISOString(),
-                    currentPage: '/dashboard', // Would need session tracking for real current page
+                    lastActivity,
+                    currentPage: '/dashboard',
                     avatarUrl: profile?.avatar_url,
                 };
             })
-            .slice(0, 10); // Limit to 10 users for display
+            // Sort: recently active first
+            .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
+            .slice(0, 10);
+
+        // Count users active within last 24h for the "live" count
+        const recentlyActive = allUsers.filter(u =>
+            new Date(u.lastActivity) >= new Date(twentyFourHoursAgo)
+        );
 
         return {
-            total: activeUsers.length,
-            users: activeUsers,
+            total: recentlyActive.length > 0 ? recentlyActive.length : allUsers.length,
+            users: allUsers,
         };
     }
 
@@ -681,7 +730,7 @@ export class DashboardService {
 
         const activities: FarmActivity[] = (recentTasks || []).map(task => {
             const farm = task.farms as any;
-            const coordinates = farm?.coordinates;
+            const coords = this.extractLatLng(farm?.coordinates);
             return {
                 id: task.id,
                 farmId: task.farm_id || '',
@@ -689,10 +738,7 @@ export class DashboardService {
                 activityType: `Task ${task.status === 'completed' ? 'Completed' : 'Updated'}`,
                 description: task.title || 'Task activity',
                 timestamp: task.updated_at,
-                location: coordinates ? {
-                    lat: coordinates.lat || 33.5731,
-                    lng: coordinates.lng || -7.5898,
-                } : undefined,
+                location: coords ?? undefined,
             };
         });
 
@@ -718,7 +764,7 @@ export class DashboardService {
 
         const harvestActivities: FarmActivity[] = (recentHarvests || []).map(harvest => {
             const farm = harvest.farms as any;
-            const coordinates = farm?.coordinates;
+            const coords = this.extractLatLng(farm?.coordinates);
             return {
                 id: harvest.id,
                 farmId: harvest.farm_id || '',
@@ -726,10 +772,7 @@ export class DashboardService {
                 activityType: 'Harvest Recorded',
                 description: `${harvest.quantity || 0} kg harvested`,
                 timestamp: harvest.created_at,
-                location: coordinates ? {
-                    lat: coordinates.lat || 33.5731,
-                    lng: coordinates.lng || -7.5898,
-                } : undefined,
+                location: coords ?? undefined,
             };
         });
 
@@ -744,126 +787,380 @@ export class DashboardService {
     }
 
     /**
-     * Get activity heatmap data based on farm and parcel locations
-     * Uses real coordinates from farms, parcels, and their activity data
+     * Convert EPSG:3857 (Web Mercator) X/Y to WGS84 lat/lng.
+     * OpenLayers stores parcel boundaries in Web Mercator.
      */
-    async getActivityHeatmap(userId: string, organizationId: string): Promise<ActivityHeatmapPoint[]> {
-        await this.verifyOrganizationMembership(userId, organizationId);
-
-        const heatmapPoints: ActivityHeatmapPoint[] = [];
-
-        // Get farms with their coordinates
-        const { data: farms, error: farmsError } = await this.supabaseAdmin
-            .from('farms')
-            .select('id, name, coordinates')
-            .eq('organization_id', organizationId);
-
-        if (farmsError) {
-            console.error('Error fetching farms for heatmap:', farmsError);
+    private mercatorToLatLng(x: number, y: number): { lat: number; lng: number } | null {
+        try {
+            const lng = (x / 20037508.34) * 180;
+            const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+            if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+        } catch {
+            // ignore
         }
+        return null;
+    }
 
-        // Process farms with coordinates
-        for (const farm of farms || []) {
-            const coordinates = farm.coordinates as any;
-            if (!coordinates?.lat || !coordinates?.lng) continue;
+    /**
+     * Extract lat/lng from any coordinate format stored in the database.
+     * Handles: {lat,lng}, {latitude,longitude}, GeoJSON Point/Polygon,
+     *          plain arrays in WGS84 or EPSG:3857 (Web Mercator from OpenLayers).
+     */
+    private extractLatLng(coordinates: any): { lat: number; lng: number } | null {
+        if (!coordinates) return null;
 
-            // Count activities for this farm
-            const [{ count: taskCount }, { count: harvestCount }] = await Promise.all([
-                this.supabaseAdmin
-                    .from('tasks')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('farm_id', farm.id)
-                    .in('status', ['in_progress', 'pending', 'completed']),
-                this.supabaseAdmin
-                    .from('harvest_records')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('farm_id', farm.id),
-            ]);
-
-            const totalCount = (taskCount || 0) + (harvestCount || 0);
-
-            if (totalCount > 0) {
-                heatmapPoints.push({
-                    lat: coordinates.lat,
-                    lng: coordinates.lng,
-                    intensity: Math.min(totalCount / 50, 1), // Normalize intensity
-                    activityType: 'farming',
-                    count: totalCount,
-                });
+        // Format 1: { lat, lng }
+        if (typeof coordinates.lat === 'number' && typeof coordinates.lng === 'number') {
+            return { lat: coordinates.lat, lng: coordinates.lng };
+        }
+        // Format 2: { latitude, longitude }
+        if (typeof coordinates.latitude === 'number' && typeof coordinates.longitude === 'number') {
+            return { lat: coordinates.latitude, lng: coordinates.longitude };
+        }
+        // Format 3: GeoJSON Point { type: "Point", coordinates: [lng, lat] }
+        if (coordinates.type === 'Point' && Array.isArray(coordinates.coordinates) && coordinates.coordinates.length >= 2) {
+            const [lng, lat] = coordinates.coordinates;
+            if (typeof lat === 'number' && typeof lng === 'number') return { lat, lng };
+        }
+        // Format 4: GeoJSON Polygon { type: "Polygon", coordinates: [[[lng, lat], ...]] }
+        if (coordinates.type === 'Polygon' && Array.isArray(coordinates.coordinates?.[0])) {
+            const ring: number[][] = coordinates.coordinates[0];
+            if (ring.length > 0) {
+                const sumX = ring.reduce((s: number, c: number[]) => s + (c[0] ?? 0), 0);
+                const sumY = ring.reduce((s: number, c: number[]) => s + (c[1] ?? 0), 0);
+                const avgX = sumX / ring.length;
+                const avgY = sumY / ring.length;
+                // Check for EPSG:3857 (Web Mercator) — values outside geographic range
+                if (Math.abs(avgX) > 180 || Math.abs(avgY) > 90) {
+                    const converted = this.mercatorToLatLng(avgX, avgY);
+                    if (converted) return converted;
+                }
+                return { lat: avgY, lng: avgX };
             }
         }
+        // Format 5: Array of {lat, lng} or {latitude, longitude} objects (polygon)
+        if (Array.isArray(coordinates) && coordinates.length > 0) {
+            if (typeof coordinates[0]?.lat === 'number' || typeof coordinates[0]?.latitude === 'number') {
+                const sumLat = coordinates.reduce((s: number, c: any) => s + (c.lat ?? c.latitude ?? 0), 0);
+                const sumLng = coordinates.reduce((s: number, c: any) => s + (c.lng ?? c.longitude ?? 0), 0);
+                return { lat: sumLat / coordinates.length, lng: sumLng / coordinates.length };
+            }
+            // Format 6: Array of [x, y] pairs — may be WGS84 [lng, lat] or EPSG:3857 [x, y]
+            if (Array.isArray(coordinates[0]) && coordinates[0].length >= 2) {
+                const sumX = coordinates.reduce((s: number, c: number[]) => s + (c[0] ?? 0), 0);
+                const sumY = coordinates.reduce((s: number, c: number[]) => s + (c[1] ?? 0), 0);
+                const avgX = sumX / coordinates.length;
+                const avgY = sumY / coordinates.length;
+                // If values exceed geographic bounds, treat as EPSG:3857 (Web Mercator)
+                if (Math.abs(avgX) > 180 || Math.abs(avgY) > 90) {
+                    const converted = this.mercatorToLatLng(avgX, avgY);
+                    if (converted) return converted;
+                }
+                // Otherwise assume [lng, lat] geographic
+                return { lat: avgY, lng: avgX };
+            }
+        }
+        return null;
+    }
 
-        // Get parcels with coordinates (as fallback or additional data points)
-        const farmIds = (farms || []).map(f => f.id);
-        if (farmIds.length > 0) {
-            const { data: parcels, error: parcelsError } = await this.supabaseAdmin
-                .from('parcels')
-                .select('id, name, farm_id, coordinates, center_point, crop_type')
-                .in('farm_id', farmIds);
+    /**
+     * Try to get farm/parcel centroids via raw PostGIS SQL.
+     * Tries each possible geometry column name independently (column may not exist).
+     * Falls back gracefully — errors are logged as warnings, not thrown.
+     */
+    private async getPostgisCentroids(farmIds: string[]): Promise<{
+        byParcel: Map<string, { lat: number; lng: number; name: string; farmId: string }>;
+        byFarm: Map<string, { lat: number; lng: number }>;
+    }> {
+        const byParcel = new Map<string, { lat: number; lng: number; name: string; farmId: string }>();
+        const byFarm = new Map<string, { lat: number; lng: number }>();
 
-            if (!parcelsError && parcels) {
-                for (const parcel of parcels) {
-                    // Try to get coordinates from parcel (coordinates or center_point)
-                    const coords = parcel.coordinates as any;
-                    const centerPoint = parcel.center_point as any;
+        if (farmIds.length === 0) return { byParcel, byFarm };
 
-                    let lat: number | null = null;
-                    let lng: number | null = null;
+        let pool: any;
+        let client: any;
+        try {
+            pool = this.databaseService.getPgPool();
+            client = await pool.connect();
+        } catch (err) {
+            console.warn('getPostgisCentroids: pg pool unavailable:', err?.message);
+            return { byParcel, byFarm };
+        }
 
-                    if (coords?.lat && coords?.lng) {
-                        lat = coords.lat;
-                        lng = coords.lng;
-                    } else if (centerPoint?.lat && centerPoint?.lng) {
-                        lat = centerPoint.lat;
-                        lng = centerPoint.lng;
-                    } else if (Array.isArray(coords) && coords.length > 0) {
-                        // If coordinates is a polygon array, calculate centroid
-                        const sumLat = coords.reduce((sum: number, c: any) => sum + (c.lat || c[1] || 0), 0);
-                        const sumLng = coords.reduce((sum: number, c: any) => sum + (c.lng || c[0] || 0), 0);
-                        lat = sumLat / coords.length;
-                        lng = sumLng / coords.length;
-                    }
+        const tryQuery = async (sql: string, params: any[]): Promise<any[]> => {
+            try {
+                const result = await client.query(sql, params);
+                return result.rows;
+            } catch {
+                return [];
+            }
+        };
 
-                    if (lat && lng) {
-                        // Count activities for this parcel
-                        const [{ count: parcelTaskCount }, { count: parcelHarvestCount }] = await Promise.all([
-                            this.supabaseAdmin
-                                .from('tasks')
-                                .select('*', { count: 'exact', head: true })
-                                .eq('parcel_id', parcel.id)
-                                .in('status', ['in_progress', 'pending', 'completed']),
-                            this.supabaseAdmin
-                                .from('harvest_records')
-                                .select('*', { count: 'exact', head: true })
-                                .eq('parcel_id', parcel.id),
-                        ]);
+        try { // eslint-disable-line no-useless-catch
+            // Discover what geometry columns exist (avoids errors from missing columns)
+            const colsResult = await tryQuery(`
+                SELECT table_name, column_name, udt_name
+                FROM information_schema.columns
+                WHERE table_name IN ('parcels', 'farms')
+                AND table_schema = 'public'
+                AND (udt_name IN ('geometry', 'geography') OR column_name IN (
+                    'centroid', 'boundary_geom', 'geom', 'the_geom', 'location_point',
+                    'boundary_polygon', 'location_geom', 'region', 'shape'
+                ))
+            `, []);
 
-                        const parcelActivityCount = (parcelTaskCount || 0) + (parcelHarvestCount || 0);
+            const parcelGeomCols = colsResult.filter((r: any) => r.table_name === 'parcels').map((r: any) => r.column_name as string);
+            const farmGeomCols = colsResult.filter((r: any) => r.table_name === 'farms').map((r: any) => r.column_name as string);
 
-                        if (parcelActivityCount > 0) {
-                            // Determine activity type based on crop or task
-                            const activityType = parcel.crop_type?.toLowerCase().includes('harvest')
-                                ? 'harvest'
-                                : parcel.crop_type
-                                    ? 'cultivation'
-                                    : 'farming';
+            // --- Parcels: query the first usable geometry column ---
+            // Point-like columns (centroid): use ST_Y/ST_X directly
+            // Polygon-like columns (boundary_geom): compute centroid first
+            const PARCEL_POINT_COLS = ['centroid', 'location_point', 'geom', 'the_geom', 'location_geom'];
+            const PARCEL_POLY_COLS = ['boundary_geom', 'region', 'shape'];
 
-                            heatmapPoints.push({
-                                lat,
-                                lng,
-                                intensity: Math.min(parcelActivityCount / 30, 1),
-                                activityType,
-                                count: parcelActivityCount,
-                            });
-                        }
+            for (const col of PARCEL_POINT_COLS.filter(c => parcelGeomCols.includes(c))) {
+                const rows = await tryQuery(`
+                    SELECT p.id, p.name, p.farm_id,
+                        ST_Y(ST_Transform(p.${col}::geometry, 4326)) as lat,
+                        ST_X(ST_Transform(p.${col}::geometry, 4326)) as lng
+                    FROM parcels p
+                    WHERE p.farm_id = ANY($1::uuid[]) AND p.${col} IS NOT NULL
+                `, [farmIds]);
+                for (const row of rows) {
+                    if (row.lat != null && !byParcel.has(row.id)) {
+                        const lat = parseFloat(row.lat), lng = parseFloat(row.lng);
+                        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+                            byParcel.set(row.id, { lat, lng, name: row.name, farmId: row.farm_id });
                     }
                 }
+                if (byParcel.size > 0) break;
             }
+
+            if (byParcel.size === 0) {
+                for (const col of PARCEL_POLY_COLS.filter(c => parcelGeomCols.includes(c))) {
+                    const rows = await tryQuery(`
+                        SELECT p.id, p.name, p.farm_id,
+                            ST_Y(ST_Transform(ST_Centroid(p.${col}::geometry), 4326)) as lat,
+                            ST_X(ST_Transform(ST_Centroid(p.${col}::geometry), 4326)) as lng
+                        FROM parcels p
+                        WHERE p.farm_id = ANY($1::uuid[]) AND p.${col} IS NOT NULL
+                    `, [farmIds]);
+                    for (const row of rows) {
+                        if (row.lat != null && !byParcel.has(row.id)) {
+                            const lat = parseFloat(row.lat), lng = parseFloat(row.lng);
+                            if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+                                byParcel.set(row.id, { lat, lng, name: row.name, farmId: row.farm_id });
+                        }
+                    }
+                    if (byParcel.size > 0) break;
+                }
+            }
+
+            // --- Farms: same pattern ---
+            const FARM_POINT_COLS = ['location_point', 'centroid', 'geom', 'the_geom', 'location_geom'];
+            const FARM_POLY_COLS = ['boundary_polygon', 'boundary_geom', 'region', 'shape'];
+
+            for (const col of FARM_POINT_COLS.filter(c => farmGeomCols.includes(c))) {
+                const rows = await tryQuery(`
+                    SELECT f.id,
+                        ST_Y(ST_Transform(f.${col}::geometry, 4326)) as lat,
+                        ST_X(ST_Transform(f.${col}::geometry, 4326)) as lng
+                    FROM farms f
+                    WHERE f.id = ANY($1::uuid[]) AND f.${col} IS NOT NULL
+                `, [farmIds]);
+                for (const row of rows) {
+                    if (row.lat != null && !byFarm.has(row.id)) {
+                        const lat = parseFloat(row.lat), lng = parseFloat(row.lng);
+                        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+                            byFarm.set(row.id, { lat, lng });
+                    }
+                }
+                if (byFarm.size > 0) break;
+            }
+
+            if (byFarm.size === 0) {
+                for (const col of FARM_POLY_COLS.filter(c => farmGeomCols.includes(c))) {
+                    const rows = await tryQuery(`
+                        SELECT f.id,
+                            ST_Y(ST_Transform(ST_Centroid(f.${col}::geometry), 4326)) as lat,
+                            ST_X(ST_Transform(ST_Centroid(f.${col}::geometry), 4326)) as lng
+                        FROM farms f
+                        WHERE f.id = ANY($1::uuid[]) AND f.${col} IS NOT NULL
+                    `, [farmIds]);
+                    for (const row of rows) {
+                        if (row.lat != null && !byFarm.has(row.id)) {
+                            const lat = parseFloat(row.lat), lng = parseFloat(row.lng);
+                            if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180)
+                                byFarm.set(row.id, { lat, lng });
+                        }
+                    }
+                    if (byFarm.size > 0) break;
+                }
+            }
+
+            if (parcelGeomCols.length > 0 || farmGeomCols.length > 0) {
+                console.log(`getPostgisCentroids: found ${byParcel.size} parcel + ${byFarm.size} farm centroids via PostGIS. Parcel cols: [${parcelGeomCols}], Farm cols: [${farmGeomCols}]`);
+            }
+        } finally {
+            if (client) client.release();
         }
 
-        // Return empty array if no data - let frontend decide how to handle
-        // No more random mock data in production
-        return heatmapPoints;
+        return { byParcel, byFarm };
+    }
+
+    /**
+     * Get activity heatmap data based on parcel locations.
+     * Shows all parcels as circles colored by active task type.
+     * Parcels with no active tasks appear as dimmed "idle" circles.
+     */
+    async getActivityHeatmap(userId: string, organizationId: string): Promise<ActivityHeatmapPoint[]> {
+        console.log(`[Heatmap] called for org=${organizationId} user=${userId}`);
+        await this.verifyOrganizationMembership(userId, organizationId);
+
+
+        try {
+            // 1. Fetch active farms (use neq to include farms where is_active is null)
+            const { data: farms, error: farmsError } = await this.supabaseAdmin
+                .from('farms')
+                .select('id, name, coordinates, is_active')
+                .eq('organization_id', organizationId)
+                .neq('is_active', false);
+
+            if (farmsError) {
+                console.error('[Heatmap] farms error:', farmsError.message);
+            }
+
+            const farmList = farms || [];
+            const farmIds = farmList.map(f => f.id);
+            console.log(`[Heatmap] ${farmIds.length} active farms`);
+
+            if (farmIds.length === 0) return [];
+
+            const farmNameMap = new Map(farmList.map(f => [f.id, f.name]));
+
+            // 2. Fetch parcels + active tasks in parallel
+            const [parcelsResult, tasksResult] = await Promise.all([
+                this.supabaseAdmin
+                    .from('parcels')
+                    .select('id, name, farm_id, boundary')
+                    .in('farm_id', farmIds),
+                this.supabaseAdmin
+                    .from('tasks')
+                    .select('farm_id, parcel_id, task_type, status')
+                    .eq('organization_id', organizationId)
+                    .in('status', ['in_progress', 'pending']),
+            ]);
+
+            if (parcelsResult.error) {
+                console.error('[Heatmap] parcels error:', parcelsResult.error.message);
+            }
+            if (tasksResult.error) {
+                console.error('[Heatmap] tasks error:', tasksResult.error.message);
+            }
+
+            const parcelList = parcelsResult.data || [];
+            const taskList = tasksResult.data || [];
+
+            console.log(`[Heatmap] ${parcelList.length} parcels, ${taskList.length} active tasks`);
+
+            // 3. Aggregate tasks by parcel_id (in_progress wins over pending)
+            type TaskAgg = { type: string; count: number; status: string };
+            const tasksByParcel = new Map<string, TaskAgg>();
+            const tasksByFarm = new Map<string, TaskAgg>();
+
+            for (const task of taskList) {
+                const upsert = (map: Map<string, TaskAgg>, key: string | null) => {
+                    if (!key) return;
+                    const existing = map.get(key);
+                    if (!existing) {
+                        map.set(key, { type: task.task_type || 'general', count: 1, status: task.status });
+                    } else {
+                        existing.count++;
+                        if (task.status === 'in_progress' && existing.status !== 'in_progress') {
+                            existing.status = 'in_progress';
+                            existing.type = task.task_type || existing.type;
+                        }
+                    }
+                };
+                upsert(tasksByParcel, task.parcel_id);
+                upsert(tasksByFarm, task.farm_id);
+            }
+
+            const heatmapPoints: ActivityHeatmapPoint[] = [];
+
+            // 4. Parcel circles — primary display (user draws AOI for each parcel)
+            for (const parcel of parcelList) {
+                const coords = this.extractLatLng(parcel.boundary as any);
+                if (!coords) {
+                    console.log(`[Heatmap] parcel "${parcel.name}" has no usable boundary`);
+                    continue;
+                }
+
+                const agg = tasksByParcel.get(parcel.id);
+                const isIdle = !agg;
+
+                heatmapPoints.push({
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    intensity: isIdle ? 0.1 : Math.min((agg?.count ?? 0) / 5, 1),
+                    activityType: isIdle ? 'idle' : (agg?.type ?? 'general'),
+                    count: agg?.count ?? 0,
+                    farmId: parcel.farm_id,
+                    farmName: farmNameMap.get(parcel.farm_id),
+                    parcelName: parcel.name,
+                    isActiveFarm: false,
+                    status: isIdle ? 'idle' : (agg?.status ?? 'idle'),
+                    isIdle,
+                });
+            }
+
+            // 5. Farm circles for farms whose parcels had no boundary data
+            const farmsWithParcelCircles = new Set(heatmapPoints.map(p => p.farmId));
+            for (const farm of farmList) {
+                if (farmsWithParcelCircles.has(farm.id)) continue; // already represented by parcels
+
+                const f = farm as any;
+                // Try JSONB farm.coordinates first
+                let coords = this.extractLatLng(f.coordinates);
+
+                // Fallback: geocode via Nominatim
+                if (!coords) {
+                    const query = [f.city, f.address, f.location, f.name, 'Maroc']
+                        .filter(Boolean).join(', ');
+                    if (query) coords = await this.geocodeLocation(query);
+                }
+
+                // Last resort: spread around Morocco center
+                if (!coords) {
+                    const idx = farmList.indexOf(farm);
+                    coords = { lat: 31.7917 + idx * 0.3, lng: -7.0926 + idx * 0.3 };
+                    console.warn(`[Heatmap] Morocco fallback for farm "${farm.name}"`);
+                }
+
+                const agg = tasksByFarm.get(farm.id);
+                const isIdle = !agg;
+
+                heatmapPoints.push({
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    intensity: isIdle ? 0.15 : Math.min((agg?.count ?? 0) / 10, 1),
+                    activityType: isIdle ? 'idle' : (agg?.type ?? 'general'),
+                    count: agg?.count ?? 0,
+                    farmId: farm.id,
+                    farmName: farm.name,
+                    isActiveFarm: true,
+                    status: isIdle ? 'idle' : (agg?.status ?? 'idle'),
+                    isIdle,
+                });
+            }
+
+            console.log(`[Heatmap] returning ${heatmapPoints.length} points`);
+            return heatmapPoints;
+
+        } catch (err: any) {
+            console.error('[Heatmap] unexpected error:', err?.message || err);
+            return [];
+        }
     }
 
     /**
@@ -942,7 +1239,7 @@ export class DashboardService {
             .from('farms')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
-            .eq('is_active', true);
+            .neq('is_active', false);
 
         return count || 0;
     }

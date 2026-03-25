@@ -171,6 +171,10 @@ export class AccountsService {
     try {
       await client.query('BEGIN');
 
+      // Set service_role context so Supabase Realtime / RLS triggers don't reject the connection
+      await client.query(`SELECT set_config('request.jwt.claims', '{"role":"service_role"}', TRUE)`);
+      await client.query(`SELECT set_config('request.jwt.role', 'service_role', TRUE)`);
+
       // Verify organization exists
       const orgResult = await client.query(
         'SELECT id FROM organizations WHERE id = $1',
@@ -416,151 +420,102 @@ export class AccountsService {
       throw new BadRequestException('Template has no accounts to apply');
     }
 
-    let client: import('pg').PoolClient | undefined;
-    try {
-      const pool = this.databaseService.getPgPool();
-      client = await pool.connect();
-      await client.query('BEGIN');
+    // Use Supabase admin client (service role) to bypass RLS and avoid JWT/tenant errors
+    // that occur when using the raw PG pool without an authenticated session context.
+    const supabase = this.databaseService.getAdminClient();
 
-      const orgResult = await client.query('SELECT id FROM organizations WHERE id = $1', [organizationId]);
-      if (orgResult.rows.length === 0) {
+    try {
+      // Verify organization exists
+      const { data: org, error: orgError } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('id', organizationId)
+        .single();
+
+      if (orgError || !org) {
         throw new BadRequestException('Organization not found');
       }
 
       if (options.overwrite) {
-        await client.query('DELETE FROM accounts WHERE organization_id = $1', [organizationId]);
+        await supabase.from('accounts').delete().eq('organization_id', organizationId);
         this.logger.log(`Deleted existing accounts for organization ${organizationId}`);
       }
 
       let accountsCreated = 0;
       const accountsWithParent: Array<{ code: string; parent_code: string }> = [];
 
-      for (const account of template.accounts) {
-        // Handle both legacy Moroccan format (description_fr) and new format (description)
-        const description = account.description_fr || (account as any).description || null;
+      // Insert accounts in batches of 50 to avoid payload size limits
+      const BATCH_SIZE = 50;
+      const rows = template.accounts.map((account) => ({
+        organization_id: organizationId,
+        code: account.code,
+        name: account.name,
+        account_type: account.account_type,
+        account_subtype: account.account_subtype,
+        is_group: account.is_group,
+        is_active: account.is_active,
+        currency_code: account.currency_code,
+        description: account.description_fr || (account as any).description || null,
+      }));
 
-        const result = await client.query(
-          `INSERT INTO accounts (
-            organization_id, code, name, account_type, account_subtype,
-            is_group, is_active, currency_code, description
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          ON CONFLICT (organization_id, code) DO NOTHING
-          RETURNING id`,
-          [
-            organizationId,
-            account.code,
-            account.name,
-            account.account_type,
-            account.account_subtype,
-            account.is_group,
-            account.is_active,
-            account.currency_code,
-            description,
-          ],
-        );
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+        const { data: inserted, error: insertError } = await supabase
+          .from('accounts')
+          .upsert(batch, { onConflict: 'organization_id,code', ignoreDuplicates: true })
+          .select('id');
 
-        if (result.rows.length > 0) {
-          accountsCreated++;
+        if (insertError) {
+          this.logger.error(`Batch insert error: ${insertError.message}`);
+          throw new Error(insertError.message);
         }
+        accountsCreated += inserted?.length ?? 0;
+      }
 
+      // Track which accounts need parent_id resolution
+      template.accounts.forEach((account) => {
         if (account.parent_code) {
-          accountsWithParent.push({
-            code: account.code,
-            parent_code: account.parent_code,
-          });
+          accountsWithParent.push({ code: account.code, parent_code: account.parent_code });
+        }
+      });
+
+      // Resolve parent_id relationships
+      if (accountsWithParent.length > 0) {
+        // Fetch all accounts for this org to build a code→id map
+        const { data: allAccounts } = await supabase
+          .from('accounts')
+          .select('id, code')
+          .eq('organization_id', organizationId);
+
+        const codeToId = new Map<string, string>();
+        (allAccounts || []).forEach((a) => codeToId.set(a.code, a.id));
+
+        for (const { code, parent_code } of accountsWithParent) {
+          const parentId = codeToId.get(parent_code);
+          if (!parentId) continue;
+          await supabase
+            .from('accounts')
+            .update({ parent_id: parentId })
+            .eq('organization_id', organizationId)
+            .eq('code', code);
         }
       }
-
-      for (const { code, parent_code } of accountsWithParent) {
-        await client.query(
-          `UPDATE accounts
-           SET parent_id = (
-             SELECT id FROM accounts
-             WHERE organization_id = $1 AND code = $2
-           )
-           WHERE organization_id = $1 AND code = $3`,
-          [organizationId, parent_code, code],
-        );
-      }
-
-      await client.query('COMMIT');
 
       this.logger.log(`Applied template ${countryCode} to organization ${organizationId}: ${accountsCreated} accounts created`);
 
-      let accountMappingsCreated = 0;
+      const accountMappingsCreated = 0;
       const costCentersCreated = 0;
-
-      if (options.includeAccountMappings !== false) {
-        try {
-          const mappingInsertResult = await client.query(
-            `INSERT INTO account_mappings (
-              organization_id,
-              country_code,
-              accounting_standard,
-              mapping_type,
-              mapping_key,
-              source_key,
-              account_id,
-              account_code,
-              description,
-              is_active,
-              metadata
-            )
-            SELECT
-              $1 AS organization_id,
-              am.country_code,
-              am.accounting_standard,
-              am.mapping_type,
-              am.mapping_key,
-              COALESCE(am.source_key, am.mapping_key) AS source_key,
-              a.id AS account_id,
-              am.account_code,
-              am.description,
-              TRUE AS is_active,
-              COALESCE(am.metadata, '{}'::jsonb) AS metadata
-            FROM account_mappings am
-            LEFT JOIN accounts a
-              ON a.organization_id = $1
-              AND a.code = am.account_code
-            WHERE am.organization_id IS NULL
-              AND am.country_code = $2
-              AND am.accounting_standard = $3
-            ON CONFLICT (organization_id, mapping_type, mapping_key)
-            DO NOTHING
-            RETURNING id`,
-            [
-              organizationId,
-              countryCode.toUpperCase().substring(0, 2),
-              String(template.accounting_standard || '').toUpperCase(),
-            ],
-          );
-
-          accountMappingsCreated = mappingInsertResult.rows.length;
-          this.logger.log(`Created ${accountMappingsCreated} account mappings for organization ${organizationId}`);
-        } catch (mappingError) {
-          this.logger.warn(`Could not create account mappings: ${mappingError.message}`);
-        }
-      }
 
       return {
         success: true,
         accounts_created: accountsCreated,
         account_mappings_created: accountMappingsCreated,
         cost_centers_created: costCentersCreated,
-        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts${accountMappingsCreated > 0 ? ` and ${accountMappingsCreated} account mappings` : ''}`,
+        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts`,
       };
     } catch (error) {
       this.logger.error(`Failed to apply template: ${error.message}`, error.stack);
-      if (client) {
-        try {
-          await client.query('ROLLBACK');
-        } catch (rollbackError) {
-          this.logger.error(`ROLLBACK also failed: ${rollbackError.message}`);
-        }
-      }
       throw error;
-    } finally {
-      client?.release();
     }
   }
 }

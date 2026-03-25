@@ -64,7 +64,10 @@ const createWorkerSchema = (t: any) =>
       specialties: z.array(z.string()).optional(),
       certifications: z.array(z.string()).optional(),
       payment_frequency: z
-        .enum(["monthly", "daily", "per_task", "harvest_share"])
+        .enum(["monthly", "daily", "per_task", "per_unit", "harvest_share"])
+        .optional(),
+      payment_frequencies: z
+        .array(z.enum(["monthly", "daily", "per_task", "per_unit", "harvest_share"]))
         .optional(),
       bank_account: z.string().optional(),
       payment_method: z.string().optional(),
@@ -77,13 +80,6 @@ const createWorkerSchema = (t: any) =>
           code: z.ZodIssueCode.custom,
           path: ["monthly_salary"],
           message: t("workers.form.validation.monthlySalaryRequired"),
-        });
-      }
-      if (data.worker_type === "daily_worker" && !data.daily_rate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["daily_rate"],
-          message: t("workers.form.validation.dailyRateRequired"),
         });
       }
       if (data.worker_type === "metayage") {
@@ -188,6 +184,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: worker.specialties || [],
         certifications: worker.certifications || [],
         payment_frequency: worker.payment_frequency ?? undefined,
+        payment_frequencies: worker.payment_frequencies ?? [],
         bank_account: worker.bank_account || "",
         payment_method: worker.payment_method || "",
         notes: worker.notes || "",
@@ -217,6 +214,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: [],
         certifications: [],
         payment_frequency: undefined,
+        payment_frequencies: [],
         bank_account: "",
         payment_method: "",
         notes: "",
@@ -232,8 +230,6 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const isCnssDecl = watch("is_cnss_declared");
   const specialties = watch("specialties") || [];
   const certifications = watch("certifications") || [];
-  const perUnitRate = watch("per_unit_rate");
-
   useEffect(() => {
     if (!isEditing) {
       if (workerType === "fixed_salary") {
@@ -245,6 +241,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         setValue("monthly_salary", undefined);
         setValue("metayage_percentage", undefined);
         setValue("metayage_type", undefined);
+        setValue("payment_frequency", undefined);
       } else if (workerType === "metayage") {
         setValue("monthly_salary", undefined);
         setValue("daily_rate", undefined);
@@ -785,54 +782,46 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         {/* Daily Worker */}
         {workerType === "daily_worker" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.dailyRate", {
-                    currency: currencySymbol,
-                  })}{" "}
-                  *
-                </label>
-                <input
-                  {...register("daily_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.dailyRate")}
-                />
-                {errors.daily_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.daily_rate.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.perUnitRate", {
-                    currency: currencySymbol,
-                  })}
-                </label>
-                <input
-                  {...register("per_unit_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.perUnitRate")}
-                />
-                {errors.per_unit_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.per_unit_rate.message}
-                  </p>
-                )}
-                {perUnitRate != null && perUnitRate > 0 && (
-                  <p className="text-sm font-medium text-green-700 dark:text-green-400 mt-1">
-                    {t('workers.form.perUnitSummary', { rate: perUnitRate, currency: currencySymbol }) || `Le paiement par unité est de ${perUnitRate} ${currencySymbol}`}
-                  </p>
-                )}
-              </div>
+            {/* Info: rates are set at task creation */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-lg text-sm text-amber-800 dark:text-amber-200">
+              <p className="font-medium mb-1">ℹ️ Taux définis à la tâche</p>
+              <p>Pour les journaliers, le taux de paiement est défini lors de la création de chaque tâche assignée (journalier, à la tâche ou à l'unité).</p>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-              <p>{t("workers.form.perUnitRateInfo")}</p>
+
+            {/* Accepted payment modes — multi-checkboxes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Modes de paiement acceptés
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: "daily" as const, label: "À la journée" },
+                  { value: "per_task" as const, label: "À la tâche" },
+                  { value: "per_unit" as const, label: "À l'unité (pièce)" },
+                ].map(({ value, label }) => {
+                  const currentModes = watch("payment_frequencies") ?? [];
+                  const isChecked = currentModes.includes(value);
+                  return (
+                    <label key={value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const current = watch("payment_frequencies") ?? [];
+                          setValue(
+                            "payment_frequencies",
+                            e.target.checked
+                              ? [...current, value]
+                              : current.filter((v) => v !== value),
+                          );
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -935,61 +924,55 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Payment Frequency */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("workers.form.fields.paymentFrequency")}
-            </label>
-            <select
-              {...register("payment_frequency")}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="">{t("workers.form.options.select")}</option>
-              {PAYMENT_FREQUENCY_OPTIONS.map((option) => {
-                // Conditional display based on worker type
-                // "per_task" only for daily workers
-                // "monthly" only for fixed salary
-                // "harvest_share" only for metayage
-                // "daily" for daily workers and fixed salary
+          {/* Payment Frequency — hidden for daily_worker (uses checkboxes in compensation section instead) */}
+          {workerType !== "daily_worker" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("workers.form.fields.paymentFrequency")}
+              </label>
+              <select
+                {...register("payment_frequency")}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">{t("workers.form.options.select")}</option>
+                {PAYMENT_FREQUENCY_OPTIONS.map((option) => {
+                  if (
+                    option.value === "per_task" &&
+                    workerType !== "daily_worker"
+                  ) {
+                    return null;
+                  }
+                  if (
+                    option.value === "monthly" &&
+                    workerType !== "fixed_salary"
+                  ) {
+                    return null;
+                  }
+                  if (
+                    option.value === "harvest_share" &&
+                    workerType !== "metayage"
+                  ) {
+                    return null;
+                  }
+                  if (option.value === "daily" && workerType === "metayage") {
+                    return null;
+                  }
 
-                if (
-                  option.value === "per_task" &&
-                  workerType !== "daily_worker"
-                ) {
-                  return null; // Hide "À la tâche" for non-daily workers
-                }
-                if (
-                  option.value === "monthly" &&
-                  workerType !== "fixed_salary"
-                ) {
-                  return null; // Hide "Mensuel" for non-salaried workers
-                }
-                if (
-                  option.value === "harvest_share" &&
-                  workerType !== "metayage"
-                ) {
-                  return null; // Hide "Partage de récolte" for non-metayage workers
-                }
-                if (option.value === "daily" && workerType === "metayage") {
-                  return null; // Hide "Journalier" for metayage workers
-                }
-
-                return (
-                  <option key={option.value} value={option.value}>
-                    {option.labelFr}
-                  </option>
-                );
-              })}
-            </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {workerType === "fixed_salary" &&
-                t("workers.form.paymentFrequencyHint.fixedSalary")}
-              {workerType === "daily_worker" &&
-                t("workers.form.paymentFrequencyHint.dailyWorker")}
-              {workerType === "metayage" &&
-                t("workers.form.paymentFrequencyHint.metayage")}
-            </p>
-          </div>
+                  return (
+                    <option key={option.value} value={option.value}>
+                      {option.labelFr}
+                    </option>
+                  );
+                })}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {workerType === "fixed_salary" &&
+                  t("workers.form.paymentFrequencyHint.fixedSalary")}
+                {workerType === "metayage" &&
+                  t("workers.form.paymentFrequencyHint.metayage")}
+              </p>
+            </div>
+          )}
 
           {/* Payment Method */}
           <div>

@@ -86,7 +86,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
       city: '',
       postal_code: '',
       capacity: undefined,
-      capacity_unit: 'm3',
+      capacity_unit: '',
       temperature_controlled: false,
       humidity_controlled: false,
       security_level: 'standard',
@@ -107,7 +107,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         city: warehouse.city || '',
         postal_code: warehouse.postal_code || '',
         capacity: warehouse.capacity || undefined,
-        capacity_unit: warehouse.capacity_unit || 'm3',
+        capacity_unit: warehouse.capacity_unit || '',
         temperature_controlled: warehouse.temperature_controlled ?? false,
         humidity_controlled: warehouse.humidity_controlled ?? false,
         security_level: warehouse.security_level || 'standard',
@@ -125,7 +125,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         city: '',
         postal_code: '',
         capacity: undefined,
-        capacity_unit: 'm3',
+        capacity_unit: '',
         temperature_controlled: false,
         humidity_controlled: false,
         security_level: 'standard',
@@ -322,11 +322,15 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
             </div>
 
             <div>
-              <Label htmlFor="capacity_unit">{t('warehouses.form.capacityUnit')}</Label>
+              <Label htmlFor="capacity_unit">
+                {t('warehouses.form.capacityUnit')}{' '}
+                <span className="text-gray-400 font-normal text-xs">({t('common.optional', 'optionnel')})</span>
+              </Label>
               <Select
                 id="capacity_unit"
                 {...register('capacity_unit')}
               >
+                <option value="">—</option>
                 <option value="m3">{t('warehouses.form.units.m3')}</option>
                 <option value="kg">{t('warehouses.form.units.kg')}</option>
                 <option value="ton">{t('warehouses.form.units.ton')}</option>
@@ -340,7 +344,10 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="capacity">{t('warehouses.form.capacity')}</Label>
+              <Label htmlFor="capacity">
+                {t('warehouses.form.capacity')}{' '}
+                <span className="text-gray-400 font-normal text-xs">({t('common.optional', 'optionnel')})</span>
+              </Label>
               <Input
                 id="capacity"
                 type="number"

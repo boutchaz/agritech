@@ -28,6 +28,8 @@ export interface CreateTaskAssignmentDto {
   worker_id: string;
   role?: 'worker' | 'supervisor' | 'lead';
   notes?: string;
+  payment_included_in_salary?: boolean;
+  bonus_amount?: number;
 }
 
 export interface BulkCreateTaskAssignmentsDto {

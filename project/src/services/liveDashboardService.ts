@@ -44,6 +44,12 @@ export interface ActivityHeatmapPoint {
   intensity: number;
   activityType: string;
   count: number;
+  farmId?: string;
+  farmName?: string;
+  parcelName?: string;
+  isActiveFarm?: boolean;
+  status?: string;
+  isIdle?: boolean;
 }
 
 export interface FeatureUsage {

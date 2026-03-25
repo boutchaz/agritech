@@ -38,16 +38,12 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
   // Determine which farm ID is selected
   const selectedFarmId = currentFarmId || currentFarm?.id;
 
-  // Merge auth farms with rich farm data (size from API)
+  // Merge auth farms with rich farm data; prefer total_area (sum of parcels) over stored size
   const enrichedFarms = farms.map(farm => {
     const richFarm = richFarms.find(f => f.id === farm.id);
     return {
       ...farm,
-      size:
-        richFarm?.size ??
-        (richFarm as { total_area?: number } | undefined)?.total_area ??
-        farm.size ??
-        (farm as { total_area?: number }).total_area,
+      size: (richFarm as any)?.total_area ?? richFarm?.size ?? farm.size,
     };
   });
 

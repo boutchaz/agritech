@@ -1,24 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
-import { createRequire } from 'module';
 import path from 'path';
-
-const require = createRequire(import.meta.url);
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     tanstackRouter(),
-    react({
-      // Use Babel for better React DevTools source info
-      babel: {
-        plugins: [
-          // Locator plugin for component source info in devtools
-          [require.resolve('@locator/babel-jsx'), { env: 'development' }],
-        ],
-      },
-    }),
+    react(),
   ],
   // API proxy configuration
   server: {

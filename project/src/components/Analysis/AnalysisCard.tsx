@@ -30,7 +30,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ analysis, viewMode, parcelN
           Propriétés Physiques
         </h4>
         <div className="space-y-1 text-sm">
-          {data.ph_level && (
+          {data.ph_level !== undefined && data.ph_level !== null && (
             <div className="flex justify-between">
               <span>pH</span>
               <span className="font-medium">{data.ph_level}</span>
@@ -42,35 +42,41 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ analysis, viewMode, parcelN
               <span className="font-medium">{data.texture}</span>
             </div>
           )}
-          {data.organic_matter_percentage !== undefined && (
+          {data.organic_matter_percentage !== undefined && data.organic_matter_percentage !== null && (
             <div className="flex justify-between">
               <span>Matière organique</span>
               <span className="font-medium">{data.organic_matter_percentage}%</span>
+            </div>
+          )}
+          {data.electrical_conductivity !== undefined && data.electrical_conductivity !== null && (
+            <div className="flex justify-between">
+              <span>CE</span>
+              <span className="font-medium">{data.electrical_conductivity} dS/m</span>
             </div>
           )}
         </div>
       </div>
       <div>
         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-          Propriétés Chimiques
+          Éléments principaux
         </h4>
         <div className="space-y-1 text-sm">
-          {data.nitrogen_ppm && (
+          {data.nitrogen_ppm !== undefined && data.nitrogen_ppm !== null && (
             <div className="flex justify-between">
-              <span>Azote (N)</span>
-              <span className="font-medium">{data.nitrogen_ppm} ppm</span>
+              <span>Azote minéral (N)</span>
+              <span className="font-medium">{data.nitrogen_ppm} mg/kg</span>
             </div>
           )}
-          {data.phosphorus_ppm && (
+          {data.phosphorus_olsen_ppm !== undefined && data.phosphorus_olsen_ppm !== null && (
             <div className="flex justify-between">
-              <span>Phosphore (P)</span>
-              <span className="font-medium">{data.phosphorus_ppm} ppm</span>
+              <span>Phosphore Olsen (P2O5)</span>
+              <span className="font-medium">{data.phosphorus_olsen_ppm} mg/kg</span>
             </div>
           )}
-          {data.potassium_ppm && (
+          {data.cec_meq_per_100g !== undefined && data.cec_meq_per_100g !== null && (
             <div className="flex justify-between">
-              <span>Potassium (K)</span>
-              <span className="font-medium">{data.potassium_ppm} ppm</span>
+              <span>CEC</span>
+              <span className="font-medium">{data.cec_meq_per_100g} cmol(+)/kg</span>
             </div>
           )}
         </div>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   X,
   Play,
@@ -17,6 +16,7 @@ import {
   Banknote,
 } from 'lucide-react';
 import { useUpdateTask } from '../../hooks/useTasks';
+import { useTaskAssignments } from '../../hooks/useTaskAssignments';
 import { tasksApi } from '../../lib/api/tasks';
 import { useCropsForTask, type Crop } from '../../hooks/useCrops';
 import { useQueryClient } from '@tanstack/react-query';
@@ -56,7 +56,6 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   onClose,
   onEdit,
 }) => {
-  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
   const [showHarvestForm, setShowHarvestForm] = useState(false);
@@ -67,12 +66,20 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
   // Per-unit completion form
   const isPerUnitTask = task.payment_type === 'per_unit';
+  const _isForfaitTask = task.payment_type === 'forfait';
   const [showPerUnitForm, setShowPerUnitForm] = useState(false);
   const [perUnitData, setPerUnitData] = useState({
     units_completed: task.units_required || 0,
     rate_per_unit: task.rate_per_unit || 0,
     notes: '',
   });
+
+  // Load task assignments for multi-worker support
+  const { data: taskAssignments = [] } = useTaskAssignments(task.id);
+  const hasMultipleWorkers = taskAssignments.length > 1;
+
+  // Per-worker unit completion (for per_unit tasks with multiple workers)
+  const [workerUnits, setWorkerUnits] = useState<Record<string, number>>({});
 
   // Generate lot number when harvest form opens
   useEffect(() => {
@@ -226,7 +233,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   };
 
   const handleCompletePerUnit = async () => {
-    if (perUnitData.units_completed <= 0) {
+    if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
       setError('Veuillez entrer le nombre d\'unités complétées');
       return;
     }
@@ -234,13 +241,27 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const totalCost = perUnitData.units_completed * perUnitData.rate_per_unit;
+
+      // Build per-worker completions if multiple workers
+      const worker_completions = hasMultipleWorkers
+        ? taskAssignments.map(a => ({
+            worker_id: a.worker_id,
+            units_completed: workerUnits[a.worker_id] ?? 0,
+          }))
+        : undefined;
+
+      const totalUnits = hasMultipleWorkers
+        ? Object.values(workerUnits).reduce((s, v) => s + v, 0)
+        : perUnitData.units_completed;
+
+      const totalCost = totalUnits * perUnitData.rate_per_unit;
       await tasksApi.complete(organizationId, task.id, {
-        units_completed: perUnitData.units_completed,
+        units_completed: totalUnits,
         rate_per_unit: perUnitData.rate_per_unit,
         actual_cost: totalCost,
         notes: perUnitData.notes || undefined,
-      });
+        ...(worker_completions ? { worker_completions } : {}),
+      } as any);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
@@ -511,7 +532,52 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 Paiement à l'unité
               </h3>
 
+              {/* Tarif par unité (always shown) */}
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
+                  <Input
+                    id="rate_per_unit_completion"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={perUnitData.rate_per_unit || ''}
+                    onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ex: 5.00"
+                  />
+                </div>
+              </div>
+
+              {/* Per-worker units if multiple workers */}
+              {hasMultipleWorkers ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                  {taskAssignments.map(assignment => (
+                    <div key={assignment.worker_id} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 w-40 truncate">
+                        {assignment.worker?.first_name} {assignment.worker?.last_name}
+                      </span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={workerUnits[assignment.worker_id] ?? ''}
+                        onChange={(e) => setWorkerUnits(prev => ({
+                          ...prev,
+                          [assignment.worker_id]: parseFloat(e.target.value) || 0,
+                        }))}
+                        placeholder="0"
+                        className="w-32"
+                      />
+                      {workerUnits[assignment.worker_id] > 0 && perUnitData.rate_per_unit > 0 && (
+                        <span className="text-sm text-green-600 font-medium">
+                          = {(workerUnits[assignment.worker_id] * perUnitData.rate_per_unit).toFixed(2)} MAD
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div className="space-y-2">
                   <Label htmlFor="units_completed">Unités complétées *</Label>
                   <Input
@@ -529,34 +595,21 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                     </p>
                   )}
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
-                  <Input
-                    id="rate_per_unit_completion"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={perUnitData.rate_per_unit || ''}
-                    onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 5.00"
-                  />
-                </div>
-              </div>
-
-              {perUnitData.units_completed > 0 && perUnitData.rate_per_unit > 0 && (
+              {/* Total summary */}
+              {perUnitData.rate_per_unit > 0 && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-green-800 dark:text-green-200">
                       Paiement total
                     </span>
                     <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                      {(perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
+                      {hasMultipleWorkers
+                        ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
+                        : (perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
                     </span>
                   </div>
-                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                    {perUnitData.units_completed} unités × {perUnitData.rate_per_unit} MAD/unité
-                  </p>
                 </div>
               )}
 

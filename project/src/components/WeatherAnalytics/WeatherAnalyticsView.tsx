@@ -247,6 +247,17 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
         />
       </div>
 
+      {data && (
+        <PhenologicalTemperatureCounters
+          temperatureData={data.temperature_series}
+          cropType={cropType}
+          treeType={treeType}
+          variety={variety}
+          startDate={data.start_date}
+          endDate={data.end_date}
+        />
+      )}
+
       {data ? (
         <>
           {/* Summary Cards */}
@@ -318,16 +329,6 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             </h3>
             <TemperatureCharts data={data.temperature_series} />
           </div>
-
-          {/* Phenological Temperature Counters Section */}
-          <PhenologicalTemperatureCounters
-            temperatureData={data.temperature_series}
-            cropType={cropType}
-            treeType={treeType}
-            variety={variety}
-            startDate={data.start_date}
-            endDate={data.end_date}
-          />
 
           {/* Precipitation Analysis Section */}
           <div>

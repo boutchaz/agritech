@@ -129,10 +129,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -260,10 +260,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -511,10 +511,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {

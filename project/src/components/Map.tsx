@@ -24,6 +24,10 @@ import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates
 import {
   calculatePlantCount,
   PLANTING_SYSTEMS,
+  getCropTypesByCategory,
+  getVarietiesByCropType,
+  TREE_CATEGORIES,
+  type CropCategory as StaticCropCategory,
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
 import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
@@ -128,6 +132,7 @@ const MapComponent: React.FC<MapProps> = ({
   const [tempBoundary, setTempBoundary] = useState<number[][]>([]);
   const [showParcelForm, setShowParcelForm] = useState(false);
   const [isParcelFormDialogOpen, setIsParcelFormDialogOpen] = useState(false);
+  const [treeFamily, setTreeFamily] = useState<string>('');
   const [parcelDetails, setParcelDetails] = useState({
     soil_type: '',
     area: 0,
@@ -203,32 +208,63 @@ const MapComponent: React.FC<MapProps> = ({
     ? varietiesFromCropType 
     : (varietiesFromStrapi as unknown as Variety[]);
 
-  // Use CMS data only - no static fallbacks
   const soilTypes = soilTypesFromApi;
   const irrigationTypes = irrigationTypesFromApi;
 
-  // Use CMS categories only - deduplicate by value to avoid duplicates
-  // Note: Deduplication is also done in useCropCategories hook, but we do it here as well for safety
-  // Use a plain object for deduplication to avoid conflict with OpenLayers Map
-  const categoryDeduplicationMap: Record<string, typeof cropCategories[0]> = {};
-  cropCategories.forEach(cat => {
-    const catValue = (cat as { value?: string }).value || '';
-    // Only add if we haven't seen this value before (value is the unique identifier)
-    // This ensures that even if there are duplicate entries in CMS with different IDs, we only show one
-    if (catValue && !categoryDeduplicationMap[catValue]) {
-      categoryDeduplicationMap[catValue] = cat;
-    }
-  });
-  const availableCropCategories = Object.values(categoryDeduplicationMap);
+  // Static fallback categories used when CMS returns nothing
+  const STATIC_CROP_CATEGORIES = [
+    { id: 'trees', value: 'trees', name: 'Fruit trees', name_fr: 'Arbres fruitiers' },
+    { id: 'cereals', value: 'cereals', name: 'Cereals', name_fr: 'Céréales' },
+    { id: 'vegetables', value: 'vegetables', name: 'Vegetables', name_fr: 'Légumes' },
+    { id: 'legumes', value: 'legumes', name: 'Legumes', name_fr: 'Légumineuses' },
+    { id: 'fourrages', value: 'fourrages', name: 'Forage crops', name_fr: 'Cultures fourragères' },
+    { id: 'industrielles', value: 'industrielles', name: 'Industrial crops', name_fr: 'Cultures industrielles' },
+    { id: 'aromatiques', value: 'aromatiques', name: 'Aromatic plants', name_fr: 'Plantes aromatiques' },
+    { id: 'other', value: 'other', name: 'Other', name_fr: 'Autre' },
+  ];
 
-  // Get available options based on selected crop category
-  // Use CMS data only - nested behavior: category -> crop type -> variety
-  const availableCropTypes = parcelDetails.crop_category && allCropTypesFromStrapi.length > 0
-    ? allCropTypesFromStrapi
+  // Always use the static list (fully controlled) — the static list is the source of truth
+  const availableCropCategories = STATIC_CROP_CATEGORIES;
+
+  // For trees: filter CMS crop types by selected family name (preserves CMS IDs for variety lookup)
+  // If no CMS types, fall back to static strings
+  const familyNames: string[] = treeFamily
+    ? TREE_CATEGORIES[treeFamily as keyof typeof TREE_CATEGORIES] ?? []
     : [];
 
-  const availableVarieties = parcelDetails.crop_type && allVarietiesFromStrapi.length > 0
-    ? allVarietiesFromStrapi
+  const filteredCmsTreeTypes: CropType[] = treeFamily && allCropTypesFromStrapi.length > 0
+    ? allCropTypesFromStrapi.filter(ct => {
+        const ctName = (ct.name_fr || ct.name || ct.value || '').toLowerCase();
+        return familyNames.some(fn => fn.toLowerCase() === ctName || ctName.includes(fn.toLowerCase()) || fn.toLowerCase().includes(ctName));
+      })
+    : [];
+
+  // For trees: use CMS types filtered by family (keeps IDs for variety lookup), fall back to static strings
+  // For other static-only categories: use static list (no CMS data)
+  // For cereals/vegetables: use CMS if available, then static
+  const staticOnlyCategories = ['legumes', 'fourrages', 'industrielles', 'aromatiques'];
+  const availableCropTypes: (CropType | string)[] = parcelDetails.crop_category
+    ? parcelDetails.crop_category === 'trees'
+      ? treeFamily
+        ? filteredCmsTreeTypes.length > 0
+          ? filteredCmsTreeTypes  // CMS objects → variety lookup works
+          : familyNames           // static strings fallback
+        : []                      // no family selected → show nothing
+      : staticOnlyCategories.includes(parcelDetails.crop_category)
+        ? getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
+        : allCropTypesFromStrapi.length > 0
+          ? allCropTypesFromStrapi
+          : getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
+    : [];
+
+  // Strapi varieties first, then static fallback (e.g. olive varieties from plantingSystemData)
+  const staticVarieties: string[] = parcelDetails.crop_type
+    ? getVarietiesByCropType(parcelDetails.crop_type)
+    : [];
+  const availableVarieties: (Variety | string)[] = parcelDetails.crop_type
+    ? allVarietiesFromStrapi.length > 0
+      ? allVarietiesFromStrapi
+      : staticVarieties
     : [];
 
   // Planting systems — use static PLANTING_SYSTEMS (tree systems) as default fallback
@@ -388,6 +424,15 @@ const MapComponent: React.FC<MapProps> = ({
           planting_type: parcel.planting_type || '',
           rootstock: parcel.rootstock || ''
         });
+        // Pre-select tree family when editing
+        if (parcel.crop_category === 'trees' && parcel.crop_type) {
+          const family = Object.entries(TREE_CATEGORIES).find(([, types]) =>
+            types.includes(parcel.crop_type!)
+          )?.[0] ?? '';
+          setTreeFamily(family);
+        } else {
+          setTreeFamily('');
+        }
         // Don't show the form immediately - let the user draw the boundary first
         // The form will be shown after they finish drawing (in the drawend event)
       }
@@ -1205,6 +1250,7 @@ const MapComponent: React.FC<MapProps> = ({
     setIsParcelFormDialogOpen(false);
     setParcelName('');
     setTempBoundary([]);
+    setTreeFamily('');
     setParcelDetails({
       soil_type: '',
       area: 0,
@@ -1533,13 +1579,16 @@ const MapComponent: React.FC<MapProps> = ({
                     </label>
                     <select
                       value={parcelDetails.crop_category}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        crop_category: e.target.value,
-                        crop_type: '', // Reset dependent fields
-                        variety: '',
-                        planting_system: ''
-                      }))}
+                      onChange={(e) => {
+                        setTreeFamily('');
+                        setParcelDetails(prev => ({
+                          ...prev,
+                          crop_category: e.target.value,
+                          crop_type: '', // Reset dependent fields
+                          variety: '',
+                          planting_system: ''
+                        }));
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">{t('map.select')}</option>
@@ -1554,6 +1603,27 @@ const MapComponent: React.FC<MapProps> = ({
                       })}
                     </select>
                   </div>
+
+                  {parcelDetails.crop_category === 'trees' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {t('map.treeFamily', "Famille d'arbres")}
+                      </label>
+                      <select
+                        value={treeFamily}
+                        onChange={(e) => {
+                          setTreeFamily(e.target.value);
+                          setParcelDetails(prev => ({ ...prev, crop_type: '' }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value="">{t('map.treeFamilyAll', 'Toutes les familles')}</option>
+                        {Object.keys(TREE_CATEGORIES).map(family => (
+                          <option key={family} value={family}>{family}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {parcelDetails.crop_category && (
                     <div>
@@ -1605,39 +1675,49 @@ const MapComponent: React.FC<MapProps> = ({
                     </div>
                   )}
 
-                  {availableVarieties.length > 0 && (
+                  {parcelDetails.crop_type && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {t('map.variety')}
                       </label>
-                      <select
-                        value={parcelDetails.variety}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          variety: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="">{t('map.select')}</option>
-                        {availableVarieties.map(variety => {
-                          if (typeof variety === 'string') {
+                      {availableVarieties.length > 0 ? (
+                        <select
+                          value={parcelDetails.variety}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            variety: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value="">{t('map.select')}</option>
+                          {availableVarieties.map(variety => {
+                            if (typeof variety === 'string') {
+                              return (
+                                <option key={variety} value={variety}>
+                                  {variety}
+                                </option>
+                              );
+                            }
+                            const varietyObj = variety as Variety;
                             return (
-                              <option key={variety} value={variety}>
-                                {variety}
+                              <option key={varietyObj.id} value={varietyObj.value}>
+                                {varietyObj.name || varietyObj.name_fr || varietyObj.value}
                               </option>
                             );
-                          }
-                          const varietyObj = variety as Variety;
-                          const key = varietyObj.id;
-                          const value = varietyObj.value;
-                          const label = varietyObj.name || varietyObj.name_fr || varietyObj.value;
-                          return (
-                            <option key={key} value={value}>
-                              {label}
-                            </option>
-                          );
-                        })}
-                      </select>
+                          })}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={parcelDetails.variety}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            variety: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                          placeholder={t('map.varietyPlaceholder', 'Saisir la variété...')}
+                        />
+                      )}
                     </div>
                   )}
 

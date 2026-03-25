@@ -25,7 +25,7 @@ export interface UserFarmRole {
 export const farmHierarchyApi = {
   async getOrganizationFarms(organizationId: string): Promise<HierarchyFarm[]> {
     const response = await apiClient.get<any>('/api/v1/farms', {}, organizationId);
-    const farms = Array.isArray(response) ? response : response?.data || [];
+    const farms = Array.isArray(response) ? response : response?.data || response?.farms || [];
 
     return farms.map((farm: Record<string, unknown>) => ({
       farm_id: farm.farm_id ? (farm.farm_id as string) : (farm.id as string),

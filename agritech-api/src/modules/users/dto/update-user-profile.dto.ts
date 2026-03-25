@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEmail, IsIn, Matches, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsEmail, IsIn, Matches, IsArray, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserProfileDto {
@@ -66,4 +66,9 @@ export class UpdateUserProfileDto {
   @IsArray()
   @IsString({ each: true })
   dismissed_tours?: string[];
+
+  @ApiPropertyOptional({ description: 'Whether the user has completed onboarding' })
+  @IsOptional()
+  @IsBoolean()
+  onboarding_completed?: boolean;
 }

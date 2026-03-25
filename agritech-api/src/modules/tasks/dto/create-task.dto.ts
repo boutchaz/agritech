@@ -171,8 +171,14 @@ export class CreateTaskDto {
     default: "daily",
   })
   @IsOptional()
-  @IsIn(["daily", "per_unit", "monthly", "metayage", "none"])
+  @IsIn(["daily", "per_unit", "monthly", "metayage", "none", "forfait"])
   payment_type?: string;
+
+  @ApiPropertyOptional({ description: "Forfait amount (lump sum payment)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  forfait_amount?: number;
 
   @ApiPropertyOptional({ description: "Work unit ID for piece-work" })
   @IsOptional()

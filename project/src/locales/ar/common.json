@@ -28,6 +28,8 @@
     "lightMode": "الوضع الفاتح",
     "active": "نشط",
     "inactive": "غير نشط",
+    "goBack": "رجوع",
+    "goHome": "لوحة التحكم",
     "retry": "إعادة المحاولة",
     "noResults": "لا توجد نتائج",
     "selectFarm": "اختر مزرعة",
@@ -249,7 +251,11 @@
       "street": "الشارع",
       "all": "الكل",
       "totalPoints": "إجمالي النقاط",
-      "activeLocations": "المواقع النشطة"
+      "activeLocations": "المواقع النشطة",
+      "activeFarm": "مزرعة نشطة",
+      "activeFarms": "المزارع النشطة",
+      "noFarms": "لم يتم العثور على مزارع نشطة",
+      "noFarmsHint": "أضف إحداثيات لمزارعك لرؤيتها على الخريطة"
     }
   },
   "nav": {
@@ -897,8 +903,16 @@
       "noSearchResults": "لا توجد مزارع تطابق بحثك",
       "validation": {
         "nameRequired": "يجب أن يحتوي الاسم على حرفين على الأقل"
-      }
+      },
+      "deleting": "جاري الحذف...",
+      "noEmail": "لا يوجد بريد إلكتروني",
+      "noUsersFound": "لم يتم العثور على مستخدمين",
+      "noUsersInOrganization": "لا يوجد مستخدمون في المنظمة",
+      "searchUsersPlaceholder": "البحث عن مستخدم...",
+      "selectManagerError": "خطأ في اختيار المدير",
+      "unnamedUser": "مستخدم بدون اسم"
     },
+    "parcels": "القطع",
     "details": {
       "title": "تفاصيل المزرعة",
       "information": "معلومات المزرعة",
@@ -957,6 +971,10 @@
         "trees": "أشجار مثمرة",
         "cereals": "حبوب",
         "vegetables": "خضروات",
+        "legumes": "البقوليات",
+        "fourrages": "المحاصيل العلفية",
+        "industrielles": "المحاصيل الصناعية",
+        "aromatiques": "النباتات العطرية",
         "other": "أخرى"
       },
       "irrigation": {
@@ -1297,7 +1315,8 @@
     "editDescription": "تحديث تفاصيل المورد",
     "deleteConfirmTitle": "تأكيد الحذف",
     "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف المورد",
-    "deleteWarning": "هذا الإجراء لا يمكن التراجع عنه."
+    "deleteWarning": "هذا الإجراء لا يمكن التراجع عنه.",
+    "unknownError": "خطأ غير معروف"
   },
   "warehouses": {
     "title": "إدارة المستودعات",
@@ -1324,6 +1343,8 @@
     "deleteConfirmTitle": "تأكيد الحذف",
     "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف المستودع",
     "deleteWarning": "هذا الإجراء لا يمكن التراجع عنه وسيحذف جميع بيانات المخزون المرتبطة.",
+    "createDescription": "إنشاء مستودع لإدارة مخزون الإنتاج",
+    "editDescription": "تعديل معلومات وإعدادات المستودع",
     "table": {
       "name": "الاسم",
       "location": "الموقع",
@@ -1480,7 +1501,9 @@
       "updated": "تم تحديث مجموعة المواد بنجاح",
       "deleted": "تم حذف مجموعة المواد بنجاح",
       "deleteTitle": "حذف مجموعة المواد",
-      "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف مجموعة المواد \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء."
+      "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف مجموعة المواد \"{{name}}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+      "noGroupsFound": "لم يتم العثور على مجموعات مواد",
+      "noOrganization": "لم يتم تحديد منظمة"
     },
     "unit": {
       "manage": "إدارة الوحدات",
@@ -1835,7 +1858,10 @@
       "inactive": "غير نشط"
     },
     "actions": {
-      "viewPassword": "عرض كلمة المرور"
+      "viewPassword": "عرض كلمة المرور",
+      "activate": "تفعيل المستخدم",
+      "deactivate": "إلغاء تفعيل المستخدم",
+      "remove": "إزالة المستخدم"
     },
     "invite": {
       "title": "دعوة مستخدم",
@@ -1911,6 +1937,8 @@
     "used": "تم استخدامه {{count}} مرة",
     "used_plural": "تم استخدامه {{count}} مرة",
     "cancel": "إلغاء",
+    "createLabel": "إنشاء",
+    "updateLabel": "تحديث",
     "create": {
       "success": "تم إنشاء وحدة العمل بنجاح",
       "failed": "فشل إنشاء وحدة العمل",
@@ -3849,6 +3877,10 @@
       "statsPending": "قيد الانتظار",
       "statsTotalAmount": "المبلغ الإجمالي",
       "statsWorkers": "العمال"
+    },
+    "errors": {
+      "farmsFetchFailed": "فشل تحميل المزارع",
+      "farmsFetchHint": "يرجى المحاولة مرة أخرى أو الاتصال بالمسؤول"
     }
   },
   "tasks": {

@@ -251,24 +251,61 @@ export class PaymentRecordsService {
     return stats;
   }
 
-  private calculateFixedSalaryPayment(
+  private async calculateFixedSalaryPayment(
+    client: any,
     worker: any,
     periodStart: string,
     periodEnd: string,
-  ): { base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number } {
+  ): Promise<{ base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number; task_bonus: number; already_paid_base: number }> {
     const monthlySalary = worker.monthly_salary || 0;
     const startDate = new Date(periodStart);
     const endDate = new Date(periodEnd);
     const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const daysInMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
-    const proratedAmount = (monthlySalary / daysInMonth) * daysInPeriod;
-    
+    const proratedAmount = Math.round(((monthlySalary / daysInMonth) * daysInPeriod) * 100) / 100;
+
+    // Check if monthly salary is already paid/approved for this period
+    const { data: existingPaidSalary } = await client
+      .from('payment_records')
+      .select('id, net_amount, base_amount')
+      .eq('worker_id', worker.id)
+      .eq('payment_type', 'monthly_salary')
+      .in('status', ['paid', 'approved'])
+      .lte('period_start', periodEnd)
+      .gte('period_end', periodStart)
+      .maybeSingle();
+
+    const alreadyPaidBase = existingPaidSalary
+      ? Math.round((Number(existingPaidSalary.base_amount) || proratedAmount) * 100) / 100
+      : 0;
+    // If salary already paid, base_amount = 0 (no double payment)
+    const effectiveBaseAmount = existingPaidSalary ? 0 : proratedAmount;
+
+    // Add any extra task payments (payment_included_in_salary = false, not yet paid)
+    const { data: taskWorkRecords } = await client
+      .from('work_records')
+      .select('amount_paid, total_payment, task_id')
+      .eq('worker_id', worker.id)
+      .eq('payment_included_in_salary', false)
+      .gte('work_date', periodStart)
+      .lte('work_date', periodEnd)
+      .neq('payment_status', 'paid')
+      .not('task_id', 'is', null);
+
+    const taskBonus = (taskWorkRecords || []).reduce((sum: number, r: any) => {
+      const amount = Number(r.amount_paid) || Number(r.total_payment) || 0;
+      return sum + amount;
+    }, 0);
+    const tasksCompleted = (taskWorkRecords || []).filter((r: any) => r.task_id).length;
+
     return {
-      base_amount: Math.round(proratedAmount * 100) / 100,
+      base_amount: effectiveBaseAmount,
       days_worked: daysInPeriod,
       hours_worked: daysInPeriod * 8,
-      tasks_completed: 0,
+      tasks_completed: tasksCompleted,
       overtime_amount: 0,
+      task_bonus: Math.round(taskBonus * 100) / 100,
+      already_paid_base: alreadyPaidBase,
     };
   }
 
@@ -278,13 +315,14 @@ export class PaymentRecordsService {
     periodStart: string,
     periodEnd: string,
     dailyRate: number,
-  ): Promise<{ base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number }> {
+  ): Promise<{ base_amount: number; days_worked: number; hours_worked: number; tasks_completed: number; overtime_amount: number; units_completed: number; rate_per_unit: number | null }> {
     const { data: workRecords, error: workRecordsError } = await client
       .from('work_records')
-      .select('work_date, hours_worked, hourly_rate, total_payment')
+      .select('work_date, hours_worked, hourly_rate, total_payment, amount_paid, units_completed, rate_per_unit, payment_status')
       .eq('worker_id', workerId)
       .gte('work_date', periodStart)
-      .lte('work_date', periodEnd);
+      .lte('work_date', periodEnd)
+      .neq('payment_status', 'paid');
 
     const { data: pieceWorkRecords, error } = await client
       .from('piece_work_records')
@@ -304,6 +342,8 @@ export class PaymentRecordsService {
         hours_worked: daysInPeriod * 8,
         tasks_completed: 0,
         overtime_amount: 0,
+        units_completed: 0,
+        rate_per_unit: null,
       };
     }
 
@@ -312,10 +352,18 @@ export class PaymentRecordsService {
 
     if (validWorkRecords.length > 0 || validPieceWorkRecords.length > 0) {
       const workRecordTotal = validWorkRecords.reduce((sum: number, record: any) => {
-        const totalPayment = Number(record.total_payment);
-        if (!Number.isNaN(totalPayment)) {
-          return sum + totalPayment;
+        // Use total_payment or amount_paid if explicitly set (non-null)
+        const rawTotal = record.total_payment ?? record.amount_paid;
+        if (rawTotal !== null && rawTotal !== undefined) {
+          return sum + (Number(rawTotal) || 0);
         }
+        // total_payment is null — try to recompute from units × rate
+        const units = Number(record.units_completed) || 0;
+        const rpu = Number(record.rate_per_unit) || 0;
+        if (units > 0 && rpu > 0) {
+          return sum + units * rpu;
+        }
+        // Fall back to hours × hourly_rate, then daily_rate
         const hoursWorked = Number(record.hours_worked) || 0;
         const hourlyRate = Number(record.hourly_rate) || 0;
         if (hoursWorked > 0 && hourlyRate > 0) {
@@ -329,7 +377,12 @@ export class PaymentRecordsService {
       const pieceWorkDays = new Set(validPieceWorkRecords.map((r: any) => r.work_date));
       const uniqueDays = new Set([...workRecordDays, ...pieceWorkDays]).size;
       const totalHours = validWorkRecords.reduce((sum: number, record: any) => sum + (Number(record.hours_worked) || 0), 0);
-      const totalUnits = validPieceWorkRecords.reduce((sum: number, record: any) => sum + (record.units_completed || 0), 0);
+      // Sum units from both work_records (per-unit tasks) and piece_work_records
+      const workRecordUnits = validWorkRecords.reduce((sum: number, record: any) => sum + (Number(record.units_completed) || 0), 0);
+      const pieceWorkUnits = validPieceWorkRecords.reduce((sum: number, record: any) => sum + (Number(record.units_completed) || 0), 0);
+      const totalUnits = workRecordUnits + pieceWorkUnits;
+      const totalForRate = workRecordTotal + pieceWorkTotal;
+      const computedRatePerUnit = totalUnits > 0 ? Math.round((totalForRate / totalUnits) * 100) / 100 : null;
 
       return {
         base_amount: workRecordTotal + pieceWorkTotal,
@@ -337,6 +390,8 @@ export class PaymentRecordsService {
         hours_worked: totalHours || uniqueDays * 8,
         tasks_completed: totalUnits,
         overtime_amount: 0,
+        units_completed: totalUnits,
+        rate_per_unit: computedRatePerUnit,
       };
     }
 
@@ -346,6 +401,8 @@ export class PaymentRecordsService {
       hours_worked: 0,
       tasks_completed: 0,
       overtime_amount: 0,
+      units_completed: 0,
+      rate_per_unit: null,
     };
   }
 
@@ -407,7 +464,8 @@ export class PaymentRecordsService {
         worker.daily_rate || 0,
       );
     } else if (worker.worker_type === 'fixed_salary') {
-      calculationResult = this.calculateFixedSalaryPayment(
+      calculationResult = await this.calculateFixedSalaryPayment(
+        client,
         worker,
         periodStart,
         periodEnd,
@@ -446,7 +504,9 @@ export class PaymentRecordsService {
       };
     }
 
-    const grossAmount = calculationResult.base_amount + calculationResult.overtime_amount;
+    const taskBonus = (calculationResult as any).task_bonus ?? 0;
+    const alreadyPaidBase = (calculationResult as any).already_paid_base ?? 0;
+    const grossAmount = calculationResult.base_amount + calculationResult.overtime_amount + taskBonus;
 
     // Get advance deductions if requested
     let advance_deductions = 0;
@@ -465,7 +525,11 @@ export class PaymentRecordsService {
       days_worked: calculationResult.days_worked,
       hours_worked: calculationResult.hours_worked,
       tasks_completed: calculationResult.tasks_completed,
+      units_completed: (calculationResult as any).units_completed ?? 0,
+      rate_per_unit: (calculationResult as any).rate_per_unit ?? null,
       overtime_amount: calculationResult.overtime_amount,
+      task_bonus: taskBonus,
+      already_paid_base: alreadyPaidBase,
       bonuses: [],
       deductions: [],
       advance_deductions,
@@ -494,7 +558,7 @@ export class PaymentRecordsService {
 
     const { data: worker, error: workerError } = await client
       .from('workers')
-      .select('id, worker_type, farm_id')
+      .select('id, worker_type, farm_id, first_name, last_name')
       .eq('id', paymentData.worker_id)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -502,6 +566,8 @@ export class PaymentRecordsService {
     if (workerError || !worker) {
       throw new NotFoundException('Worker not found in organization');
     }
+
+    const workerFullName = `${worker.first_name} ${worker.last_name}`.trim();
 
     const allowedPaymentTypes: Record<string, string[]> = {
       fixed_salary: ['monthly_salary', 'bonus', 'overtime', 'advance'],
@@ -514,50 +580,14 @@ export class PaymentRecordsService {
       throw new BadRequestException('Payment type not allowed for this worker');
     }
 
-    const overlapStatuses = ['pending', 'approved', 'paid'];
+    // For daily_wage and monthly_salary: only block pending/approved (not paid).
+    // A paid monthly salary doesn't block creating a supplemental task-bonus payment.
+    const overlapStatuses = ['pending', 'approved'];
     if (['daily_wage', 'monthly_salary', 'metayage_share'].includes(paymentData.payment_type)) {
-      // For fixed salary workers, also check for exact month/year match to prevent duplicates
-      if (worker.worker_type === 'fixed_salary' && paymentData.payment_type === 'monthly_salary') {
-        const startDate = new Date(paymentData.period_start);
-        const endDate = new Date(paymentData.period_end);
-
-        // Check if the period spans a single month
-        const isSingleMonthPeriod = startDate.getFullYear() === endDate.getFullYear() &&
-          startDate.getMonth() === endDate.getMonth();
-
-        if (isSingleMonthPeriod) {
-          const year = startDate.getFullYear();
-          const month = startDate.getMonth() + 1; // JavaScript months are 0-indexed
-
-          const { data: existingMonthlyPayment } = await client
-            .from('payment_records')
-            .select('id, period_start, period_end')
-            .eq('organization_id', organizationId)
-            .eq('worker_id', paymentData.worker_id)
-            .eq('payment_type', 'monthly_salary')
-            .in('status', overlapStatuses)
-            .filter('period_start', 'lte', paymentData.period_end)
-            .filter('period_end', 'gte', paymentData.period_start)
-            .maybeSingle();
-
-          if (existingMonthlyPayment) {
-            const existingStart = new Date(existingMonthlyPayment.period_start);
-            const existingYear = existingStart.getFullYear();
-            const existingMonth = existingStart.getMonth() + 1;
-
-            throw new BadRequestException(
-              `A monthly salary payment already exists for ${month}/${year}. ` +
-              `Existing payment ID: ${existingMonthlyPayment.id} (${existingMonth}/${existingYear}). ` +
-              `Please delete the existing payment first if you want to create a new one.`
-            );
-          }
-        }
-      }
-
-      // General overlap check for all payment types
+      // General overlap check — only block if an unpaid/unapproved payment already exists
       const { data: overlappingPayment } = await client
         .from('payment_records')
-        .select('id')
+        .select('id, status')
         .eq('organization_id', organizationId)
         .eq('worker_id', paymentData.worker_id)
         .eq('payment_type', paymentData.payment_type)
@@ -567,7 +597,10 @@ export class PaymentRecordsService {
         .maybeSingle();
 
       if (overlappingPayment) {
-        throw new BadRequestException('A payment already exists for the selected period');
+        throw new BadRequestException(
+          `Un paiement en attente ou approuvé existe déjà pour cette période (ID: ${overlappingPayment.id}). ` +
+          `Veuillez d'abord approuver ou supprimer ce paiement.`
+        );
       }
     }
 
@@ -647,10 +680,11 @@ export class PaymentRecordsService {
     // Compute net_amount in application layer (was previously a GENERATED column)
     const finalBaseAmount = Number(metayageSettlement?.worker_share_amount ?? paymentData.base_amount) || 0;
     const finalOvertimeAmount = Number(paymentData.overtime_amount) || 0;
-    const netAmount = finalBaseAmount + bonusesTotal - deductionsTotal + finalOvertimeAmount - finalAdvanceDeduction;
+    const finalTaskBonus = Number(paymentData.task_bonus) || 0;
+    const netAmount = finalBaseAmount + bonusesTotal - deductionsTotal + finalOvertimeAmount + finalTaskBonus - finalAdvanceDeduction;
 
-    // Prepare insert data, excluding arrays and setting calculated totals
-    const { bonuses: _, deductions: __, ...restData } = paymentData;
+    // Prepare insert data, excluding arrays and virtual fields not in DB
+    const { bonuses: _, deductions: __, task_bonus: ___, ...restData } = paymentData;
     const insertData = {
       ...restData,
       farm_id: farmId, // Ensure farm_id is always set
@@ -848,6 +882,24 @@ export class PaymentRecordsService {
         .eq('period_start', data.period_start)
         .eq('period_end', data.period_end)
         .neq('payment_status', 'paid');
+    }
+
+    // Update work_records payment_status to 'paid' for all work records in the payment period
+    if (data.worker_id && data.period_start && data.period_end) {
+      try {
+        await client
+          .from('work_records')
+          .update({ payment_status: 'paid' })
+          .eq('organization_id', organizationId)
+          .eq('worker_id', data.worker_id)
+          .gte('work_date', data.period_start)
+          .lte('work_date', data.period_end)
+          .neq('payment_status', 'paid');
+      } catch (workRecordError) {
+        this.logger.warn(
+          `Failed to update work_records payment_status for payment ${paymentId}: ${workRecordError instanceof Error ? workRecordError.message : 'Unknown error'}`,
+        );
+      }
     }
 
     // Create journal entry for the payment if it doesn't already exist

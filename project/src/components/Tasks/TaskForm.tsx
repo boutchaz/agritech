@@ -52,6 +52,7 @@ const taskFormSchema = z.object({
   work_unit_id: z.string(),
   units_required: z.number().optional(),
   rate_per_unit: z.number().optional(),
+  forfait_amount: z.number().optional(),
   crop_id: z.string(),
 });
 
@@ -86,6 +87,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
     task?.assigned_to ? [task.assigned_to] : []
   );
 
+  // payment_included_in_salary per fixed_salary worker
+  const [workerPaymentIncluded, setWorkerPaymentIncluded] = useState<Record<string, boolean>>({});
+
   // State for planned inventory items (products to consume when task completes)
   const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; quantity: number }>>([]);
 
@@ -99,6 +103,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     handleSubmit: rhfHandleSubmit,
     reset,
     setError,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<TaskFormData>({
@@ -119,6 +124,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       work_unit_id: task?.work_unit_id || '',
       units_required: task?.units_required,
       rate_per_unit: task?.rate_per_unit,
+      forfait_amount: task?.forfait_amount,
       crop_id: '',
     },
   });
@@ -143,6 +149,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
         work_unit_id: task.work_unit_id || '',
         units_required: task.units_required,
         rate_per_unit: task.rate_per_unit,
+        forfait_amount: task.forfait_amount,
         crop_id: '',
       });
       setSelectedWorkerIds(task.assigned_to ? [task.assigned_to] : []);
@@ -258,13 +265,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
           organizationId,
           updates: cleanedData,
         });
-        if (selectedWorkerIds.length > 1) {
+        if (selectedWorkerIds.length > 0) {
           await bulkCreateAssignments.mutateAsync({
             taskId: task.id,
             data: {
-              assignments: selectedWorkerIds.slice(1).map(workerId => ({
+              assignments: selectedWorkerIds.map(workerId => ({
                 worker_id: workerId,
                 role: 'worker' as const,
+                payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
               })),
             },
           });
@@ -274,13 +282,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
           ...cleanedData as CreateTaskRequest,
           organization_id: organizationId,
         });
-        if (selectedWorkerIds.length > 1 && newTask?.id) {
+        if (selectedWorkerIds.length > 0 && newTask?.id) {
           await bulkCreateAssignments.mutateAsync({
             taskId: newTask.id,
             data: {
-              assignments: selectedWorkerIds.slice(1).map(workerId => ({
+              assignments: selectedWorkerIds.map(workerId => ({
                 worker_id: workerId,
                 role: 'worker' as const,
+                payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
               })),
             },
           });
@@ -323,7 +332,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={rhfHandleSubmit(onSubmit)} className="p-6 space-y-4">
+        <form onSubmit={rhfHandleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Titre *</Label>
@@ -547,6 +556,22 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         )}
                       </span>
                     </label>
+                    {isFixedSalary && isSelected && (
+                      <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={workerPaymentIncluded[worker.id] ?? true}
+                          onChange={(e) =>
+                            setWorkerPaymentIncluded(prev => ({
+                              ...prev,
+                              [worker.id]: e.target.checked,
+                            }))
+                          }
+                          className="w-3.5 h-3.5 text-blue-600 rounded"
+                        />
+                        <span className="text-xs text-muted-foreground">Inclus dans le salaire</span>
+                      </label>
+                    )}
                   </div>
                   );
                 })}
@@ -640,10 +665,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 </Label>
                 <Select
                   value={formData.payment_type || 'daily'}
-                  onValueChange={(value) => {
-                    const event = { target: { name: 'payment_type', value } } as any;
-                    register('payment_type').onChange(event);
-                  }}
+                  onValueChange={(value) => setValue('payment_type', value, { shouldValidate: true })}
                 >
                   <SelectTrigger id="payment_type">
                     <SelectValue placeholder="Sélectionner" />
@@ -655,6 +677,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     )}
                     <SelectItem value="daily">Par jour</SelectItem>
                     <SelectItem value="per_unit">À l'unité (Pièce-travail)</SelectItem>
+                    <SelectItem value="forfait">Forfait (montant fixe)</SelectItem>
                     <SelectItem value="monthly">Mensuel</SelectItem>
                     <SelectItem value="metayage">Métayage</SelectItem>
                   </SelectContent>
@@ -694,6 +717,30 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Forfait amount (only if payment type is forfait) */}
+            {formData.payment_type === 'forfait' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forfait_amount">Montant forfaitaire (MAD) *</Label>
+                  <Input
+                    id="forfait_amount"
+                    type="number"
+                    {...register('forfait_amount', { valueAsNumber: true })}
+                    invalid={!!errors.forfait_amount}
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 500.00"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Montant fixe payé pour cette tâche, indépendamment des unités réalisées
+                  </p>
+                  {errors.forfait_amount && (
+                    <p className="text-red-600 text-sm mt-1">{errors.forfait_amount.message}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Units Required & Rate (only if payment type is per_unit) */}
             {formData.payment_type === 'per_unit' && formData.work_unit_id && (

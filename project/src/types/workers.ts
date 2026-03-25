@@ -7,6 +7,7 @@ export type PaymentFrequency =
   | "monthly"
   | "daily"
   | "per_task"
+  | "per_unit"
   | "harvest_share";
 
 export type MetayageType = "khammass" | "rebaa" | "tholth" | "custom";
@@ -70,6 +71,7 @@ export interface Worker {
 
   // Payment
   payment_frequency?: PaymentFrequency;
+  payment_frequencies?: PaymentFrequency[]; // for daily_worker: accepted payment modes (multi-select)
   bank_account?: string;
   payment_method?: string;
 
@@ -206,6 +208,7 @@ export interface WorkerFormData {
   specialties?: string[];
   certifications?: string[];
   payment_frequency?: PaymentFrequency;
+  payment_frequencies?: PaymentFrequency[]; // for daily_worker: accepted payment modes (multi-select)
   bank_account?: string;
   payment_method?: string;
   notes?: string;
