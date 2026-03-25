@@ -5671,7 +5671,15 @@
       "clear": "Effacer",
       "send": "Envoyer",
       "error": "Erreur lors de l'envoi du message",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "suggestions": {
+        "overview": "Vue d'ensemble de la ferme",
+        "lowStock": "Alertes de stock bas",
+        "weather": "Prévisions météo",
+        "financial": "Résumé financier",
+        "tasks": "Tâches des travailleurs aujourd'hui",
+        "harvests": "Récoltes à venir"
+      }
     }
   },
   "calibrationZones": {

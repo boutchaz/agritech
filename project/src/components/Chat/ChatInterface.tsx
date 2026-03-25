@@ -3,14 +3,94 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSendMessage, useChatHistory, useClearChatHistory } from '@/hooks/useChat';
+import { useChatHistory, useClearChatHistory, useStreamMessage } from '@/hooks/useChat';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
-import { Send, Mic, MicOff, Loader2, Trash2, Bot, Volume2, VolumeX } from 'lucide-react';
+import {
+  Send, Mic, MicOff, Loader2, Trash2, Bot, Volume2, VolumeX,
+  LayoutDashboard, AlertTriangle, Cloud, DollarSign, CheckSquare, Wheat,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from '@tanstack/react-router';
 import UserAvatar from '@/components/ui/UserAvatar';
+import { marked } from 'marked';
+
+// Configure marked for chat
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
+
+// Suggestion chips for empty state
+const SUGGESTION_CHIPS = [
+  { key: 'chat.suggestions.overview', icon: LayoutDashboard, defaultText: 'Farm overview' },
+  { key: 'chat.suggestions.lowStock', icon: AlertTriangle, defaultText: 'Low stock alerts' },
+  { key: 'chat.suggestions.weather', icon: Cloud, defaultText: 'Weather forecast' },
+  { key: 'chat.suggestions.financial', icon: DollarSign, defaultText: 'Financial summary' },
+  { key: 'chat.suggestions.tasks', icon: CheckSquare, defaultText: 'Worker tasks today' },
+  { key: 'chat.suggestions.harvests', icon: Wheat, defaultText: 'Upcoming harvests' },
+];
+
+// Deep link mapping: module keywords → routes
+const DEEP_LINK_MAP: Record<string, string> = {
+  'farm management': '/farms',
+  'gestion des fermes': '/farms',
+  'gestion de ferme': '/farms',
+  'إدارة المزارع': '/farms',
+  'parcels': '/parcels',
+  'parcelles': '/parcels',
+  'قطع الأرض': '/parcels',
+  'inventory': '/stock',
+  'stock': '/stock',
+  'inventaire': '/stock',
+  'المخزون': '/stock',
+  'workers': '/workers',
+  'travailleurs': '/workers',
+  'العمال': '/workers',
+  'tasks': '/tasks',
+  'tâches': '/tasks',
+  'المهام': '/tasks',
+  'accounting': '/accounting',
+  'comptabilité': '/accounting',
+  'المحاسبة': '/accounting',
+  'invoices': '/accounting',
+  'factures': '/accounting',
+  'الفواتير': '/accounting',
+  'settings': '/settings',
+  'paramètres': '/settings',
+  'الإعدادات': '/settings',
+  'dashboard': '/dashboard',
+  'tableau de bord': '/dashboard',
+  'لوحة القيادة': '/dashboard',
+  'campaigns': '/campaigns',
+  'campagnes': '/campaigns',
+  'الحملات': '/campaigns',
+  'marketplace': '/marketplace',
+  'marché': '/marketplace',
+  'السوق': '/marketplace',
+  'compliance': '/compliance',
+  'conformité': '/compliance',
+  'الامتثال': '/compliance',
+  'crop cycles': '/crop-cycles',
+  'cycles de culture': '/crop-cycles',
+  'دورات المحاصيل': '/crop-cycles',
+};
+
+// Add deep links to rendered HTML
+function addDeepLinks(html: string): string {
+  let result = html;
+  for (const [keyword, route] of Object.entries(DEEP_LINK_MAP)) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(?<!["/\\w>])\\b(${escaped})\\b(?![</\\w"])`, 'gi');
+    result = result.replace(
+      regex,
+      `<a href="#" data-route="${route}" class="text-primary underline cursor-pointer hover:text-primary/80 font-medium">$1</a>`,
+    );
+  }
+  return result;
+}
 
 interface ChatMessage {
   id: string;
@@ -22,9 +102,11 @@ interface ChatMessage {
 export function ChatInterface() {
   const { t, i18n } = useTranslation();
   const { profile, user } = useAuth();
-  const { mutate: sendMessage, isPending: isSending } = useSendMessage();
+  const navigate = useNavigate();
   const { data: history, isLoading: isLoadingHistory } = useChatHistory();
   const { mutate: clearHistory } = useClearChatHistory();
+  const { stream: streamMessage, isStreaming, streamedContent, resetStream } = useStreamMessage();
+  const isSending = isStreaming;
   
   // Get current language, defaulting to 'en' if not 'fr' or 'ar'
   const currentLanguage = i18n.language === 'fr' ? 'fr' : i18n.language === 'ar' ? 'ar' : 'en';
@@ -44,7 +126,6 @@ export function ChatInterface() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [loadingStage, setLoadingStage] = useState<string | null>(null);
   const [voiceMode, setVoiceMode] = useState(false); // Live voice chat mode
 
   // Select best voice for language (Z.ai voices: tongtong, xiaochen, chuichui, jam, kazi, douji, luodo)
@@ -176,6 +257,38 @@ export function ChatInterface() {
     proceedWithSend(trimmedInput);
   };
 
+  const handleStreamError = useCallback((messageText: string, error: any) => {
+    console.error('Chat error:', error);
+    const errorMsg = error?.message || 'Failed to send message';
+    let errorContent = '';
+
+    if (errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+      errorContent = `I'm having trouble connecting to the server. Please check your internet connection and try again.`;
+    } else if (errorMsg.includes('Z.ai API') || errorMsg.includes('API key')) {
+      errorContent = `The AI service is currently unavailable. Please contact support if this problem persists.`;
+    } else if (errorMsg.includes('Organization ID')) {
+      errorContent = `There's an issue with your organization settings. Please refresh the page and try again.`;
+    } else {
+      errorContent = `I encountered an error: ${errorMsg}. Please try again.`;
+    }
+
+    const errorMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: errorContent,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+    if (!voiceMode) setInput(messageText);
+    if (voiceMode && !isListening) {
+      setTimeout(() => {
+        resetTranscript();
+        lastSentTranscriptRef.current = '';
+        startListening();
+      }, 1000);
+    }
+  }, [voiceMode, isListening, resetTranscript, startListening]);
+
   const proceedWithSend = useCallback((messageText: string) => {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -185,128 +298,43 @@ export function ChatInterface() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput(''); // Clear input immediately
+    setInput('');
     if (voiceMode) {
-      resetTranscript(); // Reset transcript in voice mode
+      resetTranscript();
     }
 
-    setLoadingStage(t('chat.loading.analyzing', 'Analyzing your question...'));
-    
-    setTimeout(() => setLoadingStage(t('chat.loading.loadingData', 'Loading data...')), 1000);
-    setTimeout(() => setLoadingStage(t('chat.loading.generating', 'Generating response...')), 2500);
+    resetStream();
 
-    try {
-      sendMessage(
-        { query: messageText, language: currentLanguage, save_history: true },
-        {
-          onSuccess: (data) => {
-            setLoadingStage(null);
-            const assistantMessage: ChatMessage = {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant',
-              content: data.response,
-              timestamp: new Date(data.metadata.timestamp),
-            };
-            setMessages((prev) => [...prev, assistantMessage]);
-            
-            // In voice mode, restart listening after response finishes playing
-            if (voiceMode && !isListening) {
-              // Wait for TTS to finish before restarting listening
-              const restartDelay = browserTTS.isSpeaking || zaiTTS.isPlaying ? 2000 : 1000;
-              setTimeout(() => {
-                resetTranscript();
-                lastSentTranscriptRef.current = '';
-                startListening();
-              }, restartDelay);
-            }
+    // Use streaming
+    streamMessage(
+      { query: messageText, language: currentLanguage, save_history: true },
+      (metadata) => {
+        // On complete: finalize the streamed message with the full content
+        // We need to capture the content at completion time via a ref approach
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant' as const,
+            content: '__STREAM_COMPLETE__',
+            timestamp: new Date(metadata.timestamp),
           },
-          onError: (error: any) => {
-            setLoadingStage(null);
-            console.error('Chat error:', error);
-            
-            // Provide more helpful error messages
-            let errorContent = '';
-            const errorMsg = error?.message || 'Failed to send message';
-            
-            if (errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-              errorContent = `I'm having trouble connecting to the server. This could be due to:
-- Network connectivity issues
-- The API server may be temporarily unavailable
-- Please check your internet connection and try again
-
-If the problem persists, please contact support.`;
-            } else if (errorMsg.includes('Z.ai API') || errorMsg.includes('API key')) {
-              errorContent = `The AI service is currently unavailable. This is likely a configuration issue on the server side. Please contact support if this problem persists.`;
-            } else if (errorMsg.includes('Organization ID')) {
-              errorContent = `There's an issue with your organization settings. Please refresh the page and try again.`;
-            } else {
-              errorContent = `I encountered an error: ${errorMsg}. Please try again, or contact support if the problem continues.`;
-            }
-            
-            const errorMessage: ChatMessage = {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant',
-              content: errorContent,
-              timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, errorMessage]);
-            // Restore the input if there was an error (only in manual mode)
-            if (!voiceMode) {
-              setInput(messageText);
-            }
-            // In voice mode, restart listening even on error
-            if (voiceMode && !isListening) {
-              setTimeout(() => {
-                resetTranscript();
-                lastSentTranscriptRef.current = '';
-                startListening();
-              }, 1000);
-            }
-          },
-        },
-      );
-    } catch (error: any) {
-      console.error('Failed to send message:', error);
-      
-      // Provide more helpful error messages
-      let errorContent = '';
-      const errorMsg = error?.message || 'Failed to send message';
-      
-      if (errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        errorContent = `I'm having trouble connecting to the server. This could be due to:
-- Network connectivity issues
-- The API server may be temporarily unavailable
-- Please check your internet connection and try again
-
-If the problem persists, please contact support.`;
-      } else if (errorMsg.includes('Z.ai API') || errorMsg.includes('API key')) {
-        errorContent = `The AI service is currently unavailable. This is likely a configuration issue on the server side. Please contact support if this problem persists.`;
-      } else if (errorMsg.includes('Organization ID')) {
-        errorContent = `There's an issue with your organization settings. Please refresh the page and try again.`;
-      } else {
-        errorContent = `I encountered an error: ${errorMsg}. Please try again, or contact support if the problem continues.`;
-      }
-      
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: errorContent,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      if (!voiceMode) {
-        setInput(messageText);
-      }
-      // In voice mode, restart listening even on error
-      if (voiceMode && !isListening) {
-        setTimeout(() => {
-          resetTranscript();
-          lastSentTranscriptRef.current = '';
-          startListening();
-        }, 1000);
-      }
-    }
-  }, [voiceMode, currentLanguage, sendMessage, resetTranscript, isListening, startListening, t]);
+        ]);
+        // In voice mode, restart listening
+        if (voiceMode && !isListening) {
+          const restartDelay = browserTTS.isSpeaking || zaiTTS.isPlaying ? 2000 : 1000;
+          setTimeout(() => {
+            resetTranscript();
+            lastSentTranscriptRef.current = '';
+            startListening();
+          }, restartDelay);
+        }
+      },
+      (error) => {
+        handleStreamError(messageText, error);
+      },
+    );
+  }, [voiceMode, currentLanguage, streamMessage, resetStream, resetTranscript, isListening, startListening, handleStreamError, browserTTS.isSpeaking, zaiTTS.isPlaying]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -347,6 +375,23 @@ If the problem persists, please contact support.`;
       lastPlayedMessageIdRef.current = '';
     }
   };
+
+  // Track streamed content in a ref for completion callback
+  const streamedContentRef = useRef(streamedContent);
+  useEffect(() => {
+    streamedContentRef.current = streamedContent;
+  }, [streamedContent]);
+
+  // Replace placeholder with actual streamed content when stream completes
+  useEffect(() => {
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.content === '__STREAM_COMPLETE__');
+      if (idx === -1) return prev;
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], content: streamedContentRef.current };
+      return updated;
+    });
+  }, [messages.length]);  
 
   // Track last sent transcript to avoid duplicate sends
   const lastSentTranscriptRef = useRef<string>('');
@@ -449,14 +494,29 @@ If the problem persists, please contact support.`;
         <ScrollArea className="flex-1 pr-4 min-h-0" ref={scrollRef}>
           <div className="space-y-4">
             {messages.length === 0 && !isLoadingHistory && (
-              <div className="text-center text-muted-foreground py-8">
-                <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>
+              <div className="flex flex-col items-center justify-center py-8 space-y-6">
+                <Bot className="w-12 h-12 opacity-50" />
+                <p className="text-muted-foreground text-center">
                   {t(
                     'chat.welcome',
                     "Hello! I'm your AgriTech assistant. How can I help you today?",
                   )}
                 </p>
+                <div className="grid grid-cols-2 gap-2 w-full max-w-md">
+                  {SUGGESTION_CHIPS.map((chip) => (
+                    <Button
+                      key={chip.key}
+                      variant="outline"
+                      size="sm"
+                      className="justify-start gap-2 h-auto py-2.5 px-3 text-left"
+                      onClick={() => proceedWithSend(t(chip.key, chip.defaultText))}
+                      disabled={isSending}
+                    >
+                      <chip.icon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                      <span className="text-xs">{t(chip.key, chip.defaultText)}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -480,10 +540,27 @@ If the problem persists, please contact support.`;
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.content}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      {message.role === 'assistant' ? (
+                        <div
+                          className="text-sm chat-markdown"
+                          dangerouslySetInnerHTML={{
+                            __html: addDeepLinks(marked.parse(message.content) as string),
+                          }}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            const route = target.getAttribute('data-route');
+                            if (route) {
+                              e.preventDefault();
+                              navigate({ to: route });
+                            }
+                          }}
+                        />
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {message.content}
+                        </p>
+                      )}
                       <span className="text-xs opacity-70 mt-1 block">
                         {message.timestamp.toLocaleTimeString()}
                       </span>
@@ -545,18 +622,36 @@ If the problem persists, please contact support.`;
               </div>
             ))}
 
-            {isSending && (
+            {isStreaming && streamedContent && (
+              <div className="flex gap-3 justify-start">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
+                </div>
+                <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
+                  <div
+                    className="text-sm chat-markdown"
+                    dangerouslySetInnerHTML={{
+                      __html: addDeepLinks(marked.parse(streamedContent) as string),
+                    }}
+                  />
+                  <div className="flex items-center gap-1 mt-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{t('chat.loading.generating', 'Generating...')}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isSending && !streamedContent && (
               <div className="flex gap-3 justify-start">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
                   <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
                 <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {loadingStage && (
-                    <span className="text-sm text-muted-foreground animate-pulse">
-                      {loadingStage}
-                    </span>
-                  )}
+                  <span className="text-sm text-muted-foreground animate-pulse">
+                    {t('chat.loading.analyzing', 'Analyzing your question...')}
+                  </span>
                 </div>
               </div>
             )}

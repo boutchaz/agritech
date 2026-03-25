@@ -5853,7 +5853,15 @@
       "clear": "Clear",
       "send": "Send",
       "error": "Error sending message",
-      "retry": "Retry"
+      "retry": "Retry",
+      "suggestions": {
+        "overview": "Farm overview",
+        "lowStock": "Low stock alerts",
+        "weather": "Weather forecast",
+        "financial": "Financial summary",
+        "tasks": "Worker tasks today",
+        "harvests": "Upcoming harvests"
+      }
     }
   },
   "calibrationZones": {

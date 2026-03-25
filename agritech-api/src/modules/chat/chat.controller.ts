@@ -158,6 +158,62 @@ export class ChatController {
     return this.chatService.clearConversationHistory(userId, organizationId);
   }
 
+  @Post('stream')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Send chat message and get streaming AI response',
+    description: 'Streams AI response tokens via Server-Sent Events',
+  })
+  @ApiParam({
+    name: 'organizationId',
+    description: 'Organization ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Streaming response started',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests',
+  })
+  async sendMessageStream(
+    @Req() req,
+    @Param('organizationId') organizationId: string,
+    @Body() dto: SendMessageDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id || req.user?.sub;
+    if (!userId) {
+      throw new BadRequestException('User ID not found in token');
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      await this.chatService.sendMessageStream(userId, organizationId, dto, {
+        onToken: (token: string) => {
+          res.write(`data: ${JSON.stringify({ type: 'token', content: token })}\n\n`);
+        },
+        onComplete: (metadata: any) => {
+          res.write(`data: ${JSON.stringify({ type: 'done', metadata })}\n\n`);
+          res.end();
+        },
+        onError: (error: Error) => {
+          res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+          res.end();
+        },
+      });
+    } catch (error) {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+      res.end();
+    }
+  }
+
   @Post('tts')
   @ApiOperation({
     summary: 'Convert text to speech',

@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi, type SendMessageDto, type ChatResponse } from '@/lib/api/chat';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,6 +83,74 @@ export function useClearChatHistory() {
       });
     },
   });
+}
+
+/**
+ * Hook for streaming chat messages with token-by-token updates
+ */
+export function useStreamMessage() {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamedContent, setStreamedContent] = useState('');
+  const abortRef = useRef(false);
+
+  const stream = useCallback(
+    async (
+      data: SendMessageDto,
+      onComplete?: (metadata: any) => void,
+      onError?: (error: Error) => void,
+    ) => {
+      if (!currentOrganization?.id) {
+        onError?.(new Error('No organization selected'));
+        return;
+      }
+
+      setIsStreaming(true);
+      setStreamedContent('');
+      abortRef.current = false;
+
+      try {
+        await chatApi.sendMessageStream(
+          data,
+          currentOrganization.id,
+          (token) => {
+            if (!abortRef.current) {
+              setStreamedContent((prev) => prev + token);
+            }
+          },
+          (metadata) => {
+            setIsStreaming(false);
+            queryClient.invalidateQueries({
+              queryKey: ['chat-history', currentOrganization.id],
+            });
+            onComplete?.(metadata);
+          },
+          (error) => {
+            setIsStreaming(false);
+            onError?.(error);
+          },
+        );
+      } catch (error) {
+        setIsStreaming(false);
+        onError?.(error instanceof Error ? error : new Error('Stream failed'));
+      }
+    },
+    [currentOrganization?.id, queryClient],
+  );
+
+  const stopStream = useCallback(() => {
+    abortRef.current = true;
+    setIsStreaming(false);
+  }, []);
+
+  const resetStream = useCallback(() => {
+    setStreamedContent('');
+    setIsStreaming(false);
+    abortRef.current = false;
+  }, []);
+
+  return { stream, isStreaming, streamedContent, stopStream, resetStream };
 }
 
 export type { SendMessageDto, ChatResponse };

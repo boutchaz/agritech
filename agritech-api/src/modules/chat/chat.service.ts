@@ -91,6 +91,8 @@ interface AccountingContext {
   }>;
   payments_has_more: boolean;
   current_fiscal_year: { name: string; start_date: string; end_date: string } | null;
+  total_revenue_30d?: number;
+  total_expenses_30d?: number;
 }
 
 interface InventoryContext {
@@ -310,6 +312,24 @@ interface OrchardContext {
   pruning_tasks_has_more: boolean;
 }
 
+interface SettingsContext {
+  subscription: {
+    plan_type: string | null;
+    formula: string | null;
+    status: string;
+    max_users: number | null;
+    max_farms: number | null;
+    max_parcels: number | null;
+    contract_end_at: string | null;
+  } | null;
+  organization_users: Array<{
+    name: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+  }>;
+}
+
 interface BuiltContext {
   organization: OrganizationContext;
   farms?: FarmContext | null;
@@ -328,6 +348,7 @@ interface BuiltContext {
   satelliteWeather?: SatelliteWeatherContext | null;
   soilAnalysis?: SoilAnalysisContext | null;
   productionIntelligence?: ProductionIntelligenceContext | null;
+  settings?: SettingsContext | null;
   currentDate: string;
   currentSeason: string;
 }
@@ -351,6 +372,7 @@ interface ContextNeeds {
   soil: boolean;
   alerts: boolean;
   forecast: boolean;
+  settings: boolean;
 }
 
 interface SatelliteWeatherContext {
@@ -495,6 +517,7 @@ export class ChatService {
     satelliteWeather: 60 * 60 * 1000,
     soilAnalysis: 60 * 60 * 1000,
     productionIntelligence: 5 * 60 * 1000,
+    settings: 30 * 60 * 1000,
   };
 
   constructor(
@@ -676,6 +699,77 @@ export class ChatService {
     }
   }
 
+  async sendMessageStream(
+    userId: string,
+    organizationId: string,
+    dto: SendMessageDto,
+    callbacks: {
+      onToken: (token: string) => void;
+      onComplete: (metadata: any) => void;
+      onError: (error: Error) => void;
+    },
+  ): Promise<void> {
+    await this.verifyOrganizationAccess(userId, organizationId);
+
+    this.logger.log(`Building context for streaming chat request in org ${organizationId}`);
+
+    const shouldSaveHistory = dto.save_history !== false;
+    const recentMessages = shouldSaveHistory
+      ? await this.getRecentConversationHistory(userId, organizationId, 10)
+      : [];
+
+    const context = await this.buildOrganizationContext(organizationId, dto.query);
+    const systemPrompt = this.buildSystemPrompt();
+    const userPrompt = this.buildUserPrompt(
+      dto.query,
+      context,
+      dto.language || 'en',
+      recentMessages,
+    );
+
+    const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
+    this.zaiProvider.setApiKey(apiKey);
+
+    if (shouldSaveHistory) {
+      await this.saveMessage(userId, organizationId, 'user', dto.query, dto.language);
+    }
+
+    let fullResponse = '';
+
+    await this.zaiProvider.generateStream({
+      systemPrompt,
+      userPrompt,
+      config: {
+        provider: 'zai' as any,
+        model: 'GLM-4.5-Flash',
+        temperature: 0.7,
+        maxTokens: 8192,
+      },
+      onToken: (token: string) => {
+        fullResponse += token;
+        callbacks.onToken(token);
+      },
+      onComplete: async () => {
+        if (shouldSaveHistory) {
+          await this.saveMessage(userId, organizationId, 'assistant', fullResponse, dto.language, {
+            provider: 'zai',
+            model: 'GLM-4.5-Flash',
+            streamed: true,
+          });
+        }
+        callbacks.onComplete({
+          provider: 'zai',
+          model: 'GLM-4.5-Flash',
+          timestamp: new Date(),
+        });
+      },
+      onError: (error: Error) => {
+        this.logger.error(`Stream generation failed: ${error.message}`, error.stack);
+        callbacks.onError(error);
+      },
+    });
+  }
+
   private async saveMessage(
     userId: string,
     organizationId: string,
@@ -743,6 +837,7 @@ export class ChatService {
        satelliteWeatherContext,
        soilAnalysisContext,
        productionIntelligenceContext,
+       settingsContext,
      ] = await Promise.all([
        this.getCachedModule(
          `${organizationId}:organization`,
@@ -907,8 +1002,18 @@ export class ChatService {
              return null;
            })
          : Promise.resolve(null),
+       contextNeeds.settings
+         ? this.getCachedModule(
+             `${organizationId}:settings`,
+             this.MODULE_CACHE_TTLS.settings,
+             () => this.getSettingsContext(client, organizationId),
+           ).catch(err => {
+             this.logger.warn(`Failed to load settings context: ${err.message}`);
+             return null;
+           })
+         : Promise.resolve(null),
      ]);
-     
+
      // Log what was loaded for debugging
      this.logger.log(`Context loaded - Farms: ${farmContext?.farms_count || 0}, Workers: ${workerContext?.active_workers_count || 0}, Parcels: ${farmContext?.parcels_count || 0}`);
 
@@ -930,6 +1035,7 @@ export class ChatService {
        satelliteWeather: satelliteWeatherContext,
        soilAnalysis: soilAnalysisContext,
        productionIntelligence: productionIntelligenceContext,
+       settings: settingsContext,
        currentDate,
        currentSeason,
      };
@@ -944,10 +1050,10 @@ export class ChatService {
    private analyzeQueryContextSimple(query: string): ContextNeeds {
      const lowerQuery = query.toLowerCase();
      
-    const contextNeeds = {
+    const contextNeeds: ContextNeeds = {
       farm: true, // Always load - most queries need this
       worker: true, // Always load - most queries need this
-      accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|facture|paiement|dépense|revenu|coût|comptabilité|financier|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي/.test(lowerQuery),
+      accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|total|spend|how much|facture|paiement|dépense|revenu|coût|comptabilité|financier|combien|total des|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي|كم|إجمالي/.test(lowerQuery),
       inventory: /stock|inventory|warehouse|item|product|material|reception|supply|inventaire|entrepôt|article|produit|matériel|approvisionnement|مخزون|مستودع|منتج|مادة/.test(lowerQuery),
       production: /harvest|yield|production|quality|delivery|crop cycle|récolte|rendement|contrôle qualité|livraison|cycle de culture|حصاد|محصول|إنتاج|مراقبة الجودة|تسليم/.test(lowerQuery),
       supplierCustomer: /supplier|customer|vendor|client|order|quote|purchase|sale|fournisseur|client|commande|devis|achat|vente|مورد|عميل|طلب|عرض أسعار|شراء|بيع/.test(lowerQuery),
@@ -963,7 +1069,33 @@ export class ChatService {
       soil: /soil|nutrient|fertilizer|ph|organic matter|texture|soil analysis|sol|nutriment|engrais|matière organique|analyse du sol|تربة|مغذيات|سماد|مادة عضوية|تحليل التربة/.test(lowerQuery),
       alerts: /alert|warning|problem|issue|underperforming|critical|deviation|alerte|avertissement|problème|critique|déviation|تنبيه|تحذير|مشكلة|حرج|انحراف/.test(lowerQuery),
       forecast: /forecast|prediction|expected|upcoming|yield forecast|benchmark|prévision|prédiction|attendu|à venir|référence|توقعات|تنبؤ|متوقع|قادم|معيار/.test(lowerQuery),
+      settings: /settings|plan|subscription|admin|role|user|member|permission|paramètre|abonnement|administrateur|rôle|utilisateur|permission|إعدادات|اشتراك|مسؤول|دور|مستخدم|صلاحية/.test(lowerQuery),
     };
+
+    // Check if any specific module was matched (excluding always-loaded farm/worker)
+    const specificModulesMatched = [
+      contextNeeds.accounting, contextNeeds.inventory, contextNeeds.production,
+      contextNeeds.supplierCustomer, contextNeeds.campaigns, contextNeeds.reception,
+      contextNeeds.compliance, contextNeeds.utilities, contextNeeds.reports,
+      contextNeeds.marketplace, contextNeeds.orchards, contextNeeds.satellite,
+      contextNeeds.weather, contextNeeds.soil, contextNeeds.alerts, contextNeeds.forecast,
+      contextNeeds.settings,
+    ].some(Boolean);
+
+    // General/overview queries that should load ALL key contexts
+    const isGeneralQuery = /overview|summary|dashboard|help|status|what should i do|how.+doing|everything|all|résumé|vue d'ensemble|aide|tableau de bord|comment ça va|tout|ملخص|نظرة عامة|مساعدة|لوحة القيادة|كل شيء|good morning|bonjour|صباح الخير|today|aujourd'hui|اليوم/.test(lowerQuery);
+
+    if (!specificModulesMatched || isGeneralQuery) {
+      contextNeeds.accounting = true;
+      contextNeeds.inventory = true;
+      contextNeeds.production = true;
+      contextNeeds.campaigns = true;
+      contextNeeds.compliance = true;
+      contextNeeds.weather = true;
+      contextNeeds.alerts = true;
+      contextNeeds.forecast = true;
+      contextNeeds.settings = true;
+    }
 
      // Log routing decision for debugging
      this.logger.log(
@@ -975,7 +1107,8 @@ export class ChatService {
       `reports=${contextNeeds.reports}, marketplace=${contextNeeds.marketplace}, ` +
       `orchards=${contextNeeds.orchards}, satellite=${contextNeeds.satellite}, ` +
       `weather=${contextNeeds.weather}, soil=${contextNeeds.soil}, ` +
-      `alerts=${contextNeeds.alerts}, forecast=${contextNeeds.forecast}`
+      `alerts=${contextNeeds.alerts}, forecast=${contextNeeds.forecast}, ` +
+      `settings=${contextNeeds.settings}, isGeneral=${isGeneralQuery}`
     );
 
      return contextNeeds;
@@ -1118,6 +1251,7 @@ Determine which modules are relevant based on the query's intent and content. Re
           soil: parsed.soil === true,
           alerts: parsed.alerts === true,
           forecast: parsed.forecast === true,
+          settings: parsed.settings === true,
         };
       }
 
@@ -1143,6 +1277,7 @@ Determine which modules are relevant based on the query's intent and content. Re
         soil: false,
         alerts: false,
         forecast: false,
+        settings: false,
       };
     } catch (error) {
       // On any error, log and return default (no regex fallback)
@@ -1169,8 +1304,50 @@ Determine which modules are relevant based on the query's intent and content. Re
         soil: false,
         alerts: false,
         forecast: false,
+        settings: false,
       };
     }
+  }
+
+  private async getSettingsContext(
+    client: any,
+    organizationId: string,
+  ): Promise<SettingsContext> {
+    const [usersResult, subscriptionResult] = await Promise.all([
+      client
+        .from('organization_users')
+        .select('user_id, role, is_active, profiles(first_name, last_name, email)')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .limit(20),
+      client
+        .from('subscriptions')
+        .select('plan_type, formula, status, max_users, max_farms, max_parcels, contract_end_at')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    return {
+      subscription: subscriptionResult.data
+        ? {
+            plan_type: subscriptionResult.data.plan_type,
+            formula: subscriptionResult.data.formula,
+            status: subscriptionResult.data.status,
+            max_users: subscriptionResult.data.max_users,
+            max_farms: subscriptionResult.data.max_farms,
+            max_parcels: subscriptionResult.data.max_parcels,
+            contract_end_at: subscriptionResult.data.contract_end_at,
+          }
+        : null,
+      organization_users: (usersResult.data || []).map((u: any) => ({
+        name: `${u.profiles?.first_name || ''} ${u.profiles?.last_name || ''}`.trim() || 'Unknown',
+        email: u.profiles?.email || '',
+        role: u.role,
+        is_active: u.is_active,
+      })),
+    };
   }
 
   private async getOrganizationContext(
@@ -1530,11 +1707,32 @@ Determine which modules are relevant based on the query's intent and content. Re
         this.logger.error(`Error fetching fiscal year: ${fiscalYearError.message}`);
       }
 
+      // Get 30-day revenue/expense totals for aggregation
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentInvoices } = await client
+        .from('invoices')
+        .select('invoice_type, grand_total, status')
+        .eq('organization_id', organizationId)
+        .neq('status', 'cancelled')
+        .gte('invoice_date', thirtyDaysAgo);
+
+      let totalRevenue30d = 0;
+      let totalExpenses30d = 0;
+      if (recentInvoices) {
+        for (const inv of recentInvoices) {
+          if (inv.invoice_type === 'sale') {
+            totalRevenue30d += Number(inv.grand_total) || 0;
+          } else if (inv.invoice_type === 'purchase') {
+            totalExpenses30d += Number(inv.grand_total) || 0;
+          }
+        }
+      }
+
       const accountsTotal = accountsCount ?? accounts?.length ?? 0;
       const invoicesTotal = invoicesCount ?? invoices?.length ?? 0;
       const paymentsTotal = paymentsCount ?? payments?.length ?? 0;
 
-      this.logger.log(`Loaded accounting context: ${accountsTotal} accounts, ${invoicesTotal} invoices, ${paymentsTotal} payments`);
+      this.logger.log(`Loaded accounting context: ${accountsTotal} accounts, ${invoicesTotal} invoices, ${paymentsTotal} payments, rev30d=${totalRevenue30d}, exp30d=${totalExpenses30d}`);
 
       return {
         accounts_count: accountsTotal,
@@ -1572,6 +1770,8 @@ Determine which modules are relevant based on the query's intent and content. Re
               end_date: fiscalYear.end_date,
             }
           : null,
+        total_revenue_30d: totalRevenue30d,
+        total_expenses_30d: totalExpenses30d,
       };
     } catch (error) {
       this.logger.error(`Error in getAccountingContext: ${error.message}`, error.stack);
@@ -1586,6 +1786,8 @@ Determine which modules are relevant based on the query's intent and content. Re
         payments_recent: [],
         payments_has_more: false,
         current_fiscal_year: null,
+        total_revenue_30d: 0,
+        total_expenses_30d: 0,
       };
     }
   }
@@ -3171,6 +3373,21 @@ Account Type: ${context.organization.account_type}
 Active Users: ${context.organization.active_users_count}
 Timezone: ${context.organization.timezone}
 
+${context.settings ? `====================================================
+SETTINGS & SUBSCRIPTION
+====================================================
+${context.settings.subscription ? `
+Plan: ${context.settings.subscription.plan_type || 'Free'} (${context.settings.subscription.formula || 'N/A'})
+Status: ${context.settings.subscription.status}
+Max Users: ${context.settings.subscription.max_users ?? 'Unlimited'}
+Max Farms: ${context.settings.subscription.max_farms ?? 'Unlimited'}
+Max Parcels: ${context.settings.subscription.max_parcels ?? 'Unlimited'}
+${context.settings.subscription.contract_end_at ? `Contract Ends: ${context.settings.subscription.contract_end_at}` : ''}
+` : 'No subscription data.'}
+
+Team Members (${context.settings.organization_users.length}):
+${context.settings.organization_users.map(u => `- ${u.name} (${u.role}) - ${u.email}`).join('\n')}
+` : ''}
 ====================================================
 FARM DATA
 ====================================================
@@ -3409,6 +3626,11 @@ ${context.accounting.payments_recent.map((p) => `- ${p.date}: ${p.amount} (${p.m
 ${context.accounting.payments_has_more ? `\n... and ${context.accounting.recent_payments_count - context.accounting.payments_recent.length} more payments` : ''}
 
 Fiscal Year: ${context.accounting.current_fiscal_year?.name || 'Not set'}
+
+Financial Summary (Last 30 Days):
+- Total Revenue: ${context.accounting.total_revenue_30d?.toFixed(2) || '0.00'} ${context.organization.currency}
+- Total Expenses: ${context.accounting.total_expenses_30d?.toFixed(2) || '0.00'} ${context.organization.currency}
+- Net Profit: ${((context.accounting.total_revenue_30d || 0) - (context.accounting.total_expenses_30d || 0)).toFixed(2)} ${context.organization.currency}
 ` : 'No accounting data available.'}
 
 ====================================================

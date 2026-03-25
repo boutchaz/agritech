@@ -122,4 +122,63 @@ export const chatApi = {
 
     return response.blob();
   },
+
+  async sendMessageStream(
+    dto: SendMessageDto,
+    organizationId: string,
+    onToken: (token: string) => void,
+    onComplete: (metadata: any) => void,
+    onError: (error: Error) => void,
+  ): Promise<void> {
+    const headers = await getApiHeaders(organizationId);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+    const response = await fetch(
+      `${API_URL}/api/v1/organizations/${organizationId}/chat/stream`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(dto),
+      },
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Stream request failed' }));
+      onError(new Error(err.message || 'Failed to start stream'));
+      return;
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'token') onToken(data.content);
+            else if (data.type === 'done') onComplete(data.metadata);
+            else if (data.type === 'error') onError(new Error(data.message));
+          } catch {
+            // Skip malformed SSE data
+          }
+        }
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error : new Error('Stream read error'));
+    }
+  },
 };
