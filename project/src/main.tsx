@@ -4,6 +4,7 @@ import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
 import { initGA, initClarity, markRouterNavigating, markRouterStable } from './lib/analytics'
+import { initSentry } from './lib/sentry'
 import { useAuthStore, waitForHydration } from './stores/authStore'
 import './i18n/config'
 import './index.css'
@@ -55,6 +56,7 @@ declare module '@tanstack/react-router' {
 }
 
 async function init() {
+  initSentry(router)
   initGA()
 
   // Wait for Zustand store to hydrate from localStorage before making auth decisions

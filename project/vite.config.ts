@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { createRequire } from 'module';
 import path from 'path';
 
@@ -19,6 +20,13 @@ export default defineConfig({
         ],
       },
     }),
+    // Sentry plugin uploads source maps on production builds
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    }),
   ],
   // API proxy configuration
   server: {
@@ -35,7 +43,7 @@ export default defineConfig({
   },
   build: {
     // Enable sourcemaps for better debugging in development
-    sourcemap: process.env.NODE_ENV !== 'production',
+    sourcemap: true,
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
