@@ -7,6 +7,7 @@ export type PaymentFrequency =
   | "monthly"
   | "daily"
   | "per_task"
+  | "per_unit"
   | "harvest_share";
 
 export type MetayageType = "khammass" | "rebaa" | "tholth" | "custom";
@@ -206,6 +207,7 @@ export interface WorkerFormData {
   specialties?: string[];
   certifications?: string[];
   payment_frequency?: PaymentFrequency;
+  payment_frequencies?: string[];
   bank_account?: string;
   payment_method?: string;
   notes?: string;
@@ -213,7 +215,7 @@ export interface WorkerFormData {
 
 // Tuple constants for use in Zod schemas and other validations
 export const WORKER_TYPES = ['fixed_salary', 'daily_worker', 'metayage'] as const;
-export const PAYMENT_FREQUENCIES = ['monthly', 'daily', 'per_task', 'harvest_share'] as const;
+export const PAYMENT_FREQUENCIES = ['monthly', 'daily', 'per_task', 'per_unit', 'harvest_share'] as const;
 export const METAYAGE_TYPES = ['khammass', 'rebaa', 'tholth', 'custom'] as const;
 export const CALCULATION_BASES = ['gross_revenue', 'net_revenue'] as const;
 

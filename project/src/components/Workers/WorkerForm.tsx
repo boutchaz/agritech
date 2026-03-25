@@ -70,6 +70,7 @@ const createWorkerSchema = (t: any) =>
       payment_frequency: z
         .enum(PAYMENT_FREQUENCIES)
         .optional(),
+      payment_frequencies: z.array(z.string()).optional(),
       bank_account: z.string().optional(),
       payment_method: z.string().optional(),
       notes: z.string().optional(),
@@ -81,13 +82,6 @@ const createWorkerSchema = (t: any) =>
           code: z.ZodIssueCode.custom,
           path: ["monthly_salary"],
           message: t("workers.form.validation.monthlySalaryRequired"),
-        });
-      }
-      if (data.worker_type === "daily_worker" && !data.daily_rate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["daily_rate"],
-          message: t("workers.form.validation.dailyRateRequired"),
         });
       }
       if (data.worker_type === "metayage") {
@@ -192,6 +186,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: worker.specialties || [],
         certifications: worker.certifications || [],
         payment_frequency: worker.payment_frequency ?? undefined,
+        payment_frequencies: (worker as any).payment_frequencies || [],
         bank_account: worker.bank_account || "",
         payment_method: worker.payment_method || "",
         notes: worker.notes || "",
@@ -221,6 +216,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: [],
         certifications: [],
         payment_frequency: undefined,
+        payment_frequencies: [],
         bank_account: "",
         payment_method: "",
         notes: "",
@@ -236,7 +232,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const isCnssDecl = watch("is_cnss_declared");
   const specialties = watch("specialties") || [];
   const certifications = watch("certifications") || [];
-  const perUnitRate = watch("per_unit_rate");
+  // per_unit_rate is now set at task level, not worker profile
 
   useEffect(() => {
     if (!isEditing) {
@@ -249,6 +245,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         setValue("monthly_salary", undefined);
         setValue("metayage_percentage", undefined);
         setValue("metayage_type", undefined);
+        setValue("payment_frequency", undefined);
       } else if (workerType === "metayage") {
         setValue("monthly_salary", undefined);
         setValue("daily_rate", undefined);
@@ -789,13 +786,46 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         {/* Daily Worker */}
         {workerType === "daily_worker" && (
           <div className="space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
+              <p>{t("workers.form.ratesDefinedAtTask", "Les taux (journalier, à l'unité) sont définis lors de la création de chaque tâche.")}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t("workers.form.fields.paymentModes", "Modes de paiement acceptés")}
+              </label>
+              <div className="space-y-2">
+                {[
+                  { value: 'daily' as const, label: t("workers.form.paymentMode.daily", "Journalier") },
+                  { value: 'per_task' as const, label: t("workers.form.paymentMode.perTask", "À la tâche") },
+                  { value: 'per_unit' as const, label: t("workers.form.paymentMode.perUnit", "À l'unité") },
+                  { value: 'harvest_share' as const, label: t("workers.form.paymentMode.harvestShare", "Part de récolte") },
+                ].map((mode) => {
+                  const currentFreqs = watch("payment_frequencies") || [];
+                  return (
+                    <label key={mode.value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={currentFreqs.includes(mode.value)}
+                        onChange={(e) => {
+                          const updated = e.target.checked
+                            ? [...currentFreqs, mode.value]
+                            : currentFreqs.filter((f: string) => f !== mode.value);
+                          setValue("payment_frequencies", updated);
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{mode.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.dailyRate", {
-                    currency: currencySymbol,
-                  })}{" "}
-                  *
+                  {t("workers.form.fields.dailyRate", { currency: currencySymbol })}
                 </label>
                 <input
                   {...register("daily_rate", { valueAsNumber: true })}
@@ -804,39 +834,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   placeholder={t("workers.form.placeholders.dailyRate")}
                 />
-                {errors.daily_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.daily_rate.message}
-                  </p>
-                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.perUnitRate", {
-                    currency: currencySymbol,
-                  })}
-                </label>
-                <input
-                  {...register("per_unit_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.perUnitRate")}
-                />
-                {errors.per_unit_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.per_unit_rate.message}
-                  </p>
-                )}
-                {perUnitRate != null && perUnitRate > 0 && (
-                  <p className="text-sm font-medium text-green-700 dark:text-green-400 mt-1">
-                    {t('workers.form.perUnitSummary', { rate: perUnitRate, currency: currencySymbol }) || `Le paiement par unité est de ${perUnitRate} ${currencySymbol}`}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-              <p>{t("workers.form.perUnitRateInfo")}</p>
             </div>
           </div>
         )}
@@ -939,7 +937,8 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Payment Frequency */}
+          {/* Payment Frequency — hidden for daily workers (they use payment_frequencies checkboxes) */}
+          {workerType !== "daily_worker" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.paymentFrequency")}
@@ -994,6 +993,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 t("workers.form.paymentFrequencyHint.metayage")}
             </p>
           </div>
+          )}
 
           {/* Payment Method */}
           <div>
