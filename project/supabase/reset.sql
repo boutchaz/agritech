@@ -215,20 +215,40 @@ BEGIN
 END $$;
 
 -- =====================================================
--- 8. DROP SUPABASE-SPECIFIC OBJECTS
+-- 8. CLEAR SUPABASE STORAGE (buckets + objects)
 -- =====================================================
 DO $$
+DECLARE
+    bucket RECORD;
+    obj_count INTEGER;
 BEGIN
-    RAISE NOTICE '=== Dropping Supabase-specific objects ===';
+    RAISE NOTICE '=== Clearing Supabase storage ===';
 
-    -- Drop storage buckets (if any exist in public schema)
-    -- Note: These are typically in the storage schema, but checking just in case
-    BEGIN
-        DROP TABLE IF EXISTS public.storage.buckets CASCADE;
-        DROP TABLE IF EXISTS public.storage.objects CASCADE;
-    EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'No storage tables found in public schema';
-    END;
+    -- Delete all objects from every bucket, then delete the buckets
+    FOR bucket IN
+        SELECT id, name FROM storage.buckets ORDER BY name
+    LOOP
+        BEGIN
+            -- Count objects before deleting
+            SELECT COUNT(*) INTO obj_count
+            FROM storage.objects
+            WHERE bucket_id = bucket.id;
+
+            -- Delete all objects in this bucket
+            DELETE FROM storage.objects WHERE bucket_id = bucket.id;
+
+            -- Delete the bucket itself
+            DELETE FROM storage.buckets WHERE id = bucket.id;
+
+            RAISE NOTICE 'Cleared bucket "%": % objects deleted', bucket.name, obj_count;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Warning: Could not clear bucket "%" - %', bucket.name, SQLERRM;
+        END;
+    END LOOP;
+
+    -- Verify
+    SELECT COUNT(*) INTO obj_count FROM storage.objects;
+    RAISE NOTICE 'Remaining storage objects: % (should be 0)', obj_count;
 END $$;
 
 -- =====================================================
