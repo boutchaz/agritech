@@ -167,8 +167,8 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
             const parcelsData = parcelsByFarm[farmId];
             const farmSize = farm.farm_size ?? farm.size;
 
-            // If farm size is not set or 0, use the calculated area from parcels
-            const totalArea = (!farmSize || farmSize === 0) && parcelsData
+            // Always use calculated area from parcels when available; fall back to farm size
+            const totalArea = parcelsData?.totalArea
               ? parseFloat(parcelsData.totalArea.toFixed(2))
               : farmSize;
 

@@ -62,21 +62,41 @@ export const farmsKeys = {
 };
 
 // Fetch farms for an organization using farmsService (apiClient)
+// Also computes total_area from parcels (sum of parcel areas) for each farm
 export const useFarms = (organizationId: string | undefined) => {
   return useQuery({
     queryKey: farmsKeys.byOrganization(organizationId || ''),
-    queryFn: async (): Promise<Farm[]> => {
+    queryFn: async (): Promise<(Farm & { total_area: number | null })[]> => {
       if (!organizationId) return [];
       const farms = await farmsService.listFarms(organizationId);
-      // Map to match expected Farm interface (convert undefined to null)
-      // Backend returns farm_id/farm_name in ListFarmsResponseDto
-      return farms.map((farm: any) => ({
-        id: farm.farm_id || farm.id,
-        name: farm.farm_name || farm.name,
-        location: farm.farm_location ?? farm.location ?? null,
-        size: farm.farm_size ?? farm.size ?? null,
-        manager_name: farm.manager_name ?? null,
-      }));
+
+      // Fetch parcels to compute total area per farm
+      let parcelAreaByFarm: Record<string, number> = {};
+      try {
+        const parcels = await parcelsService.listParcels();
+        parcelAreaByFarm = parcels.reduce((acc: Record<string, number>, parcel: any) => {
+          const fid = parcel.farm_id;
+          if (!fid) return acc;
+          acc[fid] = (acc[fid] || 0) + (parcel.area || 0);
+          return acc;
+        }, {});
+      } catch {
+        // If parcels fetch fails, fall back to stored farm size
+      }
+
+      return farms.map((farm: any) => {
+        const id = farm.farm_id || farm.id;
+        const storedSize = farm.farm_size ?? farm.size ?? null;
+        const calculatedArea = parcelAreaByFarm[id];
+        return {
+          id,
+          name: farm.farm_name || farm.name,
+          location: farm.farm_location ?? farm.location ?? null,
+          size: storedSize,
+          manager_name: farm.manager_name ?? null,
+          total_area: calculatedArea !== undefined ? parseFloat(calculatedArea.toFixed(2)) : storedSize,
+        };
+      });
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes

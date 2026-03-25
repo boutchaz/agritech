@@ -13,6 +13,7 @@ import {
   getPlantingSystemsByCategory,
   getVarietiesByCropType,
   PLANTING_SYSTEMS,
+  TREE_CATEGORIES,
   type CropCategory,
 } from "../../lib/plantingSystemData";
 import { parcelsService, type Parcel } from "../../services/parcelsService";
@@ -114,8 +115,23 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Base categories always shown (static, fully controlled)
+  const BASE_CROP_CATEGORIES = [
+    { value: 'trees', label: t('farmHierarchy.parcel.categories.trees') },
+    { value: 'cereals', label: t('farmHierarchy.parcel.categories.cereals') },
+    { value: 'vegetables', label: t('farmHierarchy.parcel.categories.vegetables') },
+    { value: 'legumes', label: t('farmHierarchy.parcel.categories.legumes', 'Légumineuses') },
+    { value: 'fourrages', label: t('farmHierarchy.parcel.categories.fourrages', 'Cultures fourragères') },
+    { value: 'industrielles', label: t('farmHierarchy.parcel.categories.industrielles', 'Cultures industrielles') },
+    { value: 'aromatiques', label: t('farmHierarchy.parcel.categories.aromatiques', 'Plantes aromatiques') },
+    { value: 'other', label: t('farmHierarchy.parcel.categories.other') },
+  ];
+  const availableCropCategories = BASE_CROP_CATEGORIES;
+
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
+  const [treeFamily, setTreeFamily] = useState<string>('');
   const [parcelToDelete, setParcelToDelete] = useState<{
     id: string;
     name: string;
@@ -142,9 +158,14 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
   const selectedArea = watch("area");
   const selectedDensity = watch("density_per_hectare");
 
-  // Get available crop types based on category
+  // Get available crop types based on category (filtered by tree family if applicable)
+  // For trees: require a family to be selected first to avoid 40+ item flat list
   const availableCropTypes = selectedCategory
-    ? getCropTypesByCategory(selectedCategory)
+    ? selectedCategory === 'trees'
+      ? treeFamily
+        ? TREE_CATEGORIES[treeFamily as keyof typeof TREE_CATEGORIES] ?? []
+        : [] // force family selection first
+      : getCropTypesByCategory(selectedCategory)
     : [];
 
   // Get available varieties based on crop type
@@ -247,6 +268,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
       reset();
       setShowForm(false);
       setEditingParcel(null);
+      setTreeFamily('');
     },
     onError: (error: Error) => {
       toast.error(t("app.error") + ": " + (error.message || ""));
@@ -292,6 +314,15 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     setValue("area_unit", parcel.area_unit);
     setValue("crop_category", parcel.crop_category || "");
     setValue("crop_type", parcel.crop_type || "");
+    // Pre-select tree family when editing
+    if (parcel.crop_category === 'trees' && parcel.crop_type) {
+      const family = Object.entries(TREE_CATEGORIES).find(([, types]) =>
+        types.includes(parcel.crop_type!)
+      )?.[0] ?? '';
+      setTreeFamily(family);
+    } else {
+      setTreeFamily('');
+    }
     setValue("variety", parcel.variety || "");
     setValue("planting_system", parcel.planting_system || "");
     setValue("spacing", parcel.spacing || "");
@@ -460,9 +491,11 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         >
                           <Select
                             value={watch("crop_category") || undefined}
-                            onValueChange={(value) =>
-                              setValue("crop_category", value)
-                            }
+                            onValueChange={(value) => {
+                              setValue("crop_category", value);
+                              setValue("crop_type", "");
+                              setTreeFamily('');
+                            }}
                           >
                             <SelectTrigger id="crop_category">
                               <SelectValue
@@ -470,23 +503,40 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="trees">
-                                {t("farmHierarchy.parcel.categories.trees")}
-                              </SelectItem>
-                              <SelectItem value="cereals">
-                                {t("farmHierarchy.parcel.categories.cereals")}
-                              </SelectItem>
-                              <SelectItem value="vegetables">
-                                {t(
-                                  "farmHierarchy.parcel.categories.vegetables",
-                                )}
-                              </SelectItem>
-                              <SelectItem value="other">
-                                {t("farmHierarchy.parcel.categories.other")}
-                              </SelectItem>
+                              {availableCropCategories.map((cat) => (
+                                <SelectItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormField>
+
+                        {selectedCategory === "trees" && (
+                          <FormField
+                            label={t("farmHierarchy.parcel.treeFamily", "Famille d'arbres")}
+                            htmlFor="tree_family"
+                          >
+                            <Select
+                              value={treeFamily || undefined}
+                              onValueChange={(value) => {
+                                setTreeFamily(value);
+                                setValue("crop_type", "");
+                              }}
+                            >
+                              <SelectTrigger id="tree_family">
+                                <SelectValue placeholder={t("farmHierarchy.parcel.treeFamilyPlaceholder", "Toutes les familles")} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(TREE_CATEGORIES).map((family) => (
+                                  <SelectItem key={family} value={family}>
+                                    {family}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormField>
+                        )}
 
                         <FormField
                           label={t("farmHierarchy.parcel.cropType")}
@@ -523,30 +573,38 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                           )}
                         </FormField>
 
-                        {availableVarieties.length > 0 && (
+                        {selectedCategory && watch("crop_type") && (
                           <FormField
                             label={t("farmHierarchy.parcel.variety")}
                             htmlFor="variety"
                           >
-                            <Select
-                              value={watch("variety") || undefined}
-                              onValueChange={(value) =>
-                                setValue("variety", value)
-                              }
-                            >
-                              <SelectTrigger id="variety">
-                                <SelectValue
-                                  placeholder={t("common.selectOption")}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableVarieties.map((variety) => (
-                                  <SelectItem key={variety} value={variety}>
-                                    {variety}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            {availableVarieties.length > 0 ? (
+                              <Select
+                                value={watch("variety") || undefined}
+                                onValueChange={(value) =>
+                                  setValue("variety", value)
+                                }
+                              >
+                                <SelectTrigger id="variety">
+                                  <SelectValue
+                                    placeholder={t("common.selectOption")}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableVarieties.map((variety) => (
+                                    <SelectItem key={variety} value={variety}>
+                                      {variety}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                id="variety"
+                                {...register("variety")}
+                                placeholder={t("farmHierarchy.parcel.variety")}
+                              />
+                            )}
                           </FormField>
                         )}
 
@@ -849,6 +907,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                         onClick={() => {
                           setShowForm(false);
                           setEditingParcel(null);
+                          setTreeFamily('');
                           reset();
                         }}
                       >

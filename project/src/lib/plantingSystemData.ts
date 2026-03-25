@@ -27,7 +27,7 @@
  * - getDensityFromSpacing(): Calculate density from spacing string
  */
 
-export type CropCategory = 'trees' | 'cereals' | 'vegetables' | 'other';
+export type CropCategory = 'trees' | 'cereals' | 'vegetables' | 'legumes' | 'fourrages' | 'industrielles' | 'aromatiques' | 'other';
 
 export interface PlantingSystem {
   type: string;
@@ -389,6 +389,67 @@ export const VEGETABLE_CROPS = [
   'Menthe',
 ];
 
+// Légumineuses (légumes secs / pulses)
+export const LEGUME_CROPS = [
+  'Pois chiche',
+  'Lentille',
+  'Fève',
+  'Haricot sec',
+  'Petit pois',
+  'Niébé',
+  'Soja',
+  'Lupin',
+  'Vesces',
+  'Lentillon',
+];
+
+// Cultures fourragères
+export const FOURRAGES_CROPS = [
+  'Luzerne',
+  'Trèfle',
+  'Sorgho fourrager',
+  'Avoine fourragère',
+  'Ray-grass',
+  'Fescue',
+  'Dactyle',
+  'Vesce-avoine',
+  'Maïs fourrage',
+  'Betterave fourragère',
+];
+
+// Cultures industrielles
+export const INDUSTRIELLES_CROPS = [
+  'Tournesol',
+  'Colza',
+  'Betterave à sucre',
+  'Coton',
+  'Lin',
+  'Chanvre',
+  'Tabac',
+  'Carthame',
+  'Arachide',
+  'Sésame',
+];
+
+// Plantes aromatiques et médicinales
+export const AROMATIQUES_CROPS = [
+  'Thym',
+  'Romarin',
+  'Lavande',
+  'Menthe poivrée',
+  'Origan',
+  'Fenouil',
+  'Cumin',
+  'Coriandre (graines)',
+  'Nigelle',
+  'Sauge',
+  'Basilic',
+  'Mélisse',
+  'Verveine',
+  'Camomille',
+  'Armoise',
+];
+
 // Vegetable Planting Systems
 export const VEGETABLE_PLANTING_SYSTEMS = [
   {
@@ -482,6 +543,14 @@ export function getCropTypesByCategory(category: CropCategory): string[] {
       return VEGETABLE_CROPS;
     case 'cereals':
       return CEREAL_CROPS;
+    case 'legumes':
+      return LEGUME_CROPS;
+    case 'fourrages':
+      return FOURRAGES_CROPS;
+    case 'industrielles':
+      return INDUSTRIELLES_CROPS;
+    case 'aromatiques':
+      return AROMATIQUES_CROPS;
     default:
       return [];
   }

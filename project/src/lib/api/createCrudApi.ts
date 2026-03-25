@@ -70,10 +70,10 @@ export function createCrudApi<
      */
     async getAll(filters?: TFilters, organizationId?: string): Promise<TEntity[]> {
       const url = buildQueryUrl(baseUrl, filters as Record<string, unknown>);
-      const res = await apiClient.get<TEntity[] | { data: TEntity[] }>(url, {}, organizationId);
+      const res = await apiClient.get<TEntity[] | { data: TEntity[]; farms: TEntity[] }>(url, {}, organizationId);
       // Handle both PaginatedResponse and plain array from backend
       if (Array.isArray(res)) return res;
-      return (res as { data: TEntity[] }).data || [];
+      return (res as { data: TEntity[]; farms: TEntity[] }).data || (res as { data: TEntity[]; farms: TEntity[] }).farms || [];
     },
 
     /**

@@ -28,6 +28,8 @@
     "lightMode": "Light mode",
     "active": "Active",
     "inactive": "Inactive",
+    "goBack": "Go Back",
+    "goHome": "Go to Dashboard",
     "retry": "Retry",
     "noResults": "No results found",
     "selectFarm": "Select a farm",
@@ -249,7 +251,11 @@
       "street": "Street",
       "all": "All",
       "totalPoints": "Total Points",
-      "activeLocations": "Active locations"
+      "activeLocations": "Active locations",
+      "activeFarm": "Active Farm",
+      "activeFarms": "Active farms",
+      "noFarms": "No active farms found",
+      "noFarmsHint": "Add coordinates to your farms to see them on the map"
     }
   },
   "nav": {
@@ -938,8 +944,16 @@
       "noSearchResults": "No farms match your search",
       "validation": {
         "nameRequired": "Name must contain at least 2 characters"
-      }
+      },
+      "deleting": "Deleting...",
+      "noEmail": "No email",
+      "noUsersFound": "No users found",
+      "noUsersInOrganization": "No users in organization",
+      "searchUsersPlaceholder": "Search for a user...",
+      "selectManagerError": "Error selecting manager",
+      "unnamedUser": "Unnamed user"
     },
+    "parcels": "Parcels",
     "details": {
       "title": "Farm Details",
       "information": "Farm Information",
@@ -1011,6 +1025,10 @@
         "trees": "Fruit trees",
         "cereals": "Cereals",
         "vegetables": "Vegetables",
+        "legumes": "Legumes",
+        "fourrages": "Forage crops",
+        "industrielles": "Industrial crops",
+        "aromatiques": "Aromatic plants",
         "other": "Other"
       },
       "irrigation": {
@@ -1383,6 +1401,8 @@
     "deleteConfirmTitle": "Confirm Deletion",
     "deleteConfirmation": "Are you sure you want to delete the warehouse",
     "deleteWarning": "This action is irreversible and will remove all associated stock data.",
+    "createDescription": "Create a warehouse to manage your production stock",
+    "editDescription": "Edit warehouse information and settings",
     "table": {
       "name": "Name",
       "location": "Location",
@@ -1539,7 +1559,9 @@
       "updated": "Item group updated successfully",
       "deleted": "Item group deleted successfully",
       "deleteTitle": "Delete Item Group",
-      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone."
+      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone.",
+      "noGroupsFound": "No item groups found",
+      "noOrganization": "No organization selected"
     },
     "unit": {
       "manage": "Manage Units",
@@ -1975,7 +1997,10 @@
       "inactive": "Inactive"
     },
     "actions": {
-      "viewPassword": "View Password"
+      "viewPassword": "View Password",
+      "activate": "Activate User",
+      "deactivate": "Deactivate User",
+      "remove": "Remove User"
     },
     "invite": {
       "title": "Invite User",
@@ -2051,6 +2076,8 @@
     "used": "Used {{count}} times",
     "used_plural": "Used {{count}} times",
     "cancel": "Cancel",
+    "createLabel": "Create",
+    "updateLabel": "Update",
     "create": {
       "success": "Work unit created successfully",
       "failed": "Failed to create work unit",
@@ -4275,6 +4302,10 @@
       "statsPending": "Pending",
       "statsTotalAmount": "Total Amount",
       "statsWorkers": "Workers"
+    },
+    "errors": {
+      "farmsFetchFailed": "Failed to load farms",
+      "farmsFetchHint": "Please try again or contact the administrator"
     }
   },
   "tasks": {

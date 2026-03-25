@@ -71,6 +71,7 @@ export interface Worker {
 
   // Payment
   payment_frequency?: PaymentFrequency;
+  payment_frequencies?: PaymentFrequency[]; // for daily_worker: accepted payment modes (multi-select)
   bank_account?: string;
   payment_method?: string;
 

@@ -28,6 +28,8 @@
     "lightMode": "Mode clair",
     "active": "Actif",
     "inactive": "Inactif",
+    "goBack": "Retour",
+    "goHome": "Tableau de bord",
     "retry": "Réessayer",
     "noResults": "Aucun résultat trouvé",
     "selectFarm": "Sélectionnez une ferme",
@@ -249,7 +251,11 @@
       "street": "Rue",
       "all": "Tous",
       "totalPoints": "Points totaux",
-      "activeLocations": "Emplacements actifs"
+      "activeLocations": "Emplacements actifs",
+      "activeFarm": "Ferme Active",
+      "activeFarms": "Fermes actives",
+      "noFarms": "Aucune parcelle localisée",
+      "noFarmsHint": "Dessinez les limites de vos parcelles sur la carte pour les voir ici"
     }
   },
   "nav": {
@@ -938,8 +944,16 @@
       "noSearchResults": "Aucune ferme ne correspond à votre recherche",
       "validation": {
         "nameRequired": "Le nom doit contenir au moins 2 caractères"
-      }
+      },
+      "deleting": "Suppression...",
+      "noEmail": "Aucun email",
+      "noUsersFound": "Aucun utilisateur trouvé",
+      "noUsersInOrganization": "Aucun utilisateur dans l'organisation",
+      "searchUsersPlaceholder": "Rechercher un utilisateur...",
+      "selectManagerError": "Erreur lors de la sélection du gestionnaire",
+      "unnamedUser": "Utilisateur sans nom"
     },
+    "parcels": "Parcelles",
     "details": {
       "title": "Détails de la ferme",
       "information": "Informations de la ferme",
@@ -1011,6 +1025,10 @@
         "trees": "Arbres fruitiers",
         "cereals": "Céréales",
         "vegetables": "Légumes",
+        "legumes": "Légumineuses",
+        "fourrages": "Cultures fourragères",
+        "industrielles": "Cultures industrielles",
+        "aromatiques": "Plantes aromatiques",
         "other": "Autre"
       },
       "irrigation": {
@@ -1351,7 +1369,8 @@
     "editDescription": "Mettre à jour les détails du fournisseur",
     "deleteConfirmTitle": "Confirmer la suppression",
     "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le fournisseur",
-    "deleteWarning": "Cette action est irréversible."
+    "deleteWarning": "Cette action est irréversible.",
+    "unknownError": "Erreur inconnue"
   },
   "warehouses": {
     "title": "Gestion des Entrepôts",
@@ -1378,6 +1397,8 @@
     "deleteConfirmTitle": "Confirmer la suppression",
     "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer l'entrepôt",
     "deleteWarning": "Cette action est irréversible et supprimera toutes les données de stock associées.",
+    "createDescription": "Créer un entrepôt pour gérer vos stocks de production",
+    "editDescription": "Modifier les informations et paramètres de l'entrepôt",
     "table": {
       "name": "Nom",
       "location": "Emplacement",
@@ -1534,7 +1555,9 @@
       "updated": "Groupe d'articles mis à jour avec succès",
       "deleted": "Groupe d'articles supprimé avec succès",
       "deleteTitle": "Supprimer le Groupe d'Articles",
-      "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le groupe d'articles \"{{name}}\" ? Cette action ne peut pas être annulée."
+      "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le groupe d'articles \"{{name}}\" ? Cette action ne peut pas être annulée.",
+      "noGroupsFound": "Aucun groupe d'articles trouvé",
+      "noOrganization": "Aucune organisation sélectionnée"
     },
     "unit": {
       "manage": "Gérer les Unités",
@@ -1970,7 +1993,10 @@
       "inactive": "Inactif"
     },
     "actions": {
-      "viewPassword": "Voir le mot de passe"
+      "viewPassword": "Voir le mot de passe",
+      "activate": "Activer l'utilisateur",
+      "deactivate": "Désactiver l'utilisateur",
+      "remove": "Retirer l'utilisateur"
     },
     "invite": {
       "title": "Inviter un utilisateur",
@@ -2046,6 +2072,8 @@
     "used": "Utilisé {{count}} fois",
     "used_plural": "Utilisé {{count}} fois",
     "cancel": "Annuler",
+    "createLabel": "Créer",
+    "updateLabel": "Mettre à jour",
     "create": {
       "success": "Unité de travail créée avec succès",
       "failed": "Échec de la création de l'unité de travail",
@@ -4093,6 +4121,10 @@
       "statsPending": "En attente",
       "statsTotalAmount": "Montant total",
       "statsWorkers": "Travailleurs"
+    },
+    "errors": {
+      "farmsFetchFailed": "Échec du chargement des fermes",
+      "farmsFetchHint": "Veuillez réessayer ou contacter l'administrateur"
     }
   },
   "tasks": {

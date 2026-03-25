@@ -567,6 +567,8 @@ export class PaymentRecordsService {
       throw new NotFoundException('Worker not found in organization');
     }
 
+    const workerFullName = `${worker.first_name} ${worker.last_name}`.trim();
+
     const allowedPaymentTypes: Record<string, string[]> = {
       fixed_salary: ['monthly_salary', 'bonus', 'overtime', 'advance'],
       daily_worker: ['daily_wage', 'bonus', 'overtime', 'advance'],

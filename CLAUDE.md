@@ -26,6 +26,51 @@
 - Roles: system_admin > organization_admin > farm_manager > farm_worker > day_laborer > viewer
 - Check subscription limits for create operations
 
+### Product Context
+AGROGINA = ERP agricole + Agronomie + AgromindIA (IA decisionnelle) in one app for Moroccan farms (50-600+ ha).
+AgromindIA is the core differentiator: it sees stocks, worker availability, costs, weather, and agronomic data to produce actionable recommendations — no other tool does this.
+
+**Target Personas (inform every UX decision):**
+- **Karim** (farm_manager, 300ha Meknes): Needs coordination across agronome/workers/comptable. Hates complexity. The litmus test: "Would Karim find this useful and easy to use?"
+- **Hassan** (agronome, manages 5-15 farms): Wants scientific precision, historical data, traceability. Needs Level 3 expert display.
+- **Fatima** (organization_admin, cooperative 500-2000ha): Needs reporting, multi-member consolidation, export certification compliance.
+- **Ahmed** (farm_manager, 50ha, Darija speaker, no tech background): Needs Level 1 simplified interface. Zero jargon.
+
+**AgromindIA Display Levels (CEO decision — do not change without validation):**
+- Level 1 (Basic): Simple actionable language, no scientific data. "Arrose la parcelle B3 demain avant 8h."
+- Level 2 (Intermediate): BLOCKED — awaiting CEO definition. Do NOT implement.
+- Level 3 (Expert): Full scientific data, indices, charts. Current default.
+
+### Dual-Backend Architecture
+
+| Concern | Service | Tech | Port |
+|---------|---------|------|------|
+| All business logic (ERP, tasks, workers, accounting, AI chat, parcels) | `agritech-api/` | NestJS 11 | 3001 |
+| Satellite imagery, vegetation indices, weather, GEE processing | `backend-service/` | FastAPI | 8001 |
+
+- Frontend calls NestJS for everything except satellite/weather endpoints
+- **Never** put business logic in FastAPI. **Never** put GEE processing in NestJS.
+- NestJS owns all business tables. FastAPI writes only to `satellite_data` + Supabase Storage.
+
+### Offline-First (CRITICAL — rural Morocco)
+- Target users have variable 3G/4G in rural areas — app MUST degrade gracefully offline
+- TanStack Query cache is the first defense — use aggressive `staleTime`
+- Design all features assuming intermittent connectivity
+- PWA with Service Worker is planned (not yet implemented)
+
+### Decision Escalation
+
+| Action | Decision |
+|--------|----------|
+| Fix bug (technical or functional) | Auto-proceed |
+| Modify existing code | Auto-proceed |
+| Add nullable column, index, RLS policy | Auto-proceed |
+| New feature | CEO must instruct first |
+| New table, drop/rename column, change schema structure | CEO validation required |
+| Change CASL roles/permissions | CEO validation required |
+| Deploy to production | CEO validation required |
+| Architecture change | CEO validation required |
+
 ## Frontend Conventions
 
 ### File Naming

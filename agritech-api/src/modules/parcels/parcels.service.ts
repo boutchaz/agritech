@@ -469,7 +469,6 @@ export class ParcelsService {
         rootstock,
         soil_type,
         irrigation_type,
-        ai_phase,
         is_active,
         created_at,
         updated_at,
@@ -551,7 +550,6 @@ export class ParcelsService {
         rootstock,
         soil_type,
         irrigation_type,
-        ai_phase,
         is_active,
         created_at,
         updated_at,
@@ -685,15 +683,9 @@ export class ParcelsService {
       rootstock: dto.rootstock || null,
       soil_type: dto.soil_type || null,
       irrigation_type: dto.irrigation_type || null,
-      water_source: dto.water_source || null,
-      irrigation_frequency: dto.irrigation_frequency || null,
-      water_quantity_per_session: dto.water_quantity_per_session || null,
-      water_quantity_unit: dto.water_quantity_unit || null,
       boundary: dto.boundary || null,
       calculated_area: dto.calculated_area || null,
       perimeter: dto.perimeter || null,
-      ai_phase: "disabled",
-      langue: dto.langue || "fr",
       is_active: true,
     };
 
@@ -902,7 +894,6 @@ export class ParcelsService {
     if (dto.calculated_area !== undefined)
       updateData.calculated_area = dto.calculated_area;
     if (dto.perimeter !== undefined) updateData.perimeter = dto.perimeter;
-    if (dto.langue !== undefined) updateData.langue = dto.langue;
 
     // Update parcel
     const { data: updatedParcel, error: updateError } = await this.supabaseAdmin
