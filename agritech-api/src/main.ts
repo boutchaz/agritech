@@ -1,5 +1,9 @@
+// Import Sentry instrumentation first!
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, ExceptionFilter, Catch, ArgumentsHost, HttpException, BadRequestException } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
@@ -44,6 +48,11 @@ class AllExceptionsFilter implements ExceptionFilter {
       console.error(`Exception Type: ${exception?.constructor?.name}`);
       console.error(`Stack trace (first 15 lines):\n${stack.split('\n').slice(0, 15).join('\n')}`);
       console.error(`==========================================================\n`);
+    }
+
+    // Report server errors to Sentry
+    if (status >= 500) {
+      Sentry.captureException(exception);
     }
 
     // Build response object, preserving validation error structure

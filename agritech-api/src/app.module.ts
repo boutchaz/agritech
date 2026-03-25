@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { Reflector } from "@nestjs/core";
+import { SentryModule } from "@sentry/nestjs/setup";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 
@@ -105,6 +106,9 @@ import { AuditModule } from "./modules/audit/audit.module";
 
 @Module({
   imports: [
+    // Sentry must be first
+    SentryModule.forRoot(),
+
     // Config
     ConfigModule.forRoot({
       isGlobal: true,
