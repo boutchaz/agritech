@@ -43,7 +43,7 @@ export default defineConfig({
   },
   build: {
     // Enable sourcemaps for better debugging in development
-    sourcemap: true,
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
