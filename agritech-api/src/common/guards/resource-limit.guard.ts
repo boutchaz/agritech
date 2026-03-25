@@ -162,7 +162,8 @@ export class ResourceLimitGuard implements CanActivate {
             count: 'exact',
             head: true,
           })
-          .eq('farms.organization_id', organizationId);
+          .eq('farms.organization_id', organizationId)
+          .eq('is_active', true);
         return count ?? 0;
       }
 

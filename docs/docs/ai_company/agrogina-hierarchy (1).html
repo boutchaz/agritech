@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGROGINA — Hiérarchie des Agents</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2D5A3D;
+    --green-light: #3d7a54;
+    --green-muted: rgba(45,90,61,0.15);
+    --blue: #1E88E5;
+    --blue-muted: rgba(30,136,229,0.12);
+    --orange: #FF6B35;
+    --orange-muted: rgba(255,107,53,0.12);
+    --anthracite: #1E1E1E;
+    --surface: #111a14;
+    --surface2: #162019;
+    --surface3: #1c2b20;
+    --surface4: #213226;
+    --border: rgba(45,90,61,0.25);
+    --border-bright: rgba(45,90,61,0.5);
+    --text: #e8f0ea;
+    --text-muted: rgba(232,240,234,0.5);
+    --text-dim: rgba(232,240,234,0.25);
+    --red: #e05252;
+    --yellow: #f0c040;
+    --purple: #9c6fe4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(45,90,61,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(30,136,229,0.07) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .page-title {
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green-light);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .page-heading {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* TREE CONTAINER */
+  .tree {
+    position: relative;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* LEVELS */
+  .level {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 0;
+  }
+
+  /* NODE */
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  }
+
+  .node-card {
+    border-radius: 12px;
+    padding: 12px 16px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    text-align: center;
+    min-width: 130px;
+    max-width: 160px;
+  }
+
+  .node-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  /* CEO NODE */
+  .node-ceo .node-card {
+    background: linear-gradient(135deg, #2D5A3D, #1e3d2a);
+    border-color: rgba(93,189,128,0.4);
+    box-shadow: 0 0 30px rgba(45,90,61,0.3);
+    min-width: 160px;
+    padding: 16px 20px;
+  }
+
+  /* CHEF NODES */
+  .node-chef .node-card {
+    background: var(--surface3);
+    border-color: var(--border-bright);
+  }
+
+  .node-chef.dev .node-card { border-color: rgba(93,189,128,0.35); }
+  .node-chef.agro .node-card { border-color: rgba(30,136,229,0.35); }
+  .node-chef.marketing .node-card { border-color: rgba(100,181,246,0.35); }
+  .node-chef.seo .node-card { border-color: rgba(240,192,64,0.35); }
+  .node-chef.finance .node-card { border-color: rgba(255,107,53,0.35); }
+  .node-chef.agronomie .node-card { border-color: rgba(129,199,132,0.35); }
+
+  /* AGENT NODES */
+  .node-agent .node-card {
+    background: var(--surface2);
+    border-color: var(--border);
+    min-width: 110px;
+    max-width: 140px;
+    padding: 10px 12px;
+  }
+
+  .node-agent.persona .node-card {
+    border-color: rgba(156,111,228,0.3);
+    background: rgba(156,111,228,0.05);
+  }
+
+  .node-icon {
+    font-size: 20px;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  .node-ceo .node-icon { font-size: 26px; }
+
+  .node-name {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 3px;
+  }
+
+  .node-ceo .node-name { font-size: 14px; color: #a8e6bc; }
+
+  .node-role {
+    font-size: 9px;
+    color: var(--text-muted);
+    line-height: 1.3;
+  }
+
+  .node-ceo .node-role { font-size: 10px; color: rgba(168,230,188,0.7); }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    position: absolute;
+    top: 8px; right: 8px;
+  }
+
+  .status-dot.active { background: #5dbd80; box-shadow: 0 0 6px rgba(93,189,128,0.7); animation: pulse 2s infinite; }
+  .status-dot.working { background: var(--blue); box-shadow: 0 0 6px rgba(30,136,229,0.7); animation: pulse 1.5s infinite; }
+  .status-dot.idle { background: var(--text-dim); }
+  .status-dot.waiting { background: var(--orange); animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.75); }
+  }
+
+  /* SVG LINES */
+  .lines-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .tree-line {
+    stroke: rgba(45,90,61,0.4);
+    stroke-width: 1.5;
+    fill: none;
+    stroke-dasharray: 4 3;
+  }
+
+  .tree-line.dev { stroke: rgba(93,189,128,0.4); }
+  .tree-line.agro { stroke: rgba(30,136,229,0.4); }
+  .tree-line.marketing { stroke: rgba(100,181,246,0.35); }
+  .tree-line.seo { stroke: rgba(240,192,64,0.35); }
+  .tree-line.finance { stroke: rgba(255,107,53,0.35); }
+  .tree-line.agronomie { stroke: rgba(129,199,132,0.35); }
+  .tree-line.persona { stroke: rgba(156,111,228,0.35); }
+  .tree-line.cross { stroke: rgba(255,107,53,0.5); stroke-dasharray: 6 4; stroke-width: 1; }
+  .tree-line.solid {
+    stroke-dasharray: none;
+    stroke-width: 2;
+  }
+
+  /* LAYOUT WRAPPER */
+  .hierarchy-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  /* DEPT SECTION */
+  .dept-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .depts-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .dept-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .agents-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0;
+  }
+
+  /* CONNECTOR LINES via CSS */
+  .connector-down {
+    width: 2px;
+    background: var(--border-bright);
+    flex-shrink: 0;
+  }
+
+  .connector-down.dev { background: rgba(93,189,128,0.4); }
+  .connector-down.agro { background: rgba(30,136,229,0.4); }
+  .connector-down.marketing { background: rgba(100,181,246,0.35); }
+  .connector-down.seo { background: rgba(240,192,64,0.35); }
+  .connector-down.finance { background: rgba(255,107,53,0.35); }
+  .connector-down.agronomie { background: rgba(129,199,132,0.35); }
+
+  .v-line {
+    width: 2px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 1px;
+  }
+
+  .h-connector {
+    height: 2px;
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  /* CEO row */
+  .ceo-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0;
+  }
+
+  /* Cross-dept connector */
+  .cross-connector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin: 0 auto;
+    position: relative;
+    width: 60%;
+  }
+
+  .cross-line {
+    height: 2px;
+    background: rgba(255,107,53,0.4);
+    flex: 1;
+    border-top: 2px dashed rgba(255,107,53,0.3);
+  }
+
+  .cross-label {
+    font-size: 9px;
+    color: var(--orange);
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 3px 10px;
+    background: var(--orange-muted);
+    border: 1px solid rgba(255,107,53,0.2);
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .legend-line {
+    width: 24px; height: 2px;
+    border-radius: 1px;
+  }
+
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface4);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    line-height: 1.5;
+  }
+
+  .node-card:hover .tooltip { opacity: 1; }
+
+  /* DEPT LABELS */
+  .dept-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-top: 8px;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  /* Animations */
+  .node-card { animation: nodeIn 0.4s ease both; }
+  @keyframes nodeIn {
+    from { opacity: 0; transform: scale(0.9) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .dept-col:nth-child(1) .node-card { animation-delay: 0.05s; }
+  .dept-col:nth-child(2) .node-card { animation-delay: 0.1s; }
+  .dept-col:nth-child(3) .node-card { animation-delay: 0.15s; }
+  .dept-col:nth-child(4) .node-card { animation-delay: 0.2s; }
+  .dept-col:nth-child(5) .node-card { animation-delay: 0.25s; }
+  .dept-col:nth-child(6) .node-card { animation-delay: 0.3s; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">🌿 AGROGINA — Virtual AI Company</div>
+  <div class="page-heading">Hiérarchie des Agents IA</div>
+  <div class="page-sub">Structure complète • Lignes de commandement • Statut en temps réel</div>
+</div>
+
+<div class="tree">
+
+  <!-- CEO -->
+  <div class="ceo-row">
+    <div class="dept-col">
+      <div class="node node-ceo">
+        <div class="node-card">
+          <div class="status-dot active"></div>
+          <span class="node-icon">👑</span>
+          <div class="node-name">Yassine</div>
+          <div class="node-role">CEO — AGROGINA<br>Décideur stratégique</div>
+          <div class="tooltip">Valide toutes les décisions stratégiques<br>Accès dashboard CEO complet</div>
+        </div>
+      </div>
+      <!-- V line CEO → depts -->
+      <div class="v-line" style="height:28px;background:rgba(93,189,128,0.5);"></div>
+    </div>
+  </div>
+
+  <!-- HORIZONTAL BRIDGE CEO → all chefs -->
+  <div style="display:flex;justify-content:center;margin-bottom:0;">
+    <div style="width:82%;height:2px;background:linear-gradient(90deg, transparent, rgba(45,90,61,0.5) 10%, rgba(45,90,61,0.5) 90%, transparent);border-radius:1px;"></div>
+  </div>
+
+  <!-- V LINES DOWN TO CHEFS -->
+  <div class="depts-row" style="margin-bottom:0;align-items:flex-start;">
+    <!-- DEV ERP -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:200px;">
+      <div class="v-line" style="height:24px;background:rgba(93,189,128,0.4);"></div>
+      <div class="node node-chef dev">
+        <div class="node-card">
+          <div class="status-dot working"></div>
+          <span class="node-icon">🖥️</span>
+          <div class="node-name">Chef ERP</div>
+          <div class="node-role">Orchestre le dev<br>de l'ERP agricole</div>
+          <div class="tooltip">Coordonne 6 agents Dev ERP<br>Gère escalades → CEO<br>Recrute agents temporaires</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(93,189,128,0.3);"></div>
+      <!-- Horizontal bar agents -->
+      <div style="width:90%;height:2px;background:rgba(93,189,128,0.3);border-radius:1px;"></div>
+      <!-- Agents ERP -->
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:0;">
+        <!-- Each agent gets a v-line -->
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(93,189,128,0.25);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">⚛️</span>
+              <div class="node-name" style="font-size:10px;">Frontend</div>
+              <div class="node-role">React / TanStack</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(93,189,128,0.25);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">🐍</span>
+              <div class="node-name" style="font-size:10px;">Backend</div>
+              <div class="node-role">Python / Supabase</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(93,189,128,0.25);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot working"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">🎭</span>
+              <div class="node-name" style="font-size:10px;">QA Playwright</div>
+              <div class="node-role">Tests visuels</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(93,189,128,0.25);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">🐳</span>
+              <div class="node-name" style="font-size:10px;">DevOps</div>
+              <div class="node-role">Docker / Deploy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Personas ERP -->
+      <div style="margin-top:12px;width:100%;display:flex;flex-direction:column;align-items:center;">
+        <div style="font-size:9px;color:rgba(156,111,228,0.7);letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;">Personas Utilisateurs</div>
+        <div style="width:1px;height:16px;background:rgba(156,111,228,0.3);"></div>
+        <div style="width:60%;height:2px;background:rgba(156,111,228,0.25);"></div>
+        <div style="display:flex;gap:8px;margin-top:0;">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div class="v-line" style="height:12px;background:rgba(156,111,228,0.2);"></div>
+            <div class="node node-agent persona">
+              <div class="node-card">
+                <div class="status-dot active"></div>
+                <span style="font-size:13px;display:block;margin-bottom:2px;">👨‍🌾</span>
+                <div class="node-name" style="font-size:9px;">Karim</div>
+                <div class="node-role" style="font-size:8px;">Chef de ferme</div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <div class="v-line" style="height:12px;background:rgba(156,111,228,0.2);"></div>
+            <div class="node node-agent persona">
+              <div class="node-card">
+                <div class="status-dot idle"></div>
+                <span style="font-size:13px;display:block;margin-bottom:2px;">👩‍💼</span>
+                <div class="node-name" style="font-size:9px;">Fatima</div>
+                <div class="node-role" style="font-size:8px;">Comptable coop.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGROMIND IA -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:200px;">
+      <div class="v-line" style="height:24px;background:rgba(30,136,229,0.4);"></div>
+      <div class="node node-chef agro">
+        <div class="node-card">
+          <div class="status-dot working"></div>
+          <span class="node-icon">🧠</span>
+          <div class="node-name">Chef AgromindIA</div>
+          <div class="node-role">Orchestre l'IA<br>décisionnelle</div>
+          <div class="tooltip">Parle au Chef ERP si besoin<br>Coordonne ML + Data + QA IA</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(30,136,229,0.3);"></div>
+      <div style="width:80%;height:2px;background:rgba(30,136,229,0.3);"></div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(30,136,229,0.2);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot working"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">📊</span>
+              <div class="node-name" style="font-size:10px;">ML / Data</div>
+              <div class="node-role">Modèles IA</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(30,136,229,0.2);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">🔗</span>
+              <div class="node-name" style="font-size:10px;">Backend IA</div>
+              <div class="node-role">APIs / Intégration</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(30,136,229,0.2);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:14px;display:block;margin-bottom:3px;">✅</span>
+              <div class="node-name" style="font-size:10px;">QA AgromindIA</div>
+              <div class="node-role">Pertinence agro</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Persona Agronome -->
+      <div style="margin-top:12px;width:100%;display:flex;flex-direction:column;align-items:center;">
+        <div style="font-size:9px;color:rgba(156,111,228,0.7);letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;">Personas</div>
+        <div style="width:1px;height:16px;background:rgba(156,111,228,0.3);"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="node node-agent persona">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🌿</span>
+              <div class="node-name" style="font-size:9px;">Hassan</div>
+              <div class="node-role" style="font-size:8px;">Agronome expert</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETING -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:180px;">
+      <div class="v-line" style="height:24px;background:rgba(100,181,246,0.35);"></div>
+      <div class="node node-chef marketing">
+        <div class="node-card">
+          <div class="status-dot active"></div>
+          <span class="node-icon">🎯</span>
+          <div class="node-name">Chef Marketing</div>
+          <div class="node-role">Stratégie réseaux<br>sociaux + veille</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(100,181,246,0.25);"></div>
+      <div style="width:85%;height:2px;background:rgba(100,181,246,0.25);"></div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(100,181,246,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🔎</span>
+              <div class="node-name" style="font-size:9px;">Veille</div>
+              <div class="node-role" style="font-size:8px;">LinkedIn / X</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(100,181,246,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">✍️</span>
+              <div class="node-name" style="font-size:9px;">Contenu</div>
+              <div class="node-role" style="font-size:8px;">Posts / Copy</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(100,181,246,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">📱</span>
+              <div class="node-name" style="font-size:9px;">Social Media</div>
+              <div class="node-role" style="font-size:8px;">Publication auto</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(100,181,246,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">📊</span>
+              <div class="node-name" style="font-size:9px;">Analyse</div>
+              <div class="node-role" style="font-size:8px;">ROI / Stats</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEO -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:160px;">
+      <div class="v-line" style="height:24px;background:rgba(240,192,64,0.35);"></div>
+      <div class="node node-chef seo">
+        <div class="node-card">
+          <div class="status-dot active"></div>
+          <span class="node-icon">🔍</span>
+          <div class="node-name">Chef SEO</div>
+          <div class="node-role">Stratégie SEO<br>Maroc + Afrique</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(240,192,64,0.25);"></div>
+      <div style="width:80%;height:2px;background:rgba(240,192,64,0.25);"></div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(240,192,64,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🗝️</span>
+              <div class="node-name" style="font-size:9px;">Mots-clés</div>
+              <div class="node-role" style="font-size:8px;">FR / AR</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(240,192,64,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot working"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">📝</span>
+              <div class="node-name" style="font-size:9px;">Contenu SEO</div>
+              <div class="node-role" style="font-size:8px;">Articles blog</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(240,192,64,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">⚙️</span>
+              <div class="node-name" style="font-size:9px;">SEO Tech</div>
+              <div class="node-role" style="font-size:8px;">Audit / Vitesse</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINANCE -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:160px;">
+      <div class="v-line" style="height:24px;background:rgba(255,107,53,0.35);"></div>
+      <div class="node node-chef finance">
+        <div class="node-card">
+          <div class="status-dot active"></div>
+          <span class="node-icon">💰</span>
+          <div class="node-name">Chef Finance</div>
+          <div class="node-role">CFO virtuel<br>P&L + Cash flow</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(255,107,53,0.25);"></div>
+      <div style="width:80%;height:2px;background:rgba(255,107,53,0.25);"></div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(255,107,53,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">📈</span>
+              <div class="node-name" style="font-size:9px;">Reporting</div>
+              <div class="node-role" style="font-size:8px;">P&L / MRR</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(255,107,53,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">💳</span>
+              <div class="node-name" style="font-size:9px;">Paiements</div>
+              <div class="node-role" style="font-size:8px;">Abonnements</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(255,107,53,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🚨</span>
+              <div class="node-name" style="font-size:9px;">Alertes</div>
+              <div class="node-role" style="font-size:8px;">Cash flow</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGRONOMIE -->
+    <div class="dept-col" style="flex:1;min-width:0;max-width:160px;">
+      <div class="v-line" style="height:24px;background:rgba(129,199,132,0.35);"></div>
+      <div class="node node-chef agronomie">
+        <div class="node-card">
+          <div class="status-dot active"></div>
+          <span class="node-icon">🌱</span>
+          <div class="node-name">Chef Agronomie</div>
+          <div class="node-role">Veille scientifique<br>Alimente AgromindIA</div>
+        </div>
+      </div>
+      <div class="v-line" style="height:24px;background:rgba(129,199,132,0.25);"></div>
+      <div style="width:80%;height:2px;background:rgba(129,199,132,0.25);"></div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(129,199,132,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot active"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🔬</span>
+              <div class="node-name" style="font-size:9px;">Veille Sci.</div>
+              <div class="node-role" style="font-size:8px;">Recherches</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(129,199,132,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">🗄️</span>
+              <div class="node-name" style="font-size:9px;">Données</div>
+              <div class="node-role" style="font-size:8px;">Alimente IA</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div class="v-line" style="height:16px;background:rgba(129,199,132,0.18);"></div>
+          <div class="node node-agent">
+            <div class="node-card">
+              <div class="status-dot idle"></div>
+              <span style="font-size:13px;display:block;margin-bottom:2px;">✔️</span>
+              <div class="node-name" style="font-size:9px;">Validation</div>
+              <div class="node-role" style="font-size:8px;">Recommandations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CROSS-DEPT CONNECTOR -->
+  <div style="display:flex;justify-content:center;align-items:center;gap:0;margin-top:28px;margin-bottom:4px;">
+    <div style="width:28%;height:1px;border-top:2px dashed rgba(255,107,53,0.25);"></div>
+    <div style="font-size:9px;color:var(--orange);font-weight:700;padding:4px 14px;background:var(--orange-muted);border:1px solid rgba(255,107,53,0.2);border-radius:20px;letter-spacing:0.08em;text-transform:uppercase;white-space:nowrap;">
+      ↔ Chef ERP ↔ Chef AgromindIA — Communication directe si feature cross-système
+    </div>
+    <div style="width:28%;height:1px;border-top:2px dashed rgba(255,107,53,0.25);"></div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#5dbd80;box-shadow:0 0 5px rgba(93,189,128,0.5);animation:pulse 2s infinite;"></div>
+      Actif
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--blue);box-shadow:0 0 5px rgba(30,136,229,0.5);animation:pulse 1.5s infinite;"></div>
+      En cours de travail
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--text-dim);"></div>
+      En attente
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:rgba(45,90,61,0.5);"></div>
+      Ligne de commandement
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background:rgba(156,111,228,0.4);"></div>
+      Agents personas
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="border-top:2px dashed rgba(255,107,53,0.4);background:transparent;"></div>
+      Communication cross-dept
+    </div>
+  </div>
+
+</div>
+
+<style>
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(.75)}
+}
+</style>
+
+</body>
+</html>

@@ -62,15 +62,19 @@ export class ParcelsService {
     });
   }
 
-  async deleteParcel(userId: string, dto: DeleteParcelDto) {
+  /**
+   * Archive a parcel (soft delete). Sets is_active=false instead of hard deleting.
+   * All related data (harvests, costs, tasks, etc.) is preserved for historical reporting.
+   */
+  async archiveParcel(userId: string, dto: DeleteParcelDto) {
     const { parcel_id } = dto;
 
-    this.logger.log(`Deleting parcel ${parcel_id} for user ${userId}`);
+    this.logger.log(`Archiving parcel ${parcel_id} for user ${userId}`);
 
-    // First verify the parcel exists and get farm info
+    // Verify the parcel exists and get farm info
     const { data: existingParcel, error: checkError } = await this.supabaseAdmin
       .from("parcels")
-      .select("id, name, farm_id")
+      .select("id, name, farm_id, is_active")
       .eq("id", parcel_id)
       .single();
 
@@ -79,6 +83,14 @@ export class ParcelsService {
       throw new NotFoundException(
         `Unable to verify parcel: ${checkError?.message || "Parcel not found"}`,
       );
+    }
+
+    if (!existingParcel.is_active) {
+      return {
+        success: true,
+        archived_parcel: { id: existingParcel.id, name: existingParcel.name },
+        message: "Parcel is already archived",
+      };
     }
 
     if (!existingParcel.farm_id) {
@@ -129,158 +141,124 @@ export class ParcelsService {
       );
     }
 
-    // Check subscription status using SubscriptionsService
+    // Check subscription status
     const hasValidSubscription =
       await this.subscriptionsService.hasValidSubscription(organizationId);
 
     if (!hasValidSubscription) {
-      this.logger.warn(
-        `Subscription check failed for organization ${organizationId}`,
-      );
       throw new ForbiddenException(
-        "An active subscription is required to delete parcels",
+        "An active subscription is required to manage parcels",
       );
     }
 
-    this.logger.log(`Deleting parcel: ${parcel_id}`);
-
-    const shouldCleanupRelatedData = dto.cleanup_related_data !== false;
-    const cleanupSummary = shouldCleanupRelatedData
-      ? await this.cleanupParcelRelatedData(parcel_id, organizationId)
-      : [];
-
-    // Delete the parcel
-    const { data: deletedParcels, error: deleteError } =
+    // Archive the parcel (soft delete)
+    const { data: archivedParcel, error: archiveError } =
       await this.supabaseAdmin
         .from("parcels")
-        .delete()
+        .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq("id", parcel_id)
-        .select("id, name");
+        .select("id, name")
+        .single();
 
-    if (deleteError) {
-      this.logger.error("Delete error", deleteError);
+    if (archiveError) {
+      this.logger.error("Archive error", archiveError);
       throw new InternalServerErrorException(
-        `Error during deletion: ${deleteError.message}`,
+        `Error during archiving: ${archiveError.message}`,
       );
     }
 
-    if (!deletedParcels || deletedParcels.length === 0) {
-      this.logger.warn(
-        "No parcel deleted - parcel may not exist or was already deleted",
-      );
-
-      // Verify if parcel still exists
-      const { data: verifyParcel, error: verifyError } =
-        await this.supabaseAdmin
-          .from("parcels")
-          .select("id")
-          .eq("id", parcel_id)
-          .maybeSingle();
-
-      if (verifyError) {
-        this.logger.error("Error verifying parcel", verifyError);
-        throw new InternalServerErrorException(
-          `Verification error: ${verifyError.message}`,
-        );
-      }
-
-      if (verifyParcel) {
-        throw new InternalServerErrorException(
-          "Deletion failed. Parcel may be referenced elsewhere or protected by a constraint.",
-        );
-      } else {
-        this.logger.log("Parcel was already deleted or does not exist");
-        return {
-          success: true,
-          message: "Parcel deleted or already absent",
-          cleanup_summary: cleanupSummary,
-        };
-      }
-    }
-
-    const deletedParcel = deletedParcels[0];
-    this.logger.log(`Parcel deleted successfully: ${deletedParcel.id}`);
+    this.logger.log(`Parcel archived successfully: ${archivedParcel.id}`);
 
     return {
       success: true,
-      deleted_parcel: deletedParcel,
-      cleanup_summary: cleanupSummary,
+      archived_parcel: archivedParcel,
     };
   }
 
-  private async cleanupParcelRelatedData(
-    parcelId: string,
-    organizationId: string,
-  ): Promise<Array<{ table: string; deleted: number }>> {
-    const tablesInDeletionOrder: Array<{
-      name: string;
-      hasOrganizationId: boolean;
-    }> = [
-      { name: "monitoring_analyses", hasOrganizationId: true },
-      { name: "weather_daily", hasOrganizationId: true },
-      { name: "weather_forecast", hasOrganizationId: true },
-      { name: "yield_forecasts", hasOrganizationId: true },
-      { name: "tasks", hasOrganizationId: true },
-      { name: "plan_interventions", hasOrganizationId: true },
-      { name: "annual_plans", hasOrganizationId: true },
-      { name: "ai_recommendations", hasOrganizationId: true },
-      { name: "suivis_saison", hasOrganizationId: true },
-      { name: "evenements_parcelle", hasOrganizationId: true },
-      { name: "performance_alerts", hasOrganizationId: true },
-      { name: "product_applications", hasOrganizationId: true },
-      { name: "satellite_indices_data", hasOrganizationId: true },
-      { name: "harvest_records", hasOrganizationId: true },
-      { name: "parcel_events", hasOrganizationId: true },
-      { name: "calibrations", hasOrganizationId: true },
-    ];
+  /**
+   * Restore an archived parcel (set is_active=true).
+   */
+  async restoreParcel(userId: string, parcelId: string) {
+    this.logger.log(`Restoring parcel ${parcelId} for user ${userId}`);
 
-    const summary: Array<{ table: string; deleted: number }> = [];
+    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
+      .from("parcels")
+      .select("id, name, farm_id, is_active")
+      .eq("id", parcelId)
+      .single();
 
-    for (const table of tablesInDeletionOrder) {
-      const deletedCount = await this.deleteRowsForParcel(
-        table.name,
-        parcelId,
-        table.hasOrganizationId ? organizationId : null,
-      );
-
-      if (deletedCount !== null) {
-        summary.push({ table: table.name, deleted: deletedCount });
-      }
+    if (checkError || !existingParcel) {
+      throw new NotFoundException("Parcel not found");
     }
 
-    return summary;
-  }
-
-  private async deleteRowsForParcel(
-    tableName: string,
-    parcelId: string,
-    organizationId: string | null,
-  ): Promise<number | null> {
-    let query = this.supabaseAdmin
-      .from(tableName)
-      .delete({ count: "exact" })
-      .eq("parcel_id", parcelId);
-
-    if (organizationId) {
-      query = query.eq("organization_id", organizationId);
+    if (existingParcel.is_active) {
+      return { success: true, restored_parcel: { id: existingParcel.id, name: existingParcel.name }, message: "Parcel is already active" };
     }
 
-    const { count, error } = await query;
-    if (error) {
-      if (error.code === "42P01" || error.code === "42703") {
-        this.logger.debug(
-          `Skipping cleanup for ${tableName}: ${error.message}`,
+    if (!existingParcel.farm_id) {
+      throw new BadRequestException("Parcel is not associated with any farm");
+    }
+
+    const { data: farm } = await this.supabaseAdmin
+      .from("farms")
+      .select("organization_id")
+      .eq("id", existingParcel.farm_id)
+      .single();
+
+    if (!farm?.organization_id) {
+      throw new BadRequestException("Unable to determine organization");
+    }
+
+    const organizationId = farm.organization_id;
+
+    // Verify user access
+    const { data: orgUser } = await this.supabaseAdmin
+      .from("organization_users")
+      .select("role_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException("You do not have access to this organization");
+    }
+
+    // Check subscription limit before restoring
+    const { data: sub } = await this.supabaseAdmin
+      .from("subscriptions")
+      .select("max_parcels")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (sub?.max_parcels != null) {
+      const { count: activeParcelCount } = await this.supabaseAdmin
+        .from("parcels")
+        .select("id, farms!inner(organization_id)", { count: "exact", head: true })
+        .eq("farms.organization_id", organizationId)
+        .eq("is_active", true);
+
+      if ((activeParcelCount ?? 0) >= sub.max_parcels) {
+        throw new ForbiddenException(
+          `Cannot restore: subscription limit of ${sub.max_parcels} active parcels reached`,
         );
-        return null;
       }
-
-      this.logger.warn(
-        `Cleanup failed for ${tableName} on parcel ${parcelId}: ${error.message}`,
-      );
-      return null;
     }
 
-    return count ?? 0;
+    const { data: restoredParcel, error: restoreError } = await this.supabaseAdmin
+      .from("parcels")
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq("id", parcelId)
+      .select("id, name")
+      .single();
+
+    if (restoreError) {
+      throw new InternalServerErrorException(`Error restoring parcel: ${restoreError.message}`);
+    }
+
+    this.logger.log(`Parcel restored successfully: ${restoredParcel.id}`);
+
+    return { success: true, restored_parcel: restoredParcel };
   }
 
   async getPerformanceSummary(
@@ -501,7 +479,8 @@ export class ParcelsService {
         )
       `,
       )
-      .eq("farms.organization_id", organizationId);
+      .eq("farms.organization_id", organizationId)
+      .eq("is_active", true);
 
     if (farmId) {
       query = query.eq("farm_id", farmId);
@@ -649,7 +628,8 @@ export class ParcelsService {
           count: "exact",
           head: true,
         })
-        .eq("farms.organization_id", organizationId);
+        .eq("farms.organization_id", organizationId)
+        .eq("is_active", true);
 
       if ((parcelCount ?? 0) >= sub.max_parcels) {
         throw new ForbiddenException(

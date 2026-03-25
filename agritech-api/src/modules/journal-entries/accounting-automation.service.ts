@@ -132,7 +132,7 @@ export class AccountingAutomationService {
     // Post the journal entry now that items are inserted and validated
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -263,7 +263,7 @@ export class AccountingAutomationService {
     // Post the journal entry now that items are inserted and validated
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -514,7 +514,7 @@ export class AccountingAutomationService {
     // Post the journal entry now that items are inserted and validated
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {

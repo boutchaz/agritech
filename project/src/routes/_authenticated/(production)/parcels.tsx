@@ -35,7 +35,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   // React Query hooks
   const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
   const updateParcelMutation = useUpdateParcel();
-  const deleteParcelMutation = useDeleteParcel();
+  const archiveParcelMutation = useDeleteParcel();
 
   // Determine which parcels query to use
   const isAllFarmsView = selectedFarmId === "";
@@ -100,12 +100,13 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   // Farms and parcels are loaded automatically via React Query hooks
   // No manual fetching needed
 
-  const handleDeleteParcel = async (parcelId: string) => {
+  const handleArchiveParcel = async (parcelId: string) => {
     try {
-      await deleteParcelMutation.mutateAsync(parcelId);
+      await archiveParcelMutation.mutateAsync(parcelId);
+      toast.success(t('parcels.archiveSuccess', 'Parcelle archivée avec succès'));
     } catch (error) {
-      console.error('Error deleting parcel:', error);
-      toast.error(t('parcels.deleteError'));
+      console.error('Error archiving parcel:', error);
+      toast.error(t('parcels.archiveError', "Erreur lors de l'archivage"));
     }
   };
 
@@ -358,12 +359,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(t('parcels.deleteConfirm', { name: parcel.name }))) {
-                                  handleDeleteParcel(parcel.id);
+                                if (confirm(t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'))) {
+                                  handleArchiveParcel(parcel.id);
                                 }
                               }}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
-                              title={t('app.delete')}
+                              className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                              title={t('parcels.archive', 'Archiver')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>

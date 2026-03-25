@@ -162,16 +162,25 @@ class ParcelsService {
     return parcels.find(p => p.id === parcelId) || null;
   }
 
-  async deleteParcel(parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string } }> {
-    // Use apiRequest directly since DELETE with body is needed
+  async archiveParcel(parcelId: string): Promise<{ success: boolean; archived_parcel?: { id: string; name: string } }> {
     const { apiRequest } = await import('../lib/api-client');
     const organizationId = getCurrentOrganizationId();
-    return apiRequest<{ success: boolean; deleted_parcel?: { id: string; name: string } }>(
+    return apiRequest<{ success: boolean; archived_parcel?: { id: string; name: string } }>(
       '/api/v1/parcels',
       {
         method: 'DELETE',
         body: JSON.stringify({ parcel_id: parcelId }),
       },
+      organizationId
+    );
+  }
+
+  async restoreParcel(parcelId: string): Promise<{ success: boolean; restored_parcel?: { id: string; name: string } }> {
+    const { apiRequest } = await import('../lib/api-client');
+    const organizationId = getCurrentOrganizationId();
+    return apiRequest<{ success: boolean; restored_parcel?: { id: string; name: string } }>(
+      `/api/v1/parcels/${parcelId}/restore`,
+      { method: 'PATCH' },
       organizationId
     );
   }

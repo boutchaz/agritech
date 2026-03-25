@@ -6264,6 +6264,7 @@ export class DemoDataService {
     };
 
     // Tables to export in order (respecting dependencies for import)
+    // Tables with organization_id are fetched directly; child tables via parent IDs below
     const tables = [
       "farms",
       "parcels",
@@ -6275,22 +6276,30 @@ export class DemoDataService {
       "items",
       "customers",
       "suppliers",
+      "accounts",
       "tasks",
       "task_assignments",
+      "work_records",
+      "payment_records",
+      "payment_advances",
+      "metayage_settlements",
       "harvest_records",
       "reception_batches",
+      "crop_cycles",
+      "biological_assets",
+      "product_applications",
+      "calibrations",
       "stock_entries",
-      "stock_entry_items",
       "quotes",
-      "quote_items",
       "sales_orders",
-      "sales_order_items",
       "purchase_orders",
-      "purchase_order_items",
       "invoices",
-      "invoice_items",
+      "accounting_payments",
+      "journal_entries",
       "costs",
       "revenues",
+      "utilities",
+      "file_registry",
     ];
 
     for (const table of tables) {
@@ -6363,6 +6372,61 @@ export class DemoDataService {
       exportData.invoice_items = invoiceItems || [];
     }
 
+    // Journal items - get via journal_entries
+    if (exportData.journal_entries && exportData.journal_entries.length > 0) {
+      const journalEntryIds = exportData.journal_entries.map((j: any) => j.id);
+      const { data: journalItems } = await client
+        .from("journal_items")
+        .select("*")
+        .in("journal_entry_id", journalEntryIds);
+      exportData.journal_items = journalItems || [];
+    }
+
+    // Payment allocations - get via accounting_payments
+    if (exportData.accounting_payments && exportData.accounting_payments.length > 0) {
+      const paymentIds = exportData.accounting_payments.map((p: any) => p.id);
+      const { data: paymentAllocations } = await client
+        .from("payment_allocations")
+        .select("*")
+        .in("payment_id", paymentIds);
+      exportData.payment_allocations = paymentAllocations || [];
+    }
+
+    // Export storage files as base64
+    const fileRecords = exportData.file_registry || [];
+    if (fileRecords.length > 0) {
+      this.logger.log(`Exporting ${fileRecords.length} storage files...`);
+      const storageFiles: Array<{ bucket: string; path: string; base64: string; mime_type: string }> = [];
+
+      for (const fileRecord of fileRecords) {
+        if (!fileRecord.bucket_name || !fileRecord.file_path) continue;
+        try {
+          const { data, error } = await client.storage
+            .from(fileRecord.bucket_name)
+            .download(fileRecord.file_path);
+
+          if (error || !data) {
+            this.logger.warn(`Skipping file ${fileRecord.file_path}: ${error?.message || 'not found'}`);
+            continue;
+          }
+
+          const arrayBuffer = await data.arrayBuffer();
+          const base64 = Buffer.from(arrayBuffer).toString('base64');
+          storageFiles.push({
+            bucket: fileRecord.bucket_name,
+            path: fileRecord.file_path,
+            base64,
+            mime_type: fileRecord.mime_type || 'application/octet-stream',
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to download file ${fileRecord.file_path}: ${err}`);
+        }
+      }
+
+      exportData._storage_files = storageFiles;
+      this.logger.log(`Exported ${storageFiles.length}/${fileRecords.length} storage files`);
+    }
+
     this.logger.log(`Export completed for organization ${organizationId}`);
     return exportData;
   }
@@ -6394,17 +6458,30 @@ export class DemoDataService {
       "items",
       "customers",
       "suppliers",
+      "accounts",
       "tasks",
       "task_assignments",
+      "work_records",
+      "payment_records",
+      "payment_advances",
+      "metayage_settlements",
       "harvest_records",
       "reception_batches",
+      "crop_cycles",
+      "biological_assets",
+      "product_applications",
+      "calibrations",
       "stock_entries",
       "quotes",
       "sales_orders",
       "purchase_orders",
       "invoices",
+      "accounting_payments",
+      "journal_entries",
       "costs",
       "revenues",
+      "utilities",
+      "file_registry",
     ];
 
     for (const table of importOrder) {
@@ -6431,6 +6508,25 @@ export class DemoDataService {
 
           // Update foreign key references using ID maps
           this.updateForeignKeys(newRecord, table, idMaps);
+
+          // Special handling for file_registry: polymorphic entity_id
+          if (table === "file_registry" && newRecord.entity_id && newRecord.entity_type) {
+            const entityTypeToTable: Record<string, string> = {
+              item: "items", task: "tasks", invoice: "invoices",
+              utility: "utilities", certification: "calibrations",
+              worker: "workers", farm: "farms", parcel: "parcels",
+              harvest: "harvest_records", customer: "customers",
+              supplier: "suppliers", quote: "quotes",
+            };
+            const refTable = entityTypeToTable[newRecord.entity_type];
+            if (refTable && idMaps[refTable]) {
+              const newId = idMaps[refTable].get(newRecord.entity_id);
+              if (newId) newRecord.entity_id = newId;
+              else newRecord.entity_id = null;
+            }
+            // Also remove uploaded_by (user FK that may not exist after reset)
+            delete newRecord.uploaded_by;
+          }
 
           // Update created_by/updated_by if present
           if (newRecord.created_by) newRecord.created_by = userId;
@@ -6469,6 +6565,37 @@ export class DemoDataService {
     // Import child tables (items without organization_id)
     await this.importChildRecords(client, importData, idMaps, importedCounts);
 
+    // Re-upload storage files
+    const storageFiles = importData._storage_files;
+    if (storageFiles && Array.isArray(storageFiles) && storageFiles.length > 0) {
+      this.logger.log(`Re-uploading ${storageFiles.length} storage files...`);
+      let uploadCount = 0;
+
+      for (const file of storageFiles) {
+        if (!file.bucket || !file.path || !file.base64) continue;
+        try {
+          const buffer = Buffer.from(file.base64, 'base64');
+          const { error } = await client.storage
+            .from(file.bucket)
+            .upload(file.path, buffer, {
+              contentType: file.mime_type || 'application/octet-stream',
+              upsert: true,
+            });
+
+          if (error) {
+            this.logger.warn(`Failed to upload ${file.bucket}/${file.path}: ${error.message}`);
+          } else {
+            uploadCount++;
+          }
+        } catch (err) {
+          this.logger.warn(`Error uploading file ${file.path}: ${err}`);
+        }
+      }
+
+      importedCounts._storage_files = uploadCount;
+      this.logger.log(`Re-uploaded ${uploadCount}/${storageFiles.length} storage files`);
+    }
+
     this.logger.log(`Import completed for organization ${organizationId}`);
     return { importedCounts };
   }
@@ -6484,7 +6611,7 @@ export class DemoDataService {
     const foreignKeyMappings: Record<string, Record<string, string>> = {
       parcels: { farm_id: "farms" },
       workers: { farm_id: "farms" },
-      cost_centers: { parcel_id: "parcels" },
+      cost_centers: { farm_id: "farms", parcel_id: "parcels" },
       structures: { farm_id: "farms" },
       warehouses: { farm_id: "farms" },
       items: {
@@ -6500,6 +6627,24 @@ export class DemoDataService {
         task_id: "tasks",
         worker_id: "workers",
       },
+      work_records: {
+        farm_id: "farms",
+        worker_id: "workers",
+        task_id: "tasks",
+      },
+      payment_records: {
+        farm_id: "farms",
+        worker_id: "workers",
+      },
+      payment_advances: {
+        worker_id: "workers",
+        farm_id: "farms",
+      },
+      metayage_settlements: {
+        worker_id: "workers",
+        farm_id: "farms",
+        parcel_id: "parcels",
+      },
       harvest_records: {
         farm_id: "farms",
         parcel_id: "parcels",
@@ -6514,22 +6659,55 @@ export class DemoDataService {
         received_by: "workers",
         quality_checked_by: "workers",
       },
+      crop_cycles: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+      },
+      biological_assets: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+      },
+      product_applications: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+        product_id: "items",
+      },
+      calibrations: {
+        parcel_id: "parcels",
+      },
       stock_entries: {
         from_warehouse_id: "warehouses",
         to_warehouse_id: "warehouses",
       },
+      quotes: {
+        customer_id: "customers",
+      },
       sales_orders: {
         customer_id: "customers",
       },
-      invoices: {
-        party_id: "customers", // or suppliers depending on type
+      purchase_orders: {
+        supplier_id: "suppliers",
       },
+      invoices: {
+        party_id: "customers",
+      },
+      accounting_payments: {
+        party_id: "customers",
+      },
+      journal_entries: {},
       costs: {
+        farm_id: "farms",
         parcel_id: "parcels",
       },
       revenues: {
+        farm_id: "farms",
         parcel_id: "parcels",
       },
+      utilities: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+      },
+      // file_registry: entity_id FK is polymorphic (depends on entity_type), handled specially below
     };
 
     const mappings = foreignKeyMappings[table];
@@ -6716,6 +6894,70 @@ export class DemoDataService {
         if (!error) count++;
       }
       importedCounts.invoice_items = count;
+    }
+
+    // Journal items - child of journal_entries
+    const journalItems = importData.journal_items;
+    if (journalItems && Array.isArray(journalItems) && journalItems.length > 0) {
+      let count = 0;
+      for (const item of journalItems) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.journal_entry_id && idMaps.journal_entries) {
+          const newId = idMaps.journal_entries.get(newItem.journal_entry_id);
+          if (newId) newItem.journal_entry_id = newId;
+          else continue;
+        }
+        if (newItem.account_id && idMaps.accounts) {
+          const newId = idMaps.accounts.get(newItem.account_id);
+          if (newId) newItem.account_id = newId;
+        }
+        if (newItem.cost_center_id && idMaps.cost_centers) {
+          const newId = idMaps.cost_centers.get(newItem.cost_center_id);
+          if (newId) newItem.cost_center_id = newId;
+        }
+        if (newItem.farm_id && idMaps.farms) {
+          const newId = idMaps.farms.get(newItem.farm_id);
+          if (newId) newItem.farm_id = newId;
+        }
+        if (newItem.parcel_id && idMaps.parcels) {
+          const newId = idMaps.parcels.get(newItem.parcel_id);
+          if (newId) newItem.parcel_id = newId;
+        }
+
+        const { error } = await client.from("journal_items").insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.journal_items = count;
+    }
+
+    // Payment allocations - child of accounting_payments
+    const paymentAllocations = importData.payment_allocations;
+    if (paymentAllocations && Array.isArray(paymentAllocations) && paymentAllocations.length > 0) {
+      let count = 0;
+      for (const item of paymentAllocations) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+
+        if (newItem.payment_id && idMaps.accounting_payments) {
+          const newId = idMaps.accounting_payments.get(newItem.payment_id);
+          if (newId) newItem.payment_id = newId;
+          else continue;
+        }
+        if (newItem.invoice_id && idMaps.invoices) {
+          const newId = idMaps.invoices.get(newItem.invoice_id);
+          if (newId) newItem.invoice_id = newId;
+        }
+
+        const { error } = await client.from("payment_allocations").insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.payment_allocations = count;
     }
   }
 

@@ -108,16 +108,16 @@ export function useParcels(farmId: string | null) {
     }
   };
 
-  const deleteParcel = async (id: string) => {
+  const archiveParcel = async (id: string) => {
     if (!farmId) throw new Error('No farm ID provided');
     if (!currentOrganization?.id) throw new Error('No organization selected');
 
     try {
       await parcelsApi.delete(id, farmId, currentOrganization.id);
 
-      setParcels(prev => prev.filter(p => p.id !== id));
+      setParcels(prev => prev.map(p => p.id === id ? { ...p, is_active: false } : p));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting parcel');
+      setError(err instanceof Error ? err.message : 'Error archiving parcel');
       throw err;
     }
   };
@@ -128,7 +128,8 @@ export function useParcels(farmId: string | null) {
     error,
     addParcel,
     updateParcel,
-    deleteParcel,
+    deleteParcel: archiveParcel,
+    archiveParcel,
     refresh: fetchParcels
   };
 }

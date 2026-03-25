@@ -253,36 +253,34 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
     },
   });
 
-  // Delete parcel mutation using parcelsService (apiClient)
-  const deleteParcelMutation = useMutation({
+  // Archive parcel mutation (soft delete)
+  const archiveParcelMutation = useMutation({
     mutationFn: async (parcelId: string) => {
-      const result = await parcelsService.deleteParcel(parcelId);
+      const result = await parcelsService.archiveParcel(parcelId);
 
       if (!result?.success) {
-        throw new Error("La suppression a échoué");
+        throw new Error(t('parcels.archiveFailed', "L'archivage a échoué"));
       }
 
       return parcelId;
     },
     onSuccess: () => {
-      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ["parcels", farmId] });
       queryClient.invalidateQueries({ queryKey: ["farm-hierarchy"] });
       queryClient.invalidateQueries({ queryKey: ["parcels"] });
 
-      // Close dialog after successful deletion
       setParcelToDelete(null);
-      deleteParcelMutation.reset();
+      archiveParcelMutation.reset();
+      toast.success(t('parcels.archiveSuccess', 'Parcelle archivée avec succès'));
     },
     onError: (error: Error) => {
-      let errorMessage = "Erreur lors de la suppression de la parcelle";
+      let errorMessage = t('parcels.archiveError', "Erreur lors de l'archivage de la parcelle");
 
       if (error?.message) {
         errorMessage += `: ${error.message}`;
       }
 
       toast.error(errorMessage);
-      // Don't close dialog on error so user can try again or see the error
     },
   });
 
@@ -962,15 +960,14 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Parcel Confirmation Dialog */}
+      {/* Archive Parcel Confirmation Dialog */}
       <AlertDialog
         open={!!parcelToDelete}
         onOpenChange={(open) => {
-          // Only allow closing if mutation is not pending and not successful
-          if (!open && !deleteParcelMutation.isPending) {
+          if (!open && !archiveParcelMutation.isPending) {
             setParcelToDelete(null);
-            if (deleteParcelMutation.isSuccess) {
-              deleteParcelMutation.reset();
+            if (archiveParcelMutation.isSuccess) {
+              archiveParcelMutation.reset();
             }
           }
         }}
@@ -978,37 +975,37 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
         <AlertDialogContent className="bg-white dark:bg-gray-800">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-gray-900 dark:text-white">
-              {t("farmHierarchy.parcel.deleteConfirm")}
+              {t("parcels.archiveConfirm", "Archiver la parcelle")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t("farmHierarchy.parcel.deleteWarning")}{" "}
+              {t("parcels.archiveWarning", "Voulez-vous archiver la parcelle")}{" "}
               <strong className="text-gray-900 dark:text-white">
                 {parcelToDelete?.name}
               </strong>{" "}
               ?
               <br />
               <br />
-              <span className="text-red-600 dark:text-red-400">
-                ⚠️ {t("farmHierarchy.parcel.deleteIrreversibleWarning")}
+              <span className="text-amber-600 dark:text-amber-400">
+                {t("parcels.archiveNote", "Les données historiques (récoltes, coûts, tâches) seront conservées.")}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteParcelMutation.isPending}>
+            <AlertDialogCancel disabled={archiveParcelMutation.isPending}>
               {t("app.cancel")}
             </AlertDialogCancel>
             <Button
               onClick={() => {
-                if (parcelToDelete && !deleteParcelMutation.isPending) {
-                  deleteParcelMutation.mutate(parcelToDelete.id);
+                if (parcelToDelete && !archiveParcelMutation.isPending) {
+                  archiveParcelMutation.mutate(parcelToDelete.id);
                 }
               }}
-              disabled={deleteParcelMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              disabled={archiveParcelMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
             >
-              {deleteParcelMutation.isPending
-                ? t("farmHierarchy.parcel.deleting")
-                : t("farmHierarchy.parcel.delete")}
+              {archiveParcelMutation.isPending
+                ? t("parcels.archiving", "Archivage...")
+                : t("parcels.archive", "Archiver")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

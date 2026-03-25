@@ -21,7 +21,7 @@ import {
 @ApiTags('Task Assignments')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('api/v1/organizations/:organizationId/tasks/:taskId/assignments')
+@Controller('organizations/:organizationId/tasks/:taskId/assignments')
 export class TaskAssignmentsController {
   constructor(private readonly taskAssignmentsService: TaskAssignmentsService) {}
 

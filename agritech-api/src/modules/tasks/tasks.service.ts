@@ -899,7 +899,7 @@ export class TasksService {
     const { data: existingTask } = await client
       .from("tasks")
       .select(
-        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end, farm_id, parcel_id, payment_type, units_required, rate_per_unit, work_unit_id",
+        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end, farm_id, parcel_id, payment_type, units_required, rate_per_unit, work_unit_id, forfait_amount",
       )
       .eq("id", taskId)
       .eq("organization_id", organizationId)
@@ -977,57 +977,117 @@ export class TasksService {
               hoursWorked = Math.round(calculatedHours * 100) / 100;
             }
           }
-        // Handle per-unit payment tasks
-          const isPerUnitTask = existingTask.payment_type === "per_unit";
-          const unitsCompleted =
-            completeTaskDto.units_completed ??
-            (isPerUnitTask ? existingTask.units_required : null);
-          const ratePerUnit =
-            completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
-          const workUnitId =
-          completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
-          let totalPayment: number | null = null;
-          if (isPerUnitTask && unitsCompleted && ratePerUnit) {
-            totalPayment = unitsCompleted * ratePerUnit;
+        // Fetch all active task assignments (additional workers beyond assigned_to)
+          const { data: taskAssignments } = await client
+            .from('task_assignments')
+            .select('worker_id, payment_included_in_salary, bonus_amount, units_completed, hours_worked')
+            .eq('task_id', taskId)
+            .neq('status', 'removed');
+
+          // Build list of all workers from task_assignments (includes primary worker)
+          const allWorkers: Array<{
+            worker_id: string;
+            payment_included_in_salary: boolean;
+            bonus_amount: number | null;
+            units_completed_override: number | null;
+            hours_worked_override: number | null;
+          }> = [];
+
+          const assignmentWorkerIds = new Set((taskAssignments || []).map((a: any) => a.worker_id));
+
+          // Add all workers from task_assignments
+          for (const assignment of taskAssignments || []) {
+            allWorkers.push({
+              worker_id: assignment.worker_id,
+              payment_included_in_salary: assignment.payment_included_in_salary ?? false,
+              bonus_amount: assignment.bonus_amount ?? null,
+              units_completed_override: assignment.units_completed ?? null,
+              hours_worked_override: assignment.hours_worked ?? null,
+            });
           }
 
-          const { data: workRecord, error: workRecordError } = await client
-            .from("work_records")
-            .insert({
+          // Fallback: if primary worker not in task_assignments, add them
+          if (existingTask.assigned_to && !assignmentWorkerIds.has(existingTask.assigned_to)) {
+            allWorkers.unshift({
               worker_id: existingTask.assigned_to,
-              farm_id: farmId,
-              organization_id: organizationId,
-              worker_type: isPerUnitTask ? "per_unit" : "daily",
-              work_date: now.split("T")[0],
-              hours_worked: hoursWorked,
-              task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
-              payment_status: totalPayment ? "pending" : "not_applicable",
-              total_payment: totalPayment,
-              task_id: taskId,
-              units_completed: unitsCompleted,
-              rate_per_unit: ratePerUnit,
-              work_unit_id: workUnitId,
-              notes: JSON.stringify({
+              payment_included_in_salary: false,
+              bonus_amount: null,
+              units_completed_override: null,
+              hours_worked_override: null,
+            });
+          }
+
+          const isPerUnitTask = existingTask.payment_type === "per_unit";
+          const isForfaitTask = existingTask.payment_type === "forfait";
+          const ratePerUnit = completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
+          const workUnitId = completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
+
+          // Create work record for each worker
+          for (const workerEntry of allWorkers) {
+            // Determine units for this worker
+            // 1. Check worker_completions from DTO
+            const workerCompletion = (completeTaskDto as any).worker_completions?.find(
+              (wc: any) => wc.worker_id === workerEntry.worker_id
+            );
+            // For multi-worker per-unit tasks, units MUST come from worker_completions (per-worker input)
+            // Never divide dto.units_completed equally — each worker's contribution is tracked individually
+            const workerUnits = workerCompletion?.units_completed
+              ?? workerEntry.units_completed_override
+              ?? (allWorkers.length > 1 ? null : completeTaskDto.units_completed)
+              ?? (isPerUnitTask ? existingTask.units_required : null);
+            const workerHours = workerCompletion?.hours_worked
+              ?? workerEntry.hours_worked_override
+              ?? hoursWorked;
+
+            // For fixed salary workers with payment_included_in_salary = true, skip work record
+            if (workerEntry.payment_included_in_salary) {
+              this.logger.log(`Skipping work record for worker ${workerEntry.worker_id}: payment included in salary`);
+              continue;
+            }
+
+            let totalPayment: number | null = null;
+            if (workerEntry.bonus_amount) {
+              totalPayment = workerEntry.bonus_amount;
+            } else if (isForfaitTask && existingTask.forfait_amount) {
+              // Split forfait equally among non-salary workers
+              const billableWorkers = allWorkers.filter(w => !w.payment_included_in_salary).length;
+              totalPayment = existingTask.forfait_amount / (billableWorkers || 1);
+            } else if (isPerUnitTask && workerUnits && ratePerUnit) {
+              totalPayment = workerUnits * ratePerUnit;
+            }
+
+            const { error: workRecordError } = await client
+              .from("work_records")
+              .insert({
+                worker_id: workerEntry.worker_id,
+                farm_id: farmId,
+                organization_id: organizationId,
+                worker_type: isForfaitTask ? "forfait" : isPerUnitTask ? "per_unit" : "daily",
+                work_date: now.split("T")[0],
+                hours_worked: workerHours,
+                task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
+                payment_status: totalPayment ? "pending" : "not_applicable",
+                total_payment: totalPayment,
+                amount_paid: totalPayment,
                 task_id: taskId,
-                task_type: existingTask.task_type,
-                payment_type: existingTask.payment_type,
-                parcel_id: existingTask.parcel_id,
-                completed_at: now,
-              }),
-            })
-            .select()
-          .single();
-          if (workRecordError) {
-            this.logger.warn(
-              `Failed to create work record for task ${taskId}: ${workRecordError.message}`,
-            );
-          } else {
-            this.logger.log(
-              `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}` +
-                (isPerUnitTask
-                  ? `, units: ${unitsCompleted}, payment: ${totalPayment}`
-                  : ""),
-            );
+                units_completed: workerUnits,
+                rate_per_unit: isForfaitTask ? null : ratePerUnit,
+                work_unit_id: workUnitId,
+                payment_included_in_salary: workerEntry.payment_included_in_salary ?? false,
+                notes: JSON.stringify({
+                  task_id: taskId,
+                  task_type: existingTask.task_type,
+                  payment_type: existingTask.payment_type,
+                  parcel_id: existingTask.parcel_id,
+                  completed_at: now,
+                }),
+              });
+
+            if (workRecordError) {
+              this.logger.warn(`Failed to create work record for worker ${workerEntry.worker_id}: ${workRecordError.message}`);
+            } else {
+              this.logger.log(`Work record created for task ${taskId}, worker ${workerEntry.worker_id}`);
+            }
           }
         } // end else (farmId exists)
       } catch (workRecordError) {
@@ -1116,7 +1176,7 @@ export class TasksService {
     // Verify task belongs to organization and is a harvest task
     const { data: existingTask } = await client
       .from("tasks")
-      .select("id, task_type, farm_id, parcel_id, assigned_to, notes")
+      .select("id, task_type, farm_id, parcel_id, assigned_to, notes, payment_type, rate_per_unit, title")
       .eq("id", taskId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -1263,6 +1323,49 @@ export class TasksService {
       throw new Error(
         `Failed to create harvest record: ${harvestError.message}`,
       );
+    }
+
+    // Create work records for per-unit payment harvest tasks
+    if (existingTask.payment_type === 'per_unit' && completeDto.workers && completeDto.workers.length > 0) {
+      // Prefer rate from DTO (user entered in harvest form) over task rate
+      const ratePerUnit = (completeDto as any).rate_per_unit ?? existingTask.rate_per_unit;
+      // Get payment_included_in_salary from task_assignments
+      const { data: taskAssignments } = await client
+        .from('task_assignments')
+        .select('worker_id, payment_included_in_salary')
+        .eq('task_id', taskId);
+      const assignmentMap = new Map((taskAssignments || []).map((a: any) => [a.worker_id, a]));
+
+      for (const workerEntry of completeDto.workers) {
+        const units = workerEntry.quantity_picked ?? 0;
+        const paymentIncluded = (assignmentMap.get(workerEntry.worker_id) as any)?.payment_included_in_salary ?? false;
+        if (paymentIncluded) continue; // salary worker, skip work record
+
+        const totalPayment = (units > 0 && ratePerUnit) ? units * Number(ratePerUnit) : null;
+
+        const { error: workRecordError } = await client
+          .from('work_records')
+          .insert({
+            worker_id: workerEntry.worker_id,
+            farm_id: existingTask.farm_id,
+            organization_id: organizationId,
+            worker_type: 'per_unit',
+            work_date: completeDto.harvest_date,
+            hours_worked: workerEntry.hours_worked ?? 0,
+            task_description: `Récolte: ${existingTask.title || taskId}`,
+            payment_status: totalPayment ? 'pending' : 'not_applicable',
+            total_payment: totalPayment,
+            amount_paid: totalPayment,
+            task_id: taskId,
+            units_completed: units,
+            rate_per_unit: ratePerUnit,
+            payment_included_in_salary: false,
+            notes: JSON.stringify({ task_id: taskId, task_type: 'harvesting', is_partial: isPartial }),
+          });
+        if (workRecordError) {
+          this.logger.error(`Failed to create work record for worker ${workerEntry.worker_id}: ${workRecordError.message}`);
+        }
+      }
     }
 
     // Automatically create a reception batch for this harvest

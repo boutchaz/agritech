@@ -331,19 +331,37 @@ export const useUpdateParcel = () => {
   });
 };
 
-// Delete parcel mutation using parcelsService (apiClient)
-export const useDeleteParcel = () => {
+// Archive parcel mutation (soft delete)
+export const useArchiveParcel = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (parcelId: string) => {
-      await parcelsService.deleteParcel(parcelId);
+      await parcelsService.archiveParcel(parcelId);
       return parcelId;
     },
-    onSuccess: (_parcelId) => {
-      // Invalidate all parcel queries since we don't know which farm it belonged to
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
       queryClient.invalidateQueries({ queryKey: farmsKeys.all });
     },
   });
 };
+
+// Restore archived parcel mutation
+export const useRestoreParcel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (parcelId: string) => {
+      await parcelsService.restoreParcel(parcelId);
+      return parcelId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
+      queryClient.invalidateQueries({ queryKey: farmsKeys.all });
+    },
+  });
+};
+
+/** @deprecated Use useArchiveParcel instead */
+export const useDeleteParcel = useArchiveParcel;

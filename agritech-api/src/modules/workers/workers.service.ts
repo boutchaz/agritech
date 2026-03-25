@@ -62,7 +62,7 @@ export class WorkersService {
       select: '*, organizations!inner(name), farms(name)',
       filters: (q) => {
         q = q.eq('organization_id', organizationId);
-        if (farmId) q = q.eq('farm_id', farmId);
+        if (farmId) q = q.or(`farm_id.eq.${farmId},farm_id.is.null`);
         return q;
       },
       page,
@@ -180,6 +180,7 @@ export class WorkersService {
       metayage_percentage: createWorkerDto.metayage_percentage || null,
       calculation_basis: createWorkerDto.calculation_basis || null,
       payment_frequency: createWorkerDto.payment_frequency || null,
+      payment_frequencies: createWorkerDto.payment_frequencies || null,
       metayage_contract_details: createWorkerDto.metayage_contract_details || null,
       specialties: createWorkerDto.specialties || null,
       certifications: createWorkerDto.certifications || null,
@@ -277,6 +278,7 @@ export class WorkersService {
     if ('metayage_percentage' in sanitizedData) sanitizedData.metayage_percentage = sanitizedData.metayage_percentage || null;
     if ('calculation_basis' in sanitizedData) sanitizedData.calculation_basis = sanitizedData.calculation_basis || null;
     if ('payment_frequency' in sanitizedData) sanitizedData.payment_frequency = sanitizedData.payment_frequency || null;
+    if ('payment_frequencies' in sanitizedData) sanitizedData.payment_frequencies = sanitizedData.payment_frequencies || null;
     if ('metayage_contract_details' in sanitizedData) sanitizedData.metayage_contract_details = sanitizedData.metayage_contract_details || null;
     if ('specialties' in sanitizedData) sanitizedData.specialties = sanitizedData.specialties || null;
     if ('certifications' in sanitizedData) sanitizedData.certifications = sanitizedData.certifications || null;
@@ -407,7 +409,7 @@ export class WorkersService {
 
     const { data: workRecords } = await client
       .from('work_records')
-      .select('amount_paid, payment_status')
+      .select('amount_paid, payment_status, work_date, task_id, hours_worked')
       .eq('worker_id', workerId);
 
     const workRecordsPaid = (workRecords || [])
@@ -417,6 +419,14 @@ export class WorkersService {
     const workRecordsPending = (workRecords || [])
       .filter(r => r.payment_status === 'pending')
       .reduce((sum, r) => sum + (r.amount_paid || 0), 0);
+
+    // Count distinct work dates as "days worked"
+    const distinctDates = new Set((workRecords || []).map(r => r.work_date).filter(Boolean));
+    const totalDaysWorked = distinctDates.size;
+
+    // Count distinct completed tasks
+    const distinctTasks = new Set((workRecords || []).map(r => r.task_id).filter(Boolean));
+    const totalTasksCompleted = distinctTasks.size;
 
     const { data: paymentRecords } = await client
       .from('payment_records')
@@ -450,8 +460,8 @@ export class WorkersService {
       totalWorkRecords: workRecords?.length || 0,
       totalPaid: workRecordsPaid + paymentsPaid + metayageTotal,
       pendingPayments: workRecordsPending + paymentsPending,
-      totalDaysWorked: worker.total_days_worked || 0,
-      totalTasksCompleted: worker.total_tasks_completed || 0,
+      totalDaysWorked,
+      totalTasksCompleted,
     };
   }
 

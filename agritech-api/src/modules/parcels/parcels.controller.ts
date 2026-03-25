@@ -1,4 +1,4 @@
-import { Controller, Delete, Body, UseGuards, Request, Get, Query, Post, Put, Param } from '@nestjs/common';
+import { Controller, Delete, Body, UseGuards, Request, Get, Query, Post, Put, Patch, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -197,13 +197,13 @@ export class ParcelsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Delete a parcel',
+    summary: 'Archive a parcel (soft delete)',
     description:
-      'Delete a parcel with subscription validation. Checks for active subscription before deletion.',
+      'Archives a parcel by setting is_active=false. All related historical data (harvests, costs, tasks) is preserved.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Parcel deleted successfully',
+    description: 'Parcel archived successfully',
     type: DeleteParcelResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -211,6 +211,21 @@ export class ParcelsController {
   @ApiResponse({ status: 403, description: 'Forbidden - invalid subscription' })
   @ApiResponse({ status: 404, description: 'Parcel or farm not found' })
   async deleteParcel(@Request() req, @Body() deleteParcelDto: DeleteParcelDto) {
-    return this.parcelsService.deleteParcel(req.user.id, deleteParcelDto);
+    return this.parcelsService.archiveParcel(req.user.id, deleteParcelDto);
+  }
+
+  @Patch(':id/restore')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Restore an archived parcel',
+    description: 'Restores a previously archived parcel by setting is_active=true.',
+  })
+  @ApiParam({ name: 'id', description: 'Parcel ID to restore', type: String })
+  @ApiResponse({ status: 200, description: 'Parcel restored successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - subscription limit reached' })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  async restoreParcel(@Request() req, @Param('id') parcelId: string) {
+    return this.parcelsService.restoreParcel(req.user.id, parcelId);
   }
 }

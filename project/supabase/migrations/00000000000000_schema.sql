@@ -183,6 +183,7 @@ DO $$ BEGIN
     'monthly',
     'daily',
     'per_task',
+    'per_unit',
     'harvest_share'
   );
 EXCEPTION
@@ -2094,6 +2095,7 @@ CREATE TABLE IF NOT EXISTS workers (
   specialties TEXT[],
   certifications TEXT[],
   payment_frequency payment_frequency,
+  payment_frequencies TEXT[],
   bank_account TEXT,
   payment_method TEXT,
   total_days_worked INTEGER DEFAULT 0,
@@ -2188,6 +2190,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   units_required NUMERIC,
   units_completed NUMERIC DEFAULT 0,
   rate_per_unit NUMERIC,
+  forfait_amount NUMERIC,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2223,6 +2226,8 @@ CREATE TABLE IF NOT EXISTS task_assignments (
   hours_worked NUMERIC(10, 2),
   units_completed NUMERIC(10, 2),
   notes TEXT,
+  payment_included_in_salary BOOLEAN DEFAULT false,
+  bonus_amount NUMERIC(10, 2),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2363,6 +2368,7 @@ CREATE TABLE IF NOT EXISTS work_records (
   rate_per_unit NUMERIC,
   work_unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
   task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+  payment_included_in_salary BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

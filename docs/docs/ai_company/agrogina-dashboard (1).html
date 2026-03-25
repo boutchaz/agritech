@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGROGINA — Dashboard CEO</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2D5A3D;
+    --green-light: #3d7a54;
+    --green-dark: #1e3d2a;
+    --green-muted: rgba(45,90,61,0.12);
+    --blue: #1E88E5;
+    --blue-muted: rgba(30,136,229,0.12);
+    --orange: #FF6B35;
+    --orange-muted: rgba(255,107,53,0.12);
+    --anthracite: #1E1E1E;
+    --surface: #111a14;
+    --surface2: #162019;
+    --surface3: #1c2b20;
+    --surface4: #213226;
+    --border: rgba(45,90,61,0.25);
+    --border-bright: rgba(45,90,61,0.5);
+    --text: #e8f0ea;
+    --text-muted: rgba(232,240,234,0.5);
+    --text-dim: rgba(232,240,234,0.3);
+    --white: #F8F9FA;
+    --red: #e05252;
+    --yellow: #f0c040;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 10% 20%, rgba(45,90,61,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 80%, rgba(30,136,229,0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 240px;
+    background: var(--surface2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--green);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+
+  .logo-sub {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .sidebar-section {
+    padding: 16px 12px 8px;
+  }
+
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    position: relative;
+  }
+
+  .nav-item:hover { background: var(--green-muted); color: var(--text); }
+  .nav-item.active { background: var(--green-muted); color: var(--text); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 20px;
+    background: var(--green);
+    border-radius: 0 2px 2px 0;
+  }
+
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .badge {
+    margin-left: auto;
+    background: var(--orange);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .badge.green { background: var(--green); }
+  .badge.blue { background: var(--blue); }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .ceo-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--green-muted);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .ceo-avatar {
+    width: 32px; height: 32px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .ceo-name { font-size: 12px; font-weight: 600; }
+  .ceo-role { font-size: 10px; color: var(--text-muted); }
+
+  /* MAIN */
+  .main {
+    margin-left: 240px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(17,26,20,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .topbar-title {
+    font-size: 15px;
+    font-weight: 700;
+    flex: 1;
+  }
+
+  .topbar-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .siam-countdown {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--orange-muted);
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--orange);
+  }
+
+  .siam-dot {
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .notif-btn {
+    width: 36px; height: 36px;
+    background: var(--green-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    position: relative;
+    transition: all 0.15s;
+  }
+
+  .notif-btn:hover { background: var(--surface3); }
+  .notif-dot {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 7px; height: 7px;
+    background: var(--orange);
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+  }
+
+  /* CONTENT */
+  .content { padding: 24px 28px; flex: 1; }
+
+  /* INPUT TASK */
+  .task-input-zone {
+    background: var(--surface3);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .task-input-zone:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(45,90,61,0.15);
+  }
+
+  .task-input-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .task-textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    resize: none;
+    line-height: 1.6;
+    min-height: 60px;
+  }
+
+  .task-textarea::placeholder { color: var(--text-dim); }
+
+  .task-input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .dept-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .dept-chip {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .dept-chip.dev { background: var(--green-muted); color: #5dbd80; border-color: rgba(93,189,128,0.2); }
+  .dept-chip.marketing { background: var(--blue-muted); color: #64b5f6; border-color: rgba(100,181,246,0.2); }
+  .dept-chip.seo { background: rgba(240,192,64,0.1); color: #f0c040; border-color: rgba(240,192,64,0.2); }
+  .dept-chip.finance { background: var(--orange-muted); color: #ff9066; border-color: rgba(255,107,53,0.2); }
+  .dept-chip.agro { background: rgba(129,199,132,0.1); color: #81c784; border-color: rgba(129,199,132,0.2); }
+
+  .send-btn {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .send-btn:hover { background: var(--green-light); transform: translateY(-1px); }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* STAT CARDS */
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 60px; height: 60px;
+    border-radius: 0 14px 0 60px;
+    opacity: 0.08;
+  }
+
+  .stat-card.green::after { background: var(--green); }
+  .stat-card.blue::after { background: var(--blue); }
+  .stat-card.orange::after { background: var(--orange); }
+  .stat-card.red::after { background: var(--red); }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-value.green { color: #5dbd80; }
+  .stat-value.blue { color: #64b5f6; }
+  .stat-value.orange { color: var(--orange); }
+  .stat-value.red { color: var(--red); }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* AGENTS STATUS */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .agent-item {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .agent-item:hover { border-color: var(--border-bright); background: var(--surface4); }
+
+  .agent-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .agent-status-dot.active { background: #5dbd80; box-shadow: 0 0 6px rgba(93,189,128,0.6); animation: pulse 2s infinite; }
+  .agent-status-dot.idle { background: var(--text-dim); }
+  .agent-status-dot.working { background: var(--blue); box-shadow: 0 0 6px rgba(30,136,229,0.6); animation: pulse 1.5s infinite; }
+  .agent-status-dot.error { background: var(--red); box-shadow: 0 0 6px rgba(224,82,82,0.6); }
+  .agent-status-dot.waiting { background: var(--orange); animation: pulse 2s infinite; }
+
+  .agent-info { flex: 1; min-width: 0; }
+  .agent-name { font-size: 12px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-task { font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-dept { font-size: 9px; color: var(--text-dim); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* VALIDATION QUEUE */
+  .validation-item {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 8px;
+    transition: all 0.15s;
+  }
+
+  .validation-item:hover { border-color: var(--border-bright); }
+
+  .validation-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .validation-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .validation-meta { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .validation-type {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .type-ux { background: var(--blue-muted); color: #64b5f6; border: 1px solid rgba(100,181,246,0.2); }
+  .type-db { background: var(--orange-muted); color: #ff9066; border: 1px solid rgba(255,107,53,0.2); }
+  .type-escalade { background: rgba(224,82,82,0.1); color: var(--red); border: 1px solid rgba(224,82,82,0.2); }
+  .type-seo { background: rgba(240,192,64,0.1); color: #f0c040; border: 1px solid rgba(240,192,64,0.2); }
+  .type-recrutement { background: var(--green-muted); color: #5dbd80; border: 1px solid rgba(93,189,128,0.2); }
+
+  .validation-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .btn-validate {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-validate:hover { background: var(--green-light); }
+
+  .btn-reject {
+    background: rgba(224,82,82,0.1);
+    color: var(--red);
+    border: 1px solid rgba(224,82,82,0.2);
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-reject:hover { background: rgba(224,82,82,0.2); }
+
+  .btn-detail {
+    background: var(--green-muted);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-left: auto;
+  }
+
+  .btn-detail:hover { color: var(--text); }
+
+  /* ACTIVITY LOG */
+  .log-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+
+  .log-item:last-child { border-bottom: none; }
+
+  .log-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .log-icon.success { background: rgba(93,189,128,0.15); }
+  .log-icon.info { background: var(--blue-muted); }
+  .log-icon.warn { background: var(--orange-muted); }
+  .log-icon.error { background: rgba(224,82,82,0.1); }
+
+  .log-content { flex: 1; min-width: 0; }
+  .log-text { font-size: 12px; line-height: 1.4; }
+  .log-text strong { color: var(--text); font-weight: 600; }
+  .log-time { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  /* BUGS */
+  .bug-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bug-item:last-child { border-bottom: none; }
+
+  .bug-priority {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .bug-priority.critical { background: var(--red); box-shadow: 0 0 5px rgba(224,82,82,0.5); }
+  .bug-priority.high { background: var(--orange); }
+  .bug-priority.medium { background: var(--yellow); }
+
+  .bug-info { flex: 1; min-width: 0; }
+  .bug-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bug-meta { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  .bug-status {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .status-fixing { background: var(--blue-muted); color: #64b5f6; }
+  .status-pending { background: var(--orange-muted); color: #ff9066; }
+  .status-done { background: rgba(93,189,128,0.1); color: #5dbd80; }
+
+  /* PROGRESS BAR */
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .progress-fill.green { background: linear-gradient(90deg, var(--green), #5dbd80); }
+  .progress-fill.orange { background: linear-gradient(90deg, #ff6b35, #ff9066); }
+  .progress-fill.blue { background: linear-gradient(90deg, var(--blue), #64b5f6); }
+
+  /* SIAM PROGRESS */
+  .siam-card {
+    background: linear-gradient(135deg, var(--surface3) 0%, rgba(45,90,61,0.1) 100%);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .siam-card::before {
+    content: 'SIAM 2026';
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 64px;
+    font-weight: 800;
+    color: rgba(45,90,61,0.08);
+    letter-spacing: -2px;
+    pointer-events: none;
+  }
+
+  .siam-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .siam-title { font-size: 13px; font-weight: 700; color: var(--orange); }
+  .siam-days { font-size: 28px; font-weight: 800; color: var(--orange); }
+  .siam-days span { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+
+  .siam-tasks {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .siam-task {
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .siam-task.done { background: rgba(93,189,128,0.1); color: #5dbd80; }
+  .siam-task.todo { background: var(--orange-muted); color: #ff9066; }
+  .siam-task.inprogress { background: var(--blue-muted); color: #64b5f6; }
+
+  /* SECTION HEADER */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .view-all {
+    font-size: 11px;
+    color: var(--green);
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: gap 0.15s;
+  }
+
+  .view-all:hover { gap: 7px; }
+
+  /* NOTIFICATION PANEL */
+  .notif-panel {
+    position: fixed;
+    top: 64px; right: 20px;
+    width: 320px;
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    z-index: 200;
+    display: none;
+    animation: slideDown 0.2s ease;
+  }
+
+  .notif-panel.open { display: block; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .notif-panel-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .notif-panel-title { font-size: 13px; font-weight: 700; }
+  .notif-panel-close { cursor: pointer; color: var(--text-muted); font-size: 18px; }
+
+  .notif-list { padding: 8px; max-height: 360px; overflow-y: auto; }
+
+  .notif-entry {
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .notif-entry:hover { background: var(--green-muted); }
+  .notif-entry-title { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .notif-entry-text { font-size: 11px; color: var(--text-muted); }
+  .notif-entry-time { font-size: 10px; color: var(--text-dim); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+  .unread-dot {
+    width: 6px; height: 6px;
+    background: var(--orange);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ANIMATIONS */
+  .fade-in {
+    animation: fadeIn 0.4s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; }
+  }
+
+  .fade-in-up {
+    animation: fadeInUp 0.4s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Stagger */
+  .fade-in-up:nth-child(1) { animation-delay: 0.05s; }
+  .fade-in-up:nth-child(2) { animation-delay: 0.1s; }
+  .fade-in-up:nth-child(3) { animation-delay: 0.15s; }
+  .fade-in-up:nth-child(4) { animation-delay: 0.2s; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface3);
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text-muted);
+  }
+
+  .tab.active {
+    background: var(--green);
+    color: white;
+  }
+
+  .tab:hover:not(.active) { color: var(--text); background: var(--green-muted); }
+
+  /* RESPONSIVE */
+  @media (max-width: 1100px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .agents-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <div class="logo-icon">🌿</div>
+        <div>
+          <div class="logo-text">AGROGINA</div>
+          <div class="logo-sub">Virtual AI Company</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Vue d'ensemble</div>
+      <div class="nav-item active" onclick="setActive(this)">
+        <span class="nav-icon">⬡</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">⏳</span> Validations
+        <span class="badge">4</span>
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📋</span> Historique
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Départements</div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🖥️</span> Dev ERP
+        <span class="badge green">●</span>
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🧠</span> AgromindIA
+        <span class="badge blue">●</span>
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🎯</span> Marketing
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🔍</span> SEO
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">💰</span> Finance
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">🌱</span> Agronomie
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Système</div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">⚙️</span> Configuration
+      </div>
+      <div class="nav-item" onclick="setActive(this)">
+        <span class="nav-icon">📊</span> Rapports
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="ceo-card">
+        <div class="ceo-avatar">Y</div>
+        <div>
+          <div class="ceo-name">Yassine</div>
+          <div class="ceo-role">CEO — AGROGINA</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-title">Dashboard CEO</div>
+      <div class="topbar-date" id="current-date">Jeudi 12 Mars 2026</div>
+      <div class="siam-countdown">
+        <div class="siam-dot"></div>
+        <span id="countdown">J-39 avant SIAM</span>
+      </div>
+      <div class="notif-btn" onclick="toggleNotif()" id="notif-btn">
+        🔔
+        <div class="notif-dot"></div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION PANEL -->
+    <div class="notif-panel" id="notif-panel">
+      <div class="notif-panel-header">
+        <div class="notif-panel-title">Notifications</div>
+        <div class="notif-panel-close" onclick="toggleNotif()">✕</div>
+      </div>
+      <div class="notif-list">
+        <div class="notif-entry">
+          <div class="notif-entry-title"><span class="unread-dot"></span>🚨 Escalade — BUG-002</div>
+          <div class="notif-entry-text">Chef ERP a tenté 4 fois de centraliser la vérification d'abonnement sans succès. Votre décision requise.</div>
+          <div class="notif-entry-time">Il y a 12 min</div>
+        </div>
+        <div class="notif-entry">
+          <div class="notif-entry-title"><span class="unread-dot"></span>⏳ Validation requise</div>
+          <div class="notif-entry-text">Agent Persona Karim suggère d'ajouter un raccourci "Créer tâche rapide" sur le dashboard ferme.</div>
+          <div class="notif-entry-time">Il y a 34 min</div>
+        </div>
+        <div class="notif-entry">
+          <div class="notif-entry-title"><span class="unread-dot"></span>✅ BUG-001 corrigé</div>
+          <div class="notif-entry-text">Double QueryClient supprimé. Tests Playwright passés (8/8).</div>
+          <div class="notif-entry-time">Il y a 1h 20min</div>
+        </div>
+        <div class="notif-entry">
+          <div class="notif-entry-title">💰 Rapport Finance disponible</div>
+          <div class="notif-entry-text">Rapport Mars 2026 généré automatiquement. Cash flow positif.</div>
+          <div class="notif-entry-time">Aujourd'hui 08:00</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- SIAM COUNTDOWN CARD -->
+      <div class="siam-card fade-in">
+        <div class="siam-header">
+          <div>
+            <div class="siam-title">🎯 SIAM 2026 — Meknès</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">20-26 Avril 2026 • Objectif : 5-10 leads qualifiés</div>
+          </div>
+          <div style="text-align:right">
+            <div class="siam-days" id="siam-days">39 <span>jours</span></div>
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill orange" style="width: 72%"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">72% des tâches pré-SIAM complétées</div>
+        <div class="siam-tasks">
+          <div class="siam-task done">✓ BUG-001 QueryClient</div>
+          <div class="siam-task inprogress">⟳ BUG-002 Abonnement</div>
+          <div class="siam-task todo">○ BUG-003 Localhost</div>
+          <div class="siam-task todo">○ BUG-004 Supabase</div>
+          <div class="siam-task todo">○ BUG-005 Redis</div>
+          <div class="siam-task inprogress">⟳ PWA Push Notifs</div>
+          <div class="siam-task inprogress">⟳ AgromindIA UI</div>
+          <div class="siam-task todo">○ Niveaux lecture agro</div>
+        </div>
+      </div>
+
+      <!-- STATS ROW -->
+      <div class="grid-4">
+        <div class="stat-card green fade-in-up">
+          <div class="stat-label">Agents actifs</div>
+          <div class="stat-value green">12</div>
+          <div class="stat-sub">↑ 3 depuis hier</div>
+          <div class="progress-bar"><div class="progress-fill green" style="width:80%"></div></div>
+        </div>
+        <div class="stat-card orange fade-in-up">
+          <div class="stat-label">En attente CEO</div>
+          <div class="stat-value orange">4</div>
+          <div class="stat-sub">Validations requises</div>
+          <div class="progress-bar"><div class="progress-fill orange" style="width:40%"></div></div>
+        </div>
+        <div class="stat-card blue fade-in-up">
+          <div class="stat-label">Tâches complétées</div>
+          <div class="stat-value blue">28</div>
+          <div class="stat-sub">Cette semaine</div>
+          <div class="progress-bar"><div class="progress-fill blue" style="width:65%"></div></div>
+        </div>
+        <div class="stat-card red fade-in-up">
+          <div class="stat-label">Bugs corrigés</div>
+          <div class="stat-value" style="color:#5dbd80">7</div>
+          <div class="stat-sub" style="color:var(--red)">1 escalade active</div>
+          <div class="progress-bar"><div class="progress-fill green" style="width:85%"></div></div>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT GRID -->
+      <div class="grid-2">
+
+        <!-- VALIDATIONS EN ATTENTE -->
+        <div class="card fade-in-up">
+          <div class="section-header">
+            <div class="section-title">⏳ En attente de validation</div>
+            <a class="view-all">Tout voir →</a>
+          </div>
+
+          <div class="validation-item">
+            <div class="validation-header">
+              <div>
+                <div class="validation-title">🚨 Escalade — BUG-002 abonnement dupliqué</div>
+                <div class="validation-meta">Chef d'Orchestre ERP • 4 tentatives échouées</div>
+              </div>
+              <span class="validation-type type-escalade">ESCALADE</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">
+              La centralisation dans MultiTenantAuthProvider.tsx provoque des redirections infinies. 3 approches testées. Besoin de votre décision sur l'approche D.
+            </div>
+            <div class="validation-actions">
+              <button class="btn-validate" onclick="validate(this)">✓ Approuver approche D</button>
+              <button class="btn-reject" onclick="reject(this)">✕ Rejeter</button>
+              <button class="btn-detail">Voir détail →</button>
+            </div>
+          </div>
+
+          <div class="validation-item">
+            <div class="validation-header">
+              <div>
+                <div class="validation-title">Amélioration UX — Raccourci "Créer tâche"</div>
+                <div class="validation-meta">Persona Karim (Chef de ferme) • Dashboard parcelles</div>
+              </div>
+              <span class="validation-type type-ux">UX</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">
+              Karim suggère un bouton flottant "+" pour créer une tâche directement depuis la vue parcelle sans naviguer.
+            </div>
+            <div class="validation-actions">
+              <button class="btn-validate" onclick="validate(this)">✓ Valider</button>
+              <button class="btn-reject" onclick="reject(this)">✕ Rejeter</button>
+              <button class="btn-detail">Voir maquette →</button>
+            </div>
+          </div>
+
+          <div class="validation-item">
+            <div class="validation-header">
+              <div>
+                <div class="validation-title">Recrutement — Agent Spécialiste PWA</div>
+                <div class="validation-meta">Chef d'Orchestre ERP • Service Workers complexes</div>
+              </div>
+              <span class="validation-type type-recrutement">RECRUTEMENT</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">
+              L'intégration PWA nécessite une expertise spécifique Service Worker / iOS Safari. Agent temporaire estimé 3-4 jours.
+            </div>
+            <div class="validation-actions">
+              <button class="btn-validate" onclick="validate(this)">✓ Recruter</button>
+              <button class="btn-reject" onclick="reject(this)">✕ Refuser</button>
+              <button class="btn-detail">Voir justif. →</button>
+            </div>
+          </div>
+
+          <div class="validation-item">
+            <div class="validation-header">
+              <div>
+                <div class="validation-title">Article SEO — "Logiciel gestion ferme Maroc"</div>
+                <div class="validation-meta">Agent SEO • 1,240 mots • Prêt pour publication</div>
+              </div>
+              <span class="validation-type type-seo">SEO</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.5;">
+              Article optimisé pour le mot-clé principal. Score SEO : 87/100. Relecture recommandée avant publication.
+            </div>
+            <div class="validation-actions">
+              <button class="btn-validate" onclick="validate(this)">✓ Publier</button>
+              <button class="btn-reject" onclick="reject(this)">✕ Réviser</button>
+              <button class="btn-detail">Lire l'article →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGENTS STATUS -->
+        <div>
+          <div class="card fade-in-up" style="margin-bottom:16px">
+            <div class="section-header">
+              <div class="section-title">🤖 Statut des agents</div>
+              <div style="font-size:11px;color:var(--text-muted)">12 actifs / 18 total</div>
+            </div>
+
+            <div class="tabs">
+              <div class="tab active" onclick="setTab(this)">Tous</div>
+              <div class="tab" onclick="setTab(this)">Dev</div>
+              <div class="tab" onclick="setTab(this)">Marketing</div>
+              <div class="tab" onclick="setTab(this)">Finance</div>
+            </div>
+
+            <div class="agents-grid">
+              <div class="agent-item">
+                <div class="agent-status-dot working"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Chef d'Orchestre ERP</div>
+                  <div class="agent-task">Gère l'escalade BUG-002</div>
+                  <div class="agent-dept">Dev ERP</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot active"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Agent Frontend ERP</div>
+                  <div class="agent-task">Correction BUG-003 localhost</div>
+                  <div class="agent-dept">Dev ERP</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot active"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Agent Backend ERP</div>
+                  <div class="agent-task">Correction monkey-patch Supabase</div>
+                  <div class="agent-dept">Dev ERP</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot working"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Agent QA Playwright</div>
+                  <div class="agent-task">Tests regression BUG-001 (8/8 ✓)</div>
+                  <div class="agent-dept">Dev ERP</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot active"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Persona Karim</div>
+                  <div class="agent-task">Test module parcelles v2</div>
+                  <div class="agent-dept">Personas</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot working"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Chef AgromindIA</div>
+                  <div class="agent-task">Intégration UI recommandations</div>
+                  <div class="agent-dept">AgromindIA</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot active"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Agent Veille Marketing</div>
+                  <div class="agent-task">Scraping LinkedIn AgTech Maroc</div>
+                  <div class="agent-dept">Marketing</div>
+                </div>
+              </div>
+              <div class="agent-item">
+                <div class="agent-status-dot idle"></div>
+                <div class="agent-info">
+                  <div class="agent-name">Agent DevOps</div>
+                  <div class="agent-task">En attente de tâche</div>
+                  <div class="agent-dept">Dev ERP</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BUGS ACTIFS -->
+          <div class="card fade-in-up">
+            <div class="section-header">
+              <div class="section-title">🔴 Bugs actifs</div>
+              <a class="view-all">Voir tout →</a>
+            </div>
+            <div class="bug-item">
+              <div class="bug-priority critical"></div>
+              <div class="bug-info">
+                <div class="bug-name">BUG-002 — Vérification abonnement dupliquée</div>
+                <div class="bug-meta">Chef ERP • Tentative 4/4 • Escaladé</div>
+              </div>
+              <div class="bug-status status-pending">Escaladé</div>
+            </div>
+            <div class="bug-item">
+              <div class="bug-priority high"></div>
+              <div class="bug-info">
+                <div class="bug-name">BUG-003 — URLs localhost hardcodées</div>
+                <div class="bug-meta">Agent Frontend • register.tsx, select-trial.tsx</div>
+              </div>
+              <div class="bug-status status-fixing">En cours</div>
+            </div>
+            <div class="bug-item">
+              <div class="bug-priority high"></div>
+              <div class="bug-info">
+                <div class="bug-name">BUG-004 — Monkey-patch Supabase</div>
+                <div class="bug-meta">Agent Backend • supabase_client.py</div>
+              </div>
+              <div class="bug-status status-fixing">En cours</div>
+            </div>
+            <div class="bug-item">
+              <div class="bug-priority medium"></div>
+              <div class="bug-info">
+                <div class="bug-name">BUG-005 — Redis manquant docker-compose</div>
+                <div class="bug-meta">Agent DevOps • En attente</div>
+              </div>
+              <div class="bug-status status-pending">En attente</div>
+            </div>
+            <div class="bug-item">
+              <div class="bug-priority medium"></div>
+              <div class="bug-info">
+                <div class="bug-name">BUG-006 — Fichiers .bak en production</div>
+                <div class="bug-meta">Agent Frontend • 9 fichiers identifiés</div>
+              </div>
+              <div class="bug-status status-done">Corrigé ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY LOG -->
+      <div class="card fade-in-up">
+        <div class="section-header">
+          <div class="section-title">📜 Activité récente</div>
+          <a class="view-all">Historique complet →</a>
+        </div>
+
+        <div class="log-item">
+          <div class="log-icon success">✅</div>
+          <div class="log-content">
+            <div class="log-text"><strong>BUG-001 corrigé</strong> — Agent Frontend a supprimé le QueryClient double dans <code style="font-family:JetBrains Mono;font-size:11px;background:var(--green-muted);padding:1px 5px;border-radius:3px;">__root.tsx</code>. Tests Playwright validés (8/8).</div>
+            <div class="log-time">13:42 — Agent Frontend ERP</div>
+          </div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon warn">⏳</div>
+          <div class="log-content">
+            <div class="log-text"><strong>Escalade déclenchée</strong> — Chef d'Orchestre ERP a atteint la limite de 4 tentatives sur BUG-002. Rapport complet généré. En attente décision CEO.</div>
+            <div class="log-time">13:28 — Chef d'Orchestre ERP</div>
+          </div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon success">✅</div>
+          <div class="log-content">
+            <div class="log-text"><strong>9 fichiers .bak supprimés</strong> — BUG-006 résolu. <code style="font-family:JetBrains Mono;font-size:11px;background:var(--green-muted);padding:1px 5px;border-radius:3px;">*.bak</code> ajouté à .gitignore et .dockerignore.</div>
+            <div class="log-time">12:15 — Agent Frontend ERP</div>
+          </div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon info">🤖</div>
+          <div class="log-content">
+            <div class="log-text"><strong>Persona Karim</strong> a testé le module parcelles pendant 22 minutes. 1 bug fonctionnel détecté (filtrage par culture), 2 améliorations UX suggérées → en attente validation CEO.</div>
+            <div class="log-time">11:50 — Agent Persona Karim</div>
+          </div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon info">🧠</div>
+          <div class="log-content">
+            <div class="log-text"><strong>Chef AgromindIA</strong> a commencé l'intégration de l'interface recommandations. Niveau Basique en cours. Niveau Expert déjà fonctionnel.</div>
+            <div class="log-time">10:30 — Chef d'Orchestre AgromindIA</div>
+          </div>
+        </div>
+        <div class="log-item">
+          <div class="log-icon success">📊</div>
+          <div class="log-content">
+            <div class="log-text"><strong>Rapport Finance Mars 2026</strong> généré automatiquement. MRR estimé : en phase pré-revenus. Charges opérationnelles : 12 USD/mois (VPS). Cash flow stable.</div>
+            <div class="log-time">08:00 — Agent Finance</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TASK INPUT -->
+      <div class="task-input-zone fade-in-up" style="margin-top:16px;margin-bottom:0">
+        <div class="task-input-label">
+          <span>⚡</span> Donner une instruction aux agents
+        </div>
+        <textarea class="task-textarea" placeholder="Ex: Corrigez tous les bugs critiques restants et faites-moi un rapport d'ici ce soir..." rows="3" id="task-input"></textarea>
+        <div class="task-input-footer">
+          <div class="dept-chips">
+            <div class="dept-chip dev" onclick="toggleChip(this)">🖥️ Dev ERP</div>
+            <div class="dept-chip dev" onclick="toggleChip(this)">🧠 AgromindIA</div>
+            <div class="dept-chip marketing" onclick="toggleChip(this)">🎯 Marketing</div>
+            <div class="dept-chip seo" onclick="toggleChip(this)">🔍 SEO</div>
+            <div class="dept-chip finance" onclick="toggleChip(this)">💰 Finance</div>
+            <div class="dept-chip agro" onclick="toggleChip(this)">🌱 Agronomie</div>
+          </div>
+          <button class="send-btn" onclick="sendTask()">
+            Envoyer ⚡
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  // Navigation
+  function setActive(el) {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Tabs
+  function setTab(el) {
+    el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // Notifications
+  function toggleNotif() {
+    const panel = document.getElementById('notif-panel');
+    panel.classList.toggle('open');
+  }
+
+  // Close notif when clicking outside
+  document.addEventListener('click', function(e) {
+    const panel = document.getElementById('notif-panel');
+    const btn = document.getElementById('notif-btn');
+    if (!panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.classList.remove('open');
+    }
+  });
+
+  // Validation
+  function validate(btn) {
+    const item = btn.closest('.validation-item');
+    item.style.transition = 'all 0.3s ease';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+      item.remove();
+      updateValidationCount(-1);
+    }, 300);
+  }
+
+  function reject(btn) {
+    const item = btn.closest('.validation-item');
+    item.style.transition = 'all 0.3s ease';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(-20px)';
+    setTimeout(() => {
+      item.remove();
+      updateValidationCount(-1);
+    }, 300);
+  }
+
+  function updateValidationCount(delta) {
+    const badge = document.querySelector('.nav-item .badge:not(.green):not(.blue)');
+    if (badge) {
+      const current = parseInt(badge.textContent);
+      const next = current + delta;
+      if (next <= 0) badge.style.display = 'none';
+      else badge.textContent = next;
+    }
+  }
+
+  // Chip selection
+  function toggleChip(chip) {
+    chip.style.opacity = chip.style.opacity === '0.4' ? '1' : '0.4';
+  }
+
+  // Send task
+  function sendTask() {
+    const input = document.getElementById('task-input');
+    const text = input.value.trim();
+    if (!text) {
+      input.style.border = '1px solid rgba(255,107,53,0.5)';
+      setTimeout(() => input.style.border = '', 1000);
+      return;
+    }
+
+    const btn = document.querySelector('.send-btn');
+    btn.textContent = '⟳ En cours...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = '✓ Envoyé !';
+      btn.style.background = '#3d7a54';
+      input.value = '';
+      setTimeout(() => {
+        btn.textContent = 'Envoyer ⚡';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2000);
+    }, 1200);
+  }
+
+  // Countdown SIAM
+  function updateCountdown() {
+    const siam = new Date('2026-04-20');
+    const now = new Date();
+    const diff = Math.ceil((siam - now) / (1000 * 60 * 60 * 24));
+    document.getElementById('countdown').textContent = `J-${diff} avant SIAM`;
+    document.getElementById('siam-days').innerHTML = `${diff} <span>jours</span>`;
+  }
+
+  updateCountdown();
+
+  // Date
+  const now = new Date();
+  const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const months = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('current-date').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+</script>
+</body>
+</html>

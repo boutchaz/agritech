@@ -713,7 +713,7 @@ export class FarmsService {
       inventoryRes,
       structuresRes
     ] = await Promise.all([
-      this.supabaseAdmin.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.supabaseAdmin.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
       this.supabaseAdmin.from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
       this.supabaseAdmin.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
       this.supabaseAdmin.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
@@ -1452,6 +1452,7 @@ export class FarmsService {
       .from('parcels')
       .select('*')
       .in('farm_id', farmIds)
+      .eq('is_active', true)
       .order('created_at', { ascending: true });
 
     if (parcelsError) {
