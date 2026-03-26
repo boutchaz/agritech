@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
-import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
+import { useBulkCreateTaskAssignments, useSyncTaskAssignments } from '../../hooks/useTaskAssignments';
 import { useFormErrors } from '../../hooks/useFormErrors';
 import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
@@ -94,11 +94,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const [workerPaymentIncluded, setWorkerPaymentIncluded] = useState<Record<string, boolean>>({});
 
   // State for planned inventory items (products to consume when task completes)
-  const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; quantity: number }>>([]);
+  const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; variant_id?: string; quantity: number }>>([]);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const bulkCreateAssignments = useBulkCreateTaskAssignments();
+  const syncAssignments = useSyncTaskAssignments();
   const { handleFormError } = useFormErrors<TaskFormData>();
 
   const {
@@ -267,18 +268,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
           organizationId,
           updates: cleanedData,
         });
-        if (selectedWorkerIds.length > 0) {
-          await bulkCreateAssignments.mutateAsync({
-            taskId: task.id,
-            data: {
-              assignments: selectedWorkerIds.map(workerId => ({
-                worker_id: workerId,
-                role: 'worker' as const,
-                payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
-              })),
-            },
-          });
-        }
+        // In edit mode: sync (creates new + removes deselected workers)
+        await syncAssignments.mutateAsync({
+          taskId: task.id,
+          data: {
+            assignments: selectedWorkerIds.map(workerId => ({
+              worker_id: workerId,
+              role: 'worker' as const,
+              payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
+            })),
+          },
+        });
       } else {
         const newTask = await createTask.mutateAsync({
           ...cleanedData as CreateTaskRequest,
@@ -820,64 +820,97 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 <div className="space-y-3">
                   {plannedItems.map((item, index) => {
                     const selectedProd = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
+                    const hasVariants = (selectedProd?.variants?.length ?? 0) > 0;
+                    const selectedVariant = hasVariants
+                      ? selectedProd!.variants.find((v) => v.id === item.variant_id)
+                      : undefined;
+                    const unitLabel = selectedVariant?.unit ?? selectedProd?.unit ?? '';
+                    const availableStock = selectedVariant?.quantity ?? selectedProd?.quantity ?? 0;
                     return (
-                      <div key={index} className="flex items-end gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs">{t('tasks.form.productLabel')}</Label>
-                          <Select
-                            value={item.product_id || '__none__'}
-                            onValueChange={(value) => {
-                              const newItems = [...plannedItems];
-                              newItems[index] = { ...newItems[index], product_id: value === '__none__' ? '' : value };
-                              setPlannedItems(newItems);
+                      <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div className="flex items-end gap-3">
+                          <div className="flex-1 space-y-1">
+                            <Label className="text-xs">{t('tasks.form.productLabel')}</Label>
+                            <Select
+                              value={item.product_id || '__none__'}
+                              onValueChange={(value) => {
+                                const newItems = [...plannedItems];
+                                newItems[index] = { product_id: value === '__none__' ? '' : value, variant_id: undefined, quantity: 0 };
+                                setPlannedItems(newItems);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t('tasks.form.productPlaceholder')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">{t('tasks.form.productSelectDefault')}</SelectItem>
+                                {availableProducts.map((product: InventoryProduct) => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} ({product.quantity} {product.unit})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-32 space-y-1">
+                            <Label className="text-xs">
+                              {t('tasks.form.quantityLabel')} {unitLabel ? `(${unitLabel})` : ''}
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={item.quantity || ''}
+                              onChange={(e) => {
+                                const newItems = [...plannedItems];
+                                newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
+                                setPlannedItems(newItems);
+                              }}
+                              placeholder="0"
+                            />
+                            {item.quantity > 0 && item.quantity > availableStock && (
+                              <p className="text-xs text-red-500">
+                                {t('tasks.form.exceedsStock', { available: availableStock })}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPlannedItems(plannedItems.filter((_, i) => i !== index));
                             }}
+                            className="text-red-500 hover:text-red-700"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder={t('tasks.form.productPlaceholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">{t('tasks.form.productSelectDefault')}</SelectItem>
-                              {availableProducts.map((product: InventoryProduct) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name} ({product.quantity} {product.unit})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                        <div className="w-32 space-y-1">
-                          <Label className="text-xs">
-                            {t('tasks.form.quantityLabel')} {selectedProd ? `(${selectedProd.unit})` : ''}
-                          </Label>
-                          <Input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={item.quantity || ''}
-                            onChange={(e) => {
-                              const newItems = [...plannedItems];
-                              newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
-                              setPlannedItems(newItems);
-                            }}
-                            placeholder="0"
-                          />
-                          {selectedProd && item.quantity > selectedProd.quantity && (
-                            <p className="text-xs text-red-500">
-                              {t('tasks.form.exceedsStock', { available: selectedProd.quantity })}
-                            </p>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setPlannedItems(plannedItems.filter((_, i) => i !== index));
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {hasVariants && (
+                          <div className="pl-0 space-y-1">
+                            <Label className="text-xs text-muted-foreground">{t('tasks.form.variantLabel', 'Format / conditionnement')}</Label>
+                            <Select
+                              value={item.variant_id || '__none__'}
+                              onValueChange={(value) => {
+                                const newItems = [...plannedItems];
+                                newItems[index] = { ...newItems[index], variant_id: value === '__none__' ? undefined : value, quantity: 0 };
+                                setPlannedItems(newItems);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t('tasks.form.variantPlaceholder', 'Sélectionner un format (optionnel)')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">{t('tasks.form.variantSelectDefault', 'Sans format spécifique')}</SelectItem>
+                                {selectedProd!.variants.map((v) => (
+                                  <SelectItem key={v.id} value={v.id}>
+                                    {v.name} ({v.quantity} {v.unit ?? selectedProd!.unit})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

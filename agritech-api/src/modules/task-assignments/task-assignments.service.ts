@@ -77,13 +77,15 @@ export class TaskAssignmentsService {
 
     if (existing) {
       if (existing.status === 'removed') {
-        // Re-activate the assignment
+        // Re-activate the assignment — preserve payment fields from DTO
         const { data, error } = await client
           .from('task_assignments')
           .update({
             status: 'assigned',
             role: dto.role || 'worker',
             notes: dto.notes,
+            payment_included_in_salary: dto.payment_included_in_salary ?? false,
+            bonus_amount: dto.bonus_amount ?? null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id)
@@ -152,6 +154,36 @@ export class TaskAssignmentsService {
     }
 
     return results;
+  }
+
+  async syncAssignments(
+    organizationId: string,
+    taskId: string,
+    dto: BulkCreateTaskAssignmentsDto,
+    userId: string,
+  ): Promise<TaskAssignment[]> {
+    const client = this.databaseService.getAdminClient();
+    const incomingWorkerIds = new Set(dto.assignments.map(a => a.worker_id));
+
+    // Remove workers no longer in the list
+    const { data: currentAssignments } = await client
+      .from('task_assignments')
+      .select('id, worker_id')
+      .eq('organization_id', organizationId)
+      .eq('task_id', taskId)
+      .neq('status', 'removed');
+
+    for (const current of currentAssignments || []) {
+      if (!incomingWorkerIds.has(current.worker_id)) {
+        await client
+          .from('task_assignments')
+          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .eq('id', current.id);
+      }
+    }
+
+    // Create or re-activate incoming workers
+    return this.bulkCreateAssignments(organizationId, taskId, dto, userId);
   }
 
   async updateAssignment(

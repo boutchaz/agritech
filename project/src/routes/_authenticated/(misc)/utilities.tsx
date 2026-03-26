@@ -5,14 +5,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Loader2, Building2, Zap } from 'lucide-react'
- 
+
 // Lazy load utilities component (includes Recharts ~600KB)
 const UtilitiesManagement = lazy(() => import('@/components/UtilitiesManagement'))
- 
+
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
- 
+
   if (!currentOrganization) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -23,7 +23,7 @@ const AppContent: React.FC = () => {
       </div>
     );
   }
- 
+
   return (
     <PageLayout
       activeModule="utilities"
@@ -51,7 +51,7 @@ const AppContent: React.FC = () => {
     </PageLayout>
   );
 };
- 
+
 export const Route = createFileRoute('/_authenticated/(misc)/utilities')({
   component: AppContent,
 })

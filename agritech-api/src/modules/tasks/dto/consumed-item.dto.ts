@@ -6,6 +6,11 @@ export class ConsumedItemDto {
   @IsUUID()
   product_id: string;
 
+  @ApiPropertyOptional({ description: "Product variant ID (e.g. 1L, 5L format)" })
+  @IsOptional()
+  @IsUUID()
+  variant_id?: string;
+
   @ApiProperty({ description: "Quantity to consume" })
   @IsNumber()
   @Min(0.01)

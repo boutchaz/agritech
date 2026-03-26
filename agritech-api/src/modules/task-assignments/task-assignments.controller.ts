@@ -74,6 +74,23 @@ export class TaskAssignmentsController {
     );
   }
 
+  @Post('sync')
+  @ApiOperation({ summary: 'Sync workers for a task (create new, remove deselected)' })
+  @ApiResponse({ status: 200, description: 'Assignments synced successfully' })
+  async syncAssignments(
+    @Param('organizationId') organizationId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: BulkCreateTaskAssignmentsDto,
+    @Req() req: any,
+  ) {
+    return this.taskAssignmentsService.syncAssignments(
+      organizationId,
+      taskId,
+      dto,
+      req.user.id,
+    );
+  }
+
   @Patch(':assignmentId')
   @ApiOperation({ summary: 'Update a task assignment' })
   @ApiResponse({ status: 200, description: 'Assignment updated successfully' })

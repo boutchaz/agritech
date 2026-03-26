@@ -93,6 +93,10 @@ export const tasksApi = {
     }, {}, organizationId);
   },
 
+  async start(organizationId: string, taskId: string): Promise<Task> {
+    return apiClient.post<Task>(`/api/v1/tasks/${taskId}/start`, {}, {}, organizationId);
+  },
+
   async complete(
     organizationId: string,
     taskId: string,

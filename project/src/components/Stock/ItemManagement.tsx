@@ -96,7 +96,10 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const productVariantSchema = z.object({
   variant_name: z.string().min(1, 'Variant name is required'),
   variant_sku: z.string().optional(),
-  unit_id: z.string().uuid('Invalid unit ID').optional(),
+  unit_id: z.preprocess(
+    (val) => (val === '' ? undefined : val),
+    z.string().uuid('Invalid unit ID').optional()
+  ),
   quantity: z.number().min(0, 'Quantity must be non-negative').optional(),
   min_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
   standard_rate: z.number().min(0, 'Standard rate must be non-negative').optional(),
@@ -234,6 +237,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const updateItem = useUpdateItem();
   const { handleFormError } = useFormErrors<ItemFormData>();
   const [showGroupForm, setShowGroupForm] = useState(false);
+  const [selectedMainGroupId, setSelectedMainGroupId] = useState('');
 
   const {
     register,
@@ -352,6 +356,15 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         marketplace_category_slug: item.marketplace_category_slug || '',
         show_in_website: item.show_in_website ?? false,
       });
+      // Prefill the main group selector
+      if (item.item_group_id && itemGroups.length > 0) {
+        const group = itemGroups.find((g) => g.id === item.item_group_id);
+        if (group?.parent_group_id) {
+          setSelectedMainGroupId(group.parent_group_id);
+        } else {
+          setSelectedMainGroupId(item.item_group_id);
+        }
+      }
     } else {
       reset({
         item_code: '',
@@ -371,8 +384,9 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         marketplace_category_slug: '',
         show_in_website: false,
       });
+      setSelectedMainGroupId(firstItemGroupId || '');
     }
-  }, [item, firstItemGroupId, reset]);
+  }, [item, firstItemGroupId, reset, itemGroups]);
 
   useEffect(() => {
     if (!item && itemGroups.length > 0 && !watch('item_group_id')) {
@@ -487,23 +501,63 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   {t('items.itemGroup.createFirst')}
                 </Button>
               </div>
-            ) : (
-              <Select
-                value={watch('item_group_id') || ''}
-                onValueChange={(value) => setValue('item_group_id', value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={t('items.selectItemGroup')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {itemGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.path || group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            ) : (() => {
+              const mainGroups = itemGroups.filter((g) => !g.parent_group_id);
+              const subcategories = itemGroups.filter(
+                (g) => g.parent_group_id === selectedMainGroupId
+              );
+              const hasSubcategories = subcategories.length > 0;
+              return (
+                <div className="space-y-2 mt-1">
+                  {/* Main group selector */}
+                  <Select
+                    value={selectedMainGroupId || ''}
+                    onValueChange={(value) => {
+                      setSelectedMainGroupId(value);
+                      const subs = itemGroups.filter((g) => g.parent_group_id === value);
+                      if (subs.length === 0) {
+                        // No subcategories: set item_group_id directly
+                        setValue('item_group_id', value);
+                      } else {
+                        // Has subcategories: clear until user picks one
+                        setValue('item_group_id', '');
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('items.selectItemGroup')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mainGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* Subcategory selector — shown only if the main group has children */}
+                  {hasSubcategories && (
+                    <Select
+                      value={watch('item_group_id') || ''}
+                      onValueChange={(value) => setValue('item_group_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={t('items.selectSubcategory', 'Sélectionner une sous-catégorie')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subcategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              );
+            })()}
             {errors.item_group_id && (
               <p className="text-red-600 text-sm mt-1">{errors.item_group_id.message}</p>
             )}
@@ -1732,7 +1786,7 @@ export default function ItemManagement() {
               {/* Farm Usage */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
-                <ItemFarmUsage item_id={selectedItemForDetails.id} showDetails={true} />
+                <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
               </div>
             </div>
           </DialogContent>

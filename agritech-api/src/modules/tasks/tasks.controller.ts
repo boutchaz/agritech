@@ -276,6 +276,21 @@ export class TasksController {
     return this.tasksService.assign(req.user.id, organizationId, taskId, assignTaskDto);
   }
 
+  @Post(':taskId/reprocess-stock')
+  @ApiOperation({ summary: 'Reprocess stock deduction for a task (admin fix)' })
+  async reprocessStock(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.reprocessStockForTask(req.user.id, organizationId, taskId);
+  }
+
+  @Post(':taskId/start')
+  @ApiOperation({ summary: 'Start a task and deduct planned stock from inventory' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async startTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.startTask(req.user.id, organizationId, taskId);
+  }
+
   @Patch(':taskId/complete')
   @CanUpdateTask()
   @ApiOperation({ summary: 'Complete a task' })

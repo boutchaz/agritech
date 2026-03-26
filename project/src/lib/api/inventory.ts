@@ -2,11 +2,19 @@ import { apiClient } from '../api-client';
 
 const BASE_URL = '/api/v1/product-applications';
 
+export interface InventoryProductVariant {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+}
+
 export interface InventoryProduct {
   id: string;
   name: string;
   quantity: number;
   unit: string;
+  variants: InventoryProductVariant[];
 }
 
 export const inventoryApi = {
