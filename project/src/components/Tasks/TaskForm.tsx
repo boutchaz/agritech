@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { useWorkers } from '../../hooks/useWorkers';
-import { useBulkCreateTaskAssignments } from '../../hooks/useTaskAssignments';
+import { useBulkCreateTaskAssignments, useSyncTaskAssignments } from '../../hooks/useTaskAssignments';
 import { useFormErrors } from '../../hooks/useFormErrors';
 import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
@@ -99,6 +99,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const bulkCreateAssignments = useBulkCreateTaskAssignments();
+  const syncAssignments = useSyncTaskAssignments();
   const { handleFormError } = useFormErrors<TaskFormData>();
 
   const {
@@ -267,18 +268,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
           organizationId,
           updates: cleanedData,
         });
-        if (selectedWorkerIds.length > 0) {
-          await bulkCreateAssignments.mutateAsync({
-            taskId: task.id,
-            data: {
-              assignments: selectedWorkerIds.map(workerId => ({
-                worker_id: workerId,
-                role: 'worker' as const,
-                payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
-              })),
-            },
-          });
-        }
+        // In edit mode: sync (creates new + removes deselected workers)
+        await syncAssignments.mutateAsync({
+          taskId: task.id,
+          data: {
+            assignments: selectedWorkerIds.map(workerId => ({
+              worker_id: workerId,
+              role: 'worker' as const,
+              payment_included_in_salary: workerPaymentIncluded[workerId] ?? false,
+            })),
+          },
+        });
       } else {
         const newTask = await createTask.mutateAsync({
           ...cleanedData as CreateTaskRequest,

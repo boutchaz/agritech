@@ -98,7 +98,7 @@ function TaskDetailPage() {
       return [primaryWorker, ...taskAssignments];
     }
     return taskAssignments;
-  }, [taskAssignments, task?.worker_id, task?.worker_name]);
+  }, [taskAssignments, task?.worker_id, task?.worker_name, task]);
   const hasMultipleWorkers = allWorkers.length > 1;
 
   // Comments

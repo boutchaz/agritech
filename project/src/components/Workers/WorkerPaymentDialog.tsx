@@ -353,7 +353,11 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 type="date"
                 value={periodEnd}
                 onChange={(e) => setPeriodEnd(e.target.value)}
+                className={periodEnd < periodStart ? 'border-red-500' : ''}
               />
+              {periodEnd < periodStart && (
+                <p className="text-xs text-red-500">La date de fin doit être après la date de début</p>
+              )}
             </div>
           </div>
 
@@ -501,7 +505,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
           ) : !calculatedPayment ? (
             <Button
               onClick={handleCalculate}
-              disabled={isLoading}
+              disabled={isLoading || periodEnd < periodStart}
               className="w-full"
               variant="outline"
             >

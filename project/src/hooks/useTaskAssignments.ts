@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { taskAssignmentsApi, TaskAssignment, CreateTaskAssignmentDto, BulkCreateTaskAssignmentsDto, UpdateTaskAssignmentDto } from '../lib/api/task-assignments';
+import { taskAssignmentsApi, CreateTaskAssignmentDto, BulkCreateTaskAssignmentsDto, UpdateTaskAssignmentDto } from '../lib/api/task-assignments';
 import { useAuth } from '../hooks/useAuth';
 
 export function useTaskAssignments(taskId: string | undefined) {
@@ -36,6 +36,21 @@ export function useBulkCreateTaskAssignments() {
   return useMutation({
     mutationFn: ({ taskId, data }: { taskId: string; data: BulkCreateTaskAssignmentsDto }) =>
       taskAssignmentsApi.bulkCreateAssignments(organizationId!, taskId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-assignments', variables.taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useSyncTaskAssignments() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: BulkCreateTaskAssignmentsDto }) =>
+      taskAssignmentsApi.syncAssignments(organizationId!, taskId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['task-assignments', variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });

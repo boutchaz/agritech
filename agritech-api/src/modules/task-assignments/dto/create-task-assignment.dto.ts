@@ -51,6 +51,17 @@ export class UpdateTaskAssignmentDto {
   @IsOptional()
   units_completed?: number;
 
+  @ApiPropertyOptional({ description: 'For fixed_salary workers: task is included in salary (no extra pay)' })
+  @IsOptional()
+  @IsBoolean()
+  payment_included_in_salary?: boolean;
+
+  @ApiPropertyOptional({ description: 'Bonus amount for fixed_salary workers' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  bonus_amount?: number;
+
   @ApiPropertyOptional({ description: 'Notes' })
   @IsOptional()
   @IsString()
