@@ -40,6 +40,14 @@ All accounting flows (invoices, payments, costs, revenue, worker payments) now r
 
 When applying a country chart template, the system now: (1) sets `country_code` and `accounting_standard` on the organization, (2) inserts all chart accounts, (3) calls `initializeDefaultMappings` to create org-level account_mappings with resolved account_ids. Previously, accounting context was never set on the org and account_mappings_created was always 0.
 
+### Chat connects to AgromindIA via delegation, not duplication — 2026-03-26 (Request: chat-polish)
+
+AgromindiaContextService calls existing services (AiDiagnosticsService, AiRecommendationsService, AnnualPlanService, AiReferencesService, CalibrationService) in parallel to fetch computed intelligence per parcel. It does NOT query DB tables directly for AI data. This ensures the chat always reflects the same intelligence shown on the /parcels/:id/ai pages. The service is wired into ContextBuilder via ChatService.onModuleInit setter pattern to avoid constructor circular dependencies.
+
+### Remove all chat caching (response + module) — 2026-03-26 (Request: chat-polish)
+
+Both the response cache (Map<query, AI response>) and module cache (Map<orgId:module, DB data>) were removed from ChatService. Response cache bypassed AI quota/metering — cached responses weren't counted. Module cache served stale data with no invalidation, didn't work across multiple instances, and the underlying Supabase queries with `.limit(3)` are fast enough. With AgromindIA integration coming, stale diagnostics/recommendations would produce wrong advice. Every chat message now does fresh DB queries and a real AI call.
+
 ### Pre-existing seed data bugs fixed for cash/tax accounts — 2026-03-26 (Request: generic-accounting-mappings)
 
 Multiple countries had cash mapping account codes that didn't match their actual chart of accounts: MA (514→5141, 511→5161), TN (53→52/511), GB (1200→232, 1220→231), DE (1100→1000). Tunisia and Germany also lacked separate input VAT accounts in their charts — used closest equivalents with notes to configure manually.

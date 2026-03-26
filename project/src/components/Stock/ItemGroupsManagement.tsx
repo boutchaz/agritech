@@ -118,10 +118,11 @@ interface TreeNodeRowProps {
   onToggle: (id: string) => void;
   onEdit: (group: ItemGroup) => void;
   onDelete: (group: ItemGroup) => void;
+  onAddChild: (parentId: string) => void;
   t: (key: string, defaultValue?: string) => string;
 }
 
-function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, t }: TreeNodeRowProps) {
+function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, onAddChild, t }: TreeNodeRowProps) {
   const isExpanded = expanded.has(node.id);
   const hasChildren = node.children.length > 0;
 
@@ -171,6 +172,14 @@ function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, t }: T
         </TableCell>
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onAddChild(node.id)}
+              title={t('items.itemGroup.addSubGroup')}
+            >
+              <Plus className="h-4 w-4 text-primary" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>
               <Pencil className="h-4 w-4" />
             </Button>
@@ -190,6 +199,7 @@ function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, t }: T
             onToggle={onToggle}
             onEdit={onEdit}
             onDelete={onDelete}
+            onAddChild={onAddChild}
             t={t}
           />
         ))}
@@ -210,6 +220,7 @@ export default function ItemGroupsManagement() {
 
   const [showDialog, setShowDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ItemGroup | null>(null);
+  const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -306,19 +317,27 @@ export default function ItemGroupsManagement() {
         name: '',
         code: '',
         description: '',
-        parent_group_id: '',
+        parent_group_id: defaultParentId || '',
         is_active: true,
       });
     }
-  }, [editingGroup, reset]);
+  }, [editingGroup, defaultParentId, reset]);
 
   const handleOpenCreate = () => {
     setEditingGroup(null);
+    setDefaultParentId(null);
     setShowDialog(true);
   };
 
+  const handleAddChild = useCallback((parentId: string) => {
+    setEditingGroup(null);
+    setDefaultParentId(parentId);
+    setShowDialog(true);
+  }, []);
+
   const handleOpenEdit = (group: ItemGroup) => {
     setEditingGroup(group);
+    setDefaultParentId(null);
     setShowDialog(true);
   };
 
@@ -604,6 +623,7 @@ export default function ItemGroupsManagement() {
                           onToggle={handleToggle}
                           onEdit={handleOpenEdit}
                           onDelete={setDeleteConfirmGroup}
+                          onAddChild={handleAddChild}
                           t={t}
                         />
                       ))}
@@ -621,12 +641,20 @@ export default function ItemGroupsManagement() {
          <DialogContent>
            <DialogHeader>
              <DialogTitle>
-               {editingGroup ? t('items.itemGroup.edit') : t('items.itemGroup.createNew')}
+               {editingGroup
+                 ? t('items.itemGroup.edit')
+                 : defaultParentId
+                   ? t('items.itemGroup.addSubGroup')
+                   : t('items.itemGroup.createNew')}
              </DialogTitle>
              <DialogDescription>
                {editingGroup
                  ? t('items.itemGroup.editDescription')
-                 : t('items.itemGroup.description')}
+                 : defaultParentId
+                   ? t('items.itemGroup.addSubGroupDescription', {
+                       parent: groupNameById.get(defaultParentId) || '',
+                     })
+                   : t('items.itemGroup.description')}
              </DialogDescription>
            </DialogHeader>
            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

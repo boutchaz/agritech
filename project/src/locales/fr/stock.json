@@ -284,7 +284,9 @@
       "childGroups": "Sous-groupes",
       "noChildGroups": "Aucun sous-groupe",
       "expandAll": "Tout déplier",
-      "collapseAll": "Tout replier"
+      "collapseAll": "Tout replier",
+      "addSubGroup": "Ajouter un sous-groupe",
+      "addSubGroupDescription": "Créer un nouveau sous-groupe sous \"{{parent}}\""
     },
     "unit": {
       "manage": "Gérer les Unités",

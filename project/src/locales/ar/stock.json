@@ -284,7 +284,9 @@
       "childGroups": "مجموعات فرعية",
       "noChildGroups": "لا توجد مجموعات فرعية",
       "expandAll": "توسيع الكل",
-      "collapseAll": "طي الكل"
+      "collapseAll": "طي الكل",
+      "addSubGroup": "إضافة مجموعة فرعية",
+      "addSubGroupDescription": "إنشاء مجموعة فرعية جديدة تحت \"{{parent}}\""
     },
     "unit": {
       "manage": "إدارة الوحدات",
