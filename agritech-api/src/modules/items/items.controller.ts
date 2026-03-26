@@ -95,6 +95,15 @@ export class ItemsController {
     return this.itemsService.updateItemGroup(id, organizationId, userId, updateItemGroupDto);
   }
 
+  @Post('groups/seed-predefined')
+  @ApiOperation({ summary: 'Seed predefined item groups and subcategories (idempotent)' })
+  @ApiResponse({ status: 201, description: 'Seeding completed' })
+  async seedPredefinedItemGroups(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.itemsService.seedPredefinedItemGroups(organizationId, userId);
+  }
+
   @Delete('groups/:id')
   @ApiOperation({ summary: 'Delete an item group' })
   @ApiParam({ name: 'id', description: 'Item group ID' })

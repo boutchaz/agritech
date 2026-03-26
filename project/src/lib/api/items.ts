@@ -84,6 +84,18 @@ export const itemsApi = {
     return apiClient.delete<{ message: string }>(`${BASE_URL}/groups/${id}`, {}, organizationId);
   },
 
+  /**
+   * Seed predefined item groups and subcategories (idempotent)
+   */
+  async seedPredefinedGroups(organizationId?: string): Promise<{ created: number; skipped: number }> {
+    return apiClient.post<{ created: number; skipped: number }>(
+      `${BASE_URL}/groups/seed-predefined`,
+      {},
+      {},
+      organizationId
+    );
+  },
+
   // =====================================================
   // CUSTOM ITEM METHODS
   // =====================================================

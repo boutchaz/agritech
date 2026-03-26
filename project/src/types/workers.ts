@@ -339,7 +339,7 @@ export const getCompensationDisplay = (worker: Worker): string => {
     case "daily_worker":
       return worker.daily_rate
         ? `${worker.daily_rate.toFixed(2)} DH/jour`
-        : "N/A";
+        : "Selon la tâche";
     case "metayage": {
       const typeLabel = worker.metayage_type
         ? getMetayageTypeLabel(worker.metayage_type)

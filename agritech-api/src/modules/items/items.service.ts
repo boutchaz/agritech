@@ -153,6 +153,185 @@ export class ItemsService {
     return { message: 'Item group deleted successfully' };
   }
 
+  async seedPredefinedItemGroups(organizationId: string, userId: string): Promise<{ created: number; skipped: number }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const PREDEFINED_GROUPS: { name: string; subcategories: string[] }[] = [
+      {
+        name: 'Intrants agricoles',
+        subcategories: [
+          'Engrais solides',
+          'Engrais liquides',
+          'Amendements organiques',
+          'Amendements minéraux',
+          'Biostimulants',
+          'Correcteurs de carences',
+          'Acides humiques / fulviques',
+        ],
+      },
+      {
+        name: 'Produits phytosanitaires',
+        subcategories: [
+          'Insecticides',
+          'Fongicides',
+          'Herbicides',
+          'Acaricides',
+          'Nématicides',
+          'Produits biologiques (biocontrôle)',
+          'Adjuvants / mouillants',
+        ],
+      },
+      {
+        name: 'Irrigation',
+        subcategories: [
+          'Tuyaux et gaines',
+          'Goutteurs',
+          'Vannes',
+          'Filtres',
+          'Pompes',
+          'Programmateurs',
+          'Accessoires irrigation',
+        ],
+      },
+      {
+        name: 'Matériel agricole',
+        subcategories: [
+          'Outils manuels',
+          'Matériel motorisé',
+          'Pulvérisateurs',
+          'Équipements de fertilisation',
+          'Pièces de rechange',
+        ],
+      },
+      {
+        name: 'Plantation & pépinière',
+        subcategories: [
+          'Plants / arbres',
+          'Porte-greffes',
+          'Tuteurs',
+          'Protections plants',
+          'Substrats',
+        ],
+      },
+      {
+        name: 'Récolte',
+        subcategories: [
+          'Filets de récolte',
+          'Caisses / palox',
+          'Peignes électriques',
+          'Bâches',
+          'Sacs',
+        ],
+      },
+      {
+        name: 'Conditionnement & stockage',
+        subcategories: [
+          'Emballages',
+          'Bidons / cuves',
+          'Étiquettes',
+          'Produits de conservation',
+        ],
+      },
+      {
+        name: 'Carburants & énergie',
+        subcategories: ['Gasoil', 'Essence', 'Lubrifiants', 'Batteries'],
+      },
+      {
+        name: 'Entretien & maintenance',
+        subcategories: [
+          'Produits de nettoyage',
+          "Pièces d'usure",
+          'Consommables atelier',
+        ],
+      },
+      {
+        name: 'Équipements de protection (EPI)',
+        subcategories: ['Gants', 'Masques', 'Lunettes', 'Combinaisons', 'Bottes'],
+      },
+      {
+        name: 'Divers / consommables',
+        subcategories: [
+          'Fournitures diverses',
+          'Petits équipements',
+          'Articles non classés',
+        ],
+      },
+    ];
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const group of PREDEFINED_GROUPS) {
+      // Check if parent group already exists
+      const { data: existing } = await supabase
+        .from('item_groups')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('name', group.name)
+        .is('parent_group_id', null)
+        .maybeSingle();
+
+      let parentId: string;
+
+      if (existing) {
+        parentId = existing.id;
+        skipped++;
+      } else {
+        const { data: created_group, error } = await supabase
+          .from('item_groups')
+          .insert({
+            organization_id: organizationId,
+            name: group.name,
+            is_active: true,
+            created_by: userId,
+            updated_by: userId,
+          })
+          .select('id')
+          .single();
+
+        if (error) {
+          this.logger.error(`Failed to create group "${group.name}": ${error.message}`);
+          continue;
+        }
+
+        parentId = created_group.id;
+        created++;
+      }
+
+      // Create subcategories
+      for (const subName of group.subcategories) {
+        const { data: existingSub } = await supabase
+          .from('item_groups')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('name', subName)
+          .eq('parent_group_id', parentId)
+          .maybeSingle();
+
+        if (existingSub) {
+          skipped++;
+        } else {
+          const { error: subError } = await supabase.from('item_groups').insert({
+            organization_id: organizationId,
+            name: subName,
+            parent_group_id: parentId,
+            is_active: true,
+            created_by: userId,
+            updated_by: userId,
+          });
+
+          if (subError) {
+            this.logger.error(`Failed to create subcategory "${subName}": ${subError.message}`);
+          } else {
+            created++;
+          }
+        }
+      }
+    }
+
+    return { created, skipped };
+  }
+
   // =====================================================
   // ITEMS
   // =====================================================
@@ -532,7 +711,7 @@ export class ItemsService {
       }
     }
 
-    let query = supabase
+    let stockQuery = supabase
       .from('stock_valuation')
       .select(`
         item_id,
@@ -557,14 +736,14 @@ export class ItemsService {
       .gt('remaining_quantity', 0);
 
     if (warehouseIds) {
-      query = query.in('warehouse_id', warehouseIds);
+      stockQuery = stockQuery.in('warehouse_id', warehouseIds);
     }
 
     if (filters?.item_id) {
-      query = query.eq('item_id', filters.item_id);
+      stockQuery = stockQuery.eq('item_id', filters.item_id);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await stockQuery;
 
     if (error) {
       this.logger.error(`Failed to fetch farm stock levels: ${error.message}`);
@@ -626,6 +805,46 @@ export class ItemsService {
         itemData.is_low_stock = true;
       }
     });
+
+    // Also fetch items with a minimum_stock_level that have no stock movements at all
+    // (they won't appear in stock_valuation, so they'd be silently missing from alerts)
+    let itemsQuery = supabase
+      .from('items')
+      .select('id, item_code, item_name, default_unit, minimum_stock_level')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .not('minimum_stock_level', 'is', null);
+
+    if (filters?.item_id) {
+      itemsQuery = itemsQuery.eq('id', filters.item_id);
+    }
+
+    const { data: itemsWithThreshold, error: itemsError } = await itemsQuery;
+
+    if (itemsError) {
+      this.logger.error(`Failed to fetch items with thresholds: ${itemsError.message}`);
+      // Non-fatal: continue with existing stock data
+    } else {
+      // Add zero-stock entries for items not already in the map
+      (itemsWithThreshold || []).forEach((item: any) => {
+        if (!itemMap.has(item.id)) {
+          const minStock = item.minimum_stock_level
+            ? parseFloat(item.minimum_stock_level)
+            : undefined;
+          itemMap.set(item.id, {
+            item_id: item.id,
+            item_code: item.item_code,
+            item_name: item.item_name,
+            default_unit: item.default_unit,
+            minimum_stock_level: minStock,
+            total_quantity: 0,
+            total_value: 0,
+            is_low_stock: minStock !== undefined && 0 <= minStock,
+            by_farm: [],
+          });
+        }
+      });
+    }
 
     let result = Array.from(itemMap.values());
 

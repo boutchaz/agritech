@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useItemGroups,
   useCreateItemGroup,
@@ -11,9 +12,17 @@ import {
 } from '@/hooks/useItems';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormErrors } from '@/hooks/useFormErrors';
+import { itemsApi } from '@/lib/api/items';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
 import {
   Dialog,
   DialogContent,
@@ -40,7 +49,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Loader2, FolderOpen, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, FolderOpen, Package, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ItemGroup } from '@/types/items';
 
@@ -48,6 +57,7 @@ const itemGroupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   code: z.string().optional(),
   description: z.string().optional(),
+  parent_group_id: z.string().uuid().optional().or(z.literal('')).transform((v) => v || undefined),
   is_active: z.boolean(),
 });
 
@@ -56,6 +66,7 @@ type ItemGroupFormData = z.infer<typeof itemGroupSchema>;
 export default function ItemGroupsManagement() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
   const { data: itemGroups = [], isLoading } = useItemGroups({ is_active: true });
   const createItemGroup = useCreateItemGroup();
   const updateItemGroup = useUpdateItemGroup();
@@ -65,11 +76,36 @@ export default function ItemGroupsManagement() {
   const [showDialog, setShowDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ItemGroup | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 15;
+
+  // Parent groups only (no parent themselves)
+  const parentGroups = itemGroups.filter((g) => !g.parent_group_id);
+
+  const seedMutation = useMutation({
+    mutationFn: () => itemsApi.seedPredefinedGroups(currentOrganization?.id),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['item-groups'] });
+      setCurrentPage(1);
+      toast.success(
+        t('items.itemGroup.seedSuccess', {
+          created: result.created,
+          skipped: result.skipped,
+          defaultValue: `${result.created} groupes créés, ${result.skipped} déjà existants`,
+        })
+      );
+    },
+    onError: () => {
+      toast.error(t('items.itemGroup.seedFailed', 'Échec de l\'importation de la liste'));
+    },
+  });
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ItemGroupFormData>({
@@ -78,9 +114,12 @@ export default function ItemGroupsManagement() {
       name: '',
       code: '',
       description: '',
+      parent_group_id: '',
       is_active: true,
     },
   });
+
+  const selectedParentId = watch('parent_group_id');
 
   useEffect(() => {
     if (editingGroup) {
@@ -88,6 +127,7 @@ export default function ItemGroupsManagement() {
         name: editingGroup.name || '',
         code: editingGroup.code || '',
         description: editingGroup.description || '',
+        parent_group_id: editingGroup.parent_group_id || '',
         is_active: editingGroup.is_active ?? true,
       });
     } else {
@@ -95,6 +135,7 @@ export default function ItemGroupsManagement() {
         name: '',
         code: '',
         description: '',
+        parent_group_id: '',
         is_active: true,
       });
     }
@@ -121,6 +162,7 @@ export default function ItemGroupsManagement() {
         name: formData.name.trim(),
         code: formData.code?.trim() || undefined,
         description: formData.description?.trim() || undefined,
+        parent_group_id: formData.parent_group_id || undefined,
         is_active: formData.is_active,
       };
 
@@ -157,7 +199,13 @@ export default function ItemGroupsManagement() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error(t('items.itemGroup.deleteFailed', { error: errorMessage }));
     }
-  }
+  };
+
+  // Build lookup map for parent names
+  const groupNameById = new Map(itemGroups.map((g) => [g.id, g.name]));
+
+  const totalPages = Math.max(1, Math.ceil(itemGroups.length / PAGE_SIZE));
+  const paginatedGroups = itemGroups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   if (isLoading) {
     return (
@@ -179,10 +227,24 @@ export default function ItemGroupsManagement() {
               </CardTitle>
               <CardDescription>{t('items.itemGroup.manageDescription')}</CardDescription>
             </div>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('items.itemGroup.createNew')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+              >
+                {seedMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {t('items.itemGroup.importPredefined', 'Importer liste prédéfinie')}
+              </Button>
+              <Button onClick={handleOpenCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('items.itemGroup.createNew')}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -193,10 +255,20 @@ export default function ItemGroupsManagement() {
               <p className="text-sm text-muted-foreground mb-4">
                 {t('items.itemGroup.noGroupsDescription')}
               </p>
-              <Button onClick={handleOpenCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('items.itemGroup.createFirst')}
-              </Button>
+              <div className="flex justify-center gap-3">
+                <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+                  {seedMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  {t('items.itemGroup.importPredefined', 'Importer liste prédéfinie')}
+                </Button>
+                <Button onClick={handleOpenCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('items.itemGroup.createFirst')}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -205,16 +277,28 @@ export default function ItemGroupsManagement() {
                   <TableRow>
                     <TableHead>{t('items.itemGroup.code')}</TableHead>
                     <TableHead>{t('items.itemGroup.name')}</TableHead>
+                    <TableHead>{t('items.itemGroup.parentGroup', 'Groupe parent')}</TableHead>
                     <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
                     <TableHead className="text-center">{t('common.statusColumn')}</TableHead>
                     <TableHead className="text-right">{t('common.actionsColumn')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {itemGroups.map((group) => (
+                  {paginatedGroups.map((group) => (
                     <TableRow key={group.id}>
                       <TableCell className="font-mono text-sm">{group.code || '-'}</TableCell>
-                      <TableCell className="font-medium">{group.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {group.parent_group_id && (
+                          <span className="text-muted-foreground mr-1">↳</span>
+                        )}
+                        {group.name}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {group.parent_group_id
+                          ? groupNameById.get(group.parent_group_id) || '-'
+                          : <span className="text-xs text-blue-600 font-medium">Groupe principal</span>
+                        }
+                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {group.description || '-'}
                       </TableCell>
@@ -253,6 +337,32 @@ export default function ItemGroupsManagement() {
               </Table>
             </div>
           )}
+          {itemGroups.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-4 px-1">
+              <p className="text-sm text-muted-foreground">
+                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, itemGroups.length)} / {itemGroups.length}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm px-2">{currentPage} / {totalPages}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -280,6 +390,36 @@ export default function ItemGroupsManagement() {
                />
                {errors.name && (
                  <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+               )}
+             </div>
+             <div>
+               <Label htmlFor="parent_group_id">
+                 {t('items.itemGroup.parentGroup', 'Groupe parent')}
+               </Label>
+               <Select
+                 value={selectedParentId || ''}
+                 onValueChange={(value) =>
+                   setValue('parent_group_id', value === '_none' ? '' : value)
+                 }
+               >
+                 <SelectTrigger id="parent_group_id" className="mt-1">
+                   <SelectValue
+                     placeholder={t('items.itemGroup.noParent', 'Aucun (groupe principal)')}
+                   />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="_none">
+                     {t('items.itemGroup.noParent', 'Aucun (groupe principal)')}
+                   </SelectItem>
+                   {parentGroups.map((g) => (
+                     <SelectItem key={g.id} value={g.id}>
+                       {g.name}
+                     </SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
+               {errors.parent_group_id && (
+                 <p className="text-red-600 text-sm mt-1">{errors.parent_group_id.message}</p>
                )}
              </div>
              <div>

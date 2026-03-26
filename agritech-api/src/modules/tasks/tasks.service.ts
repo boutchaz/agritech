@@ -2375,6 +2375,7 @@ export class TasksService {
             organizationId,
             {
               product_id: item.product_id,
+              variant_id: item.variant_id || undefined,
               application_date: completedDate,
               quantity_used: item.quantity,
               area_treated: item.area_treated || task.parcel_area || 0,
