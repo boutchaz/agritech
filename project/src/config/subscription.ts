@@ -39,6 +39,6 @@ export const SUBSCRIPTION_CONFIG = {
   EXEMPT_PATHS: [
     '/settings/subscription',
     '/settings/organization',
-    '/settings/profile',
+    '/settings/account',
   ],
 };

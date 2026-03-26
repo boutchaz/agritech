@@ -15,7 +15,7 @@ interface RoleProtectedRouteProps {
 export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   children,
   allowedRoles,
-  redirectTo = '/settings/profile'
+  redirectTo = '/settings/account'
 }) => {
   const { userRole, loading, currentOrganization, refreshUserData } = useAuth();
 

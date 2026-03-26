@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
 import SubscriptionRequired from '../components/SubscriptionRequired'
@@ -15,6 +15,7 @@ import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
+import { usersApi } from '../lib/api/users'
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -39,16 +40,46 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const { currentOrganization } = useAuth()
+  const { currentOrganization, profile } = useAuth()
   const { data: subscription, isLoading: subscriptionLoading, isFetched: subscriptionFetched } = useSubscription()
   const { i18n } = useTranslation()
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Initialize from localStorage for instant render, DB value syncs in useEffect
+    const stored = localStorage.getItem('darkMode')
+    return stored === 'true'
+  })
   const [activeModule, setActiveModule] = useState('dashboard')
   const isRTL = isRTLLocale(i18n.language)
   const { style: sidebarStyle } = useSidebarMargin(isRTL)
 
   // Track user activity for live dashboard concurrent users
   useActivityTracking()
+
+  // Sync dark mode from DB profile on load
+  useEffect(() => {
+    if (profile?.dark_mode !== undefined && profile?.dark_mode !== null) {
+      setIsDarkMode(profile.dark_mode)
+      localStorage.setItem('darkMode', String(profile.dark_mode))
+    }
+  }, [profile?.dark_mode])
+
+  // Sync language from DB profile on load (overrides localStorage if DB has a value)
+  useEffect(() => {
+    if (profile?.language && profile.language !== i18n.language) {
+      i18n.changeLanguage(profile.language)
+    }
+  }, [profile?.language])
+
+  // Toggle dark mode and persist to DB + localStorage
+  const handleThemeToggle = useCallback(() => {
+    const newValue = !isDarkMode
+    setIsDarkMode(newValue)
+    localStorage.setItem('darkMode', String(newValue))
+    // Fire-and-forget DB persistence
+    usersApi.updateMe({ dark_mode: newValue }).catch((err) => {
+      console.warn('Failed to persist dark mode to DB:', err)
+    })
+  }, [isDarkMode])
 
   // Mock modules data - this should come from your state management
   const modules = [
@@ -95,7 +126,7 @@ function AuthenticatedLayout() {
           activeModule={activeModule}
           onModuleChange={setActiveModule}
           isDarkMode={isDarkMode}
-          onThemeToggle={() => setIsDarkMode(!isDarkMode)}
+          onThemeToggle={handleThemeToggle}
         />
         {/* Main content with margin for fixed sidebar (desktop only) */}
         <div

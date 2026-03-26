@@ -13,6 +13,11 @@ export interface UserProfile {
   onboarding_completed?: boolean;
   timezone: string;
   language: string;
+  dark_mode?: boolean;
+  experience_level?: string;
+  dismissed_hints?: string[];
+  feature_usage?: Record<string, unknown>;
+  notification_preferences?: Record<string, boolean>;
   created_at?: string;
   updated_at?: string;
 }
@@ -26,9 +31,11 @@ export interface UpdateUserProfileInput {
   avatar_url?: string | null;
   timezone?: string;
   language?: string;
+  dark_mode?: boolean;
   experience_level?: string;
   dismissed_hints?: string[];
   feature_usage?: Record<string, unknown>;
+  notification_preferences?: Record<string, boolean>;
   onboarding_completed?: boolean;
   password_set?: boolean;
 }

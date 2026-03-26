@@ -139,8 +139,13 @@ const AccountSettings: React.FC = () => {
         if (data) {
           setProfile(data);
           // Initialize notifications from profile if available
-          if ((data as any).notifications) {
-            setNotifications((data as any).notifications);
+          if (data.notification_preferences) {
+            setNotifications({
+              email: data.notification_preferences.email ?? true,
+              push: data.notification_preferences.push ?? true,
+              alerts: data.notification_preferences.alerts ?? true,
+              reports: data.notification_preferences.reports ?? false,
+            });
           }
         } else {
           setProfile({
@@ -162,7 +167,7 @@ const AccountSettings: React.FC = () => {
    
   }, [user?.id, i18n.language]);
 
-  // Handle language change immediately
+  // Handle language change — immediately apply + persist to DB
   const handleLanguageChange = async (newLanguage: string) => {
     if (!profile) return;
 
@@ -178,6 +183,13 @@ const AccountSettings: React.FC = () => {
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = newLanguage;
+    }
+
+    // Persist to DB immediately (don't wait for Save button)
+    try {
+      await usersApi.updateMe({ language: newLanguage });
+    } catch (err) {
+      console.warn('Failed to persist language to DB:', err);
     }
   };
 
@@ -197,6 +209,7 @@ const AccountSettings: React.FC = () => {
         phone: profile.phone,
         timezone: profile.timezone,
         language: profile.language,
+        notification_preferences: notifications,
       });
 
       setProfile(updatedProfile);

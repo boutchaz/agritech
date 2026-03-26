@@ -23764,13 +23764,18 @@ export type Database = {
           avatar_url: string | null
           completed_tours: string[] | null
           created_at: string | null
+          dark_mode: boolean | null
+          dismissed_hints: string[] | null
           dismissed_tours: string[] | null
           email: string | null
+          experience_level: string | null
+          feature_usage: Json | null
           first_name: string | null
           full_name: string | null
           id: string
           language: string | null
           last_name: string | null
+          notification_preferences: Json | null
           onboarding_completed: boolean | null
           onboarding_completed_at: string | null
           onboarding_current_step: string | null
@@ -23784,13 +23789,18 @@ export type Database = {
           avatar_url?: string | null
           completed_tours?: string[] | null
           created_at?: string | null
+          dark_mode?: boolean | null
+          dismissed_hints?: string[] | null
           dismissed_tours?: string[] | null
           email?: string | null
+          experience_level?: string | null
+          feature_usage?: Json | null
           first_name?: string | null
           full_name?: string | null
           id: string
           language?: string | null
           last_name?: string | null
+          notification_preferences?: Json | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_current_step?: string | null
@@ -23804,13 +23814,18 @@ export type Database = {
           avatar_url?: string | null
           completed_tours?: string[] | null
           created_at?: string | null
+          dark_mode?: boolean | null
+          dismissed_hints?: string[] | null
           dismissed_tours?: string[] | null
           email?: string | null
+          experience_level?: string | null
+          feature_usage?: Json | null
           first_name?: string | null
           full_name?: string | null
           id?: string
           language?: string | null
           last_name?: string | null
+          notification_preferences?: Json | null
           onboarding_completed?: boolean | null
           onboarding_completed_at?: string | null
           onboarding_current_step?: string | null

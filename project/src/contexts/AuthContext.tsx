@@ -32,6 +32,11 @@ export interface AuthUserProfile {
   phone?: string | null;
   timezone: string | null;
   language: string | null;
+  dark_mode?: boolean | null;
+  experience_level?: string | null;
+  dismissed_hints?: string[] | null;
+  feature_usage?: Record<string, unknown> | null;
+  notification_preferences?: Record<string, boolean> | null;
   password_set?: boolean | null;
   onboarding_completed?: boolean | null;
   created_at?: string | null;

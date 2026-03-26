@@ -149,7 +149,7 @@
       "capacityPlaceholder": "e.g., 1000",
       "capacityUnit": "Capacity Unit",
       "units": {
-        "m3": "Cubic meters (m\u00b3)",
+        "m3": "Cubic meters (m³)",
         "kg": "Kilograms (kg)",
         "ton": "Tons (t)",
         "pallets": "Pallets"
@@ -273,7 +273,23 @@
       "updated": "Item group updated successfully",
       "deleted": "Item group deleted successfully",
       "deleteTitle": "Delete Item Group",
-      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone."
+      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone.",
+      "parentGroup": "Parent Group",
+      "noParent": "None (root group)",
+      "mainGroup": "Root group",
+      "seedSuccess": "{{created}} groups created, {{skipped}} already existing",
+      "seedFailed": "Failed to import predefined list",
+      "importPredefined": "Import predefined list",
+      "noOrganization": "No organization selected",
+      "createFailed": "Failed to create item group",
+      "updateFailed": "Failed to update item group",
+      "deleteFailed": "Failed to delete item group: {{error}}",
+      "treeView": "Tree View",
+      "tableView": "Table View",
+      "childGroups": "Sub-groups",
+      "noChildGroups": "No sub-groups",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all"
     },
     "unit": {
       "manage": "Manage Units",
@@ -568,8 +584,8 @@
       "maturityPlaceholder": "Ripe, semi-ripe, green...",
       "humidityLabel": "Humidity (%)",
       "moistureLabel": "Moisture content (%)",
-      "temperatureLabel": "Temperature (\u00b0C)",
-      "temperaturePlaceholder": "Temperature in \u00b0C",
+      "temperatureLabel": "Temperature (°C)",
+      "temperaturePlaceholder": "Temperature in °C",
       "qualityNotesLabel": "Quality notes",
       "qualityNotesPlaceholder": "Quality observations, defects found, remarks...",
       "cancel": "Cancel",
@@ -718,8 +734,8 @@
       "capacity": "Capacity",
       "capacityUnit": "Capacity unit",
       "capacityUnits": {
-        "m3": "Cubic meters (m\u00b3)",
-        "m2": "Square meters (m\u00b2)",
+        "m3": "Cubic meters (m³)",
+        "m2": "Square meters (m²)",
         "kg": "Kilograms",
         "ton": "Tonnes"
       },

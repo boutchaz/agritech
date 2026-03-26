@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEmail, IsIn, Matches, IsArray, IsBoolean } from 'class-validator';
+import { IsOptional, IsString, IsEmail, IsIn, Matches, IsArray, IsBoolean, IsObject } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserProfileDto {
@@ -46,6 +46,42 @@ export class UpdateUserProfileDto {
   @IsOptional()
   @IsIn(['fr', 'en', 'ar', 'es'])
   language?: string;
+
+  @ApiPropertyOptional({ description: 'Enable dark mode', example: false })
+  @IsOptional()
+  @IsBoolean()
+  dark_mode?: boolean;
+
+  @ApiPropertyOptional({ description: 'User experience level', enum: ['basic', 'intermediate', 'advanced'] })
+  @IsOptional()
+  @IsIn(['basic', 'intermediate', 'advanced'])
+  experience_level?: string;
+
+  @ApiPropertyOptional({
+    description: 'Array of dismissed hint IDs',
+    example: ['welcome-hint', 'task-hint'],
+    type: [String]
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  dismissed_hints?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Feature usage tracking object',
+    example: { dashboard: { count: 5, lastUsed: '2026-03-26T00:00:00Z', firstUsed: '2026-03-20T00:00:00Z' } }
+  })
+  @IsOptional()
+  @IsObject()
+  feature_usage?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'Notification preferences',
+    example: { email: true, push: true, alerts: true, reports: false }
+  })
+  @IsOptional()
+  @IsObject()
+  notification_preferences?: Record<string, boolean>;
 
   @ApiPropertyOptional({
     description: 'Array of completed tour IDs',

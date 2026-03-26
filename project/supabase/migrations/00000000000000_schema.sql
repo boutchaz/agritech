@@ -293,6 +293,11 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   completed_tours TEXT[] DEFAULT '{}',
   dismissed_tours TEXT[] DEFAULT '{}',
   password_set BOOLEAN DEFAULT false,
+  dark_mode BOOLEAN DEFAULT false,
+  experience_level VARCHAR(20) DEFAULT 'basic',
+  dismissed_hints TEXT[] DEFAULT '{}',
+  feature_usage JSONB DEFAULT '{}',
+  notification_preferences JSONB DEFAULT '{"email": true, "push": true, "alerts": true, "reports": false}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

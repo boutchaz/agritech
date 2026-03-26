@@ -130,7 +130,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
   const handleUserProfile = () => {
     setIsOpen(false);
     setShowFarms(false);
-    navigate({ to: '/settings/profile' });
+    navigate({ to: '/settings/account' });
   };
 
   const handleTeamManagement = () => {

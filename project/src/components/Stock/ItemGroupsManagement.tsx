@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,8 +49,27 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Loader2, FolderOpen, Package, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  FolderOpen,
+  Package,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronRightIcon,
+  List,
+  // GitBranchPlus,
+  FolderTree,
+  ChevronsDownUp,
+  ChevronsUpDown,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { ItemGroup } from '@/types/items';
 
 const itemGroupSchema = z.object({
@@ -63,6 +82,122 @@ const itemGroupSchema = z.object({
 
 type ItemGroupFormData = z.infer<typeof itemGroupSchema>;
 
+type ViewMode = 'table' | 'tree';
+
+interface TreeNode extends ItemGroup {
+  children: TreeNode[];
+}
+
+function buildTree(groups: ItemGroup[]): TreeNode[] {
+  const map = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
+
+  // Create tree nodes
+  for (const group of groups) {
+    map.set(group.id, { ...group, children: [] });
+  }
+
+  // Build parent-child relationships
+  for (const group of groups) {
+    const node = map.get(group.id)!;
+    if (group.parent_group_id && map.has(group.parent_group_id)) {
+      map.get(group.parent_group_id)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+// ─── Tree Node Component ─────────────────────────────────────────────────
+interface TreeNodeRowProps {
+  node: TreeNode;
+  depth: number;
+  expanded: Set<string>;
+  onToggle: (id: string) => void;
+  onEdit: (group: ItemGroup) => void;
+  onDelete: (group: ItemGroup) => void;
+  t: (key: string, defaultValue?: string) => string;
+}
+
+function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, t }: TreeNodeRowProps) {
+  const isExpanded = expanded.has(node.id);
+  const hasChildren = node.children.length > 0;
+
+  return (
+    <>
+      <TableRow className={cn(depth > 0 && 'bg-muted/30')}>
+        <TableCell className="font-mono text-sm">{node.code || '-'}</TableCell>
+        <TableCell>
+          <div className="flex items-center" style={{ paddingInlineStart: `${depth * 1.5}rem` }}>
+            {hasChildren ? (
+              <button
+                onClick={() => onToggle(node.id)}
+                className="mr-1.5 p-0.5 rounded hover:bg-muted transition-colors"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            ) : (
+              <span className="mr-1.5 w-5" />
+            )}
+            <FolderOpen className={cn('h-4 w-4 mr-2 shrink-0', depth === 0 ? 'text-primary' : 'text-muted-foreground')} />
+            <span className="font-medium">{node.name}</span>
+            {hasChildren && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {node.children.length}
+              </Badge>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+          {node.description || '-'}
+        </TableCell>
+        <TableCell className="text-center">
+          <span
+            className={cn(
+              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+              node.is_active
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+            )}
+          >
+            {node.is_active ? t('common:active') : t('common:inactive')}
+          </span>
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="sm" onClick={() => onEdit(node)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onDelete(node)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+      {isExpanded &&
+        node.children.map((child) => (
+          <TreeNodeRow
+            key={child.id}
+            node={child}
+            depth={depth + 1}
+            expanded={expanded}
+            onToggle={onToggle}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            t={t}
+          />
+        ))}
+    </>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────
 export default function ItemGroupsManagement() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
@@ -77,10 +212,46 @@ export default function ItemGroupsManagement() {
   const [editingGroup, setEditingGroup] = useState<ItemGroup | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 15;
 
   // Parent groups only (no parent themselves)
   const parentGroups = itemGroups.filter((g) => !g.parent_group_id);
+
+  // Build tree for tree view
+  const tree = useMemo(() => buildTree(itemGroups), [itemGroups]);
+
+  // Collect all IDs that have children for expand/collapse all
+  const allParentIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const group of itemGroups) {
+      if (group.parent_group_id) {
+        ids.add(group.parent_group_id);
+      }
+    }
+    return ids;
+  }, [itemGroups]);
+
+  const handleToggle = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleExpandAll = useCallback(() => {
+    setExpanded(new Set(allParentIds));
+  }, [allParentIds]);
+
+  const handleCollapseAll = useCallback(() => {
+    setExpanded(new Set());
+  }, []);
 
   const seedMutation = useMutation({
     mutationFn: () => itemsApi.seedPredefinedGroups(currentOrganization?.id),
@@ -91,12 +262,12 @@ export default function ItemGroupsManagement() {
         t('items.itemGroup.seedSuccess', {
           created: result.created,
           skipped: result.skipped,
-          defaultValue: `${result.created} groupes créés, ${result.skipped} déjà existants`,
+          defaultValue: `${result.created} groups created, ${result.skipped} already existing`,
         })
       );
     },
     onError: () => {
-      toast.error(t('items.itemGroup.seedFailed', 'Échec de l\'importation de la liste'));
+      toast.error(t('items.itemGroup.seedFailed'));
     },
   });
 
@@ -238,7 +409,7 @@ export default function ItemGroupsManagement() {
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                {t('items.itemGroup.importPredefined', 'Importer liste prédéfinie')}
+                {t('items.itemGroup.importPredefined')}
               </Button>
               <Button onClick={handleOpenCreate}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -262,7 +433,7 @@ export default function ItemGroupsManagement() {
                   ) : (
                     <Download className="h-4 w-4 mr-2" />
                   )}
-                  {t('items.itemGroup.importPredefined', 'Importer liste prédéfinie')}
+                  {t('items.itemGroup.importPredefined')}
                 </Button>
                 <Button onClick={handleOpenCreate}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -271,97 +442,176 @@ export default function ItemGroupsManagement() {
               </div>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('items.itemGroup.code')}</TableHead>
-                    <TableHead>{t('items.itemGroup.name')}</TableHead>
-                    <TableHead>{t('items.itemGroup.parentGroup', 'Groupe parent')}</TableHead>
-                    <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
-                    <TableHead className="text-center">{t('common.statusColumn')}</TableHead>
-                    <TableHead className="text-right">{t('common.actionsColumn')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedGroups.map((group) => (
-                    <TableRow key={group.id}>
-                      <TableCell className="font-mono text-sm">{group.code || '-'}</TableCell>
-                      <TableCell className="font-medium">
-                        {group.parent_group_id && (
-                          <span className="text-muted-foreground mr-1">↳</span>
-                        )}
-                        {group.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {group.parent_group_id
-                          ? groupNameById.get(group.parent_group_id) || '-'
-                          : <span className="text-xs text-blue-600 font-medium">Groupe principal</span>
-                        }
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {group.description || '-'}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            group.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {group.is_active ? t('common.active', { defaultValue: 'Active' }) : t('common.inactive', { defaultValue: 'Inactive' })}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenEdit(group)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeleteConfirmGroup(group)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          {itemGroups.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between mt-4 px-1">
-              <p className="text-sm text-muted-foreground">
-                {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, itemGroups.length)} / {itemGroups.length}
-              </p>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm px-2">{currentPage} / {totalPages}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+            <>
+              {/* View mode toggle + tree controls */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-1 rounded-lg border p-1 bg-muted/50">
+                  <Button
+                    variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('table')}
+                    className="gap-1.5"
+                  >
+                    <List className="h-4 w-4" />
+                    {t('items.itemGroup.tableView')}
+                  </Button>
+                  <Button
+                    variant={viewMode === 'tree' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('tree')}
+                    className="gap-1.5"
+                  >
+                    <FolderTree className="h-4 w-4" />
+                    {t('items.itemGroup.treeView')}
+                  </Button>
+                </div>
+                {viewMode === 'tree' && allParentIds.size > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={handleExpandAll} className="gap-1.5">
+                      <ChevronsUpDown className="h-4 w-4" />
+                      {t('items.itemGroup.expandAll')}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleCollapseAll} className="gap-1.5">
+                      <ChevronsDownUp className="h-4 w-4" />
+                      {t('items.itemGroup.collapseAll')}
+                    </Button>
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* ─── TABLE VIEW ─────────────────────────── */}
+              {viewMode === 'table' && (
+                <>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('items.itemGroup.code')}</TableHead>
+                          <TableHead>{t('items.itemGroup.name')}</TableHead>
+                          <TableHead>{t('items.itemGroup.parentGroup')}</TableHead>
+                          <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
+                          <TableHead className="text-center">{t('common:statusColumn')}</TableHead>
+                          <TableHead className="text-right">{t('common:actionsColumn')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedGroups.map((group) => (
+                          <TableRow key={group.id}>
+                            <TableCell className="font-mono text-sm">{group.code || '-'}</TableCell>
+                            <TableCell className="font-medium">
+                              {group.parent_group_id && (
+                                <span className="text-muted-foreground mr-1">↳</span>
+                              )}
+                              {group.name}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {group.parent_group_id
+                                ? groupNameById.get(group.parent_group_id) || '-'
+                                : (
+                                  <Badge variant="outline" className="text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                                    {t('items.itemGroup.mainGroup')}
+                                  </Badge>
+                                )
+                              }
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                              {group.description || '-'}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span
+                                className={cn(
+                                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                  group.is_active
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                                )}
+                              >
+                                {group.is_active ? t('common:active') : t('common:inactive')}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenEdit(group)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteConfirmGroup(group)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {itemGroups.length > PAGE_SIZE && (
+                    <div className="flex items-center justify-between mt-4 px-1">
+                      <p className="text-sm text-muted-foreground">
+                        {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, itemGroups.length)} / {itemGroups.length}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm px-2">{currentPage} / {totalPages}</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ─── TREE VIEW ──────────────────────────── */}
+              {viewMode === 'tree' && (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[120px]">{t('items.itemGroup.code')}</TableHead>
+                        <TableHead>{t('items.itemGroup.name')}</TableHead>
+                        <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
+                        <TableHead className="text-center w-[100px]">{t('common:statusColumn')}</TableHead>
+                        <TableHead className="text-right w-[100px]">{t('common:actionsColumn')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tree.map((node) => (
+                        <TreeNodeRow
+                          key={node.id}
+                          node={node}
+                          depth={0}
+                          expanded={expanded}
+                          onToggle={handleToggle}
+                          onEdit={handleOpenEdit}
+                          onDelete={setDeleteConfirmGroup}
+                          t={t}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -394,7 +644,7 @@ export default function ItemGroupsManagement() {
              </div>
              <div>
                <Label htmlFor="parent_group_id">
-                 {t('items.itemGroup.parentGroup', 'Groupe parent')}
+                 {t('items.itemGroup.parentGroup')}
                </Label>
                <Select
                  value={selectedParentId || ''}
@@ -404,12 +654,12 @@ export default function ItemGroupsManagement() {
                >
                  <SelectTrigger id="parent_group_id" className="mt-1">
                    <SelectValue
-                     placeholder={t('items.itemGroup.noParent', 'Aucun (groupe principal)')}
+                     placeholder={t('items.itemGroup.noParent')}
                    />
                  </SelectTrigger>
                  <SelectContent>
                    <SelectItem value="_none">
-                     {t('items.itemGroup.noParent', 'Aucun (groupe principal)')}
+                     {t('items.itemGroup.noParent')}
                    </SelectItem>
                    {parentGroups.map((g) => (
                      <SelectItem key={g.id} value={g.id}>
@@ -454,7 +704,7 @@ export default function ItemGroupsManagement() {
                  className="rounded border-gray-300"
                />
                <Label htmlFor="is_active" className="font-normal">
-                 {t('common.active', { defaultValue: 'Active' })}
+                 {t('common:active')}
                </Label>
              </div>
              <div className="flex justify-end space-x-3 pt-4">
@@ -464,18 +714,18 @@ export default function ItemGroupsManagement() {
                  onClick={() => setShowDialog(false)}
                  disabled={isSubmitting}
                >
-                 {t('common.cancel')}
+                 {t('common:cancel')}
                </Button>
                <Button type="submit" disabled={isSubmitting}>
                  {isSubmitting ? (
                    <>
                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                     {editingGroup ? t('common.saving') : t('common.creating')}
+                     {editingGroup ? t('common:saving') : t('common:creating')}
                    </>
                  ) : editingGroup ? (
-                   t('common.save')
+                   t('common:save')
                  ) : (
-                   t('common.create')
+                   t('common:create')
                  )}
                </Button>
              </div>
@@ -498,7 +748,7 @@ export default function ItemGroupsManagement() {
              </AlertDialogDescription>
            </AlertDialogHeader>
            <AlertDialogFooter>
-             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+             <AlertDialogCancel>{t('common:cancel')}</AlertDialogCancel>
              <AlertDialogAction
                onClick={handleDelete}
                disabled={deleteItemGroup.isPending}
@@ -507,10 +757,10 @@ export default function ItemGroupsManagement() {
                {deleteItemGroup.isPending ? (
                  <>
                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                   {t('common.deleting')}
+                   {t('common:deleting')}
                  </>
                ) : (
-                 t('common.delete')
+                 t('common:delete')
                )}
              </AlertDialogAction>
            </AlertDialogFooter>

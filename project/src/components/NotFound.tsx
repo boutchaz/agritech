@@ -112,7 +112,7 @@ export const NotFound: React.FC<NotFoundProps> = ({
                 { label: 'Stock', path: '/stock' },
                 { label: 'Tasks', path: '/tasks' },
                 { label: 'Reports', path: '/reports' },
-                { label: 'Settings', path: '/settings/profile' },
+                { label: 'Settings', path: '/settings/account' },
               ].map((link) => (
                 <button
                   key={link.path}

@@ -3,7 +3,7 @@ import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Downl
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { profitabilityApi } from '../lib/api/profitability';
-import type { Cost, Revenue } from '../lib/api/profitability';
+import type { Cost as _Cost, Revenue as _Revenue } from '../lib/api/profitability';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCampaigns, useFiscalYears } from '../hooks/useAgriculturalAccounting';
 import { Button } from './ui/button';
@@ -20,7 +20,7 @@ import {
   TableRow,
 } from './ui/table';
 import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelContext';
-import { AdaptiveSection } from './adaptive/AdaptiveSection';
+import { AdaptiveSection as _AdaptiveSection } from './adaptive/AdaptiveSection';
 import { Badge } from './ui/badge';
 
 const ProfitabilityDashboard: React.FC = () => {
@@ -31,7 +31,7 @@ const ProfitabilityDashboard: React.FC = () => {
   const { level, config } = useExperienceLevel();
   const showExport = useFeatureFlag('showDataExport');
   const showAnalytics = useFeatureFlag('showAnalytics');
-  const showAdvancedFilters = useFeatureFlag('showAdvancedFilters');
+  const _showAdvancedFilters = useFeatureFlag('showAdvancedFilters');
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 3);
@@ -466,7 +466,7 @@ const ProfitabilityDashboard: React.FC = () => {
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => window.location.href = '/settings/preferences'}
+                  onClick={() => window.location.href = '/settings/account'}
                 >
                   Changer de niveau
                 </Button>
