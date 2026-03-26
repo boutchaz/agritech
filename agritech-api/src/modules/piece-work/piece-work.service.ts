@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreatePieceWorkDto, UpdatePieceWorkDto, PieceWorkFiltersDto } from './dto';
 
 @Injectable()
 export class PieceWorkService {
   private readonly logger = new Logger(PieceWorkService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Get all piece work records with optional filters
@@ -171,6 +176,21 @@ export class PieceWorkService {
         if (updateError) {
           this.logger.warn(`Failed to increment work unit usage count: ${updateError.message}`);
         }
+      }
+
+      // Notify operational roles about new piece work
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          OPERATIONAL_ROLES,
+          createdBy,
+          NotificationType.PIECE_WORK_CREATED,
+          `💼 New piece work: ${data.description || 'Piece work created'}`,
+          data.description || undefined,
+          { pieceWorkId: data.id, description: data.description },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send piece work notification: ${notifError}`);
       }
 
       return data;

@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
   CreateTaskAssignmentDto,
   BulkCreateTaskAssignmentsDto,
@@ -32,7 +34,12 @@ export interface TaskAssignment {
 
 @Injectable()
 export class TaskAssignmentsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(TaskAssignmentsService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getTaskAssignments(
     organizationId: string,
@@ -129,6 +136,23 @@ export class TaskAssignmentsService {
       .update({ status: 'assigned', updated_at: new Date().toISOString() })
       .eq('id', taskId)
       .eq('status', 'pending');
+
+    // Notify operational roles about new task assignment
+    try {
+      const worker = Array.isArray(data.worker) ? data.worker[0] : data.worker;
+      const workerName = worker ? `${worker.first_name || ''} ${worker.last_name || ''}`.trim() : 'Worker';
+      await this.notificationsService.createNotificationsForRoles(
+        organizationId,
+        OPERATIONAL_ROLES,
+        userId,
+        NotificationType.TASK_REASSIGNED,
+        `🔄 Task assigned to ${workerName}`,
+        `Worker assigned to task`,
+        { taskId, assignmentId: data.id, workerId: dto.worker_id, workerName },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send task assignment notification: ${notifError}`);
+    }
 
     return data;
   }

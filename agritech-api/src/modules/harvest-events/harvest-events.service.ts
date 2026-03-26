@@ -1,12 +1,17 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateHarvestEventDto } from './dto/create-harvest-event.dto';
 
 @Injectable()
 export class HarvestEventsService {
   private readonly logger = new Logger(HarvestEventsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findByCropCycle(cropCycleId: string) {
     const client = this.databaseService.getAdminClient();
@@ -73,6 +78,31 @@ export class HarvestEventsService {
     if (error) {
       this.logger.error(`Failed to create harvest event: ${error.message}`);
       throw error;
+    }
+
+    // Notify operational roles about harvest event
+    try {
+      const quantity = createDto.quantity;
+      const unit = createDto.quantity_unit || 'kg';
+      // Resolve organization_id from the crop_cycle
+      const { data: cycle } = await client
+        .from('crop_cycles')
+        .select('organization_id')
+        .eq('id', createDto.crop_cycle_id)
+        .single();
+      if (cycle?.organization_id) {
+        await this.notificationsService.createNotificationsForRoles(
+          cycle.organization_id,
+          OPERATIONAL_ROLES,
+          null,
+          NotificationType.HARVEST_EVENT_RECORDED,
+          `🌾 Harvest recorded: ${quantity ? `${quantity} ${unit}` : 'New harvest event'}`,
+          createDto.quality_notes || undefined,
+          { harvestEventId: data.id, cropCycleId: createDto.crop_cycle_id, quantity, unit },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send harvest event notification: ${notifError}`);
     }
 
     return data;

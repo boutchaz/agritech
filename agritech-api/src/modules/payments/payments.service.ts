@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
     CreatePaymentDto,
     AllocatePaymentDto,
@@ -21,6 +23,7 @@ export class PaymentsService {
         private readonly databaseService: DatabaseService,
         private readonly sequencesService: SequencesService,
         private readonly accountingAutomationService: AccountingAutomationService,
+        private readonly notificationsService: NotificationsService,
     ) { }
 
     /**
@@ -66,6 +69,21 @@ export class PaymentsService {
             if (error) {
                 this.logger.error('Error creating payment:', error);
                 throw new BadRequestException(`Failed to create payment: ${error.message}`);
+            }
+
+            // Notify management about new payment
+            try {
+                await this.notificationsService.createNotificationsForRoles(
+                    organizationId,
+                    MANAGEMENT_ROLES,
+                    userId,
+                    NotificationType.PAYMENT_STATUS_CHANGED,
+                    `💳 Payment ${payment.payment_number || ''} created — ${dto.amount} ${dto.currency_code || 'MAD'}`,
+                    `Payment of ${dto.amount} ${dto.currency_code || 'MAD'} created`,
+                    { paymentId: payment.id, amount: dto.amount, currency: dto.currency_code || 'MAD', status: 'draft' },
+                );
+            } catch (notifError) {
+                this.logger.warn(`Failed to send payment notification: ${notifError}`);
             }
 
             return payment;

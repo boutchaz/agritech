@@ -130,6 +130,11 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   // Subscribe to real-time notifications
   useEffect(() => {
     const handleNewNotification = (notification: NotificationData) => {
+      // Validate notification has required fields — ignore malformed payloads
+      if (!notification?.id || !notification?.title) {
+        return;
+      }
+
       // Play sound if enabled
       if (isSoundEnabled) {
         try {
@@ -281,13 +286,38 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   });
 
   // Mark as read mutation
+  // Note: The backend already broadcasts socket events on API completion,
+  // so we don't need to also send socket events from the frontend.
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       await apiClient.patch(`/api/v1/notifications/${notificationId}/read`, {}, {}, organizationId!);
-      // Also notify via socket for other connected clients
-      socketManager.sendMarkRead(notificationId);
     },
-    onSuccess: () => {
+    onMutate: async (notificationId: string) => {
+      // Optimistic update: mark as read in cache immediately
+      await queryClient.cancelQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+
+      // Update all notification query caches that match this organization
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+      for (const query of queries) {
+        queryClient.setQueryData<NotificationData[]>(
+          query.queryKey,
+          (old = []) =>
+            old.map((n) =>
+              n.id === notificationId
+                ? { ...n, is_read: true, read_at: new Date().toISOString() }
+                : n
+            )
+        );
+      }
+
+      queryClient.setQueryData<number>(
+        [UNREAD_COUNT_QUERY_KEY, organizationId],
+        (old = 0) => Math.max(0, old - 1)
+      );
+    },
+    onError: () => {
+      // Revert on error
       queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
       queryClient.invalidateQueries({ queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId] });
     },
@@ -297,10 +327,27 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       await apiClient.post('/api/v1/notifications/read-all', {}, {}, organizationId!);
-      // Also notify via socket for other connected clients
-      socketManager.sendMarkAllRead();
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      // Optimistic update: mark all as read in cache immediately
+      await queryClient.cancelQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+      for (const query of queries) {
+        queryClient.setQueryData<NotificationData[]>(
+          query.queryKey,
+          (old = []) =>
+            old.map((n) =>
+              !n.is_read ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+            )
+        );
+      }
+
+      queryClient.setQueryData<number>([UNREAD_COUNT_QUERY_KEY, organizationId], 0);
+    },
+    onError: () => {
+      // Revert on error
       queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
       queryClient.invalidateQueries({ queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId] });
     },

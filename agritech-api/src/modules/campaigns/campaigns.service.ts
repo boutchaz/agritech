@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCampaignDto, CampaignStatus } from './dto';
 import { CampaignFiltersDto } from './dto/campaign-filters.dto';
 
@@ -7,7 +9,10 @@ import { CampaignFiltersDto } from './dto/campaign-filters.dto';
 export class CampaignsService {
   private readonly logger = new Logger(CampaignsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(organizationId: string, filters: CampaignFiltersDto = {}) {
     const client = this.databaseService.getAdminClient();
@@ -225,6 +230,22 @@ export class CampaignsService {
     if (error) {
       this.logger.error(`Failed to update campaign status: ${error.message}`);
       throw error;
+    }
+
+    // Notify management about campaign status change
+    try {
+      const campaignName = existing.name || 'Campaign';
+      await this.notificationsService.createNotificationsForRoles(
+        organizationId,
+        MANAGEMENT_ROLES,
+        userId,
+        NotificationType.CAMPAIGN_STATUS_CHANGED,
+        `📅 ${campaignName}: ${existing.status} → ${status}`,
+        `Campaign status updated to ${status}`,
+        { campaignId: id, campaignName, oldStatus: existing.status, newStatus: status },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send campaign notification: ${notifError}`);
     }
 
     return data;

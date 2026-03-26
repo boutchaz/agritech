@@ -49,6 +49,8 @@ describe('NotificationsService', () => {
     };
     mockGateway = {
       sendToUser: jest.fn(),
+      emitRead: jest.fn(),
+      emitReadAll: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -227,6 +229,160 @@ describe('NotificationsService', () => {
       );
       expect(queryBuilder.eq).toHaveBeenCalledWith('id', 'notif-1');
       expect(queryBuilder.eq).toHaveBeenCalledWith('user_id', TEST_IDS.user);
+    });
+  });
+
+  // ============================================================
+  // createNotificationsForRoles
+  // ============================================================
+
+  describe('createNotificationsForRoles', () => {
+    const ACTOR_ID = 'actor-user-id';
+    const ADMIN_USER_ID = 'admin-user-id';
+    const MANAGER_USER_ID = 'manager-user-id';
+
+    function setupRoleQueryMock(users: Array<{ user_id: string }>, error: any = null) {
+      const roleQueryBuilder = createMockQueryBuilder();
+      roleQueryBuilder.then.mockImplementation((resolve) => {
+        const result = { data: error ? null : users, error };
+        resolve(result);
+        return Promise.resolve(result);
+      });
+      return roleQueryBuilder;
+    }
+
+    function setupInsertMock(insertedData: any[]) {
+      const insertBuilder = createMockQueryBuilder();
+      insertBuilder.insert.mockReturnValue(insertBuilder);
+      insertBuilder.select.mockResolvedValue({ data: insertedData, error: null });
+      return insertBuilder;
+    }
+
+    it('should resolve users by role and send notifications excluding actor', async () => {
+      const roleUsers = [
+        { user_id: ADMIN_USER_ID },
+        { user_id: MANAGER_USER_ID },
+        { user_id: ACTOR_ID },
+      ];
+
+      const roleQueryBuilder = setupRoleQueryMock(roleUsers);
+      const insertBuilder = setupInsertMock(
+        roleUsers
+          .filter(u => u.user_id !== ACTOR_ID)
+          .map(u => ({
+            id: `notif-${u.user_id}`,
+            user_id: u.user_id,
+            organization_id: TEST_IDS.organization,
+            type: 'task_assigned',
+            title: 'Test',
+            message: null,
+            data: {},
+            is_read: false,
+            created_at: '2024-06-01T10:00:00Z',
+          })),
+      );
+
+      let callIndex = 0;
+      mockClient.from.mockImplementation((table: string) => {
+        callIndex++;
+        if (table === 'organization_users') return roleQueryBuilder;
+        if (table === 'notifications') return insertBuilder;
+        return createMockQueryBuilder();
+      });
+
+      await service.createNotificationsForRoles(
+        TEST_IDS.organization,
+        ['organization_admin', 'farm_manager'],
+        ACTOR_ID,
+        'task_assigned' as any,
+        'Test notification',
+        'Test message',
+        { key: 'value' },
+      );
+
+      // Should query organization_users with role join
+      expect(mockClient.from).toHaveBeenCalledWith('organization_users');
+      expect(roleQueryBuilder.eq).toHaveBeenCalledWith('organization_id', TEST_IDS.organization);
+      expect(roleQueryBuilder.eq).toHaveBeenCalledWith('is_active', true);
+
+      // Should insert notifications for non-actor users only
+      expect(mockClient.from).toHaveBeenCalledWith('notifications');
+      expect(insertBuilder.insert).toHaveBeenCalled();
+      const insertedNotifs = insertBuilder.insert.mock.calls[0][0];
+      const insertedUserIds = insertedNotifs.map((n: any) => n.user_id);
+      expect(insertedUserIds).toContain(ADMIN_USER_ID);
+      expect(insertedUserIds).toContain(MANAGER_USER_ID);
+      expect(insertedUserIds).not.toContain(ACTOR_ID);
+    });
+
+    it('should not crash when no users match the role filter', async () => {
+      const roleQueryBuilder = setupRoleQueryMock([]);
+      mockClient.from.mockReturnValue(roleQueryBuilder);
+
+      await expect(
+        service.createNotificationsForRoles(
+          TEST_IDS.organization,
+          ['organization_admin'],
+          ACTOR_ID,
+          'task_assigned' as any,
+          'Test',
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('should not crash when role query fails', async () => {
+      const roleQueryBuilder = setupRoleQueryMock([], { message: 'DB error' });
+      mockClient.from.mockReturnValue(roleQueryBuilder);
+
+      await expect(
+        service.createNotificationsForRoles(
+          TEST_IDS.organization,
+          ['organization_admin'],
+          ACTOR_ID,
+          'task_assigned' as any,
+          'Test',
+        ),
+      ).resolves.not.toThrow();
+    });
+
+    it('should send to all matching users when excludeUserId is null', async () => {
+      const roleUsers = [
+        { user_id: ADMIN_USER_ID },
+        { user_id: MANAGER_USER_ID },
+      ];
+
+      const roleQueryBuilder = setupRoleQueryMock(roleUsers);
+      const insertBuilder = setupInsertMock(
+        roleUsers.map(u => ({
+          id: `notif-${u.user_id}`,
+          user_id: u.user_id,
+          organization_id: TEST_IDS.organization,
+          type: 'task_assigned',
+          title: 'Test',
+          message: null,
+          data: {},
+          is_read: false,
+          created_at: '2024-06-01T10:00:00Z',
+        })),
+      );
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'organization_users') return roleQueryBuilder;
+        if (table === 'notifications') return insertBuilder;
+        return createMockQueryBuilder();
+      });
+
+      await service.createNotificationsForRoles(
+        TEST_IDS.organization,
+        ['organization_admin', 'farm_manager'],
+        null,
+        'task_assigned' as any,
+        'AI generated',
+      );
+
+      expect(insertBuilder.insert).toHaveBeenCalled();
+      const insertedNotifs = insertBuilder.insert.mock.calls[0][0];
+      expect(insertedNotifs).toHaveLength(2);
     });
   });
 });

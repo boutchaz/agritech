@@ -39,6 +39,24 @@ export enum NotificationType {
   ROLE_CHANGED = "role_changed",
   WORKER_ADDED = "worker_added",
   TASK_MENTION = "task_mention",
+  // Phase 1 — AgromindIA
+  AI_RECOMMENDATION_CREATED = "ai_recommendation_created",
+  AI_ALERT_TRIGGERED = "ai_alert_triggered",
+  // Phase 2 — Operations
+  CROP_CYCLE_STATUS_CHANGED = "crop_cycle_status_changed",
+  CAMPAIGN_STATUS_CHANGED = "campaign_status_changed",
+  TASK_REASSIGNED = "task_reassigned",
+  PIECE_WORK_CREATED = "piece_work_created",
+  // Phase 3 — Finance
+  INVOICE_CREATED = "invoice_created",
+  JOURNAL_ENTRY_POSTED = "journal_entry_posted",
+  PAYMENT_STATUS_CHANGED = "payment_status_changed",
+  // Phase 4 — Agronomy
+  LAB_RESULTS_AVAILABLE = "lab_results_available",
+  PRODUCT_APPLICATION_COMPLETED = "product_application_completed",
+  SOIL_ANALYSIS_COMPLETED = "soil_analysis_completed",
+  HARVEST_EVENT_RECORDED = "harvest_event_recorded",
+  WORK_UNIT_COMPLETED = "work_unit_completed",
   GENERAL = "general",
 }
 

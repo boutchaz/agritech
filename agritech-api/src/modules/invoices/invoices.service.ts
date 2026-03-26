@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
-import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
+import { NotificationsService, InvoiceEmailData, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
@@ -220,6 +221,22 @@ export class InvoicesService {
         await supabaseClient.from('invoices').delete().eq('id', invoice.id);
         this.logger.error(`Failed to create invoice items: ${itemsError.message}`);
         throw new BadRequestException(`Failed to create invoice items: ${itemsError.message}`);
+      }
+
+      // Notify management about new invoice
+      try {
+        const typeLabel = dto.invoice_type === 'sales' ? 'Sales' : 'Purchase';
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          MANAGEMENT_ROLES,
+          userId,
+          NotificationType.INVOICE_CREATED,
+          `🧾 ${typeLabel} Invoice ${invoiceNumber} created`,
+          `${dto.party_name} — ${grandTotal} ${dto.currency_code || 'MAD'}`,
+          { invoiceId: invoice.id, invoiceNumber, invoiceType: dto.invoice_type, amount: grandTotal, currency: dto.currency_code || 'MAD' },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send invoice notification: ${notifError}`);
       }
 
       // Fetch the complete invoice with items

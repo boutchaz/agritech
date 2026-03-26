@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCropCycleDto, CropCycleStatus } from './dto';
 import { CropCycleFiltersDto } from './dto/crop-cycle-filters.dto';
 
@@ -7,7 +9,10 @@ import { CropCycleFiltersDto } from './dto/crop-cycle-filters.dto';
 export class CropCyclesService {
   private readonly logger = new Logger(CropCyclesService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(organizationId: string, filters: CropCycleFiltersDto = {}) {
     const client = this.databaseService.getAdminClient();
@@ -223,6 +228,22 @@ export class CropCyclesService {
     if (error) {
       this.logger.error(`Failed to update crop cycle status: ${error.message}`);
       throw error;
+    }
+
+    // Notify management about crop cycle status change
+    try {
+      const cycleName = existing.name || existing.crop_name || 'Crop cycle';
+      await this.notificationsService.createNotificationsForRoles(
+        organizationId,
+        MANAGEMENT_ROLES,
+        userId,
+        NotificationType.CROP_CYCLE_STATUS_CHANGED,
+        `🌱 ${cycleName}: ${existing.status} → ${status}`,
+        `Crop cycle status updated to ${status}`,
+        { cropCycleId: id, cropName: cycleName, oldStatus: existing.status, newStatus: status },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send crop cycle notification: ${notifError}`);
     }
 
     return data;

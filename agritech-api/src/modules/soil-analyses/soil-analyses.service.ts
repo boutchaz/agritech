@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SoilAnalysisFiltersDto, CreateSoilAnalysisDto, UpdateSoilAnalysisDto } from './dto';
 
@@ -7,7 +9,10 @@ import { SoilAnalysisFiltersDto, CreateSoilAnalysisDto, UpdateSoilAnalysisDto } 
 export class SoilAnalysesService {
   private readonly logger = new Logger(SoilAnalysesService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Get all soil analyses with optional filters
@@ -161,6 +166,21 @@ export class SoilAnalysesService {
       if (error) {
         this.logger.error(`Failed to create soil analysis: ${error.message}`);
         throw new BadRequestException(`Failed to create soil analysis: ${error.message}`);
+      }
+
+      // Notify management about completed soil analysis
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          MANAGEMENT_ROLES,
+          null,
+          NotificationType.SOIL_ANALYSIS_COMPLETED,
+          `🌍 Soil analysis completed`,
+          dto.notes || undefined,
+          { analysisId: data.id, parcelId: dto.parcel_id, analysisType: dto.test_type_id },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send soil analysis notification: ${notifError}`);
       }
 
       return data;

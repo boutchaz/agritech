@@ -1,10 +1,13 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateRecommendationDto } from './dto/create-recommendation.dto';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export const AI_RECOMMENDATION_STATUSES = [
   'pending',
@@ -78,7 +81,12 @@ export interface AiRecommendationEvaluation {
 
 @Injectable()
 export class AiRecommendationsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(AiRecommendationsService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getRecommendations(
     parcelId: string,
@@ -138,6 +146,27 @@ export class AiRecommendationsService {
       throw new BadRequestException(
         `Failed to create AI recommendation: ${error.message}`,
       );
+    }
+
+    // Notify management roles about new AI recommendation
+    try {
+      const actionPreview = data.action ? data.action.substring(0, 80) : 'New recommendation';
+      await this.notificationsService.createNotificationsForRoles(
+        organizationId,
+        MANAGEMENT_ROLES,
+        null, // AI is the actor — no user to exclude
+        NotificationType.AI_RECOMMENDATION_CREATED,
+        `🤖 AgromindIA: ${actionPreview}`,
+        data.diagnostic || undefined,
+        {
+          recommendationId: createdRecommendation.id,
+          parcelId: data.parcel_id,
+          priority: data.priority,
+          alertCode: data.alert_code,
+        },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send AI recommendation notification: ${notifError}`);
     }
 
     return createdRecommendation as AiRecommendationRecord;

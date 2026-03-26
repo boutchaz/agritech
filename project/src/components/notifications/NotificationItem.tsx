@@ -143,6 +143,90 @@ const typeStyles: Record<string, { bg: string; text: string; icon: string; iconB
     icon: '👷',
     iconBg: 'bg-orange-100 dark:bg-orange-900/40',
   },
+  ai_recommendation_created: {
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    icon: '🤖',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+  },
+  ai_alert_triggered: {
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    text: 'text-red-700 dark:text-red-400',
+    icon: '🚨',
+    iconBg: 'bg-red-100 dark:bg-red-900/40',
+  },
+  crop_cycle_status_changed: {
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    text: 'text-green-700 dark:text-green-400',
+    icon: '🌱',
+    iconBg: 'bg-green-100 dark:bg-green-900/40',
+  },
+  campaign_status_changed: {
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    text: 'text-blue-700 dark:text-blue-400',
+    icon: '📅',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+  },
+  task_reassigned: {
+    bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+    text: 'text-indigo-700 dark:text-indigo-400',
+    icon: '🔄',
+    iconBg: 'bg-indigo-100 dark:bg-indigo-900/40',
+  },
+  piece_work_created: {
+    bg: 'bg-orange-50 dark:bg-orange-900/20',
+    text: 'text-orange-700 dark:text-orange-400',
+    icon: '💼',
+    iconBg: 'bg-orange-100 dark:bg-orange-900/40',
+  },
+  invoice_created: {
+    bg: 'bg-purple-50 dark:bg-purple-900/20',
+    text: 'text-purple-700 dark:text-purple-400',
+    icon: '🧾',
+    iconBg: 'bg-purple-100 dark:bg-purple-900/40',
+  },
+  journal_entry_posted: {
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    text: 'text-violet-700 dark:text-violet-400',
+    icon: '📒',
+    iconBg: 'bg-violet-100 dark:bg-violet-900/40',
+  },
+  payment_status_changed: {
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    text: 'text-emerald-700 dark:text-emerald-400',
+    icon: '💳',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+  },
+  lab_results_available: {
+    bg: 'bg-sky-50 dark:bg-sky-900/20',
+    text: 'text-sky-700 dark:text-sky-400',
+    icon: '🔬',
+    iconBg: 'bg-sky-100 dark:bg-sky-900/40',
+  },
+  product_application_completed: {
+    bg: 'bg-lime-50 dark:bg-lime-900/20',
+    text: 'text-lime-700 dark:text-lime-400',
+    icon: '🧪',
+    iconBg: 'bg-lime-100 dark:bg-lime-900/40',
+  },
+  soil_analysis_completed: {
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    text: 'text-amber-700 dark:text-amber-400',
+    icon: '🌍',
+    iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+  },
+  harvest_event_recorded: {
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    text: 'text-green-700 dark:text-green-400',
+    icon: '🌾',
+    iconBg: 'bg-green-100 dark:bg-green-900/40',
+  },
+  work_unit_completed: {
+    bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+    text: 'text-cyan-700 dark:text-cyan-400',
+    icon: '📊',
+    iconBg: 'bg-cyan-100 dark:bg-cyan-900/40',
+  },
   general: {
     bg: 'bg-gray-50 dark:bg-gray-800/50',
     text: 'text-gray-700 dark:text-gray-400',
@@ -168,8 +252,8 @@ const priorityStyles: Record<string, { border: string; dot: string }> = {
 };
 
 function getPriorityFromType(type: string): string {
-  if (type === 'low_inventory' || type === 'member_removed') return 'high';
-  if (type === 'task_assigned' || type === 'quote_received' || type === 'delivery_completed' || type === 'role_changed' || type === 'quality_inspection_completed') return 'medium';
+  if (type === 'low_inventory' || type === 'member_removed' || type === 'ai_alert_triggered') return 'high';
+  if (type === 'task_assigned' || type === 'quote_received' || type === 'delivery_completed' || type === 'role_changed' || type === 'quality_inspection_completed' || type === 'ai_recommendation_created' || type === 'task_reassigned' || type === 'invoice_created' || type === 'payment_status_changed' || type === 'lab_results_available') return 'medium';
   return 'low';
 }
 

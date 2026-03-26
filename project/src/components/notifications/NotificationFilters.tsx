@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 
-export type NotificationTypeFilter = 'all' | 'task_assigned' | 'task_status_changed' | 'order_status_changed' | 'quote_received' | 'quote_responded' | 'harvest_completed' | 'low_inventory' | 'payment_processed' | 'sales_order_created' | 'sales_order_status_changed' | 'purchase_order_created' | 'purchase_order_status_changed' | 'stock_entry_created' | 'reception_batch_decision' | 'quality_inspection_completed' | 'delivery_status_changed' | 'delivery_completed' | 'member_added' | 'member_removed' | 'role_changed' | 'worker_added' | 'general';
+export type NotificationTypeFilter = 'all' | 'task_assigned' | 'task_status_changed' | 'order_status_changed' | 'quote_received' | 'quote_responded' | 'harvest_completed' | 'low_inventory' | 'payment_processed' | 'sales_order_created' | 'sales_order_status_changed' | 'purchase_order_created' | 'purchase_order_status_changed' | 'stock_entry_created' | 'reception_batch_decision' | 'quality_inspection_completed' | 'delivery_status_changed' | 'delivery_completed' | 'member_added' | 'member_removed' | 'role_changed' | 'worker_added' | 'ai_recommendation_created' | 'ai_alert_triggered' | 'crop_cycle_status_changed' | 'campaign_status_changed' | 'task_reassigned' | 'piece_work_created' | 'invoice_created' | 'journal_entry_posted' | 'payment_status_changed' | 'lab_results_available' | 'product_application_completed' | 'soil_analysis_completed' | 'harvest_event_recorded' | 'work_unit_completed' | 'general';
 export type NotificationStatusFilter = 'all' | 'unread' | 'important';
 export type NotificationTimeFilter = 'all' | 'today' | 'week' | 'month' | 'older';
 
@@ -37,6 +37,20 @@ const typeFilters: { value: NotificationTypeFilter; label: string; icon: string 
   { value: 'quality_inspection_completed', label: 'Quality', icon: '🔍' },
   { value: 'member_added', label: 'Members', icon: '👤' },
   { value: 'worker_added', label: 'Workers', icon: '👷' },
+  { value: 'ai_recommendation_created', label: 'AI Recommendations', icon: '🤖' },
+  { value: 'ai_alert_triggered', label: 'AI Alerts', icon: '🚨' },
+  { value: 'crop_cycle_status_changed', label: 'Crop Cycles', icon: '🌱' },
+  { value: 'campaign_status_changed', label: 'Campaigns', icon: '📅' },
+  { value: 'task_reassigned', label: 'Reassignments', icon: '🔄' },
+  { value: 'piece_work_created', label: 'Piece Work', icon: '💼' },
+  { value: 'invoice_created', label: 'Invoices', icon: '🧾' },
+  { value: 'journal_entry_posted', label: 'Journal Entries', icon: '📒' },
+  { value: 'payment_status_changed', label: 'Payment Updates', icon: '💳' },
+  { value: 'lab_results_available', label: 'Lab Results', icon: '🔬' },
+  { value: 'product_application_completed', label: 'Applications', icon: '🧪' },
+  { value: 'soil_analysis_completed', label: 'Soil Analyses', icon: '🌍' },
+  { value: 'harvest_event_recorded', label: 'Harvest Events', icon: '🌾' },
+  { value: 'work_unit_completed', label: 'Work Units', icon: '📊' },
   { value: 'general', label: 'General', icon: 'ℹ️' },
 ];
 

@@ -83,6 +83,11 @@ export interface InvoiceEmailData {
   invoiceUrl?: string;
 }
 
+// Role targeting constants — used by all modules to declare who should see a notification
+export const MANAGEMENT_ROLES = ['organization_admin', 'farm_manager'];
+export const OPERATIONAL_ROLES = ['organization_admin', 'farm_manager', 'farm_worker'];
+export const ADMIN_ONLY_ROLES = ['organization_admin'];
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -171,6 +176,79 @@ export class NotificationsService {
     }
 
     this.logger.log(`Created ${created.length} notifications for ${userIds.length} users`);
+  }
+
+  /**
+   * Resolve user IDs by role within an organization.
+   * Queries organization_users JOIN roles to find users with matching role names.
+   */
+  private async getUserIdsByRoles(
+    organizationId: string,
+    roles: string[],
+    excludeUserId?: string | null,
+  ): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('organization_users')
+      .select('user_id, roles!inner(name)')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .in('roles.name', roles);
+
+    if (error) {
+      this.logger.error(`Failed to resolve users by roles: ${error.message}`);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    let userIds = data.map((row: any) => row.user_id as string);
+
+    // Exclude the actor (the user who triggered the action)
+    if (excludeUserId) {
+      userIds = userIds.filter((id) => id !== excludeUserId);
+    }
+
+    return userIds;
+  }
+
+  /**
+   * Create notifications for users matching specific roles in an organization.
+   * The actor (excludeUserId) is automatically excluded from recipients.
+   *
+   * @param organizationId - The organization to target
+   * @param roles - Role names to target (e.g. MANAGEMENT_ROLES, OPERATIONAL_ROLES)
+   * @param excludeUserId - The user who triggered the action (excluded from notifications), null for system/AI actions
+   * @param type - Notification type enum value
+   * @param title - Notification title
+   * @param message - Optional notification message
+   * @param data - Optional additional data payload
+   */
+  async createNotificationsForRoles(
+    organizationId: string,
+    roles: string[],
+    excludeUserId: string | null,
+    type: NotificationType,
+    title: string,
+    message?: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      const userIds = await this.getUserIdsByRoles(organizationId, roles, excludeUserId);
+
+      if (userIds.length === 0) {
+        this.logger.debug(`No users found for roles [${roles.join(', ')}] in org ${organizationId}`);
+        return;
+      }
+
+      await this.createNotificationsForUsers(userIds, organizationId, type, title, message, data);
+    } catch (error) {
+      this.logger.warn(`Failed to create role-based notifications: ${error.message || error}`);
+      // Never fail the main operation — notifications are best-effort
+    }
   }
 
   /**
@@ -266,11 +344,7 @@ export class NotificationsService {
     }
 
     // Notify all user's connected clients about the read status
-    this.gateway.sendToUser(userId, {
-      type: 'notification:read',
-      notificationId,
-      readAt: new Date().toISOString(),
-    });
+    this.gateway.emitRead(userId, notificationId, new Date().toISOString());
   }
 
   /**
@@ -298,11 +372,7 @@ export class NotificationsService {
     const count = data?.length || 0;
 
     // Notify all user's connected clients
-    this.gateway.sendToUser(userId, {
-      type: 'notification:read-all',
-      count,
-      readAt: new Date().toISOString(),
-    });
+    this.gateway.emitReadAll(userId, count, new Date().toISOString());
 
     return count;
   }

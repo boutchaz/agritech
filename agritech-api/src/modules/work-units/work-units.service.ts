@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { WorkUnitFiltersDto, CreateWorkUnitDto, UpdateWorkUnitDto } from './dto';
 
@@ -7,7 +9,10 @@ import { WorkUnitFiltersDto, CreateWorkUnitDto, UpdateWorkUnitDto } from './dto'
 export class WorkUnitsService {
   private readonly logger = new Logger(WorkUnitsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Get all work units with optional filters
@@ -96,6 +101,21 @@ export class WorkUnitsService {
       if (error) {
         this.logger.error(`Failed to create work unit: ${error.message}`);
         throw new BadRequestException(`Failed to create work unit: ${error.message}`);
+      }
+
+      // Notify operational roles about new work unit
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          OPERATIONAL_ROLES,
+          createdBy,
+          NotificationType.WORK_UNIT_COMPLETED,
+          `📊 New work unit: ${dto.name} (${dto.code})`,
+          dto.name_fr || undefined,
+          { workUnitId: data.id, code: dto.code, name: dto.name },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send work unit notification: ${notifError}`);
       }
 
       return data;

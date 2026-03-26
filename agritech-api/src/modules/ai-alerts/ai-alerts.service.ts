@@ -1,9 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export const AI_ALERT_TYPES = [
   'ai_drought_stress',
@@ -63,7 +66,12 @@ export interface CreateAiAlertInput {
 
 @Injectable()
 export class AiAlertsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(AiAlertsService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getAlerts(parcelId: string, organizationId: string): Promise<AiAlertRecord[]> {
     const supabase = this.databaseService.getAdminClient();
@@ -168,6 +176,28 @@ export class AiAlertsService {
 
     if (error) {
       throw new BadRequestException(`Failed to create AI alert: ${error.message}`);
+    }
+
+    // Notify management roles about the AI alert
+    try {
+      const description = createdAlert.description || data.alert_code || 'New AI alert';
+      await this.notificationsService.createNotificationsForRoles(
+        data.organization_id,
+        MANAGEMENT_ROLES,
+        null, // AI is the actor
+        NotificationType.AI_ALERT_TRIGGERED,
+        `🚨 AI Alert: ${description}`,
+        createdAlert.description || undefined,
+        {
+          alertId: createdAlert.id,
+          parcelId: data.parcel_id,
+          alertCode: data.alert_code,
+          priority: data.priority,
+          category: data.category,
+        },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send AI alert notification: ${notifError}`);
     }
 
     return createdAlert as AiAlertRecord;

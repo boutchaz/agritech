@@ -9,7 +9,6 @@ import {
   WifiOff,
   X,
   Star,
-  Filter,
 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
@@ -20,9 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { socketManager, NotificationData } from '@/lib/socket';
-import { NotificationItem } from './notifications/NotificationItem';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
-import { NotificationQuickActions } from './notifications/NotificationQuickActions';
 
 interface EnhancedNotificationItemProps {
   notification: NotificationData;
@@ -61,6 +58,34 @@ function EnhancedNotificationItem({
         return '⚠️';
       case 'payment_processed':
         return '💳';
+      case 'ai_recommendation_created':
+        return '🤖';
+      case 'ai_alert_triggered':
+        return '🚨';
+      case 'crop_cycle_status_changed':
+        return '🌱';
+      case 'campaign_status_changed':
+        return '📅';
+      case 'task_reassigned':
+        return '🔄';
+      case 'piece_work_created':
+        return '💼';
+      case 'invoice_created':
+        return '🧾';
+      case 'journal_entry_posted':
+        return '📒';
+      case 'payment_status_changed':
+        return '💳';
+      case 'lab_results_available':
+        return '🔬';
+      case 'product_application_completed':
+        return '🧪';
+      case 'soil_analysis_completed':
+        return '🌍';
+      case 'harvest_event_recorded':
+        return '🌾';
+      case 'work_unit_completed':
+        return '📊';
       default:
         return '🔔';
     }
@@ -84,6 +109,34 @@ function EnhancedNotificationItem({
         return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
       case 'payment_processed':
         return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'ai_recommendation_created':
+        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'ai_alert_triggered':
+        return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
+      case 'crop_cycle_status_changed':
+        return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400';
+      case 'campaign_status_changed':
+        return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400';
+      case 'task_reassigned':
+        return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400';
+      case 'piece_work_created':
+        return 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400';
+      case 'invoice_created':
+        return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400';
+      case 'journal_entry_posted':
+        return 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400';
+      case 'payment_status_changed':
+        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'lab_results_available':
+        return 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400';
+      case 'product_application_completed':
+        return 'bg-lime-50 dark:bg-lime-900/20 text-lime-700 dark:text-lime-400';
+      case 'soil_analysis_completed':
+        return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400';
+      case 'harvest_event_recorded':
+        return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400';
+      case 'work_unit_completed':
+        return 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400';
       default:
         return 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-400';
     }
@@ -200,7 +253,6 @@ export function NotificationBell() {
     notifications,
     unreadCount,
     isLoading,
-    isConnected,
     socketStatus,
     markAsRead,
     markAllAsRead,
@@ -231,6 +283,12 @@ export function NotificationBell() {
   // Show toast and animate bell for new notifications
   useEffect(() => {
     const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
+      // Validate notification has required fields — ignore malformed payloads
+      // (e.g., read/read-all events incorrectly sent as notification:new)
+      if (!notification?.id || !notification?.title) {
+        return;
+      }
+
       // Add to new notifications set for animation
       setNewNotificationIds((prev) => new Set(prev).add(notification.id));
 
@@ -238,13 +296,14 @@ export function NotificationBell() {
       setIsBellAnimating(true);
       setTimeout(() => setIsBellAnimating(false), 500);
 
-      // Show toast
-      toast(notification.title, {
-        description: notification.message,
+      // Show toast for new notification
+      toast.info(notification.title, {
+        description: notification.message || undefined,
         action: notification.data?.taskId || notification.data?.orderId ? {
           label: 'View',
           onClick: () => handleNotificationClick(notification),
         } : undefined,
+        duration: 5000,
       });
 
       // Remove from new notifications after animation
@@ -258,7 +317,7 @@ export function NotificationBell() {
     });
 
     return unsubscribe;
-  }, []);
+  }, [handleNotificationClick]);
 
   const handleNotificationClick = useCallback((notification: NotificationData) => {
     // Mark as read
@@ -299,8 +358,8 @@ export function NotificationBell() {
     });
   }, []);
 
-  const handleDismiss = useCallback((id: string) => {
-    // In a real app, this would call an API to dismiss the notification
+  const handleDismiss = useCallback((_id: string) => {
+    // TODO: Call API to dismiss the notification when backend supports it
     toast.success('Notification dismissed');
   }, []);
 

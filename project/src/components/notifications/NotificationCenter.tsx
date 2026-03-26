@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Bell, Loader2, Inbox, Star, Clock, Filter } from 'lucide-react';
+import { Search, Loader2, Inbox, Clock, Filter } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -200,8 +200,8 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
   }, [markAsRead]);
 
   // Handle dismiss (archive)
-  const handleDismiss = useCallback((id: string) => {
-    // In a real app, this would call an API to archive the notification
+  const handleDismiss = useCallback((_id: string) => {
+    // TODO: Call API to archive the notification when backend supports it
     toast.success('Notification dismissed');
   }, []);
 
@@ -222,7 +222,7 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
   }, []);
 
   // Handle mark all as read
-  const handleMarkAllRead = useCallback(async () => {
+  const _handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
     toast.success('All notifications marked as read');
   }, [markAllAsRead]);

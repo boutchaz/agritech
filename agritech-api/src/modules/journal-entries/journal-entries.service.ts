@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { NotificationsService, ADMIN_ONLY_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export interface CreateJournalEntryDto {
   entry_date: string;
@@ -43,6 +45,7 @@ export class JournalEntriesService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(organizationId: string, filters?: any) {
@@ -381,6 +384,21 @@ export class JournalEntriesService {
 
       if (error) {
         throw new BadRequestException(`Failed to post journal entry: ${error.message}`);
+      }
+
+      // Notify admins about posted journal entry
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          ADMIN_ONLY_ROLES,
+          userId,
+          NotificationType.JOURNAL_ENTRY_POSTED,
+          `📒 Journal entry ${entry.entry_number || id} posted`,
+          entry.description || undefined,
+          { journalEntryId: id, entryNumber: entry.entry_number },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send journal entry notification: ${notifError}`);
       }
 
       return this.findOne(id, organizationId);

@@ -1,13 +1,18 @@
 import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateProductApplicationDto } from './dto/create-product-application.dto';
 
 @Injectable()
 export class ProductApplicationsService {
   private readonly logger = new Logger(ProductApplicationsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Get a warehouse for the organization (first active warehouse)
@@ -203,6 +208,21 @@ export class ProductApplicationsService {
         `Product application created: ${createDto.quantity_used} ${unit} of item ${createDto.product_id}, ` +
         `stock deducted: ${totalCost} (${consumedBatches.length} batches consumed)`,
       );
+
+      // Notify operational roles about product application
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          OPERATIONAL_ROLES,
+          userId,
+          NotificationType.PRODUCT_APPLICATION_COMPLETED,
+          `🧪 Product applied: ${createDto.quantity_used} ${unit}`,
+          createDto.notes || undefined,
+          { applicationId: application.id, productId: createDto.product_id, parcelId: createDto.parcel_id, quantity: createDto.quantity_used },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send product application notification: ${notifError}`);
+      }
 
       return {
         success: true,
