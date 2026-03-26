@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
@@ -17,6 +18,7 @@ export class InvoicesService {
     private readonly sequencesService: SequencesService,
     private readonly notificationsService: NotificationsService,
     private readonly stockEntriesService: StockEntriesService,
+    private readonly accountingAutomationService: AccountingAutomationService,
   ) {}
 
   async findAll(
@@ -454,9 +456,10 @@ export class InvoicesService {
           item_name,
           description,
           quantity,
-          unit,
+          unit_of_measure,
           amount,
-          tax_amount
+          tax_amount,
+          account_id
         )
       `)
       .eq('id', invoiceId)
@@ -471,25 +474,39 @@ export class InvoicesService {
       throw new BadRequestException('Only draft invoices can be posted');
     }
 
-    // Get required GL accounts based on invoice type
-    const SALES_ACCOUNT_CODES = ['1200', '2150']; // AR, Taxes Payable
-    const PURCHASE_ACCOUNT_CODES = ['2110', '1400']; // AP, Prepaid taxes
-    const requiredCodes =
-      invoice.invoice_type === 'sales' ? SALES_ACCOUNT_CODES : PURCHASE_ACCOUNT_CODES;
+    // Resolve GL accounts via account_mappings (country-generic)
+    const isSales = invoice.invoice_type === 'sales';
 
-    const { data: accountRows, error: accountsError } = await supabaseClient
-      .from('accounts')
-      .select('id, code')
-      .eq('organization_id', organizationId)
-      .in('code', requiredCodes);
+    const receivableAccountId = isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'receivable', 'trade')
+      : null;
+    const payableAccountId = !isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'payable', 'trade')
+      : null;
+    const taxCollectedAccountId = isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'tax', 'collected')
+      : null;
+    const taxDeductibleAccountId = !isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'tax', 'deductible')
+      : null;
+    const defaultRevenueAccountId = isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'revenue', 'default')
+      : null;
+    const defaultExpenseAccountId = !isSales
+      ? await this.accountingAutomationService.resolveAccountId(organizationId, 'expense', 'default')
+      : null;
 
-    if (accountsError) {
-      throw new BadRequestException(`Failed to load ledger accounts: ${accountsError.message}`);
+    // Validate critical accounts exist
+    if (isSales && !receivableAccountId) {
+      throw new BadRequestException(
+        'Account mapping missing for receivable/trade. Please configure account mappings before posting sales invoices.',
+      );
     }
-
-    const codeToAccountId = new Map<string, string>(
-      (accountRows ?? []).map((row) => [row.code, row.id]),
-    );
+    if (!isSales && !payableAccountId) {
+      throw new BadRequestException(
+        'Account mapping missing for payable/trade. Please configure account mappings before posting purchase invoices.',
+      );
+    }
 
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabaseClient, organizationId);
@@ -501,7 +518,6 @@ export class InvoicesService {
         organization_id: organizationId,
         entry_number: entryNumber,
         entry_date: postingDate,
-        posting_date: postingDate,
         reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
         reference_number: invoice.invoice_number,
         remarks: `Journal entry for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
@@ -516,9 +532,7 @@ export class InvoicesService {
     }
 
     try {
-      // Build journal lines
-      // Note: income_account_id, expense_account_id, cost_center_id are optional
-      // and may not exist in the current database schema
+      // Build journal lines using mapped accounts
       const lines = buildInvoiceLedgerLines(
         {
           id: invoice.id,
@@ -533,17 +547,18 @@ export class InvoicesService {
             description: item.description,
             amount: Number(item.amount),
             tax_amount: Number(item.tax_amount ?? 0),
-            income_account_id: item.income_account_id || null,
-            expense_account_id: item.expense_account_id || null,
+            account_id: item.account_id || null,
             cost_center_id: item.cost_center_id || null,
           })),
         },
         journalEntry.id,
         {
-          receivableAccountId: codeToAccountId.get('1200') ?? '',
-          payableAccountId: codeToAccountId.get('2110') ?? '',
-          taxPayableAccountId: codeToAccountId.get('2150'),
-          taxReceivableAccountId: codeToAccountId.get('1400'),
+          receivableAccountId: receivableAccountId ?? '',
+          payableAccountId: payableAccountId ?? '',
+          taxPayableAccountId: taxCollectedAccountId ?? undefined,
+          taxReceivableAccountId: taxDeductibleAccountId ?? undefined,
+          defaultRevenueAccountId: defaultRevenueAccountId ?? undefined,
+          defaultExpenseAccountId: defaultExpenseAccountId ?? undefined,
         },
       );
 

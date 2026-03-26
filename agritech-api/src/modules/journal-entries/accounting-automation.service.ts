@@ -276,6 +276,20 @@ export class AccountingAutomationService {
   }
 
   /**
+   * Public method to resolve an account ID by mapping type and key.
+   * Looks up org-level mappings first, falls back to global templates.
+   * Used by invoices, payments, and other services that need account resolution.
+   */
+  async resolveAccountId(
+    organizationId: string,
+    mappingType: string,
+    mappingKey: string,
+  ): Promise<string | null> {
+    const supabase = this.databaseService.getAdminClient();
+    return this.getAccountIdByMapping(supabase, organizationId, mappingType, mappingKey);
+  }
+
+  /**
    * Get account ID by mapping type and key
    * Replaces function: get_account_id_by_mapping()
    */

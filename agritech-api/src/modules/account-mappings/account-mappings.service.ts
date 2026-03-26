@@ -462,12 +462,10 @@ export class AccountMappingsService {
       });
 
       if (rows.length > 0) {
+        // Use plain insert — we already checked that no org mappings exist above
         const { error: insertError } = await supabaseClient
           .from('account_mappings')
-          .upsert(rows, {
-            onConflict: 'organization_id,mapping_type,mapping_key',
-            ignoreDuplicates: true,
-          });
+          .insert(rows);
 
         if (insertError) {
           throw new BadRequestException(`Failed to initialize mappings: ${insertError.message}`);

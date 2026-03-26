@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import {
     CreatePaymentDto,
     AllocatePaymentDto,
@@ -19,6 +20,7 @@ export class PaymentsService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly sequencesService: SequencesService,
+        private readonly accountingAutomationService: AccountingAutomationService,
     ) { }
 
     /**
@@ -192,42 +194,29 @@ export class PaymentsService {
                 }
             }
 
-            // Get required GL accounts and verify chart of accounts exists
-            const LEDGER_CODES = ['1110', '1200', '2110'];
-            const { data: ledgerAccounts, error: ledgerError } = await supabaseClient
-                .from('accounts')
-                .select('id, code')
-                .eq('organization_id', organizationId)
-                .in('code', LEDGER_CODES);
+            // Resolve GL accounts via account_mappings (country-generic)
+            const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+            const receivableAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'receivable', 'trade');
+            const payableAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'payable', 'trade');
 
-            if (ledgerError) {
-                throw new BadRequestException(`Failed to load ledger accounts: ${ledgerError.message}`);
-            }
-
-            // Check if chart of accounts exists and has required accounts
-            if (!ledgerAccounts || ledgerAccounts.length === 0) {
+            if (!cashAccountId) {
                 throw new BadRequestException(
-                    'Chart of accounts not configured. Please set up your chart of accounts before processing payments. ' +
-                    'Go to Accounting > Accounts > Apply Template to initialize your chart of accounts.'
+                    'Account mapping missing for cash/bank. Please configure account mappings before processing payments.',
+                );
+            }
+            if (!receivableAccountId) {
+                throw new BadRequestException(
+                    'Account mapping missing for receivable/trade. Please configure account mappings before processing payments.',
+                );
+            }
+            if (!payableAccountId) {
+                throw new BadRequestException(
+                    'Account mapping missing for payable/trade. Please configure account mappings before processing payments.',
                 );
             }
 
-            const foundCodes = new Set(ledgerAccounts.map(acc => acc.code));
-            const missingCodes = LEDGER_CODES.filter(code => !foundCodes.has(code));
-
-            if (missingCodes.length > 0) {
-                throw new BadRequestException(
-                    `Required accounts missing from chart of accounts: ${missingCodes.join(', ')}. ` +
-                    'Please set up your chart of accounts with all required account codes before processing payments.'
-                );
-            }
-
-            const ledgerMap = new Map<string, string>(
-                ledgerAccounts.map((acc) => [acc.code, acc.id])
-            );
-
-            // Determine cash account (use bank account's GL account if specified)
-            let cashLedgerAccountId = ledgerMap.get('1110') ?? '';
+            // Determine cash account (use bank account's GL account if specified, otherwise use mapping)
+            let cashLedgerAccountId = cashAccountId;
             if (payment.bank_account_id) {
                 const { data: bankAccount, error: bankError } = await supabaseClient
                     .from('bank_accounts')
@@ -281,8 +270,8 @@ export class PaymentsService {
                     journalEntry.id,
                     {
                         cashAccountId: cashLedgerAccountId,
-                        accountsReceivableId: ledgerMap.get('1200') ?? '',
-                        accountsPayableId: ledgerMap.get('2110') ?? '',
+                        accountsReceivableId: receivableAccountId,
+                        accountsPayableId: payableAccountId,
                     }
                 );
 

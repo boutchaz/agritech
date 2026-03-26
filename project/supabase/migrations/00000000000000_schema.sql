@@ -721,7 +721,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS account_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   country_code VARCHAR(2) NOT NULL,  -- ISO country code (MA, FR, TN, US, GB)
-  accounting_standard VARCHAR(50) NOT NULL,  -- PCG, PCEC, PCN, GAAP, FRS102
+  accounting_standard VARCHAR(50) NOT NULL,  -- PCG, CGNC, PCN, GAAP, FRS102
   template_name VARCHAR(255) NOT NULL,
   account_code VARCHAR(50) NOT NULL,
   account_name VARCHAR(255) NOT NULL,
@@ -773,8 +773,7 @@ CREATE TABLE IF NOT EXISTS account_mappings (
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(country_code, accounting_standard, mapping_type, mapping_key)
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_account_mappings_lookup ON account_mappings(country_code, accounting_standard, mapping_type, mapping_key);
@@ -794,58 +793,58 @@ COMMENT ON TABLE account_mappings IS 'Maps generic business operations to countr
 -- SEED ACCOUNT TEMPLATES FOR ALL COUNTRIES
 -- =====================================================
 
--- Morocco (PCEC - Plan Comptable des Établissements de Crédit adapted for agriculture)
+-- Morocco (CGNC - Plan Comptable des Établissements de Crédit adapted for agriculture)
 INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
   -- Class 1: Financement permanent
-  ('MA', 'PCEC', 'Financement permanent', '1', 'Financement permanent', 'equity', true, 10, 'Permanent financing'),
-  ('MA', 'PCEC', 'Capital social', '111', 'Capital social', 'equity', false, 11, 'Share capital'),
-  ('MA', 'PCEC', 'Réserves', '112', 'Réserves', 'equity', false, 12, 'Reserves'),
-  ('MA', 'PCEC', 'Report à nouveau', '116', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
+  ('MA', 'CGNC', 'Financement permanent', '1', 'Financement permanent', 'equity', true, 10, 'Permanent financing'),
+  ('MA', 'CGNC', 'Capital social', '111', 'Capital social', 'equity', false, 11, 'Share capital'),
+  ('MA', 'CGNC', 'Réserves', '112', 'Réserves', 'equity', false, 12, 'Reserves'),
+  ('MA', 'CGNC', 'Report à nouveau', '116', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
 
   -- Class 2: Actif immobilisé
-  ('MA', 'PCEC', 'Actif immobilisé', '2', 'Actif immobilisé', 'asset', true, 20, 'Fixed assets'),
-  ('MA', 'PCEC', 'Terrains', '231', 'Terrains', 'asset', false, 21, 'Land'),
-  ('MA', 'PCEC', 'Constructions', '232', 'Constructions', 'asset', false, 22, 'Buildings'),
-  ('MA', 'PCEC', 'Matériel et outillage agricole', '233', 'Matériel et outillage agricole', 'asset', false, 23, 'Agricultural equipment and tools'),
-  ('MA', 'PCEC', 'Autres immobilisations corporelles', '238', 'Autres immobilisations corporelles', 'asset', false, 24, 'Other tangible fixed assets'),
+  ('MA', 'CGNC', 'Actif immobilisé', '2', 'Actif immobilisé', 'asset', true, 20, 'Fixed assets'),
+  ('MA', 'CGNC', 'Terrains', '231', 'Terrains', 'asset', false, 21, 'Land'),
+  ('MA', 'CGNC', 'Constructions', '232', 'Constructions', 'asset', false, 22, 'Buildings'),
+  ('MA', 'CGNC', 'Matériel et outillage agricole', '233', 'Matériel et outillage agricole', 'asset', false, 23, 'Agricultural equipment and tools'),
+  ('MA', 'CGNC', 'Autres immobilisations corporelles', '238', 'Autres immobilisations corporelles', 'asset', false, 24, 'Other tangible fixed assets'),
 
   -- Class 3: Actif circulant
-  ('MA', 'PCEC', 'Actif circulant', '3', 'Actif circulant', 'asset', true, 30, 'Current assets'),
-  ('MA', 'PCEC', 'Stocks de matières premières', '311', 'Stocks de matières premières', 'asset', false, 31, 'Raw materials inventory'),
-  ('MA', 'PCEC', 'Stocks de produits en cours', '313', 'Stocks de produits en cours', 'asset', false, 32, 'Work in progress inventory'),
-  ('MA', 'PCEC', 'Stocks de produits finis', '315', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods inventory'),
-  ('MA', 'PCEC', 'Clients et comptes rattachés', '342', 'Clients et comptes rattachés', 'asset', false, 34, 'Accounts receivable'),
+  ('MA', 'CGNC', 'Actif circulant', '3', 'Actif circulant', 'asset', true, 30, 'Current assets'),
+  ('MA', 'CGNC', 'Stocks de matières premières', '311', 'Stocks de matières premières', 'asset', false, 31, 'Raw materials inventory'),
+  ('MA', 'CGNC', 'Stocks de produits en cours', '313', 'Stocks de produits en cours', 'asset', false, 32, 'Work in progress inventory'),
+  ('MA', 'CGNC', 'Stocks de produits finis', '315', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods inventory'),
+  ('MA', 'CGNC', 'Clients et comptes rattachés', '342', 'Clients et comptes rattachés', 'asset', false, 34, 'Accounts receivable'),
 
   -- Class 4: Passif circulant
-  ('MA', 'PCEC', 'Passif circulant', '4', 'Passif circulant', 'liability', true, 40, 'Current liabilities'),
-  ('MA', 'PCEC', 'Fournisseurs et comptes rattachés', '441', 'Fournisseurs et comptes rattachés', 'liability', false, 41, 'Accounts payable'),
-  ('MA', 'PCEC', 'Organismes sociaux', '443', 'Organismes sociaux', 'liability', false, 42, 'Social security'),
-  ('MA', 'PCEC', 'État - Impôts et taxes', '445', 'État - Impôts et taxes', 'liability', false, 43, 'State - Taxes'),
+  ('MA', 'CGNC', 'Passif circulant', '4', 'Passif circulant', 'liability', true, 40, 'Current liabilities'),
+  ('MA', 'CGNC', 'Fournisseurs et comptes rattachés', '441', 'Fournisseurs et comptes rattachés', 'liability', false, 41, 'Accounts payable'),
+  ('MA', 'CGNC', 'Organismes sociaux', '443', 'Organismes sociaux', 'liability', false, 42, 'Social security'),
+  ('MA', 'CGNC', 'État - Impôts et taxes', '445', 'État - Impôts et taxes', 'liability', false, 43, 'State - Taxes'),
 
   -- Class 5: Trésorerie
-  ('MA', 'PCEC', 'Trésorerie', '5', 'Trésorerie', 'asset', true, 50, 'Cash and cash equivalents'),
-  ('MA', 'PCEC', 'Caisse', '511', 'Caisse', 'asset', false, 51, 'Cash'),
-  ('MA', 'PCEC', 'Banques', '514', 'Banques', 'asset', false, 52, 'Banks'),
+  ('MA', 'CGNC', 'Trésorerie', '5', 'Trésorerie', 'asset', true, 50, 'Cash and cash equivalents'),
+  ('MA', 'CGNC', 'Caisse', '511', 'Caisse', 'asset', false, 51, 'Cash'),
+  ('MA', 'CGNC', 'Banques', '514', 'Banques', 'asset', false, 52, 'Banks'),
 
   -- Class 6: Charges
-  ('MA', 'PCEC', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
-  ('MA', 'PCEC', 'Achats de matières premières', '611', 'Achats de matières premières', 'expense', false, 61, 'Purchases of raw materials'),
-  ('MA', 'PCEC', 'Achats de fournitures', '612', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
-  ('MA', 'PCEC', 'Achats de produits agricoles', '613', 'Achats de produits agricoles', 'expense', false, 63, 'Purchases of agricultural products'),
-  ('MA', 'PCEC', 'Achats de matériel et outillage', '617', 'Achats de matériel et outillage', 'expense', false, 64, 'Purchases of equipment and tools'),
-  ('MA', 'PCEC', 'Autres achats', '618', 'Autres achats', 'expense', false, 65, 'Other purchases'),
-  ('MA', 'PCEC', 'Charges de personnel', '621', 'Charges de personnel', 'expense', false, 66, 'Staff costs'),
-  ('MA', 'PCEC', 'Cotisations sociales', '622', 'Cotisations sociales', 'expense', false, 67, 'Social security contributions'),
-  ('MA', 'PCEC', 'Impôts et taxes', '631', 'Impôts et taxes', 'expense', false, 68, 'Taxes'),
-  ('MA', 'PCEC', 'Charges d''intérêts', '641', 'Charges d''intérêts', 'expense', false, 69, 'Interest charges'),
+  ('MA', 'CGNC', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
+  ('MA', 'CGNC', 'Achats de matières premières', '611', 'Achats de matières premières', 'expense', false, 61, 'Purchases of raw materials'),
+  ('MA', 'CGNC', 'Achats de fournitures', '612', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
+  ('MA', 'CGNC', 'Achats de produits agricoles', '613', 'Achats de produits agricoles', 'expense', false, 63, 'Purchases of agricultural products'),
+  ('MA', 'CGNC', 'Achats de matériel et outillage', '617', 'Achats de matériel et outillage', 'expense', false, 64, 'Purchases of equipment and tools'),
+  ('MA', 'CGNC', 'Autres achats', '618', 'Autres achats', 'expense', false, 65, 'Other purchases'),
+  ('MA', 'CGNC', 'Charges de personnel', '621', 'Charges de personnel', 'expense', false, 66, 'Staff costs'),
+  ('MA', 'CGNC', 'Cotisations sociales', '622', 'Cotisations sociales', 'expense', false, 67, 'Social security contributions'),
+  ('MA', 'CGNC', 'Impôts et taxes', '631', 'Impôts et taxes', 'expense', false, 68, 'Taxes'),
+  ('MA', 'CGNC', 'Charges d''intérêts', '641', 'Charges d''intérêts', 'expense', false, 69, 'Interest charges'),
 
   -- Class 7: Produits
-  ('MA', 'PCEC', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
-  ('MA', 'PCEC', 'Ventes de produits agricoles', '711', 'Ventes de produits agricoles', 'revenue', false, 71, 'Sales of agricultural products'),
-  ('MA', 'PCEC', 'Ventes de produits transformés', '712', 'Ventes de produits transformés', 'revenue', false, 72, 'Sales of processed products'),
-  ('MA', 'PCEC', 'Prestations de services', '713', 'Prestations de services', 'revenue', false, 73, 'Services'),
-  ('MA', 'PCEC', 'Autres produits d''exploitation', '718', 'Autres produits d''exploitation', 'revenue', false, 74, 'Other operating income'),
-  ('MA', 'PCEC', 'Subventions d''exploitation', '751', 'Subventions d''exploitation', 'revenue', false, 75, 'Operating subsidies')
+  ('MA', 'CGNC', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
+  ('MA', 'CGNC', 'Ventes de produits agricoles', '711', 'Ventes de produits agricoles', 'revenue', false, 71, 'Sales of agricultural products'),
+  ('MA', 'CGNC', 'Ventes de produits transformés', '712', 'Ventes de produits transformés', 'revenue', false, 72, 'Sales of processed products'),
+  ('MA', 'CGNC', 'Prestations de services', '713', 'Prestations de services', 'revenue', false, 73, 'Services'),
+  ('MA', 'CGNC', 'Autres produits d''exploitation', '718', 'Autres produits d''exploitation', 'revenue', false, 74, 'Other operating income'),
+  ('MA', 'CGNC', 'Subventions d''exploitation', '751', 'Subventions d''exploitation', 'revenue', false, 75, 'Operating subsidies')
 ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
 
 -- Tunisia (PCN - Plan Comptable National)
@@ -993,20 +992,26 @@ ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
 -- SEED ACCOUNT MAPPINGS FOR ALL COUNTRIES
 -- =====================================================
 
--- Morocco (PCEC) Mappings
+-- Morocco (CGNC) Mappings
 INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('MA', 'PCEC', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
-  ('MA', 'PCEC', 'cost_type', 'materials', '611', 'Materials mapped to Raw materials purchases'),
-  ('MA', 'PCEC', 'cost_type', 'utilities', '612', 'Utilities mapped to Supplies purchases'),
-  ('MA', 'PCEC', 'cost_type', 'equipment', '617', 'Equipment mapped to Equipment purchases'),
-  ('MA', 'PCEC', 'cost_type', 'product_application', '612', 'Product application mapped to Supplies'),
-  ('MA', 'PCEC', 'cost_type', 'other', '618', 'Other costs mapped to Other purchases'),
-  ('MA', 'PCEC', 'revenue_type', 'harvest', '711', 'Harvest revenue mapped to Agricultural product sales'),
-  ('MA', 'PCEC', 'revenue_type', 'subsidy', '751', 'Subsidy mapped to Operating subsidies'),
-  ('MA', 'PCEC', 'revenue_type', 'other', '718', 'Other revenue mapped to Other operating income'),
-  ('MA', 'PCEC', 'cash', 'bank', '514', 'Bank account'),
-  ('MA', 'PCEC', 'cash', 'cash', '511', 'Cash account')
-ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+  ('MA', 'CGNC', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
+  ('MA', 'CGNC', 'cost_type', 'materials', '611', 'Materials mapped to Raw materials purchases'),
+  ('MA', 'CGNC', 'cost_type', 'utilities', '612', 'Utilities mapped to Supplies purchases'),
+  ('MA', 'CGNC', 'cost_type', 'equipment', '617', 'Equipment mapped to Equipment purchases'),
+  ('MA', 'CGNC', 'cost_type', 'product_application', '612', 'Product application mapped to Supplies'),
+  ('MA', 'CGNC', 'cost_type', 'other', '618', 'Other costs mapped to Other purchases'),
+  ('MA', 'CGNC', 'revenue_type', 'harvest', '711', 'Harvest revenue mapped to Agricultural product sales'),
+  ('MA', 'CGNC', 'revenue_type', 'subsidy', '751', 'Subsidy mapped to Operating subsidies'),
+  ('MA', 'CGNC', 'revenue_type', 'other', '718', 'Other revenue mapped to Other operating income'),
+  ('MA', 'CGNC', 'cash', 'bank', '5141', 'Bank account (Banque - Compte courant)'),
+  ('MA', 'CGNC', 'cash', 'cash', '5161', 'Cash account (Caisse principale)'),
+  ('MA', 'CGNC', 'receivable', 'trade', '3420', 'Trade receivables (Clients)'),
+  ('MA', 'CGNC', 'payable', 'trade', '4410', 'Trade payables (Fournisseurs)'),
+  ('MA', 'CGNC', 'tax', 'collected', '4457', 'TVA collectée'),
+  ('MA', 'CGNC', 'tax', 'deductible', '4456', 'TVA déductible'),
+  ('MA', 'CGNC', 'revenue', 'default', '7111', 'Default revenue account (Ventes fruits et légumes)'),
+  ('MA', 'CGNC', 'expense', 'default', '6111', 'Default expense account (Achats engrais)')
+ON CONFLICT DO NOTHING;
 
 -- Tunisia (PCN) Mappings
 INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
@@ -1019,9 +1024,15 @@ INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, m
   ('TN', 'PCN', 'revenue_type', 'harvest', '701', 'Harvest revenue mapped to Finished product sales'),
   ('TN', 'PCN', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
   ('TN', 'PCN', 'revenue_type', 'other', '708', 'Other revenue mapped to Other revenue'),
-  ('TN', 'PCN', 'cash', 'bank', '53', 'Bank account'),
-  ('TN', 'PCN', 'cash', 'cash', '53', 'Cash account')
-ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+  ('TN', 'PCN', 'cash', 'bank', '52', 'Bank account (Banques)'),
+  ('TN', 'PCN', 'cash', 'cash', '511', 'Cash account (Caisse)'),
+  ('TN', 'PCN', 'receivable', 'trade', '411', 'Trade receivables (Clients)'),
+  ('TN', 'PCN', 'payable', 'trade', '401', 'Trade payables (Fournisseurs)'),
+  ('TN', 'PCN', 'tax', 'collected', '431', 'TVA à payer'),
+  ('TN', 'PCN', 'tax', 'deductible', '431', 'TVA déductible (à configurer manuellement)'),
+  ('TN', 'PCN', 'revenue', 'default', '701', 'Default revenue account (Ventes de céréales)'),
+  ('TN', 'PCN', 'expense', 'default', '601', 'Default expense account (Achats de matières premières)')
+ON CONFLICT DO NOTHING;
 
 -- USA (GAAP) Mappings
 INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
@@ -1035,8 +1046,14 @@ INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, m
   ('US', 'GAAP', 'revenue_type', 'subsidy', '4950', 'Subsidy mapped to Government Subsidies'),
   ('US', 'GAAP', 'revenue_type', 'other', '4900', 'Other revenue mapped to Other Revenue'),
   ('US', 'GAAP', 'cash', 'bank', '1000', 'Cash and Cash Equivalents'),
-  ('US', 'GAAP', 'cash', 'cash', '1000', 'Cash and Cash Equivalents')
-ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+  ('US', 'GAAP', 'cash', 'cash', '1000', 'Cash and Cash Equivalents'),
+  ('US', 'GAAP', 'receivable', 'trade', '1200', 'Accounts Receivable'),
+  ('US', 'GAAP', 'payable', 'trade', '2110', 'Trade Payables'),
+  ('US', 'GAAP', 'tax', 'collected', '2250', 'Sales Tax Payable'),
+  ('US', 'GAAP', 'tax', 'deductible', '2200', 'Taxes Payable (input tax)'),
+  ('US', 'GAAP', 'revenue', 'default', '4100', 'Default revenue account (Crop Sales)'),
+  ('US', 'GAAP', 'expense', 'default', '5100', 'Default expense account (Cost of Goods Sold)')
+ON CONFLICT DO NOTHING;
 
 -- UK (FRS 102) Mappings
 INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
@@ -1049,9 +1066,15 @@ INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, m
   ('GB', 'FRS102', 'revenue_type', 'harvest', '5000', 'Harvest revenue mapped to Agricultural product sales'),
   ('GB', 'FRS102', 'revenue_type', 'subsidy', '5900', 'Subsidy mapped to Government Grants'),
   ('GB', 'FRS102', 'revenue_type', 'other', '5200', 'Other revenue mapped to Other Income'),
-  ('GB', 'FRS102', 'cash', 'bank', '1200', 'Bank Current Account'),
-  ('GB', 'FRS102', 'cash', 'cash', '1220', 'Cash in Hand')
-ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+  ('GB', 'FRS102', 'cash', 'bank', '232', 'Cash at Bank'),
+  ('GB', 'FRS102', 'cash', 'cash', '231', 'Cash in Hand'),
+  ('GB', 'FRS102', 'receivable', 'trade', '220', 'Trade Receivables'),
+  ('GB', 'FRS102', 'payable', 'trade', '360', 'Trade and Other Payables'),
+  ('GB', 'FRS102', 'tax', 'collected', '363', 'VAT Payable'),
+  ('GB', 'FRS102', 'tax', 'deductible', '224', 'Other Receivables (input VAT)'),
+  ('GB', 'FRS102', 'revenue', 'default', '511', 'Default revenue account (Agricultural Sales)'),
+  ('GB', 'FRS102', 'expense', 'default', '610', 'Default expense account (Raw Materials and Consumables)')
+ON CONFLICT DO NOTHING;
 
 -- France (PCG) Mappings - Migrate existing hard-coded mappings
 INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
@@ -1065,8 +1088,35 @@ INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, m
   ('FR', 'PCG', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
   ('FR', 'PCG', 'revenue_type', 'other', '708', 'Other revenue mapped to Ancillary activities products'),
   ('FR', 'PCG', 'cash', 'bank', '512', 'Banks'),
-  ('FR', 'PCG', 'cash', 'cash', '531', 'Cash')
-ON CONFLICT (country_code, accounting_standard, mapping_type, mapping_key) DO NOTHING;
+  ('FR', 'PCG', 'cash', 'cash', '531', 'Cash'),
+  ('FR', 'PCG', 'receivable', 'trade', '411', 'Trade receivables (Clients)'),
+  ('FR', 'PCG', 'payable', 'trade', '401', 'Trade payables (Fournisseurs)'),
+  ('FR', 'PCG', 'tax', 'collected', '4437', 'TVA collectée'),
+  ('FR', 'PCG', 'tax', 'deductible', '4456', 'TVA déductible'),
+  ('FR', 'PCG', 'revenue', 'default', '701', 'Default revenue account (Ventes de produits agricoles)'),
+  ('FR', 'PCG', 'expense', 'default', '601', 'Default expense account (Achats de semences et plants)')
+ON CONFLICT DO NOTHING;
+
+-- Germany (HGB) Mappings
+INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
+  ('DE', 'HGB', 'cost_type', 'labor', '6400', 'Labor costs mapped to Personnel costs'),
+  ('DE', 'HGB', 'cost_type', 'materials', '6100', 'Materials mapped to Cost of Materials'),
+  ('DE', 'HGB', 'cost_type', 'utilities', '6300', 'Utilities mapped to Energy costs'),
+  ('DE', 'HGB', 'cost_type', 'equipment', '6500', 'Equipment mapped to Maintenance costs'),
+  ('DE', 'HGB', 'cost_type', 'product_application', '6100', 'Product application mapped to Cost of Materials'),
+  ('DE', 'HGB', 'cost_type', 'other', '6900', 'Other costs mapped to Other operating expenses'),
+  ('DE', 'HGB', 'revenue_type', 'harvest', '5100', 'Harvest revenue mapped to Agricultural Sales'),
+  ('DE', 'HGB', 'revenue_type', 'subsidy', '5600', 'Subsidy mapped to Government subsidies'),
+  ('DE', 'HGB', 'revenue_type', 'other', '5900', 'Other revenue mapped to Other income'),
+  ('DE', 'HGB', 'cash', 'bank', '1200', 'Bank accounts'),
+  ('DE', 'HGB', 'cash', 'cash', '1000', 'Cash account (Kasse)'),
+  ('DE', 'HGB', 'receivable', 'trade', '1400', 'Trade receivables (Forderungen aus Lieferungen und Leistungen)'),
+  ('DE', 'HGB', 'payable', 'trade', '3100', 'Trade payables (Verbindlichkeiten aus Lieferungen und Leistungen)'),
+  ('DE', 'HGB', 'tax', 'collected', '3301', 'Umsatzsteuer (VAT Payable)'),
+  ('DE', 'HGB', 'tax', 'deductible', '3300', 'Vorsteuer (Input VAT) - to be configured'),
+  ('DE', 'HGB', 'revenue', 'default', '5100', 'Default revenue account (Agricultural Sales)'),
+  ('DE', 'HGB', 'expense', 'default', '6100', 'Default expense account (Cost of Materials)')
+ON CONFLICT DO NOTHING;
 
 -- Quotes
 CREATE TABLE IF NOT EXISTS quotes (

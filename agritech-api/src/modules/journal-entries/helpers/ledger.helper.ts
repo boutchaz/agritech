@@ -13,7 +13,11 @@ export interface InvoiceItem {
   description?: string | null;
   amount: number;
   tax_amount?: number | null;
+  /** Per-item account override (from invoice_items.account_id). Takes priority over defaults. */
+  account_id?: string | null;
+  /** @deprecated Use account_id instead */
   income_account_id?: string | null;
+  /** @deprecated Use account_id instead */
   expense_account_id?: string | null;
   cost_center_id?: string | null;
 }
@@ -53,6 +57,10 @@ export interface InvoiceLedgerAccounts {
   payableAccountId: string;
   taxPayableAccountId?: string;
   taxReceivableAccountId?: string;
+  /** Default revenue account for sales invoice items without per-item account_id */
+  defaultRevenueAccountId?: string;
+  /** Default expense account for purchase invoice items without per-item account_id */
+  defaultExpenseAccountId?: string;
 }
 
 export interface PaymentLedgerAccounts {
@@ -109,8 +117,9 @@ export function buildInvoiceLedgerLines(
     // Cr. Revenue accounts (per item)
     let lineCredits = 0;
     invoice.items.forEach((item) => {
-      if (!item.income_account_id) {
-        throw new Error(`Invoice item ${item.id} missing income account`);
+      const itemAccountId = item.account_id || item.income_account_id || accounts.defaultRevenueAccountId;
+      if (!itemAccountId) {
+        throw new Error(`Invoice item ${item.id} missing revenue account. Set account_id on the item or configure a default revenue account mapping.`);
       }
 
       const amount = roundCurrency(toNumber(item.amount));
@@ -118,7 +127,7 @@ export function buildInvoiceLedgerLines(
 
       lines.push({
         journal_entry_id: entryId,
-        account_id: item.income_account_id,
+        account_id: itemAccountId,
         debit: 0,
         credit: amount,
         cost_center_id: item.cost_center_id ?? undefined,
@@ -158,8 +167,9 @@ export function buildInvoiceLedgerLines(
     // Dr. Expense accounts (per item)
     let lineDebits = 0;
     invoice.items.forEach((item) => {
-      if (!item.expense_account_id) {
-        throw new Error(`Invoice item ${item.id} missing expense account`);
+      const itemAccountId = item.account_id || item.expense_account_id || accounts.defaultExpenseAccountId;
+      if (!itemAccountId) {
+        throw new Error(`Invoice item ${item.id} missing expense account. Set account_id on the item or configure a default expense account mapping.`);
       }
 
       const amount = roundCurrency(toNumber(item.amount));
@@ -167,7 +177,7 @@ export function buildInvoiceLedgerLines(
 
       lines.push({
         journal_entry_id: entryId,
-        account_id: item.expense_account_id,
+        account_id: itemAccountId,
         debit: amount,
         credit: 0,
         cost_center_id: item.cost_center_id ?? undefined,

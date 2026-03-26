@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AlertService } from '../health/alert.service';
+import { AccountMappingsService } from '../account-mappings/account-mappings.service';
 import { moroccanChartOfAccounts } from './data/moroccan-chart-of-accounts';
 import { frenchChartOfAccounts } from './data/french-chart-of-accounts';
 import { usaChartOfAccounts } from './data/usa-chart-of-accounts';
@@ -35,6 +36,7 @@ export class AccountsService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly alertService: AlertService,
+    private readonly accountMappingsService: AccountMappingsService,
   ) {}
 
   /**
@@ -436,6 +438,19 @@ export class AccountsService {
         throw new BadRequestException('Organization not found');
       }
 
+      // Set country_code and accounting_standard on the organization
+      const { error: orgUpdateError } = await supabase
+        .from('organizations')
+        .update({
+          country_code: template.country_code,
+          accounting_standard: template.accounting_standard,
+        })
+        .eq('id', organizationId);
+
+      if (orgUpdateError) {
+        this.logger.warn(`Failed to update org accounting context: ${orgUpdateError.message}`);
+      }
+
       if (options.overwrite) {
         await supabase.from('accounts').delete().eq('organization_id', organizationId);
         this.logger.log(`Deleted existing accounts for organization ${organizationId}`);
@@ -503,7 +518,19 @@ export class AccountsService {
 
       this.logger.log(`Applied template ${countryCode} to organization ${organizationId}: ${accountsCreated} accounts created`);
 
-      const accountMappingsCreated = 0;
+      // Initialize account mappings from global templates
+      let accountMappingsCreated = 0;
+      try {
+        const mappingResult = await this.accountMappingsService.initializeDefaultMappings(
+          organizationId,
+          countryCode,
+        );
+        accountMappingsCreated = mappingResult.count;
+        this.logger.log(`Initialized ${accountMappingsCreated} account mappings for org ${organizationId}`);
+      } catch (error) {
+        this.logger.warn(`Failed to initialize account mappings: ${error.message}. Accounts were created successfully.`);
+      }
+
       const costCentersCreated = 0;
 
       return {
@@ -511,7 +538,7 @@ export class AccountsService {
         accounts_created: accountsCreated,
         account_mappings_created: accountMappingsCreated,
         cost_centers_created: costCentersCreated,
-        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts`,
+        message: `Successfully applied ${template.country_name} template with ${accountsCreated} accounts and ${accountMappingsCreated} account mappings`,
       };
     } catch (error) {
       this.logger.error(`Failed to apply template: ${error.message}`, error.stack);
