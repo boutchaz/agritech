@@ -885,34 +885,34 @@ export class ItemsService {
       this.logger.warn(`Could not fetch stock movements: ${movementsError.message}`);
     }
 
-    // Query tasks that might reference this item
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
+    // Query product_applications for this item (linked to tasks via task_id)
+    const { data: applications, error: applicationsError } = await supabase
+      .from('product_applications')
       .select(`
         id,
-        created_at,
+        task_id,
+        application_date,
+        quantity_used,
+        farm_id,
         parcel_id,
-        parcel:parcels(
-          id,
-          name,
-          farm_id,
-          farm:farms(id, name)
-        )
+        farm:farms(id, name),
+        parcel:parcels(id, name),
+        task:tasks(id, title)
       `)
       .eq('organization_id', organizationId)
-      .not('parcel_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .eq('product_id', itemId)
+      .not('task_id', 'is', null)
+      .order('application_date', { ascending: false });
 
-    if (tasksError) {
-      this.logger.warn(`Could not fetch tasks: ${tasksError.message}`);
+    if (applicationsError) {
+      this.logger.warn(`Could not fetch product applications: ${applicationsError.message}`);
     }
 
     // Aggregate usage by farm
     const farmMap = new Map<string, any>();
     const parcelMap = new Map<string, any>();
 
-    // Process stock movements
+    // Process stock movements (OUT movements = actual deductions)
     (movements || []).forEach((movement: any) => {
       const warehouse = movement.warehouse;
       const farm = warehouse?.farm;
@@ -920,7 +920,7 @@ export class ItemsService {
       if (!farm) return;
 
       const farmId = farm.id;
-      const quantity = parseFloat(movement.quantity || 0);
+      const quantity = Math.abs(parseFloat(movement.quantity || 0));
       const movementDate = movement.movement_date;
 
       if (!farmMap.has(farmId)) {
@@ -942,45 +942,56 @@ export class ItemsService {
       }
     });
 
-    // Process tasks
-    (tasks || []).forEach((task: any) => {
-      const parcel = task.parcel;
-      if (!parcel || !parcel.farm) return;
+    // Process product_applications linked to tasks (filtered by this item's product_id)
+    (applications || []).forEach((app: any) => {
+      const farm = app.farm;
+      const parcel = app.parcel;
+      if (!farm || !app.task_id) return;
 
-      const farmId = parcel.farm.id;
-      const parcelId = parcel.id;
+      const farmId = farm.id;
 
-      const parcelKey = `${farmId}_${parcelId}`;
-      if (!parcelMap.has(parcelKey)) {
-        parcelMap.set(parcelKey, {
-          farm_id: farmId,
-          farm_name: parcel.farm.name,
-          parcel_id: parcelId,
-          parcel_name: parcel.name,
-          usage_count: 0,
-          total_quantity_used: 0,
-          task_ids: [],
-        });
+      if (parcel) {
+        const parcelKey = `${farmId}_${parcel.id}`;
+        if (!parcelMap.has(parcelKey)) {
+          parcelMap.set(parcelKey, {
+            farm_id: farmId,
+            farm_name: farm.name,
+            parcel_id: parcel.id,
+            parcel_name: parcel.name,
+            usage_count: 0,
+            total_quantity_used: 0,
+            task_ids: [],
+          });
+        }
+        const parcelUsage = parcelMap.get(parcelKey);
+        parcelUsage.usage_count += 1;
+        if (!parcelUsage.task_ids.includes(app.task_id)) {
+          parcelUsage.task_ids.push(app.task_id);
+        }
       }
-
-      const parcelUsage = parcelMap.get(parcelKey);
-      parcelUsage.usage_count += 1;
-      parcelUsage.task_ids.push(task.id);
 
       if (!farmMap.has(farmId)) {
         farmMap.set(farmId, {
           farm_id: farmId,
-          farm_name: parcel.farm.name,
+          farm_name: farm.name,
           usage_count: 0,
           total_quantity_used: 0,
           task_ids: [],
+          tasks: [],
         });
       }
 
       const farmUsage = farmMap.get(farmId);
       farmUsage.usage_count += 1;
-      if (!farmUsage.task_ids.includes(task.id)) {
-        farmUsage.task_ids.push(task.id);
+      farmUsage.total_quantity_used += parseFloat(app.quantity_used || 0);
+      if (!farmUsage.last_used_date || app.application_date > farmUsage.last_used_date) {
+        farmUsage.last_used_date = app.application_date;
+      }
+      if (!farmUsage.task_ids.includes(app.task_id)) {
+        farmUsage.task_ids.push(app.task_id);
+        if (app.task) {
+          farmUsage.tasks.push({ id: app.task.id, title: app.task.title });
+        }
       }
     });
 

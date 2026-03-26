@@ -243,6 +243,8 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         setValue("metayage_type", undefined);
       } else if (workerType === "daily_worker") {
         setValue("monthly_salary", undefined);
+        setValue("daily_rate", undefined);
+        setValue("per_unit_rate", undefined);
         setValue("metayage_percentage", undefined);
         setValue("metayage_type", undefined);
         setValue("payment_frequency", undefined);
@@ -309,6 +311,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         bank_account: data.bank_account?.trim() || undefined,
         payment_method: data.payment_method?.trim() || undefined,
         notes: data.notes?.trim() || undefined,
+        // Daily workers: rates are defined at task level, not in the profile
+        ...(data.worker_type === "daily_worker" && {
+          daily_rate: undefined,
+          per_unit_rate: undefined,
+        }),
       };
 
       // 1. Create or update the worker
@@ -382,6 +389,10 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       onSuccess?.();
       onClose();
     } catch (error: unknown) {
+      console.error('[WorkerForm] Submit error:', error);
+      if (error && typeof error === 'object' && 'responseData' in error) {
+        console.error('[WorkerForm] Backend response:', (error as any).responseData);
+      }
       // Use generic error handler for worker create/update errors
       handleFormError(error, setError);
     }
@@ -822,20 +833,6 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.dailyRate", { currency: currencySymbol })}
-                </label>
-                <input
-                  {...register("daily_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.dailyRate")}
-                />
-              </div>
-            </div>
           </div>
         )}
 

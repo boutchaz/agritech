@@ -1138,15 +1138,6 @@ export class TasksService {
       );
     }
 
-    // Process consumed items - deduct from stock
-    await this.processConsumedItems(
-      userId,
-      organizationId,
-      taskId,
-      task,
-      completeTaskDto.consumed_items,
-    );
-
     return {
       ...task,
       worker_name: task.worker
@@ -1159,6 +1150,40 @@ export class TasksService {
         ? task.parcel[0]?.name
         : task.parcel?.name,
     };
+  }
+
+  /**
+   * Start a task — sets status to in_progress and deducts planned stock immediately
+   */
+  async startTask(userId: string, organizationId: string, taskId: string): Promise<any> {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data: task, error } = await client
+      .from('tasks')
+      .select('*, worker:workers!assigned_to(first_name, last_name), farm:farms!farm_id(name), parcel:parcels!parcel_id(name)')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error || !task) throw new Error('Task not found');
+
+    if (!['pending', 'assigned'].includes(task.status)) {
+      throw new Error(`Cannot start a task with status "${task.status}"`);
+    }
+
+    // Update status to in_progress
+    const { data: updated } = await client
+      .from('tasks')
+      .update({ status: 'in_progress', actual_start: new Date().toISOString() })
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    // Deduct planned stock immediately — workers are taking the product now
+    await this.processConsumedItems(userId, organizationId, taskId, task);
+
+    return updated;
   }
 
   /**
@@ -2322,6 +2347,54 @@ export class TasksService {
     };
   }
 
+  async reprocessStockForTask(userId: string, organizationId: string, taskId: string): Promise<{ processed: number; skipped: boolean }> {
+    const client = this.databaseService.getAdminClient();
+    const { data: task } = await client
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!task) throw new Error('Task not found');
+
+    // Remove guard: force reprocess even if product_applications exist (idempotent via this endpoint)
+    const { data: taskData } = await client
+      .from('tasks')
+      .select('planned_items')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    const itemsToProcess = taskData?.planned_items;
+    if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
+      return { processed: 0, skipped: true };
+    }
+
+    const completedDate = (task.completed_date || new Date().toISOString()).split('T')[0];
+    let processed = 0;
+
+    for (const item of itemsToProcess) {
+      try {
+        await this.productApplicationsService.createProductApplication(userId, organizationId, {
+          product_id: item.product_id,
+          variant_id: item.variant_id || undefined,
+          application_date: completedDate,
+          quantity_used: item.quantity,
+          area_treated: task.parcel_area || 0,
+          farm_id: task.farm_id,
+          parcel_id: task.parcel_id || undefined,
+          task_id: taskId,
+          notes: `Reprocessed stock deduction for task: ${task.title}`,
+        });
+        processed++;
+      } catch (error) {
+        this.logger.error(`Reprocess failed for product ${item.product_id}: ${error.message}`);
+      }
+    }
+
+    return { processed, skipped: false };
+  }
+
   private async processConsumedItems(
     userId: string,
     organizationId: string,
@@ -2349,20 +2422,19 @@ export class TasksService {
       return;
     }
 
-    const applicableTaskTypes = [
-      "fertilization",
-      "pest_control",
-      "irrigation",
-      "planting",
-      "soil_preparation",
-    ];
+    // Guard against double deduction: skip if product_applications already exist for this task
+    const { count: existingCount } = await client
+      .from('product_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('task_id', taskId);
 
-    if (!applicableTaskTypes.includes(task.task_type)) {
-      this.logger.log(
-        `Task type ${task.task_type} does not consume stock items, skipping`,
-      );
+    if (existingCount && existingCount > 0) {
+      this.logger.log(`Task ${taskId} already has ${existingCount} product application(s), skipping stock deduction`);
       return;
     }
+
+    // Consume stock for any task that has planned_items — no task_type restriction
 
     const completedDate = new Date().toISOString().split("T")[0];
     const productApplications: any[] = [];

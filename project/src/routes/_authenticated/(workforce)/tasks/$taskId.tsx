@@ -6,8 +6,6 @@ import {
   Play,
   CheckCircle,
   Pause,
-  Clock,
-  Calendar,
   MapPin,
   User,
   Wheat,
@@ -26,7 +24,6 @@ import TaskAttachments from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
 import TaskDependencies from '@/components/Tasks/TaskDependencies';
 import TaskWorklog from '@/components/Tasks/TaskWorklog';
-import TaskAssignee from '@/components/Tasks/TaskAssignee';
 import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
@@ -60,7 +57,7 @@ function TaskDetailPage() {
   const { t, i18n } = useTranslation();
   const { taskId } = Route.useParams();
   const navigate = useNavigate();
-  const { currentOrganization } = useAuth();
+  const { currentOrganization, profile } = useAuth();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
 
@@ -206,12 +203,9 @@ function TaskDetailPage() {
     try {
       setIsActionLoading(true);
       setError(null);
-      await updateTask.mutateAsync({
-        taskId: task.id,
-        organizationId: taskOrganizationId,
-        updates: { status: 'in_progress', actual_start: new Date().toISOString() },
-      });
+      await tasksApi.start(taskOrganizationId, task.id);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
     } catch (err: any) {
       setError(err.message || t('tasks.detail.errors.start', 'Failed to start task'));
     } finally {
@@ -558,53 +552,88 @@ function TaskDetailPage() {
                 </div>
               )}
 
-              {task.estimated_duration && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.estimatedDuration', 'Estimated duration')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <Timer className="w-4 h-4" />
-                    {task.estimated_duration}h
-                  </p>
-                </div>
-              )}
+              {(() => {
+                const endTime = task.actual_end || task.completed_date;
+                if (task.actual_start && endTime) {
+                  const diffMs = new Date(endTime).getTime() - new Date(task.actual_start).getTime();
+                  const diffH = Math.floor(diffMs / 3600000);
+                  const diffMin = Math.floor((diffMs % 3600000) / 60000);
+                  const label = diffH > 0
+                    ? `${diffH}h${diffMin > 0 ? ` ${diffMin}min` : ''}`
+                    : `${diffMin}min`;
+                  return (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.actualDuration', 'Durée réelle')}</p>
+                      <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        <Timer className="w-4 h-4 text-green-600" />
+                        {label}
+                      </p>
+                    </div>
+                  );
+                } else if (task.estimated_duration) {
+                  return (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.estimatedDuration', 'Durée estimée')}</p>
+                      <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        <Timer className="w-4 h-4" />
+                        {task.estimated_duration}h
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
 
-              {task.scheduled_start && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.scheduledStart', 'Scheduled start')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {format(new Date(task.scheduled_start), 'PPP', { locale: getLocale() })}
-                  </p>
-                </div>
-              )}
+              {/* Dates prévisionnelles vs réelles */}
+              {(task.scheduled_start || task.actual_start) && (
+                <div className="space-y-1 col-span-2">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tasks.detail.dates', 'Dates')}</p>
+                  <div className="grid grid-cols-3 gap-2 text-sm bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3">
+                    <div className="font-medium text-gray-500 dark:text-gray-400"></div>
+                    <div className="font-medium text-gray-500 dark:text-gray-400">{t('tasks.detail.planned', 'Prévu')}</div>
+                    <div className="font-medium text-gray-500 dark:text-gray-400">{t('tasks.detail.actual', 'Réel')}</div>
 
-              {task.due_date && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.dueDate', 'Due date')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {format(new Date(task.due_date), 'PPP', { locale: getLocale() })}
-                  </p>
-                </div>
-              )}
+                    {/* Début */}
+                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <Play className="w-3 h-3" />{t('tasks.detail.start', 'Début')}
+                    </div>
+                    <div className="text-gray-900 dark:text-white">
+                      {task.scheduled_start ? format(new Date(task.scheduled_start), 'dd/MM/yyyy', { locale: getLocale() }) : '—'}
+                    </div>
+                    <div className={`font-medium ${task.actual_start && task.scheduled_start && new Date(task.actual_start) > new Date(task.scheduled_start) ? 'text-orange-600' : 'text-green-600'}`}>
+                      {task.actual_start ? format(new Date(task.actual_start), 'dd/MM/yyyy HH:mm', { locale: getLocale() }) : '—'}
+                    </div>
 
-              {task.actual_start && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.actualStart', 'Started at')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-600" />
-                    {format(new Date(task.actual_start), 'PPP p', { locale: getLocale() })}
-                  </p>
-                </div>
-              )}
+                    {/* Fin */}
+                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                      <CheckCircle className="w-3 h-3" />{t('tasks.detail.end', 'Fin')}
+                    </div>
+                    <div className="text-gray-900 dark:text-white">
+                      {task.due_date ? format(new Date(task.due_date), 'dd/MM/yyyy', { locale: getLocale() }) : '—'}
+                    </div>
+                    <div className={`font-medium ${task.completed_date && task.due_date && new Date(task.completed_date) > new Date(task.due_date) ? 'text-red-600' : 'text-green-600'}`}>
+                      {task.completed_date ? format(new Date(task.completed_date), 'dd/MM/yyyy', { locale: getLocale() }) : (task.status === 'in_progress' ? <span className="text-blue-500">{t('tasks.detail.inProgress', 'En cours...')}</span> : '—')}
+                    </div>
 
-              {task.completed_date && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.completedAt', 'Completed at')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    {format(new Date(task.completed_date), 'PPP', { locale: getLocale() })}
-                  </p>
+                    {/* Écart si terminée */}
+                    {task.actual_start && task.completed_date && task.scheduled_start && (() => {
+                      const plannedMs = new Date(task.due_date || task.scheduled_start).getTime() - new Date(task.scheduled_start).getTime();
+                      const actualMs = new Date(task.completed_date).getTime() - new Date(task.actual_start).getTime();
+                      const diffDays = Math.round((actualMs - plannedMs) / 86400000);
+                      return (
+                        <>
+                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 col-span-1">
+                            <Timer className="w-3 h-3" />{t('tasks.detail.variance', 'Écart')}
+                          </div>
+                          <div className="col-span-2 font-medium">
+                            <span className={diffDays > 0 ? 'text-orange-600' : diffDays < 0 ? 'text-green-600' : 'text-gray-500'}>
+                              {diffDays === 0 ? t('tasks.detail.onTime', 'Dans les temps') : diffDays > 0 ? `+${diffDays}j ${t('tasks.detail.late', 'de retard')}` : `${Math.abs(diffDays)}j ${t('tasks.detail.early', 'en avance')}`}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               )}
             </div>
@@ -633,8 +662,8 @@ function TaskDetailPage() {
             )}
           </div>
 
-          {/* Payment Info */}
-          {task.payment_type && (
+          {/* Payment Info — only show when there's meaningful payment data */}
+          {task.payment_type && (task.rate_per_unit || task.units_required || task.actual_cost || task.cost_estimate) && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 {t('tasks.detail.paymentInfo', 'Payment Information')}
@@ -968,14 +997,28 @@ function TaskDetailPage() {
 
         {/* Sidebar - Actions */}
         <div className="space-y-6">
-          {/* Assignee */}
-          <TaskAssignee
-            taskId={taskId}
-            organizationId={organizationId}
-            currentAssignee={task.worker_id && task.worker_name ? { id: task.worker_id, name: task.worker_name } : undefined}
-            taskStatus={task.status}
-            farmId={task.farm_id}
-          />
+          {/* Assignee — the manager who created/assigned this task */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <User className="w-5 h-5" />
+              {t('tasks.detail.assignee', 'Assignee')}
+            </h2>
+            {profile ? (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-700 dark:text-green-400 font-semibold text-sm">
+                  {(profile.first_name?.[0] || '') + (profile.last_name?.[0] || '')}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.detail.manager', 'Responsable')}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">—</p>
+            )}
+          </div>
 
           {/* Quick Actions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

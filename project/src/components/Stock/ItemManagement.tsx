@@ -1786,7 +1786,7 @@ export default function ItemManagement() {
               {/* Farm Usage */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
-                <ItemFarmUsage item_id={selectedItemForDetails.id} showDetails={true} />
+                <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
               </div>
             </div>
           </DialogContent>

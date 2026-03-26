@@ -11,6 +11,7 @@ export interface ItemFarmUsage {
   last_used_date?: string;
   total_quantity_used: number;
   task_ids: string[];
+  tasks: { id: string; title: string }[];
 }
 
 export interface ItemUsageSummary {
