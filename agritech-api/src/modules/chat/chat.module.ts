@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { ChatController } from './chat.controller';
@@ -26,7 +26,7 @@ import { CalibrationModule } from '../calibration/calibration.module';
     AiRecommendationsModule,
     AnnualPlanModule,
     AiReferencesModule,
-    CalibrationModule,
+    forwardRef(() => CalibrationModule),
   ],
   controllers: [ChatController],
   providers: [

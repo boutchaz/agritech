@@ -15,7 +15,7 @@ import { ChatModule } from '../chat/chat.module';
     DatabaseModule,
     ConfigModule,
     forwardRef(() => OrganizationAISettingsModule),
-    ChatModule, // Import ChatModule to access WeatherProvider
+    forwardRef(() => ChatModule), // forwardRef to break circular: ChatModule → CalibrationModule → AIReportsModule → ChatModule
   ],
   controllers: [AIReportsController],
   providers: [AIReportsService, OpenAIProvider, GeminiProvider, GroqProvider, ZaiProvider],
