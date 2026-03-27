@@ -280,11 +280,29 @@ export function NotificationBell() {
 
   const importantCount = importantNotifications.size;
 
+  const handleNotificationClick = useCallback((notification: NotificationData) => {
+    // Mark as read
+    if (!notification.is_read) {
+      markAsRead(notification.id);
+    }
+
+    // Navigate based on notification type
+    const { data } = notification;
+    if (data?.taskId) {
+      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
+    } else if (data?.orderId) {
+      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
+    } else if (data?.quoteRequestId) {
+      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
+    }
+
+    setOpen(false);
+  }, [markAsRead, navigate]);
+
   // Show toast and animate bell for new notifications
   useEffect(() => {
     const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
       // Validate notification has required fields — ignore malformed payloads
-      // (e.g., read/read-all events incorrectly sent as notification:new)
       if (!notification?.id || !notification?.title) {
         return;
       }
@@ -318,25 +336,6 @@ export function NotificationBell() {
 
     return unsubscribe;
   }, [handleNotificationClick]);
-
-  const handleNotificationClick = useCallback((notification: NotificationData) => {
-    // Mark as read
-    if (!notification.is_read) {
-      markAsRead(notification.id);
-    }
-
-    // Navigate based on notification type
-    const { data } = notification;
-    if (data?.taskId) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
-    } else if (data?.orderId) {
-      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
-    } else if (data?.quoteRequestId) {
-      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
-    }
-
-    setOpen(false);
-  }, [markAsRead, navigate]);
 
   const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
