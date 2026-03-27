@@ -271,9 +271,20 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       return;
     }
 
+    // Build items directly from form data (synchronous — no async totals race condition)
+    const buildItems = () => data.items.map((item) => ({
+      inventory_item_id: item.inventory_item_id || undefined,
+      item_name: item.item_name,
+      description: item.description || undefined,
+      quantity: item.quantity,
+      rate: item.rate,
+      unit_of_measure: item.unit_of_measure || undefined,
+      account_id: item.account_id || undefined,
+      tax_id: item.tax_id || undefined,
+    }));
+
     try {
       if (isEditMode && purchaseOrder) {
-        // Update existing purchase order
         const updateData = {
           poId: purchaseOrder.id,
           order_date: data.order_date,
@@ -281,11 +292,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           payment_terms: data.payment_terms || null,
           delivery_address: data.shipping_address || null,
           notes: data.notes || null,
-          items: totals.items_with_tax.map((item, index) => ({
-            ...data.items[index],
-            amount: item.amount,
-            tax_amount: item.tax_amount,
-          })),
+          items: buildItems(),
         };
 
         await updatePurchaseOrder.mutateAsync(updateData);
@@ -299,12 +306,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           expected_delivery_date: data.expected_delivery_date,
           payment_terms: data.payment_terms || null,
           notes: data.notes || null,
-          items: totals.items_with_tax.map((item, index) => ({
-            ...data.items[index],
-            amount: item.amount,
-            tax_amount: item.tax_amount,
-            tax_rate: item.tax_rate || 0,
-          })),
+          items: buildItems(),
         };
 
         await createPurchaseOrder.mutateAsync(purchaseOrderData);
@@ -513,6 +515,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                           </option>
                         ))}
                       </NativeSelect>
+                      {errors.items?.[index]?.account_id && (
+                        <p className="text-xs text-red-600 mt-1">
+                          {errors.items[index]?.account_id?.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="col-span-2">

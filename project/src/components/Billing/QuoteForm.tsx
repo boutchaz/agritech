@@ -442,10 +442,14 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                         type="hidden"
                         {...register(`items.${index}.item_id`)}
                       />
-                      <input
-                        type="hidden"
+                      <Input
                         {...register(`items.${index}.item_name`)}
+                        placeholder={t('quotes.form.itemName', 'Nom de l\'article *')}
+                        className="w-full"
                       />
+                      {errors.items?.[index]?.item_name && (
+                        <p className="text-xs text-red-600">{errors.items[index]?.item_name?.message}</p>
+                      )}
                       <Input
                         {...register(`items.${index}.description`)}
                         placeholder={t('quotes.form.description')}
@@ -491,6 +495,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                             <FolderPlus className="h-4 w-4 text-blue-600" />
                           </Button>
                         </div>
+                        {errors.items?.[index]?.account_id && (
+                          <p className="text-xs text-red-600 mt-1">{errors.items[index]?.account_id?.message}</p>
+                        )}
                         <div className="flex gap-2">
                           <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
                             <option value="">{t('quotes.form.noTax')}</option>
@@ -530,8 +537,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.itemName', 'Nom')} * / {t('quotes.form.description')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</th>
@@ -598,21 +605,24 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 )}
                               </SelectContent>
                             </Select>
-                            {/* Hidden field for item_name (required for backward compatibility) */}
                             <input
                               type="hidden"
                               {...register(`items.${index}.item_id`)}
                             />
-                            <input
-                              type="hidden"
-                              {...register(`items.${index}.item_name`)}
-                            />
                           </td>
                           <td className="py-2 px-3">
                             <Input
+                              {...register(`items.${index}.item_name`)}
+                              placeholder={t('quotes.form.itemName', 'Nom de l\'article *')}
+                              className={cn("w-full", errors.items?.[index]?.item_name && "border-red-500")}
+                            />
+                            {errors.items?.[index]?.item_name && (
+                              <p className="text-xs text-red-600 mt-1">{errors.items[index]?.item_name?.message}</p>
+                            )}
+                            <Input
                               {...register(`items.${index}.description`)}
                               placeholder={t('quotes.form.description')}
-                              className="w-full"
+                              className="w-full mt-1"
                             />
                           </td>
                           <td className="py-2 px-3">
@@ -655,6 +665,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <FolderPlus className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
+                            {errors.items?.[index]?.account_id && (
+                              <p className="text-xs text-red-600 mt-1">{errors.items[index]?.account_id?.message}</p>
+                            )}
                           </td>
                           <td className="py-2 px-3">
                             <div className="flex gap-1">

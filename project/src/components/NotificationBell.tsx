@@ -280,45 +280,6 @@ export function NotificationBell() {
 
   const importantCount = importantNotifications.size;
 
-  // Show toast and animate bell for new notifications
-  useEffect(() => {
-    const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
-      // Validate notification has required fields — ignore malformed payloads
-      // (e.g., read/read-all events incorrectly sent as notification:new)
-      if (!notification?.id || !notification?.title) {
-        return;
-      }
-
-      // Add to new notifications set for animation
-      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
-
-      // Trigger bell shake animation
-      setIsBellAnimating(true);
-      setTimeout(() => setIsBellAnimating(false), 500);
-
-      // Show toast for new notification
-      toast.info(notification.title, {
-        description: notification.message || undefined,
-        action: notification.data?.taskId || notification.data?.orderId ? {
-          label: 'View',
-          onClick: () => handleNotificationClick(notification),
-        } : undefined,
-        duration: 5000,
-      });
-
-      // Remove from new notifications after animation
-      setTimeout(() => {
-        setNewNotificationIds((prev) => {
-          const next = new Set(prev);
-          next.delete(notification.id);
-          return next;
-        });
-      }, 3000);
-    });
-
-    return unsubscribe;
-  }, [handleNotificationClick]);
-
   const handleNotificationClick = useCallback((notification: NotificationData) => {
     // Mark as read
     if (!notification.is_read) {
@@ -337,6 +298,38 @@ export function NotificationBell() {
 
     setOpen(false);
   }, [markAsRead, navigate]);
+
+  // Show toast and animate bell for new notifications
+  useEffect(() => {
+    const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
+      if (!notification?.id || !notification?.title) {
+        return;
+      }
+
+      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
+      setIsBellAnimating(true);
+      setTimeout(() => setIsBellAnimating(false), 500);
+
+      toast.info(notification.title, {
+        description: notification.message || undefined,
+        action: notification.data?.taskId || notification.data?.orderId ? {
+          label: 'View',
+          onClick: () => handleNotificationClick(notification),
+        } : undefined,
+        duration: 5000,
+      });
+
+      setTimeout(() => {
+        setNewNotificationIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notification.id);
+          return next;
+        });
+      }, 3000);
+    });
+
+    return unsubscribe;
+  }, [handleNotificationClick]);
 
   const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
