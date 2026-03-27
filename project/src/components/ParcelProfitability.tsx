@@ -519,7 +519,11 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{app.item_name ?? 'Produit'}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(app.application_date).toLocaleDateString()} • {app.quantity_used} unités
+                          {new Date(app.application_date).toLocaleDateString()}
+                          {' • '}{app.quantity_used} {app.unit ?? 'unité(s)'}
+                          {app.quantity_used > 0 && app.cost > 0
+                            ? ` × ${formatCurrency(app.cost / app.quantity_used)}/unité`
+                            : ''}
                           {app.task_title && ` • ${app.task_title}`}
                         </div>
                       </div>
