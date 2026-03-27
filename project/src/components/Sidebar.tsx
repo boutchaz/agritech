@@ -11,7 +11,6 @@ import {
   Building2,
   Users,
   Network,
-  Menu,
   X,
   ChevronDown,
   ChevronRight,
@@ -401,23 +400,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      {!isMobileMenuOpen && (
-        <button
-          onClick={() => setIsMobileMenuOpen(true)}
-          className={cn(
-            "lg:hidden fixed top-2 z-50 inline-flex items-center justify-center rounded-xl bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-md",
-            "h-9 w-9", // compact but still tappable
-            "outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0",
-            isRTL ? "right-3" : "left-3",
-          )}
-          aria-label="Toggle menu"
-        >
-          <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-        </button>
-      )}
-
-      {/* Overlay for mobile */}
+      {/* Overlay for mobile — only used if sidebar is somehow opened programmatically */}
       {isMobileMenuOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-40"
@@ -433,12 +416,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           isRTL ? "right-0 border-l" : "left-0 border-r",
           "h-screen bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
-          isCollapsed ? "lg:w-16 w-64" : "w-64",
-          isMobileMenuOpen
-            ? "translate-x-0"
-            : isRTL
-              ? "translate-x-full lg:translate-x-0"
-              : "-translate-x-full lg:translate-x-0",
+          "hidden lg:flex",
+          isCollapsed ? "lg:w-16" : "w-64",
         )}
         dir={isRTL ? "rtl" : "ltr"}
       >

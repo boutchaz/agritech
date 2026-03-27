@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import Joyride, { Step, CallBackProps, STATUS, EVENTS, ACTIONS, TooltipRenderProps } from 'react-joyride';
+import { Joyride, STATUS, EVENTS, ACTIONS } from 'react-joyride';
+import type { Step, CallBackProps, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useLocation, useNavigate } from '@tanstack/react-router';
@@ -704,6 +705,19 @@ const _isStale = (): boolean => {
   }
 };
 
+// Hook to detect mobile viewport
+const useIsMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [breakpoint]);
+  return isMobile;
+};
+
 export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -711,6 +725,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const location = useLocation();
   const { hasFeature: _hasFeature } = useExperienceLevel();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
+  const isMobile = useIsMobile();
   const loadRequestIdRef = useRef(0);
   const mutationVersionRef = useRef(0);
   const [tourState, setTourState] = useState<TourState>({
@@ -1253,7 +1268,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       }}
     >
       {children}
-      {!isOnboardingRoute && (
+      {!isOnboardingRoute && !isMobile && (
         <Joyride
           steps={currentSteps}
           run={tourState.isRunning}
@@ -1294,10 +1309,14 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
   const { hasFeature } = useExperienceLevel();
   const location = useLocation();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Don't auto-start while still loading preferences from backend
     if (isLoading) return;
+
+    // Don't auto-start tours on mobile — no tour UI rendered there
+    if (isMobile) return;
 
     // Only auto-start if:
     // 1. Tour not completed
@@ -1319,5 +1338,5 @@ export const useAutoStartTour = (tourId: TourId, delay: number = 1000) => {
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [tourId, startTour, completedTours, dismissedTours, isRunning, delay, hasFeature, isLoading, isOnboardingRoute]);
+  }, [tourId, startTour, completedTours, dismissedTours, isRunning, delay, hasFeature, isLoading, isOnboardingRoute, isMobile]);
 };

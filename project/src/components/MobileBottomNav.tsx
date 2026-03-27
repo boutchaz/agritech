@@ -13,11 +13,17 @@ import {
   Wheat,
   BookOpen,
   ShoppingBag,
+  ShoppingCart,
   BarChart3,
   Settings,
   Bot,
   ShieldCheck,
   X,
+  Leaf,
+  FlaskConical,
+  CalendarRange,
+  PackageCheck,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -76,6 +82,7 @@ interface MoreMenuItem {
 }
 
 const moreMenuItems: MoreMenuItem[] = [
+  // Farm & Land
   {
     id: "farm-hierarchy",
     labelKey: "nav.farmHierarchy",
@@ -84,11 +91,34 @@ const moreMenuItems: MoreMenuItem[] = [
     path: "/farm-hierarchy",
   },
   {
+    id: "infrastructure",
+    labelKey: "nav.infrastructure",
+    fallback: "Infrastructure",
+    icon: Building2,
+    path: "/infrastructure",
+  },
+  // Personnel
+  {
     id: "workers",
     labelKey: "nav.workers",
     fallback: "Workers",
     icon: Users,
     path: "/workers",
+  },
+  // Production
+  {
+    id: "campaigns",
+    labelKey: "nav.campaigns",
+    fallback: "Campaigns",
+    icon: CalendarRange,
+    path: "/campaigns",
+  },
+  {
+    id: "crop-cycles",
+    labelKey: "nav.cropCycles",
+    fallback: "Crop Cycles",
+    icon: Leaf,
+    path: "/crop-cycles",
   },
   {
     id: "harvests",
@@ -98,12 +128,27 @@ const moreMenuItems: MoreMenuItem[] = [
     path: "/harvests",
   },
   {
-    id: "infrastructure",
-    labelKey: "nav.infrastructure",
-    fallback: "Infrastructure",
-    icon: Building2,
-    path: "/infrastructure",
+    id: "reception-batches",
+    labelKey: "nav.receptionBatches",
+    fallback: "Reception Batches",
+    icon: PackageCheck,
+    path: "/reception-batches",
   },
+  {
+    id: "quality-control",
+    labelKey: "nav.qualityControl",
+    fallback: "Quality Control",
+    icon: FlaskConical,
+    path: "/quality-control",
+  },
+  {
+    id: "biological-assets",
+    labelKey: "nav.biologicalAssets",
+    fallback: "Biological Assets",
+    icon: Leaf,
+    path: "/biological-assets",
+  },
+  // Compliance
   {
     id: "compliance",
     labelKey: "nav.compliance",
@@ -111,6 +156,15 @@ const moreMenuItems: MoreMenuItem[] = [
     icon: ShieldCheck,
     path: "/compliance",
   },
+  // Sales & Purchasing
+  {
+    id: "billing",
+    labelKey: "nav.salesPurchasing",
+    fallback: "Sales & Purchasing",
+    icon: ShoppingCart,
+    path: "/accounting/quotes",
+  },
+  // Accounting
   {
     id: "accounting",
     labelKey: "nav.accounting",
@@ -119,12 +173,21 @@ const moreMenuItems: MoreMenuItem[] = [
     path: "/accounting",
   },
   {
+    id: "utilities",
+    labelKey: "nav.utilities",
+    fallback: "Utilities",
+    icon: Wrench,
+    path: "/utilities",
+  },
+  // Marketplace
+  {
     id: "marketplace",
     labelKey: "mobileNav.marketplace",
     fallback: "Marketplace",
     icon: ShoppingBag,
     path: "/marketplace/quote-requests/received",
   },
+  // AI & Reports
   {
     id: "chat",
     labelKey: "nav.chat",
@@ -139,6 +202,7 @@ const moreMenuItems: MoreMenuItem[] = [
     icon: BarChart3,
     path: "/accounting/reports",
   },
+  // Settings
   {
     id: "settings",
     labelKey: "nav.settings",
