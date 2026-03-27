@@ -72,7 +72,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
       {/* ===== MOBILE HEADER (<lg) ===== */}
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
-        <div className="flex gap-1 py-1.5 pl-16 pr-2 items-center">
+        <div className="flex gap-1 py-1.5 px-2 items-center">
           <button
             type="button"
             onClick={() => navigate({ to: '/' })}
