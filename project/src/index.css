@@ -523,3 +523,12 @@
 .chat-markdown > *:last-child {
   margin-bottom: 0;
 }
+
+/* Hide scrollbar for horizontal scroll strips */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

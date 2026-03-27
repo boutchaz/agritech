@@ -307,7 +307,7 @@ const MobileBottomNav: React.FC = () => {
       </nav>
 
       <Drawer open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <DrawerContent side="bottom" className="max-h-[70vh] rounded-t-2xl p-0">
+        <DrawerContent side="bottom" hideClose className="max-h-[70vh] rounded-t-2xl p-0">
           <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-base font-semibold">

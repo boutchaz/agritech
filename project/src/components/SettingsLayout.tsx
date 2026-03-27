@@ -344,7 +344,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
       {/* Mobile Settings Drawer */}
       <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <DrawerContent side="bottom" className="max-h-[80vh] rounded-t-2xl p-0">
+        <DrawerContent side="bottom" hideClose className="max-h-[80vh] rounded-t-2xl p-0">
           <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-base font-semibold">
