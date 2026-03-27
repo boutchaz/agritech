@@ -530,8 +530,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                     <tr>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.item')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.itemName', 'Nom')} * / {t('quotes.form.description')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-20", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-28", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-28", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.account')}</th>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
                       <th className={cn("text-right py-2 px-3 text-sm font-medium w-24", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
@@ -621,7 +621,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.quantity`)}
-                              className="w-full"
+                              className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </td>
                           <td className="py-2 px-3">
@@ -629,7 +629,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.rate`)}
-                              className="w-full"
+                              className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                           </td>
                           <td className="py-2 px-3">
