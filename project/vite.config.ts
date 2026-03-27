@@ -42,8 +42,11 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         // Manual chunks for better code splitting
         manualChunks: {
-          // React core
-          'react-vendor': ['react', 'react-dom'],
+          // NOTE: React and React-DOM are NOT split into a separate chunk.
+          // Doing so causes "Cannot access 'R' before initialization" TDZ errors
+          // due to circular imports between the entry chunk and react-vendor chunk.
+          // Vite/Rollup handles React deduplication automatically.
+
           // Routing
           'router': ['@tanstack/react-router'],
           // Query/State management
