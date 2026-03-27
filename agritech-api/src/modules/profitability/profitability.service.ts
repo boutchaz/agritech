@@ -651,47 +651,62 @@ export class ProfitabilityService {
     }
     const taskLaborTotal = taskLaborCosts.reduce((s, r) => s + Number(r.total_payment || 0), 0);
 
-    // Step 3: Product/material costs consumed in tasks linked to this parcel
-    // Filter by task_id (not parcel_id which is often NULL on product_applications)
-    let materialCosts: any[] = [];
-    let materialCostTotal = 0;
+    // Step 3: Product/material costs for this parcel
+    // Primary: filter by parcel_id (same as "Historique des Applications")
+    // Secondary: filter by task_id for applications where parcel_id may be NULL
+    const { data: appsByParcel } = await supabase
+      .from('product_applications')
+      .select(`
+        id, application_date, quantity_used, cost, currency, task_id, product_id,
+        items!product_id(item_name, unit_of_measure, standard_rate)
+      `)
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .gte('application_date', startDate)
+      .lte('application_date', endDate)
+      .order('application_date', { ascending: false });
 
+    let appsByTask: any[] = [];
     if (parcelTaskIds.length > 0) {
-      const { data: productApps } = await supabase
+      const { data: byTask } = await supabase
         .from('product_applications')
         .select(`
           id, application_date, quantity_used, cost, currency, task_id, product_id,
           items!product_id(item_name, unit_of_measure, standard_rate)
         `)
         .in('task_id', parcelTaskIds)
+        .is('parcel_id', null)  // avoid duplicates with appsByParcel
         .gte('application_date', startDate)
         .lte('application_date', endDate)
         .order('application_date', { ascending: false });
-
-      materialCosts = (productApps || []).map((app) => {
-        const item = (app as any).items;
-        // Use FIFO cost if available, otherwise estimate from item standard_rate
-        const effectiveCost =
-          app.cost != null
-            ? Number(app.cost)
-            : item?.standard_rate
-              ? Number(item.standard_rate) * Number(app.quantity_used || 0)
-              : 0;
-        return {
-          id: app.id,
-          application_date: app.application_date,
-          quantity_used: Number(app.quantity_used || 0),
-          cost: effectiveCost,
-          currency: app.currency,
-          task_id: app.task_id,
-          task_title: taskTitleMap.get(app.task_id) || null,
-          item_name: item?.item_name || 'Produit',
-          unit: item?.unit_of_measure,
-        };
-      }).filter((app) => app.cost > 0);
-
-      materialCostTotal = materialCosts.reduce((s, a) => s + a.cost, 0);
+      appsByTask = byTask || [];
     }
+
+    const allProductApps = [...(appsByParcel || []), ...appsByTask];
+
+    const mapApp = (app: any) => {
+      const item = app.items;
+      const effectiveCost =
+        app.cost != null
+          ? Number(app.cost)
+          : item?.standard_rate
+            ? Number(item.standard_rate) * Number(app.quantity_used || 0)
+            : 0;
+      return {
+        id: app.id,
+        application_date: app.application_date,
+        quantity_used: Number(app.quantity_used || 0),
+        cost: effectiveCost,
+        currency: app.currency,
+        task_id: app.task_id,
+        task_title: taskTitleMap.get(app.task_id) || null,
+        item_name: item?.item_name || 'Produit',
+        unit: item?.unit_of_measure,
+      };
+    };
+
+    const materialCosts = allProductApps.map(mapApp).filter((a) => a.cost > 0);
+    const materialCostTotal = materialCosts.reduce((s, a) => s + a.cost, 0);
 
     // Step 4: Harvest revenues (harvest_records linked to parcel)
     const { data: harvestRecs } = await supabase
