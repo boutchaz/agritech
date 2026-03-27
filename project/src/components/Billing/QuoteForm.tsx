@@ -274,7 +274,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[95vw] sm:w-auto max-w-6xl max-h-[90vh] overflow-y-auto p-4 sm:p-6",
+          "w-[95vw] max-w-6xl min-w-[min(95vw,860px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6",
           isRTL && "text-right"
         )}
         dir={isRTL ? 'rtl' : 'ltr'}
@@ -312,15 +312,6 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
               {errors.customer_id && (
                 <p className="text-sm text-red-600 mt-1">{errors.customer_id.message}</p>
               )}
-            </div>
-
-            <div>
-              <Label htmlFor="reference_number">{t('quotes.form.referenceNumber')}</Label>
-              <Input
-                id="reference_number"
-                {...register('reference_number')}
-                placeholder={t('quotes.form.referencePlaceholder')}
-              />
             </div>
 
             <div>
