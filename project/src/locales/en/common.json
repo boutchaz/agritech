@@ -5318,14 +5318,30 @@
       "temperatureAnalysis": "Temperature Analysis",
       "precipitationAnalysis": "Precipitation Analysis",
       "dryWetConditions": "Dry & Wet Conditions",
-      "insightsRecommendations": "Insights and Recommendations"
+      "insightsRecommendations": "Insights and Recommendations",
+      "evapotranspiration": "Evapotranspiration (ET₀)"
     },
     "insights": {
       "comparison": "Data is compared to long-term climate normals (LTN) to identify significant deviations from usual conditions.",
       "wetDay": "A wet day is defined as a day with more than 1mm of precipitation. Dry periods are analyzed to optimize irrigation management.",
       "drought": "Drought conditions (5 consecutive days with less than 5mm) require special attention for crop water management."
     },
-    "noData": "Select a period to display weather analyses"
+    "noData": "Select a period to display weather analyses",
+    "et": {
+      "whatIsET": "What is Evapotranspiration (ET)?",
+      "description": "Evapotranspiration (ET) is the total water loss from land to the atmosphere, combining evaporation (water turning into vapor from soil, water bodies, or wet surfaces) and transpiration (water released by plants through their leaves). ET₀ (reference ET) is key for irrigation planning.",
+      "noData": "No evapotranspiration data available",
+      "totalET": "Total ET₀",
+      "avgDaily": "Avg. Daily ET₀",
+      "maxDaily": "Max Daily ET₀",
+      "minDaily": "Min Daily ET₀",
+      "dailyChart": "Daily Reference Evapotranspiration (ET₀)",
+      "dailyET0": "Daily ET₀",
+      "movingAvg": "7-day Moving Avg.",
+      "monthlyChart": "Monthly Evapotranspiration (ET₀)",
+      "monthlyTotal": "Monthly Total ET₀ (mm)",
+      "irrigationInsight": "ET₀ represents the water demand of the atmosphere. Multiply ET₀ by the crop coefficient (Kc) to estimate actual crop water needs (ETc = ET₀ × Kc). Higher ET₀ values indicate greater irrigation requirements."
+    }
   },
   "satellite": {
     "loading": "Loading satellite analysis...",

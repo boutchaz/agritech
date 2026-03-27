@@ -5137,14 +5137,30 @@
       "temperatureAnalysis": "Analyse des Températures",
       "precipitationAnalysis": "Analyse des Précipitations",
       "dryWetConditions": "Conditions Sèches & Humides",
-      "insightsRecommendations": "Analyses et Recommandations"
+      "insightsRecommendations": "Analyses et Recommandations",
+      "evapotranspiration": "Évapotranspiration (ET₀)"
     },
     "insights": {
       "comparison": "Les données sont comparées aux normales climatiques à long terme (LTN) pour identifier les écarts significatifs par rapport aux conditions habituelles.",
       "wetDay": "Un jour humide est défini comme un jour avec plus de 1mm de précipitations. Les périodes sèches sont analysées pour optimiser la gestion de l'irrigation.",
       "drought": "Les conditions de sécheresse (5 jours consécutifs avec moins de 5mm) nécessitent une attention particulière pour la gestion hydrique des cultures."
     },
-    "noData": "Sélectionnez une période pour afficher les analyses météorologiques"
+    "noData": "Sélectionnez une période pour afficher les analyses météorologiques",
+    "et": {
+      "whatIsET": "Qu'est-ce que l'Évapotranspiration (ET) ?",
+      "description": "L'évapotranspiration (ET) est la perte totale d'eau du sol vers l'atmosphère, combinant l'évaporation (eau se transformant en vapeur depuis le sol, les plans d'eau ou les surfaces humides) et la transpiration (eau libérée par les plantes à travers leurs feuilles). L'ET₀ (ET de référence) est essentielle pour la planification de l'irrigation.",
+      "noData": "Aucune donnée d'évapotranspiration disponible",
+      "totalET": "ET₀ Totale",
+      "avgDaily": "ET₀ Moy. Journalière",
+      "maxDaily": "ET₀ Max Journalière",
+      "minDaily": "ET₀ Min Journalière",
+      "dailyChart": "Évapotranspiration de Référence Journalière (ET₀)",
+      "dailyET0": "ET₀ Journalière",
+      "movingAvg": "Moy. Mobile 7 jours",
+      "monthlyChart": "Évapotranspiration Mensuelle (ET₀)",
+      "monthlyTotal": "ET₀ Totale Mensuelle (mm)",
+      "irrigationInsight": "L'ET₀ représente la demande en eau de l'atmosphère. Multipliez l'ET₀ par le coefficient cultural (Kc) pour estimer les besoins en eau réels de la culture (ETc = ET₀ × Kc). Des valeurs d'ET₀ plus élevées indiquent des besoins en irrigation plus importants."
+    }
   },
   "satellite": {
     "loading": "Chargement de l'analyse satellite...",

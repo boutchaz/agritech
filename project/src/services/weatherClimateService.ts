@@ -10,6 +10,7 @@ export interface DailyWeatherData {
   temperature_max: number;
   precipitation: number;
   is_wet_day: boolean; // > 1mm
+  et0: number | null; // FAO-56 reference evapotranspiration (mm/day)
 }
 
 export interface MonthlyWeatherData {
@@ -26,6 +27,18 @@ export interface MonthlyWeatherData {
   short_dry_spells_ltn: number;
 }
 
+export interface EvapotranspirationTimeSeries {
+  date: string;
+  et0: number; // FAO-56 reference ET (mm/day)
+}
+
+export interface MonthlyEvapotranspirationData {
+  month: string; // "2024-01"
+  et0_total: number; // Total ET0 for the month (mm)
+  et0_avg: number; // Average daily ET0 for the month (mm/day)
+  days_count: number;
+}
+
 export interface TemperatureTimeSeries {
   date: string;
   current_min: number;
@@ -39,6 +52,8 @@ export interface TemperatureTimeSeries {
 export interface WeatherAnalyticsData {
   temperature_series: TemperatureTimeSeries[];
   monthly_precipitation: MonthlyWeatherData[];
+  evapotranspiration_series: EvapotranspirationTimeSeries[];
+  monthly_evapotranspiration: MonthlyEvapotranspirationData[];
   start_date: string;
   end_date: string;
   location: {
@@ -114,7 +129,7 @@ class WeatherClimateService {
       longitude: longitude.toString(),
       start_date: startDate,
       end_date: endDate,
-      daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum',
+      daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum,et0_fao_evapotranspiration',
       timezone: 'auto',
     });
 
@@ -134,6 +149,7 @@ class WeatherClimateService {
       temperature_max: data.daily.temperature_2m_max[i],
       precipitation: data.daily.precipitation_sum[i],
       is_wet_day: data.daily.precipitation_sum[i] > 1,
+      et0: data.daily.et0_fao_evapotranspiration?.[i] ?? null,
     }));
   }
 
@@ -401,9 +417,22 @@ class WeatherClimateService {
     // Calculate monthly precipitation and derived metrics
     const monthly_precipitation = this.calculateMonthlyMetrics(dailyData, normals);
 
+    // Build evapotranspiration time series
+    const evapotranspiration_series: EvapotranspirationTimeSeries[] = dailyData
+      .filter((day) => day.et0 != null)
+      .map((day) => ({
+        date: day.date,
+        et0: day.et0!,
+      }));
+
+    // Calculate monthly evapotranspiration aggregates
+    const monthly_evapotranspiration = this.calculateMonthlyET(dailyData);
+
     return {
       temperature_series,
       monthly_precipitation,
+      evapotranspiration_series,
+      monthly_evapotranspiration,
       start_date: startDate,
       end_date: endDate,
       location: {
@@ -411,6 +440,34 @@ class WeatherClimateService {
         longitude: lon,
       },
     };
+  }
+
+  /**
+   * Calculate monthly evapotranspiration aggregates
+   */
+  private calculateMonthlyET(dailyData: DailyWeatherData[]): MonthlyEvapotranspirationData[] {
+    const monthlyMap = new Map<string, { total: number; count: number }>();
+
+    dailyData.forEach((day) => {
+      if (day.et0 == null) return;
+      const monthKey = day.date.substring(0, 7);
+      const existing = monthlyMap.get(monthKey);
+      if (existing) {
+        existing.total += day.et0;
+        existing.count++;
+      } else {
+        monthlyMap.set(monthKey, { total: day.et0, count: 1 });
+      }
+    });
+
+    return Array.from(monthlyMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, { total, count }]) => ({
+        month,
+        et0_total: Math.round(total * 10) / 10,
+        et0_avg: Math.round((total / count) * 10) / 10,
+        days_count: count,
+      }));
   }
 }
 

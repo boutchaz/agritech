@@ -7,7 +7,9 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    tanstackRouter(),
+    tanstackRouter({
+      autoCodeSplitting: true,
+    }),
     react(),
     // Sentry plugin uploads source maps on production builds
     sentryVitePlugin({
@@ -35,44 +37,103 @@ export default defineConfig({
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
+      external: (id) => id.startsWith('@tauri-apps/'),
       output: {
         // Ensure unique filenames for cache busting
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         // Manual chunks for better code splitting
-        manualChunks: {
-          // React core
-          'react-vendor': ['react', 'react-dom'],
-          // Routing
-          'router': ['@tanstack/react-router'],
-          // Query/State management
-          'query': ['@tanstack/react-query', 'zustand', 'jotai'],
-          // UI components
-          'ui-vendor': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-select',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-label',
-            '@radix-ui/react-alert-dialog',
-          ],
-          // Charts (large)
-          'charts': ['echarts', 'echarts-for-react', 'recharts'],
-          // Maps (large)
-          'maps': ['leaflet', 'react-leaflet', 'ol'],
-          // Date utilities
-          'dates': ['date-fns', 'react-day-picker'],
-          // Supabase
-          'supabase': ['@supabase/supabase-js', '@supabase/ssr'],
-          // Forms
-          'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          // i18n
-          'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-          // PDF generation
-          'pdf': ['jspdf', 'jspdf-autotable'],
+        manualChunks(id) {
+          // React core — needed immediately
+          if (id.includes('/react-dom/') || id.includes('/node_modules/react/')) {
+            return 'react-vendor';
+          }
+          // Router — needed for first render
+          if (id.includes('@tanstack/react-router') && !id.includes('devtools')) {
+            return 'router';
+          }
+          // Query + state — needed for data fetching
+          if (id.includes('@tanstack/react-query') && !id.includes('devtools')) {
+            return 'query';
+          }
+          if (id.includes('zustand') || id.includes('jotai')) {
+            return 'state';
+          }
+          // Supabase — needed for auth
+          if (id.includes('@supabase/')) {
+            return 'supabase';
+          }
+          // i18n — needed for first render
+          if (id.includes('i18next') || id.includes('react-i18next')) {
+            return 'i18n';
+          }
+          // UI primitives (Radix) — loaded on demand per route
+          if (id.includes('@radix-ui/')) {
+            return 'ui-vendor';
+          }
+          // Forms — loaded when forms are used
+          if (id.includes('react-hook-form') || id.includes('@hookform/') || id.includes('/zod/')) {
+            return 'forms';
+          }
+          // Charts — heavy, lazy loaded
+          if (id.includes('echarts')) {
+            return 'echarts';
+          }
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) {
+            return 'recharts';
+          }
+          // Maps — heavy, lazy loaded
+          if (id.includes('leaflet')) {
+            return 'maps-leaflet';
+          }
+          if (id.includes('/ol/') || id.includes('openlayers')) {
+            return 'maps-ol';
+          }
+          // Dates
+          if (id.includes('date-fns') || id.includes('react-day-picker')) {
+            return 'dates';
+          }
+          // PDF — heavy, lazy loaded
+          if (id.includes('jspdf') || id.includes('html2canvas')) {
+            return 'pdf';
+          }
+          // CASL
+          if (id.includes('@casl/')) {
+            return 'casl';
+          }
+          // Sentry — loaded async after initial render
+          if (id.includes('@sentry/')) {
+            return 'sentry';
+          }
+          // Lucide icons — large icon set
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
+          // kbar (command palette)
+          if (id.includes('kbar')) {
+            return 'kbar';
+          }
+          // axios
+          if (id.includes('axios')) {
+            return 'axios';
+          }
+          // Devtools — dev only
+          if (id.includes('devtools')) {
+            return 'devtools';
+          }
+          // Marked (markdown) — lazy
+          if (id.includes('marked') || id.includes('dompurify')) {
+            return 'markdown';
+          }
+          // Socket.io
+          if (id.includes('socket.io')) {
+            return 'socketio';
+          }
+          // docx generation
+          if (id.includes('docx')) {
+            return 'docx';
+          }
         },
       },
     },
@@ -83,8 +144,28 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react-day-picker', 'date-fns', 'leaflet'],
-    exclude: ['lucide-react'],
+    include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      '@tanstack/react-router',
+      '@tanstack/react-query',
+      'zustand',
+      'i18next',
+      'react-i18next',
+      '@supabase/supabase-js',
+      'react-day-picker',
+      'date-fns',
+      'leaflet',
+      'react-hook-form',
+      'sonner',
+      'clsx',
+      'tailwind-merge',
+      'class-variance-authority',
+      'axios',
+      'lucide-react',
+    ],
   },
   // Fix Leaflet SSR issues
   ssr: {

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays } from 'lucide-react';
+import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays, Waves } from 'lucide-react';
 import { useWeatherAnalytics, TimeRange } from '../../hooks/useWeatherAnalytics';
 import TemperatureCharts from './TemperatureCharts';
 import PrecipitationChart from './PrecipitationChart';
 import DryWetConditionsCharts from './DryWetConditionsCharts';
 import PhenologicalTemperatureCounters from './PhenologicalTemperatureCounters';
+import EvapotranspirationChart from './EvapotranspirationChart';
 import WeatherForecast from '../WeatherForecast';
 import { SectionLoader } from '@/components/ui/loader';
 
@@ -338,6 +339,20 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             </h3>
             <PrecipitationChart data={data.monthly_precipitation} />
           </div>
+
+          {/* Evapotranspiration Section */}
+          {data.evapotranspiration_series && data.evapotranspiration_series.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Waves className="h-6 w-6 text-orange-500" />
+                {t('weather.sections.evapotranspiration', 'Evapotranspiration (ET₀)')}
+              </h3>
+              <EvapotranspirationChart
+                dailyData={data.evapotranspiration_series}
+                monthlyData={data.monthly_evapotranspiration}
+              />
+            </div>
+          )}
 
           {/* Dry/Wet Conditions Section */}
           <div>

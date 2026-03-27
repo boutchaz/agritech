@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share2, Facebook, Twitter, Linkedin, Copy, Check } from 'lucide-react';
+import { Share2, Copy, Check, Globe, MessageCircle, Briefcase } from 'lucide-react';
 
 interface SocialShareProps {
   url: string;
@@ -40,21 +40,21 @@ export function SocialShare({ url, title }: SocialShareProps) {
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on Facebook"
       >
-        <Facebook className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+        <Globe className="h-4 w-4 text-gray-600 dark:text-gray-400" />
       </button>
       <button
         onClick={() => handleShare('twitter')}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on Twitter"
       >
-        <Twitter className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+        <MessageCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
       </button>
       <button
         onClick={() => handleShare('linkedin')}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on LinkedIn"
       >
-        <Linkedin className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+        <Briefcase className="h-4 w-4 text-gray-600 dark:text-gray-400" />
       </button>
       <button
         onClick={handleCopy}

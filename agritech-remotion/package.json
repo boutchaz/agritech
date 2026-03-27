@@ -11,18 +11,18 @@
     "upgrade": "remotion upgrade"
   },
   "dependencies": {
-    "@remotion/cli": "^4.0.277",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "remotion": "^4.0.277"
+    "@remotion/cli": "^4.0.441",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.441"
   },
   "devDependencies": {
-    "@remotion/eslint-config": "^4.0.277",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "@types/node": "^22.13.10",
-    "eslint": "^9.21.0",
-    "prettier": "^3.5.3",
+    "@remotion/eslint-config": "^4.0.441",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/node": "^22.19.15",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   }
 }

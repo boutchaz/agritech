@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { weatherClimateService, WeatherAnalyticsData, MonthlyWeatherData, TemperatureTimeSeries } from '../services/weatherClimateService';
+import { weatherClimateService, WeatherAnalyticsData, MonthlyWeatherData, TemperatureTimeSeries, EvapotranspirationTimeSeries, MonthlyEvapotranspirationData } from '../services/weatherClimateService';
 import { apiRequest } from '../lib/api-client';
 
 export type TimeRange = 'last-3-months' | 'last-6-months' | 'last-12-months' | 'ytd' | 'custom';
@@ -52,6 +52,8 @@ export function useWeatherAnalytics({
             setData({
               temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily),
               monthly_precipitation: result.monthly?.map(mapMonthlyToWeatherData) ?? [],
+              evapotranspiration_series: result.evapotranspiration_series ?? mapDailyToETSeries(result.daily),
+              monthly_evapotranspiration: result.monthly_evapotranspiration ?? [],
               start_date: startDate,
               end_date: endDate,
               location: result.location ?? { latitude: 0, longitude: 0 },
@@ -85,6 +87,16 @@ export function useWeatherAnalytics({
   }, [parcelId, parcelBoundary, timeRange, customStartDate, customEndDate]);
 
   return { data, loading, error };
+}
+
+function mapDailyToETSeries(daily: any[]): EvapotranspirationTimeSeries[] {
+  if (!daily) return [];
+  return daily
+    .filter((d: any) => d.et0_fao_evapotranspiration != null || d.et0 != null)
+    .map((d: any) => ({
+      date: d.date,
+      et0: d.et0_fao_evapotranspiration ?? d.et0 ?? 0,
+    }));
 }
 
 function mapDailyToTempSeries(daily: any[]): TemperatureTimeSeries[] {
