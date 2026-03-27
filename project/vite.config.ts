@@ -41,41 +41,22 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
         // Manual chunks for better code splitting
-        manualChunks: {
-          // NOTE: React and React-DOM are NOT split into a separate chunk.
-          // Doing so causes "Cannot access 'R' before initialization" TDZ errors
-          // due to circular imports between the entry chunk and react-vendor chunk.
-          // Vite/Rollup handles React deduplication automatically.
-
-          // Routing
-          'router': ['@tanstack/react-router'],
-          // Query/State management
-          'query': ['@tanstack/react-query', 'zustand', 'jotai'],
-          // UI components
-          'ui-vendor': [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-select',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-label',
-            '@radix-ui/react-alert-dialog',
-          ],
-          // Charts (large)
-          'charts': ['echarts', 'echarts-for-react', 'recharts'],
-          // Maps (large)
-          'maps': ['leaflet', 'react-leaflet', 'ol'],
-          // Date utilities
-          'dates': ['date-fns', 'react-day-picker'],
-          // Supabase
-          'supabase': ['@supabase/supabase-js', '@supabase/ssr'],
-          // Forms
-          'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          // i18n
-          'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
-          // PDF generation
-          'pdf': ['jspdf', 'jspdf-autotable'],
+        manualChunks(id) {
+          // IMPORTANT: react and react-dom must NOT be in a manual chunk.
+          // Splitting them causes "Cannot access 'R' before initialization" TDZ errors.
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return undefined; // Let Vite handle React — stays in entry chunk
+          }
+          if (id.includes('node_modules/@tanstack/react-router')) return 'router';
+          if (id.includes('node_modules/@tanstack/react-query') || id.includes('node_modules/zustand') || id.includes('node_modules/jotai')) return 'query';
+          if (id.includes('node_modules/@radix-ui/')) return 'ui-vendor';
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/recharts')) return 'charts';
+          if (id.includes('node_modules/leaflet') || id.includes('node_modules/react-leaflet') || id.includes('node_modules/ol/')) return 'maps';
+          if (id.includes('node_modules/date-fns') || id.includes('node_modules/react-day-picker')) return 'dates';
+          if (id.includes('node_modules/@supabase/')) return 'supabase';
+          if (id.includes('node_modules/react-hook-form') || id.includes('node_modules/@hookform/') || id.includes('node_modules/zod')) return 'forms';
+          if (id.includes('node_modules/i18next') || id.includes('node_modules/react-i18next')) return 'i18n';
+          if (id.includes('node_modules/jspdf')) return 'pdf';
         },
       },
     },
