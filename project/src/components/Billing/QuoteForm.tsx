@@ -274,7 +274,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[95vw] max-w-6xl min-w-[min(95vw,860px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6",
+          "w-[95vw] max-w-6xl min-w-[min(95vw,980px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6",
           isRTL && "text-right"
         )}
         dir={isRTL ? 'rtl' : 'ltr'}
@@ -525,17 +525,17 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             {/* Desktop table */}
             <div className="border rounded-lg overflow-hidden hidden md:block">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
+                <table className="w-full min-w-[800px]">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.item')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.itemName', 'Nom')} * / {t('quotes.form.description')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
-                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-36", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
-                      <th className="w-12"></th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.itemName', 'Nom')} * / {t('quotes.form.description')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-20", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-28", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.account')}</th>
+                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
+                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-24", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
+                      <th className="w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
