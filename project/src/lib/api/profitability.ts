@@ -130,11 +130,14 @@ export interface ProfitabilityData {
 }
 
 export interface ParcelProfitabilityData {
-  // Combined totals (legacy + ledger)
+  // Grand totals (accounting + operational)
   totalCosts: number;
   totalRevenue: number;
   netProfit: number;
   profitMargin: number;
+  // Accounting sub-totals only
+  accountingCosts?: number;
+  accountingRevenue?: number;
   // Legacy data
   costs: Cost[];
   revenues: Revenue[];
@@ -204,6 +207,53 @@ export interface ParcelProfitabilityData {
     revenue_amount: number;
     net_amount: number;
   }>;
+  // Operational data
+  taskLaborCosts?: Array<{
+    id: string;
+    work_date: string;
+    total_payment: number;
+    hours_worked?: number;
+    hourly_rate?: number;
+    payment_status: string;
+    task_description: string;
+    task_id: string;
+    task_title: string;
+    worker_type?: string;
+  }>;
+  taskLaborTotal?: number;
+  materialCosts?: Array<{
+    id: string;
+    application_date: string;
+    quantity_used: number;
+    cost: number;
+    currency?: string;
+    task_id?: string;
+    task_title?: string;
+    item_name?: string;
+  }>;
+  materialCostTotal?: number;
+  harvestRevenues?: Array<{
+    id: string;
+    harvest_date: string;
+    quantity: number;
+    unit?: string;
+    expected_price_per_unit?: number;
+    estimated_revenue: number;
+    lot_number?: string;
+    crop_type?: string;
+  }>;
+  harvestRevenueTotal?: number;
+  metayageSettlements?: Array<{
+    id: string;
+    payment_date?: string;
+    gross_revenue: number;
+    net_revenue: number;
+    total_charges?: number;
+    worker_share_amount?: number;
+    worker_percentage?: number;
+    payment_status: string;
+  }>;
+  metayageTotal?: number;
 }
 
 export interface Parcel {

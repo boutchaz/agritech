@@ -619,20 +619,98 @@ export class ProfitabilityService {
     );
 
     // Combine totals: legacy + ledger
-    // Note: Legacy totals already exclude costs/revenues that have linked journal entries
-    // so adding them together won't cause double counting
     const combinedCosts = totalCosts + ledgerExpenseTotal;
     const combinedRevenue = totalRevenue + ledgerRevenueTotal;
-    const combinedProfit = combinedRevenue - combinedCosts;
-    const combinedMargin = combinedRevenue > 0 ? (combinedProfit / combinedRevenue) * 100 : 0;
+
+    // === OPERATIONAL DATA (tasks, products, harvests, metayage) ===
+
+    // Step 1: Get all task IDs linked to this parcel
+    const { data: parcelTasks } = await supabase
+      .from('tasks')
+      .select('id, title, task_type')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId);
+
+    const parcelTaskIds = (parcelTasks || []).map((t) => t.id);
+    const taskTitleMap = new Map((parcelTasks || []).map((t) => [t.id, t.title]));
+
+    // Step 2: Work records (labor costs) linked to parcel tasks
+    let taskLaborCosts: any[] = [];
+    if (parcelTaskIds.length > 0) {
+      const { data: wr } = await supabase
+        .from('work_records')
+        .select('id, work_date, total_payment, hours_worked, hourly_rate, payment_status, task_description, task_id, worker_type')
+        .in('task_id', parcelTaskIds)
+        .gte('work_date', startDate)
+        .lte('work_date', endDate)
+        .order('work_date', { ascending: false });
+      taskLaborCosts = (wr || []).map((r) => ({
+        ...r,
+        task_title: taskTitleMap.get(r.task_id) || 'Tâche',
+      }));
+    }
+    const taskLaborTotal = taskLaborCosts.reduce((s, r) => s + Number(r.total_payment || 0), 0);
+
+    // Step 3: Product/material costs (product_applications linked to parcel)
+    const { data: productApps } = await supabase
+      .from('product_applications')
+      .select('id, application_date, quantity_used, cost, currency, task_id, item_name')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .gte('application_date', startDate)
+      .lte('application_date', endDate)
+      .not('cost', 'is', null)
+      .gt('cost', 0)
+      .order('application_date', { ascending: false });
+
+    const materialCosts = (productApps || []).map((app) => ({
+      ...app,
+      task_title: taskTitleMap.get(app.task_id) || null,
+    }));
+    const materialCostTotal = materialCosts.reduce((s, a) => s + Number(a.cost || 0), 0);
+
+    // Step 4: Harvest revenues (harvest_records linked to parcel)
+    const { data: harvestRecs } = await supabase
+      .from('harvest_records')
+      .select('id, harvest_date, quantity, unit, expected_price_per_unit, estimated_revenue, lot_number, crop_type')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .gte('harvest_date', startDate)
+      .lte('harvest_date', endDate)
+      .order('harvest_date', { ascending: false });
+
+    const harvestRevenues = harvestRecs || [];
+    const harvestRevenueTotal = harvestRevenues.reduce((s, h) => s + Number(h.estimated_revenue || 0), 0);
+
+    // Step 5: Metayage settlements (linked to parcel)
+    const { data: metayage } = await supabase
+      .from('metayage_settlements')
+      .select('id, payment_date, gross_revenue, net_revenue, total_charges, worker_share_amount, worker_percentage, payment_status, created_at')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: false });
+
+    const metayageSettlements = metayage || [];
+    const metayageTotal = metayageSettlements.reduce((s, m) => s + Number(m.net_revenue || 0), 0);
+
+    // Grand totals = accounting + operational
+    const grandTotalCosts = combinedCosts + taskLaborTotal + materialCostTotal;
+    const grandTotalRevenue = combinedRevenue + harvestRevenueTotal + metayageTotal;
+    const grandProfit = grandTotalRevenue - grandTotalCosts;
+    const grandMargin = grandTotalRevenue > 0 ? (grandProfit / grandTotalRevenue) * 100 : 0;
 
     return {
-      // Combined totals (legacy + ledger)
-      totalCosts: combinedCosts,
-      totalRevenue: combinedRevenue,
-      netProfit: combinedProfit,
-      profitMargin: combinedMargin,
-      // Legacy data for backward compatibility
+      // Grand totals (accounting + operational)
+      totalCosts: grandTotalCosts,
+      totalRevenue: grandTotalRevenue,
+      netProfit: grandProfit,
+      profitMargin: grandMargin,
+      // Accounting sub-totals
+      accountingCosts: combinedCosts,
+      accountingRevenue: combinedRevenue,
+      // Legacy data
       costs: costs || [],
       revenues: revenues || [],
       categoryBreakdown,
@@ -646,6 +724,15 @@ export class ProfitabilityService {
       ledgerRevenueTotal,
       accountBreakdown,
       costCenterBreakdown,
+      // Operational data
+      taskLaborCosts,
+      taskLaborTotal,
+      materialCosts,
+      materialCostTotal,
+      harvestRevenues,
+      harvestRevenueTotal,
+      metayageSettlements,
+      metayageTotal,
     };
   }
 
