@@ -177,6 +177,12 @@
       "cancel": "Annuler",
       "create": "Créer"
     },
+    "updateCheck": {
+      "button": "Modifier",
+      "title": "Modifier le contrôle",
+      "description": "Mettez à jour le statut, le score ou les informations de ce contrôle.",
+      "save": "Enregistrer"
+    },
     "createAction": {
       "button": "Nouvelle action corrective",
       "title": "Créer une action corrective",

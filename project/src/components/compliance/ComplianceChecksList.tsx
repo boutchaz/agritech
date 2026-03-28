@@ -6,8 +6,9 @@ import {
   AlertTriangle,
   XCircle,
   Clock,
-  MoreHorizontal,
   FileText,
+  MoreHorizontal,
+  Pencil,
   Trash2,
 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ComplianceCheckResponseDto, ComplianceCheckStatus } from '@/lib/api/compliance';
+import { UpdateComplianceCheckDialog } from '@/components/compliance/UpdateComplianceCheckDialog';
 
 interface ComplianceChecksListProps {
   checks: ComplianceCheckResponseDto[];
@@ -136,14 +138,14 @@ export function ComplianceChecksList({ checks, isLoading, onDelete }: Compliance
               </TableCell>
               <TableCell>{check.auditor_name || '-'}</TableCell>
               <TableCell>
-                {check.score !== undefined ? (
+                {check.score != null ? (
                   <span className={`font-bold ${
-                    (check.score || 0) >= 80 ? 'text-green-600' : 
-                    (check.score || 0) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    check.score >= 80 ? 'text-green-600' :
+                    check.score >= 50 ? 'text-yellow-600' : 'text-red-600'
                   }`}>
                     {check.score}%
                   </span>
-                ) : '-'}
+                ) : <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell>{getStatusBadge(check.status)}</TableCell>
               <TableCell className="text-right">
@@ -156,10 +158,15 @@ export function ComplianceChecksList({ checks, isLoading, onDelete }: Compliance
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                      <FileText className="mr-2 h-4 w-4" />
-                      {check.check_type.replace(/_/g, ' ')} — {check.score !== undefined ? `${check.score}%` : t('table.noScore')}
-                    </DropdownMenuItem>
+                    <UpdateComplianceCheckDialog
+                      check={check}
+                      trigger={
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {t('dialogs.updateCheck.button')}
+                        </DropdownMenuItem>
+                      }
+                    />
                     {onDelete && (
                       <>
                         <DropdownMenuSeparator />
