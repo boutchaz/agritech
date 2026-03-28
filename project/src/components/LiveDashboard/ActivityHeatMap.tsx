@@ -6,6 +6,7 @@ import { Map, RefreshCw, Layers, Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from '@/components/ui/skeleton';
 import type { ActivityHeatmapPoint } from '../../services/liveDashboardService';
+import NewsTicker from './NewsTicker';
 
 // Fix Leaflet default icon issue
 if (typeof window !== 'undefined') {
@@ -350,6 +351,9 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
           </>
         )}
       </div>
+
+      {/* News ticker — fullscreen only */}
+      {isFullscreen && <NewsTicker data={data} />}
     </div>
   );
 };
