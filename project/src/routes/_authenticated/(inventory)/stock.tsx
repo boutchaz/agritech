@@ -10,6 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { cn } from '@/lib/utils';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { PageLoader } from '@/components/ui/loader';
+
 
 const AppContent: React.FC = () => {
   const { t, i18n } = useTranslation('stock');
@@ -49,12 +51,7 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

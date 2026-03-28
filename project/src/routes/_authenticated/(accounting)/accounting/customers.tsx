@@ -31,6 +31,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { PageLoader } from '@/components/ui/loader';
+
 
 // Zod schema for customer form validation
 const customerSchema = z.object({
@@ -211,14 +213,7 @@ function CustomersPage() {
 
   if (!currentOrganization || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization ? t('dashboard.loading', 'Loading organization...') : t('accountingModule.customers.loading', 'Loading customers...')}
-          </p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

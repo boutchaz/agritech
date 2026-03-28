@@ -19,6 +19,8 @@ import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
 import { invoicesApi } from '@/lib/api/invoices';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -125,9 +127,7 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
         </DialogHeader>
 
         {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-          </div>
+          <SectionLoader />
         )}
 
         {error && (

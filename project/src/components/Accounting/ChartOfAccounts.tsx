@@ -41,6 +41,8 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import type { Database } from '@/types/database.types';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 type Account = Database['public']['Tables']['accounts']['Row'];
 type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
@@ -355,7 +357,7 @@ export const ChartOfAccounts: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <SectionLoader />
       </div>
     );
   }

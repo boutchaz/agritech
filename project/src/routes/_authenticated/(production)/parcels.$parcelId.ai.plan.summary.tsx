@@ -4,6 +4,8 @@ import { FileText, CheckCircle2, Clock3, AlertTriangle, Leaf, Droplets, DollarSi
 import { Button } from '@/components/ui/button';
 import { useAIPlan, useAIPlanSummary, useEnsureAIPlan, useValidateAIPlan } from '@/hooks/useAIPlan';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface AnnualDoses {
   N_kg_ha?: number;
@@ -47,9 +49,7 @@ const AIPlanSummaryPage = () => {
 
   if (isLoading || isSummaryLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

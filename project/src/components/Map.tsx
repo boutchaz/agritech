@@ -40,6 +40,8 @@ import {
 } from './ui/dialog';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 interface MapProps {
   center: [number, number];
@@ -2091,7 +2093,7 @@ const MapComponent: React.FC<MapProps> = ({
                     onClick={handleCalculateIndices}
                     disabled={indicesLoading || selectedIndices.length === 0}
                   >
-                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    {indicesLoading && <ButtonLoader />}
                     <span>{t('map.calculate')}</span>
                   </Button>
                 </div>
@@ -2169,7 +2171,7 @@ const MapComponent: React.FC<MapProps> = ({
                     disabled={indicesLoading}
                     className="bg-purple-600 hover:bg-purple-700"
                   >
-                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    {indicesLoading && <ButtonLoader />}
                     <span>{t('map.analyze')}</span>
                   </Button>
                 </div>

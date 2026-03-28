@@ -10,6 +10,8 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { useAuth } from '../../hooks/useAuth';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface EditFarmManagerModalProps {
   open: boolean;
@@ -198,9 +200,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <ScrollArea className="h-64">
             {isLoadingUsers ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-              </div>
+              <SectionLoader />
             ) : filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400">
                 <User className="w-8 h-8 mb-2 opacity-50" />

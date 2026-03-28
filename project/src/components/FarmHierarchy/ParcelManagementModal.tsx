@@ -51,6 +51,8 @@ import {
   SelectValue,
 } from "../ui/radix-select";
 import { Textarea } from "../ui/Textarea";
+import { SectionLoader } from '@/components/ui/loader';
+
 
 // Parcel interface is now imported from parcelsService
 
@@ -921,9 +923,7 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
 
             {/* Parcels List */}
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-              </div>
+              <SectionLoader />
             ) : parcels.length === 0 ? (
               <div className="text-center py-12">
                 <Leaf className="w-16 h-16 text-gray-300 mx-auto mb-4" />

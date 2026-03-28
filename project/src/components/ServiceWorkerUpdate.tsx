@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { toast } from 'sonner';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 export function ServiceWorkerUpdate() {
   const [_updateAvailable, setUpdateAvailable] = useState(false);
@@ -66,7 +68,7 @@ export function ServiceWorkerUpdate() {
     return (
       <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50">
         <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <ButtonLoader />
           <span>Updating app...</span>
         </div>
       </div>

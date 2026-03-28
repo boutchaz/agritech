@@ -15,6 +15,8 @@ import {
   TreePine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface FarmHierarchyManagerProps {
   organizationId: string;
@@ -222,8 +224,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <SectionLoader />
         <span className="ml-2">Loading farm hierarchy...</span>
       </div>
     );

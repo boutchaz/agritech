@@ -8,6 +8,8 @@ import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
 import { Building2, ClipboardCheck } from 'lucide-react';
 import type { ReceptionBatch } from '@/types/reception';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 function ReceptionBatchesPage() {
   const { t } = useTranslation('stock');
@@ -49,7 +51,7 @@ function ReceptionBatchesPage() {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">{t('receptionBatches.loading')}</p>
         </div>
       </div>

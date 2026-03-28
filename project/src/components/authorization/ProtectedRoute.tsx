@@ -3,6 +3,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useAbility } from '../../lib/casl/AbilityContext';
 import { useAuth } from '../../hooks/useAuth';
 import type { Action, Subject } from '../../lib/casl/ability';
+import { PageLoader } from '@/components/ui/loader';
+
 
 interface ProtectedRouteProps {
   action: Action;
@@ -43,14 +45,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Show loading while auth is loading OR rules aren't loaded yet
   if (!isReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {authLoading ? 'Loading authentication...' : 'Loading permissions...'}
-          </p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

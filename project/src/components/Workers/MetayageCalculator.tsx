@@ -7,6 +7,8 @@ import { calculateMetayageShare } from '../../types/workers';
 import type { CalculationBasis } from '../../types/workers';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Button } from '@/components/ui/button';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 interface MetayageCalculatorProps {
   organizationId: string;
@@ -342,7 +344,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                 >
                   {createSettlement.isPending ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <ButtonLoader />
                       <span>{t('workers.metayage.buttons.saving')}</span>
                     </>
                   ) : (

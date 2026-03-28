@@ -16,6 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
 import { Button } from '@/components/ui/button';
+import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 
 interface TimeSeriesChartProps {
   parcelId: string;
@@ -684,7 +685,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
              />
              <div className="flex items-center gap-1.5 text-sm text-gray-700">
                {isLoadingWeather ? (
-                 <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                 <ButtonLoader className="w-4 h-4" />
                ) : (
                  <Thermometer className="w-4 h-4 text-orange-500" />
                )}
@@ -836,7 +837,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <SectionLoader />
               <span className="text-gray-500">
                 {isSyncing && syncProgress
                   ? `Sync ${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`

@@ -7,6 +7,8 @@ import { AlertCircle, Droplets, FlaskRound, RefreshCw, Satellite, TrendingUp } f
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const ParcelOverview = () => {
   const { t } = useTranslation();
@@ -21,9 +23,7 @@ const ParcelOverview = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -244,9 +244,7 @@ const ParcelOverview = () => {
         </div>
 
         {isLoadingApplications ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
-          </div>
+          <SectionLoader />
         ) : applicationsData && applicationsData.applications && applicationsData.applications.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">

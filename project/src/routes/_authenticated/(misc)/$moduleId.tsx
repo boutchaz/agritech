@@ -6,6 +6,8 @@ import { useModuleConfig } from '@/hooks/useModuleConfig'
 import ModuleView from '@/components/ModuleView'
 import type { Module } from '@/types'
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
@@ -18,7 +20,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
         </div>
       </div>
@@ -29,7 +31,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement du module...</p>
         </div>
       </div>

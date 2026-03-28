@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { organizationUsersApi } from '../lib/api/organization-users';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface OrganizationUser {
   id: string;
@@ -368,9 +370,7 @@ const UsersSettings: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-        </div>
+        <SectionLoader />
       ) : users.length === 0 ? (
         <div className="text-center py-12">
           <Users className="mx-auto h-12 w-12 text-gray-400" />
@@ -781,9 +781,7 @@ const UsersSettings: React.FC = () => {
             </p>
 
             {passwordLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              </div>
+              <SectionLoader />
             ) : tempPassword ? (
               <div className="space-y-4">
                 <div>

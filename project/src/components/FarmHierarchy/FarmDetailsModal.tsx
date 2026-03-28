@@ -21,6 +21,8 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface FarmDetailsModalProps {
   farmId: string;
@@ -64,7 +66,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-3xl">
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            <SectionLoader />
             <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.details.loading')}</span>
           </div>
         </DialogContent>

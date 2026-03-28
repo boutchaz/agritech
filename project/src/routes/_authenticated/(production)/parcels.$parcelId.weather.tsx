@@ -3,6 +3,8 @@ import { Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { Cloud, Loader2 } from 'lucide-react'
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const WeatherAnalyticsView = lazy(() => import('../../../components/WeatherAnalytics/WeatherAnalyticsView'));
 
@@ -13,9 +15,7 @@ const ParcelWeatherPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

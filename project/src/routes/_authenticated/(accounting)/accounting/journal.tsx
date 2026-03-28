@@ -72,6 +72,8 @@ import {
   DateRangeFilter,
   DataTablePagination,
 } from "@/components/ui/data-table";
+import { PageLoader } from '@/components/ui/loader';
+
 
 interface JournalLineInput {
   account_id: string;
@@ -331,16 +333,7 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization
-              ? "Chargement de l'organisation..."
-              : "Chargement des écritures..."}
-          </p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

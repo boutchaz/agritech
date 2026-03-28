@@ -25,6 +25,8 @@ import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface WorkersListProps {
   organizationId: string;
@@ -265,8 +267,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
 
       {/* Workers List - Mobile Cards / Desktop Table */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <SectionLoader />
           <span className="ms-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
         </div>
       ) : filteredWorkers.length === 0 ? (

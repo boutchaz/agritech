@@ -11,6 +11,8 @@ import PlantAnalysisForm from '@/components/Analysis/PlantAnalysisForm'
 import WaterAnalysisForm from '@/components/Analysis/WaterAnalysisForm'
 import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '@/types/analysis'
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const ParcelSoilAnalysis = () => {
   const { t } = useTranslation();
@@ -41,9 +43,7 @@ const ParcelSoilAnalysis = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -416,9 +416,7 @@ const ParcelSoilAnalysis = () => {
         {/* Analysis Content */}
         <div className="p-6">
           {analysesLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            </div>
+            <SectionLoader />
           ) : currentAnalyses.length === 0 ? (
             <div className="text-center py-12">
               {analysisTab === 'soil' && <Flask className="h-12 w-12 text-gray-400 mx-auto mb-4" />}

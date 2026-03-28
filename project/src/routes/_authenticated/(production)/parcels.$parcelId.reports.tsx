@@ -3,6 +3,8 @@ import { Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { Loader2 } from 'lucide-react'
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const ParcelReportGenerator = lazy(() => import('../../../components/ParcelReportGenerator'));
 
@@ -14,9 +16,7 @@ const ParcelReportsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

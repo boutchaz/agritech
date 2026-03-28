@@ -41,6 +41,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { QuickCreateItem } from "../Billing/QuickCreateItem";
 import { useTranslation } from "react-i18next";
+import { SectionLoader } from '@/components/ui/loader';
+
 
 // Invoice item schema
 const getInvoiceItemSchema = (t: (key: string) => string) =>
@@ -429,8 +431,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
         </DialogHeader>
 
         {isEditMode && isLoadingInvoice ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <SectionLoader />
             <span className="ml-2 text-gray-600">
               {t("accountingModule.invoices.form.loading")}
             </span>

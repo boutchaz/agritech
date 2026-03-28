@@ -5,6 +5,8 @@ import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Bell } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const NotificationsPage: React.FC = () => {
   const { currentOrganization } = useAuth();
@@ -13,7 +15,7 @@ const NotificationsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>

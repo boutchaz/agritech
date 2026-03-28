@@ -1,6 +1,8 @@
 import React from 'react';
 import { Cloud, CloudRain, Wind } from 'lucide-react';
 import { useWeatherForecast } from '../hooks/useWeatherForecast';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface WeatherForecastProps {
   latitude: number;
@@ -12,9 +14,7 @@ const WeatherForecast: React.FC<WeatherForecastProps> = ({ latitude, longitude }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

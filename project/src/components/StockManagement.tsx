@@ -34,6 +34,8 @@ import { suppliersApi } from "@/lib/api/suppliers";
 import { warehousesApi } from "@/lib/api/warehouses";
 import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface Product {
   id: string;
@@ -462,9 +464,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

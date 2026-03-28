@@ -36,6 +36,8 @@ import {
 import { Button } from "../ui/button";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { Button } from '@/components/ui/button';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 // Zod schema factory function with conditional validation
 const createWorkerSchema = (t: any) =>
@@ -452,7 +454,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       <Button type="submit" form="worker-form" disabled={isSubmitting}>
         {isSubmitting ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <ButtonLoader />
             <span>{t("workers.form.buttons.saving")}</span>
           </>
         ) : (

@@ -27,6 +27,8 @@ import {
   trackSessionStart,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
+import { PageLoader } from '@/components/ui/loader';
+
 
 type Organization = AuthOrganization;
 type Farm = AuthFarm;
@@ -637,12 +639,7 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
   // Show loading spinner (but not on public routes)
   if (loading && !isPublicRoute) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('app.loading')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

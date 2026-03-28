@@ -33,6 +33,8 @@ import {
 } from '@/components/ui/table';
 import { itemsApi } from '@/lib/api/items';
 import type { Item } from '@/types/items';
+import { PageLoader, SectionLoader } from '@/components/ui/loader';
+
 
 export const Route = createFileRoute('/_authenticated/(misc)/marketplace')({
   component: MarketplacePage,
@@ -91,12 +93,7 @@ function MarketplacePage() {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('marketplace.loading', 'Loading...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -275,9 +272,7 @@ function MarketplacePage() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
-              </div>
+              <SectionLoader />
             ) : filteredItems.length === 0 ? (
               <div className="text-center py-10">
                 <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />

@@ -19,6 +19,8 @@ import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess
 import { useCurrency } from '../hooks/useCurrency';
 import InlineFarmSelector from './InlineFarmSelector';
 import { Button } from '@/components/ui/button';
+import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
+
 
 interface Utility {
   id: string;
@@ -633,9 +635,7 @@ const UtilitiesManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -1758,7 +1758,7 @@ const UtilitiesManagement: React.FC = () => {
               className="bg-green-600 hover:bg-green-700"
             >
               {uploading && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <ButtonLoader />
               )}
               {uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}
             </Button>

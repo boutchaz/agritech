@@ -8,6 +8,15 @@ import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem as BreadcrumbListItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 interface BreadcrumbItem {
   icon?: React.ComponentType<{ className?: string }>;
@@ -76,40 +85,40 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
         <div className="flex gap-1 py-1.5 px-2 items-center">
           <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => navigate({ to: '/' })}
-            className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center"
+            className="flex-shrink-0 h-8 w-8 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             aria-label="Go to home"
-            style={{ alignSelf: 'center' }}
           >
             <HomeIcon className="h-5 w-5" />
           </Button>
-          <nav className="flex flex-col justify-center flex-1 min-w-0">
-            <div className="flex items-center gap-1 text-xs">
+          <Breadcrumb className="flex-1 min-w-0">
+            <BreadcrumbList className="text-xs flex-nowrap gap-1 sm:gap-1.5">
               {breadcrumbs.map((item, index) => {
                 const isLast = index === breadcrumbs.length - 1;
                 return (
                   <React.Fragment key={item.label}>
-                    {index > 0 && (
-                      <span className="text-gray-300 dark:text-gray-600 flex-shrink-0">/</span>
-                    )}
-                    {isLast ? (
-                      <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap">
-                        {item.label}
-                      </span>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() => handleBreadcrumbClick(item.path)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
-                      >
-                        {item.label}
-                      </Button>
-                    )}
+                    {index > 0 && <BreadcrumbSeparator className="[&>svg]:w-3 [&>svg]:h-3" />}
+                    <BreadcrumbListItem>
+                      {isLast ? (
+                        <BreadcrumbPage className="whitespace-nowrap font-medium">
+                          {item.label}
+                        </BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink
+                          className="whitespace-nowrap cursor-pointer"
+                          onClick={() => handleBreadcrumbClick(item.path)}
+                        >
+                          {item.label}
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbListItem>
                   </React.Fragment>
                 );
               })}
-            </div>
-          </nav>
+            </BreadcrumbList>
+          </Breadcrumb>
           <div className="flex flex-col justify-center gap-1 flex-shrink-0">
             <div className="flex items-center gap-1">
               <OrganizationSwitcher compact />
@@ -133,39 +142,40 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
           {/* Top Section - Breadcrumbs & Organization */}
           <div className="flex items-center justify-between py-1.5">
             {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1 text-xs flex-1 me-3 min-h-[1.25rem]" aria-label="Breadcrumb">
-              {breadcrumbs.map((item, index) => {
-                const Icon = item.icon;
-                const isLast = index === breadcrumbs.length - 1;
+            <Breadcrumb className="flex-1 me-3 min-h-[1.25rem]">
+              <BreadcrumbList className="text-xs gap-1.5 sm:gap-2">
+                {breadcrumbs.map((item, index) => {
+                  const Icon = item.icon;
+                  const isLast = index === breadcrumbs.length - 1;
 
-                return (
-                  <React.Fragment key={`${item.path ?? item.label}-${index}`}>
-                    {index > 0 && (
-                      <span className="text-gray-400 dark:text-gray-500 flex-shrink-0 select-none" aria-hidden>/</span>
-                    )}
-                    {isLast ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-gray-900 dark:text-white font-medium">
-                        {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
-                        <span className={index === 0 ? 'hidden sm:inline' : ''}>
-                          {item.label}
-                        </span>
-                      </span>
-                    ) : (
-                      <Button
-                        type="button"
-                        onClick={() => handleBreadcrumbClick(item.path)}
-                        className="inline-flex items-center gap-1 whitespace-nowrap text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
-                      >
-                        {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
-                        <span className={index === 0 ? 'hidden sm:inline' : ''}>
-                          {item.label}
-                        </span>
-                      </Button>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </nav>
+                  return (
+                    <React.Fragment key={`${item.path ?? item.label}-${index}`}>
+                      {index > 0 && <BreadcrumbSeparator />}
+                      <BreadcrumbListItem>
+                        {isLast ? (
+                          <BreadcrumbPage className="inline-flex items-center gap-1 whitespace-nowrap">
+                            {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                            <span className={index === 0 ? 'hidden sm:inline' : ''}>
+                              {item.label}
+                            </span>
+                          </BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink
+                            className="inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                            onClick={() => handleBreadcrumbClick(item.path)}
+                          >
+                            {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                            <span className={index === 0 ? 'hidden sm:inline' : ''}>
+                              {item.label}
+                            </span>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbListItem>
+                    </React.Fragment>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
 
             {/* Organization Switcher & Notifications */}
             <div className="flex flex-shrink-0 items-center gap-2">
@@ -203,19 +213,21 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                 {/* Search Bar */}
                 {showSearch && (
                   <div className="relative flex-1 lg:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Input
+                      type="search"
                       placeholder={searchPlaceholder}
                       value={searchQuery}
                       onChange={(e) => handleSearchChange(e.target.value)}
-                      className="w-full pl-9 pr-9 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      className="pl-9 pr-9 bg-gray-50 dark:bg-gray-900"
                     />
                     {searchQuery ? (
                       <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={clearSearch}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                       >
                         <X className="h-4 w-4 text-gray-400" />
                       </Button>

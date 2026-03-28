@@ -11,6 +11,8 @@ import { PlanInterventionCard } from '@/components/ai/PlanInterventionCard';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Calendar, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const AIPlanCalendarPage = () => {
   const { t } = useTranslation('ai');
@@ -23,9 +25,7 @@ const AIPlanCalendarPage = () => {
 
   if (isPlanLoading || isInterventionsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

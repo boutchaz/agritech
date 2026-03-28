@@ -29,6 +29,8 @@ import { fr, ar, enUS } from 'date-fns/locale';
 import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
@@ -176,7 +178,7 @@ const AppContent: React.FC = () => {
     return (
       <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">{t('quotes.loading')}</p>
         </div>
       </div>
@@ -201,7 +203,7 @@ const AppContent: React.FC = () => {
         }
       >
         <div className="p-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <SectionLoader />
         </div>
       </PageLayout>
     );

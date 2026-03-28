@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { ClipboardCheck, Building2 } from 'lucide-react';
+import { PageLoader } from '@/components/ui/loader';
+
 
 function QualityControlPage() {
   const { t } = useTranslation();
@@ -11,12 +13,7 @@ function QualityControlPage() {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('production.qualityControl.loadingOrganization')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { financialReportsApi, AgedReport } from '@/lib/api/financial-reports';
 import { exportAgedReportCsv } from '@/lib/utils/report-export';
+import { PageLoader } from '@/components/ui/loader';
+
 
 export const Route = createFileRoute('/_authenticated/(accounting)/accounting/aged-payables')({
   component: withRouteProtection(AppContent, 'read', 'AccountingReport'),
@@ -55,12 +57,7 @@ function AppContent() {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

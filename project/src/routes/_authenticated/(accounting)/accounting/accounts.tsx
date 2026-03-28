@@ -7,6 +7,8 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, BookOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ChartOfAccounts } from '@/components/Accounting/ChartOfAccounts';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const AccountsContent = () => {
   const { t } = useTranslation();
@@ -15,7 +17,7 @@ const AccountsContent = () => {
   if (!currentOrganization) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <SectionLoader />
       </div>
     );
   }

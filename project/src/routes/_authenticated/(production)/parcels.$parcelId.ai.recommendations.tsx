@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useAIRecommendations, useValidateAIRecommendation, useRejectAIRecommendation, useExecuteAIRecommendation } from '@/hooks/useAIRecommendations'
 import { RecommendationCard } from '@/components/ai/RecommendationCard'
 import { Lightbulb } from 'lucide-react'
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const AIRecommendationsPage = () => {
   const { parcelId } = Route.useParams();
@@ -12,9 +14,7 @@ const AIRecommendationsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

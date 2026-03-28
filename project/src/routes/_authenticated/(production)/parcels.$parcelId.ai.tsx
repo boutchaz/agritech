@@ -3,6 +3,8 @@ import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { BrainCircuit, AlertTriangle, Lightbulb, Calendar, Cloud, Settings } from 'lucide-react'
+import { SectionLoader } from '@/components/ui/loader';
+
 
 type AITab = 'dashboard' | 'calibration' | 'alerts' | 'recommendations' | 'plan' | 'weather';
 
@@ -14,9 +16,7 @@ const ParcelAILayout = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

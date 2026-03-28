@@ -39,3 +39,4 @@ playwright-report/
 playwright-report-integration/
 tests/
 e2e/.auth/
+storybook-static

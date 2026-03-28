@@ -17,6 +17,8 @@ import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
 import { usersApi } from '../lib/api/users'
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -94,9 +96,7 @@ function AuthenticatedLayout() {
   const isSubscriptionPending = !subscriptionFetched && (subscriptionLoading || !!currentOrganization)
   if (isSubscriptionPending) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     )
   }
 

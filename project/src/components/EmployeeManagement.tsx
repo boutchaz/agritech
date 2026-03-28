@@ -10,6 +10,8 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 interface Employee {
   id: string;
@@ -213,9 +215,7 @@ const EmployeeManagement: React.FC = () => {
 
   if (employeesQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     );
   }
 

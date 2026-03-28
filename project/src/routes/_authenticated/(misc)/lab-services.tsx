@@ -16,6 +16,8 @@ import {
 import { LabServiceMarketplace } from '@/components/LabServices/LabServiceMarketplace';
 import { LabOrdersList } from '@/components/LabServices/LabOrdersList';
 import { SampleSchedulesList } from '@/components/LabServices/SampleSchedulesList';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 export const Route = createFileRoute('/_authenticated/(misc)/lab-services')({
   component: LabServicesPage,
@@ -49,7 +51,7 @@ function LabServicesPage() {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">{t('labServices.loading')}</p>
         </div>
       </div>

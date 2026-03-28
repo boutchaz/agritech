@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/radix-select';
 import type { LucideIcon } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 export const Route = createFileRoute(
   '/_authenticated/(misc)/marketplace/orders',
@@ -302,9 +304,7 @@ function SellerOrdersPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
-        </div>
+        <SectionLoader />
       ) : filteredOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

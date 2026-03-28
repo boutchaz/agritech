@@ -3,6 +3,8 @@ import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { ClipboardCheck, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 function QualityControlPage() {
   const { t } = useTranslation();
@@ -12,7 +14,7 @@ function QualityControlPage() {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <SectionLoader />
           <p className="mt-4 text-gray-600 dark:text-gray-400">{t('production.qualityControl.loadingOrganization')}</p>
         </div>
       </div>

@@ -17,6 +17,8 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useServerTableState, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
+import { PageLoader } from '@/components/ui/loader';
+
 
 function HarvestsPage() {
   const { t } = useTranslation();
@@ -129,12 +131,7 @@ function HarvestsPage() {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('production.harvests.loading')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

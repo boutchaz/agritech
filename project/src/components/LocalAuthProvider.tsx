@@ -12,6 +12,8 @@ import {
   type AuthUserProfile,
   type AuthUser,
 } from '../contexts/AuthContext';
+import { PageLoader } from '@/components/ui/loader';
+
 
 const ROLE_HIERARCHY: Record<string, number> = {
   system_admin: 1,
@@ -247,23 +249,13 @@ export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('app.loading')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
   if (user && needsImport && !isOnImportPage && !isOnPublicPage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('desktop.redirectingToImport', 'Redirecting to import...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

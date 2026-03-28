@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '../ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 
 interface FarmNode {
   farm_id: string;
@@ -574,7 +575,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <SectionLoader />
           <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.loading')}</p>
         </div>
       </div>
@@ -782,7 +783,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               {/* Loading state */}
               {loadingRelatedData && (
                 <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                  <ButtonLoader className="h-8 w-8" />
                   <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.farm.analyzing')}</span>
                 </div>
               )}

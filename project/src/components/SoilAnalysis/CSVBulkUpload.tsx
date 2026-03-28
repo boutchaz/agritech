@@ -3,6 +3,8 @@ import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-
 import { parcelsApi } from '../../lib/api/parcels';
 import { soilAnalysesApi } from '../../lib/api/soil-analyses';
 import { Button } from '@/components/ui/button';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 interface CSVBulkUploadProps {
   onImportComplete: () => void;
@@ -360,7 +362,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {importing && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <ButtonLoader />
                 )}
                 <span>{importing ? 'Import en cours...' : 'Importer'}</span>
               </Button>

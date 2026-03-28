@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useTrialBalance } from '@/hooks/useFinancialReports';
 import { exportTrialBalanceCsv } from '@/lib/utils/report-export';
+import { PageLoader } from '@/components/ui/loader';
+
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -45,12 +47,7 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
