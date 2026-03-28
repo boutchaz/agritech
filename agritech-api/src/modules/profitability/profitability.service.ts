@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
-import { CreateCostDto, CreateRevenueDto, ProfitabilityFiltersDto } from './dto';
+import { CreateCostDto, CreateRevenueDto, ProfitabilityFiltersDto, ProfitabilityAnalysisFiltersDto } from './dto';
 
 @Injectable()
 export class ProfitabilityService {
@@ -658,7 +658,7 @@ export class ProfitabilityService {
       .from('product_applications')
       .select(`
         id, application_date, quantity_used, cost, currency, task_id, product_id,
-        items!product_id(item_name, unit_of_measure, standard_rate)
+        items!inner(item_name, default_unit, standard_rate)
       `)
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
@@ -672,10 +672,10 @@ export class ProfitabilityService {
         .from('product_applications')
         .select(`
           id, application_date, quantity_used, cost, currency, task_id, product_id,
-          items!product_id(item_name, unit_of_measure, standard_rate)
+          items!inner(item_name, default_unit, standard_rate)
         `)
         .in('task_id', parcelTaskIds)
-        .is('parcel_id', null)  // avoid duplicates with appsByParcel
+        .is('parcel_id', null)
         .gte('application_date', startDate)
         .lte('application_date', endDate)
         .order('application_date', { ascending: false });
@@ -701,7 +701,7 @@ export class ProfitabilityService {
         task_id: app.task_id,
         task_title: taskTitleMap.get(app.task_id) || null,
         item_name: item?.item_name || 'Produit',
-        unit: item?.unit_of_measure,
+        unit: item?.default_unit,
       };
     };
 
@@ -914,5 +914,272 @@ export class ProfitabilityService {
     }
 
     return result;
+  }
+
+  /**
+   * Multi-filter financial analysis:
+   * Aggregates costs + revenues across all parcels matching the given filter scope.
+   */
+  async getAnalysis(organizationId: string, filters: ProfitabilityAnalysisFiltersDto) {
+    const supabase = this.databaseService.getAdminClient();
+
+    const startDate = filters.start_date || '1970-01-01';
+    const endDate = filters.end_date || new Date().toISOString().split('T')[0];
+
+    // 1. Resolve target parcels based on filter_type
+    let parcelsQuery = supabase
+      .from('parcels')
+      .select('id, name, crop_type, variety, farm_id, farms(name)')
+      .eq('organization_id', organizationId);
+
+    const filterType = filters.filter_type || 'organization';
+    const filterValue = filters.filter_value;
+
+    if (filterType === 'farm' && filterValue) {
+      parcelsQuery = parcelsQuery.eq('farm_id', filterValue);
+    } else if (filterType === 'parcel' && filterValue) {
+      parcelsQuery = parcelsQuery.eq('id', filterValue);
+    } else if (filterType === 'crop_type' && filterValue) {
+      parcelsQuery = parcelsQuery.ilike('crop_type', filterValue);
+    } else if (filterType === 'variety' && filterValue) {
+      parcelsQuery = parcelsQuery.ilike('variety', filterValue);
+    }
+    // 'organization' → no additional filter (all parcels)
+
+    const { data: parcels, error: parcelsError } = await parcelsQuery.order('name');
+    if (parcelsError) {
+      this.logger.error('Error fetching parcels for analysis', parcelsError);
+      throw new InternalServerErrorException('Failed to fetch parcels');
+    }
+
+    if (!parcels || parcels.length === 0) {
+      return {
+        filter_type: filterType,
+        filter_value: filterValue,
+        filter_label: filterValue || 'Organisation',
+        parcel_count: 0,
+        farm_count: 0,
+        total_costs: 0,
+        total_revenue: 0,
+        net_profit: 0,
+        margin_percent: 0,
+        cost_breakdown: { labor: 0, materials: 0, product_applications: 0, equipment: 0, other: 0 },
+        revenue_breakdown: { harvest: 0, invoiced: 0, other: 0 },
+        by_parcel: [],
+      };
+    }
+
+    const parcelIds = parcels.map((p) => p.id);
+    const farmIds = [...new Set(parcels.map((p: any) => p.farm_id).filter(Boolean))];
+
+    // Per-parcel accumulator
+    const parcelMap = new Map<string, { name: string; crop_type: string | null; variety: string | null; costs: number; revenue: number }>();
+    for (const p of parcels) {
+      parcelMap.set(p.id, { name: p.name, crop_type: (p as any).crop_type || null, variety: (p as any).variety || null, costs: 0, revenue: 0 });
+    }
+
+    // Cost breakdown accumulators
+    const breakdown = { labor: 0, materials: 0, product_applications: 0, equipment: 0, other: 0 };
+    const revBreakdown = { harvest: 0, invoiced: 0, other: 0 };
+
+    // 2. Aggregate legacy costs table
+    const { data: costsData } = await supabase
+      .from('costs')
+      .select('parcel_id, cost_type, amount')
+      .in('parcel_id', parcelIds)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    for (const c of costsData || []) {
+      const pm = parcelMap.get(c.parcel_id);
+      if (pm) pm.costs += Number(c.amount || 0);
+      const ct = (c.cost_type || 'other').toLowerCase();
+      if (ct === 'labor') breakdown.labor += Number(c.amount || 0);
+      else if (ct === 'materials') breakdown.materials += Number(c.amount || 0);
+      else if (ct === 'equipment') breakdown.equipment += Number(c.amount || 0);
+      else breakdown.other += Number(c.amount || 0);
+    }
+
+    // 3. Aggregate legacy revenues table
+    const { data: revsData } = await supabase
+      .from('revenues')
+      .select('parcel_id, revenue_type, amount')
+      .in('parcel_id', parcelIds)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    for (const r of revsData || []) {
+      const pm = parcelMap.get(r.parcel_id);
+      if (pm) pm.revenue += Number(r.amount || 0);
+      const rt = (r.revenue_type || 'other').toLowerCase();
+      if (rt === 'harvest') revBreakdown.harvest += Number(r.amount || 0);
+      else revBreakdown.other += Number(r.amount || 0);
+    }
+
+    // 4. Task-based labor costs (work_records linked to parcel tasks)
+    const { data: parcelTasksData } = await supabase
+      .from('tasks')
+      .select('id, parcel_id')
+      .in('parcel_id', parcelIds)
+      .eq('organization_id', organizationId);
+
+    const taskParcelMap = new Map<string, string>(); // task_id → parcel_id
+    for (const t of parcelTasksData || []) {
+      taskParcelMap.set(t.id, t.parcel_id);
+    }
+
+    const taskIds = [...taskParcelMap.keys()];
+    if (taskIds.length > 0) {
+      const { data: workRecs } = await supabase
+        .from('work_records')
+        .select('task_id, total_payment')
+        .in('task_id', taskIds)
+        .gte('work_date', startDate)
+        .lte('work_date', endDate);
+
+      for (const wr of workRecs || []) {
+        const parcelId = taskParcelMap.get(wr.task_id);
+        if (parcelId) {
+          const pm = parcelMap.get(parcelId);
+          if (pm) pm.costs += Number(wr.total_payment || 0);
+        }
+        breakdown.labor += Number(wr.total_payment || 0);
+      }
+
+      // 5. Product applications (material costs)
+      const { data: appsByTask } = await supabase
+        .from('product_applications')
+        .select('task_id, parcel_id, cost, quantity_used, items(standard_rate)')
+        .in('task_id', taskIds)
+        .gte('application_date', startDate)
+        .lte('application_date', endDate);
+
+      for (const app of appsByTask || []) {
+        const effectiveCost = app.cost != null
+          ? Number(app.cost)
+          : ((app as any).items?.standard_rate ? Number((app as any).items.standard_rate) * Number((app as any).quantity_used || 0) : 0);
+        if (effectiveCost <= 0) continue;
+        const resolvedParcelId = app.parcel_id || taskParcelMap.get(app.task_id);
+        if (resolvedParcelId) {
+          const pm = parcelMap.get(resolvedParcelId);
+          if (pm) pm.costs += effectiveCost;
+        }
+        breakdown.product_applications += effectiveCost;
+      }
+    }
+
+    // Also product applications directly by parcel_id (no task)
+    const { data: appsByParcel } = await supabase
+      .from('product_applications')
+      .select('parcel_id, cost, quantity_used, items(standard_rate)')
+      .in('parcel_id', parcelIds)
+      .is('task_id', null)
+      .gte('application_date', startDate)
+      .lte('application_date', endDate);
+
+    for (const app of appsByParcel || []) {
+      const effectiveCost = app.cost != null
+        ? Number(app.cost)
+        : ((app as any).items?.standard_rate ? Number((app as any).items.standard_rate) * Number((app as any).quantity_used || 0) : 0);
+      if (effectiveCost <= 0) continue;
+      const pm = parcelMap.get(app.parcel_id);
+      if (pm) pm.costs += effectiveCost;
+      breakdown.product_applications += effectiveCost;
+    }
+
+    // 6. Harvest revenues
+    const { data: harvests } = await supabase
+      .from('harvest_records')
+      .select('parcel_id, estimated_revenue')
+      .in('parcel_id', parcelIds)
+      .gte('harvest_date', startDate)
+      .lte('harvest_date', endDate);
+
+    for (const h of harvests || []) {
+      const pm = parcelMap.get(h.parcel_id);
+      if (pm) pm.revenue += Number(h.estimated_revenue || 0);
+      revBreakdown.harvest += Number(h.estimated_revenue || 0);
+    }
+
+    // 7. Journal items for these parcels (ledger expenses & revenues)
+    const { data: expItems } = await supabase
+      .from('journal_items')
+      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status)')
+      .in('parcel_id', parcelIds)
+      .eq('accounts.account_type', 'expense')
+      .eq('journal_entries.status', 'posted')
+      .gte('journal_entries.entry_date', startDate)
+      .lte('journal_entries.entry_date', endDate);
+
+    for (const item of expItems || []) {
+      const net = Number(item.debit || 0) - Number(item.credit || 0);
+      const pm = parcelMap.get((item as any).parcel_id);
+      if (pm) pm.costs += net;
+      breakdown.other += net;
+    }
+
+    const { data: revItems } = await supabase
+      .from('journal_items')
+      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status)')
+      .in('parcel_id', parcelIds)
+      .eq('accounts.account_type', 'revenue')
+      .eq('journal_entries.status', 'posted')
+      .gte('journal_entries.entry_date', startDate)
+      .lte('journal_entries.entry_date', endDate);
+
+    for (const item of revItems || []) {
+      const net = Number(item.credit || 0) - Number(item.debit || 0);
+      const pm = parcelMap.get((item as any).parcel_id);
+      if (pm) pm.revenue += net;
+      revBreakdown.invoiced += net;
+    }
+
+    // 8. Aggregate totals
+    let totalCosts = 0;
+    let totalRevenue = 0;
+    const byParcel = Array.from(parcelMap.entries()).map(([parcelId, data]) => {
+      totalCosts += data.costs;
+      totalRevenue += data.revenue;
+      return {
+        parcel_id: parcelId,
+        parcel_name: data.name,
+        crop_type: data.crop_type,
+        variety: data.variety,
+        costs: data.costs,
+        revenue: data.revenue,
+        profit: data.revenue - data.costs,
+      };
+    }).sort((a, b) => b.profit - a.profit);
+
+    const netProfit = totalRevenue - totalCosts;
+    const marginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    // Build filter label
+    let filterLabel = 'Organisation';
+    if (filterType === 'farm' && filterValue) {
+      const farm = (parcels[0] as any)?.farms;
+      filterLabel = farm?.name || filterValue;
+    } else if (filterType === 'parcel' && filterValue) {
+      filterLabel = parcels[0]?.name || filterValue;
+    } else if (filterType === 'crop_type' && filterValue) {
+      filterLabel = filterValue;
+    } else if (filterType === 'variety' && filterValue) {
+      filterLabel = filterValue;
+    }
+
+    return {
+      filter_type: filterType,
+      filter_value: filterValue,
+      filter_label: filterLabel,
+      parcel_count: parcelIds.length,
+      farm_count: farmIds.length,
+      total_costs: totalCosts,
+      total_revenue: totalRevenue,
+      net_profit: netProfit,
+      margin_percent: marginPercent,
+      cost_breakdown: breakdown,
+      revenue_breakdown: revBreakdown,
+      by_parcel: byParcel,
+    };
   }
 }

@@ -18,19 +18,19 @@ const formatCurrency = (amount: number, symbol: string = 'MAD') => {
 };
 
 const getAccountTypeColor = (accountType: string): string => {
-  switch (accountType) {
-    case 'Asset':
-      return 'text-blue-600 dark:text-blue-400';
-    case 'Liability':
-      return 'text-red-600 dark:text-red-400';
-    case 'Equity':
-      return 'text-green-600 dark:text-green-400';
-    case 'Revenue':
-      return 'text-emerald-600 dark:text-emerald-400';
-    case 'Expense':
-      return 'text-orange-600 dark:text-orange-400';
+  switch (accountType.toLowerCase()) {
+    case 'asset':
+      return 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30';
+    case 'liability':
+      return 'text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30';
+    case 'equity':
+      return 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30';
+    case 'revenue':
+      return 'text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30';
+    case 'expense':
+      return 'text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30';
     default:
-      return 'text-gray-600 dark:text-gray-400';
+      return 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800/50';
   }
 };
 
@@ -219,7 +219,7 @@ const AppContent: React.FC = () => {
                                 {account.account_name}
                               </td>
                               <td className="px-4 py-3 text-sm text-center">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.account_type)} bg-opacity-20`}>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.account_type)}`}>
                                   {account.account_type}
                                 </span>
                               </td>

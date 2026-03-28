@@ -111,6 +111,7 @@ import { Route as AuthenticatedinventoryStockEntriesRouteImport } from './routes
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
+import { Route as AuthenticatedaccountingAccountingReportsAnalysisRouteImport } from './routes/_authenticated/(accounting)/accounting/reports-analysis'
 import { Route as AuthenticatedaccountingAccountingReportsRouteImport } from './routes/_authenticated/(accounting)/accounting/reports'
 import { Route as AuthenticatedaccountingAccountingQuotesRouteImport } from './routes/_authenticated/(accounting)/accounting/quotes'
 import { Route as AuthenticatedaccountingAccountingPurchaseOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-orders'
@@ -742,6 +743,12 @@ const AuthenticatedaccountingAccountingSalesOrdersRoute =
     path: '/sales-orders',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingReportsAnalysisRoute =
+  AuthenticatedaccountingAccountingReportsAnalysisRouteImport.update({
+    id: '/reports-analysis',
+    path: '/reports-analysis',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingReportsRoute =
   AuthenticatedaccountingAccountingReportsRouteImport.update({
     id: '/reports',
@@ -1036,6 +1043,7 @@ export interface FileRoutesByFullPath {
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
@@ -1172,6 +1180,7 @@ export interface FileRoutesByTo {
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
@@ -1311,6 +1320,7 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/_authenticated/(accounting)/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/_authenticated/(accounting)/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/_authenticated/(accounting)/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
@@ -1454,6 +1464,7 @@ export interface FileRouteTypes {
     | '/accounting/purchase-orders'
     | '/accounting/quotes'
     | '/accounting/reports'
+    | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
@@ -1590,6 +1601,7 @@ export interface FileRouteTypes {
     | '/accounting/purchase-orders'
     | '/accounting/quotes'
     | '/accounting/reports'
+    | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
@@ -1728,6 +1740,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/purchase-orders'
     | '/_authenticated/(accounting)/accounting/quotes'
     | '/_authenticated/(accounting)/accounting/reports'
+    | '/_authenticated/(accounting)/accounting/reports-analysis'
     | '/_authenticated/(accounting)/accounting/sales-orders'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
@@ -2538,6 +2551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/reports-analysis': {
+      id: '/_authenticated/(accounting)/accounting/reports-analysis'
+      path: '/reports-analysis'
+      fullPath: '/accounting/reports-analysis'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/reports': {
       id: '/_authenticated/(accounting)/accounting/reports'
       path: '/reports'
@@ -2822,6 +2842,7 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingPurchaseOrdersRoute: typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   AuthenticatedaccountingAccountingQuotesRoute: typeof AuthenticatedaccountingAccountingQuotesRoute
   AuthenticatedaccountingAccountingReportsRoute: typeof AuthenticatedaccountingAccountingReportsRoute
+  AuthenticatedaccountingAccountingReportsAnalysisRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   AuthenticatedaccountingAccountingSalesOrdersRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   AuthenticatedaccountingAccountingTrialBalanceRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   AuthenticatedaccountingAccountingIndexRoute: typeof AuthenticatedaccountingAccountingIndexRoute
@@ -2857,6 +2878,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingQuotesRoute,
     AuthenticatedaccountingAccountingReportsRoute:
       AuthenticatedaccountingAccountingReportsRoute,
+    AuthenticatedaccountingAccountingReportsAnalysisRoute:
+      AuthenticatedaccountingAccountingReportsAnalysisRoute,
     AuthenticatedaccountingAccountingSalesOrdersRoute:
       AuthenticatedaccountingAccountingSalesOrdersRoute,
     AuthenticatedaccountingAccountingTrialBalanceRoute:
