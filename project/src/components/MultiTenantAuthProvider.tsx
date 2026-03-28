@@ -100,17 +100,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
   // Calculate onboarding state - only redirect when we have POSITIVE evidence onboarding is incomplete.
   // Never redirect based on missing/errored data (API failures should not trigger onboarding).
+  // KEY RULE: having at least one organization is definitive proof onboarding is done —
+  // never redirect to onboarding if the user already belongs to an org.
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
   const hasCompletedOnboarding = profile?.onboarding_completed === true;
   const needsOnboarding = isSessionValid && !profileError && !orgsError && !!(
-    user && !loading && !hasCompletedOnboarding && (
-      // Profile explicitly says onboarding not completed
-      (profile && profile.onboarding_completed === false) ||
-      // Profile exists but missing required fields and onboarding not yet completed
-      (profile && !profile.full_name) ||
-      // No profile AND no organizations (genuinely new user, not an API error)
-      (!profile && organizations.length === 0)
-    )
+    user && !loading && !hasCompletedOnboarding && organizations.length === 0
   );
 
 

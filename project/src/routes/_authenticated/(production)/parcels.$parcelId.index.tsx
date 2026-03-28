@@ -1,30 +1,30 @@
-import { ApplicationFormDialog } from '@/components/parcels/ApplicationFormDialog'
-import { useAbility } from '@/lib/casl/AbilityContext'
 import { calculateHealthStatus, calculateIrrigationIndex, useLatestSatelliteIndices } from '@/hooks/useLatestSatelliteIndices'
-import { useParcelApplications, useParcelById } from '@/hooks/useParcelsQuery'
+import { useParcelById } from '@/hooks/useParcelsQuery'
+import { useTasks } from '@/hooks/useTasks'
+import { useAuth } from '@/hooks/useAuth'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { AlertCircle, Droplets, FlaskRound, RefreshCw, Satellite, TrendingUp } from 'lucide-react'
-import { useState } from 'react'
+import { AlertCircle, CheckCircle2, Circle, Clock, Droplets, RefreshCw, Satellite, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SectionLoader } from '@/components/ui/loader';
-
+import { useMemo } from 'react'
+import { Button } from '@/components/ui/button'
 
 const ParcelOverview = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
+  const { organizationId } = useAuth();
   const { data: parcel, isLoading: isLoadingParcel } = useParcelById(parcelId);
-  const { data: indices, isLoading: isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
-  const { data: applicationsData, isLoading: isLoadingApplications } = useParcelApplications(parcelId);
-  const ability = useAbility();
-  const [showApplicationForm, setShowApplicationForm] = useState(false);
+  const { data: indices, isLoading: _isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
+  
+  // Memoize filters to prevent unnecessary refetches
+  const parcelFilters = useMemo(() => ({ parcel_id: parcelId }), [parcelId]);
+  const { data: parcelTasks, isLoading: isLoadingTasks } = useTasks(organizationId || '', parcelFilters);
 
-  const isLoading = isLoadingParcel || isLoadingIndices;
-
-  if (isLoading) {
+  // Only block on parcel data — satellite indices are supplementary and load asynchronously
+  if (isLoadingParcel) {
     return (
-      <SectionLoader />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
     );
   }
 
@@ -219,110 +219,95 @@ const ParcelOverview = () => {
         </div>
       )}
 
-      {/* Applications History */}
+      {/* Tasks History */}
       <div className="bg-white dark:bg-gray-700 rounded-lg p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <FlaskRound className="h-5 w-5 text-green-600" />
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{t('parcels.index.applicationsHistory')}</h4>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Historique des tâches</h4>
           </div>
-          <div className="flex items-center gap-2">
-            {ability.can('create', 'ProductApplication') && (
-              <Button
-                onClick={() => setShowApplicationForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <FlaskRound className="h-5 w-5" />
-                {t('parcels.index.addApplication')}
-              </Button>
-            )}
-            {applicationsData && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {t('parcels.index.totalApplications')}: {applicationsData.total || 0}
-              </span>
-            )}
-          </div>
+          {parcelTasks && (
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {parcelTasks.length} tâche{parcelTasks.length !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
 
-        {isLoadingApplications ? (
-          <SectionLoader />
-        ) : applicationsData && applicationsData.applications && applicationsData.applications.length > 0 ? (
+        {isLoadingTasks ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+          </div>
+        ) : parcelTasks && parcelTasks.length > 0 ? (
           <div className="overflow-x-auto">
-            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-              <TableHeader className="bg-gray-50 dark:bg-gray-800">
-                <TableRow>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.applicationDate')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.product')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.quantityUsed')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.areaTreated')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.cost')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.task')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    {t('parcels.index.notes')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-                {applicationsData.applications.map((app) => (
-                  <TableRow key={app.id} className="hover:bg-gray-50 dark:hover:bg-gray-600">
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {new Date(app.application_date).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {app.inventory?.name || '-'}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {app.quantity_used} {app.inventory?.unit || ''}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {app.area_treated} ha
-                    </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {app.cost ? `${app.cost} ${app.currency || ''}` : '-'}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {app.task_id ? `✓ ${t('parcels.index.planned')}` : t('parcels.index.adhoc')}
-                    </TableCell>
-                    <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                      {app.notes || '-'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tâche</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Priorité</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+                {parcelTasks.map((task) => {
+                  const statusIcon =
+                    task.status === 'completed' ? <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                    task.status === 'in_progress' ? <Clock className="h-4 w-4 text-blue-500" /> :
+                    <Circle className="h-4 w-4 text-gray-400" />;
+                  const statusLabel =
+                    task.status === 'completed' ? 'Terminée' :
+                    task.status === 'in_progress' ? 'En cours' :
+                    task.status === 'cancelled' ? 'Annulée' : 'Planifiée';
+                  return (
+                    <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-600">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {task.scheduled_start
+                          ? new Date(task.scheduled_start).toLocaleDateString('fr-FR')
+                          : task.due_date
+                            ? new Date(task.due_date).toLocaleDateString('fr-FR')
+                            : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium max-w-xs">
+                        {task.title}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {task.task_type || '-'}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          task.priority === 'high' || task.priority === 'urgent' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                          task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                          'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                        }`}>
+                          {task.priority === 'urgent' ? 'Urgent' : task.priority === 'high' ? 'Haute' : task.priority === 'medium' ? 'Moyenne' : 'Basse'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-1.5">
+                          {statusIcon}
+                          <span className={
+                            task.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                            task.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' :
+                            task.status === 'cancelled' ? 'text-red-500 dark:text-red-400' :
+                            'text-gray-500 dark:text-gray-400'
+                          }>{statusLabel}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div className="text-center py-8">
-            <FlaskRound className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">{t('parcels.index.noApplications')}</p>
+            <CheckCircle2 className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">Aucune tâche liée à cette parcelle</p>
           </div>
         )}
       </div>
 
-      {/* Application Form Dialog */}
-      {parcel && (
-        <ApplicationFormDialog
-          open={showApplicationForm}
-          onOpenChange={setShowApplicationForm}
-          parcelId={parcelId}
-          farmId={parcel.farm_id || ''}
-          onSuccess={() => {
-            // Refresh applications data will be handled by query invalidation
-          }}
-        />
-      )}
     </div>
   );
 };

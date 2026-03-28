@@ -350,6 +350,7 @@ export class ComplianceController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async createEvidence(@Request() req, @Body() dto: CreateEvidenceDto) {
     const organizationId = req.headers['x-organization-id'] as string;
+    dto.uploaded_by = req.user.id;
     return this.complianceService.createEvidence(organizationId, dto);
   }
 

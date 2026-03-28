@@ -104,16 +104,16 @@ export function usePaymentStats() {
 
   const stats = {
     total: payments?.length || 0,
-    received: payments?.filter(p => p.payment_type === 'received').length || 0,
-    paid: payments?.filter(p => p.payment_type === 'paid').length || 0,
+    received: payments?.filter(p => p.payment_type === 'receive' || p.payment_type === 'received').length || 0,
+    paid: payments?.filter(p => p.payment_type === 'pay' || p.payment_type === 'paid').length || 0,
     draft: payments?.filter(p => p.status === 'draft').length || 0,
     submitted: payments?.filter(p => p.status === 'submitted').length || 0,
     cancelled: payments?.filter(p => p.status === 'cancelled').length || 0,
     totalReceived: payments
-      ?.filter(p => p.payment_type === 'received')
+      ?.filter(p => p.payment_type === 'receive' || p.payment_type === 'received')
       ?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
     totalPaid: payments
-      ?.filter(p => p.payment_type === 'paid')
+      ?.filter(p => p.payment_type === 'pay' || p.payment_type === 'paid')
       ?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
   };
 

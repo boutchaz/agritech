@@ -23,7 +23,8 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
-import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle } from 'lucide-react';
+import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
+import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
@@ -55,6 +56,18 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   const { data: items = [], isLoading: itemsLoading } = useItemSelection({
     is_sales_item: true
   });
+
+  // Stock control setting (default: allow selling without stock)
+  const allowNegativeStock = (currentOrganization as any)?.accounting_settings?.allow_negative_stock ?? true;
+  const { data: stockLevels = [] } = useFarmStockLevels();
+  // Build a quick lookup: item_id → total_quantity
+  const stockMap = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of stockLevels) {
+      map[s.item_id] = s.total_quantity;
+    }
+    return map;
+  }, [stockLevels]);
 
   const isEditMode = !!quote;
 
@@ -231,6 +244,19 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   }, [watchItems]);
 
   const onSubmit = async (data: z.infer<typeof quoteSchema>) => {
+    // Stock check: if negative stock is not allowed, block items with insufficient stock
+    if (!allowNegativeStock) {
+      const insufficientItems = data.items.filter(item => {
+        if (!item.item_id) return false; // manual items not linked to stock
+        const available = stockMap[item.item_id] ?? 0;
+        return Number(item.quantity) > available;
+      });
+      if (insufficientItems.length > 0) {
+        toast.error(t('quotes.form.errors.insufficientStock', 'Stock insuffisant pour un ou plusieurs articles. Veuillez réduire les quantités ou activer la vente sans stock dans les paramètres.'));
+        return;
+      }
+    }
+
     try {
       const transformedItems = data.items.map((item, index) => ({
         line_number: index + 1,
@@ -448,13 +474,30 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                         className="w-full"
                       />
                       <div className="grid grid-cols-2 gap-3">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...register(`items.${index}.quantity`)}
-                          placeholder={t('quotes.form.quantity')}
-                          className="w-full"
-                        />
+                        <div>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...register(`items.${index}.quantity`)}
+                            placeholder={t('quotes.form.quantity')}
+                            className="w-full"
+                          />
+                          {(() => {
+                            const itemId = watch(`items.${index}.item_id`);
+                            if (!itemId) return null;
+                            const available = stockMap[itemId] ?? 0;
+                            const qty = Number(watch(`items.${index}.quantity`)) || 0;
+                            const insufficient = qty > available;
+                            return (
+                              <div className={`flex items-center gap-1 mt-1 text-xs ${insufficient ? 'text-red-600' : 'text-green-600'}`}>
+                                {insufficient
+                                  ? <><AlertTriangle className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                  : <><CheckCircle2 className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                }
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <Input
                           type="number"
                           step="0.01"
@@ -624,6 +667,21 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               {...register(`items.${index}.quantity`)}
                               className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
+                            {(() => {
+                              const itemId = watch(`items.${index}.item_id`);
+                              if (!itemId) return null;
+                              const available = stockMap[itemId] ?? 0;
+                              const qty = Number(watch(`items.${index}.quantity`)) || 0;
+                              const insufficient = qty > available;
+                              return (
+                                <div className={`flex items-center gap-1 mt-1 text-xs ${insufficient ? 'text-red-600' : 'text-green-600'}`}>
+                                  {insufficient
+                                    ? <><AlertTriangle className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                    : <><CheckCircle2 className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                  }
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="py-2 px-3">
                             <Input

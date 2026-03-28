@@ -117,26 +117,48 @@ export class ItemsService {
   async deleteItemGroup(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
-    // Check if group has items
-    const { data: items } = await supabase
+    // Check if group (or any descendant) has items attached
+    const allIds = await this.collectGroupIds(supabase, id, organizationId);
+    const { data: linkedItems } = await supabase
       .from('items')
       .select('id')
-      .eq('item_group_id', id)
+      .in('item_group_id', allIds)
       .limit(1);
 
-    if (items && items.length > 0) {
+    if (linkedItems && linkedItems.length > 0) {
       throw new BadRequestException('Cannot delete item group with items. Please move or delete items first.');
     }
 
-    // Check if group has children
+    // Delete all descendants bottom-up, then the group itself
+    await this.deleteGroupCascade(supabase, id, organizationId);
+
+    return { message: 'Item group deleted successfully' };
+  }
+
+  private async collectGroupIds(supabase: any, parentId: string, organizationId: string): Promise<string[]> {
+    const ids: string[] = [parentId];
+    const { data: children } = await supabase
+      .from('item_groups')
+      .select('id')
+      .eq('parent_group_id', parentId)
+      .eq('organization_id', organizationId);
+
+    for (const child of children || []) {
+      const childIds = await this.collectGroupIds(supabase, child.id, organizationId);
+      ids.push(...childIds);
+    }
+    return ids;
+  }
+
+  private async deleteGroupCascade(supabase: any, id: string, organizationId: string): Promise<void> {
     const { data: children } = await supabase
       .from('item_groups')
       .select('id')
       .eq('parent_group_id', id)
-      .limit(1);
+      .eq('organization_id', organizationId);
 
-    if (children && children.length > 0) {
-      throw new BadRequestException('Cannot delete item group with child groups. Please move or delete child groups first.');
+    for (const child of children || []) {
+      await this.deleteGroupCascade(supabase, child.id, organizationId);
     }
 
     const { error } = await supabase
@@ -146,114 +168,148 @@ export class ItemsService {
       .eq('organization_id', organizationId);
 
     if (error) {
-      this.logger.error(`Failed to delete item group: ${error.message}`);
+      this.logger.error(`Failed to delete item group ${id}: ${error.message}`);
       throw new BadRequestException(`Failed to delete item group: ${error.message}`);
     }
-
-    return { message: 'Item group deleted successfully' };
   }
 
   async seedPredefinedItemGroups(organizationId: string, userId: string): Promise<{ created: number; skipped: number }> {
     const supabase = this.databaseService.getAdminClient();
 
-    const PREDEFINED_GROUPS: { name: string; subcategories: string[] }[] = [
+    type PredefinedSub = { name: string; code: string; description: string };
+    type PredefinedGroup = { name: string; code: string; description: string; subcategories: PredefinedSub[] };
+
+    const PREDEFINED_GROUPS: PredefinedGroup[] = [
       {
         name: 'Intrants agricoles',
+        code: 'INTRANTS',
+        description: 'Engrais, amendements et biostimulants pour la fertilisation des cultures',
         subcategories: [
-          'Engrais solides',
-          'Engrais liquides',
-          'Amendements organiques',
-          'Amendements minéraux',
-          'Biostimulants',
-          'Correcteurs de carences',
-          'Acides humiques / fulviques',
+          { name: 'Engrais solides', code: 'INTRANTS-ENGR-SOL', description: 'Engrais granulés, poudres et cristallins' },
+          { name: 'Engrais liquides', code: 'INTRANTS-ENGR-LIQ', description: 'Solutions fertilisantes et engrais foliaires' },
+          { name: 'Amendements organiques', code: 'INTRANTS-AMEND-ORG', description: 'Compost, fumier, tourbe et matières organiques' },
+          { name: 'Amendements minéraux', code: 'INTRANTS-AMEND-MIN', description: 'Chaux, gypse et correcteurs de pH' },
+          { name: 'Biostimulants', code: 'INTRANTS-BIOSTIM', description: 'Extraits d\'algues, acides aminés et micro-organismes bénéfiques' },
+          { name: 'Correcteurs de carences', code: 'INTRANTS-CARENCES', description: 'Oligo-éléments et micronutriments (fer, zinc, bore…)' },
+          { name: 'Acides humiques / fulviques', code: 'INTRANTS-HUMIQUE', description: 'Amendements à base d\'acides humiques et fulviques' },
         ],
       },
       {
         name: 'Produits phytosanitaires',
+        code: 'PHYTO',
+        description: 'Produits de protection des plantes contre les ravageurs et maladies',
         subcategories: [
-          'Insecticides',
-          'Fongicides',
-          'Herbicides',
-          'Acaricides',
-          'Nématicides',
-          'Produits biologiques (biocontrôle)',
-          'Adjuvants / mouillants',
+          { name: 'Insecticides', code: 'PHYTO-INSECT', description: 'Lutte contre les insectes ravageurs' },
+          { name: 'Fongicides', code: 'PHYTO-FONGI', description: 'Traitement et prévention des maladies fongiques' },
+          { name: 'Herbicides', code: 'PHYTO-HERBI', description: 'Désherbage chimique sélectif et total' },
+          { name: 'Acaricides', code: 'PHYTO-ACARI', description: 'Traitement contre les acariens et tétranyques' },
+          { name: 'Nématicides', code: 'PHYTO-NEMAT', description: 'Lutte contre les nématodes parasites des racines' },
+          { name: 'Produits biologiques (biocontrôle)', code: 'PHYTO-BIO', description: 'Solutions naturelles à base d\'organismes vivants ou extraits végétaux' },
+          { name: 'Adjuvants / mouillants', code: 'PHYTO-ADJUV', description: 'Agents améliorant l\'efficacité des traitements phytosanitaires' },
         ],
       },
       {
         name: 'Irrigation',
+        code: 'IRR',
+        description: 'Matériel et équipements pour les systèmes d\'irrigation agricole',
         subcategories: [
-          'Tuyaux et gaines',
-          'Goutteurs',
-          'Vannes',
-          'Filtres',
-          'Pompes',
-          'Programmateurs',
-          'Accessoires irrigation',
+          { name: 'Tuyaux et gaines', code: 'IRR-TUYAUX', description: 'Conduites principales, rampes et micro-tubes' },
+          { name: 'Goutteurs', code: 'IRR-GOUTTEURS', description: 'Goutteurs intégrés, en ligne et boutons pousseurs' },
+          { name: 'Vannes', code: 'IRR-VANNES', description: 'Vannes manuelles, électrovannes et vannes de secteur' },
+          { name: 'Filtres', code: 'IRR-FILTRES', description: 'Filtres à tamis, à disques et à sable' },
+          { name: 'Pompes', code: 'IRR-POMPES', description: 'Pompes de surface, immergées et surpresseurs' },
+          { name: 'Programmateurs', code: 'IRR-PROGRAM', description: 'Contrôleurs d\'irrigation, minuteries et automatismes' },
+          { name: 'Accessoires irrigation', code: 'IRR-ACCESS', description: 'Raccords, bouchons, piquets et supports divers' },
         ],
       },
       {
         name: 'Matériel agricole',
+        code: 'MATER',
+        description: 'Outils, engins et équipements pour le travail agricole',
         subcategories: [
-          'Outils manuels',
-          'Matériel motorisé',
-          'Pulvérisateurs',
-          'Équipements de fertilisation',
-          'Pièces de rechange',
+          { name: 'Outils manuels', code: 'MATER-MANUELS', description: 'Pioches, houes, sécateurs, scies et outillage à main' },
+          { name: 'Matériel motorisé', code: 'MATER-MOTEUR', description: 'Motoculteurs, tondeuses et équipements à moteur' },
+          { name: 'Pulvérisateurs', code: 'MATER-PULV', description: 'Pulvérisateurs à dos, sur roues et tractés' },
+          { name: 'Équipements de fertilisation', code: 'MATER-FERTIL', description: 'Épandeurs, injecteurs et matériel de fertigation' },
+          { name: 'Pièces de rechange', code: 'MATER-PIECES', description: 'Pièces détachées et consommables pour engins agricoles' },
         ],
       },
       {
         name: 'Plantation & pépinière',
+        code: 'PLANT',
+        description: 'Matériel végétal et fournitures pour la plantation et la pépinière',
         subcategories: [
-          'Plants / arbres',
-          'Porte-greffes',
-          'Tuteurs',
-          'Protections plants',
-          'Substrats',
+          { name: 'Plants / arbres', code: 'PLANT-PLANTS', description: 'Jeunes plants, greffons et arbres fruitiers' },
+          { name: 'Porte-greffes', code: 'PLANT-PORTEGREFFES', description: 'Sujets porte-greffes pour arbres fruitiers' },
+          { name: 'Tuteurs', code: 'PLANT-TUTEURS', description: 'Piquets, tuteurs bambou et supports de formation' },
+          { name: 'Protections plants', code: 'PLANT-PROTECT', description: 'Gaines, manchons et protège-plants' },
+          { name: 'Substrats', code: 'PLANT-SUBSTRATS', description: 'Terreau, perlite, vermiculite et mélanges horticoles' },
         ],
       },
       {
         name: 'Récolte',
+        code: 'RECOLTE',
+        description: 'Équipements et contenants pour la récolte et la manutention des produits',
         subcategories: [
-          'Filets de récolte',
-          'Caisses / palox',
-          'Peignes électriques',
-          'Bâches',
-          'Sacs',
+          { name: 'Filets de récolte', code: 'RECOLTE-FILETS', description: 'Filets de sol pour olives, amandes et autres fruits' },
+          { name: 'Caisses / palox', code: 'RECOLTE-CAISSES', description: 'Caisses plastiques et palox bois pour le transport' },
+          { name: 'Peignes électriques', code: 'RECOLTE-PEIGNES', description: 'Vibreurs et peignes électriques pour la cueillette' },
+          { name: 'Bâches', code: 'RECOLTE-BACHES', description: 'Bâches de protection et de collecte au sol' },
+          { name: 'Sacs', code: 'RECOLTE-SACS', description: 'Sacs de récolte, sacs big-bag et contenants vrac' },
         ],
       },
       {
         name: 'Conditionnement & stockage',
+        code: 'COND',
+        description: 'Emballages et produits pour le conditionnement et la conservation',
         subcategories: [
-          'Emballages',
-          'Bidons / cuves',
-          'Étiquettes',
-          'Produits de conservation',
+          { name: 'Emballages', code: 'COND-EMBALL', description: 'Boîtes, plateaux, cagettes et films d\'emballage' },
+          { name: 'Bidons / cuves', code: 'COND-BIDONS', description: 'Bidons de stockage, jerricans et cuves IBC' },
+          { name: 'Étiquettes', code: 'COND-ETIQ', description: 'Étiquettes produits, autocollants et codes-barres' },
+          { name: 'Produits de conservation', code: 'COND-CONSERV', description: 'Cires, antifongiques de post-récolte et traitements conservation' },
         ],
       },
       {
         name: 'Carburants & énergie',
-        subcategories: ['Gasoil', 'Essence', 'Lubrifiants', 'Batteries'],
+        code: 'CARBU',
+        description: 'Carburants, lubrifiants et sources d\'énergie pour les équipements agricoles',
+        subcategories: [
+          { name: 'Gasoil', code: 'CARBU-GASOIL', description: 'Gazole et diesel pour tracteurs et engins agricoles' },
+          { name: 'Essence', code: 'CARBU-ESSENCE', description: 'Essence sans plomb pour petits moteurs' },
+          { name: 'Lubrifiants', code: 'CARBU-LUBRI', description: 'Huiles moteur, graisses et fluides hydrauliques' },
+          { name: 'Batteries', code: 'CARBU-BATT', description: 'Batteries pour véhicules, engins et équipements électriques' },
+        ],
       },
       {
         name: 'Entretien & maintenance',
+        code: 'MAINT',
+        description: 'Produits et fournitures pour l\'entretien du matériel et des infrastructures',
         subcategories: [
-          'Produits de nettoyage',
-          "Pièces d'usure",
-          'Consommables atelier',
+          { name: 'Produits de nettoyage', code: 'MAINT-NETTOY', description: 'Désinfectants, détergents et produits d\'hygiène' },
+          { name: "Pièces d'usure", code: 'MAINT-USURE', description: 'Courroies, filtres, joints et pièces d\'usure courante' },
+          { name: 'Consommables atelier', code: 'MAINT-ATEL', description: 'Visserie, boulonnerie, fils et consommables divers' },
         ],
       },
       {
         name: 'Équipements de protection (EPI)',
-        subcategories: ['Gants', 'Masques', 'Lunettes', 'Combinaisons', 'Bottes'],
+        code: 'EPI',
+        description: 'Équipements de protection individuelle pour les travailleurs agricoles',
+        subcategories: [
+          { name: 'Gants', code: 'EPI-GANTS', description: 'Gants de travail, anti-coupures et protection chimique' },
+          { name: 'Masques', code: 'EPI-MASQUES', description: 'Masques FFP, demi-masques et respirateurs' },
+          { name: 'Lunettes', code: 'EPI-LUNETTES', description: 'Lunettes de protection et écrans faciaux' },
+          { name: 'Combinaisons', code: 'EPI-COMBI', description: 'Combinaisons de protection chimique et vêtements de travail' },
+          { name: 'Bottes', code: 'EPI-BOTTES', description: 'Bottes de sécurité et chaussures de protection' },
+        ],
       },
       {
         name: 'Divers / consommables',
+        code: 'DIVERS',
+        description: 'Articles non classés et fournitures diverses d\'usage général',
         subcategories: [
-          'Fournitures diverses',
-          'Petits équipements',
-          'Articles non classés',
+          { name: 'Fournitures diverses', code: 'DIVERS-FOURN', description: 'Articles de bureau, papeterie et fournitures générales' },
+          { name: 'Petits équipements', code: 'DIVERS-EQUIP', description: 'Petits appareils et équipements non catégorisés' },
+          { name: 'Articles non classés', code: 'DIVERS-NC', description: 'Articles en attente de classification' },
         ],
       },
     ];
@@ -265,7 +321,7 @@ export class ItemsService {
       // Check if parent group already exists
       const { data: existing } = await supabase
         .from('item_groups')
-        .select('id')
+        .select('id, code')
         .eq('organization_id', organizationId)
         .eq('name', group.name)
         .is('parent_group_id', null)
@@ -275,6 +331,13 @@ export class ItemsService {
 
       if (existing) {
         parentId = existing.id;
+        // Patch code/description if missing
+        if (!existing.code) {
+          await supabase
+            .from('item_groups')
+            .update({ code: group.code, description: group.description, updated_by: userId })
+            .eq('id', parentId);
+        }
         skipped++;
       } else {
         const { data: created_group, error } = await supabase
@@ -282,6 +345,8 @@ export class ItemsService {
           .insert({
             organization_id: organizationId,
             name: group.name,
+            code: group.code,
+            description: group.description,
             is_active: true,
             created_by: userId,
             updated_by: userId,
@@ -298,22 +363,31 @@ export class ItemsService {
         created++;
       }
 
-      // Create subcategories
-      for (const subName of group.subcategories) {
+      // Create or update subcategories
+      for (const sub of group.subcategories) {
         const { data: existingSub } = await supabase
           .from('item_groups')
-          .select('id')
+          .select('id, code')
           .eq('organization_id', organizationId)
-          .eq('name', subName)
+          .eq('name', sub.name)
           .eq('parent_group_id', parentId)
           .maybeSingle();
 
         if (existingSub) {
+          // Patch code/description if missing
+          if (!existingSub.code) {
+            await supabase
+              .from('item_groups')
+              .update({ code: sub.code, description: sub.description, updated_by: userId })
+              .eq('id', existingSub.id);
+          }
           skipped++;
         } else {
           const { error: subError } = await supabase.from('item_groups').insert({
             organization_id: organizationId,
-            name: subName,
+            name: sub.name,
+            code: sub.code,
+            description: sub.description,
             parent_group_id: parentId,
             is_active: true,
             created_by: userId,
@@ -321,7 +395,7 @@ export class ItemsService {
           });
 
           if (subError) {
-            this.logger.error(`Failed to create subcategory "${subName}": ${subError.message}`);
+            this.logger.error(`Failed to create subcategory "${sub.name}": ${subError.message}`);
           } else {
             created++;
           }

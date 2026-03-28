@@ -5,8 +5,9 @@ import 'leaflet/dist/leaflet.css';
 import { Map, RefreshCw, Layers, Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from '@/components/ui/skeleton';
-import type { ActivityHeatmapPoint } from '../../services/liveDashboardService';
+import type { ActivityHeatmapPoint, FarmActivity } from '../../services/liveDashboardService';
 import { Button } from '@/components/ui/button';
+import NewsTicker from './NewsTicker';
 
 // Fix Leaflet default icon issue
 if (typeof window !== 'undefined') {
@@ -57,6 +58,7 @@ interface ActivityHeatMapProps {
   data: ActivityHeatmapPoint[];
   isLoading?: boolean;
   lastUpdated?: string;
+  recentActivities?: FarmActivity[];
 }
 
 // Fit all bounds controller — called imperatively via ref
@@ -177,6 +179,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
   data,
   isLoading = false,
   lastUpdated,
+  recentActivities = [],
 }) => {
   const { t } = useTranslation();
   const [isSatellite, setIsSatellite] = useState(true);
@@ -353,6 +356,9 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
           </>
         )}
       </div>
+
+      {/* News ticker — fullscreen only */}
+      {isFullscreen && <NewsTicker data={data} recentActivities={recentActivities} />}
     </div>
   );
 };

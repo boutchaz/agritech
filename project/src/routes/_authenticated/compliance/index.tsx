@@ -136,8 +136,10 @@ function ComplianceDashboardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold tracking-tight">{t('dashboard.recentChecks')}</h2>
-          <Button variant="ghost" size="sm" className="gap-1">
-            {t('dashboard.viewAll')} <ArrowRight className="h-4 w-4" />
+          <Button variant="ghost" size="sm" className="gap-1" asChild>
+            <Link to="/compliance/checks">
+              {t('dashboard.viewAll')} <ArrowRight className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
         <ComplianceChecksList 

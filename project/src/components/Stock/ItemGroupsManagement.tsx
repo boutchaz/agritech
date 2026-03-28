@@ -223,7 +223,7 @@ export default function ItemGroupsManagement() {
   const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 15;
 

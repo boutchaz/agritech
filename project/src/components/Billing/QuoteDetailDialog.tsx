@@ -362,7 +362,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   if (isDetailLoading || !resolvedQuote) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+        <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
           <SectionLoader className="py-10" />
         </DialogContent>
       </Dialog>
@@ -372,7 +372,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   if (detailError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+        <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             {t('quotes.detail.error')}
           </div>
@@ -499,7 +499,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>
@@ -514,7 +514,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">

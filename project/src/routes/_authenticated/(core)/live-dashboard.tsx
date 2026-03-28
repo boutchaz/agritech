@@ -93,6 +93,7 @@ const LiveDashboardPage: React.FC = () => {
               data={heatmapData || []}
               isLoading={heatmapLoading}
               lastUpdated={liveMetrics?.lastUpdated}
+              recentActivities={liveMetrics?.farmActivities.activities || []}
             />
           </div>
 
