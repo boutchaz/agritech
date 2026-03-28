@@ -1114,6 +1114,7 @@ export class TasksService {
           new Date(now),
           completeTaskDto.notes || `Cost for completed task: ${task.title}`,
           userId,
+          task.parcel_id || undefined,
         );
 
         this.logger.log(

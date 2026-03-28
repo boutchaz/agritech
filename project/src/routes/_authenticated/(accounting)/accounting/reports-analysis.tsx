@@ -30,10 +30,10 @@ import { useProfitabilityAnalysis, type AnalysisFilterType } from '@/hooks/usePr
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelsWithDetails } from '@/hooks/useParcelsWithDetails';
 
-const formatCurrency = (amount: number) =>
+const formatCurrency = (amount: number, currencyCode = 'MAD') =>
   new Intl.NumberFormat('fr-MA', {
     style: 'currency',
-    currency: 'MAD',
+    currency: currencyCode,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -44,6 +44,7 @@ const AppContent: React.FC = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id ?? null;
+  const currencyCode = (currentOrganization as any)?.currency_code || 'MAD';
   const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState<AnalysisFilterType>('organization');
@@ -296,7 +297,7 @@ const AppContent: React.FC = () => {
               {[
                 {
                   label: t('reports.analysis.totalRevenue', 'Revenus totaux'),
-                  value: formatCurrency(analysis.total_revenue),
+                  value: formatCurrency(analysis.total_revenue, currencyCode),
                   icon: TrendingUp,
                   color: 'text-emerald-600 dark:text-emerald-400',
                   bg: 'bg-emerald-50 dark:bg-emerald-950/40',
@@ -304,7 +305,7 @@ const AppContent: React.FC = () => {
                 },
                 {
                   label: t('reports.analysis.totalCosts', 'Coûts totaux'),
-                  value: formatCurrency(analysis.total_costs),
+                  value: formatCurrency(analysis.total_costs, currencyCode),
                   icon: TrendingDown,
                   color: 'text-red-600 dark:text-red-400',
                   bg: 'bg-red-50 dark:bg-red-950/40',
@@ -312,7 +313,7 @@ const AppContent: React.FC = () => {
                 },
                 {
                   label: t('reports.analysis.netProfit', 'Bénéfice net'),
-                  value: formatCurrency(analysis.net_profit),
+                  value: formatCurrency(analysis.net_profit, currencyCode),
                   icon: BarChart3,
                   color: kpiColor(analysis.net_profit),
                   bg: analysis.net_profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-red-50 dark:bg-red-950/40',
@@ -381,7 +382,7 @@ const AppContent: React.FC = () => {
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">{label}</span>
                             <span className="font-medium text-gray-800 dark:text-gray-200">
-                              {formatCurrency(val)} <span className="text-xs text-gray-400">({pct.toFixed(0)}%)</span>
+                              {formatCurrency(val, currencyCode)} <span className="text-xs text-gray-400">({pct.toFixed(0)}%)</span>
                             </span>
                           </div>
                           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -418,7 +419,7 @@ const AppContent: React.FC = () => {
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">{label}</span>
                             <span className="font-medium text-gray-800 dark:text-gray-200">
-                              {formatCurrency(val)} <span className="text-xs text-gray-400">({pct.toFixed(0)}%)</span>
+                              {formatCurrency(val, currencyCode)} <span className="text-xs text-gray-400">({pct.toFixed(0)}%)</span>
                             </span>
                           </div>
                           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -467,13 +468,13 @@ const AppContent: React.FC = () => {
                               {row.variety && <span className="ml-1 text-xs text-gray-400">({row.variety})</span>}
                             </td>
                             <td className="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
-                              {formatCurrency(row.revenue)}
+                              {formatCurrency(row.revenue, currencyCode)}
                             </td>
                             <td className="px-4 py-3 text-right text-red-600 dark:text-red-400 font-medium">
-                              {formatCurrency(row.costs)}
+                              {formatCurrency(row.costs, currencyCode)}
                             </td>
                             <td className={`px-4 py-3 text-right font-semibold ${kpiColor(row.profit)}`}>
-                              {formatCurrency(row.profit)}
+                              {formatCurrency(row.profit, currencyCode)}
                             </td>
                           </tr>
                         ))}
@@ -484,13 +485,13 @@ const AppContent: React.FC = () => {
                             {t('reports.analysis.total', 'Total')}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(analysis.total_revenue)}
+                            {formatCurrency(analysis.total_revenue, currencyCode)}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
-                            {formatCurrency(analysis.total_costs)}
+                            {formatCurrency(analysis.total_costs, currencyCode)}
                           </td>
                           <td className={`px-4 py-3 text-right font-bold ${kpiColor(analysis.net_profit)}`}>
-                            {formatCurrency(analysis.net_profit)}
+                            {formatCurrency(analysis.net_profit, currencyCode)}
                           </td>
                         </tr>
                       </tfoot>

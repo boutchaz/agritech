@@ -26,6 +26,7 @@ export class AccountingAutomationService {
     date: Date,
     description: string,
     createdBy: string,
+    parcelId?: string,
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
@@ -94,6 +95,7 @@ export class AccountingAutomationService {
         debit: amount,
         credit: 0,
         description: description,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -101,6 +103,7 @@ export class AccountingAutomationService {
         debit: 0,
         credit: amount,
         description: `Payment for ${costType}`,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
       },
     ];
 
@@ -157,6 +160,7 @@ export class AccountingAutomationService {
     date: Date,
     description: string,
     createdBy: string,
+    parcelId?: string,
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
@@ -225,6 +229,7 @@ export class AccountingAutomationService {
         debit: amount,
         credit: 0,
         description: `Receipt for ${revenueType}`,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -232,6 +237,7 @@ export class AccountingAutomationService {
         debit: 0,
         credit: amount,
         description: description,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
       },
     ];
 

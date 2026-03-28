@@ -224,6 +224,7 @@ export class ProfitabilityService {
           new Date(createCostDto.date),
           createCostDto.description || `Cost: ${createCostDto.cost_type}`,
           userId,
+          createCostDto.parcel_id,
         );
         this.logger.log(`Journal entry created automatically for cost ${data.id}`);
       } catch (journalError) {
@@ -279,6 +280,7 @@ export class ProfitabilityService {
           new Date(createRevenueDto.date),
           createRevenueDto.description || `Revenue: ${createRevenueDto.revenue_type}`,
           userId,
+          createRevenueDto.parcel_id,
         );
         this.logger.log(`Journal entry created automatically for revenue ${data.id}`);
       } catch (journalError) {
@@ -986,6 +988,7 @@ export class ProfitabilityService {
     const { data: costsData } = await supabase
       .from('costs')
       .select('parcel_id, cost_type, amount')
+      .eq('organization_id', organizationId)
       .in('parcel_id', parcelIds)
       .gte('date', startDate)
       .lte('date', endDate);
@@ -1004,6 +1007,7 @@ export class ProfitabilityService {
     const { data: revsData } = await supabase
       .from('revenues')
       .select('parcel_id, revenue_type, amount')
+      .eq('organization_id', organizationId)
       .in('parcel_id', parcelIds)
       .gte('date', startDate)
       .lte('date', endDate);
@@ -1033,6 +1037,7 @@ export class ProfitabilityService {
       const { data: workRecs } = await supabase
         .from('work_records')
         .select('task_id, total_payment')
+        .eq('organization_id', organizationId)
         .in('task_id', taskIds)
         .gte('work_date', startDate)
         .lte('work_date', endDate);
@@ -1050,6 +1055,7 @@ export class ProfitabilityService {
       const { data: appsByTask } = await supabase
         .from('product_applications')
         .select('task_id, parcel_id, cost, quantity_used, items(standard_rate)')
+        .eq('organization_id', organizationId)
         .in('task_id', taskIds)
         .gte('application_date', startDate)
         .lte('application_date', endDate);
@@ -1072,6 +1078,7 @@ export class ProfitabilityService {
     const { data: appsByParcel } = await supabase
       .from('product_applications')
       .select('parcel_id, cost, quantity_used, items(standard_rate)')
+      .eq('organization_id', organizationId)
       .in('parcel_id', parcelIds)
       .is('task_id', null)
       .gte('application_date', startDate)
@@ -1091,6 +1098,7 @@ export class ProfitabilityService {
     const { data: harvests } = await supabase
       .from('harvest_records')
       .select('parcel_id, estimated_revenue')
+      .eq('organization_id', organizationId)
       .in('parcel_id', parcelIds)
       .gte('harvest_date', startDate)
       .lte('harvest_date', endDate);
@@ -1104,9 +1112,10 @@ export class ProfitabilityService {
     // 7. Journal items for these parcels (ledger expenses & revenues)
     const { data: expItems } = await supabase
       .from('journal_items')
-      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status)')
+      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status, organization_id)')
       .in('parcel_id', parcelIds)
       .eq('accounts.account_type', 'expense')
+      .eq('journal_entries.organization_id', organizationId)
       .eq('journal_entries.status', 'posted')
       .gte('journal_entries.entry_date', startDate)
       .lte('journal_entries.entry_date', endDate);
@@ -1120,9 +1129,10 @@ export class ProfitabilityService {
 
     const { data: revItems } = await supabase
       .from('journal_items')
-      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status)')
+      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status, organization_id)')
       .in('parcel_id', parcelIds)
       .eq('accounts.account_type', 'revenue')
+      .eq('journal_entries.organization_id', organizationId)
       .eq('journal_entries.status', 'posted')
       .gte('journal_entries.entry_date', startDate)
       .lte('journal_entries.entry_date', endDate);
