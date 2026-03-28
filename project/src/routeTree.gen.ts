@@ -87,6 +87,7 @@ import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './ro
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
 import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
+import { Route as AuthenticatedsettingsSettingsAiRouteImport } from './routes/_authenticated/(settings)/settings.ai'
 import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
 import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
 import { Route as AuthenticatedproductionProductionSoilAnalysisRouteImport } from './routes/_authenticated/(production)/production/soil-analysis'
@@ -598,6 +599,12 @@ const AuthenticatedsettingsSettingsBiologicalAssetsRoute =
     path: '/biological-assets',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsAiRoute =
+  AuthenticatedsettingsSettingsAiRouteImport.update({
+    id: '/ai',
+    path: '/ai',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedsettingsSettingsAccountMappingsRoute =
   AuthenticatedsettingsSettingsAccountMappingsRouteImport.update({
     id: '/account-mappings',
@@ -1060,6 +1067,7 @@ export interface FileRoutesByFullPath {
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
@@ -1195,6 +1203,7 @@ export interface FileRoutesByTo {
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
@@ -1335,6 +1344,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/_authenticated/(settings)/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
@@ -1478,6 +1488,7 @@ export interface FileRouteTypes {
     | '/production/soil-analysis'
     | '/settings/account'
     | '/settings/account-mappings'
+    | '/settings/ai'
     | '/settings/biological-assets'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
@@ -1613,6 +1624,7 @@ export interface FileRouteTypes {
     | '/production/soil-analysis'
     | '/settings/account'
     | '/settings/account-mappings'
+    | '/settings/ai'
     | '/settings/biological-assets'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
@@ -1752,6 +1764,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/production/soil-analysis'
     | '/_authenticated/(settings)/settings/account'
     | '/_authenticated/(settings)/settings/account-mappings'
+    | '/_authenticated/(settings)/settings/ai'
     | '/_authenticated/(settings)/settings/biological-assets'
     | '/_authenticated/(settings)/settings/cost-centers'
     | '/_authenticated/(settings)/settings/danger-zone'
@@ -2368,6 +2381,13 @@ declare module '@tanstack/react-router' {
       path: '/biological-assets'
       fullPath: '/settings/biological-assets'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/ai': {
+      id: '/_authenticated/(settings)/settings/ai'
+      path: '/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsAiRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/account-mappings': {
@@ -3086,6 +3106,7 @@ const AuthenticatedproductionParcelsRouteWithChildren =
 interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
   AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  AuthenticatedsettingsSettingsAiRoute: typeof AuthenticatedsettingsSettingsAiRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
   AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
@@ -3109,6 +3130,7 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsAccountRoute,
     AuthenticatedsettingsSettingsAccountMappingsRoute:
       AuthenticatedsettingsSettingsAccountMappingsRoute,
+    AuthenticatedsettingsSettingsAiRoute: AuthenticatedsettingsSettingsAiRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:
       AuthenticatedsettingsSettingsBiologicalAssetsRoute,
     AuthenticatedsettingsSettingsCostCentersRoute:
