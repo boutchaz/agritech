@@ -539,11 +539,15 @@ export class ComplianceService {
         throw checksError;
       }
 
-      // Get all checks for statistics
+      // Get checks from last 90 days for statistics (score + non-compliances)
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
       const { data: allChecks, error: allChecksError } = await supabase
         .from('compliance_checks')
         .select('status, score')
-        .eq('organization_id', organizationId);
+        .eq('organization_id', organizationId)
+        .gte('check_date', ninetyDaysAgo.toISOString().split('T')[0]);
 
       if (allChecksError) {
         throw allChecksError;
@@ -552,7 +556,7 @@ export class ComplianceService {
       const nonCompliantCount =
         allChecks?.filter((c) => c.status === 'non_compliant').length || 0;
 
-      // Calculate average compliance score
+      // Calculate average compliance score (last 90 days)
       const checksWithScore = allChecks?.filter((c) => c.score !== null) || [];
       const averageScore =
         checksWithScore.length > 0

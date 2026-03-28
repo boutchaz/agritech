@@ -34,7 +34,8 @@ export class CreateEvidenceDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'User ID who uploaded the evidence' })
+  @ApiPropertyOptional({ description: 'User ID who uploaded the evidence (set server-side from JWT)' })
+  @IsOptional()
   @IsUUID()
-  uploaded_by: string;
+  uploaded_by?: string;
 }
