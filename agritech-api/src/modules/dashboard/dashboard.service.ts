@@ -627,7 +627,7 @@ export class DashboardService {
                 farms:farm_id (name)
             `)
             .eq('organization_id', organizationId)
-            .in('status', ['in_progress', 'pending'])
+            .eq('status', 'in_progress')
             .order('scheduled_start', { ascending: false })
             .limit(20);
 
@@ -662,6 +662,7 @@ export class DashboardService {
             `)
             .eq('organization_id', organizationId)
             .gte('harvest_date', today)
+            .in('status', ['stored', 'in_delivery'])
             .limit(10);
 
         if (harvestsError) {
@@ -699,7 +700,7 @@ export class DashboardService {
             .from('tasks')
             .select('*', { count: 'exact', head: true })
             .eq('organization_id', organizationId)
-            .in('status', ['in_progress', 'pending']);
+            .eq('status', 'in_progress');
 
         return tasksCount || 0;
     }
