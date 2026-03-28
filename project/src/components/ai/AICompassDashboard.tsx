@@ -125,10 +125,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
   if (loadingEssential) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-900/30">
-        <div className="flex flex-col items-center gap-3">
-          <SectionLoader />
-          <p className="text-sm text-slate-600 dark:text-slate-400">{t('compass.loading')}</p>
-        </div>
+        <SectionLoader />
       </div>
     );
   }

@@ -247,18 +247,18 @@ const DayLaborerManagement: React.FC = () => {
   };
 
   const handleDeleteLaborer = async (id: string) => {
-    showConfirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?', () => { /* action below */ }, {variant: "destructive"}); return
-
-    try {
-      if (!farmId) {
-        setError('Sélectionnez une ferme pour supprimer un ouvrier.');
-        return;
+    showConfirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?', () => {
+      try {
+        if (!farmId) {
+          setError('Sélectionnez une ferme pour supprimer un ouvrier.');
+          return;
+        }
+        deleteLaborerMutation.mutate(id);
+      } catch (error) {
+        console.error('Error deleting laborer:', error);
+        setError('Failed to delete laborer');
       }
-      deleteLaborerMutation.mutate(id);
-    } catch (error) {
-      console.error('Error deleting laborer:', error);
-      setError('Failed to delete laborer');
-    }
+    }, {variant: "destructive"});
   };
 
   const renderSpecialtiesSelect = () => (

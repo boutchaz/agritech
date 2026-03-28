@@ -49,12 +49,7 @@ function LabServicesPage() {
 
   if (!currentOrganization) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <SectionLoader />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('labServices.loading')}</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 

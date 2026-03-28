@@ -98,15 +98,15 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    showConfirm("Êtes-vous sûr de vouloir supprimer cette catégorie?", () => {
+  const handleDeleteCategory = (categoryId: string) => {
+    showConfirm("Êtes-vous sûr de vouloir supprimer cette catégorie?", async () => {
       try {
         await deleteCategory(categoryId);
         onDataChange?.();
-      }) catch (error: any) {
+      } catch (error: any) {
         toast.error("Error deleting category: " + error.message);
       }
-    }
+    }, {variant: "destructive"});
   };
 
   const handleEditCategory = (categoryId: string) => {
@@ -184,17 +184,15 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
     }
   };
 
-  const handleDeletePlantationType = async (id: string) => {
-    showConfirm(
-        "Êtes-vous sûr de vouloir supprimer ce type de plantation?",
-      , () => {
+  const handleDeletePlantationType = (id: string) => {
+    showConfirm("Êtes-vous sûr de vouloir supprimer ce type de plantation?", async () => {
       try {
         await deletePlantationType(id);
         onDataChange?.();
       } catch (error: any) {
         toast.error("Error deleting plantation type: " + error.message);
       }
-    })
+    }, {variant: "destructive"});
   };
 
   const handleEditPlantationType = (id: string) => {

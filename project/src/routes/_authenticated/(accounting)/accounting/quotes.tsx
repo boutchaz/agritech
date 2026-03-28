@@ -176,14 +176,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentOrganization) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="text-center">
-          <SectionLoader />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('quotes.loading')}</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (isLoading) {
@@ -203,9 +196,7 @@ const AppContent: React.FC = () => {
           </div>
         }
       >
-        <div className="p-6 flex items-center justify-center">
-          <SectionLoader />
-        </div>
+        <SectionLoader />
       </PageLayout>
     );
   }

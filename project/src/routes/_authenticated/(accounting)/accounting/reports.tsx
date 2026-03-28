@@ -23,6 +23,7 @@ import {
   DollarSign,
   BarChart3,
   Loader2,
+  Layers,
 } from 'lucide-react';
 
 interface ReportCard {
@@ -203,6 +204,19 @@ const AppContent: React.FC = () => {
       iconBg: 'bg-indigo-100 dark:bg-indigo-900/50',
       available: true,
       path: '/accounting/aged-payables',
+    },
+    {
+      id: 'multi-filter-analysis',
+      title: t('reports.multiFilterAnalysis', 'Analyse Multi-Filtres'),
+      description: t(
+        'accounting.reports.multiFilterAnalysisDesc',
+        'Analysez coûts et revenus par ferme, parcelle, culture ou variété avec comparaison détaillée.'
+      ),
+      icon: Layers,
+      iconColor: 'text-teal-600 dark:text-teal-400',
+      iconBg: 'bg-teal-100 dark:bg-teal-900/50',
+      available: true,
+      path: '/accounting/reports-analysis',
     },
   ];
 

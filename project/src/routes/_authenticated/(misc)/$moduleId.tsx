@@ -18,23 +18,13 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <SectionLoader />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 
   if (modulesLoading || configLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <SectionLoader />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement du module...</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 

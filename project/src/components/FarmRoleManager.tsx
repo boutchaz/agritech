@@ -76,8 +76,9 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   };
 
   const handleRemoveRole = async (roleId: string) => {
-    showConfirm('Are you sure you want to remove this role assignment?', () => { /* action below */ }, {variant: "destructive"}); return
-    removeRole.mutate({ roleId, farmId });
+    showConfirm('Are you sure you want to remove this role assignment?', () => {
+      removeRole.mutate({ roleId, farmId });
+    }, {variant: "destructive"});
   };
 
   const getRoleIcon = (role: string) => {

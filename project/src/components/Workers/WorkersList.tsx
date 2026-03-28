@@ -41,7 +41,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -277,8 +277,6 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
       {/* Workers List - Mobile Cards / Desktop Table */}
       {isLoading ? (
         <SectionLoader />
-          <span className="ms-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
-        </div>
       ) : filteredWorkers.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 sm:p-12 text-center">
           <Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />

@@ -433,10 +433,6 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
         {isEditMode && isLoadingInvoice ? (
           <SectionLoader />
-            <span className="ml-2 text-gray-600">
-              {t("accountingModule.invoices.form.loading")}
-            </span>
-          </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Invoice Header */}

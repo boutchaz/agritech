@@ -608,32 +608,32 @@ const UtilitiesManagement: React.FC = () => {
   };
 
   const handleDeleteUtility = async (id: string) => {
-    showConfirm('Êtes-vous sûr de vouloir supprimer cette charge ?', () => { /* action below */ }, {variant: "destructive"}); return
+    showConfirm('Êtes-vous sûr de vouloir supprimer cette charge ?', async () => {
+      const utilityToDelete = utilities.find(util => util.id === id);
 
-    const utilityToDelete = utilities.find(util => util.id === id);
-
-    try {
-      if (!currentFarm?.id || !currentOrganization?.id) {
-        setError('Sélectionnez une ferme pour supprimer une charge.');
-        return;
-      }
-      setError(null);
-
-      await utilitiesApi.delete(currentOrganization.id, currentFarm.id, id);
-
-      if (utilityToDelete?.journal_entry_id) {
-        try {
-          await accountingApi.deleteJournalEntry(utilityToDelete.journal_entry_id);
-        } catch (journalError) {
-          console.error('Error deleting journal entry for utility:', journalError);
+      try {
+        if (!currentFarm?.id || !currentOrganization?.id) {
+          setError('Sélectionnez une ferme pour supprimer une charge.');
+          return;
         }
-      }
+        setError(null);
 
-      setUtilities(utilities.filter(util => util.id !== id));
-    } catch (error) {
-      console.error('Error deleting utility:', error);
-      setError('Failed to delete utility');
-    }
+        await utilitiesApi.delete(currentOrganization.id, currentFarm.id, id);
+
+        if (utilityToDelete?.journal_entry_id) {
+          try {
+            await accountingApi.deleteJournalEntry(utilityToDelete.journal_entry_id);
+          } catch (journalError) {
+            console.error('Error deleting journal entry for utility:', journalError);
+          }
+        }
+
+        setUtilities(utilities.filter(util => util.id !== id));
+      } catch (error) {
+        console.error('Error deleting utility:', error);
+        setError('Failed to delete utility');
+      }
+    }, {variant: "destructive"});
   };
 
   const getUtilityIcon = (type: string) => {

@@ -179,9 +179,7 @@ const AppContent: React.FC = () => {
           />
         }
       >
-        <div className="p-6 flex items-center justify-center">
-          <SectionLoader />
-        </div>
+        <SectionLoader />
       </PageLayout>
     );
   }

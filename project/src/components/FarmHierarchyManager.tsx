@@ -225,8 +225,6 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
   if (loading) {
     return (
       <SectionLoader />
-        <span className="ml-2">Loading farm hierarchy...</span>
-      </div>
     );
   }
 

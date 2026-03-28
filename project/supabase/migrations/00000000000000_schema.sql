@@ -42,7 +42,8 @@ $$ LANGUAGE plpgsql;
 DO $$ BEGIN
   CREATE TYPE quote_status AS ENUM (
     'draft',        -- Being prepared
-    'submitted',         -- Sent to customer
+    'submitted',    -- Legacy value (kept for compatibility)
+    'sent',         -- Sent to customer
     'accepted',     -- Customer accepted
     'rejected',     -- Customer rejected
     'expired',      -- Validity period expired
@@ -51,6 +52,11 @@ DO $$ BEGIN
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
+END $$;
+-- Add 'sent' value to existing enum if not present (idempotent)
+DO $$ BEGIN
+  ALTER TYPE quote_status ADD VALUE IF NOT EXISTS 'sent';
+EXCEPTION WHEN others THEN null;
 END $$;
 
 -- Sales Order Status

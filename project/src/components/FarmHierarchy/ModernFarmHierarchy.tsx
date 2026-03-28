@@ -573,12 +573,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <SectionLoader />
-          <p className="text-gray-600 dark:text-gray-400">{t('farmHierarchy.loading')}</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 

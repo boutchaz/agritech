@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,17 +15,11 @@ import { PageLoader } from '@/components/ui/loader';
 function ReceptionBatchesPage() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
-  const [showForm, setShowForm] = useState(false);
-  const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
-  const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
   const defaultHarvestId = search.harvest_id;
-
-  useEffect(() => {
-    if (defaultHarvestId) {
-      setShowForm(true);
-    }
-  }, [defaultHarvestId]);
+  const [showForm, setShowForm] = useState(!!defaultHarvestId);
+  const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
+  const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);

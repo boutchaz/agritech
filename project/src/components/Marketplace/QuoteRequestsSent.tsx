@@ -58,31 +58,31 @@ export function QuoteRequestsSent() {
     },
   });
 
-  const handleAccept = async (quoteId: string) => {
-    showConfirm('Accepter ce devis?', () => {
+  const handleAccept = (quoteId: string) => {
+    showConfirm('Accepter ce devis?', async () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'accepted' }),
+        data: { status: 'accepted' },
       });
-    }
+    });
   };
 
-  const handleDecline = async (quoteId: string) => {
-    showConfirm('Refuser ce devis?', () => {
+  const handleDecline = (quoteId: string) => {
+    showConfirm('Refuser ce devis?', async () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'declined' }),
+        data: { status: 'declined' },
       });
-    }
+    });
   };
 
-  const handleCancel = async (quoteId: string) => {
-    showConfirm('Annuler cette demande de devis?', () => {
+  const handleCancel = (quoteId: string) => {
+    showConfirm('Annuler cette demande de devis?', async () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'cancelled' }),
+        data: { status: 'cancelled' },
       });
-    }
+    });
   };
 
   const getStatusColor = (status: string) => {

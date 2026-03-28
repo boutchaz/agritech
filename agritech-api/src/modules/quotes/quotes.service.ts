@@ -209,7 +209,6 @@ export class QuotesService {
           line_total: lineTotal,
           account_id: item.account_id || null,
           item_id: item.item_id || null,
-          variant_id: item.variant_id || null,
         };
       });
 

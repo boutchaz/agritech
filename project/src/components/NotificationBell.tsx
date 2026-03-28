@@ -20,7 +20,6 @@ import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { socketManager, NotificationData } from '@/lib/socket';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
-import { Button } from '@/components/ui/button';
 
 interface EnhancedNotificationItemProps {
   notification: NotificationData;
@@ -303,19 +302,14 @@ export function NotificationBell() {
   // Show toast and animate bell for new notifications
   useEffect(() => {
     const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
-      // Validate notification has required fields — ignore malformed payloads
       if (!notification?.id || !notification?.title) {
         return;
       }
 
-      // Add to new notifications set for animation
       setNewNotificationIds((prev) => new Set(prev).add(notification.id));
-
-      // Trigger bell shake animation
       setIsBellAnimating(true);
       setTimeout(() => setIsBellAnimating(false), 500);
 
-      // Show toast for new notification
       toast.info(notification.title, {
         description: notification.message || undefined,
         action: notification.data?.taskId || notification.data?.orderId ? {
@@ -325,7 +319,7 @@ export function NotificationBell() {
         duration: 5000,
       });
 
-      // Remove from new notifications after animation
+
       setTimeout(() => {
         setNewNotificationIds((prev) => {
           const next = new Set(prev);

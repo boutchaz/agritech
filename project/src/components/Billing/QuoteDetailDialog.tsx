@@ -499,7 +499,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-w-4xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <DialogContent className={cn("w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>

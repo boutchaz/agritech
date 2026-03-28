@@ -414,12 +414,5 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
         onConfirm={confirmAction.onConfirm}
       />
     </Dialog>
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={confirmAction.title}
-        description={confirmAction.description}
-        variant={confirmAction.variant}
-        onConfirm={confirmAction.onConfirm}
-      />
   );
 };

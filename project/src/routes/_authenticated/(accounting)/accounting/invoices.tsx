@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -130,16 +130,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentOrganization || isLoading) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="text-center">
-          <SectionLoader />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization ? t('common.loading') : t('invoices.loading', 'Loading invoices...')}
-          </p>
-        </div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (error) {

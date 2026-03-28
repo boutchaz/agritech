@@ -6,6 +6,13 @@ import type { AddonModule, OrganizationAddon } from '../lib/api/addons';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
+type ConfirmAction = {
+  title: string;
+  description?: string;
+  variant?: 'destructive' | 'default';
+  onConfirm: () => void;
+};
+
 interface AddonCardProps {
   addon: AddonModule;
   activeAddon?: OrganizationAddon;
@@ -21,6 +28,12 @@ const AddonCard: React.FC<AddonCardProps> = ({
 }) => {
   const purchaseAddon = usePurchaseAddon();
   const cancelAddon = useCancelAddon();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>({ title: '', onConfirm: () => {} });
+  const showConfirm = (title: string, onConfirm: () => void, opts?: { description?: string; variant?: 'destructive' | 'default' }) => {
+    setConfirmAction({ title, onConfirm, ...opts });
+    setConfirmOpen(true);
+  };
 
   const isActive = activeAddon?.status === 'active' || activeAddon?.status === 'trialing';
   const isCanceling = activeAddon?.cancel_at_period_end;
@@ -56,22 +69,22 @@ const AddonCard: React.FC<AddonCardProps> = ({
       ? 'Êtes-vous sûr de vouloir annuler immédiatement? Vous perdrez l\'accès à ce module.'
       : 'L\'addon sera annulé à la fin de la période de facturation. Continuer?';
 
-    showConfirm(confirmMessage, () => { /* action below */ }, {variant: "destructive"}); return
-
-    try {
-      await cancelAddon.mutateAsync({
-        module_id: addon.id,
-        cancel_immediately: immediately,
-      });
-      toast.success(
-        immediately
-          ? 'Addon annulé avec succès'
-          : 'L\'addon sera annulé à la fin de la période'
-      );
-    } catch (error) {
-      toast.error('Erreur lors de l\'annulation de l\'addon');
-      console.error('Cancel error:', error);
-    }
+    showConfirm(confirmMessage, async () => {
+      try {
+        await cancelAddon.mutateAsync({
+          module_id: addon.id,
+          cancel_immediately: immediately,
+        });
+        toast.success(
+          immediately
+            ? 'Addon annulé avec succès'
+            : 'L\'addon sera annulé à la fin de la période'
+        );
+      } catch (error) {
+        toast.error('Erreur lors de l\'annulation de l\'addon');
+        console.error('Cancel error:', error);
+      }
+    }, {variant: "destructive"});
   };
 
   const formatDate = (dateString?: string) => {

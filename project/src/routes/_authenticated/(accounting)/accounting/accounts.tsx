@@ -16,9 +16,7 @@ const AccountsContent = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <SectionLoader />
-      </div>
+      <SectionLoader />
     );
   }
 

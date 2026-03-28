@@ -27,6 +27,7 @@ import {
   CreateRevenueDto,
   ProfitabilityFiltersDto,
   ProfitabilityDataDto,
+  ProfitabilityAnalysisFiltersDto,
 } from './dto';
 
 @ApiTags('profitability')
@@ -213,6 +214,36 @@ export class ProfitabilityController {
       startDate,
       endDate,
     );
+  }
+
+  @Get('analysis')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Multi-filter financial analysis: aggregate costs & revenues by org/farm/parcel/crop/variety' })
+  @ApiQuery({ name: 'filter_type', required: false, enum: ['organization', 'farm', 'parcel', 'crop_type', 'variety'] })
+  @ApiQuery({ name: 'filter_value', required: false })
+  @ApiQuery({ name: 'start_date', required: false })
+  @ApiQuery({ name: 'end_date', required: false })
+  @ApiResponse({ status: 200, description: 'Analysis data retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Parcel'))
+  async getAnalysis(
+    @Request() req,
+    @Query('filter_type') filterType?: string,
+    @Query('filter_value') filterValue?: string,
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+    const filters: ProfitabilityAnalysisFiltersDto = {
+      filter_type: filterType as any,
+      filter_value: filterValue,
+      start_date: startDate,
+      end_date: endDate,
+    };
+    return this.profitabilityService.getAnalysis(organizationId, filters);
   }
 
   @Get('account-mappings')

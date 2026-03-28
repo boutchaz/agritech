@@ -65,10 +65,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
     return (
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-3xl">
-          <div className="flex items-center justify-center py-12">
-            <SectionLoader />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.details.loading')}</span>
-          </div>
+          <SectionLoader />
         </DialogContent>
       </Dialog>
     );

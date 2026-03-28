@@ -468,6 +468,147 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             </Card>
           </div>
 
+          {/* Operational Data Sections */}
+          {/* Task Labor Costs */}
+          {(profitabilityData?.taskLaborCosts?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Main d'œuvre (tâches liées à la parcelle)
+                  </h3>
+                  <span className="text-sm font-bold text-red-600">
+                    − {formatCurrency(profitabilityData?.taskLaborTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.taskLaborCosts!.map((wr) => (
+                    <div key={wr.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{wr.task_title}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(wr.work_date).toLocaleDateString()} • {wr.worker_type} • {wr.hours_worked ? `${wr.hours_worked}h` : wr.task_description}
+                          {wr.payment_status === 'paid' && <span className="ml-2 text-green-600">✓ payé</span>}
+                          {wr.payment_status === 'pending' && <span className="ml-2 text-orange-500">en attente</span>}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                        {formatCurrency(Number(wr.total_payment || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Material / Product Application Costs */}
+          {(profitabilityData?.materialCosts?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Matières et produits appliqués
+                  </h3>
+                  <span className="text-sm font-bold text-red-600">
+                    − {formatCurrency(profitabilityData?.materialCostTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.materialCosts!.map((app) => (
+                    <div key={app.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{app.item_name ?? 'Produit'}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(app.application_date).toLocaleDateString()}
+                          {' • '}{app.quantity_used} {app.unit ?? 'unité(s)'}
+                          {app.quantity_used > 0 && app.cost > 0
+                            ? ` × ${formatCurrency(app.cost / app.quantity_used)}/unité`
+                            : ''}
+                          {app.task_title && ` • ${app.task_title}`}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                        {formatCurrency(Number(app.cost || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Harvest Revenues */}
+          {(profitabilityData?.harvestRevenues?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Récoltes
+                  </h3>
+                  <span className="text-sm font-bold text-green-600">
+                    + {formatCurrency(profitabilityData?.harvestRevenueTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.harvestRevenues!.map((hr) => (
+                    <div key={hr.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {hr.crop_type ?? 'Récolte'}{hr.lot_number ? ` — Lot ${hr.lot_number}` : ''}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(hr.harvest_date).toLocaleDateString()} • {hr.quantity} {hr.unit}
+                          {hr.expected_price_per_unit ? ` × ${formatCurrency(hr.expected_price_per_unit)}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatCurrency(Number(hr.estimated_revenue || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Metayage Settlements */}
+          {(profitabilityData?.metayageSettlements?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Partage métayage
+                  </h3>
+                  <span className="text-sm font-bold text-green-600">
+                    + {formatCurrency(profitabilityData?.metayageTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {profitabilityData!.metayageSettlements!.map((ms) => (
+                    <div key={ms.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          Brut {formatCurrency(Number(ms.gross_revenue))} — charges {formatCurrency(Number(ms.total_charges || 0))}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {ms.payment_date ? new Date(ms.payment_date).toLocaleDateString() : '—'}
+                          {ms.worker_percentage ? ` • Part ouvrier ${ms.worker_percentage}%` : ''}
+                          <span className={`ml-2 ${ms.payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'}`}>
+                            {ms.payment_status === 'paid' ? '✓ payé' : ms.payment_status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatCurrency(Number(ms.net_revenue || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Enhanced Profitability Analysis with Tabs */}
           {profitabilityData && (
             <Tabs defaultValue="overview" className="w-full">

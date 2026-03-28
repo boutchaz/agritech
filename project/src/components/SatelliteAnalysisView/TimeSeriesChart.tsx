@@ -838,14 +838,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       <div className="h-96 mb-6">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-2">
-              <SectionLoader />
-              <span className="text-gray-500">
-                {isSyncing && syncProgress
-                  ? `Sync ${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
-                  : isSyncing ? 'Lancement de la synchronisation...' : 'Chargement...'}
-              </span>
-            </div>
+            <SectionLoader />
           </div>
         ) : data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
