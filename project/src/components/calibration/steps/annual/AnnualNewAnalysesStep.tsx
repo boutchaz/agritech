@@ -144,7 +144,7 @@ export function AnnualNewAnalysesStep({ parcelId, onContinueIfNone }: AnnualNewA
 
       {hasNoNewAnalyses && (
         <div className="flex justify-end">
-          <Button type="button" onClick={onContinueIfNone} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button type="button" onClick={onContinueIfNone} >
             Aucune nouvelle analyse - Continuer
           </Button>
         </div>

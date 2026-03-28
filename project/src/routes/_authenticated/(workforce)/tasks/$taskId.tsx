@@ -1027,7 +1027,7 @@ function TaskDetailPage() {
             </h2>
             <div className="space-y-3">
               {canStart && (
-                <Button onClick={handleStartTask} disabled={isActionLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleStartTask} disabled={isActionLoading} className="w-full">
                   <Play className="w-4 h-4 mr-2" />
                   {t('tasks.start', 'Start')}
                 </Button>
@@ -1041,14 +1041,14 @@ function TaskDetailPage() {
               )}
 
               {canResume && (
-                <Button onClick={handleResumeTask} disabled={isActionLoading} className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleResumeTask} disabled={isActionLoading} className="w-full">
                   <Play className="w-4 h-4 mr-2" />
                   {t('tasks.resume', 'Resume')}
                 </Button>
               )}
 
               {canComplete && !showHarvestForm && !showPerUnitForm && (
-                <Button onClick={handleCompleteTask} disabled={isActionLoading} className="w-full bg-green-600 hover:bg-green-700">
+                <Button onClick={handleCompleteTask} disabled={isActionLoading} className="w-full">
                   {isHarvestingTask ? (
                     <>
                       <Wheat className="w-4 h-4 mr-2" />
@@ -1147,7 +1147,7 @@ function TaskDetailPage() {
                     <Button variant="outline" onClick={() => setShowPerUnitForm(false)} className="flex-1">
                       Annuler
                     </Button>
-                    <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1 bg-green-600 hover:bg-green-700">
+                    <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1">
                       <CheckCircle className="w-4 h-4 mr-2" />
                       {isActionLoading ? 'En cours...' : 'Confirmer'}
                     </Button>

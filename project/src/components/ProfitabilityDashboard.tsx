@@ -207,7 +207,7 @@ const ProfitabilityDashboard: React.FC = () => {
         </div>
         {/* Only show export button for medium/expert */}
         {showExport && (
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button >
             <Download className="h-4 w-4 mr-2" />
             Exporter
           </Button>

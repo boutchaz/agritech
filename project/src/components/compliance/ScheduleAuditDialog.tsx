@@ -107,7 +107,7 @@ export function ScheduleAuditDialog({ certification }: ScheduleAuditDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white border-none">
+        <Button size="sm" className="w-full">
           <CalendarClock className="mr-2 h-4 w-4" />
           {t('dialogs.scheduleAudit.button')}
         </Button>

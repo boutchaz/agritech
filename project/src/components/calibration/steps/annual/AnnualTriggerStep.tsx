@@ -64,7 +64,7 @@ export function AnnualTriggerStep({ parcelId, onProceed, onSnooze }: AnnualTrigg
       </div>
 
       <div className="flex flex-col gap-3">
-        <Button type="button" className="bg-green-600 hover:bg-green-700 text-white" onClick={onProceed}>
+        <Button type="button"  onClick={onProceed}>
           Oui, recolte terminee - Lancer le recalibrage
         </Button>
 

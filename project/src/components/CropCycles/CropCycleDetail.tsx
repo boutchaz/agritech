@@ -277,7 +277,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
           {cycle.status !== 'completed' && cycle.status !== 'cancelled' && (
              <Button 
                variant="default"
-               className="bg-green-600 hover:bg-green-700"
+               
                onClick={() => {
                  if (confirm(t('cropCycles.confirmComplete', 'Are you sure you want to mark this cycle as complete?'))) {
                    completeCycleMutation.mutate(cycle.id);
@@ -511,7 +511,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                               </Button>
                             )}
                             {stage.status === 'in_progress' && (
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStageStatusChange(stage.id, 'completed')}>
+                              <Button size="sm" onClick={() => handleStageStatusChange(stage.id, 'completed')}>
                                 {t('common.complete', 'Complete')}
                               </Button>
                             )}

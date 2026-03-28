@@ -147,7 +147,7 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
           </div>
         </div>
         <div className="flex justify-end">
-          <Button type="button" onClick={onContinue} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button type="button" onClick={onContinue} >
             Continuer
           </Button>
         </div>

@@ -22,13 +22,13 @@ const HarvestDetailsModal: React.FC<Props> = ({ harvestId, onClose, onEdit }) =>
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold">{t('dialogs.harvestDetails.title')}</h2>
-          <Button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X className="h-5 w-5" /></Button>
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label={t('common.close', 'Close')}><X className="h-5 w-5" /></Button>
         </div>
         <div className="p-6 space-y-4">
           <div><strong>{t('dialogs.harvestDetails.date')}:</strong> {harvest.harvest_date}</div>
           <div><strong>{t('dialogs.harvestDetails.quantity')}:</strong> {harvest.quantity} {harvest.unit}</div>
           <div><strong>{t('dialogs.harvestDetails.parcel')}:</strong> {harvest.parcel_name}</div>
-          <Button onClick={() => onEdit(harvest)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">{t('app.edit')}</Button>
+          <Button onClick={() => onEdit(harvest)}>{t('app.edit')}</Button>
         </div>
       </div>
     </div>

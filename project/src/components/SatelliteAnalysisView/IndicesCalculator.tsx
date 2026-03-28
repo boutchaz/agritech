@@ -390,7 +390,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
           </Button>
 
           {getDisplayResults() && (
-            <Button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+            <Button variant="outline">
               <Download className="w-4 h-4" />
               Exporter les résultats
             </Button>

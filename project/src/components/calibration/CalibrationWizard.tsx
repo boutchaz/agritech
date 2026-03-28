@@ -549,7 +549,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
               {t('calibration.wizard.previous')}
             </Button>
             {currentStep < 8 && (
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button type="submit" >
                 {t('calibration.wizard.next')}
               </Button>
             )}
