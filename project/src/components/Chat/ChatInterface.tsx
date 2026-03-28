@@ -14,6 +14,7 @@ import { AssistantMessage } from './AssistantMessage';
 import { ChatInput } from './ChatInput';
 import { WelcomeState } from './WelcomeState';
 import { FollowUpSuggestions } from './FollowUpSuggestions';
+import { AiQuotaExceededModal, useAiQuotaError } from '@/components/ai/AiQuotaExceededModal';
 
 interface ChatMessage {
   id: string;
@@ -43,6 +44,7 @@ export function ChatInterface() {
     onError: () => { if (browserTTS.isSupported) browserTTS.speak(messages[messages.length - 1]?.content || ''); },
   });
 
+  const { quotaError, handleError: handleQuotaError, closeModal: closeQuotaModal } = useAiQuotaError();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [voiceMode, setVoiceMode] = useState(false);
@@ -100,14 +102,19 @@ export function ChatInterface() {
   }, [messages.length, streamSuggestions]);
 
   const handleStreamError = useCallback((messageText: string, error: any) => {
+    // Check for quota exceeded error first
+    if (handleQuotaError(error)) return;
+
     const errorMsg = error?.message || 'Failed to send message';
-    let errorContent = errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch')
+    let errorContent = errorMsg.includes('AI quota exceeded') || errorMsg.includes('AI_QUOTA_EXCEEDED')
+      ? "You've reached your AI usage limit for this month."
+      : errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch')
       ? "I'm having trouble connecting to the server."
       : errorMsg.includes('Z.ai API') ? 'The AI service is currently unavailable.'
       : `I encountered an error: ${errorMsg}. Please try again.`;
     setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: errorContent, timestamp: new Date() }]);
     if (!voiceMode) setInput(messageText);
-  }, [voiceMode]);
+  }, [voiceMode, handleQuotaError]);
 
   const proceedWithSend = useCallback((messageText: string) => {
     setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date() }]);
@@ -294,6 +301,14 @@ export function ChatInterface() {
         {!isSupported && <p className="text-xs text-muted-foreground text-center">{t('chat.voiceNotSupported', 'Voice input is not supported in this browser')}</p>}
         {voiceError && <p className="text-xs text-destructive text-center">{voiceError}</p>}
       </CardContent>
+
+      <AiQuotaExceededModal
+        open={quotaError.open}
+        onClose={closeQuotaModal}
+        limit={quotaError.limit}
+        used={quotaError.used}
+        resetDate={quotaError.resetDate}
+      />
     </Card>
   );
 }

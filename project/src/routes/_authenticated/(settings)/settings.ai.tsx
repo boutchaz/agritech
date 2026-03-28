@@ -1,0 +1,72 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AiUsageBar } from '@/components/settings/AiUsageBar';
+import { useAiQuota } from '@/hooks/useAiQuota';
+import { useAuth } from '@/hooks/useAuth';
+import { Brain, Loader2 } from 'lucide-react';
+
+export const Route = createFileRoute('/_authenticated/(settings)/settings/ai')({
+  component: AiSettingsPage,
+});
+
+function AiSettingsPage() {
+  const { t } = useTranslation();
+  const { currentOrganization } = useAuth();
+  const { data: quota, isLoading } = useAiQuota(currentOrganization?.id || null);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold flex items-center gap-2">
+          <Brain className="w-6 h-6" />
+          {t('ai.settings.title', 'AI Settings')}
+        </h2>
+        <p className="text-muted-foreground">
+          {t('ai.settings.description', 'Manage your AI usage, quotas, and provider configuration.')}
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : quota ? (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('ai.settings.usage', 'AI Usage This Month')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AiUsageBar
+                currentCount={quota.current_count}
+                monthlyLimit={quota.monthly_limit}
+                periodEnd={quota.period_end}
+                isByok={quota.is_byok}
+                isUnlimited={quota.is_unlimited}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('ai.settings.provider', 'AI Provider')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {quota.is_byok
+                  ? t('ai.settings.byokActive', 'You are using your own API key. AI usage is unlimited.')
+                  : t('ai.settings.systemProvider', 'AgromindIA uses our integrated AI by default. Connect your own API key for unlimited usage.')
+                }
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed">
+          <p className="text-muted-foreground">{t('ai.settings.noData', 'No AI usage data available.')}</p>
+        </div>
+      )}
+    </div>
+  );
+}

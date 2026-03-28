@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   HardDrive,
   Calendar,
+  Brain,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -104,6 +105,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
             icon: Users,
             path: "/settings/users",
             description: t("settings.menu.usersDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "ai",
+            name: t("settings.menu.ai", "AI"),
+            icon: Brain,
+            path: "/settings/ai",
+            description: t("settings.menu.aiDescription", "AI usage, quotas, and provider settings"),
             roles: ADMIN_ROLES,
           },
         ],

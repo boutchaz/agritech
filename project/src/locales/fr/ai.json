@@ -367,5 +367,30 @@
   },
   "errors": {
     "invalidPlanPayload": "Le serveur a renvoyé un plan annuel invalide."
+  },
+  "settings": {
+    "title": "Paramètres IA",
+    "description": "Gérez votre utilisation IA, quotas et configuration des fournisseurs.",
+    "usage": "Utilisation IA ce mois",
+    "provider": "Fournisseur IA",
+    "byokActive": "Vous utilisez votre propre clé API. L'utilisation IA est illimitée.",
+    "systemProvider": "AgromindIA utilise notre IA intégrée par défaut. Connectez votre propre clé pour un usage illimité.",
+    "noData": "Aucune donnée d'utilisation IA disponible."
+  },
+  "quota": {
+    "title": "Quota IA",
+    "usage": "Utilisation",
+    "used": "utilisé",
+    "remaining": "restant",
+    "requests": "requêtes",
+    "unlimited": "Illimité",
+    "byokNote": "Utilisation de votre propre clé API — pas de limites.",
+    "enterpriseNote": "Plan Entreprise — requêtes IA illimitées.",
+    "usedThisMonth": "{{count}} requêtes ce mois",
+    "resetsOn": "Réinitialisation le {{date}}",
+    "exceeded": "Quota IA dépassé",
+    "exceededDescription": "Vous avez utilisé {{used}} sur {{limit}} requêtes IA ce mois. Votre quota se réinitialise le {{resetDate}}.",
+    "upgradeAction": "Mettre à niveau",
+    "byokAction": "Ajouter votre propre clé"
   }
 }

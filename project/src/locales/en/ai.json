@@ -367,5 +367,30 @@
   },
   "errors": {
     "invalidPlanPayload": "The server returned an invalid season plan."
+  },
+  "settings": {
+    "title": "AI Settings",
+    "description": "Manage your AI usage, quotas, and provider configuration.",
+    "usage": "AI Usage This Month",
+    "provider": "AI Provider",
+    "byokActive": "You are using your own API key. AI usage is unlimited.",
+    "systemProvider": "AgromindIA uses our integrated AI by default. Connect your own API key for unlimited usage.",
+    "noData": "No AI usage data available."
+  },
+  "quota": {
+    "title": "AI Quota",
+    "usage": "Usage",
+    "used": "used",
+    "remaining": "remaining",
+    "requests": "requests",
+    "unlimited": "Unlimited",
+    "byokNote": "Using your own API key — no limits.",
+    "enterpriseNote": "Enterprise plan — unlimited AI requests.",
+    "usedThisMonth": "{{count}} requests this month",
+    "resetsOn": "Resets {{date}}",
+    "exceeded": "AI Quota Exceeded",
+    "exceededDescription": "You've used all {{used}} of your {{limit}} AI requests this month. Your quota resets on {{resetDate}}.",
+    "upgradeAction": "Upgrade Plan",
+    "byokAction": "Add Your Own Key"
   }
 }
