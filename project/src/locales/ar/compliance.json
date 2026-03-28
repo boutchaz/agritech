@@ -127,7 +127,11 @@
     "actions": "الإجراءات",
     "openMenu": "فتح القائمة",
     "downloadReport": "تحميل التقرير",
-    "delete": "حذف"
+    "delete": "حذف",
+    "noScore": "—"
+  },
+  "checks": {
+    "deleteConfirm": "حذف فحص الامتثال هذا؟"
   },
   "dialogs": {
     "createCertification": {

@@ -2,13 +2,13 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import {
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  Clock, 
-  MoreHorizontal, 
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Clock,
+  MoreHorizontal,
   FileText,
-  Eye
+  Trash2,
 } from 'lucide-react';
 
 import {
@@ -35,9 +35,10 @@ import { ComplianceCheckResponseDto, ComplianceCheckStatus } from '@/lib/api/com
 interface ComplianceChecksListProps {
   checks: ComplianceCheckResponseDto[];
   isLoading?: boolean;
+  onDelete?: (check: ComplianceCheckResponseDto) => void;
 }
 
-export function ComplianceChecksList({ checks, isLoading }: ComplianceChecksListProps) {
+export function ComplianceChecksList({ checks, isLoading, onDelete }: ComplianceChecksListProps) {
   const { t } = useTranslation('compliance');
 
   const getStatusBadge = (status: ComplianceCheckStatus) => {
@@ -156,17 +157,21 @@ export function ComplianceChecksList({ checks, isLoading }: ComplianceChecksList
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
                     <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      {t('certifications.viewDetails')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
                       <FileText className="mr-2 h-4 w-4" />
-                      {t('table.downloadReport')}
+                      {check.check_type.replace(/_/g, ' ')} — {check.score !== undefined ? `${check.score}%` : t('table.noScore')}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
-                      {t('table.delete')}
-                    </DropdownMenuItem>
+                    {onDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => onDelete(check)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t('table.delete')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
