@@ -7,9 +7,9 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { profitabilityApi, type ParcelProfitabilityData, type AnalysisFilters, type AnalysisResult } from '@/lib/api/profitability';
+import { profitabilityApi, type ParcelProfitabilityData, type AnalysisFilters, type AnalysisFilterType, type AnalysisResult } from '@/lib/api/profitability';
 
-export type { ParcelProfitabilityData, AnalysisFilters, AnalysisResult };
+export type { ParcelProfitabilityData, AnalysisFilters, AnalysisFilterType, AnalysisResult };
 
 export function useProfitabilityData(
   parcelId: string,

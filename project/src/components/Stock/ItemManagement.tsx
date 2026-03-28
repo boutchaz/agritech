@@ -1385,6 +1385,8 @@ export default function ItemManagement() {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   // Fetch stock levels for items with farm context
   const { data: stockLevels = {} } = useQuery({
