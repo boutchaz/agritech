@@ -41,12 +41,37 @@ interface SignupData {
   invitedWithRole?: string;
 }
 
+const isNetworkError = (err: unknown): boolean =>
+  err instanceof TypeError &&
+  (err.message.includes('Failed to fetch') ||
+    err.message.includes('NetworkError') ||
+    err.message.includes('Network request failed') ||
+    err.message.includes('Load failed'));
+
+async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      if (isNetworkError(err) && attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+        continue;
+      }
+      if (isNetworkError(err)) {
+        throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion et réessayez.');
+      }
+      throw err;
+    }
+  }
+  throw new Error('Impossible de se connecter au serveur. Vérifiez votre connexion et réessayez.');
+}
+
 export async function loginViaApi(
   email: string,
   password: string,
   rememberMe: boolean = true
 ): Promise<LoginResponse> {
-  const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+  const response = await fetchWithRetry(`${API_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -78,7 +103,7 @@ export async function loginViaApi(
 }
 
 export async function signupViaApi(signupData: SignupData): Promise<SignupResponse> {
-  const response = await fetch(`${API_URL}/api/v1/auth/signup`, {
+  const response = await fetchWithRetry(`${API_URL}/api/v1/auth/signup`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -99,7 +124,7 @@ export async function loginAfterSignup(email: string, password: string): Promise
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  const response = await fetch(`${API_URL}/api/v1/auth/oauth/url`, {
+  const response = await fetchWithRetry(`${API_URL}/api/v1/auth/oauth/url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
