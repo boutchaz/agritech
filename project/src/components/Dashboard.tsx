@@ -16,6 +16,7 @@ import AccountingWidget from './Dashboard/AccountingWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardProps {
   sensorData: SensorData[];
@@ -59,15 +60,15 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
             <div className="mt-3 sm:mt-4 grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.parcels')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : parcelCount}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-10 inline-block" /> : parcelCount}</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.surface')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : totalArea.toFixed(2)} ha</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-16 inline-block" /> : <>{totalArea.toFixed(2)} ha</>}</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.analyses')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : analysesCount}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-10 inline-block" /> : analysesCount}</div>
               </div>
             </div>
             <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">

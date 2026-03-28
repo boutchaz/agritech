@@ -26,7 +26,7 @@ import {
   trackRefreshMetrics,
   trackPageView,
 } from '@/lib/analytics'
-import { PageLoader } from '@/components/ui/loader'
+import DashboardSkeleton from '@/components/Dashboard/DashboardSkeleton'
 import { Button } from '@/components/ui/button';
 
 // Sensor data is now fetched via useSensorData hook in Dashboard component
@@ -150,7 +150,7 @@ const AppContent: React.FC = () => {
   }, [currentOrganization, siteOrigin, t]);
 
   if (!currentOrganization) {
-    return <PageLoader />;
+    return <DashboardSkeleton />;
   }
 
   return (
