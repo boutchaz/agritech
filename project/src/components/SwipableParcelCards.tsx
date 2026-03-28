@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 
 interface Parcel {
   id: string;
@@ -288,7 +289,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
 
                     <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <StatusDot color="green" size="md" />
                         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                           NDVI
                         </span>
@@ -300,7 +301,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
 
                     <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <StatusDot color="blue" size="md" />
                         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                           Statut
                         </span>

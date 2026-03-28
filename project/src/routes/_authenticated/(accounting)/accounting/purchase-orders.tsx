@@ -7,6 +7,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 
 import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -347,9 +348,9 @@ const AppContent: React.FC = () => {
             </CardHeader>
             <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label={t('billingModule.purchaseOrders.table.poNumber', 'PO #')}
                         sortKey="order_number"
@@ -394,44 +395,44 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('billingModule.purchaseOrders.table.actions', 'Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={order.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableCell className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {order.order_number}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-gray-900 dark:text-white">
                           {order.supplier_name}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {order.order_date ? new Date(order.order_date).toLocaleDateString('fr-FR') : '-'}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {order.expected_delivery_date ? new Date(order.expected_delivery_date).toLocaleDateString('fr-FR') : '-'}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-right font-medium">
                           {order.currency_code} {Number(order.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-right">
                           {order.currency_code} {Number(order.billed_amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={`${getStatusColor(order.status)} flex items-center gap-1 w-fit`}>
                             {getStatusIcon(order.status)}
                             {order.status}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -505,20 +506,20 @@ const AppContent: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {orders.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      <TableRow>
+                        <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
                           {tableState.search || tableState.datePreset !== 'all'
                             ? t('billingModule.purchaseOrders.empty.filtered', 'No purchase orders match your filters.')
                             : t('billingModule.purchaseOrders.empty', 'No purchase orders found. Create your first purchase order to get started.')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               <DataTablePagination
                 page={tableState.page}

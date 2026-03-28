@@ -13,6 +13,7 @@ import { PageLoader } from '@/components/ui/loader'
 import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface ParcelsListContentProps {
   search: { farmId?: string };
@@ -22,6 +23,13 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
 
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -604,6 +612,14 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </>
   );
 };

@@ -21,6 +21,7 @@ import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStat
 import { useSourceDataFromCalibration, useRefreshSourceData } from '../../hooks/useSourceDataMetadata';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 
 const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({ onSelectJob }) => {
   const { t } = useTranslation();
@@ -44,7 +45,7 @@ const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({
             className="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-blue-100 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <StatusDot color="blue" size="sm" pulse />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 {job.status === 'pending' ? t('aiReport.statusPending', 'En attente...') : t('aiReport.statusProcessing', 'Analyse en cours...')}
               </span>

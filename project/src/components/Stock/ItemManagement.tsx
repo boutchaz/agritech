@@ -20,6 +20,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -126,6 +128,13 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [groupName, setGroupName] = useState('');
   const [groupCode, setGroupCode] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
@@ -1268,33 +1277,33 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               <p className="text-sm text-gray-500">{t('items.variants.empty', 'No variants yet')}</p>
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                <Table className="w-full">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.name', 'Variant name')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.unit', 'Unit')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.quantity', 'Quantity')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.standardRate', 'Standard rate')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.status', 'Status')}
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-right text-xs font-medium text-gray-500">
                         {t('items.variants.actions', 'Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y">
                     {variants.map((variant) => (
-                      <tr key={variant.id} className="text-sm">
-                        <td className="px-4 py-2">
+                      <TableRow key={variant.id} className="text-sm">
+                        <TableCell className="px-4 py-2">
                           <div className="flex flex-col">
                             <span className="font-medium text-gray-900 dark:text-white">
                               {variant.variant_name}
@@ -1303,19 +1312,19 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                               <span className="text-xs text-gray-500">{variant.variant_sku}</span>
                             )}
                           </div>
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {variant.unit_id
                             ? workUnits.find((wu) => wu.id === variant.unit_id)?.code || variant.unit_id
                             : '-'}
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {(variant.quantity ?? 0).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {variant.standard_rate ? formatCurrency(variant.standard_rate) : '-'}
-                        </td>
-                        <td className="px-4 py-2">
+                        </TableCell>
+                        <TableCell className="px-4 py-2">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               variant.is_active
@@ -1325,8 +1334,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                           >
                             {variant.is_active ? t('items.active') : t('items.inactive')}
                           </span>
-                        </td>
-                        <td className="px-4 py-2 text-right">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -1344,11 +1353,11 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
@@ -1576,42 +1585,42 @@ export default function ItemManagement() {
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gray-50 dark:bg-gray-800 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+            <Table className="w-full min-w-[800px]">
+              <TableHeader className="bg-gray-50 dark:bg-gray-800 border-b">
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.itemCode')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.itemName')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.group')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.defaultUnit')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.standardRate')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.stockLevel')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.status')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                </TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                   {t('items.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                     {t('items.noItemsFound')}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 filteredItems.map((item) => {
                   const stockLevel = (stockLevels as Record<string, {
@@ -1632,11 +1641,11 @@ export default function ItemManagement() {
                      stockLevel.total_quantity < item.minimum_stock_level);
                   
                   return (
-                    <tr
+                    <TableRow
                       key={item.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                      <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                         <div className="flex items-center gap-2">
                           {item.item_code}
                           {isLowStock && (
@@ -1645,20 +1654,20 @@ export default function ItemManagement() {
                             </div>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {item.item_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {(item.item_group as any)?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {item.default_unit}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                         {stockLevel ? (
                           <div className="flex flex-col items-end">
                             <div className="flex items-center gap-1">
@@ -1686,8 +1695,8 @@ export default function ItemManagement() {
                         ) : (
                           <span className="text-gray-400">{t('items.noStock')}</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm">
                         <div className="flex flex-col gap-1">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -1705,8 +1714,8 @@ export default function ItemManagement() {
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1 sm:gap-2">
                           <Button
                             variant="ghost"
@@ -1743,13 +1752,13 @@ export default function ItemManagement() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-            </table>
+            </TableBody>
+            </Table>
           </div>
         </div>
       )}
@@ -1823,6 +1832,14 @@ export default function ItemManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAnnualCampaignBilan } from '@/hooks/useAnnualRecalibration';
 
 interface AnnualCampaignBilanStepProps {
@@ -58,28 +59,28 @@ export function AnnualCampaignBilanStep({ parcelId, onReadyForAutoAdvance }: Ann
       </div>
 
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Metric</th>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Predicted</th>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Actual</th>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Delta</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t border-gray-200 dark:border-gray-700">
-              <td className="px-4 py-3 text-gray-700 dark:text-gray-300">Rendement</td>
-              <td className="px-4 py-3 text-gray-900 dark:text-white">
+        <Table className="w-full text-sm">
+          <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
+            <TableRow>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Metric</TableHead>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Predicted</TableHead>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Actual</TableHead>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Delta</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow className="border-t border-gray-200 dark:border-gray-700">
+              <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">Rendement</TableCell>
+              <TableCell className="px-4 py-3 text-gray-900 dark:text-white">
                 {bilan.predicted_yield.min}-{bilan.predicted_yield.max} T/ha
-              </td>
-              <td className="px-4 py-3 text-gray-900 dark:text-white">
+              </TableCell>
+              <TableCell className="px-4 py-3 text-gray-900 dark:text-white">
                 {bilan.actual_yield != null ? `${bilan.actual_yield} T/ha` : 'N/A'}
-              </td>
-              <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{formatDelta(bilan.yield_deviation_pct)}</td>
-            </tr>
-          </tbody>
-        </table>
+              </TableCell>
+              <TableCell className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{formatDelta(bilan.yield_deviation_pct)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

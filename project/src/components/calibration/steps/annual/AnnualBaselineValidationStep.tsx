@@ -1,5 +1,6 @@
 import { ArrowRight, FileDown, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAnnualCampaignBilan, useStartAnnualRecalibration } from '@/hooks/useAnnualRecalibration';
 import { exportCampaignBilanPdf } from '@/lib/export/campaignReportPdf';
 
@@ -82,20 +83,20 @@ export function AnnualBaselineValidationStep({
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-900/50">
-            <tr>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Parametre</th>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Ancien profil de reference</th>
-              <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Nouveau profil de reference</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full text-sm">
+          <TableHeader className="bg-gray-50 dark:bg-gray-900/50">
+            <TableRow>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Parametre</TableHead>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Ancien profil de reference</TableHead>
+              <TableHead className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Nouveau profil de reference</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {baselineRows.map((row) => (
-              <tr key={row.label} className="border-t border-gray-200 dark:border-gray-700">
-                <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.label}</td>
-                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{row.oldValue}</td>
-                <td
+              <TableRow key={row.label} className="border-t border-gray-200 dark:border-gray-700">
+                <TableCell className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.label}</TableCell>
+                <TableCell className="px-4 py-3 text-gray-500 dark:text-gray-400">{row.oldValue}</TableCell>
+                <TableCell
                   className={`px-4 py-3 font-medium ${
                     row.changed
                       ? 'text-blue-700 dark:text-blue-300'
@@ -103,11 +104,11 @@ export function AnnualBaselineValidationStep({
                   }`}
                 >
                   {row.newValue}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="rounded-lg border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/20 p-4">

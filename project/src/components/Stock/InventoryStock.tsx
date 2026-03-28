@@ -8,6 +8,7 @@ import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { itemsApi } from '@/lib/api/items';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -190,66 +191,66 @@ export default function InventoryStock() {
 
       {/* Inventory Table */}
       <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+        <Table className="w-full">
+          <TableHeader className="bg-gray-50 dark:bg-gray-800 border-b">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.itemCode')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.itemName')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.group')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.warehouse')}
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.quantity')}
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.value')}
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.status')}
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                 {t('inventoryStock.table.actions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
             {inventoryData.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                   {items.length === 0
                     ? t('inventoryStock.noItemsFound')
                     : t('inventoryStock.noStockLevels')}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               inventoryData.map((row) => (
-                <tr key={`${row.item_id}_${row.warehouse_id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                <TableRow key={`${row.item_id}_${row.warehouse_id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                     {row.item_code}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {row.item_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                     {row.item_group}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                     {row.warehouse_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {row.total_quantity.toFixed(3)} {row.default_unit}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {formatCurrency(row.total_value)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     {row.total_quantity === 0 ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                         <AlertTriangle className="w-3 h-3 mr-1" />
@@ -261,8 +262,8 @@ export default function InventoryStock() {
                         {t('inventoryStock.inStock')}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -272,12 +273,12 @@ export default function InventoryStock() {
                       <ExternalLink className="w-4 h-4 mr-1" />
                       {t('inventoryStock.viewItem')}
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

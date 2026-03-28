@@ -17,10 +17,18 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useServerTableState, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 function HarvestsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingHarvest, setEditingHarvest] = useState<HarvestSummary | null>(null);
   const [selectedHarvest, setSelectedHarvest] = useState<string | null>(null);
@@ -292,6 +300,14 @@ function HarvestsPage() {
           }}
         />
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </>
   );
 }

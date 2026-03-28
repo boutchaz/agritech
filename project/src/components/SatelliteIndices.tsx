@@ -28,6 +28,8 @@ import TimeSeriesChart from "./TimeSeriesChart";
 import MultiIndexChart from "./MultiIndexChart";
 import { useTifUpload } from "../hooks/useTifUpload";
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type DataExportFormat = "JSON" | "CSV" | "PDF";
 type ImageExportFormat = ExportFormat;
@@ -54,6 +56,13 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     availableIndices,
     loadAvailableIndices,
   } = useSatelliteIndices();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
 
   const [selectedIndex, setSelectedIndex] = useState<string>("NDVI");
   const [selectedIndices, setSelectedIndices] = useState<string[]>(["NDVI"]);
@@ -484,12 +493,10 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               </Button>
               <Button
                 onClick={() => {
-                  if (
-                    confirm("Êtes-vous sûr de vouloir supprimer cette image ?")
-                  ) {
+                  showConfirm("Êtes-vous sûr de vouloir supprimer cette image ?", () => {
                     removeTif();
                     setTifImageUrl(null);
-                  }
+                  })
                 }}
                 disabled={isUploading}
                 className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1020,31 +1027,31 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
                   {/* Desktop table */}
                   <div className="overflow-x-auto hidden md:block">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
-                      <thead>
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                    <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                             Indice
-                          </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          </TableHead>
+                          <TableHead className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                             Moyenne
-                          </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          </TableHead>
+                          <TableHead className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                             Min
-                          </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          </TableHead>
+                          <TableHead className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                             Max
-                          </th>
-                          <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                          </TableHead>
+                          <TableHead className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                             Écart-type
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="divide-y divide-gray-200 dark:divide-gray-600">
                         {Object.entries(multiTimeSeriesData).map(
                           ([index, data]) => (
-                            <tr key={index}>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
+                            <TableRow key={index}>
+                              <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
                                 <span className="flex items-center gap-2">
                                   <div
                                     className="w-3 h-3 rounded-full"
@@ -1054,24 +1061,24 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                                   />
                                   {index}
                                 </span>
-                              </td>
-                              <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
+                              </TableCell>
+                              <TableCell className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
                                 {data.statistics?.mean.toFixed(3) || "-"}
-                              </td>
-                              <td className="px-4 py-2 text-center text-sm text-green-600 dark:text-green-400">
+                              </TableCell>
+                              <TableCell className="px-4 py-2 text-center text-sm text-green-600 dark:text-green-400">
                                 {data.statistics?.min.toFixed(3) || "-"}
-                              </td>
-                              <td className="px-4 py-2 text-center text-sm text-red-600 dark:text-red-400">
+                              </TableCell>
+                              <TableCell className="px-4 py-2 text-center text-sm text-red-600 dark:text-red-400">
                                 {data.statistics?.max.toFixed(3) || "-"}
-                              </td>
-                              <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
+                              </TableCell>
+                              <TableCell className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">
                                 {data.statistics?.std.toFixed(3) || "-"}
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ),
                         )}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
 
@@ -1112,6 +1119,14 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             )}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

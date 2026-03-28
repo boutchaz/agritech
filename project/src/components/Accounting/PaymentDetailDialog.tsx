@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Badge } from '@/components/ui/badge';
 import { type Payment, useDeletePayment } from '@/hooks/useAccountingPayments';
@@ -272,6 +273,14 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
         open={allocationOpen}
         onOpenChange={setAllocationOpen}
         onAllocated={() => onOpenChange(false)}
+      />
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
       />
     </>
   );

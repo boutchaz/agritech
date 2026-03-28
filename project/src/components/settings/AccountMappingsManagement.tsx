@@ -23,6 +23,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
@@ -399,25 +400,25 @@ export function AccountMappingsManagement() {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium">{t('accountMappings.table.key', 'Key')}</th>
-                      <th className="text-left py-3 px-4 font-medium">{t('accountMappings.table.account', 'Account')}</th>
-                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('accountMappings.table.description', 'Description')}</th>
-                      <th className="text-center py-3 px-4 font-medium">{t('accountMappings.table.status', 'Status')}</th>
-                      <th className="text-right py-3 px-4 font-medium">{t('accountMappings.table.actions', 'Actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.key', 'Key')}</TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.account', 'Account')}</TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('accountMappings.table.description', 'Description')}</TableHead>
+                      <TableHead className="text-center py-3 px-4 font-medium">{t('accountMappings.table.status', 'Status')}</TableHead>
+                      <TableHead className="text-right py-3 px-4 font-medium">{t('accountMappings.table.actions', 'Actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {typeMappings.map((mapping) => (
-                      <tr key={mapping.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={mapping.id} className="border-b hover:bg-muted/50">
+                        <TableCell className="py-3 px-4">
                           <code className="text-sm bg-muted px-2 py-1 rounded">
                             {getMappingKeyLabel(type, mapping.source_key || mapping.mapping_key || '')}
                           </code>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           {mapping.account ? (
                             <div>
                               <div className="font-medium">{mapping.account.code}</div>
@@ -426,20 +427,20 @@ export function AccountMappingsManagement() {
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
-                        </td>
-                        <td className="py-3 px-4 hidden md:table-cell">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 hidden md:table-cell">
                           <span className="text-sm text-muted-foreground line-clamp-1">
                             {mapping.description || '-'}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-center">
                           <Badge variant={mapping.is_active ? 'default' : 'secondary'}>
                             {mapping.is_active
                               ? t('accountMappings.active', 'Active')
                               : t('accountMappings.inactive', 'Inactive')}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -469,11 +470,11 @@ export function AccountMappingsManagement() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

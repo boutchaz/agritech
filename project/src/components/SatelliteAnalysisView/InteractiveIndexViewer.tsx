@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Layers, ZoomIn, Loader, Maximize, Minimize, GitCompareArrows, ArrowUp, ArrowDown, Minus, ChevronLeft, ChevronRight, Calendar, AlertCircle } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
@@ -1099,33 +1100,33 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
           {/* Comparison Table */}
           <div className="bg-white border rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <Table className="min-w-full divide-y divide-gray-200">
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Indice
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Moyenne
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Médiane
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Écart-type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Min / Max
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pixels
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white divide-y divide-gray-200">
                 {Array.from(multiData.entries()).map(([index, data]) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <TableRow key={index} className="hover:bg-gray-50">
+                    <TableCell className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
@@ -1133,26 +1134,26 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                         />
                         <span className="font-medium">{index}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       {(data.statistics?.mean ?? 0).toFixed(3)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       {(data.statistics?.median ?? 0).toFixed(3)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       {(data.statistics?.std ?? 0).toFixed(3)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       {(data.statistics?.min ?? 0).toFixed(3)} / {(data.statistics?.max ?? 0).toFixed(3)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       {(data.statistics?.count ?? 0).toLocaleString()}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
@@ -1251,19 +1252,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             <div className="bg-white border rounded-lg p-4">
               <h4 className="font-semibold mb-4">Statistiques Détaillées</h4>
               <div className="overflow-auto max-h-[300px]">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Indice</th>
-                      <th className="px-3 py-2 text-right">Moy.</th>
-                      <th className="px-3 py-2 text-right">Min</th>
-                      <th className="px-3 py-2 text-right">Max</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                <Table className="min-w-full text-sm">
+                  <TableHeader className="bg-gray-50 sticky top-0">
+                    <TableRow>
+                      <TableHead className="px-3 py-2 text-left">Indice</TableHead>
+                      <TableHead className="px-3 py-2 text-right">Moy.</TableHead>
+                      <TableHead className="px-3 py-2 text-right">Min</TableHead>
+                      <TableHead className="px-3 py-2 text-right">Max</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y">
                     {Array.from(multiData.entries()).map(([index, data]) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-3 py-2">
+                      <TableRow key={index} className="hover:bg-gray-50">
+                        <TableCell className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             <div
                               className="w-3 h-3 rounded-full"
@@ -1271,14 +1272,14 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                             />
                             <span className="font-medium">{index}</span>
                           </div>
-                        </td>
-                        <td className="px-3 py-2 text-right">{(data.statistics?.mean ?? 0).toFixed(3)}</td>
-                        <td className="px-3 py-2 text-right">{(data.statistics?.min ?? 0).toFixed(3)}</td>
-                        <td className="px-3 py-2 text-right">{(data.statistics?.max ?? 0).toFixed(3)}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right">{(data.statistics?.mean ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="px-3 py-2 text-right">{(data.statistics?.min ?? 0).toFixed(3)}</TableCell>
+                        <TableCell className="px-3 py-2 text-right">{(data.statistics?.max ?? 0).toFixed(3)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </div>
@@ -1359,17 +1360,17 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statistique</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date A ({selectedDate})</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date B ({compareDate})</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Delta</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variation %</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+              <Table className="min-w-full divide-y divide-gray-200">
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statistique</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date A ({selectedDate})</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date B ({compareDate})</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Delta</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variation %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="bg-white divide-y divide-gray-200">
                   {([
                     { label: 'Moyenne', key: 'mean' as const },
                     { label: 'Médiane', key: 'median' as const },
@@ -1385,33 +1386,33 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                     const pctChange = valA !== 0 ? (delta / Math.abs(valA)) * 100 : 0;
 
                     return (
-                      <tr key={key} className="hover:bg-gray-50">
-                        <td className="px-6 py-3 text-sm font-medium text-gray-900">{label}</td>
-                        <td className="px-6 py-3 text-sm text-right tabular-nums">{valA.toFixed(3)}</td>
-                        <td className="px-6 py-3 text-sm text-right tabular-nums">{valB.toFixed(3)}</td>
-                        <td className="px-6 py-3 text-sm text-right tabular-nums">
+                      <TableRow key={key} className="hover:bg-gray-50">
+                        <TableCell className="px-6 py-3 text-sm font-medium text-gray-900">{label}</TableCell>
+                        <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{valA.toFixed(3)}</TableCell>
+                        <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{valB.toFixed(3)}</TableCell>
+                        <TableCell className="px-6 py-3 text-sm text-right tabular-nums">
                           <span className={`inline-flex items-center gap-1 ${delta > 0.001 ? 'text-green-600' : delta < -0.001 ? 'text-red-600' : 'text-gray-500'}`}>
                             {delta > 0.001 ? <ArrowUp className="w-3 h-3" /> : delta < -0.001 ? <ArrowDown className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
                             {delta >= 0 ? '+' : ''}{delta.toFixed(3)}
                           </span>
-                        </td>
-                        <td className="px-6 py-3 text-sm text-right tabular-nums">
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-sm text-right tabular-nums">
                           <span className={`${pctChange > 0.1 ? 'text-green-600' : pctChange < -0.1 ? 'text-red-600' : 'text-gray-500'}`}>
                             {pctChange >= 0 ? '+' : ''}{pctChange.toFixed(1)}%
                           </span>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                  <tr className="bg-gray-50 font-medium">
-                    <td className="px-6 py-3 text-sm text-gray-900">Pixels</td>
-                    <td className="px-6 py-3 text-sm text-right tabular-nums">{(leftTemporalData.statistics?.count ?? 0).toLocaleString()}</td>
-                    <td className="px-6 py-3 text-sm text-right tabular-nums">{(rightTemporalData.statistics?.count ?? 0).toLocaleString()}</td>
-                    <td className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</td>
-                    <td className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</td>
-                  </tr>
-                </tbody>
-              </table>
+                  <TableRow className="bg-gray-50 font-medium">
+                    <TableCell className="px-6 py-3 text-sm text-gray-900">Pixels</TableCell>
+                    <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{(leftTemporalData.statistics?.count ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{(rightTemporalData.statistics?.count ?? 0).toLocaleString()}</TableCell>
+                    <TableCell className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</TableCell>
+                    <TableCell className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
           </div>
 

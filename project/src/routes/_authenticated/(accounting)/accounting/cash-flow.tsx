@@ -7,6 +7,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { ArrowDownCircle, ArrowUpCircle, Banknote, Building2, Calendar, Loader2, AlertCircle, Download, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -46,32 +47,32 @@ const CashFlowSection: React.FC<{
       {items.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No transactions in this period</div>
       ) : (
-        <table className="w-full" aria-label={tableLabel}>
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</th>
-              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full" aria-label={tableLabel}>
+          <TableHeader className="bg-gray-50 dark:bg-gray-800">
+            <TableRow>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</TableHead>
+              <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {items.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.label}</td>
-                <td className={`px-4 py-3 text-sm text-right font-medium ${item.amount >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+              <TableRow key={item.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.label}</TableCell>
+                <TableCell className={`px-4 py-3 text-sm text-right font-medium ${item.amount >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                   {formatCurrency(item.amount, currencySymbol)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
-            <tr>
-              <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Net {title}</td>
-              <td className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
+          </TableBody>
+          <TableFooter className="bg-gray-100 dark:bg-gray-700">
+            <TableRow>
+              <TableCell className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Net {title}</TableCell>
+              <TableCell className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
                 {formatCurrency(total, currencySymbol)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       )}
     </CardContent>
   </Card>
@@ -490,42 +491,42 @@ const AppContent: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <table className="w-full" aria-label={t('reportsModule.cashFlow.tableLabel', 'Cash Summary')}>
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</th>
-                      <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                <Table className="w-full" aria-label={t('reportsModule.cashFlow.tableLabel', 'Cash Summary')}>
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</TableHead>
+                      <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="border-t border-gray-100 dark:border-gray-700">
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.openingCash', 'Opening Cash Balance')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                         {formatCurrency(cashFlowReport.opening_cash, currencySymbol)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="border-t border-gray-100 dark:border-gray-700">
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.netChangeInCash', 'Net Change in Cash')}
-                      </td>
-                      <td className={`px-4 py-3 text-sm text-right font-medium ${cashFlowReport.net_change >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                      </TableCell>
+                      <TableCell className={`px-4 py-3 text-sm text-right font-medium ${cashFlowReport.net_change >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                         {formatCurrency(cashFlowReport.net_change, currencySymbol)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-gray-100 dark:bg-gray-700 font-bold">
-                    <tr>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                  <TableFooter className="bg-gray-100 dark:bg-gray-700 font-bold">
+                    <TableRow>
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.closingCash', 'Closing Cash Balance')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
                         {formatCurrency(cashFlowReport.closing_cash, currencySymbol)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
               </CardContent>
             </Card>
 

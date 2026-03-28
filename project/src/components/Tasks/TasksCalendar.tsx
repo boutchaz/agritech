@@ -46,6 +46,7 @@ import { format, parseISO, startOfMonth, endOfMonth, isToday, isTomorrow, isPast
 import { fr, enUS, ar } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import { SectionLoader } from '@/components/ui/loader';
+import { StatusDot } from '@/components/ui/status-dot';
 
 interface TasksCalendarProps {
   organizationId: string;
@@ -342,19 +343,19 @@ const CalendarContent: React.FC<{
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 <span className="text-gray-500 dark:text-gray-400">{t('tasks.calendarPage.legend', 'Legend')}:</span>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-gray-400" />
+                  <StatusDot color="gray" size="md" />
                   <span>{t('tasks.stats.pending')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <StatusDot color="amber" size="md" />
                   <span>{t('tasks.stats.inProgress')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <StatusDot color="green" size="md" />
                   <span>{t('tasks.stats.completed')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <StatusDot color="red" size="md" />
                   <span>{t('tasks.stats.overdue')}</span>
                 </div>
               </div>

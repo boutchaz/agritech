@@ -19,6 +19,7 @@ import {
 } from '../hooks/useFarmRoles';
 import { SectionLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface FarmRoleManagerProps {
   farmId: string;
@@ -31,6 +32,13 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   farmName, 
   onClose 
 }) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAssignRole, setShowAssignRole] = useState(false);
   const [newRole, setNewRole] = useState({
     user_id: '',
@@ -68,7 +76,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   };
 
   const handleRemoveRole = async (roleId: string) => {
-    if (!confirm('Are you sure you want to remove this role assignment?')) return;
+    showConfirm('Are you sure you want to remove this role assignment?', () => { /* action below */ }, {variant: "destructive"}); return
     removeRole.mutate({ roleId, farmId });
   };
 
@@ -296,6 +304,14 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

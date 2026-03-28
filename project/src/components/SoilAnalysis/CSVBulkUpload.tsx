@@ -3,6 +3,7 @@ import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-
 import { parcelsApi } from '../../lib/api/parcels';
 import { soilAnalysesApi } from '../../lib/api/soil-analyses';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ButtonLoader } from '@/components/ui/loader';
 
 
@@ -294,32 +295,32 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                     Aperçu des données ({parsedData.length} analyses)
                   </h3>
                   <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Parcelle</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">pH</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">M.O.</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">N</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">P</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">K</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <TableHeader className="bg-gray-50 dark:bg-gray-700">
+                        <TableRow>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Parcelle</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">pH</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">M.O.</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">N</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">P</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">K</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {parsedData.slice(0, 5).map((row, index) => (
-                          <tr key={index}>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.parcel_name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.sample_date}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.ph_level}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.organic_matter}%</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.nitrogen}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.phosphorus}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.potassium}</td>
-                          </tr>
+                          <TableRow key={index}>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.parcel_name}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.sample_date}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.ph_level}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.organic_matter}%</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.nitrogen}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.phosphorus}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.potassium}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                     {parsedData.length > 5 && (
                       <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
                         ... et {parsedData.length - 5} autres analyses

@@ -11,6 +11,7 @@ import AnalysisCard from './Analysis/AnalysisCard';
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
 import { AIStatusBadge } from './ai/AIStatusBadge';
 import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
@@ -226,7 +227,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <StatusDot color="green" size="md" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     NDVI
                   </span>
@@ -254,7 +255,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <StatusDot color="blue" size="md" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     Statut
                   </span>
@@ -849,12 +850,12 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
           <div className="flex items-center space-x-2 flex-wrap">
             {isAssigned ? (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <StatusDot color="green" size="sm" />
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">Assignée</span>
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <StatusDot color="gray" size="sm" />
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Non assignée</span>
               </div>
             )}

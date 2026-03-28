@@ -7,6 +7,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -43,34 +44,34 @@ const ProfitLossSection: React.FC<{
       {accounts.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No transactions in this period</div>
       ) : (
-        <table className="w-full" aria-label={`${title} Accounts`}>
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
-              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full" aria-label={`${title} Accounts`}>
+          <TableHeader className="bg-gray-50 dark:bg-gray-800">
+            <TableRow>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</TableHead>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</TableHead>
+              <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {accounts.map((account) => (
-              <tr key={account.account_id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{account.account_code}</td>
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{account.account_name}</td>
-                <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+              <TableRow key={account.account_id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{account.account_code}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{account.account_name}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                   {formatCurrency(Number(account.display_amount), currencySymbol)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
-            <tr>
-              <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</td>
-              <td className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
+          </TableBody>
+          <TableFooter className="bg-gray-100 dark:bg-gray-700">
+            <TableRow>
+              <TableCell colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</TableCell>
+              <TableCell className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
                 {formatCurrency(total, currencySymbol)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       )}
     </CardContent>
   </Card>

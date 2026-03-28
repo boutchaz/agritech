@@ -1,4 +1,5 @@
 import { useDocumentTemplate } from '@/hooks/useDocumentTemplates';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -165,44 +166,44 @@ export function DocumentTemplatePreview({
                 {['invoice', 'quote', 'sales_order', 'purchase_order'].includes(
                   template.document_type
                 ) && (
-                  <table className="w-full mt-6 text-sm">
-                    <thead>
-                      <tr className="border-b-2 border-gray-300">
-                        <th className="text-left py-2">Description</th>
-                        <th className="text-right py-2">Quantity</th>
-                        <th className="text-right py-2">Unit Price</th>
-                        <th className="text-right py-2">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-200">
-                        <td className="py-2">Product/Service Item 1</td>
-                        <td className="text-right">2</td>
-                        <td className="text-right">$50.00</td>
-                        <td className="text-right">$100.00</td>
-                      </tr>
-                      <tr className="border-b border-gray-200">
-                        <td className="py-2">Product/Service Item 2</td>
-                        <td className="text-right">1</td>
-                        <td className="text-right">$75.00</td>
-                        <td className="text-right">$75.00</td>
-                      </tr>
-                      <tr className="border-b border-gray-200">
-                        <td className="py-2">Product/Service Item 3</td>
-                        <td className="text-right">3</td>
-                        <td className="text-right">$25.00</td>
-                        <td className="text-right">$75.00</td>
-                      </tr>
-                    </tbody>
-                    <tfoot>
-                      <tr className="font-semibold">
-                        <td colSpan={3} className="text-right py-2">
+                  <Table className="w-full mt-6 text-sm">
+                    <TableHeader>
+                      <TableRow className="border-b-2 border-gray-300">
+                        <TableHead className="text-left py-2">Description</TableHead>
+                        <TableHead className="text-right py-2">Quantity</TableHead>
+                        <TableHead className="text-right py-2">Unit Price</TableHead>
+                        <TableHead className="text-right py-2">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="border-b border-gray-200">
+                        <TableCell className="py-2">Product/Service Item 1</TableCell>
+                        <TableCell className="text-right">2</TableCell>
+                        <TableCell className="text-right">$50.00</TableCell>
+                        <TableCell className="text-right">$100.00</TableCell>
+                      </TableRow>
+                      <TableRow className="border-b border-gray-200">
+                        <TableCell className="py-2">Product/Service Item 2</TableCell>
+                        <TableCell className="text-right">1</TableCell>
+                        <TableCell className="text-right">$75.00</TableCell>
+                        <TableCell className="text-right">$75.00</TableCell>
+                      </TableRow>
+                      <TableRow className="border-b border-gray-200">
+                        <TableCell className="py-2">Product/Service Item 3</TableCell>
+                        <TableCell className="text-right">3</TableCell>
+                        <TableCell className="text-right">$25.00</TableCell>
+                        <TableCell className="text-right">$75.00</TableCell>
+                      </TableRow>
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow className="font-semibold">
+                        <TableCell colSpan={3} className="text-right py-2">
                           Total:
-                        </td>
-                        <td className="text-right py-2">$250.00</td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                        </TableCell>
+                        <TableCell className="text-right py-2">$250.00</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
                 )}
 
                 {/* Sample text for reports */}

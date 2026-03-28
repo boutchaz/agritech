@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   TrendingUp,
   TrendingDown,
@@ -565,61 +566,61 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       </p>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <Table className="w-full">
+                          <TableHeader>
+                            <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.code', 'Code')}
-                              </th>
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.name', 'Account Name')}
-                              </th>
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.type', 'Type')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.debit', 'Debit')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.credit', 'Credit')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.net', 'Net')}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {profitabilityData?.accountBreakdown?.map((acc) => (
-                              <tr
+                              <TableRow
                                 key={acc.account_code}
                                 className="border-b border-gray-100 dark:border-gray-800"
                               >
-                                <td className="py-3 px-2 text-sm font-mono text-gray-900 dark:text-white">
+                                <TableCell className="py-3 px-2 text-sm font-mono text-gray-900 dark:text-white">
                                   {acc.account_code}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-gray-900 dark:text-white">
                                   {acc.account_name}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400">
                                   {acc.account_type}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
                                   {formatCurrency(acc.total_debit)}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
                                   {formatCurrency(acc.total_credit)}
-                                </td>
-                                <td
+                                </TableCell>
+                                <TableCell
                                   className={`py-3 px-2 text-sm text-right font-semibold ${
                                     acc.net_amount >= 0 ? 'text-green-600' : 'text-red-600'
                                   }`}
                                 >
                                   {formatCurrency(Math.abs(acc.net_amount))}
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </CardContent>
@@ -739,22 +740,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
 
                             {expandedJournalEntry === entry.id && (
                               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="text-left text-gray-600 dark:text-gray-400">
-                                      <th className="pb-2">{t('profitability.journal.account', 'Account')}</th>
-                                      <th className="pb-2 text-right">
+                                <Table className="w-full text-sm">
+                                  <TableHeader>
+                                    <TableRow className="text-left text-gray-600 dark:text-gray-400">
+                                      <TableHead className="pb-2">{t('profitability.journal.account', 'Account')}</TableHead>
+                                      <TableHead className="pb-2 text-right">
                                         {t('profitability.journal.debit', 'Debit')}
-                                      </th>
-                                      <th className="pb-2 text-right">
+                                      </TableHead>
+                                      <TableHead className="pb-2 text-right">
                                         {t('profitability.journal.credit', 'Credit')}
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
                                     {entry.journal_items.map((item: any) => (
-                                      <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
-                                        <td className="py-2">
+                                      <TableRow key={item.id} className="border-t border-gray-100 dark:border-gray-800">
+                                        <TableCell className="py-2">
                                           <div>
                                             <span className="font-mono">{item.accounts?.code}</span>
                                             <span className="ml-2 text-gray-600 dark:text-gray-400">
@@ -764,17 +765,17 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                                           {item.description && (
                                             <div className="text-xs text-gray-500 mt-1">{item.description}</div>
                                           )}
-                                        </td>
-                                        <td className="py-2 text-right">
+                                        </TableCell>
+                                        <TableCell className="py-2 text-right">
                                           {item.debit > 0 ? formatCurrency(item.debit) : '-'}
-                                        </td>
-                                        <td className="py-2 text-right">
+                                        </TableCell>
+                                        <TableCell className="py-2 text-right">
                                           {item.credit > 0 ? formatCurrency(item.credit) : '-'}
-                                        </td>
-                                      </tr>
+                                        </TableCell>
+                                      </TableRow>
                                     ))}
-                                  </tbody>
-                                </table>
+                                  </TableBody>
+                                </Table>
                               </div>
                             )}
                           </div>

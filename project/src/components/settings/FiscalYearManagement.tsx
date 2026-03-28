@@ -14,6 +14,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -200,34 +201,34 @@ export function FiscalYearManagement() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.code', 'Code')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.name', 'Name')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('fiscalYears.table.period', 'Period')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('fiscalYears.table.periodType', 'Type')}</th>
-                    <th className="text-center py-3 px-4 font-medium">{t('fiscalYears.table.status', 'Status')}</th>
-                    <th className="text-right py-3 px-4 font-medium">{t('fiscalYears.table.actions', 'Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="border-b">
+                    <TableHead className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.code', 'Code')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.name', 'Name')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('fiscalYears.table.period', 'Period')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('fiscalYears.table.periodType', 'Type')}</TableHead>
+                    <TableHead className="text-center py-3 px-4 font-medium">{t('fiscalYears.table.status', 'Status')}</TableHead>
+                    <TableHead className="text-right py-3 px-4 font-medium">{t('fiscalYears.table.actions', 'Actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {fiscalYears.map((year) => (
-                    <tr key={year.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">
+                    <TableRow key={year.id} className="border-b hover:bg-muted/50">
+                      <TableCell className="py-3 px-4">
                         <code className="text-sm bg-muted px-2 py-1 rounded">{year.code}</code>
-                      </td>
-                      <td className="py-3 px-4 font-medium">{year.name}</td>
-                      <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 font-medium">{year.name}</TableCell>
+                      <TableCell className="py-3 px-4 hidden md:table-cell text-muted-foreground">
                         {new Date(year.start_date).toLocaleDateString()} - {new Date(year.end_date).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4 hidden lg:table-cell capitalize">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 hidden lg:table-cell capitalize">
                         {year.period_type}
-                      </td>
-                      <td className="py-3 px-4 text-center">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-center">
                         {getStatusBadge(year.status, year.is_current)}
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-right">
                         <div className="flex justify-end gap-2">
                           {year.status === 'open' && (
                             <>
@@ -250,11 +251,11 @@ export function FiscalYearManagement() {
                             </>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

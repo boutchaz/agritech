@@ -21,12 +21,20 @@ import {
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 import { toast } from 'sonner';
 
 export function QuoteRequestsSent() {
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined);
 
   // Fetch sent quote requests
@@ -51,28 +59,28 @@ export function QuoteRequestsSent() {
   });
 
   const handleAccept = async (quoteId: string) => {
-    if (confirm('Accepter ce devis?')) {
+    showConfirm('Accepter ce devis?', () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'accepted' },
+        data: { status: 'accepted' }),
       });
     }
   };
 
   const handleDecline = async (quoteId: string) => {
-    if (confirm('Refuser ce devis?')) {
+    showConfirm('Refuser ce devis?', () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'declined' },
+        data: { status: 'declined' }),
       });
     }
   };
 
   const handleCancel = async (quoteId: string) => {
-    if (confirm('Annuler cette demande de devis?')) {
+    showConfirm('Annuler cette demande de devis?', () => {
       await updateQuoteMutation.mutateAsync({
         id: quoteId,
-        data: { status: 'cancelled' },
+        data: { status: 'cancelled' }),
       });
     }
   };
@@ -327,6 +335,14 @@ export function QuoteRequestsSent() {
           ))
         )}
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 }

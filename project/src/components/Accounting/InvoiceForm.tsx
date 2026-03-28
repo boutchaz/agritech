@@ -42,6 +42,7 @@ import { z } from "zod";
 import { QuickCreateItem } from "../Billing/QuickCreateItem";
 import { useTranslation } from "react-i18next";
 import { SectionLoader } from '@/components/ui/loader';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 // Invoice item schema
@@ -883,55 +884,55 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
               {/* Desktop table */}
               <div className="border rounded-lg overflow-x-auto hidden md:block">
-                <table className="w-full min-w-[800px]">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[140px]">
+                <Table className="w-full min-w-[800px]">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[140px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.itemName",
                         )}{" "}
                         *
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.description",
                         )}
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.account",
                         )}{" "}
                         *
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[80px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[80px]">
                         {t("accountingModule.invoices.form.items.columns.tax")}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.quantity",
                         )}{" "}
                         *
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
                         {t("accountingModule.invoices.form.items.columns.rate")}{" "}
                         *
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[70px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[70px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.amount",
                         )}
-                      </th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[50px]">
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[50px]">
                         {t(
                           "accountingModule.invoices.form.items.columns.action",
                         )}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {fields.map((field, index) => (
-                      <tr key={field.id}>
-                        <td className="px-3 py-2">
+                      <TableRow key={field.id}>
+                        <TableCell className="px-3 py-2">
                           <RadixSelect
                             value={watch(`items.${index}.item_id`) || ""}
                             onValueChange={(itemId) => {
@@ -1016,8 +1017,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                               {errors.items[index]?.item_name?.message}
                             </p>
                           )}
-                        </td>
-                        <td className="px-3 py-2 min-w-[120px]">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 min-w-[120px]">
                           <Input
                             {...register(`items.${index}.description`)}
                             placeholder={t(
@@ -1025,8 +1026,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                             )}
                             className="h-9 text-sm"
                           />
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           <Select
                             {...register(`items.${index}.account_id`)}
                             className="h-9 max-w-[180px]"
@@ -1051,8 +1052,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                               {errors.items[index]?.account_id?.message}
                             </p>
                           )}
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           <Select
                             {...register(`items.${index}.tax_id`)}
                             className="h-9"
@@ -1066,8 +1067,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                               </option>
                             ))}
                           </Select>
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           <Input
                             type="number"
                             step="0.01"
@@ -1077,8 +1078,8 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                             )}
                             className="h-9 text-right"
                           />
-                        </td>
-                        <td className="px-3 py-2">
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
                           <Input
                             type="number"
                             step="0.01"
@@ -1088,14 +1089,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                             )}
                             className="h-9 text-right"
                           />
-                        </td>
-                        <td className="px-3 py-2 text-right font-medium">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right font-medium">
                           {calculateItemTotal(
                             watchItems[index]?.quantity || 0,
                             watchItems[index]?.rate || 0,
                           ).toFixed(2)}
-                        </td>
-                        <td className="px-3 py-2 text-center">
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
                           {fields.length > 1 && (
                             <Button
                               type="button"
@@ -1107,11 +1108,11 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
               {errors.items &&

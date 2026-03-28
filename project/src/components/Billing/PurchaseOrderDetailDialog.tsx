@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
@@ -920,83 +921,83 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                      <TableHead className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                         Item
-                      </th>
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                         Description
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Qty
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Received
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Billed
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Rate
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Amount
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Tax
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {po.items && po.items.length > 0 ? (
                       po.items.map((item: PurchaseOrderItem, index: number) => (
-                        <tr key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
+                        <TableRow key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                          <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
                             {item.description || '-'}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {item.quantity}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {item.received_quantity || 0}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {item.billed_quantity || 0}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {formatCurrency(Number(item.unit_price), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {formatCurrency(Number(item.amount), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {formatCurrency(Number(item.tax_amount ?? 0), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
                             {formatCurrency(
                               Number(item.amount) + Number(item.tax_amount ?? 0),
                               po.currency_code,
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                           No line items found.{canEditDetails ? ' Use the "Add Items" button above to add line items.' : ' This purchase order has no line items.'}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

@@ -4,6 +4,7 @@ import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
 import { ExperienceLevelSelector } from './settings/ExperienceLevelSelector';
 import { Button } from './ui/button';
+import { Switch } from './ui/switch';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
@@ -209,15 +210,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.email.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.email}
-                  onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.email} onCheckedChange={(val) => setNotifications({ ...notifications, email: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -227,15 +220,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.push.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.push}
-                  onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.push} onCheckedChange={(val) => setNotifications({ ...notifications, push: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -245,15 +230,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.alerts.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.alerts}
-                  onChange={(e) => setNotifications({ ...notifications, alerts: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.alerts} onCheckedChange={(val) => setNotifications({ ...notifications, alerts: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -263,15 +240,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.reports.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.reports}
-                  onChange={(e) => setNotifications({ ...notifications, reports: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.reports} onCheckedChange={(val) => setNotifications({ ...notifications, reports: val })} />
             </div>
           </div>
         </div>
@@ -290,10 +259,7 @@ const PreferencesSettings: React.FC = () => {
                 {t('preferences.dataPrivacy.analytics.description')}
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-            </label>
+            <Switch defaultChecked />
           </div>
 
           <div className="text-sm text-gray-500 dark:text-gray-400">

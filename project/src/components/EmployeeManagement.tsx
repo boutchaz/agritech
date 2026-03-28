@@ -10,6 +10,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -43,6 +44,13 @@ type EmployeeFormValues = z.infer<typeof employeeSchema>;
 const EmployeeManagement: React.FC = () => {
   const { currentFarm, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
@@ -288,9 +296,9 @@ const EmployeeManagement: React.FC = () => {
                 <Button
                   type="button"
                   onClick={() => {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
+                    showConfirm('Êtes-vous sûr de vouloir supprimer cet employé ?', () => {
                       deleteEmployeeMutation.mutate(employee.id);
-                    }
+                    })
                   }}
                   className="text-red-600 hover:text-red-800"
                 >
@@ -416,6 +424,14 @@ const EmployeeManagement: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

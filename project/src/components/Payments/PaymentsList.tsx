@@ -18,6 +18,7 @@ import {
 import { format } from 'date-fns';
 import { SectionLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface PaymentsListProps {
   organizationId: string;
@@ -168,43 +169,43 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <Table className="w-full">
+              <TableHeader className="bg-gray-50 dark:bg-gray-900">
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Travailleur
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Période
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Montant brut
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Déductions
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Montant net
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Statut
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredPayments.map((payment) => (
-                  <tr
+                  <TableRow
                     key={payment.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                     onClick={() => onSelectPayment?.(payment.id)}
                   >
-                    <td className="px-6 py-4">
+                    <TableCell className="px-6 py-4">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">
                           {payment.worker_name}
@@ -213,40 +214,40 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
                           {payment.farm_name}
                         </p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {getPaymentTypeLabel(payment.payment_type, 'fr')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                       {format(new Date(payment.period_start), 'dd/MM')} -{' '}
                       {format(new Date(payment.period_end), 'dd/MM/yyyy')}
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">
                       {formatCurrency(payment.base_amount + payment.bonuses + payment.overtime_amount)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm text-red-600 dark:text-red-400">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right text-sm text-red-600 dark:text-red-400">
                       -{formatCurrency(payment.deductions + payment.advance_deduction)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right text-sm font-bold text-gray-900 dark:text-white">
                       {formatCurrency(payment.net_amount)}
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         {getStatusIcon(payment.status)}
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${PAYMENT_STATUS_COLORS[payment.status]}`}>
                           {getPaymentStatusLabel(payment.status, 'fr')}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right">
                       <Button variant="link" className="text-blue-600 dark:text-blue-400 p-0 h-auto">
                         Voir détails
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}

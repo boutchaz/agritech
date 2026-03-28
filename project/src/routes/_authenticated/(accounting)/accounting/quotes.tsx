@@ -8,6 +8,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 
 import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -351,9 +352,9 @@ const AppContent: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label={t('quotes.table.quoteNumber')}
                         sortKey="quote_number"
@@ -391,41 +392,41 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      <TableHead className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.table.actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {quotes.map((quote) => (
-                      <tr key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                             <FileText className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {quote.quote_number}
                             </span>
                           </div>
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
                           {quote.customer_name}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(quote.quote_date), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(quote.valid_until), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm font-medium", isRTL ? "text-left" : "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm font-medium", isRTL ? "text-left" : "text-right")}>
                           {quote.currency_code} {Number(quote.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(`${getStatusColor(quote.status)} flex items-center gap-1 w-fit`, isRTL && "flex-row-reverse")}>
                             {getStatusIcon(quote.status)}
                             {getStatusLabel(quote.status)}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL ? "justify-start flex-row-reverse" : "justify-end")}>
                             <Button
                               variant="ghost"
@@ -515,20 +516,20 @@ const AppContent: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {quotes.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {tableState.search || tableState.datePreset !== 'all'
                             ? t('quotes.empty.filtered', 'No quotes match your filters.')
                             : t('quotes.empty.message')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               <DataTablePagination
                 page={tableState.page}

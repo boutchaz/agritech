@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useTranslation } from 'react-i18next';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -59,6 +60,13 @@ function CorrectiveActionsPage() {
     [CorrectiveActionPriority.HIGH]: t('priority.high'),
     [CorrectiveActionPriority.MEDIUM]: t('priority.medium'),
     [CorrectiveActionPriority.LOW]: t('priority.low'),
+  };
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
   };
 
   const [search, setSearch] = useState('');
@@ -238,6 +246,14 @@ function CorrectiveActionsPage() {
         />
       )}
     </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </PageLayout>
   );
 }

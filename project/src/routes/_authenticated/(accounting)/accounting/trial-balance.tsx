@@ -7,6 +7,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, BookOpen, Loader2, AlertCircle, Download, Calendar, CheckCircle2, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
@@ -190,59 +191,59 @@ const AppContent: React.FC = () => {
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table
+                      <Table
                         className="w-full"
                         aria-label={t('reportsModule.trialBalance.title', 'Trial Balance Accounts')}
                       >
-                        <thead className="bg-gray-50 dark:bg-gray-800">
-                          <tr>
-                            <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.code', 'Code')}</th>
-                            <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.accountName', 'Account Name')}</th>
-                            <th scope="col" className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.type', 'Type')}</th>
-                            <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.debit', 'Debit')}</th>
-                            <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.credit', 'Credit')}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                        <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                          <TableRow>
+                            <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.code', 'Code')}</TableHead>
+                            <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.accountName', 'Account Name')}</TableHead>
+                            <TableHead scope="col" className="text-center px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.type', 'Type')}</TableHead>
+                            <TableHead scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.debit', 'Debit')}</TableHead>
+                            <TableHead scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">{t('reportsModule.trialBalance.table.credit', 'Credit')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
                           {report.accounts.map((account) => (
-                            <tr
+                            <TableRow
                               key={account.account_id}
                               className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                             >
-                              <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
+                              <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
                                 {account.account_code}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                                 {account.account_name}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-center">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-center">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.account_type)} bg-opacity-20`}>
                                   {account.account_type}
                                 </span>
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
                                 {Number(account.debit_balance) > 0 ? formatCurrency(Number(account.debit_balance), currencySymbol) : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
+                              </TableCell>
+                              <TableCell className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
                                 {Number(account.credit_balance) > 0 ? formatCurrency(Number(account.credit_balance), currencySymbol) : '-'}
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           ))}
-                        </tbody>
-                        <tfoot className="bg-gray-100 dark:bg-gray-700 font-bold">
-                          <tr>
-                            <td colSpan={3} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                        </TableBody>
+                        <TableFooter className="bg-gray-100 dark:bg-gray-700 font-bold">
+                          <TableRow>
+                            <TableCell colSpan={3} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                               {t('reportsModule.trialBalance.totals', 'TOTALS')}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
                               {formatCurrency(report.totals.total_debit, currencySymbol)}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right text-purple-700 dark:text-purple-300">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-right text-purple-700 dark:text-purple-300">
                               {formatCurrency(report.totals.total_credit, currencySymbol)}
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
+                            </TableCell>
+                          </TableRow>
+                        </TableFooter>
+                      </Table>
                     </div>
                   )}
                 </CardContent>

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
@@ -814,72 +815,72 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
                         {t('quotes.form.item')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
                         {t('quotes.form.description')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.quantity')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.rate')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.amount')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.tax')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.detail.totals')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {q.items && q.items.length > 0 ? (
                       q.items.map((item: any, index: number) => (
-                        <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
+                        <TableRow key={index} className="border-b border-gray-100 dark:border-gray-800">
+                          <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
                             {item.item_name}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                             {item.description || '-'}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {item.quantity}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.unit_price ?? item.rate ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.amount ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.tax_amount ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(
                               Number(item.amount ?? 0) + Number(item.tax_amount ?? 0),
                               q.currency_code
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-sm text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-sm text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {t('quotes.detail.noItems')}
                           {canEditDetails ? t('quotes.detail.noItemsWithEdit') : t('quotes.detail.noItemsWithoutEdit')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

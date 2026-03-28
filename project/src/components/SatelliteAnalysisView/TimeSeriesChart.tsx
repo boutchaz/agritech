@@ -16,6 +16,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatusDot } from '@/components/ui/status-dot';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 
 interface TimeSeriesChartProps {
@@ -760,75 +762,75 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       {/* Statistics Table */}
       {data.length > 0 && (
         <div className="mb-6 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-2">Index</th>
-                <th className="text-center py-2 px-2">Moyenne</th>
-                <th className="text-center py-2 px-2">Min</th>
-                <th className="text-center py-2 px-2">Max</th>
-                <th className="text-center py-2 px-2">Écart-type</th>
-                <th className="text-center py-2 px-2">Tendance</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b">
+                <TableHead className="text-left py-2 px-2">Index</TableHead>
+                <TableHead className="text-center py-2 px-2">Moyenne</TableHead>
+                <TableHead className="text-center py-2 px-2">Min</TableHead>
+                <TableHead className="text-center py-2 px-2">Max</TableHead>
+                <TableHead className="text-center py-2 px-2">Écart-type</TableHead>
+                <TableHead className="text-center py-2 px-2">Tendance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {selectedIndices.map(index => {
                 const stats = calculateStatistics(index);
                 // Show row with "no data" message instead of hiding (Issue 1 fix)
                 if (!stats) {
                   return (
-                    <tr key={index} className="border-b hover:bg-gray-50 bg-gray-50/50">
-                      <td className="py-2 px-2">
+                    <TableRow key={index} className="border-b hover:bg-gray-50 bg-gray-50/50">
+                      <TableCell className="py-2 px-2">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full opacity-50" style={{ backgroundColor: getIndexColor(index) }} />
                           <span className="font-medium text-gray-400">{index}</span>
                         </div>
-                      </td>
-                      <td colSpan={5} className="text-center py-2 px-2 text-gray-400 italic text-xs">
+                      </TableCell>
+                      <TableCell colSpan={5} className="text-center py-2 px-2 text-gray-400 italic text-xs">
                         Pas de données disponibles
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 }
                 return (
-                  <tr key={index} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-2">
+                  <TableRow key={index} className="border-b hover:bg-gray-50">
+                    <TableCell className="py-2 px-2">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
                         <span className="font-medium">{index}</span>
                       </div>
-                    </td>
-                    <td className="text-center py-2 px-2">{stats.mean.toFixed(3)}</td>
-                    <td className="text-center py-2 px-2">{stats.min.toFixed(3)}</td>
-                    <td className="text-center py-2 px-2">{stats.max.toFixed(3)}</td>
-                    <td className="text-center py-2 px-2">{stats.std.toFixed(3)}</td>
-                    <td className="text-center py-2 px-2">{getTrendIcon(index)}</td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-center py-2 px-2">{stats.mean.toFixed(3)}</TableCell>
+                    <TableCell className="text-center py-2 px-2">{stats.min.toFixed(3)}</TableCell>
+                    <TableCell className="text-center py-2 px-2">{stats.max.toFixed(3)}</TableCell>
+                    <TableCell className="text-center py-2 px-2">{stats.std.toFixed(3)}</TableCell>
+                    <TableCell className="text-center py-2 px-2">{getTrendIcon(index)}</TableCell>
+                  </TableRow>
                 );
               })}
               {showTemperature && weatherData && weatherData.length > 0 && (
-                <tr className="border-b hover:bg-gray-50 bg-orange-50/30">
-                  <td className="py-2 px-2">
+                <TableRow className="border-b hover:bg-gray-50 bg-orange-50/30">
+                  <TableCell className="py-2 px-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-orange-500" />
+                      <StatusDot color="orange" size="md" />
                       <span className="font-medium text-gray-800">Temp. moyenne</span>
                     </div>
-                  </td>
-                  <td className="text-center py-2 px-2">
+                  </TableCell>
+                  <TableCell className="text-center py-2 px-2">
                     {(weatherData.reduce((acc, curr) => acc + curr.temperature_mean, 0) / weatherData.length).toFixed(1)} °C
-                  </td>
-                  <td className="text-center py-2 px-2">
+                  </TableCell>
+                  <TableCell className="text-center py-2 px-2">
                     {Math.min(...weatherData.map(d => d.temperature_min)).toFixed(1)} °C
-                  </td>
-                  <td className="text-center py-2 px-2">
+                  </TableCell>
+                  <TableCell className="text-center py-2 px-2">
                     {Math.max(...weatherData.map(d => d.temperature_max)).toFixed(1)} °C
-                  </td>
-                  <td className="text-center py-2 px-2">-</td>
-                  <td className="text-center py-2 px-2">-</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-center py-2 px-2">-</TableCell>
+                  <TableCell className="text-center py-2 px-2">-</TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
 

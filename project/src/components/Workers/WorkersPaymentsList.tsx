@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { Loader2, Banknote } from 'lucide-react';
 import { usePayments } from '@/hooks/usePayments';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, getPaymentTypeLabel, getPaymentStatusLabel } from '@/types/payments';
 import { format } from 'date-fns';
@@ -51,40 +52,40 @@ const WorkersPaymentsList: React.FC<WorkersPaymentsListProps> = ({ organizationI
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.date')}
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  </TableHead>
+                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.worker')}
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  </TableHead>
+                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.type')}
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  </TableHead>
+                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.period')}
-                  </th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  </TableHead>
+                  <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.amount')}
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  </TableHead>
+                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                     {t('workers.payments.status')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {payments.map((payment: any) => (
-                  <tr key={payment.id} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-3 px-4 text-gray-900 dark:text-white">
+                  <TableRow key={payment.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
                       {payment.payment_date
                         ? format(new Date(payment.payment_date), 'dd/MM/yyyy')
                         : payment.period_end
                           ? format(new Date(payment.period_end), 'dd/MM/yyyy')
                           : '-'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                       {payment.worker_id ? (
                         <Link
                           to="/workers/$workerId"
@@ -96,27 +97,27 @@ const WorkersPaymentsList: React.FC<WorkersPaymentsListProps> = ({ organizationI
                       ) : (
                         payment.worker_name || t('workers.payments.unknownWorker')
                       )}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                       {payment.payment_type ? getPaymentTypeLabel(payment.payment_type, language) : '-'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                    </TableCell>
+                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                       {payment.period_start && payment.period_end
                         ? `${format(new Date(payment.period_start), 'dd/MM/yy')} - ${format(new Date(payment.period_end), 'dd/MM/yy')}`
                         : '-'}
-                    </td>
-                    <td className="py-3 px-4 text-right text-gray-900 dark:text-white">
+                    </TableCell>
+                    <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
                       {formatCurrency(payment.net_amount || 0)}
-                    </td>
-                    <td className="py-3 px-4">
+                    </TableCell>
+                    <TableCell className="py-3 px-4">
                       <Badge className={getStatusColor(payment.status)}>
                         {payment.status ? getPaymentStatusLabel(payment.status, language) : '-'}
                       </Badge>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>

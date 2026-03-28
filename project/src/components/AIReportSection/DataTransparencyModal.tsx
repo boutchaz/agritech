@@ -24,6 +24,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatusDot } from '@/components/ui/status-dot';
 import { cn } from '@/lib/utils';
 import {
   DataFreshnessIndicator,
@@ -615,28 +617,28 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
       )}
       {details.parameters.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+          <Table className="min-w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.parameter', 'Parameter')}
-                </th>
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+                </TableHead>
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.value', 'Value')}
-                </th>
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+                </TableHead>
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.status', 'Status')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {details.parameters.slice(0, 10).map((param, idx) => (
-                <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="py-2 text-gray-900 dark:text-white">{param.name}</td>
-                  <td className="py-2 text-gray-900 dark:text-white">
+                <TableRow key={idx} className="border-b border-gray-100 dark:border-gray-800">
+                  <TableCell className="py-2 text-gray-900 dark:text-white">{param.name}</TableCell>
+                  <TableCell className="py-2 text-gray-900 dark:text-white">
                     {param.value} {param.unit}
-                  </td>
-                  <td className="py-2">
+                  </TableCell>
+                  <TableCell className="py-2">
                     {param.status && (
                       <span
                         className={cn(
@@ -651,11 +653,11 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
                         {param.status}
                       </span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {details.parameters.length > 10 && (
             <p className="text-xs text-gray-500 mt-2">
               {t('dataTransparency.analysis.andMore', 'And {{count}} more parameters...', {
@@ -801,7 +803,7 @@ const AuditTab: React.FC<{
         </h4>
         <div className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-blue-500 mt-1.5" />
+            <StatusDot color="blue" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.dataFetched', 'Data Fetched')}
@@ -812,7 +814,7 @@ const AuditTab: React.FC<{
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1.5" />
+            <StatusDot color="yellow" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.processingStarted', 'Processing Started')}
@@ -823,7 +825,7 @@ const AuditTab: React.FC<{
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-green-500 mt-1.5" />
+            <StatusDot color="green" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.processingCompleted', 'Processing Completed')}

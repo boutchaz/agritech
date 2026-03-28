@@ -14,6 +14,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type { OrganizationModule } from '../lib/api/modules';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Icon mapping for activity modules
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -36,6 +38,13 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 // ============================================================================
 const ModulesSettings: React.FC = () => {
   const { t } = useTranslation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
   const [showFunctional, setShowFunctional] = useState(false);
   const { data: subscription } = useSubscription();
@@ -482,15 +491,15 @@ const ModuleSettingsPanel: React.FC<{
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('modulesSettings.generalSettings')}</h3>
               <div className="space-y-3">
                 <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <Checkbox defaultChecked />
                   <span>{t('modulesSettings.pruningNotifications')}</span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <Checkbox defaultChecked />
                   <span>{t('modulesSettings.diseaseAlerts')}</span>
                 </label>
                 <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded border-gray-300" defaultChecked />
+                  <Checkbox defaultChecked />
                   <span>{t('modulesSettings.harvestForecasts')}</span>
                 </label>
               </div>
@@ -522,6 +531,14 @@ const ModuleSettingsPanel: React.FC<{
         </Button>
       </div>
       {renderModuleSettings()}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -573,69 +574,69 @@ function WorkerDetailPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.date")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.type")}
-                        </th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.amount")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.status")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.method")}
-                        </th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.payments.actions")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {payments.map((payment: any) => (
-                        <tr
+                        <TableRow
                           key={payment.id}
                           className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                         >
-                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                          <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
                             {payment.payment_date
                               ? format(
                                   new Date(payment.payment_date),
                                   "dd/MM/yyyy",
                                 )
                               : "-"}
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             {t(
                               `workers.paymentTypes.${payment.payment_type}`,
                             ) || payment.payment_type}
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
                             {formatCurrency(
                               payment.net_amount || payment.base_amount || 0,
                             )}
-                          </td>
-                          <td className="py-3 px-4">
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
                             <Badge
                               className={getPaymentStatusColor(payment.status)}
                             >
                               {t(`workers.paymentStatuses.${payment.status}`) ||
                                 payment.status}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             {payment.payment_method
                               ? t(
                                   `workers.paymentMethods.${payment.payment_method}`,
                                 )
                               : "-"}
-                          </td>
-                          <td className="py-3 px-4 text-right">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-right">
                             {payment.status === "pending" && (
                               <Button
                                 size="sm"
@@ -672,11 +673,11 @@ function WorkerDetailPage() {
                                 )}
                               </Button>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
@@ -702,39 +703,39 @@ function WorkerDetailPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.date")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.hours")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.units")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.description")}
-                        </th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.payment")}
-                        </th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                        </TableHead>
+                        <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                           {t("workers.workRecords.status")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {workRecords.map((record: any) => (
-                        <tr
+                        <TableRow
                           key={record.id}
                           className="border-b border-gray-100 dark:border-gray-800"
                         >
-                          <td className="py-3 px-4 text-gray-900 dark:text-white">
+                          <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
                             {format(new Date(record.work_date), "dd/MM/yyyy")}
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             {record.hours_worked
                               ? `${record.hours_worked}h`
                               : "-"}
@@ -743,8 +744,8 @@ function WorkerDetailPage() {
                                 ({Math.round((record.hours_worked / 8) * 10) / 10}j)
                               </span>
                             )}
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             {record.units_completed ? (
                               <span>
                                 {record.units_completed}
@@ -762,8 +763,8 @@ function WorkerDetailPage() {
                             ) : (
                               "-"
                             )}
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-300">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
                             <div className="flex flex-col">
                               <span>
                                 {record.task_description ||
@@ -778,13 +779,13 @@ function WorkerDetailPage() {
                                 </span>
                               )}
                             </div>
-                          </td>
-                          <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
                             {record.total_payment
                               ? formatCurrency(record.total_payment)
                               : "-"}
-                          </td>
-                          <td className="py-3 px-4">
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
                             <Badge
                               className={getPaymentStatusColor(
                                 record.payment_status || record.status,
@@ -796,11 +797,11 @@ function WorkerDetailPage() {
                                 record.payment_status ||
                                 record.status}
                             </Badge>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
@@ -834,54 +835,54 @@ function WorkerDetailPage() {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                    <Table className="w-full">
+                      <TableHeader>
+                        <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                          <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.period")}
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.grossRevenue")}
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.charges")}
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.share")}
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.status")}
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
                             {t("workers.settlements.actions")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {settlements.map((settlement: any) => (
-                          <tr
+                          <TableRow
                             key={settlement.id}
                             className="border-b border-gray-100 dark:border-gray-800"
                           >
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">
+                            <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
                               {settlement.period_start && settlement.period_end
                                 ? `${format(new Date(settlement.period_start), "dd/MM/yy")} - ${format(new Date(settlement.period_end), "dd/MM/yy")}`
                                 : "-"}
-                            </td>
-                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">
                               {formatCurrency(settlement.gross_revenue || 0)}
-                            </td>
-                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right text-gray-600 dark:text-gray-300">
                               {formatCurrency(settlement.total_charges || 0)}
-                            </td>
-                            <td className="py-3 px-4 text-right font-medium text-emerald-600 dark:text-emerald-400">
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right font-medium text-emerald-600 dark:text-emerald-400">
                               {formatCurrency(
                                 settlement.worker_share ||
                                   settlement.worker_share_amount ||
                                   0,
                               )}
-                            </td>
-                            <td className="py-3 px-4">
+                            </TableCell>
+                            <TableCell className="py-3 px-4">
                               <Badge
                                 className={getPaymentStatusColor(
                                   settlement.payment_status,
@@ -891,8 +892,8 @@ function WorkerDetailPage() {
                                   `workers.settlementStatuses.${settlement.payment_status}`,
                                 ) || settlement.payment_status}
                               </Badge>
-                            </td>
-                            <td className="py-3 px-4">
+                            </TableCell>
+                            <TableCell className="py-3 px-4">
                               {settlement.payment_status === "pending" && (
                                 <Button
                                   variant="outline"
@@ -904,11 +905,11 @@ function WorkerDetailPage() {
                                   {t("workers.settlements.createPayment")}
                                 </Button>
                               )}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </CardContent>

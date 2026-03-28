@@ -73,6 +73,8 @@ import {
   DataTablePagination,
 } from "@/components/ui/data-table";
 import { PageLoader } from '@/components/ui/loader';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 
 interface JournalLineInput {
@@ -91,6 +93,13 @@ const emptyLine: JournalLineInput = {
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
 
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<
@@ -302,28 +311,25 @@ const AppContent: React.FC = () => {
   };
 
   const handleCancelEntry = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir annuler cette écriture ?")) return;
-    try {
-      await cancelMutation.mutateAsync(id);
-      closeDrawer();
-    } catch (err: any) {
-      console.error("Error cancelling entry:", err);
-    }
+    showConfirm("Êtes-vous sûr de vouloir annuler cette écriture ?", async () => {
+      try {
+        await cancelMutation.mutateAsync(id);
+        closeDrawer();
+      } catch (err: any) {
+        console.error("Error cancelling entry:", err);
+      }
+    }, {variant: "destructive"});
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (
-      !confirm(
-        "Êtes-vous sûr de vouloir supprimer cette écriture ? Cette action est irréversible.",
-      )
-    )
-      return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      closeDrawer();
-    } catch (err: any) {
-      console.error("Error deleting entry:", err);
-    }
+    showConfirm("Êtes-vous sûr de vouloir supprimer cette écriture ? Cette action est irréversible.", async () => {
+      try {
+        await deleteMutation.mutateAsync(id);
+        closeDrawer();
+      } catch (err: any) {
+        console.error("Error deleting entry:", err);
+      }
+    }, {variant: "destructive"});
   };
 
   const _clearFilters = () => {
@@ -640,9 +646,9 @@ const AppContent: React.FC = () => {
               </div>
 
               <div className="hidden md:block overflow-x-auto -mx-3 sm:mx-0">
-                <table className="w-full min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full min-w-[800px]">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label="N° Écriture"
                         sortKey="entry_number"
@@ -661,9 +667,9 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         Référence
-                      </th>
+                      </TableHead>
                       <SortableHeader
                         label="Débit"
                         sortKey="total_debit"
@@ -684,32 +690,32 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {journalEntries.map((entry) => (
-                      <tr
+                      <TableRow
                         key={entry.id}
                         className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                       >
-                        <td className="py-3 px-4">
+                        <TableCell className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {entry.entry_number}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {formatDate(entry.entry_date)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                           {formatDate(entry.posted_at)}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className="flex flex-col gap-1">
                             <span className="text-sm text-gray-900 dark:text-white">
                               {entry.reference_type || "-"}
@@ -720,22 +726,22 @@ const AppContent: React.FC = () => {
                               </span>
                             )}
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
                           {formatAmount(entry.total_debit)}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
                           {formatAmount(entry.total_credit)}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}
                           >
                             {getStatusIcon(entry.status)}
                             {getStatusLabel(entry.status)}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-right">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
@@ -769,12 +775,12 @@ const AppContent: React.FC = () => {
                               </DropdownMenu>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {journalEntries.length === 0 && (
-                      <tr>
-                        <td
+                      <TableRow>
+                        <TableCell
                           colSpan={8}
                           className="py-8 text-center text-gray-500 dark:text-gray-400"
                         >
@@ -783,11 +789,11 @@ const AppContent: React.FC = () => {
                           tableState.datePreset !== "all"
                             ? "Aucune écriture ne correspond à vos filtres."
                             : 'Aucune écriture comptable trouvée. Les écritures sont créées automatiquement lors de la comptabilisation des factures et paiements, ou manuellement via le bouton "Nouvelle Écriture".'}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               <DataTablePagination
                 page={tableState.page}
@@ -1284,6 +1290,14 @@ const AppContent: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </>
   );
 };

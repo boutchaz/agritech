@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation} from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -527,27 +528,27 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             {/* Desktop table */}
             <div className="border rounded-lg overflow-hidden hidden md:block">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
-                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-36", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
-                      <th className="w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.tax')}</TableHead>
+                      <TableHead className={cn("text-right py-2 px-3 text-sm font-medium w-36", isRTL && "text-left")}>{t('quotes.form.amount')}</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {fields.map((field, index) => {
                       const item = watchItems[index];
                       const amount = (Number(item?.quantity) || 0) * (Number(item?.rate) || 0);
 
                       return (
-                        <tr key={field.id} className="border-t">
-                          <td className="py-2 px-3">
+                        <TableRow key={field.id} className="border-t">
+                          <TableCell className="py-2 px-3">
                             <Select
                               value={watch(`items.${index}.item_id`) || ''}
                               onValueChange={(itemId) => {
@@ -607,31 +608,31 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                               type="hidden"
                               {...register(`items.${index}.item_name`)}
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <Input
                               {...register(`items.${index}.description`)}
                               placeholder={t('quotes.form.description')}
                               className="w-full"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <Input
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.quantity`)}
                               className="w-full"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <Input
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.rate`)}
                               className="w-full"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <div className="flex gap-1">
                               <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
                                 <option value="">{t('quotes.form.selectAccount')}</option>
@@ -655,8 +656,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <FolderPlus className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <div className="flex gap-1">
                               <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
                                 <option value="">{t('quotes.form.noTax')}</option>
@@ -680,11 +681,11 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <PercentCircle className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
-                          </td>
-                          <td className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
                             {amount.toFixed(2)}
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             {fields.length > 1 && (
                               <Button
                                 type="button"
@@ -695,12 +696,12 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
             {errors.items && (

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, Plus, Loader2, X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePurchaseAddon, useCancelAddon } from '../hooks/useAddons';
 import type { AddonModule, OrganizationAddon } from '../lib/api/addons';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface AddonCardProps {
   addon: AddonModule;
@@ -55,7 +56,7 @@ const AddonCard: React.FC<AddonCardProps> = ({
       ? 'Êtes-vous sûr de vouloir annuler immédiatement? Vous perdrez l\'accès à ce module.'
       : 'L\'addon sera annulé à la fin de la période de facturation. Continuer?';
 
-    if (!confirm(confirmMessage)) return;
+    showConfirm(confirmMessage, () => { /* action below */ }, {variant: "destructive"}); return
 
     try {
       await cancelAddon.mutateAsync({
@@ -179,6 +180,14 @@ const AddonCard: React.FC<AddonCardProps> = ({
           </Button>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

@@ -23,6 +23,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
@@ -315,25 +316,25 @@ export function CostCenterManagement() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</th>
-                      <th className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</th>
-                      <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('costCenters.table.parent', 'Parent')}</th>
-                      <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('costCenters.table.location', 'Location')}</th>
-                      <th className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</th>
-                      <th className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</th>
-                    </tr>
-                  </thead>
-                <tbody>
+              <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b">
+                      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('costCenters.table.parent', 'Parent')}</TableHead>
+                      <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('costCenters.table.location', 'Location')}</TableHead>
+                      <TableHead className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</TableHead>
+                      <TableHead className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                <TableBody>
                   {filteredCostCenters.map((costCenter) => (
-                    <tr key={costCenter.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">
+                    <TableRow key={costCenter.id} className="border-b hover:bg-muted/50">
+                      <TableCell className="py-3 px-4">
                         <code className="text-sm bg-muted px-2 py-1 rounded">{costCenter.code}</code>
-                      </td>
-                      <td className="py-3 px-4 font-medium">{costCenter.name}</td>
-                      <td className="py-3 px-4 hidden md:table-cell">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 font-medium">{costCenter.name}</TableCell>
+                      <TableCell className="py-3 px-4 hidden md:table-cell">
                         {costCenter.parent_id ? (
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <FolderTree className="h-3 w-3" />
@@ -342,8 +343,8 @@ export function CostCenterManagement() {
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
-                      </td>
-                      <td className="py-3 px-4 hidden lg:table-cell">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 hidden lg:table-cell">
                           {costCenter.farm_id ? (
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Building2 className="h-3 w-3" />
@@ -360,15 +361,15 @@ export function CostCenterManagement() {
                           ) : (
                             <span className="text-muted-foreground">-</span>
                           )}
-                        </td>
-                      <td className="py-3 px-4 text-center">
+                        </TableCell>
+                      <TableCell className="py-3 px-4 text-center">
                         <Badge variant={costCenter.is_active ? 'default' : 'secondary'}>
                           {costCenter.is_active
                             ? t('costCenters.active', 'Active')
                             : t('costCenters.inactive', 'Inactive')}
                         </Badge>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell className="py-3 px-4">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
@@ -398,11 +399,11 @@ export function CostCenterManagement() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

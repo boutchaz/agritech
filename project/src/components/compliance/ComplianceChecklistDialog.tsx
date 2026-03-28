@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 import {
   Dialog,
   DialogContent,
@@ -128,11 +129,11 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <StatusDot color="red" size="sm" />
               <span>{t('dialogs.checklist.critical')}</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <StatusDot color="blue" size="sm" />
               <span>{t('dialogs.checklist.standard')}</span>
             </div>
             <span className="ml-auto">

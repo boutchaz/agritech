@@ -25,6 +25,8 @@ import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -37,6 +39,13 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<WorkerType | 'all'>('all');
   const [filterActive, setFilterActive] = useState<boolean | 'all'>('all');
@@ -428,43 +437,43 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           {/* Desktop Table View */}
           <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden" data-tour="worker-list">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <Table className="w-full">
+                <TableHeader className="bg-gray-50 dark:bg-gray-900">
+                  <TableRow>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.worker')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.type')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.compensation')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.farm')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.cnss')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.status')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.platformAccess')}
-                    </th>
-                    <th className="px-4 xl:px-6 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-4 xl:px-6 py-3 text-end text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('workers.table.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredWorkers.map((worker) => (
-                    <tr
+                    <TableRow
                       key={worker.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
                     >
-                      <td className="px-4 xl:px-6 py-4">
+                      <TableCell className="px-4 xl:px-6 py-4">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">
                             {worker.first_name} {worker.last_name}
@@ -478,19 +487,19 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                             </p>
                           )}
                         </div>
-                      </td>
-                      <td className="px-4 xl:px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getWorkerTypeColor(worker.worker_type)}`}>
                           {getWorkerTypeLabel(worker.worker_type)}
                         </span>
-                      </td>
-                      <td className="px-4 xl:px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4 text-sm text-gray-900 dark:text-white">
                         {getCompensationDisplay(worker)}
-                      </td>
-                      <td className="px-4 xl:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                         {worker.farm_name || '-'}
-                      </td>
-                      <td className="px-4 xl:px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4">
                         {worker.is_cnss_declared ? (
                           <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                             <CheckCircle className="w-4 h-4" />
@@ -502,8 +511,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                             <span className="text-xs">{t('workers.table.notDeclared')}</span>
                           </div>
                         )}
-                      </td>
-                      <td className="px-4 xl:px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4">
                         {worker.is_active ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 rounded-full">
                             <CheckCircle className="w-3 h-3" />
@@ -515,8 +524,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                             {t('workers.table.inactive')}
                           </span>
                         )}
-                      </td>
-                      <td className="px-4 xl:px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4">
                         {worker.user_id ? (
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200 rounded-full">
@@ -544,8 +553,8 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                             )}
                           </div>
                         )}
-                      </td>
-                      <td className="px-4 xl:px-6 py-4 text-end" onClick={(e) => e.stopPropagation()}>
+                      </TableCell>
+                      <TableCell className="px-4 xl:px-6 py-4 text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1 rtl:flex-row-reverse">
                           <Can I="create" a="Payment">
                             <Button
@@ -592,11 +601,11 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                             </span>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         </>
@@ -641,6 +650,14 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           }}
         />
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

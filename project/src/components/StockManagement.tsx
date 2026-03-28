@@ -34,6 +34,8 @@ import { suppliersApi } from "@/lib/api/suppliers";
 import { warehousesApi } from "@/lib/api/warehouses";
 import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -163,6 +165,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const { t } = useTranslation('stock');
   const { currentOrganization, currentFarm } = useAuth();
   const { symbol: currencySymbol } = useCurrency();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
@@ -655,24 +664,24 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
             {/* Desktop Table View */}
             <div className="hidden md:block">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <TableHeader className="bg-gray-50 dark:bg-gray-700">
+                  <TableRow>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t('stockManagement.supplierTable.supplier')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t('stockManagement.supplierTable.contact')}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t('stockManagement.supplierTable.location')}
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    </TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       {t('stockManagement.supplierTable.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {suppliers
                     .filter(
                       (supplier) =>
@@ -687,8 +696,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                           .includes(searchTerm.toLowerCase()),
                     )
                     .map((supplier) => (
-                      <tr key={supplier.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                      <TableRow key={supplier.id}>
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0">
                               <Building2 className="h-6 w-6 text-gray-400" />
@@ -704,8 +713,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               )}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-white">
                             {supplier.contact_person}
                           </div>
@@ -723,15 +732,15 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {supplier.city && supplier.country
                               ? `${supplier.city}, ${supplier.country}`
                               : supplier.country || supplier.city || "-"}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -760,11 +769,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
 
               {suppliers.length === 0 && (
                 <div className="text-center py-12">
@@ -799,27 +808,27 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
           {/* Warehouses List */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <TableHeader className="bg-gray-50 dark:bg-gray-700">
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('stockManagement.warehouseTable.warehouse')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('stockManagement.warehouseTable.capacity')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('stockManagement.warehouseTable.manager')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('stockManagement.warehouseTable.conditions')}
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t('stockManagement.warehouseTable.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {warehouses
                   .filter(
                     (warehouse) =>
@@ -834,8 +843,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         .includes(searchTerm.toLowerCase()),
                   )
                   .map((warehouse) => (
-                    <tr key={warehouse.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <TableRow key={warehouse.id}>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0">
                             <Warehouse className="h-6 w-6 text-gray-400" />
@@ -849,15 +858,15 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
                           {warehouse.capacity
                             ? `${warehouse.capacity} ${warehouse.capacity_unit}`
                             : "-"}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">
                           {warehouse.manager_name || "-"}
                         </div>
@@ -867,8 +876,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             {warehouse.manager_phone}
                           </div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="text-xs space-y-1">
                           {warehouse.temperature_controlled && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -884,8 +893,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             {t('stockManagement.security')}{warehouse.security_level}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
@@ -914,11 +923,11 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
 
             {warehouses.length === 0 && (
               <div className="text-center py-12">
@@ -2317,6 +2326,14 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

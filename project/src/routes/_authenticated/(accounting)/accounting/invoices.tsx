@@ -8,6 +8,8 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 
 import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +37,13 @@ import { SectionLoader } from '@/components/ui/loader';
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
@@ -280,9 +289,9 @@ const AppContent: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label={t('invoices.table.invoiceNumber', 'Invoice #')}
                         sortKey="invoice_number"
@@ -320,23 +329,23 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      <TableHead className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('invoices.table.actions', 'Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {invoices.map((invoice) => (
-                      <tr key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                             <Receipt className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {invoice.invoice_number}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(
                             invoice.invoice_type === 'sales'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
@@ -344,23 +353,23 @@ const AppContent: React.FC = () => {
                           )}>
                             {invoice.invoice_type === 'sales' ? t('invoices.type.sales', 'Sales') : t('invoices.type.purchase', 'Purchase')}
                           </Badge>
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
                           {invoice.party_name}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(invoice.invoice_date), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                           {invoice.currency_code} {Number(invoice.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(`${getStatusColor(invoice.status)} flex items-center gap-1 w-fit`, isRTL && "flex-row-reverse")}>
                             {getStatusIcon(invoice.status)}
                             {t(`invoices.status.${invoice.status}`, invoice.status)}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL ? "justify-start flex-row-reverse" : "justify-end")}>
                             <Button
                               variant="ghost"
@@ -418,20 +427,20 @@ const AppContent: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {invoices.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {tableState.search || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                             ? t('invoices.empty.filtered', 'No invoices match your filters.')
                             : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               <DataTablePagination
                 page={tableState.page}
@@ -599,6 +608,14 @@ const AppContent: React.FC = () => {
           invoiceId={viewInvoiceId}
         />
       </div>
+          <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </PageLayout>
   );
 };

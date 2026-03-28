@@ -1,4 +1,5 @@
 import { Controller, type FieldPath, type UseFormReturn } from 'react-hook-form';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ChevronDown, FlaskConical, TableProperties } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -194,39 +195,39 @@ export function BlockUpdateStep({ motif, form, fields, baselineValues }: BlockUp
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-white dark:bg-gray-900/60">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Parameter</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Old Value</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">New Value</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Delta</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900/30">
+          <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <TableHeader className="bg-white dark:bg-gray-900/60">
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Parameter</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Old Value</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">New Value</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Delta</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900/30">
               {fields.map((row) => {
                 const baseline = baselineValues[row.path];
                 const currentValue = form.watch(row.path as FieldPath<CalibrationWizardFormValues>);
                 const oldValue = baseline?.value;
 
                 return (
-                  <tr key={row.path}>
-                    <td className="px-4 py-3 align-top">
+                  <TableRow key={row.path}>
+                    <TableCell className="px-4 py-3 align-top">
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{row.label}</div>
                       {row.unit && <div className="text-xs text-gray-500 dark:text-gray-400">{row.unit}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top">{formatOldValue(row, baseline)}</td>
-                    <td className="px-4 py-3 align-top min-w-[220px]">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top">{formatOldValue(row, baseline)}</TableCell>
+                    <TableCell className="px-4 py-3 align-top min-w-[220px]">
                       <NewValueInput form={form} field={row} />
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top">
+                    </TableCell>
+                    <TableCell className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 align-top">
                       {renderDelta(oldValue, currentValue, row.unit)}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 

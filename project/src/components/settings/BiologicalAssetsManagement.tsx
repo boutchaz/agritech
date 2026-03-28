@@ -16,6 +16,7 @@ import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -405,47 +406,47 @@ export function BiologicalAssetsManagement() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.code', 'Code')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.name', 'Name')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.type', 'Type')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('biologicalAssets.table.area', 'Area/Qty')}</th>
-                    <th className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.carryingAmount', 'Carrying Amt')}</th>
-                    <th className="text-right py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.fairValue', 'Fair Value')}</th>
-                    <th className="text-center py-3 px-4 font-medium">{t('biologicalAssets.table.status', 'Status')}</th>
-                    <th className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.actions', 'Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="border-b">
+                    <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.code', 'Code')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.name', 'Name')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.type', 'Type')}</TableHead>
+                    <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('biologicalAssets.table.area', 'Area/Qty')}</TableHead>
+                    <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.carryingAmount', 'Carrying Amt')}</TableHead>
+                    <TableHead className="text-right py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.fairValue', 'Fair Value')}</TableHead>
+                    <TableHead className="text-center py-3 px-4 font-medium">{t('biologicalAssets.table.status', 'Status')}</TableHead>
+                    <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.actions', 'Actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {assets.map((asset) => (
-                    <tr key={asset.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">
+                    <TableRow key={asset.id} className="border-b hover:bg-muted/50">
+                      <TableCell className="py-3 px-4">
                         <code className="text-sm bg-muted px-2 py-1 rounded">{asset.asset_code}</code>
-                      </td>
-                      <td className="py-3 px-4">
+                      </TableCell>
+                      <TableCell className="py-3 px-4">
                         <div className="font-medium">{asset.asset_name}</div>
                         <div className="text-sm text-muted-foreground">{asset.asset_category}</div>
-                      </td>
-                      <td className="py-3 px-4 hidden md:table-cell">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 hidden md:table-cell">
                         {ASSET_TYPES.find(t => t.value === asset.asset_type)?.label || asset.asset_type}
-                      </td>
-                      <td className="py-3 px-4 hidden lg:table-cell">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 hidden lg:table-cell">
                         {asset.area_ha ? `${asset.area_ha} ha` : asset.quantity ? `${asset.quantity} units` : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-right font-mono">
                         {formatCurrency(asset.carrying_amount || asset.initial_cost)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono hidden md:table-cell">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-right font-mono hidden md:table-cell">
                         {asset.fair_value ? formatCurrency(asset.fair_value) : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-center">
                         <Badge className={STATUS_COLORS[asset.status]}>
                           {asset.status}
                         </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-right">
+                      </TableCell>
+                      <TableCell className="py-3 px-4 text-right">
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="ghost"
@@ -466,11 +467,11 @@ export function BiologicalAssetsManagement() {
                             </Button>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>

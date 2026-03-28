@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { organizationUsersApi } from '../lib/api/organization-users';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -50,6 +52,13 @@ const UsersSettings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const isRTL = isRTLLocale(i18n.language);
   const dateLocale = isRTL ? 'ar-MA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
 
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -490,42 +499,42 @@ const UsersSettings: React.FC = () => {
 
         {/* Desktop Table Layout */}
         <div className="hidden overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 md:block">
-          <table
+          <Table
             className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
             dir={isRTL ? 'rtl' : 'ltr'}
           >
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th
+            <TableHeader className="bg-gray-50 dark:bg-gray-700">
+              <TableRow>
+                <TableHead
                   scope="col"
                   className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   {t('users.table.user')}
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   scope="col"
                   className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   {t('users.table.role')}
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   scope="col"
                   className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   {t('users.table.status')}
-                </th>
-                <th
+                </TableHead>
+                <TableHead
                   scope="col"
                   className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
                 >
                   {t('users.table.joinedOn')}
-                </th>
-                <th scope="col" className="px-6 py-3 text-end text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                </TableHead>
+                <TableHead scope="col" className="px-6 py-3 text-end text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                   {t('users.table.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {users.map((user) => {
                 const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
                 const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -533,8 +542,8 @@ const UsersSettings: React.FC = () => {
                   (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
                 return (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="whitespace-nowrap px-6 py-4">
+                  <TableRow key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <TableCell className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="shrink-0">
                           <UserAvatar
@@ -557,31 +566,31 @@ const UsersSettings: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center gap-2">
                         {getRoleIcon(user.role.name)}
                         <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getRoleColor(user.role.name)}`}>
                           {user.role.display_name}
                         </span>
                       </div>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-6 py-4">
                       <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5
                         ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                           'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
                       >
                         {user.is_active ? t('users.status.active') : t('users.status.inactive')}
                       </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-start text-sm text-gray-500 dark:text-gray-400">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-6 py-4 text-start text-sm text-gray-500 dark:text-gray-400">
                       {new Date(user.created_at).toLocaleDateString(dateLocale, {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
                       })}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-6 py-4 text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         {canModify && (
                           <>
@@ -634,12 +643,12 @@ const UsersSettings: React.FC = () => {
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         </>
       )}
@@ -849,6 +858,14 @@ const UsersSettings: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { StatusDot } from '@/components/ui/status-dot';
 import { format, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
@@ -132,7 +133,7 @@ export function DatePicker({
             {availableDates.length > 0 && (
               <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <StatusDot color="green" size="sm" />
                   <span>Available satellite imagery</span>
                 </div>
               </div>

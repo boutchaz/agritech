@@ -17,6 +17,8 @@ import {
   usePlantationTypes,
 } from "../hooks/useTreeManagement";
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface TreeManagementProps {
   onDataChange?: () => void;
@@ -48,6 +50,13 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
   } = usePlantationTypes(currentOrganization?.id || null);
 
   // Tree categories state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingTree, setEditingTree] = useState<{
     categoryId: string;
@@ -90,11 +99,11 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie?")) {
+    showConfirm("Êtes-vous sûr de vouloir supprimer cette catégorie?", () => {
       try {
         await deleteCategory(categoryId);
         onDataChange?.();
-      } catch (error: any) {
+      }) catch (error: any) {
         toast.error("Error deleting category: " + error.message);
       }
     }
@@ -176,18 +185,16 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
   };
 
   const handleDeletePlantationType = async (id: string) => {
-    if (
-      window.confirm(
+    showConfirm(
         "Êtes-vous sûr de vouloir supprimer ce type de plantation?",
-      )
-    ) {
+      , () => {
       try {
         await deletePlantationType(id);
         onDataChange?.();
       } catch (error: any) {
         toast.error("Error deleting plantation type: " + error.message);
       }
-    }
+    })
   };
 
   const handleEditPlantationType = (id: string) => {
@@ -596,29 +603,29 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
 
           {/* Desktop table */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hidden md:block">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <TableHeader className="bg-gray-50 dark:bg-gray-900">
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Espacement
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Arbres/ha
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {plantationTypes.map((plantation) => (
-                  <tr key={plantation.id}>
+                  <TableRow key={plantation.id}>
                     {editingPlantation === plantation.id ? (
                       <>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="text"
                             value={editedPlantationType.type}
@@ -630,8 +637,8 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                             }
                             className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="text"
                             value={editedPlantationType.spacing}
@@ -643,8 +650,8 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                             }
                             className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           <input
                             type="number"
                             value={editedPlantationType.treesPerHa}
@@ -656,8 +663,8 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                             }
                             className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-right">
                           <Button
                             onClick={() =>
                               handleSavePlantationType(plantation.id)
@@ -672,20 +679,20 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                           >
                             <X className="h-4 w-4" />
                           </Button>
-                        </td>
+                        </TableCell>
                       </>
                     ) : (
                       <>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {plantation.type}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {plantation.spacing}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {plantation.trees_per_ha}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm">
                           <Button
                             onClick={() =>
                               handleEditPlantationType(plantation.id)
@@ -702,16 +709,24 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </td>
+                        </TableCell>
                       </>
                     )}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

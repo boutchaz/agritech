@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -363,55 +364,55 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b dark:border-gray-700">
-                    <tr className="text-left">
-                      <th className="pb-3 font-semibold">Parcel</th>
-                      <th className="pb-3 font-semibold">Crop</th>
-                      <th className="pb-3 font-semibold text-right">Avg Yield</th>
-                      <th className="pb-3 font-semibold text-right">Target</th>
-                      <th className="pb-3 font-semibold text-right">Variance</th>
-                      <th className="pb-3 font-semibold text-center">Rating</th>
-                      <th className="pb-3 font-semibold text-right">Revenue</th>
-                      <th className="pb-3 font-semibold text-right">Profit</th>
-                      <th className="pb-3 font-semibold text-right">Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader className="border-b dark:border-gray-700">
+                    <TableRow className="text-left">
+                      <TableHead className="pb-3 font-semibold">Parcel</TableHead>
+                      <TableHead className="pb-3 font-semibold">Crop</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Avg Yield</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Target</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Variance</TableHead>
+                      <TableHead className="pb-3 font-semibold text-center">Rating</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Revenue</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Profit</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Margin</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {performanceSummary.map((parcel) => (
-                      <tr key={parcel.parcel_id} className="border-b dark:border-gray-800">
-                        <td className="py-3">
+                      <TableRow key={parcel.parcel_id} className="border-b dark:border-gray-800">
+                        <TableCell className="py-3">
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white">
                               {parcel.parcel_name}
                             </div>
                             <div className="text-xs text-gray-500">{parcel.farm_name}</div>
                           </div>
-                        </td>
-                        <td className="py-3">{parcel.crop_type}</td>
-                        <td className="py-3 text-right">{parcel.avg_yield_per_hectare.toFixed(2)} kg/ha</td>
-                        <td className="py-3 text-right">{parcel.avg_target_yield.toFixed(2)} kg/ha</td>
-                        <td className="py-3 text-right">
+                        </TableCell>
+                        <TableCell className="py-3">{parcel.crop_type}</TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_yield_per_hectare.toFixed(2)} kg/ha</TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_target_yield.toFixed(2)} kg/ha</TableCell>
+                        <TableCell className="py-3 text-right">
                           <span className={parcel.avg_variance_percent >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {parcel.avg_variance_percent.toFixed(1)}%
                           </span>
-                        </td>
-                        <td className="py-3 text-center">
+                        </TableCell>
+                        <TableCell className="py-3 text-center">
                           <Badge className={getPerformanceColor(parcel.performance_rating)}>
                             {parcel.performance_rating}
                           </Badge>
-                        </td>
-                        <td className="py-3 text-right">
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
                           {formatCurrency(parcel.total_revenue, currentOrganization?.currency || DEFAULT_CURRENCY)}
-                        </td>
-                        <td className="py-3 text-right">
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
                           {formatCurrency(parcel.total_profit, currentOrganization?.currency || DEFAULT_CURRENCY)}
-                        </td>
-                        <td className="py-3 text-right">{parcel.avg_profit_margin.toFixed(1)}%</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_profit_margin.toFixed(1)}%</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>

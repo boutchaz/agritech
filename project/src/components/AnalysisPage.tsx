@@ -12,6 +12,7 @@ import AnalysisCard from './Analysis/AnalysisCard';
 import { useAnalysesByFarm, useParcels, useAddAnalysis, useDeleteAnalysis } from '../hooks/useAnalysesQuery';
 import type { SoilAnalysisFormValues } from '../schemas/analysisSchemas';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -20,6 +21,13 @@ const ITEMS_PER_PAGE = 6;
 const AnalysisPage: React.FC = () => {
   const { t } = useTranslation('common');
   const { currentFarm, currentOrganization } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [activeTab, setActiveTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
@@ -311,6 +319,14 @@ const AnalysisPage: React.FC = () => {
           )}
         </>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

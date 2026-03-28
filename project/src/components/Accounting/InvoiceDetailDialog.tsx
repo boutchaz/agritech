@@ -15,6 +15,8 @@ import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
 import { invoicesApi } from '@/lib/api/invoices';
 import { toast } from 'sonner';
@@ -37,6 +39,13 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
   const postInvoice = usePostInvoice();
@@ -262,47 +271,47 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dialogs.invoiceDetail.lineItems')}</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                <Table className="w-full">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.item')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.quantity')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.rate')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.amount')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="bg-white dark:bg-gray-900">
                     {invoice.items?.map((item, index) => (
-                      <tr key={item.id} className={index !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
-                        <td className="py-3 px-4">
+                      <TableRow key={item.id} className={index !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
+                        <TableCell className="py-3 px-4">
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">{item.item_name}</p>
                             {item.description && (
                               <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
                             )}
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
                           {item.quantity}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
                           {invoice.currency_code} {Number(item.rate).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
                           {invoice.currency_code} {Number(item.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
@@ -396,6 +405,21 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
           </div>
         )}
       </DialogContent>
+          <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </Dialog>
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
   );
 };

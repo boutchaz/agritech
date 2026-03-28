@@ -8,6 +8,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Users, Loader2, AlertCircle, Download, Calendar, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
@@ -174,35 +175,35 @@ function AppContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table
+                    <Table
                       className="w-full text-sm"
                       aria-label={t('reportsModule.agedReceivables.byCustomer', 'By Customer')}
                     >
-                      <thead>
-                        <tr className="border-b dark:border-gray-700">
-                          <th scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.current', 'Current')}</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">1-30</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">31-60</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">61-90</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">90+</th>
-                          <th scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.total', 'Total')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                      <TableHeader>
+                        <TableRow className="border-b dark:border-gray-700">
+                          <TableHead scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.current', 'Current')}</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">1-30</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">31-60</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">61-90</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">90+</TableHead>
+                          <TableHead scope="col" className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.total', 'Total')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {report.by_party.map((party) => (
-                          <tr key={party.party_id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="py-3 px-2 font-medium">{party.party_name}</td>
-                            <td className="text-right py-3 px-2">{formatCurrency(party.current, currencySymbol)}</td>
-                            <td className="text-right py-3 px-2">{formatCurrency(party.days_1_30, currencySymbol)}</td>
-                            <td className="text-right py-3 px-2">{formatCurrency(party.days_31_60, currencySymbol)}</td>
-                            <td className="text-right py-3 px-2">{formatCurrency(party.days_61_90, currencySymbol)}</td>
-                            <td className="text-right py-3 px-2">{formatCurrency(party.over_90, currencySymbol)}</td>
-                            <td className="text-right py-3 px-2 font-bold">{formatCurrency(party.total, currencySymbol)}</td>
-                          </tr>
+                          <TableRow key={party.party_id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <TableCell className="py-3 px-2 font-medium">{party.party_name}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{formatCurrency(party.current, currencySymbol)}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{formatCurrency(party.days_1_30, currencySymbol)}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{formatCurrency(party.days_31_60, currencySymbol)}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{formatCurrency(party.days_61_90, currencySymbol)}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{formatCurrency(party.over_90, currencySymbol)}</TableCell>
+                            <TableCell className="text-right py-3 px-2 font-bold">{formatCurrency(party.total, currencySymbol)}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>
@@ -218,39 +219,39 @@ function AppContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <table
+                    <Table
                       className="w-full text-sm"
                       aria-label={t('reportsModule.agedReceivables.invoiceDetails', 'Invoice Details')}
                     >
-                      <thead>
-                        <tr className="border-b dark:border-gray-700">
-                          <th scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceNumber', 'Invoice #')}</th>
-                          <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</th>
-                          <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceDate', 'Date')}</th>
-                          <th className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.dueDate', 'Due Date')}</th>
-                          <th className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.daysOverdue', 'Days Overdue')}</th>
-                          <th className="text-center py-3 px-2 font-medium">{t('reportsModule.agedReceivables.ageBucket', 'Age')}</th>
-                          <th className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.outstanding', 'Outstanding')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                      <TableHeader>
+                        <TableRow className="border-b dark:border-gray-700">
+                          <TableHead scope="col" className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceNumber', 'Invoice #')}</TableHead>
+                          <TableHead className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.customer', 'Customer')}</TableHead>
+                          <TableHead className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.invoiceDate', 'Date')}</TableHead>
+                          <TableHead className="text-left py-3 px-2 font-medium">{t('reportsModule.agedReceivables.dueDate', 'Due Date')}</TableHead>
+                          <TableHead className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.daysOverdue', 'Days Overdue')}</TableHead>
+                          <TableHead className="text-center py-3 px-2 font-medium">{t('reportsModule.agedReceivables.ageBucket', 'Age')}</TableHead>
+                          <TableHead className="text-right py-3 px-2 font-medium">{t('reportsModule.agedReceivables.outstanding', 'Outstanding')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {report.invoices.map((inv) => (
-                          <tr key={inv.invoice_id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="py-3 px-2 font-mono">{inv.invoice_number}</td>
-                            <td className="py-3 px-2">{inv.party_name}</td>
-                            <td className="py-3 px-2">{new Date(inv.invoice_date).toLocaleDateString()}</td>
-                            <td className="py-3 px-2">{new Date(inv.due_date).toLocaleDateString()}</td>
-                            <td className="text-right py-3 px-2">{inv.days_overdue}</td>
-                            <td className="text-center py-3 px-2">
+                          <TableRow key={inv.invoice_id} className="border-b dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                            <TableCell className="py-3 px-2 font-mono">{inv.invoice_number}</TableCell>
+                            <TableCell className="py-3 px-2">{inv.party_name}</TableCell>
+                            <TableCell className="py-3 px-2">{new Date(inv.invoice_date).toLocaleDateString()}</TableCell>
+                            <TableCell className="py-3 px-2">{new Date(inv.due_date).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right py-3 px-2">{inv.days_overdue}</TableCell>
+                            <TableCell className="text-center py-3 px-2">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAgeBucketColor(inv.age_bucket)}`}>
                                 {inv.age_bucket === 'current' ? t('reportsModule.agedReceivables.current', 'Current') : inv.age_bucket}
                               </span>
-                            </td>
-                            <td className="text-right py-3 px-2 font-medium">{formatCurrency(inv.outstanding_amount, currencySymbol)}</td>
-                          </tr>
+                            </TableCell>
+                            <TableCell className="text-right py-3 px-2 font-medium">{formatCurrency(inv.outstanding_amount, currencySymbol)}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

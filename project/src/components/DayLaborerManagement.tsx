@@ -8,6 +8,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -39,6 +40,13 @@ const DayLaborerManagement: React.FC = () => {
   const farmId = currentFarm?.id;
   const organizationId = currentOrganization?.id;
   const currency = currentOrganization?.currency || 'EUR';
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingLaborer, setEditingLaborer] = useState<DayLaborer | null>(null);
@@ -239,7 +247,7 @@ const DayLaborerManagement: React.FC = () => {
   };
 
   const handleDeleteLaborer = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')) return;
+    showConfirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?', () => { /* action below */ }, {variant: "destructive"}); return
 
     try {
       if (!farmId) {
@@ -764,6 +772,14 @@ const DayLaborerManagement: React.FC = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };
