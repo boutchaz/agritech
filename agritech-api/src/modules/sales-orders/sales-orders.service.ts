@@ -85,10 +85,8 @@ export class SalesOrdersService {
         quantity: item.quantity,
         unit_of_measure: item.unit_of_measure || 'unit',
         unit_price: item.unit_price,
-        discount_percentage: item.discount_percentage || 0,
+        discount_percent: item.discount_percentage || 0,
         tax_rate: item.tax_rate || 0,
-        item_id: item.item_id,
-        variant_id: item.variant_id,
         account_id: item.account_id,
         // Calculate line totals
         amount: this.calculateLineAmount(item),
@@ -471,6 +469,7 @@ export class SalesOrdersService {
       ],
       [SalesOrderStatus.PROCESSING]: [
         SalesOrderStatus.SHIPPED,
+        SalesOrderStatus.DELIVERED,
         SalesOrderStatus.CANCELLED,
       ],
       [SalesOrderStatus.SHIPPED]: [
@@ -553,7 +552,6 @@ export class SalesOrdersService {
           tax_amount: taxAmount,
           line_total: amount + taxAmount,
           item_id: item.item_id || null,
-          variant_id: item.variant_id || null,
         };
       });
 

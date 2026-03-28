@@ -36,7 +36,7 @@ const AppContent: React.FC = () => {
     {
       title: t('accountingModule.dashboard.metrics.totalInvoices', 'Total Invoices'),
       value: invoiceStats.total.toString(),
-      change: `${invoiceStats.outstanding} ${t('accountingModule.dashboard.metrics.outstanding', 'outstanding')}`,
+      change: `${invoiceStats.submitted} ${t('accountingModule.dashboard.metrics.outstanding', 'en attente')}`,
       trend: 'neutral',
       icon: Receipt,
       color: 'text-green-600',

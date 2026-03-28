@@ -247,6 +247,16 @@ export class OrganizationsService {
         const logoUrl = (updateData as any).logo_url ?? (updateData as any).logoUrl;
         if (logoUrl !== undefined) dbUpdateData.logo_url = logoUrl || null;
         if (updateData.map_provider !== undefined) dbUpdateData.map_provider = updateData.map_provider;
+        const accountingSettings = (updateData as any).accounting_settings;
+        if (accountingSettings !== undefined) {
+          // Merge with existing accounting_settings to avoid overwriting unrelated keys
+          const { data: existing } = await this.supabaseAdmin
+            .from('organizations')
+            .select('accounting_settings')
+            .eq('id', organizationId)
+            .single();
+          dbUpdateData.accounting_settings = { ...((existing as any)?.accounting_settings || {}), ...accountingSettings };
+        }
 
         // Update organization
         const { data: organization, error: updateError } = await this.supabaseAdmin

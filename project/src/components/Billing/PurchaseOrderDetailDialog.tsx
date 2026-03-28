@@ -262,7 +262,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   if (isDetailLoading || !resolvedPurchaseOrder) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
           <SectionLoader className="py-10" />
         </DialogContent>
       </Dialog>
@@ -272,7 +272,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   if (detailError) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Impossible de charger les lignes du bon de commande.
           </div>
@@ -562,7 +562,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -581,7 +581,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">

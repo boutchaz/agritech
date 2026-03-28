@@ -329,7 +329,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,980px)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</DialogTitle>
           <DialogDescription>
@@ -490,6 +490,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                       <Input
                         type="number"
                         step="0.01"
+                        className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         {...register(`items.${index}.quantity`, {
                           valueAsNumber: true,
                         })}
@@ -501,6 +502,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                       <Input
                         type="number"
                         step="0.01"
+                        className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         {...register(`items.${index}.rate`, { valueAsNumber: true })}
                       />
                     </div>

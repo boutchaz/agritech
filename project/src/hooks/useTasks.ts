@@ -26,14 +26,18 @@ export type { PaginatedTaskQuery };
 // =====================================================
 
 export function useTasks(organizationId: string, filters?: TaskFilters) {
+  // Flatten filters into queryKey to avoid object reference issues
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
+  
   return useQuery({
-    queryKey: ["tasks", organizationId, filters],
+    queryKey: ["tasks", organizationId, filterKey],
     queryFn: async () => {
       if (!organizationId) return [];
       const res = await tasksApi.getAll(organizationId, filters);
       return res.data;
     },
     enabled: !!organizationId,
+    staleTime: 30 * 1000, // 30 seconds
   });
 }
 

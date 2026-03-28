@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot, Map as MapIcon } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot, Map as MapIcon, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,6 +30,7 @@ interface OrganizationData {
   currency_code?: string;
   is_active?: boolean;
   map_provider?: 'default' | 'mapbox' | null;
+  allow_negative_stock?: boolean;
 }
 
 type SettingsTab = 'general' | 'ai-providers';
@@ -88,6 +89,7 @@ const OrganizationSettings: React.FC = () => {
           website: data.website,
           currency_symbol: undefined,
           map_provider: data.map_provider,
+          allow_negative_stock: data.accounting_settings?.allow_negative_stock ?? true,
         });
       } catch (err) {
         console.error('Error fetching organization data:', err);
@@ -125,6 +127,7 @@ const OrganizationSettings: React.FC = () => {
         contact_person: cleanString(orgData.contact_person),
         website: cleanString(orgData.website),
         map_provider: orgData.map_provider,
+        accounting_settings: { allow_negative_stock: orgData.allow_negative_stock ?? true },
       });
 
       // Update local state with API response
@@ -150,6 +153,7 @@ const OrganizationSettings: React.FC = () => {
         website: updatedOrg.website ?? orgData.website,
         currency_symbol: orgData.currency_symbol,
         map_provider: updatedOrg.map_provider ?? orgData.map_provider,
+        allow_negative_stock: updatedOrg.accounting_settings?.allow_negative_stock ?? orgData.allow_negative_stock ?? true,
       });
 
       // Invalidate ALL organization-related queries to ensure fresh data
@@ -575,6 +579,37 @@ const OrganizationSettings: React.FC = () => {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Sales & Stock Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <ShoppingCart className="h-5 w-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('organization.sections.salesStock', 'Ventes & Stock')}
+            </h3>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {t('organization.settings.allowNegativeStock', 'Permettre la vente sans stock')}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('organization.settings.allowNegativeStockDesc', 'Si désactivé, les devis bloqueront les articles dont le stock est insuffisant')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => orgData && setOrgData({ ...orgData, allow_negative_stock: !(orgData.allow_negative_stock ?? true) })}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                (orgData?.allow_negative_stock ?? true) ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                (orgData?.allow_negative_stock ?? true) ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
           </div>
         </div>
 
