@@ -153,12 +153,15 @@ export default function TaskAssignee({
                   autoFocus
                 />
                 {search && (
-                  <button
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={() => setSearch('')}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2.5 top-2.5 h-auto w-auto p-0 text-gray-400 hover:text-gray-600"
+                    aria-label={t('common.clearSearch', 'Clear search')}
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -177,28 +180,30 @@ export default function TaskAssignee({
                 <>
                   {/* Unassign option */}
                   {currentAssignee && (
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={handleUnassign}
                       disabled={assignTask.isPending}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                      className="w-full justify-start gap-3 px-3 py-2 text-sm h-auto text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     >
                       <X className="w-4 h-4" />
                       {t('tasks.detail.unassign', 'Unassign')}
-                    </button>
+                    </Button>
                   )}
 
                   {filteredWorkers.map((worker: any) => {
                     const name = getWorkerName(worker);
                     const isCurrentAssignee = currentAssignee?.id === worker.id;
                     return (
-                      <button
+                      <Button
                         key={worker.id}
+                        variant="ghost"
                         onClick={() => handleAssign(worker.id)}
                         disabled={assignTask.isPending || isCurrentAssignee}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+                        className={`w-full justify-start gap-3 px-3 py-2 text-sm h-auto ${
                           isCurrentAssignee
                             ? 'bg-blue-50 dark:bg-blue-900/20'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            : ''
                         }`}
                       >
                         <UserAvatar
@@ -219,7 +224,7 @@ export default function TaskAssignee({
                         {isCurrentAssignee && (
                           <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
                         )}
-                      </button>
+                      </Button>
                     );
                   })}
                 </>

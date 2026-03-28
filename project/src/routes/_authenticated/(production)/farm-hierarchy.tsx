@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 function FarmHierarchyPage() {
   const navigate = useNavigate();
@@ -52,12 +53,12 @@ function FarmHierarchyPage() {
         {selectedFarm ? (
           <div>
             {/* Back Button */}
-            <button
+            <Button
               onClick={() => setSelectedFarm(null)}
               className="mb-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               ← {t('farmHierarchy.backToHierarchy')}
-            </button>
+            </Button>
 
             {/* Role Manager */}
             <FarmRoleManager

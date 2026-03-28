@@ -11,6 +11,7 @@ import WaterAnalysisForm from './Analysis/WaterAnalysisForm';
 import AnalysisCard from './Analysis/AnalysisCard';
 import { useAnalysesByFarm, useParcels, useAddAnalysis, useDeleteAnalysis } from '../hooks/useAnalysesQuery';
 import type { SoilAnalysisFormValues } from '../schemas/analysisSchemas';
+import { Button } from '@/components/ui/button';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -153,7 +154,7 @@ const AnalysisPage: React.FC = () => {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              <button
+              <Button
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
@@ -167,7 +168,7 @@ const AnalysisPage: React.FC = () => {
               >
                 <Icon className="h-5 w-5" />
                 <span>{t(`analysis.types.${tab.id}`)}</span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -215,22 +216,22 @@ const AnalysisPage: React.FC = () => {
         </h2>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
+            <Button
               onClick={() => setViewMode('card')}
               className={`p-2 rounded ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
               title={t('analysis.cardView')}
             >
               <Grid className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
               title={t('analysis.listView')}
             >
               <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </button>
+            </Button>
           </div>
-          <button
+          <Button
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
             className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
@@ -238,7 +239,7 @@ const AnalysisPage: React.FC = () => {
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>{t('analysis.newAnalysis')}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -276,16 +277,16 @@ const AnalysisPage: React.FC = () => {
                 })}
               </p>
               <div className="flex items-center space-x-2">
-                <button
+                <Button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
+                </Button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
+                    <Button
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${
@@ -295,16 +296,16 @@ const AnalysisPage: React.FC = () => {
                       }`}
                     >
                       {page}
-                    </button>
+                    </Button>
                   ))}
                 </div>
-                <button
+                <Button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                   className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
+                </Button>
               </div>
             </div>
           )}

@@ -45,6 +45,7 @@ import {
 } from '@/types/tasks';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 // --- Constants ---
 
@@ -214,14 +215,17 @@ function SortableTaskCard({ task, lang, t, onSelect, isDragOverlay }: SortableTa
     >
       {/* Drag handle + Title */}
       <div className="flex items-start gap-2">
-        <button
-          className="mt-0.5 flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+        <Button
+          size="icon"
+          variant="ghost"
+          className="mt-0.5 flex-shrink-0 h-auto w-auto p-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           {...attributes}
           {...listeners}
           onClick={(e) => e.stopPropagation()}
+          aria-label={t('common.dragHandle', 'Drag to reorder')}
         >
           <GripVertical className="w-4 h-4" />
-        </button>
+        </Button>
         <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 flex-1">
           {task.title}
         </h4>

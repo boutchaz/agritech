@@ -4316,6 +4316,11 @@
         "dueDateAfterStart": "La date limite doit être après la date de début",
         "parcelRequiredForHarvest": "La parcelle est requise pour les tâches de récolte"
       }
+    },
+    "checklist": {
+      "check": "Cocher l'élément",
+      "uncheck": "Décocher l'élément",
+      "removeItem": "Supprimer l'élément"
     }
   },
   "dangerZone": {
@@ -6033,5 +6038,17 @@
         "petty_cash": "Petite caisse"
       }
     }
-  }
+  },
+  "retry": "Réessayer",
+  "close": "Fermer",
+  "edit": "Modifier",
+  "clearSearch": "Effacer la recherche",
+  "resetFilters": "Réinitialiser les filtres",
+  "viewAll": "Voir tout",
+  "gridView": "Vue grille",
+  "listView": "Vue liste",
+  "dragHandle": "Glisser pour réorganiser",
+  "toggleSatellite": "Basculer vue satellite",
+  "fullscreen": "Plein écran",
+  "exitFullscreen": "Quitter le plein écran"
 }

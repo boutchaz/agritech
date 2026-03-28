@@ -166,7 +166,7 @@ function SetPasswordPage() {
                     className="pr-12 h-11"
                     required
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
@@ -176,7 +176,7 @@ function SetPasswordPage() {
                     ) : (
                       <Eye className="w-5 h-5" />
                     )}
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Password Strength Indicator */}
@@ -252,7 +252,7 @@ function SetPasswordPage() {
                     className="pr-12 h-11"
                     required
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
@@ -262,7 +262,7 @@ function SetPasswordPage() {
                     ) : (
                       <Eye className="w-5 h-5" />
                     )}
-                  </button>
+                  </Button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
                   <p className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Lock, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ModuleCardProps {
   id: string;
@@ -39,7 +40,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   const colors = colorMap[color] || colorMap.emerald;
 
   return (
-    <button
+    <Button
       type="button"
       onClick={() => {
         if (locked) {
@@ -129,7 +130,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
           animation: check-in 0.3s ease-out forwards;
         }
       `}</style>
-    </button>
+    </Button>
   );
 };
 

@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
 
 const SubscriptionBanner: React.FC = () => {
   const { data: subscription } = useSubscription();
@@ -78,7 +79,7 @@ const SubscriptionBanner: React.FC = () => {
 
         {/* Actions - on left for Arabic, on right for LTR */}
         <div className={cn("flex items-center flex-shrink-0", isRTL ? "flex-row-reverse space-x-reverse space-x-3" : "space-x-3")}>
-          <button
+          <Button
             onClick={() => navigate({ to: '/settings/subscription' })}
             className={cn(
               "px-4 py-2 rounded-md text-sm font-medium",
@@ -88,15 +89,15 @@ const SubscriptionBanner: React.FC = () => {
             )}
           >
             {isTrialing ? t('subscriptionBanner.upgradeNow') : t('subscriptionBanner.manageSubscription')}
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => setDismissed(true)}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label={t('app.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

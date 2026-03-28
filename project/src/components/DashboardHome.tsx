@@ -4,6 +4,8 @@ import { TrendingUp, AlertCircle, CheckCircle, Activity, Users, Package, Loader2
 import { useAuth } from '../hooks/useAuth';
 import { appConfig } from '@/config/app';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
+import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 // Color map for dynamic classes (fixes Tailwind JIT issue)
 const colorClasses: Record<string, { bg: string; text: string }> = {
@@ -17,6 +19,7 @@ const colorClasses: Record<string, { bg: string; text: string }> = {
 };
 
 const DashboardHome: React.FC = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const { data: summary, isLoading, error, refetch } = useDashboardSummary(currentFarm?.id);
   const navigate = useNavigate();
@@ -126,13 +129,15 @@ const DashboardHome: React.FC = () => {
           <p className="text-red-600 dark:text-red-400">
             Erreur lors du chargement des données du tableau de bord.
           </p>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+            className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
           >
             <RefreshCw className="w-4 h-4" />
-            Réessayer
-          </button>
+            {t('common.retry', 'Retry')}
+          </Button>
         </div>
       )}
 
@@ -176,10 +181,11 @@ const DashboardHome: React.FC = () => {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickActions.map((action, index) => (
-            <button
+            <Button
               key={index}
+              variant="outline"
               onClick={action.onClick}
-              className="p-4 text-left border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-600 transition-colors group"
+              className="p-4 h-auto text-left justify-start border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-600 group flex-col items-start"
             >
               <div className="flex items-center gap-3 mb-2">
                 <action.icon className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
@@ -187,10 +193,10 @@ const DashboardHome: React.FC = () => {
                   {action.title}
                 </h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">
                 {action.description}
               </p>
-            </button>
+            </Button>
           ))}
         </div>
       </div>

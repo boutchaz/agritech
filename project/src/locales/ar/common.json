@@ -4173,6 +4173,11 @@
         "dueDateAfterStart": "يجب أن يكون تاريخ الاستحقاق بعد تاريخ البدء",
         "parcelRequiredForHarvest": "القطعة مطلوبة لمهام الحصاد"
       }
+    },
+    "checklist": {
+      "check": "تحديد العنصر",
+      "uncheck": "إلغاء تحديد العنصر",
+      "removeItem": "حذف العنصر"
     }
   },
   "dangerZone": {
@@ -5871,5 +5876,17 @@
         "petty_cash": "صندوق المصاريف النثرية"
       }
     }
-  }
+  },
+  "retry": "إعادة المحاولة",
+  "close": "إغلاق",
+  "edit": "تعديل",
+  "clearSearch": "مسح البحث",
+  "resetFilters": "إعادة تعيين الفلاتر",
+  "viewAll": "عرض الكل",
+  "gridView": "عرض شبكي",
+  "listView": "عرض قائمة",
+  "dragHandle": "اسحب لإعادة الترتيب",
+  "toggleSatellite": "تبديل عرض القمر الصناعي",
+  "fullscreen": "ملء الشاشة",
+  "exitFullscreen": "الخروج من وضع ملء الشاشة"
 }

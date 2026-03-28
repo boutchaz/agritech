@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
 import { cropsApi } from '../lib/api/crops';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface IrrigationSchedulingProps {
   parcelId: string;
@@ -120,7 +121,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           </div>
         )}
 
-        <button
+        <Button
           onClick={handleGenerateSchedule}
           disabled={scheduleMutation.isPending}
           className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -136,7 +137,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
               <span>Générer le planning</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}

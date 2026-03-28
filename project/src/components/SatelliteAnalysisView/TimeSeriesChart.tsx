@@ -15,6 +15,7 @@ import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
+import { Button } from '@/components/ui/button';
 
 interface TimeSeriesChartProps {
   parcelId: string;
@@ -592,7 +593,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           const range = getDateRangeLastNDays(days);
           const isActive = startDate === range.start_date && endDate === range.end_date;
           return (
-            <button
+            <Button
               key={days}
               type="button"
               onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
@@ -603,7 +604,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               }`}
             >
               {label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -612,7 +613,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         {/* Multi-select Index Dropdown */}
         <div className="relative">
           <label className="text-sm font-medium mb-2 block">Indices de végétation</label>
-          <button
+          <Button
             type="button"
             onClick={() => setShowIndexSelector(!showIndexSelector)}
             className="w-full p-2 border border-gray-300 rounded-md bg-white text-left flex items-center justify-between hover:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -625,12 +626,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
+          </Button>
 
           {showIndexSelector && (
             <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {TIME_SERIES_INDICES.map(index => (
-                <button
+                <Button
                   key={index}
                   type="button"
                   onClick={() => toggleIndex(index)}
@@ -647,7 +648,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   <span className="truncate flex-1">
                     {index === 'TCARI_OSAVI' ? 'TCARI/OSAVI' : index}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           )}
@@ -713,11 +714,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             {index}
             {getTrendIcon(index)}
             {selectedIndices.length > 1 && (
-              <button onClick={() => toggleIndex(index)} className="ml-1 hover:bg-white/20 rounded-full p-0.5">
+              <Button onClick={() => toggleIndex(index)} className="ml-1 hover:bg-white/20 rounded-full p-0.5">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              </button>
+              </Button>
             )}
           </div>
         ))}
@@ -967,15 +968,15 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button
+        <Button
           onClick={() => refetchCache()}
           disabled={isLoading}
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
           Actualiser le cache
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={forceSync}
           disabled={isLoading || !boundary}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
@@ -984,7 +985,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           {isSyncing && syncProgress
             ? `${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
             : isSyncing ? 'Lancement...' : 'Récupérer depuis satellite'}
-        </button>
+        </Button>
       </div>
     </div>
   );

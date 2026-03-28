@@ -14,6 +14,7 @@ import {
   UserPlus,
   TreePine
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FarmHierarchyManagerProps {
   organizationId: string;
@@ -118,7 +119,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
           style={{ marginLeft: `${level * 24}px` }}
         >
           {/* Expand/Collapse Button */}
-          <button
+          <Button
             onClick={() => toggleFarmExpansion(farm.farm_id)}
             className="mr-2 p-1 hover:bg-gray-200 rounded"
             disabled={!hasChildren}
@@ -128,7 +129,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
             ) : (
               <div className="w-4 h-4" />
             )}
-          </button>
+          </Button>
 
           {/* Farm Icon */}
           <div className="mr-3">
@@ -179,25 +180,25 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
 
                 {/* Action Buttons */}
                 <div className="flex space-x-1">
-                  <button
+                  <Button
                     onClick={() => onManageRoles ? onManageRoles(farm.farm_id, farm.farm_name) : setShowManageRoles(farm.farm_id)}
                     className="p-1 hover:bg-gray-200 rounded"
                     title="Manage Roles"
                   >
                     <UserPlus className="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     className="p-1 hover:bg-gray-200 rounded"
                     title="Edit Farm"
                   >
                     <Edit className="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     className="p-1 hover:bg-red-200 rounded"
                     title="Delete Farm"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -236,13 +237,13 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
           <h2 className="text-2xl font-bold text-gray-900">Farm Hierarchy</h2>
           <p className="text-gray-600">Manage your organization's farm structure and management roles</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowCreateFarm(true)}
           className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Farm
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -381,20 +382,20 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowCreateFarm(false)}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Creating...' : 'Create Farm'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

@@ -30,6 +30,7 @@ import {
   TASK_PRIORITY_COLORS,
 } from '../../types/tasks';
 import { Button } from '../ui/button';
+import { useTranslation } from 'react-i18next';
 import { Label } from '../ui/label';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -56,6 +57,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
   onClose,
   onEdit,
 }) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
   const [showHarvestForm, setShowHarvestForm] = useState(false);
@@ -392,19 +394,23 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {onEdit && (
-              <button
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={onEdit}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                aria-label={t('common.edit', 'Edit')}
               >
                 <Edit className="w-5 h-5" />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.close', 'Close')}
             >
               <X className="w-6 h-6" />
-            </button>
+            </Button>
           </div>
         </div>
 

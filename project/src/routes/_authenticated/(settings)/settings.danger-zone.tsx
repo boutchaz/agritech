@@ -24,6 +24,7 @@ import {
   Download,
   Upload,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const STAT_ICONS: Record<string, React.ElementType> = {
   farms: MapPin,
@@ -218,13 +219,13 @@ function DangerZonePage() {
             <Database className="h-5 w-5 text-blue-500" />
             {t('dangerZone.stats.title')}
           </h2>
-          <button
+          <Button
             onClick={() => refetchStats()}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             disabled={statsLoading}
           >
             <RefreshCw className={`h-4 w-4 text-gray-500 ${statsLoading ? 'animate-spin' : ''}`} />
-          </button>
+          </Button>
         </div>
 
         {statsLoading ? (
@@ -280,7 +281,7 @@ function DangerZonePage() {
             <p className="text-blue-700 dark:text-blue-400 text-sm mb-3">
               {t('dangerZone.exportImport.exportDescription')}
             </p>
-            <button
+            <Button
               onClick={() => exportMutation.mutate()}
               disabled={exportMutation.isPending || !hasData}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -291,7 +292,7 @@ function DangerZonePage() {
                 <Download className="h-4 w-4" />
               )}
               {t('dangerZone.exportImport.exportButton')}
-            </button>
+            </Button>
             {exportMutation.isSuccess && (
               <p className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
                 <CheckCircle className="h-4 w-4" />
@@ -322,7 +323,7 @@ function DangerZonePage() {
               onChange={handleFileSelect}
               className="hidden"
             />
-            <button
+            <Button
               onClick={() => fileInputRef.current?.click()}
               disabled={importMutation.isPending}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -333,7 +334,7 @@ function DangerZonePage() {
                 <Upload className="h-4 w-4" />
               )}
               {t('dangerZone.exportImport.importSelectFile')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -356,7 +357,7 @@ function DangerZonePage() {
               dangerouslySetInnerHTML={{ __html: t('dangerZone.exportImport.importWarning') }}
             />
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => importMutation.mutate(importData)}
                 disabled={importMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -367,14 +368,14 @@ function DangerZonePage() {
                   <CheckCircle className="h-4 w-4" />
                 )}
                 {t('dangerZone.exportImport.importConfirmButton')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowImportConfirm(false)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               >
                 <XCircle className="h-4 w-4" />
                 {t('dangerZone.cancel')}
-              </button>
+              </Button>
             </div>
             {importMutation.isSuccess && (
               <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -407,7 +408,7 @@ function DangerZonePage() {
         </p>
 
         {!showSeedConfirm ? (
-          <button
+          <Button
             onClick={() => setShowSeedConfirm(true)}
             disabled={seedMutation.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -418,7 +419,7 @@ function DangerZonePage() {
               <Database className="h-4 w-4" />
             )}
             {t('dangerZone.demoData.generateButton')}
-          </button>
+          </Button>
         ) : (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <p className="text-green-700 dark:text-green-300 mb-4">
@@ -430,7 +431,7 @@ function DangerZonePage() {
               )}
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => seedMutation.mutate()}
                 disabled={seedMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
@@ -441,14 +442,14 @@ function DangerZonePage() {
                   <CheckCircle className="h-4 w-4" />
                 )}
                 {t('dangerZone.confirm')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowSeedConfirm(false)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               >
                 <XCircle className="h-4 w-4" />
                 {t('dangerZone.cancel')}
-              </button>
+              </Button>
             </div>
             {seedMutation.isSuccess && (
               <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -473,7 +474,7 @@ function DangerZonePage() {
         </p>
 
         {!showDeleteDemoConfirm ? (
-          <button
+          <Button
             onClick={() => setShowDeleteDemoConfirm(true)}
             disabled={clearDemoOnlyMutation.isPending}
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -484,14 +485,14 @@ function DangerZonePage() {
               <Trash2 className="h-4 w-4" />
             )}
             {t('dangerZone.deleteDemoOnly.button')}
-          </button>
+          </Button>
         ) : (
           <div className="space-y-4">
             <p className="text-amber-800 dark:text-amber-300">
               {t('dangerZone.deleteDemoOnly.confirmMessage')}
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => clearDemoOnlyMutation.mutate()}
                 disabled={clearDemoOnlyMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -502,14 +503,14 @@ function DangerZonePage() {
                   <CheckCircle className="h-4 w-4" />
                 )}
                 {t('dangerZone.confirm')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowDeleteDemoConfirm(false)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               >
                 <XCircle className="h-4 w-4" />
                 {t('dangerZone.cancel')}
-              </button>
+              </Button>
             </div>
             {clearDemoOnlyMutation.isSuccess && (
               <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -549,13 +550,13 @@ function DangerZonePage() {
             </p>
           </div>
         ) : !showDeleteConfirm ? (
-          <button
+          <Button
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
           >
             <Trash2 className="h-4 w-4" />
             {t('dangerZone.deleteAll.button')}
-          </button>
+          </Button>
         ) : (
           <div className="space-y-4">
             <p
@@ -570,7 +571,7 @@ function DangerZonePage() {
               className="w-full px-4 py-2 border border-red-300 dark:border-red-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => clearMutation.mutate()}
                 disabled={confirmText !== currentOrganization?.name || clearMutation.isPending}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -581,14 +582,14 @@ function DangerZonePage() {
                   <Trash2 className="h-4 w-4" />
                 )}
                 {t('dangerZone.deleteAll.confirmButton')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               >
                 <XCircle className="h-4 w-4" />
                 {t('dangerZone.cancel')}
-              </button>
+              </Button>
             </div>
             {clearMutation.isSuccess && (
               <div className="mt-4 p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">

@@ -20,6 +20,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { socketManager, NotificationData } from '@/lib/socket';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
+import { Button } from '@/components/ui/button';
 
 interface EnhancedNotificationItemProps {
   notification: NotificationData;
@@ -377,7 +378,7 @@ export function NotificationBell() {
       }
     }}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
           ref={bellRef}
           className={cn(
@@ -401,7 +402,7 @@ export function NotificationBell() {
               <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
             </>
           )}
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent
         className="w-80 p-0 glass-morphism"

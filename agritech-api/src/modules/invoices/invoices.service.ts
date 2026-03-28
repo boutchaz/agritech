@@ -209,7 +209,6 @@ export class InvoicesService {
         tax_amount: item.tax_amount,
         line_total: item.line_total,
         item_id: item.item_id || null,
-        variant_id: item.variant_id || null,
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -236,7 +235,7 @@ export class InvoicesService {
           { invoiceId: invoice.id, invoiceNumber, invoiceType: dto.invoice_type, amount: grandTotal, currency: dto.currency_code || 'MAD' },
         );
       } catch (notifError) {
-        this.logger.warn(`Failed to send invoice notification: ${notifError}`);
+        this.logger.warn(`Failed to send invoice  otification: ${notifError}`);
       }
 
       // Fetch the complete invoice with items
@@ -337,7 +336,6 @@ export class InvoicesService {
         tax_amount: item.tax_amount,
         line_total: item.line_total,
         item_id: item.item_id || null,
-        variant_id: item.variant_id || null,
       }));
 
       const { error: insertError } = await supabaseClient

@@ -189,13 +189,14 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
           {showMentions && filteredWorkers.length > 0 && (
             <div className="absolute bottom-full left-0 mb-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
               {filteredWorkers.map((worker, index) => (
-                <button
+                <Button
                   key={worker.id}
                   type="button"
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
+                  variant="ghost"
+                  className={`w-full justify-start gap-3 px-3 py-2 text-sm h-auto ${
                     index === selectedMentionIndex
                       ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      : 'text-gray-700 dark:text-gray-300'
                   }`}
                   onClick={() => insertMention(worker)}
                   onMouseEnter={() => setSelectedMentionIndex(index)}
@@ -209,7 +210,7 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
                   <span className="truncate">
                     {worker.first_name} {worker.last_name}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           )}

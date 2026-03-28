@@ -247,14 +247,13 @@ const TasksList: React.FC<TasksListProps> = ({
           </p>
         </div>
         {onCreateTask && (
-          <button
+          <Button
             data-tour="task-create"
             onClick={onCreateTask}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-5 h-5" />
             {t('tasks.listPage.newTask')}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -429,65 +428,50 @@ const TasksList: React.FC<TasksListProps> = ({
 
         {/* Status filters */}
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
+            size="sm"
+            variant={filterStatus === 'all' ? 'default' : 'outline'}
             onClick={() => handleStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              filterStatus === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
           >
             {t('tasks.listPage.filters.all')}
-          </button>
+          </Button>
           {(['pending', 'assigned', 'in_progress', 'completed', 'paused', 'overdue'] as TaskStatus[]).map(status => (
-            <button
+            <Button
               key={status}
+              size="sm"
+              variant={filterStatus === status ? 'default' : 'outline'}
               onClick={() => handleStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                filterStatus === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
             >
               {t(`tasks.listPage.filters.${status}`)}
-            </button>
+            </Button>
           ))}
         </div>
 
         {/* Sorting controls */}
         <div className="flex items-center gap-2 text-sm overflow-x-auto pb-1">
           <span className="text-gray-600 dark:text-gray-400 flex-shrink-0">{t('tasks.listPage.sortBy')}:</span>
-          <button
+          <Button
+            size="sm"
+            variant={tableState.sortConfig.key === 'scheduled_start' ? 'default' : 'ghost'}
             onClick={() => tableState.handleSort('scheduled_start')}
-            className={`flex items-center gap-1 px-2 py-1 rounded ${
-              tableState.sortConfig.key === 'scheduled_start'
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
           >
             <Calendar className="w-4 h-4" />
             {t('tasks.listPage.sortOptions.scheduledStart')}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant={tableState.sortConfig.key === 'priority' ? 'default' : 'ghost'}
             onClick={() => tableState.handleSort('priority')}
-            className={`flex items-center gap-1 px-2 py-1 rounded ${
-              tableState.sortConfig.key === 'priority'
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
           >
             {t('tasks.listPage.sortOptions.priority')}
-          </button>
-          <button
+          </Button>
+          <Button
+            size="sm"
+            variant={tableState.sortConfig.key === 'created_at' ? 'default' : 'ghost'}
             onClick={() => tableState.handleSort('created_at')}
-            className={`flex items-center gap-1 px-2 py-1 rounded ${
-              tableState.sortConfig.key === 'created_at'
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
           >
             {t('tasks.listPage.sortOptions.createdAt')}
-          </button>
+          </Button>
         </div>
       </div>
 

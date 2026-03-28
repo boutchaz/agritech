@@ -67,12 +67,12 @@ export const LevelUpSuggestion: React.FC = () => {
                 </Button>
               </div>
             </div>
-            <button
+            <Button
               onClick={handleDismiss}
               className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </CardContent>
       </Card>

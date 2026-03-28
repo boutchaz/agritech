@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { Button } from '@/components/ui/button';
 
 interface TaskCategory {
   id: string;
@@ -308,7 +309,7 @@ const DayLaborerManagement: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Gestion des Ouvriers Journaliers
         </h2>
-        <button
+        <Button
           type="button"
           onClick={() => setShowAddModal(true)}
           disabled={!currentFarm?.id}
@@ -317,7 +318,7 @@ const DayLaborerManagement: React.FC = () => {
         >
           <Plus className="h-5 w-5" />
           <span>Nouvel Ouvrier</span>
-        </button>
+        </Button>
       </div>
 
       {displayError && (
@@ -336,13 +337,13 @@ const DayLaborerManagement: React.FC = () => {
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
           <User className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun ouvrier pour l’instant.</p>
-          <button
+          <Button
             type="button"
             onClick={() => setShowAddModal(true)}
             className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
             Ajouter votre premier ouvrier
-          </button>
+          </Button>
         </div>
       )}
 
@@ -365,20 +366,20 @@ const DayLaborerManagement: React.FC = () => {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <button
+                <Button
                   type="button"
                   onClick={() => setEditingLaborer(laborer)}
                   className="text-gray-400 hover:text-gray-500"
                 >
                   <Edit2 className="h-5 w-5" />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => handleDeleteLaborer(laborer.id)}
                   className="text-gray-400 hover:text-red-500"
                 >
                   <Trash2 className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -418,13 +419,13 @@ const DayLaborerManagement: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Ouvrier
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -555,20 +556,20 @@ const DayLaborerManagement: React.FC = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={handleAddLaborer}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
               >
                 Ajouter
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -581,13 +582,13 @@ const DayLaborerManagement: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Modifier l'Ouvrier
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -745,20 +746,20 @@ const DayLaborerManagement: React.FC = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => handleUpdateLaborer(editingLaborer)}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
               >
                 Enregistrer
-              </button>
+              </Button>
             </div>
           </div>
         </div>

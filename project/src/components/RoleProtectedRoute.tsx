@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -56,19 +57,19 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
+            <Button
               onClick={() => refreshUserData()}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Réessayer
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => window.location.href = redirectTo}
               className="inline-flex items-center justify-center px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors"
             >
               Retour
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -95,12 +96,12 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
             Rôle requis: {allowedRoles.join(', ')}
           </p>
-          <button
+          <Button
             onClick={() => window.location.href = redirectTo}
             className="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
           >
             Retour aux paramètres
-          </button>
+          </Button>
         </div>
       </div>
     );

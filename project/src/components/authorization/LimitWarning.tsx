@@ -3,6 +3,7 @@ import { AlertCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../../hooks/useSubscription';
 import { getRemainingCount } from '../../lib/casl/ability';
+import { Button } from '@/components/ui/button';
 
 interface LimitWarningProps {
   resourceType: 'farms' | 'parcels' | 'users' | 'satelliteReports';
@@ -48,14 +49,14 @@ export const LimitWarning: React.FC<LimitWarningProps> = ({
             <p className="mt-1 text-sm text-red-700 dark:text-red-300">
               {`You've reached your plan limit of ${currentCount} ${resourceLabels[resourceType]}. Upgrade your plan to add more.`}
             </p>
-            <button
+            <Button
               type="button"
               onClick={() => navigate({ to: '/settings/subscription' })}
               className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
             >
               Upgrade Plan
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -80,14 +81,14 @@ export const LimitWarning: React.FC<LimitWarningProps> = ({
           <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
             {`You have ${remaining} ${resourceLabels[resourceType]} remaining out of ${limit}. Consider upgrading your plan soon.`}
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => navigate({ to: '/settings/subscription' })}
             className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300"
           >
             View Plans
             <ArrowRight className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

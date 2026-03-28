@@ -1507,13 +1507,13 @@ const MultiIndexOverlayMap: React.FC<{
   return (
     <div className={`relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : 'h-[600px]'}`}>
       {/* Fullscreen Toggle Button */}
-      <button
+      <Button
         onClick={() => setIsFullscreen(!isFullscreen)}
         className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-100 border-2 border-gray-300 rounded-lg p-2 shadow-lg transition-colors"
         title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
       >
         {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-      </button>
+      </Button>
 
       {/* Single unified map with all indices as layers */}
       <MapContainer

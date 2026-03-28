@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { normalizePlanType } from '@/lib/polar';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/checkout-success')({
   component: CheckoutSuccess,
@@ -159,7 +160,7 @@ function CheckoutSuccess() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
+            <Button
               onClick={handleContinue}
               disabled={isActivating}
               className="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
@@ -175,15 +176,15 @@ function CheckoutSuccess() {
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </>
               )}
-            </button>
+            </Button>
 
             {!isActivating && (
-              <button
+              <Button
                 onClick={handleViewSubscription}
                 className="inline-flex items-center justify-center px-6 py-3 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
               >
                 View Subscription Details
-              </button>
+              </Button>
             )}
           </div>
 

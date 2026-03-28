@@ -210,7 +210,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(PRICING_TIERS).map(([key, price]) => (
-                  <button
+                  <Button
                     key={key}
                     type="button"
                     onClick={() => setSelectedPlan(key as keyof typeof PRICING_TIERS)}
@@ -224,7 +224,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
                     {t(`common.roiCalculator.plans.${key}`)}
                     <br />
                     <span className="font-bold">{price}$</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -242,13 +242,13 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
               {t('common.roiCalculator.noCommitment')}
             </p>
 
-            <button
+            <Button
               type="button"
               onClick={() => setStep('calculator')}
               className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
             >
               {t('common.roiCalculator.backToCalculator')}
-            </button>
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -324,7 +324,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
              </label>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                {cropOptions.map((crop) => (
-                 <button
+                 <Button
                    key={crop.value}
                    type="button"
                    onClick={() => setValue('cropType', crop.value)}
@@ -336,7 +336,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
                    )}
                  >
                    {crop.label}
-                 </button>
+                 </Button>
                ))}
              </div>
              <input type="hidden" {...register('cropType')} />

@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { productionIntelligenceApi } from '../../lib/api/production-intelligence';
+import { Button } from '@/components/ui/button';
 
 interface AIReportSectionProps {
   parcelId: string;
@@ -292,7 +293,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
             )}
 
             {/* Generate Button */}
-            <button
+            <Button
               onClick={handleGenerate}
               disabled={
                 !selectedProvider ||
@@ -312,7 +313,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
                   <span>Générer le Rapport IA</span>
                 </>
               )}
-            </button>
+            </Button>
 
             {calibrationStatus?.status === 'blocked' && (
               <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
@@ -338,12 +339,12 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
           <div className="space-y-4">
             {/* Actions */}
             <div className="flex items-center justify-between">
-              <button
+              <Button
                 onClick={() => setGeneratedReport(null)}
                 className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
               >
                 ← Générer un nouveau rapport
-              </button>
+              </Button>
               <AIReportExport
                 sections={generatedReport.sections}
                 parcelName={parcelName}

@@ -35,6 +35,7 @@ import {
 } from "../ui/drawer";
 import { Button } from "../ui/button";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { Button } from '@/components/ui/button';
 
 // Zod schema factory function with conditional validation
 const createWorkerSchema = (t: any) =>
@@ -1108,13 +1109,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.specialties")}
             />
-            <button
+            <Button
               type="button"
               onClick={addSpecialty}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               {t("workers.form.buttons.add")}
-            </button>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {specialties.map((specialty, index) => (
@@ -1123,13 +1124,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
               >
                 {specialty}
-                <button
+                <Button
                   type="button"
                   onClick={() => removeSpecialty(index)}
                   className="hover:text-blue-600"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               </span>
             ))}
           </div>
@@ -1151,13 +1152,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.certifications")}
             />
-            <button
+            <Button
               type="button"
               onClick={addCertification}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               {t("workers.form.buttons.add")}
-            </button>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {certifications.map((cert, index) => (
@@ -1166,13 +1167,13 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm"
               >
                 {cert}
-                <button
+                <Button
                   type="button"
                   onClick={() => removeCertification(index)}
                   className="hover:text-green-600"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               </span>
             ))}
           </div>

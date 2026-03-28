@@ -425,7 +425,7 @@ const SourcesTab: React.FC<{
             className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
           >
             {/* Source Header */}
-            <button
+            <Button
               onClick={() => toggleSource(sourceName)}
               className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
@@ -470,7 +470,7 @@ const SourcesTab: React.FC<{
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 )}
               </div>
-            </button>
+            </Button>
 
             {/* Source Details */}
             {isExpanded && (
@@ -703,7 +703,7 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
         {Object.keys(metadata.sources).map((sourceName) => {
           const src = metadata.sources[sourceName as keyof typeof metadata.sources];
           return (
-            <button
+            <Button
               key={sourceName}
               onClick={() => {
                 setSelectedSource(sourceName);
@@ -720,7 +720,7 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
             >
               {sourceName.charAt(0).toUpperCase() + sourceName.slice(1)}
               {src.available && <span className="ml-1 text-xs">({src.dataPoints})</span>}
-            </button>
+            </Button>
           );
         })}
       </div>

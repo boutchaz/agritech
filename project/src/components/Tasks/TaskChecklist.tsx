@@ -153,18 +153,21 @@ export default function TaskChecklist({ taskId, disabled = false }: TaskChecklis
               className="group flex items-start gap-3 py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               {/* Checkbox */}
-              <button
+              <Button
                 type="button"
+                size="icon"
+                variant="ghost"
                 onClick={() => handleToggle(item.id)}
                 disabled={disabled || toggleItem.isPending}
-                className="mt-0.5 flex-shrink-0 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-0.5 flex-shrink-0 h-auto w-auto p-0 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
+                aria-label={item.completed ? t('tasks.checklist.uncheck', 'Uncheck item') : t('tasks.checklist.check', 'Check item')}
               >
                 {item.completed ? (
                   <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
                 ) : (
                   <Square className="w-5 h-5" />
                 )}
-              </button>
+              </Button>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
@@ -190,14 +193,17 @@ export default function TaskChecklist({ taskId, disabled = false }: TaskChecklis
 
               {/* Delete button */}
               {!disabled && (
-                <button
+                <Button
                   type="button"
+                  size="icon"
+                  variant="ghost"
                   onClick={() => handleRemove(item.id)}
                   disabled={removeItem.isPending}
-                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-all disabled:opacity-50"
+                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 h-auto w-auto p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                  aria-label={t('tasks.checklist.removeItem', 'Remove item')}
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               )}
             </div>
           ))}

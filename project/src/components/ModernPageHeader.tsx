@@ -7,6 +7,7 @@ import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface BreadcrumbItem {
   icon?: React.ComponentType<{ className?: string }>;
@@ -73,7 +74,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
       <div className="lg:hidden">
         {/* Mobile Navigation Bar */}
         <div className="flex gap-1 py-1.5 px-2 items-center">
-          <button
+          <Button
             type="button"
             onClick={() => navigate({ to: '/' })}
             className="flex-shrink-0 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex items-center"
@@ -81,7 +82,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
             style={{ alignSelf: 'center' }}
           >
             <HomeIcon className="h-5 w-5" />
-          </button>
+          </Button>
           <nav className="flex flex-col justify-center flex-1 min-w-0">
             <div className="flex items-center gap-1 text-xs">
               {breadcrumbs.map((item, index) => {
@@ -96,13 +97,13 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                         {item.label}
                       </span>
                     ) : (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => handleBreadcrumbClick(item.path)}
                         className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 whitespace-nowrap transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
                       >
                         {item.label}
-                      </button>
+                      </Button>
                     )}
                   </React.Fragment>
                 );
@@ -150,7 +151,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                         </span>
                       </span>
                     ) : (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => handleBreadcrumbClick(item.path)}
                         className="inline-flex items-center gap-1 whitespace-nowrap text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
@@ -159,7 +160,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                         <span className={index === 0 ? 'hidden sm:inline' : ''}>
                           {item.label}
                         </span>
-                      </button>
+                      </Button>
                     )}
                   </React.Fragment>
                 );
@@ -211,13 +212,13 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                       className="w-full pl-9 pr-9 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                     />
                     {searchQuery ? (
-                      <button
+                      <Button
                         type="button"
                         onClick={clearSearch}
                         className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                       >
                         <X className="h-4 w-4 text-gray-400" />
-                      </button>
+                      </Button>
                     ) : (
                       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 text-xs text-gray-400">
                         <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-[10px]">⌘</kbd>

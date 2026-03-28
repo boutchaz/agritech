@@ -27,6 +27,7 @@ import {
 import TimeSeriesChart from "./TimeSeriesChart";
 import MultiIndexChart from "./MultiIndexChart";
 import { useTifUpload } from "../hooks/useTifUpload";
+import { Button } from '@/components/ui/button';
 
 type DataExportFormat = "JSON" | "CSV" | "PDF";
 type ImageExportFormat = ExportFormat;
@@ -397,7 +398,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               </option>
             ))}
           </select>
-          <button
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="flex items-center space-x-1 px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -409,7 +410,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               <Image className="h-3 w-3" />
             )}
             <span>{tifImageUrl ? "Remplacer TIF" : "Importer TIF"}</span>
-          </button>
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -422,19 +423,19 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               }
             }}
           />
-          <button
+          <Button
             onClick={() => window.location.reload()}
             className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             title="Actualiser"
           >
             <RefreshCw className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tab Navigation */}
       <div className="flex space-x-1 mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-        <button
+        <Button
           onClick={() => setActiveTab("current")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === "current"
@@ -444,8 +445,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         >
           <BarChart3 className="h-4 w-4 inline mr-2" />
           Valeurs Actuelles
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setActiveTab("timeseries")}
           className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
             activeTab === "timeseries"
@@ -455,7 +456,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
         >
           <TrendingUp className="h-4 w-4 inline mr-2" />
           Série Temporelle
-        </button>
+        </Button>
       </div>
 
       {/* TIF Image Section */}
@@ -474,14 +475,14 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <button
+              <Button
                 onClick={() => window.open(tifImageUrl, "_blank")}
                 className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                 title="Ouvrir en plein écran"
               >
                 <Maximize2 className="h-4 w-4" />
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   if (
                     confirm("Êtes-vous sûr de vouloir supprimer cette image ?")
@@ -495,7 +496,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 title="Supprimer l'image"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -554,7 +555,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {getIndexDescription(selectedIndex)}
             </p>
-            <button
+            <Button
               onClick={handleCalculateCurrentIndices}
               disabled={loading}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -565,7 +566,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 <BarChart3 className="h-4 w-4" />
               )}
               <span>Calculer</span>
-            </button>
+            </Button>
           </div>
 
           {indicesData && (
@@ -605,7 +606,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   Mode d'affichage
                 </label>
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
-                  <button
+                  <Button
                     onClick={() => setChartMode("single")}
                     className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                       chartMode === "single"
@@ -614,8 +615,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     }`}
                   >
                     Indice unique
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => setChartMode("multi")}
                     className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                       chartMode === "multi"
@@ -624,7 +625,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     }`}
                   >
                     Multi-indices
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -672,12 +673,12 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Indices ({selectedIndices.length}/5)
                   </label>
-                  <button
+                  <Button
                     onClick={() => setShowIndexSelector(!showIndexSelector)}
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
                     Sélectionner les indices
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -687,7 +688,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Température
                   </label>
-                  <button
+                  <Button
                     onClick={() =>
                       setShowTemperatureOverlay(!showTemperatureOverlay)
                     }
@@ -702,13 +703,13 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     <span className="hidden sm:inline">
                       {showTemperatureOverlay ? "Masquer" : "Afficher"}
                     </span>
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
             {/* Load Button */}
-            <button
+            <Button
               onClick={handleGetTimeSeries}
               disabled={
                 loading ||
@@ -722,7 +723,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 <TrendingUp className="h-4 w-4" />
               )}
               <span>Charger Série</span>
-            </button>
+            </Button>
           </div>
 
           {/* Multi-Index Selector Panel */}
@@ -732,18 +733,18 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 <h4 className="font-medium text-gray-900 dark:text-white">
                   Sélectionnez les indices à comparer
                 </h4>
-                <button
+                <Button
                   onClick={() => setShowIndexSelector(false)}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   ✕
-                </button>
+                </Button>
               </div>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                 {timeSeriesIndices.map((index) => {
                   const isSelected = selectedIndices.includes(index);
                   return (
-                    <button
+                    <Button
                       key={index}
                       onClick={() => toggleIndexSelection(index)}
                       className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
@@ -760,7 +761,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                         {index}
                       </span>
                       {isSelected && <Check className="h-3 w-3" />}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -824,7 +825,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   </h4>
                   {/* Export Dropdown */}
                   <div className="relative" ref={exportMenuRef}>
-                    <button
+                    <Button
                       onClick={() => setShowExportMenu(!showExportMenu)}
                       disabled={loading}
                       className="flex items-center space-x-2 px-3 py-1.5 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
@@ -832,7 +833,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                       <Download className="h-3.5 w-3.5" />
                       <span>Exporter</span>
                       <ChevronDown className="h-3 w-3" />
-                    </button>
+                    </Button>
 
                     {showExportMenu && (
                       <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
@@ -840,54 +841,54 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                           <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Données
                           </div>
-                          <button
+                          <Button
                             onClick={() => handleExportData("JSON")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileJson className="h-4 w-4 mr-3 text-blue-500" />
                             JSON
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => handleExportData("CSV")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileSpreadsheet className="h-4 w-4 mr-3 text-green-500" />
                             CSV / Excel
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => handleExportData("PDF")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <FileText className="h-4 w-4 mr-3 text-red-500" />
                             PDF / Rapport
-                          </button>
+                          </Button>
 
                           <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
 
                           <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             Image Satellite
                           </div>
-                          <button
+                          <Button
                             onClick={() => handleExportMap("GeoTIFF")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-purple-500" />
                             GeoTIFF (SIG)
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => handleExportMap("PNG")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-orange-500" />
                             PNG (Image)
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => handleExportMap("JPEG")}
                             className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Image className="h-4 w-4 mr-3 text-amber-500" />
                             JPEG (Compressé)
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -1085,14 +1086,14 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                         {Object.keys(multiTimeSeriesData).length} indices
                         affichés
                       </span>
-                      <button
+                      <Button
                         onClick={() => handleExportMap("GeoTIFF")}
                         disabled={loading}
                         className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50"
                       >
                         <Download className="h-3 w-3" />
                         <span>GeoTIFF</span>
-                      </button>
+                      </Button>
                     </div>
                   </div>
 

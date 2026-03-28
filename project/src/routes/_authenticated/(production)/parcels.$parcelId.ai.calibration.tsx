@@ -95,6 +95,7 @@ import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecali
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
+import { Button } from '@/components/ui/button';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -115,7 +116,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   return (
     <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-      <button
+      <Button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -130,7 +131,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         ) : (
           <ChevronRight className="w-5 h-5 text-gray-500" />
         )}
-      </button>
+      </Button>
       {isOpen && <div className="p-4 bg-white dark:bg-gray-800">{children}</div>}
     </div>
   );
@@ -1156,14 +1157,14 @@ const ValidationPanel: React.FC<{
           <div className="flex items-center space-x-3 mt-5">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button
+                <Button
                   type="button"
                   disabled={isValidating}
                   className="inline-flex items-center space-x-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
-                </button>
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -1185,14 +1186,14 @@ const ValidationPanel: React.FC<{
               </AlertDialogContent>
             </AlertDialog>
 
-            <button
+            <Button
               type="button"
               onClick={onReCalibrate}
               className="inline-flex items-center space-x-2 px-4 py-2.5 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
             >
               <Play className="w-4 h-4" />
               <span>Re-run Calibration</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -1258,7 +1259,7 @@ const NutritionOptionSelector: React.FC<{
           const label = NUTRITION_OPTION_LABELS[opt];
 
           return (
-            <button
+            <Button
               key={opt}
               type="button"
               disabled={!isEligible || isConfirming}
@@ -1288,13 +1289,13 @@ const NutritionOptionSelector: React.FC<{
               {alt && isEligible && alt.reason && (
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{alt.reason}</p>
               )}
-            </button>
+            </Button>
           );
         })}
       </div>
 
       <div className="flex items-center space-x-3">
-        <button
+        <Button
           type="button"
           disabled={!effectiveSelection || isConfirming}
           onClick={() => {
@@ -1306,7 +1307,7 @@ const NutritionOptionSelector: React.FC<{
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>{isConfirming ? 'Confirming...' : 'Confirm Selection'}</span>
-        </button>
+        </Button>
         {effectiveSelection && effectiveSelection !== suggestion.suggested_option && (
           <span className="text-xs text-blue-600 dark:text-blue-400">
             Overriding system suggestion ({suggestion.suggested_option})
@@ -1370,7 +1371,7 @@ const PlantingYearPrompt: React.FC<{
                 className="w-28 px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
-            <button
+            <Button
               type="button"
               onClick={handleSave}
               disabled={!isValid || isSaving}
@@ -1378,7 +1379,7 @@ const PlantingYearPrompt: React.FC<{
             >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save & Continue'}</span>
-            </button>
+            </Button>
           </div>
           {year && !isValid && (
             <p className="text-xs text-red-600 dark:text-red-400 mt-1">
@@ -1578,7 +1579,7 @@ const AICalibrationPage = () => {
         {(calibration || hasV2Report) && (
           <div className="flex items-center gap-2">
             {phase === 'active' && (
-              <button
+              <Button
                 type="button"
                 onClick={handleOpenPartialRecalibration}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
@@ -1586,10 +1587,10 @@ const AICalibrationPage = () => {
               >
                 <GitCompareArrows className="w-4 h-4" />
                 <span>{tAi('calibration.page.partialUpdate')}</span>
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               type="button"
               onClick={handleOpenFullRecalibrationWizard}
               disabled={isBusy || missingPlantingYear}
@@ -1605,7 +1606,7 @@ const AICalibrationPage = () => {
               <span>
                 {isCalibrating ? tAi('calibration.page.calculating') : tAi('calibration.page.fullRecalibration')}
               </span>
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -1659,14 +1660,14 @@ const AICalibrationPage = () => {
                 {tAi('calibration.annualBanner.body')}
               </p>
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => setShowAnnualRecalibrationWizard(true)}
               className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
               data-testid="calibration-start-annual-recalibration"
             >
               {tAi('calibration.annualBanner.cta')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1704,15 +1705,15 @@ const AICalibrationPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button
+              <Button
                 type="button"
                 onClick={() => navigate({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } })}
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
               >
                 <FileText className="h-4 w-4" />
                 {tAi('calibration.nextStep.openCalendar')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => navigate({ to: '/parcels/$parcelId/ai/recommendations', params: { parcelId } })}
                 className="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-950/30 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-200 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30"
@@ -1720,7 +1721,7 @@ const AICalibrationPage = () => {
                 <Lightbulb className="h-4 w-4" />
                 {tAi('calibration.nextStep.openRecommendations')}
                 <ArrowRight className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1818,7 +1819,7 @@ const AICalibrationPage = () => {
                   <> Reason: <span className="font-medium">{calibration.error_message}</span></>
                 )}
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={handleOpenFullRecalibrationWizard}
                 disabled={missingPlantingYear}
@@ -1826,7 +1827,7 @@ const AICalibrationPage = () => {
               >
                 <Play className="w-4 h-4" />
                 <span>Retry Calibration</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>

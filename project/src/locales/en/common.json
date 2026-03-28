@@ -4497,6 +4497,11 @@
         "dueDateAfterStart": "Due date must be after start date",
         "parcelRequiredForHarvest": "Parcel is required for harvesting tasks"
       }
+    },
+    "checklist": {
+      "check": "Check item",
+      "uncheck": "Uncheck item",
+      "removeItem": "Remove item"
     }
   },
   "dangerZone": {
@@ -6214,5 +6219,17 @@
         "petty_cash": "Petty Cash"
       }
     }
-  }
+  },
+  "retry": "Retry",
+  "close": "Close",
+  "edit": "Edit",
+  "clearSearch": "Clear search",
+  "resetFilters": "Reset filters",
+  "viewAll": "View all",
+  "gridView": "Grid view",
+  "listView": "List view",
+  "dragHandle": "Drag to reorder",
+  "toggleSatellite": "Toggle satellite view",
+  "fullscreen": "Fullscreen",
+  "exitFullscreen": "Exit fullscreen"
 }

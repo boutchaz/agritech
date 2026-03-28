@@ -11,6 +11,7 @@ import {
   Download,
   Upload
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FarmHierarchyHeaderProps {
   organizationName: string;
@@ -76,41 +77,39 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           {(selectedFarmId && onExportFarm) && (
-            <button
+            <Button
+              variant="outline"
               onClick={() => onExportFarm(selectedFarmId)}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Download className="w-4 h-4" />
               <span>{t('farmHierarchy.farm.export')}</span>
-            </button>
+            </Button>
           )}
           {onExportAll && (
-            <button
+            <Button
+              variant="outline"
               onClick={onExportAll}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Download className="w-4 h-4" />
               <span>{t('farmHierarchy.farm.exportAll')}</span>
-            </button>
+            </Button>
           )}
           {onImport && (
-            <button
+            <Button
               onClick={onImport}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
             >
               <Upload className="w-4 h-4" />
               <span>{t('farmHierarchy.farm.import')}</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             data-testid="create-farm-button"
             data-tour="add-farm"
             onClick={onAddFarm}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm hover:shadow-md"
           >
             <Plus className="w-4 h-4" />
             <span>{t('farmHierarchy.farm.newFarm')}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -181,16 +180,12 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
         </div>
 
         {/* Filters Button */}
-        <button
+        <Button
+          variant={showFilters ? 'default' : 'outline'}
           onClick={onToggleFilters}
-          className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors ${
-            showFilters
-              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
-              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-          }`}
         >
-          <Filter className={`w-4 h-4 ${showFilters ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`} />
-          <span className={`text-sm font-medium ${showFilters ? 'text-green-700 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>
+          <Filter className="w-4 h-4" />
+          <span className="text-sm font-medium">
             {t('farmHierarchy.filters')}
           </span>
           {filters && (filters.type !== 'all' || filters.status !== 'all') && (
@@ -198,30 +193,26 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
               {[filters.type !== 'all' ? 1 : 0, filters.status !== 'all' ? 1 : 0].reduce((a, b) => a + b)}
             </span>
           )}
-        </button>
+        </Button>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <button
+        <div className="flex items-center gap-1">
+          <Button
+            size="icon"
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
             onClick={() => onViewModeChange('grid')}
-            className={`p-2.5 transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
+            aria-label={t('common.gridView', 'Grid view')}
           >
             <Grid3x3 className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            size="icon"
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
             onClick={() => onViewModeChange('list')}
-            className={`p-2.5 transition-colors ${
-              viewMode === 'list'
-                ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
+            aria-label={t('common.listView', 'List view')}
           >
             <List className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -265,12 +256,13 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
           {/* Reset Filters */}
           {(filters.type !== 'all' || filters.status !== 'all') && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-              <button
+              <Button
+                variant="link"
                 onClick={() => onFiltersChange({ type: 'all', status: 'all' })}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                className="p-0 h-auto text-sm text-gray-600 dark:text-gray-400"
               >
-                Réinitialiser les filtres
-              </button>
+                {t('common.resetFilters', 'Reset filters')}
+              </Button>
             </div>
           )}
         </div>

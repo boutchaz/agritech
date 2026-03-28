@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 type LanguageSwitcherProps = {
   /** Icon-only trigger; use in tight headers (e.g. next to org switcher on mobile). */
@@ -69,7 +70,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) 
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
           type="button"
           className={cn(
             compact ? headerToolbarIconTriggerClass : cn(headerToolbarTextTriggerClass, 'max-w-[220px]'),
@@ -79,7 +80,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) 
         >
           <Languages className="h-5 w-5 shrink-0" />
           {!compact && <span className="min-w-0 flex-1 truncate text-start">{currentNative}</span>}
-        </button>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"

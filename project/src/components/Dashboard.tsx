@@ -15,6 +15,7 @@ import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface DashboardProps {
   sensorData: SensorData[];
@@ -70,18 +71,21 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
               </div>
             </div>
             <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => navigate({ to: '/parcels' })}
-                className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {t('dashboard.widgets.farm.viewParcels')}
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => navigate({ to: '/parcels' })}
-                className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {t('dashboard.widgets.farm.addParcel')}
-              </button>
+              </Button>
             </div>
           </div>
         );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { List } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Heading {
   id: string;
@@ -66,7 +67,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
       </div>
       <nav className="space-y-2">
         {headings.map((heading) => (
-          <button
+          <Button
             key={heading.id}
             onClick={() => scrollToHeading(heading.id)}
             className={`block w-full text-left text-sm transition-colors ${
@@ -78,7 +79,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
             }`}
           >
             {heading.text}
-          </button>
+          </Button>
         ))}
       </nav>
     </div>

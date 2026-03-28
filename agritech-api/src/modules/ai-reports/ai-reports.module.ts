@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { AiQuotaModule } from '../ai-quota/ai-quota.module';
 import { ConfigModule } from '@nestjs/config';
 import { AIReportsController } from './ai-reports.controller';
 import { AIReportsService } from './ai-reports.service';
@@ -12,6 +13,7 @@ import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
+    AiQuotaModule,
     DatabaseModule,
     ConfigModule,
     forwardRef(() => OrganizationAISettingsModule),

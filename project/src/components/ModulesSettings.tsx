@@ -13,6 +13,7 @@ import { isModuleAvailableForPlan, getPlanDetails } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type { OrganizationModule } from '../lib/api/modules';
+import { Button } from '@/components/ui/button';
 
 // Icon mapping for activity modules
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -129,13 +130,13 @@ const ModulesSettings: React.FC = () => {
                 : t('modulesSettings.modulesAvailable', { count: getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length })}
             </p>
           </div>
-          <button
+          <Button
             onClick={() => navigate({ to: '/settings/subscription' })}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
           >
             <span>{t('modulesSettings.viewSubscription')}</span>
             <ExternalLink className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       )}
 
@@ -172,7 +173,7 @@ const ModulesSettings: React.FC = () => {
       {/* ================================================================ */}
       {functionalModules.length > 0 && (
         <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-          <button
+          <Button
             onClick={() => setShowFunctional(!showFunctional)}
             className="w-full flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
@@ -192,7 +193,7 @@ const ModulesSettings: React.FC = () => {
             ) : (
               <ChevronRight className="h-5 w-5 text-gray-400" />
             )}
-          </button>
+          </Button>
 
           {showFunctional && (
             <div className="p-5 space-y-6 bg-white dark:bg-gray-800">
@@ -360,7 +361,7 @@ const ActivityModuleCard: React.FC<{
         {isLocked ? (
           <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
         ) : (
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation();
               onToggle(module.id, module.is_active);
@@ -378,7 +379,7 @@ const ActivityModuleCard: React.FC<{
                 module.is_active ? 'translate-x-4' : 'translate-x-0'
               }`}
             />
-          </button>
+          </Button>
         )}
       </div>
 
@@ -387,7 +388,7 @@ const ActivityModuleCard: React.FC<{
       </p>
 
       {isLocked && (
-        <button
+        <Button
           onClick={(e) => {
             e.stopPropagation();
             window.location.href = '/settings/subscription';
@@ -395,7 +396,7 @@ const ActivityModuleCard: React.FC<{
           className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 mt-2"
         >
           {t('modulesSettings.upgrade')}
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -513,12 +514,12 @@ const ModuleSettingsPanel: React.FC<{
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
           {t('modulesSettings.configurationOf', { name: displayName })}
         </h3>
-        <button
+        <Button
           onClick={onClose}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
       {renderModuleSettings()}
     </div>

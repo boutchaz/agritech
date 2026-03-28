@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useFarms, useParcelsByFarms } from '../../hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const ParcelsOverviewWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -68,13 +69,14 @@ const ParcelsOverviewWidget: React.FC = () => {
             {t('dashboard.widgets.parcels.title')}
           </h3>
         </div>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewParcels}
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -142,13 +144,12 @@ const ParcelsOverviewWidget: React.FC = () => {
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
             {t('dashboard.widgets.parcels.empty')}
           </p>
-          <button
+          <Button
             onClick={handleViewParcels}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-lg transition-colors"
           >
             <MapPin className="h-4 w-4" />
             {t('dashboard.widgets.parcels.create')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

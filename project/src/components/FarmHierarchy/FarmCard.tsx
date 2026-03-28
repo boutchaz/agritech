@@ -10,6 +10,7 @@ import {
   Trash2,
   Edit
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FarmCardProps {
   farm: {
@@ -64,7 +65,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
                 <Users className="w-3.5 h-3.5" />
                 {farm.manager_name || t('farmHierarchy.farm.noManager')}
                 {onEditManager && (
-                  <button
+                  <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       onEditManager();
@@ -73,7 +74,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
                     title={t('farmHierarchy.farm.editManager')}
                   >
                     <Edit className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-                  </button>
+                  </Button>
                 )}
               </p>
             </div>
@@ -81,18 +82,18 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
 
           {/* Actions Menu */}
           <div className="relative">
-            <button
+            <Button
               onClick={() => setShowMenu(!showMenu)}
               className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
             >
               <MoreVertical className="w-4 h-4" />
-            </button>
+            </Button>
 
             {/* Dropdown Menu */}
             {showMenu && (
               <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
                 {onManage && (
-                  <button
+                  <Button
                     onClick={() => {
                       setShowMenu(false);
                       onManage();
@@ -100,10 +101,10 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
                     className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-lg"
                   >
                     {t('farmHierarchy.farm.manageRoles')}
-                  </button>
+                  </Button>
                 )}
                 {onDelete && (
-                  <button
+                  <Button
                     onClick={() => {
                       setShowMenu(false);
                       onDelete();
@@ -112,7 +113,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
                   >
                     <Trash2 className="w-4 h-4" />
                     {t('farmHierarchy.farm.delete')}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}
@@ -149,21 +150,21 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
 
         {/* Actions */}
         <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <button
+          <Button
             onClick={onViewParcels}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <Leaf className="w-4 h-4" />
             <span>{t('farmHierarchy.farm.parcels')}</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={onSelect}
             className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
           >
             <span>{t('farmHierarchy.farm.viewDetails')}</span>
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ContextSummarizerService } from '../context/context-summarizer.service';
 
 // Import BuiltContext type from chat service (will be moved to shared types later)
 // For now we use 'any' to avoid circular dependency during extraction
@@ -6,6 +7,7 @@ type BuiltContext = any;
 
 @Injectable()
 export class PromptBuilderService {
+  private readonly summarizer = new ContextSummarizerService();
   buildSystemPrompt(): string {
     return `You are an expert agricultural consultant and intelligent assistant for the AgriTech platform with deep expertise in:
 
@@ -97,6 +99,24 @@ export class PromptBuilderService {
 - Reference diagnostic scenarios by their code (A through H) and confidence score.
 - Use referential NPK formulas and BBCH stages when available — do NOT make up dosages.
 - Reference the annual plan interventions (upcoming, overdue) as actionable items.
+
+**Structured Data Cards:**
+When presenting structured data, use code blocks with the format \\\`\\\`\\\`json:TYPE where TYPE is one of:
+- \`recommendation-card\` — for recommendations: {"constat":"...", "diagnostic":"...", "action":"...", "priority":"high|medium|low", "valid_from":"...", "valid_until":"..."}
+- \`diagnostic-card\` — for diagnostics: {"scenario_code":"A-H", "scenario":"...", "confidence":0.85, "zone_classification":"optimal|normal|stressed"}
+- \`farm-summary\` — for farm overview: {"farms_count":N, "parcels_count":N, "workers_count":N, "pending_tasks":N}
+- \`plan-calendar\` — for annual plan: {"upcoming":[{"month":N, "intervention_type":"...", "description":"...", "status":"planned"}], "overdue":[...], "summary":{"total":N, "executed":N, "planned":N}}
+- \`stock-alert\` — for low stock: {"items":[{"item_name":"...", "current_quantity":N, "min_quantity":N, "unit":"..."}]}
+- \`financial-snapshot\` — for finance: {"revenue":N, "expenses":N, "currency":"MAD", "period":"..."}
+
+Use these cards when presenting recommendations, diagnostics, plans, summaries, stock alerts, or financial data. Mix text and cards naturally.
+
+**Follow-Up Suggestions:**
+At the end of EVERY response, append exactly this block:
+---SUGGESTIONS---
+["suggestion 1", "suggestion 2", "suggestion 3"]
+
+Generate 2-3 contextual follow-up questions the user might want to ask next. Make them specific to the conversation topic and the user's farm data. Write them in the same language the user is using.
 - Compare current indices against calibration baselines when available.
 - If AgromindIA data is not available for a parcel, acknowledge it and provide general best practices.
 
@@ -186,13 +206,11 @@ ${context.settings.organization_users.map(u => `- ${u.name} (${u.role}) - ${u.em
 FARM DATA
 ====================================================
 ${context.farms && context.farms.farms_count > 0 ? `
-Farms: ${context.farms.farms_count}
-${context.farms.farms_recent.map((f) => `- ${f.name} (${f.area} ha${f.location ? `, ${f.location}` : ''})`).join('\n')}
-${context.farms.farms_has_more ? `\n... and ${context.farms.farms_count - context.farms.farms_recent.length} more farms` : ''}
+Farms (${context.farms.farms_count}): ${this.summarizer.summarizeFarms(context.farms.farms_recent)}
+${context.farms.farms_has_more ? `... and ${context.farms.farms_count - context.farms.farms_recent.length} more farms` : ''}
 
-Parcels: ${context.farms.parcels_count}
-${context.farms.parcels_recent.map((p) => `- ${p.name}: ${p.crop}, ${p.area}${p.soil_type ? `, Soil: ${p.soil_type}` : ''}${p.irrigation_type ? `, Irrigation: ${p.irrigation_type}` : ''}`).join('\n')}
-${context.farms.parcels_has_more ? `\n... and ${context.farms.parcels_count - context.farms.parcels_recent.length} more parcels` : ''}
+Parcels (${context.farms.parcels_count}): ${this.summarizer.summarizeParcels(context.farms.parcels_recent)}
+${context.farms.parcels_has_more ? `... and ${context.farms.parcels_count - context.farms.parcels_recent.length} more parcels` : ''}
 
 Active Crop Cycles: ${context.farms.active_crop_cycles}
 ${context.farms.crop_cycles_recent && context.farms.crop_cycles_recent.length > 0 ? `

@@ -239,13 +239,15 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
                       </div>
                     </div>
                     {!disabled && (
-                      <button
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={() => handleRemoveDependency(dep.id)}
-                        className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                        title={t('tasks.detail.removeDependency', 'Remove dependency')}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+                        aria-label={t('tasks.detail.removeDependency', 'Remove dependency')}
                       >
                         <X className="w-4 h-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -329,20 +331,21 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
           {searchQuery && filteredTasks.length > 0 && !selectedTaskId && (
             <div className="max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
               {filteredTasks.slice(0, 10).map((task: any) => (
-                <button
+                <Button
                   key={task.id}
+                  variant="ghost"
                   onClick={() => {
                     setSelectedTaskId(task.id);
                     setSearchQuery(task.title);
                   }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  className="w-full justify-start px-3 py-2 text-sm h-auto"
                 >
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status] || 'bg-gray-400'}`} />
                   <span className="truncate text-gray-900 dark:text-white">{task.title}</span>
                   <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
                     {STATUS_LABELS[task.status] || task.status}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           )}

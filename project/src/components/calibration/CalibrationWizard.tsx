@@ -492,7 +492,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
             const isCompleted = isStepCompleted(step.number);
 
             return (
-              <button
+              <Button
                 key={step.number}
                 type="button"
                 data-testid={`calibration-wizard-step-${step.number}`}
@@ -522,7 +522,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
                 }`}>
                   {STATUS_LABELS[step.status]}
                 </span>
-              </button>
+              </Button>
             );
           })}
         </div>

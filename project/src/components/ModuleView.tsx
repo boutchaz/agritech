@@ -6,6 +6,7 @@ import { parcelsApi } from '../lib/api/parcels';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import ParcelCard from './ParcelCard';
+import { Button } from '@/components/ui/button';
 
 interface ModuleViewProps {
   module: Module;
@@ -197,13 +198,13 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {t('moduleView.noParcelsDescription')}
           </p>
-          <button
+          <Button
             onClick={() => navigate({ to: '/parcels' })}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             <MapPin className="h-4 w-4 mr-2" />
             {t('moduleView.goToParcels')}
-          </button>
+          </Button>
         </div>
       );
     }
@@ -236,21 +237,21 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
               </p>
             </div>
             <div className="flex space-x-2">
-              <button
+              <Button
                 onClick={loadParcels}
                 disabled={loadingParcels}
                 className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loadingParcels ? 'animate-spin' : ''}`} />
                 <span>{t('moduleView.refresh')}</span>
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowParcelManager(!showParcelManager)}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 <Settings className="h-4 w-4" />
                 <span>{t('moduleView.manage')}</span>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -336,7 +337,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {/* Navigation arrows */}
           {parcelsToDisplay.length > 1 && (
             <>
-              <button
+              <Button
                 onClick={() => setCurrentParcelIndex(Math.max(0, currentParcelIndex - 1))}
                 disabled={currentParcelIndex === 0}
                 aria-label={t('moduleView.previousParcel')}
@@ -345,9 +346,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                 <svg className="h-5 w-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={() => setCurrentParcelIndex(Math.min(parcelsToDisplay.length - 1, currentParcelIndex + 1))}
                 disabled={currentParcelIndex === parcelsToDisplay.length - 1}
                 aria-label={t('moduleView.nextParcel')}
@@ -356,7 +357,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                 <svg className="h-5 w-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </button>
+              </Button>
             </>
           )}
 
@@ -364,7 +365,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {parcelsToDisplay.length > 1 && (
             <div className="flex justify-center space-x-2 mt-4">
               {parcelsToDisplay.map((_, index) => (
-                <button
+                <Button
                   key={index}
                   onClick={() => setCurrentParcelIndex(index)}
                   className={`w-3 h-3 rounded-full transition-colors ${
@@ -429,13 +430,13 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t('moduleView.assignDescription')}
             </p>
-            <button
+            <Button
               onClick={() => setShowParcelManager(true)}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               <MapPin className="h-4 w-4 mr-2" />
               {t('moduleView.assignParcels')}
-            </button>
+            </Button>
           </div>
         )}
       </div>

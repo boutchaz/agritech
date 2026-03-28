@@ -108,7 +108,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
     const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
     return (
-      <button
+      <Button
         type="button"
         onClick={() => setSelectedUserId(user.user_id)}
         className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
@@ -147,7 +147,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
             <Check className="w-4 h-4" />
           </div>
         )}
-      </button>
+      </Button>
     );
   };
 

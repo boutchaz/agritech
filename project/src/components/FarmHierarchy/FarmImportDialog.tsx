@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface FarmImportDialogProps {
   open: boolean;
@@ -209,20 +210,20 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               onClick={handleClose}
               disabled={isImporting}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Annuler
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleImport}
               disabled={!file || isImporting}
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
             >
               {isImporting ? 'Import en cours...' : 'Importer'}
-            </button>
+            </Button>
           </div>
         </div>
       </DialogContent>

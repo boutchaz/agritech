@@ -11,6 +11,7 @@ import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
 import { useWarehouses } from '../../hooks/useWarehouses';
 import { useFormErrors } from '../../hooks/useFormErrors';
 import type { HarvestSummary, HarvestUnit, QualityGrade, HarvestStatus, IntendedFor } from '../../types/harvests';
+import { Button } from '@/components/ui/button';
 
 interface HarvestFormProps {
   harvest?: HarvestSummary | null;
@@ -228,12 +229,12 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
               </p>
             </div>
           </div>
-          <button
+          <Button
             onClick={onClose}
             className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             <X className="h-5 w-5 text-gray-500" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
@@ -547,15 +548,15 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
 
            {/* Actions */}
            <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
-             <button
+             <Button
                type="button"
                onClick={onClose}
                disabled={isSubmitting}
                className="px-5 py-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
              >
                {t('harvests.form.buttons.cancel')}
-             </button>
-             <button
+             </Button>
+             <Button
                type="submit"
                disabled={isSubmitting}
                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -564,7 +565,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                )}
                {harvest ? t('harvests.form.buttons.update') : t('harvests.form.buttons.save')}
-             </button>
+             </Button>
            </div>
         </form>
       </div>

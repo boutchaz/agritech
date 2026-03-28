@@ -133,7 +133,7 @@ function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, onAddC
         <TableCell>
           <div className="flex items-center" style={{ paddingInlineStart: `${depth * 1.5}rem` }}>
             {hasChildren ? (
-              <button
+              <Button
                 onClick={() => onToggle(node.id)}
                 className="mr-1.5 p-0.5 rounded hover:bg-muted transition-colors"
               >
@@ -142,7 +142,7 @@ function TreeNodeRow({ node, depth, expanded, onToggle, onEdit, onDelete, onAddC
                 ) : (
                   <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
                 )}
-              </button>
+              </Button>
             ) : (
               <span className="mr-1.5 w-5" />
             )}

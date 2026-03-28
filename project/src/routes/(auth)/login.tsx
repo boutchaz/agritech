@@ -14,6 +14,7 @@ import {
   trackPageView,
 } from '@/lib/analytics'
 import { useAuthStore, waitForHydration } from '@/stores/authStore'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(auth)/login')({
   beforeLoad: async ({ context }) => {
@@ -113,7 +114,7 @@ function LoginPage() {
     >
       <div className="space-y-6">
         <div className="space-y-3">
-          <button
+          <Button
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading || isOAuthLoading}
@@ -133,7 +134,7 @@ function LoginPage() {
               </svg>
             )}
             <span>{t('auth.continueWithGoogle')}</span>
-          </button>
+          </Button>
         </div>
 
         <div className="relative">
@@ -200,13 +201,13 @@ function LoginPage() {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={isLoading || isOAuthLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? t('auth.signingIn') : t('auth.signIn.button')}
-          </button>
+          </Button>
         </form>
       </div>
     </AuthLayout>

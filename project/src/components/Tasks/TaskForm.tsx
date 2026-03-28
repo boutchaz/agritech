@@ -326,12 +326,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             {task ? t('tasks.form.editTitle') : t('tasks.form.createTitle')}
           </h2>
-          <button
+          <Button
+            size="icon"
+            variant="ghost"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label={t('common.close', 'Close')}
           >
             <X className="w-6 h-6" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={rhfHandleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">

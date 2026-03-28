@@ -16,6 +16,7 @@ import {
   trackTrialStartFailure,
   trackPageView,
 } from '@/lib/analytics'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/onboarding/select-trial')({
   component: SelectTrialPage,
@@ -260,18 +261,18 @@ function SelectTrialPage() {
               )}
             </div>
             <div className="space-y-3">
-              <button
+              <Button
                 onClick={() => window.location.href = '/register'}
                 className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
               >
                 Back to Registration
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => window.location.reload()}
                 className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
               >
                 Retry After Confirming Email
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -302,18 +303,18 @@ function SelectTrialPage() {
             </div>
           </div>
           <div className="space-y-3">
-            <button
+            <Button
               onClick={() => window.location.href = '/register'}
               className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
             >
               Back to Registration
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => window.location.reload()}
               className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
               Retry Setup
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -511,7 +512,7 @@ function SelectTrialPage() {
         </div>
 
         <div className="text-center">
-          <button
+          <Button
             onClick={handleStartTrial}
             disabled={isCreating}
             data-testid="start-trial-button"
@@ -525,7 +526,7 @@ function SelectTrialPage() {
             ) : (
               'Start Free 14-Day Trial'
             )}
-          </button>
+          </Button>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
             No credit card required • Cancel anytime
           </p>

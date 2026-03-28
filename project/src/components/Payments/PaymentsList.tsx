@@ -17,6 +17,7 @@ import {
 } from '../../types/payments';
 import { format } from 'date-fns';
 import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface PaymentsListProps {
   organizationId: string;
@@ -78,10 +79,10 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
             {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+        <Button className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
           <Download className="w-5 h-5" />
           Exporter
-        </button>
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -130,7 +131,7 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
 
         {/* Status filters */}
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button
             onClick={() => handleStatusFilter('all')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
               !filters.status
@@ -139,9 +140,9 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
             }`}
           >
             Tous
-          </button>
+          </Button>
           {(['pending', 'approved', 'paid'] as PaymentStatus[]).map(status => (
-            <button
+            <Button
               key={status}
               onClick={() => handleStatusFilter(status)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
@@ -151,7 +152,7 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
               }`}
             >
               {getPaymentStatusLabel(status, 'fr')}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -238,9 +239,9 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm font-medium">
+                      <Button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm font-medium">
                         Voir détails
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}

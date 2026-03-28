@@ -13,6 +13,7 @@ import {
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface StatisticsCalculatorProps {
   parcelId: string;
@@ -387,32 +388,32 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             </div>
           )}
 
-          <button
+          <Button
             onClick={checkCloudCoverage}
             disabled={isCheckingCloud || !boundary}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
           >
             <Cloud className="w-4 h-4" />
             {isCheckingCloud ? 'Vérification...' : 'Vérifier couverture nuageuse'}
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => refetchCache()}
             disabled={isLoadingCache}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
             Actualiser le cache
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={calculateStatistics}
             disabled={isLoading || !boundary || selectedIndices.length === 0}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
           >
             <Satellite className="w-4 h-4" />
             {isLoading ? 'Calcul en cours...' : 'Récupérer depuis satellite'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -518,7 +519,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
                           </p>
                         </div>
                         {displayStats.tiff_files?.[index as VegetationIndexType] && (
-                          <button
+                          <Button
                             onClick={() => downloadTiff(
                               index as VegetationIndexType,
                               displayStats.tiff_files![index as VegetationIndexType].url
@@ -527,7 +528,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
                           >
                             <Download className="w-3 h-3" />
                             Télécharger TIFF
-                          </button>
+                          </Button>
                         )}
                       </div>
 

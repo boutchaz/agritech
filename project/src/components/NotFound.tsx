@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Home, ArrowLeft, Search, Sprout } from 'lucide-react';
 import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 
 interface NotFoundProps {
   title?: string;
@@ -114,13 +115,13 @@ export const NotFound: React.FC<NotFoundProps> = ({
                 { label: 'Reports', path: '/reports' },
                 { label: 'Settings', path: '/settings/account' },
               ].map((link) => (
-                <button
+                <Button
                   key={link.path}
                   onClick={() => navigate({ to: link.path })}
                   className="px-4 py-2 text-sm rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-green-500 dark:hover:border-green-400 hover:text-green-600 dark:hover:text-green-400 transition-colors"
                 >
                   {link.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

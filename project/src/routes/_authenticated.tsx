@@ -16,6 +16,7 @@ import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
 import { usersApi } from '../lib/api/users'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ context, location }) => {
@@ -143,12 +144,12 @@ function AuthenticatedLayout() {
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</span>
-                <button
+                <Button
                   onClick={() => signOut()}
                   className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                 >
                   Sign out
-                </button>
+                </Button>
               </div>
             </div>
           </header> */}

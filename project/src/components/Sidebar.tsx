@@ -37,6 +37,7 @@ import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
 import { isRTLLocale } from "../lib/is-rtl-locale";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   modules: Module[];
@@ -1291,7 +1292,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                           currentPath === "/marketplace/quote-requests/sent"
                         }
                       />
-                      <button
+                      <Button
                         onClick={async () => {
                           const url = await getMarketplaceUrl("/");
                           window.open(url, "_blank", "noopener,noreferrer");
@@ -1309,7 +1310,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                             <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </Button>
-                      </button>
+                      </Button>
                     </CollapsedSectionPopover>
                   </div>
                 ) : (
@@ -1361,7 +1362,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         >
                           {renderText(t("nav.sentRequests"))}
                         </Button>
-                        <button
+                        <Button
                           onClick={async () => {
                             const url = await getMarketplaceUrl("/");
                             window.open(url, "_blank", "noopener,noreferrer");
@@ -1384,7 +1385,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                               <ExternalLink className="h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
                             </div>
                           </Button>
-                        </button>
+                        </Button>
                       </>
                     )}
                   </>

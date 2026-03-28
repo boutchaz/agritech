@@ -6,6 +6,7 @@ import { saveAs } from 'file-saver';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { AIReportSections } from '../../lib/api/ai-reports';
+import { Button } from '@/components/ui/button';
 
 interface AIReportExportProps {
   sections: AIReportSections | null | undefined;
@@ -254,7 +255,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
   return (
     <div className="flex items-center gap-2">
       {onPreview && (
-        <button
+        <Button
           onClick={onPreview}
           disabled={!hasContent}
           className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -262,10 +263,10 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
         >
           <Eye className="w-4 h-4" />
           <span>{t('aiReports.export.previewButton', 'Aperçu')}</span>
-        </button>
+        </Button>
       )}
 
-      <button
+      <Button
         onClick={exportToPDF}
         disabled={isExporting || !hasContent}
         className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -282,9 +283,9 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
             <span>PDF</span>
           </>
         )}
-      </button>
+      </Button>
 
-      <button
+      <Button
         onClick={exportToDOCX}
         disabled={isExporting || !hasContent}
         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -301,7 +302,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
             <span>DOCX</span>
           </>
         )}
-      </button>
+      </Button>
     </div>
   );
 };

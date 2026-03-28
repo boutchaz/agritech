@@ -8,6 +8,7 @@ import {
   planInterventionTitle,
   planMonthShort,
 } from '@/lib/farmerFriendlyLabels';
+import { Button } from '@/components/ui/button';
 
 interface PlanInterventionCardProps {
   intervention: AIPlanIntervention;
@@ -92,7 +93,7 @@ export function PlanInterventionCard({
       </div>
 
       {canMarkDone && (
-        <button
+        <Button
           type="button"
           onClick={() => onExecute(intervention.id)}
           disabled={isExecuting}
@@ -100,7 +101,7 @@ export function PlanInterventionCard({
         >
           <Play className="w-4 h-4 shrink-0" aria-hidden />
           <span>{t('planIntervention.markDone')}</span>
-        </button>
+        </Button>
       )}
 
       {intervention.status === 'executed' && (

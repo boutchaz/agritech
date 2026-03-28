@@ -33,6 +33,7 @@ import {
 import { suppliersApi } from "@/lib/api/suppliers";
 import { warehousesApi } from "@/lib/api/warehouses";
 import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
 
 interface Product {
   id: string;
@@ -481,22 +482,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {/* Stock tab actions removed - handled by InventoryStock component */}
         {activeTab === "suppliers" && (
-          <button
+          <Button
             onClick={openCreateSupplierModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>{t('stockManagement.newSupplier')}</span>
-          </button>
+          </Button>
         )}
         {activeTab === "warehouses" && (
-          <button
+          <Button
             onClick={openCreateWarehouseModal}
             className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>{t('stockManagement.newWarehouse')}</span>
-          </button>
+          </Button>
         )}
       </div>
 
@@ -563,12 +564,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button
+                          <Button
                             type="button"
                             className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 min-h-[44px] min-w-[44px]"
                           >
                             <MoreVertical className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
@@ -733,12 +734,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
+                              <Button
                                 type="button"
                                 className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
                               >
                                 <MoreVertical className="h-4 w-4" />
-                              </button>
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
@@ -887,12 +888,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <button
+                            <Button
                               type="button"
                               className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
                             >
                               <MoreVertical className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
@@ -942,12 +943,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Produit
               </h3>
-              <button
+              <Button
                 onClick={() => setShowAddProduct(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -1123,19 +1124,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-              <button
+              <Button
                 onClick={() => setShowAddProduct(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 order-2 sm:order-1"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleAddProduct}
                 disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
               >
                 Ajouter
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1149,18 +1150,18 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvel Achat de Produit
               </h3>
-              <button
+              <Button
                 onClick={closePurchaseModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
 
             {/* Toggle between existing product or new product */}
             <div className="mb-6">
               <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
-                <button
+                <Button
                   onClick={() =>
                     setNewPurchase({
                       ...newPurchase,
@@ -1175,8 +1176,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   }`}
                 >
                   Nouveau Produit
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() =>
                     setNewPurchase({
                       ...newPurchase,
@@ -1192,7 +1193,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   disabled={products.length === 0}
                 >
                   Produit Existant
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -1608,7 +1609,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                           className="hidden"
                         />
                         {newPurchase.invoice_file && (
-                          <button
+                          <Button
                             onClick={() =>
                               setNewPurchase({
                                 ...newPurchase,
@@ -1618,7 +1619,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                             className="text-red-600 hover:text-red-800"
                           >
                             <X className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </FormField>
@@ -1666,13 +1667,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closePurchaseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleAddPurchase}
                 disabled={
                   (!newPurchase.product_id && !newPurchase.product_name) ||
@@ -1684,7 +1685,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               >
                 <ShoppingCart className="h-4 w-4" />
                 <span>Enregistrer l'achat</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1700,12 +1701,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   ? t('stockManagement.supplierForm.editTitle')
                   : t('stockManagement.supplierForm.createTitle')}
               </h3>
-              <button
+              <Button
                 onClick={closeSupplierModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -1911,13 +1912,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closeSupplierModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 {t('stockManagement.supplierForm.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSubmitSupplier}
                 disabled={isSubmittingSupplier || !newSupplier.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1927,7 +1928,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   : editingSupplierId
                     ? t('stockManagement.supplierForm.update')
                     : t('stockManagement.supplierForm.add')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1941,12 +1942,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {editingWarehouseId ? t('stockManagement.warehouseForm.editTitle') : t('stockManagement.warehouseForm.createTitle')}
               </h3>
-              <button
+              <Button
                 onClick={closeWarehouseModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -2198,13 +2199,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closeWarehouseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 {t('stockManagement.warehouseForm.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSubmitWarehouse}
                 disabled={isSubmittingWarehouse || !newWarehouse.name}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2214,7 +2215,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                   : editingWarehouseId
                     ? t('stockManagement.warehouseForm.update')
                     : t('stockManagement.warehouseForm.add')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -2227,12 +2228,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {t('stockManagement.adjustQuantity.title')}
               </h3>
-              <button
+              <Button
                 onClick={closeAdjustQuantityModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -2299,19 +2300,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closeAdjustQuantityModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
                 {t('stockManagement.adjustQuantity.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleAdjustQuantity}
                 disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isAdjustingQuantity ? t('stockManagement.adjustQuantity.saving') : t('stockManagement.adjustQuantity.apply')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

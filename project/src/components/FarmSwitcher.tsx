@@ -7,6 +7,7 @@ import { useFarms } from '../hooks/useParcelsQuery';
 import type { AuthFarm } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { headerToolbarTextTriggerClass } from '@/lib/header-toolbar';
+import { Button } from '@/components/ui/button';
 
 const DROPDOWN_WIDTH = 256; // w-64
 
@@ -104,7 +105,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
+      <Button
         type="button"
         ref={buttonRef}
         title={currentFarm?.name || t('farmSwitcher.selectFarm')}
@@ -115,7 +116,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
           {currentFarm?.name || t('farmSwitcher.selectFarm')}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
-      </button>
+      </Button>
 
       {isOpen && (
         <div
@@ -130,7 +131,7 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
               </div>
             ) : (
               enrichedFarms.map((farm) => (
-                <button
+                <Button
                   key={farm.id}
                   type="button"
                   onClick={() => handleFarmSelect(farm)}
@@ -153,18 +154,18 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
                   {farm.id === selectedFarmId && (
                     <Check className="ms-2 h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                   )}
-                </button>
+                </Button>
               ))
             )}
             <div className="mt-1 border-t border-gray-200 dark:border-gray-700">
-              <button
+              <Button
                 type="button"
                 onClick={handleAddFarm}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-start text-sm text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
               >
                 <Plus className="h-4 w-4 shrink-0" />
                 <span>{t('farmSwitcher.addFarm')}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>

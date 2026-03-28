@@ -10,6 +10,7 @@ import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '../../types/analysis';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const AnalysisWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -187,30 +188,33 @@ const AnalysisWidget: React.FC = () => {
           <TestTube className={`h-5 w-5 text-${color}-600`} />
           {t('dashboard.widgets.analysis.title', 'Analyses')}
         </h3>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewAnalyses}
-          className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Type Tabs */}
       <div className="flex gap-1 mb-4 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
         {tabs.map(({ type, icon: Icon, color: tabColor }) => (
-          <button
+          <Button
             key={type}
+            size="sm"
+            variant={activeType === type ? 'default' : 'ghost'}
             onClick={() => setActiveType(type)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={`flex-1 ${
               activeType === type
-                ? `bg-white dark:bg-gray-600 text-${tabColor}-600 dark:text-${tabColor}-400 shadow-sm`
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? `text-${tabColor}-600 dark:text-${tabColor}-400`
+                : ''
             }`}
           >
             <Icon className="h-4 w-4" />
             <span className="hidden sm:inline">{t(`dashboard.widgets.analysis.tabs.${type}`, type)}</span>
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -320,12 +324,13 @@ const AnalysisWidget: React.FC = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t('dashboard.widgets.analysis.empty', 'No analyses available')}
           </p>
-          <button
+          <Button
+            variant="link"
             onClick={handleViewAnalyses}
-            className="mt-2 text-sm text-green-600 hover:text-green-700 dark:text-green-400"
+            className="mt-2 p-0 h-auto text-sm text-green-600 dark:text-green-400"
           >
             {t('dashboard.widgets.analysis.addAnalysis', 'Add an analysis')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

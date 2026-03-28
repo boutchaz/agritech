@@ -389,7 +389,7 @@ export function NotificationItem({
                   </p>
                 )}
                 {hasLongMessage && (
-                  <button
+                  <Button
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsExpanded(!isExpanded);
@@ -407,7 +407,7 @@ export function NotificationItem({
                         Show more
                       </>
                     )}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}

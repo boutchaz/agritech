@@ -6,6 +6,7 @@ import { useWorkers, useCreateMetayageSettlement } from '../../hooks/useWorkers'
 import { calculateMetayageShare } from '../../types/workers';
 import type { CalculationBasis } from '../../types/workers';
 import { useCurrency } from '../../hooks/useCurrency';
+import { Button } from '@/components/ui/button';
 
 interface MetayageCalculatorProps {
   organizationId: string;
@@ -334,7 +335,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
               {/* Save Button */}
               <div className="flex justify-end">
-                <button
+                <Button
                   onClick={handleSaveSettlement}
                   disabled={createSettlement.isPending || !grossRevenue || !periodStart || !periodEnd}
                   className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -350,7 +351,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
                       <span>{t('workers.metayage.buttons.save')}</span>
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             </>
           )}

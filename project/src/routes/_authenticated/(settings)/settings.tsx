@@ -8,6 +8,7 @@ import SettingsLayout from '@/components/SettingsLayout'
 import { ArrowLeft, Home } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
 import { PageLoader } from '@/components/ui/loader'
+import { Button } from '@/components/ui/button';
 
 const SettingsLayoutComponent: React.FC = () => {
   const { currentOrganization, currentFarm } = useAuth();
@@ -30,13 +31,13 @@ const SettingsLayoutComponent: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {/* Back button on mobile */}
-            <button
+            <Button
               onClick={handleBackToDashboard}
               className="md:hidden flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg -ml-2"
               aria-label="Back to dashboard"
             >
               <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </button>
+            </Button>
             <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
               {currentOrganization.name}
             </h1>
@@ -48,13 +49,13 @@ const SettingsLayoutComponent: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             {/* Home button on mobile */}
-            <button
+            <Button
               onClick={handleBackToDashboard}
               className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               aria-label="Go to home"
             >
               <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </button>
+            </Button>
             <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
               <OrganizationSwitcher />
               <LanguageSwitcher />

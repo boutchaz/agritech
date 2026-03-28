@@ -98,7 +98,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Panel Header */}
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
       >
@@ -133,7 +133,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
             <ChevronRight className="w-5 h-5 text-gray-400" />
           )}
         </div>
-      </button>
+      </Button>
 
       {/* Panel Content */}
       {isOpen && (
@@ -292,7 +292,7 @@ export const SourceDataBadge: React.FC<{
     metadata.sufficiencyStatus !== 'sufficient' || metadata.warnings.length > 0;
 
   return (
-    <button
+    <Button
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full border transition-colors',
@@ -304,7 +304,7 @@ export const SourceDataBadge: React.FC<{
       <Database className="w-3 h-3" />
       <span>{metadata.totalDataPoints.toLocaleString()} pts</span>
       {hasIssues && <AlertTriangle className="w-3 h-3" />}
-    </button>
+    </Button>
   );
 };
 

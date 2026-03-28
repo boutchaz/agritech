@@ -93,6 +93,7 @@ export function useStreamMessage() {
   const queryClient = useQueryClient();
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedContent, setStreamedContent] = useState('');
+  const [streamSuggestions, setStreamSuggestions] = useState<string[]>([]);
   const abortRef = useRef(false);
 
   const stream = useCallback(
@@ -108,6 +109,7 @@ export function useStreamMessage() {
 
       setIsStreaming(true);
       setStreamedContent('');
+      setStreamSuggestions([]);
       abortRef.current = false;
 
       try {
@@ -121,6 +123,9 @@ export function useStreamMessage() {
           },
           (metadata) => {
             setIsStreaming(false);
+            if (metadata?.suggestions) {
+              setStreamSuggestions(metadata.suggestions);
+            }
             queryClient.invalidateQueries({
               queryKey: ['chat-history', currentOrganization.id],
             });
@@ -146,11 +151,12 @@ export function useStreamMessage() {
 
   const resetStream = useCallback(() => {
     setStreamedContent('');
+    setStreamSuggestions([]);
     setIsStreaming(false);
     abortRef.current = false;
   }, []);
 
-  return { stream, isStreaming, streamedContent, stopStream, resetStream };
+  return { stream, isStreaming, streamedContent, streamSuggestions, stopStream, resetStream };
 }
 
 export type { SendMessageDto, ChatResponse };

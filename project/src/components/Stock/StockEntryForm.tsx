@@ -339,7 +339,7 @@ export default function StockEntryForm({
               const style = typeStyles[type.color as keyof typeof typeStyles];
 
               return (
-                <button
+                <Button
                   key={type.type}
                   type="button"
                   onClick={() => setSelectedType(type.type)}
@@ -352,7 +352,7 @@ export default function StockEntryForm({
                   <Icon className={`w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2 ${style.icon}`} />
                   <div className="font-medium text-xs md:text-sm">{type.label}</div>
                   <div className="text-xs text-gray-500 mt-1 hidden md:block">{type.description}</div>
-                </button>
+                </Button>
               );
             })}
           </div>

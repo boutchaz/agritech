@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 export function BlogNewsletter() {
   const [email, setEmail] = useState('');
@@ -54,13 +55,13 @@ export function BlogNewsletter() {
           required
           className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-transparent"
         />
-        <button
+        <Button
           type="submit"
           disabled={loading}
           className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
           {loading ? 'Subscribing...' : 'Subscribe'}
-        </button>
+        </Button>
       </form>
     </div>
   );

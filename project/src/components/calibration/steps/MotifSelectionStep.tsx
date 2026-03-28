@@ -11,6 +11,7 @@ import {
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import type { RecalibrationMotif } from '@/components/calibration/RecalibrationWizard';
+import { Button } from '@/components/ui/button';
 
 export interface RecalibrationMotifOption {
   value: RecalibrationMotif;
@@ -100,7 +101,7 @@ export function MotifSelectionStep({
           const isSelected = selectedMotif === motif.value;
 
           return (
-            <button
+            <Button
               key={motif.value}
               type="button"
               data-testid={`calibration-partial-motif-option-${motif.value}`}
@@ -124,7 +125,7 @@ export function MotifSelectionStep({
               <div className="mt-3 rounded-md border border-dashed border-gray-300 dark:border-gray-600 p-2 text-xs text-gray-600 dark:text-gray-300">
                 Bloc mis a jour: <span className="font-medium">{motif.blockUpdated}</span>
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>

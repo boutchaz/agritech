@@ -19,6 +19,7 @@ import { AIReportCharts } from './AIReportCharts';
 import { SourceDataPanel, SourceDataBadge } from './SourceDataPanel';
 import { DataTransparencyModal } from './DataTransparencyModal';
 import type { SourceDataMetadata } from '@/lib/api/source-data';
+import { Button } from '@/components/ui/button';
 
 interface AIReportPreviewProps {
   sections: AIReportSections;
@@ -52,7 +53,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   return (
     <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-      <button
+      <Button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
@@ -66,7 +67,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         ) : (
           <ChevronRight className="w-5 h-5 text-gray-500" />
         )}
-      </button>
+      </Button>
       {isOpen && <div className="p-4 bg-white dark:bg-gray-800">{children}</div>}
     </div>
   );

@@ -5,6 +5,7 @@ import { useParcelById, useFarms } from '@/hooks/useParcelsQuery'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader } from '@/components/ui/loader'
 import { Building2, TreePine, MapPin, ChartBar, FlaskRound as Flask, Satellite, Cloud, DollarSign, FileSpreadsheet, TrendingUp, BrainCircuit } from 'lucide-react'
+import { Button } from '@/components/ui/button';
 
 const ParcelLayout = () => {
   const { t } = useTranslation();
@@ -35,13 +36,13 @@ const ParcelLayout = () => {
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">{t('parcels.detail.notFound')}</p>
-          <button
+          <Button
             type="button"
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
             className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
           >
             {t('parcels.detail.backToParcels')}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -70,7 +71,7 @@ const ParcelLayout = () => {
               const isActive = location.pathname === tab.path;
               const TabIcon = tab.icon;
               return (
-                <button
+                <Button
                   key={tab.id}
                   type="button"
                   onClick={() => navigate({ to: tab.path })}
@@ -84,7 +85,7 @@ const ParcelLayout = () => {
                 >
                   <TabIcon className="h-4 w-4 lg:h-6 lg:w-6" />
                   <span>{tab.name}</span>
-                </button>
+                </Button>
               );
             })}
           </nav>
@@ -98,13 +99,13 @@ const ParcelLayout = () => {
 
       {/* Back Button */}
       <div className="px-6 pb-6">
-        <button
+        <Button
           type="button"
           onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
           className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
         >
           <span>← {t('parcels.detail.backToParcels')}</span>
-        </button>
+        </Button>
       </div>
     </>
   );

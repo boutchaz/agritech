@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 interface FarmNode {
   farm_id: string;
@@ -607,12 +608,12 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {t('farmHierarchy.farm.createNew')}
             </h3>
-            <button
+            <Button
               onClick={() => setShowAddForm(false)}
               className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="w-5 h-5" />
-            </button>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -633,21 +634,21 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              <button
+              <Button
                 type="submit"
                 data-testid="farm-submit-button"
                 disabled={createFarmMutation.isPending}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
               >
                 {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={() => setShowAddForm(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
                 {t('app.cancel')}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -661,27 +662,27 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               <span className="text-sm font-medium text-gray-900 dark:text-white">
                 {selectedFarmIds.size} {selectedFarmIds.size === 1 ? 'ferme sélectionnée' : 'fermes sélectionnées'}
               </span>
-              <button
+              <Button
                 onClick={clearSelection}
                 className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               >
                 Désélectionner
-              </button>
+              </Button>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 onClick={selectAllFarms}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 Tout sélectionner
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleBatchDeleteClick}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 Supprimer
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
 import { subscriptionsService } from '@/services/subscriptionsService';
+import { Button } from '@/components/ui/button';
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();
@@ -144,12 +145,12 @@ const SubscriptionSettings: React.FC = () => {
     return (
       <div className="p-6 space-y-6">
         {showPlans && (
-          <button
+          <Button
             onClick={() => setShowPlans(false)}
             className="text-green-600 hover:text-green-700 font-medium"
           >
             ← {t('subscription.backToDetails', 'Back to details')}
-          </button>
+          </Button>
         )}
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
@@ -241,7 +242,7 @@ const SubscriptionSettings: React.FC = () => {
                   </p>
                 </div>
 
-                <button
+                <Button
                   onClick={() => purchasePlan.mutate(plan.id)}
                   disabled={(purchasePlan.isPending && selectedFormula === plan.id) || isCurrentPlan}
                   className={`w-full mt-5 px-4 py-2.5 rounded-lg font-medium transition-colors ${
@@ -261,7 +262,7 @@ const SubscriptionSettings: React.FC = () => {
                         : isDowngrade
                           ? t('subscription.plans.downgrade')
                           : t('subscription.plans.getStarted')}
-                </button>
+                </Button>
 
                 <div className="mt-5 text-xs text-gray-600 dark:text-gray-400 space-y-1">
                   <p>
@@ -306,12 +307,12 @@ const SubscriptionSettings: React.FC = () => {
           </h2>
         </div>
 
-        <button
+        <Button
           onClick={() => setShowPlans(true)}
           className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
           {t('subscription.changePlan', 'Change plan')}
-        </button>
+        </Button>
       </div>
 
       {subscription?.status === 'trialing' && (
@@ -484,7 +485,7 @@ const SubscriptionSettings: React.FC = () => {
             {t('subscription.billingManagementDescription')}
           </p>
 
-          <button
+          <Button
             onClick={() => {
               const targetPlan = normalizedPlanType || 'standard';
               purchasePlan.mutate(targetPlan);
@@ -498,7 +499,7 @@ const SubscriptionSettings: React.FC = () => {
                 : t('subscription.manageBilling')}
             </span>
             <ExternalLink className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
@@ -526,12 +527,12 @@ const SubscriptionSettings: React.FC = () => {
                       {t('subscription.addons.active')}
                     </span>
                   ) : (
-                    <button
+                    <Button
                       onClick={() => purchaseAddon.mutate(module.id)}
                       className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
                       {t('subscription.addons.buy')}
-                    </button>
+                    </Button>
                   )}
                 </div>
               );

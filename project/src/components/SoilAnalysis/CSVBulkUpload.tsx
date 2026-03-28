@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { parcelsApi } from '../../lib/api/parcels';
 import { soilAnalysesApi } from '../../lib/api/soil-analyses';
+import { Button } from '@/components/ui/button';
 
 interface CSVBulkUploadProps {
   onImportComplete: () => void;
@@ -193,13 +194,13 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
 
   return (
     <>
-      <button
+      <Button
         onClick={() => setShowModal(true)}
         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
       >
         <Upload className="w-4 h-4" />
         <span>Import CSV</span>
-      </button>
+      </Button>
 
       {showModal && (
         <div className="modal-overlay">
@@ -208,12 +209,12 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Import en masse - Analyses de sol
               </h2>
-              <button
+              <Button
                 onClick={() => setShowModal(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <X className="w-6 h-6" />
-              </button>
+              </Button>
             </div>
 
             <div className="p-6 space-y-6">
@@ -241,13 +242,13 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       <div>• lab_name (optionnel)</div>
                       <div>• notes (optionnel)</div>
                     </div>
-                    <button
+                    <Button
                       onClick={downloadTemplate}
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
                       <Download className="w-4 h-4" />
                       <span>Télécharger le modèle</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -347,13 +348,13 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
 
             {/* Footer Actions */}
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleImport}
                 disabled={parsedData.length === 0 || errors.length > 0 || importing}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
@@ -362,7 +363,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
                 <span>{importing ? 'Import en cours...' : 'Importer'}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>

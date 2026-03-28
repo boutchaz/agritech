@@ -14,6 +14,7 @@ import {
   formatDateForAPI
 } from '../../lib/satellite-api';
 import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
+import { Button } from '@/components/ui/button';
 
 // Fix Leaflet default icon issue - only in browser
 if (typeof window !== 'undefined') {
@@ -445,13 +446,13 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                     }`}
                   />
                   {recommendedDate && recommendedDate !== selectedDate && (
-                    <button
+                    <Button
                       onClick={() => setSelectedDate(recommendedDate)}
                       className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                       title={`Use recommended date: ${recommendedDate}`}
                     >
                       <Calendar className="w-3 h-3" />
-                    </button>
+                    </Button>
                   )}
                 </div>
                 {availableDates.length > 0 && !availableDates.includes(selectedDate) && (
@@ -490,14 +491,14 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               </div>
 
               <div className="flex items-end">
-                <button
+                <Button
                   onClick={generateVisualization}
                   disabled={isLoading || !boundary}
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
                   {isLoading ? 'Loading...' : data ? 'Regenerate' : 'Generate'}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -538,20 +539,20 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             {selectedIndex} Heatmap - {selectedDate}
           </h3>
           {data && (
-            <button
+            <Button
               onClick={downloadData}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               <Download className="w-4 h-4" />
               Export Data
-            </button>
+            </Button>
           )}
         </div>
 
         <div className={`border rounded-lg overflow-hidden relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : 'h-96'}`}>
           {/* Fullscreen Toggle Button */}
           {!compact && (
-            <button
+            <Button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-100 border-2 border-gray-300 rounded-lg p-2 shadow-lg transition-colors"
               title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
@@ -565,7 +566,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                 </svg>
               )}
-            </button>
+            </Button>
           )}
           <ColorScale />
           {/* Statistics Box (like desired.png) */}

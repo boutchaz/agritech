@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Parcel {
   id: string;
@@ -343,23 +344,23 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
       {/* Navigation arrows (hidden on small screens, use swipe) */}
       {parcels.length > 1 && (
         <>
-          <button
+          <Button
             onClick={prevSlide}
             disabled={currentIndex === 0}
             aria-label="Parcelle précédente"
             className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={nextSlide}
             disabled={currentIndex === parcels.length - 1}
             aria-label="Parcelle suivante"
             className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           >
             <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+          </Button>
         </>
       )}
 
@@ -367,7 +368,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
       {parcels.length > 1 && (
         <div className="flex justify-center space-x-2 mt-4">
           {parcels.map((_, index) => (
-            <button
+            <Button
               key={index}
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-colors ${

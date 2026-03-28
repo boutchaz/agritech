@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { marked } from 'marked'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/pitch-deck')({
     component: PitchDeck,
@@ -208,12 +209,12 @@ function PitchDeck() {
                     CodeLovers Agritech
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <Button
                         onClick={toggleFullScreen}
                         className="p-2 hover:bg-white/10 rounded-full transition-colors"
                     >
                         {isFullScreen ? <X size={20} /> : <Maximize2 size={20} />}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -251,25 +252,25 @@ function PitchDeck() {
 
             {/* Navigation Footer */}
             <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center items-center gap-4">
-                <button
+                <Button
                     onClick={prevSlide}
                     disabled={currentSlide === 0}
                     className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-emerald-500 hover:border-emerald-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
                 >
                     <ChevronLeft size={24} />
-                </button>
+                </Button>
 
                 <div className="px-4 py-2 rounded-full bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 font-mono text-sm">
                     {currentSlide + 1} / {slides.length}
                 </div>
 
-                <button
+                <Button
                     onClick={nextSlide}
                     disabled={currentSlide === slides.length - 1}
                     className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-emerald-500 hover:border-emerald-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
                 >
                     <ChevronRight size={24} />
-                </button>
+                </Button>
             </div>
 
             {/* Progress Bar */}

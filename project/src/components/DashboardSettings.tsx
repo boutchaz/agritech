@@ -8,6 +8,7 @@ import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 const defaultSettings: DashboardSettingsType = {
   showSoilData: true,
@@ -128,10 +129,9 @@ const DashboardSettings: React.FC = () => {
             {t('dashboard.title')}
           </h2>
         </div>
-        <button
+        <Button
           onClick={handleSave}
           disabled={saveMutation.isPending}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saveMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -139,7 +139,7 @@ const DashboardSettings: React.FC = () => {
             <Save className="h-4 w-4" />
           )}
           <span>{saveMutation.isPending ? t('dashboard.saving') : t('dashboard.save')}</span>
-        </button>
+        </Button>
       </div>
 
       {saveMutation.isError && (

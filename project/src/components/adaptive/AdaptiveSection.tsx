@@ -49,7 +49,7 @@ export const AdaptiveSection: React.FC<AdaptiveSectionProps> = ({
   if (collapsible) {
     return (
       <div className={`border border-gray-200 dark:border-gray-700 rounded-lg ${className}`}>
-        <button
+        <Button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
@@ -66,7 +66,7 @@ export const AdaptiveSection: React.FC<AdaptiveSectionProps> = ({
           ) : (
             <ChevronDown className="h-5 w-5 text-gray-400" />
           )}
-        </button>
+        </Button>
         {isExpanded && <div className="px-4 pb-4">{children}</div>}
       </div>
     );

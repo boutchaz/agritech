@@ -7,6 +7,7 @@ import { IndexCalculationResponse } from '@/lib/satellite-api';
 import { useCan } from '@/lib/casl';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 // Lazy load heavy satellite components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('@/components/SatelliteAnalysisView/IndicesCalculator'));
@@ -62,13 +63,13 @@ function SatelliteAnalysisPage() {
               <span>{t('production.satelliteAnalysis.featureHistorical')}</span>
             </div>
           </div>
-          <button
+          <Button
             onClick={() => navigate({ to: '/settings/subscription' })}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
           >
             {t('production.satelliteAnalysis.upgradeButton')}
             <span>→</span>
-          </button>
+          </Button>
         </div>
       </div>
     );

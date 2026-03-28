@@ -3,6 +3,7 @@ import { Calendar, MapPin, Package, TrendingUp, Edit, Trash2, Eye, Award, Clipbo
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { HarvestSummary } from '../../types/harvests';
+import { Button } from '@/components/ui/button';
 
 interface HarvestCardProps {
   harvest: HarvestSummary;
@@ -71,35 +72,35 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
         </div>
         <div className="flex items-center gap-1">
           {onCreateReception && harvest.status === 'stored' && (
-            <button
+            <Button
               onClick={() => onCreateReception(harvest)}
               className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
               title="Créer Lot de Réception"
             >
               <ClipboardCheck className="h-4 w-4" />
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => onViewDetails(harvest.id)}
             className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title="Voir les détails"
           >
             <Eye className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onEdit(harvest)}
             className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             title="Modifier"
           >
             <Edit className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onDelete(harvest.id)}
             className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title="Supprimer"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

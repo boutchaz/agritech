@@ -3,6 +3,7 @@ import { Building2, User, Briefcase, CheckCircle, ArrowRight, Mail } from 'lucid
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
 import { ButtonLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface OrganizationData {
   name: string;
@@ -181,7 +182,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
           ))}
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(1)}
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
             shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
@@ -190,7 +191,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -241,7 +242,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
             />
             
             {slugCheck && !slugCheck.available && slugCheck.suggestion && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   if (slugCheck.suggestion) {
@@ -251,7 +252,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
                 className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium underline underline-offset-2"
               >
                 Utiliser "{slugCheck.suggestion}" à la place
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -275,7 +276,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
           </div>
         )}
 
-        <button
+        <Button
           onClick={() => setSubStep(2)}
           disabled={!organizationData.name.trim() || (!existingOrgId && !slugCheck?.available)}
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -286,7 +287,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -360,7 +361,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         </div>
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!isValid || isLoading}
         className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -380,7 +381,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
             <ArrowRight className="w-5 h-5" />
           </>
         )}
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

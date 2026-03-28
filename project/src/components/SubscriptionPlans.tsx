@@ -10,6 +10,7 @@ import {
 } from '../lib/polar';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface SubscriptionPlansProps {
   onSelectPlan: (
@@ -77,7 +78,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
         </div>
 
         <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1">
-          <button
+          <Button
             onClick={() => setBillingInterval('monthly')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'monthly'
@@ -86,8 +87,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Monthly
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setBillingInterval('semiannual')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'semiannual'
@@ -96,8 +97,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Semiannual
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setBillingInterval('annual')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'annual'
@@ -106,7 +107,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Annual
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -156,7 +157,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                   </div>
                 </div>
 
-                <button
+                <Button
                   onClick={() => onSelectPlan(plan.id, billingInterval, contractedHectares)}
                   disabled={isCurrentPlan}
                   className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-colors ${
@@ -166,7 +167,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                   }`}
                 >
                   {isCurrentPlan ? 'Current plan' : 'Select plan'}
-                </button>
+                </Button>
 
                 <div className="mt-6 space-y-2">
                   {plan.features.map((feature, index) => (

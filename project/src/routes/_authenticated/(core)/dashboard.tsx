@@ -27,6 +27,7 @@ import {
   trackPageView,
 } from '@/lib/analytics'
 import { PageLoader } from '@/components/ui/loader'
+import { Button } from '@/components/ui/button';
 
 // Sensor data is now fetched via useSensorData hook in Dashboard component
 // No mock data needed - the hook handles real sensor connections when available
@@ -181,7 +182,7 @@ const AppContent: React.FC = () => {
             </label>
             {/* Live mode refresh button */}
             {isLiveMode && (
-              <button
+              <Button
                 onClick={() => {
                   refetchMetrics();
                   trackRefreshMetrics();
@@ -190,7 +191,7 @@ const AppContent: React.FC = () => {
               >
                 <RefreshCw className="h-4 w-4" />
                 {t('liveDashboard.refresh')}
-              </button>
+              </Button>
             )}
             <QuickActionsButton />
           </div>
@@ -296,7 +297,7 @@ const QuickActionsButton: React.FC = () => {
   };
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
       className="flex items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-green-500 hover:text-green-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-green-400 dark:hover:text-green-300"
@@ -310,6 +311,6 @@ const QuickActionsButton: React.FC = () => {
         <span>+</span>
         <kbd className="font-semibold">K</kbd>
       </span>
-    </button>
+    </Button>
   )
 }

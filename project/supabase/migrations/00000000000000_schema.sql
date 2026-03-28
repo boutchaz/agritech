@@ -15751,6 +15751,46 @@ USING (bucket_id = 'invoices');
 -- Used by: web useTifUpload.ts (TIF/satellite imagery for parcels)
 -- Private bucket for geospatial documents
 -- =====================================================
+-- AI METERING & QUOTAS
+-- =====================================================
+
+-- Append-only audit trail of all AI requests
+CREATE TABLE IF NOT EXISTS ai_usage_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  feature VARCHAR(50) NOT NULL,        -- 'chat', 'report', 'alert', 'job', 'annual_plan', 'calibration', 'compliance'
+  provider VARCHAR(50) NOT NULL,       -- 'zai', 'openai', 'gemini', 'groq'
+  model VARCHAR(100),
+  tokens_used INTEGER,                 -- nullable, for future analytics
+  is_byok BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_org ON ai_usage_log(organization_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_created ON ai_usage_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_org_created ON ai_usage_log(organization_id, created_at);
+
+ALTER TABLE ai_usage_log ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ai_usage_log_org_access" ON ai_usage_log
+  FOR ALL USING (is_organization_member(organization_id));
+
+-- Current period usage per org (one row per org, lazy-reset monthly)
+CREATE TABLE IF NOT EXISTS ai_quotas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE UNIQUE,
+  monthly_limit INTEGER NOT NULL,
+  current_count INTEGER DEFAULT 0,
+  period_start TIMESTAMPTZ NOT NULL,
+  period_end TIMESTAMPTZ NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE ai_quotas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "ai_quotas_org_access" ON ai_quotas
+  FOR ALL USING (is_organization_member(organization_id));
+
+-- =====================================================
 
 INSERT INTO storage.buckets (id, name, "public")
 VALUES ('agritech-documents', 'agritech-documents', false)

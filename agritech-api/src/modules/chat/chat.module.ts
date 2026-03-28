@@ -12,6 +12,8 @@ import { ContextBuilderService } from './context/context-builder.service';
 import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { ConversationService } from './conversation/conversation.service';
 import { AgromindiaContextService } from './context/agromindia-context.service';
+import { FollowUpService } from './prompt/follow-up.service';
+import { AiQuotaModule } from '../ai-quota/ai-quota.module';
 import { AiDiagnosticsModule } from '../ai-diagnostics/ai-diagnostics.module';
 import { AiRecommendationsModule } from '../ai-recommendations/ai-recommendations.module';
 import { AnnualPlanModule } from '../annual-plan/annual-plan.module';
@@ -27,6 +29,7 @@ import { CalibrationModule } from '../calibration/calibration.module';
     AnnualPlanModule,
     AiReferencesModule,
     forwardRef(() => CalibrationModule),
+    AiQuotaModule,
   ],
   controllers: [ChatController],
   providers: [
@@ -36,6 +39,7 @@ import { CalibrationModule } from '../calibration/calibration.module';
     PromptBuilderService,
     ConversationService,
     AgromindiaContextService,
+    FollowUpService,
     ZaiProvider,
     ZaiTTSProvider,
     WeatherProvider,

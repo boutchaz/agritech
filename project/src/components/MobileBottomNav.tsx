@@ -32,6 +32,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   id: string;
@@ -251,7 +252,7 @@ const MobileBottomNav: React.FC = () => {
             const active = isActive(item);
 
             return (
-              <button
+              <Button
                 key={item.id}
                 type="button"
                 onClick={() => handleNavigate(item.path)}
@@ -279,11 +280,11 @@ const MobileBottomNav: React.FC = () => {
                 {active && (
                   <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-green-600 dark:bg-green-400 rounded-full" />
                 )}
-              </button>
+              </Button>
             );
           })}
 
-          <button
+          <Button
             type="button"
             onClick={() => setIsMoreOpen(true)}
             className={cn(
@@ -302,7 +303,7 @@ const MobileBottomNav: React.FC = () => {
             {isMoreActive && (
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-green-600 dark:bg-green-400 rounded-full" />
             )}
-          </button>
+          </Button>
         </div>
       </nav>
 
@@ -313,14 +314,14 @@ const MobileBottomNav: React.FC = () => {
               <DrawerTitle className="text-base font-semibold">
                 {t("mobileNav.allModules", "All Modules")}
               </DrawerTitle>
-              <button
+              <Button
                 type="button"
                 onClick={() => setIsMoreOpen(false)}
                 className="p-2 -mr-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label={t("common.close", "Close")}
               >
                 <X className="h-5 w-5 text-gray-500" />
-              </button>
+              </Button>
             </div>
           </DrawerHeader>
           <div
@@ -333,7 +334,7 @@ const MobileBottomNav: React.FC = () => {
                 const active = isActive(item);
 
                 return (
-                  <button
+                  <Button
                     key={item.id}
                     type="button"
                     onClick={() => handleNavigate(item.path)}
@@ -348,7 +349,7 @@ const MobileBottomNav: React.FC = () => {
                     <span className="text-xs font-medium text-center leading-tight">
                       {getLabel(item.labelKey, item.fallback)}
                     </span>
-                  </button>
+                  </Button>
                 );
               })}
             </div>

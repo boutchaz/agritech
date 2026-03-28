@@ -16,6 +16,7 @@ import {
   useTreeCategories,
   usePlantationTypes,
 } from "../hooks/useTreeManagement";
+import { Button } from '@/components/ui/button';
 
 interface TreeManagementProps {
   onDataChange?: () => void;
@@ -242,7 +243,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
     <div className="space-y-6">
       {/* Tabs */}
       <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
-        <button
+        <Button
           onClick={() => setActiveTab("trees")}
           className={`px-4 py-2 font-medium text-sm transition-colors ${
             activeTab === "trees"
@@ -252,8 +253,8 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         >
           <TreeDeciduous className="inline h-4 w-4 mr-2" />
           Types d'arbres
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setActiveTab("plantations")}
           className={`px-4 py-2 font-medium text-sm transition-colors ${
             activeTab === "plantations"
@@ -263,7 +264,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
         >
           <Sprout className="inline h-4 w-4 mr-2" />
           Types de plantation
-        </button>
+        </Button>
       </div>
 
       {/* Tree Categories Tab */}
@@ -278,13 +279,13 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
               placeholder="Nouvelle catégorie..."
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-            <button
+            <Button
               onClick={handleAddCategory}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
               <span>Ajouter catégorie</span>
-            </button>
+            </Button>
           </div>
 
           <div className="space-y-4">
@@ -302,18 +303,18 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                         onChange={(e) => setEditedCategoryName(e.target.value)}
                         className="flex-1 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
-                      <button
+                      <Button
                         onClick={() => handleSaveCategory(category.id)}
                         className="text-green-600 hover:text-green-700"
                       >
                         <Save className="h-4 w-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => setEditingCategory(null)}
                         className="text-gray-600 hover:text-gray-700"
                       >
                         <X className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <>
@@ -321,18 +322,18 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                         {category.category}
                       </h3>
                       <div className="flex items-center space-x-2">
-                        <button
+                        <Button
                           onClick={() => handleEditCategory(category.id)}
                           className="text-blue-600 hover:text-blue-700"
                         >
                           <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteCategory(category.id)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </>
                   )}
@@ -350,12 +351,12 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                       placeholder="Ajouter un arbre..."
                       className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <button
+                    <Button
                       onClick={() => handleAddTree(category.id)}
                       className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
                     >
                       <Plus className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -374,38 +375,38 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                               }
                               className="w-32 px-2 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                             />
-                            <button
+                            <Button
                               onClick={() => handleSaveTree(tree.id)}
                               className="text-green-600 hover:text-green-700"
                             >
                               <Save className="h-3 w-3" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => setEditingTree(null)}
                               className="text-gray-600 hover:text-gray-700"
                             >
                               <X className="h-3 w-3" />
-                            </button>
+                            </Button>
                           </>
                         ) : (
                           <>
                             <span className="text-green-800 dark:text-green-200">
                               {tree.name}
                             </span>
-                            <button
+                            <Button
                               onClick={() =>
                                 handleEditTree(category.id, tree.id, tree.name)
                               }
                               className="text-blue-600 hover:text-blue-700"
                             >
                               <Edit2 className="h-3 w-3" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => handleDeleteTree(tree.id)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-3 w-3" />
-                            </button>
+                            </Button>
                           </>
                         )}
                       </div>
@@ -462,13 +463,13 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                 placeholder="Arbres/ha"
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <button
+              <Button
                 onClick={handleAddPlantationType}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <Plus className="h-4 w-4" />
                 <span>Ajouter</span>
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -530,18 +531,18 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                       />
                     </div>
                     <div className="flex justify-end space-x-2">
-                      <button
+                      <Button
                         onClick={() => handleSavePlantationType(plantation.id)}
                         className="flex items-center justify-center min-h-[44px] min-w-[44px] text-green-600 hover:text-green-700"
                       >
                         <Save className="h-5 w-5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => setEditingPlantation(null)}
                         className="flex items-center justify-center min-h-[44px] min-w-[44px] text-gray-600 hover:text-gray-700"
                       >
                         <X className="h-5 w-5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -551,22 +552,22 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                         {plantation.type}
                       </h4>
                       <div className="flex items-center space-x-1">
-                        <button
+                        <Button
                           onClick={() =>
                             handleEditPlantationType(plantation.id)
                           }
                           className="flex items-center justify-center min-h-[44px] min-w-[44px] text-blue-600 hover:text-blue-700"
                         >
                           <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() =>
                             handleDeletePlantationType(plantation.id)
                           }
                           className="flex items-center justify-center min-h-[44px] min-w-[44px] text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -657,20 +658,20 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <button
+                          <Button
                             onClick={() =>
                               handleSavePlantationType(plantation.id)
                             }
                             className="text-green-600 hover:text-green-700 mr-3"
                           >
                             <Save className="h-4 w-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => setEditingPlantation(null)}
                             className="text-gray-600 hover:text-gray-700"
                           >
                             <X className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </td>
                       </>
                     ) : (
@@ -685,22 +686,22 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                           {plantation.trees_per_ha}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                          <button
+                          <Button
                             onClick={() =>
                               handleEditPlantationType(plantation.id)
                             }
                             className="text-blue-600 hover:text-blue-700 mr-3"
                           >
                             <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() =>
                               handleDeletePlantationType(plantation.id)
                             }
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </td>
                       </>
                     )}

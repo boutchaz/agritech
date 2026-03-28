@@ -12,6 +12,8 @@ import { ContextBuilderService } from './context/context-builder.service';
 import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { ConversationService } from './conversation/conversation.service';
 import { AgromindiaContextService } from './context/agromindia-context.service';
+import { FollowUpService } from './prompt/follow-up.service';
+import { AiQuotaService } from '../ai-quota/ai-quota.service';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
@@ -25,6 +27,8 @@ export class ChatService implements OnModuleInit {
     private readonly promptBuilder: PromptBuilderService,
     private readonly conversationService: ConversationService,
     private readonly agromindiaContextService: AgromindiaContextService,
+    private readonly followUpService: FollowUpService,
+    private readonly aiQuotaService: AiQuotaService,
   ) {
     this.zaiProvider = new ZaiProvider(configService);
   }
@@ -62,6 +66,24 @@ export class ChatService implements OnModuleInit {
     const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
     this.zaiProvider.setApiKey(apiKey);
 
+    // Check AI quota before generating
+    try {
+      const quotaResult = await this.aiQuotaService.checkAndConsume(organizationId, userId, 'chat');
+      if (!quotaResult.allowed) {
+        throw new BadRequestException({
+          message: 'AI quota exceeded',
+          error: 'AI_QUOTA_EXCEEDED',
+          statusCode: 400,
+          limit: quotaResult.limit,
+          used: quotaResult.used,
+          resetDate: quotaResult.resetDate,
+        });
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.warn(`Quota check failed, proceeding: ${error.message}`);
+    }
+
     if (shouldSaveHistory) {
       await this.conversationService.saveMessage(userId, organizationId, 'user', dto.query, dto.language);
     }
@@ -87,8 +109,14 @@ export class ChatService implements OnModuleInit {
         `(org: ${organizationId}, user: ${userId}, model: ${response.model})`,
       );
 
+      // Log AI usage (fire-and-forget)
+      this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', response.model, response.tokensUsed, false).catch(() => {});
+
+      // Parse follow-up suggestions from response
+      const { cleanText, suggestions } = this.followUpService.parseSuggestions(response.content);
+
       if (shouldSaveHistory) {
-        await this.conversationService.saveMessage(userId, organizationId, 'assistant', response.content, dto.language, {
+        await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
           provider: 'zai',
           model: response.model,
           tokensUsed: response.tokensUsed,
@@ -96,7 +124,7 @@ export class ChatService implements OnModuleInit {
       }
 
       return {
-        response: response.content,
+        response: cleanText,
         context_summary: this.contextBuilder.summarizeContext(context),
         metadata: {
           provider: 'zai',
@@ -104,6 +132,7 @@ export class ChatService implements OnModuleInit {
           tokensUsed: response.tokensUsed,
           timestamp: response.generatedAt,
         },
+        suggestions,
       };
     } catch (error) {
       this.logger.error(`Chat generation failed: ${error.message}`, error.stack);
@@ -172,8 +201,11 @@ export class ChatService implements OnModuleInit {
         callbacks.onToken(token);
       },
       onComplete: async () => {
+        // Parse follow-up suggestions from the complete response
+        const { cleanText, suggestions } = this.followUpService.parseSuggestions(fullResponse);
+
         if (shouldSaveHistory) {
-          await this.conversationService.saveMessage(userId, organizationId, 'assistant', fullResponse, dto.language, {
+          await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
             provider: 'zai',
             model: 'GLM-4.5-Flash',
             streamed: true,
@@ -183,6 +215,7 @@ export class ChatService implements OnModuleInit {
           provider: 'zai',
           model: 'GLM-4.5-Flash',
           timestamp: new Date(),
+          suggestions,
         });
       },
       onError: (error: Error) => {

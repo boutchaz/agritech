@@ -24,6 +24,7 @@ import WorkerForm from './WorkerForm';
 import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
+import { Button } from '@/components/ui/button';
 
 interface WorkersListProps {
   organizationId: string;
@@ -142,7 +143,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             </div>
           }
         >
-          <button
+          <Button
             data-tour="worker-add"
             onClick={() => {
               setSelectedWorker(null);
@@ -152,7 +153,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{t('workers.list.addWorker')}</span>
-          </button>
+          </Button>
         </Can>
       </div>
 
@@ -361,12 +362,12 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                         {t('workers.table.notEnabled')}
                       </span>
                       {worker.email && (
-                        <button
+                        <Button
                           onClick={() => handleEdit(worker)}
                           className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline"
                         >
                           {t('workers.table.activate')}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
@@ -375,42 +376,42 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700 rtl:flex-row-reverse" onClick={(e) => e.stopPropagation()}>
                   <Can I="create" a="Payment">
-                    <button
+                    <Button
                       onClick={() => handlePayWorker(worker)}
                       className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg"
                       title={t('workers.actions.paySalary')}
                     >
                       <Banknote className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </Can>
                   <Can I="update" a="Worker">
-                    <button
+                    <Button
                       onClick={() => handleEdit(worker)}
                       className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
                       title={t('workers.actions.edit')}
                     >
                       <Edit className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </Can>
                   {worker.is_active && (
                     <Can I="deactivate" a="Worker">
-                      <button
+                      <Button
                         onClick={() => handleDeactivate(worker.id)}
                         className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg"
                         title={t('workers.actions.deactivate')}
                       >
                         <UserX className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </Can>
                   )}
                   <Can I="delete" a="Worker">
-                    <button
+                    <Button
                       onClick={() => handleDelete(worker.id)}
                       className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                       title={t('workers.actions.delete')}
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </Can>
                   {!can('update', 'Worker') && !can('delete', 'Worker') && (
                     <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -532,13 +533,13 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                               {t('workers.table.notEnabled')}
                             </span>
                             {worker.email && (
-                              <button
+                              <Button
                                 onClick={() => handleEdit(worker)}
                                 className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline"
                                 title={t('workers.actions.edit')}
                               >
                                 {t('workers.table.activate')}
-                              </button>
+                              </Button>
                             )}
                           </div>
                         )}
@@ -546,42 +547,42 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
                       <td className="px-4 xl:px-6 py-4 text-end" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1 rtl:flex-row-reverse">
                           <Can I="create" a="Payment">
-                            <button
+                            <Button
                               onClick={() => handlePayWorker(worker)}
                               className="p-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
                               title={t('workers.actions.paySalary')}
                             >
                               <Banknote className="w-4 h-4" />
-                            </button>
+                            </Button>
                           </Can>
                           <Can I="update" a="Worker">
-                            <button
+                            <Button
                               onClick={() => handleEdit(worker)}
                               className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                               title={t('workers.actions.edit')}
                             >
                               <Edit className="w-4 h-4" />
-                            </button>
+                            </Button>
                           </Can>
                           {worker.is_active && (
                             <Can I="deactivate" a="Worker">
-                              <button
+                              <Button
                                 onClick={() => handleDeactivate(worker.id)}
                                 className="p-1 text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-200"
                                 title={t('workers.actions.deactivate')}
                               >
                                 <UserX className="w-4 h-4" />
-                              </button>
+                              </Button>
                             </Can>
                           )}
                           <Can I="delete" a="Worker">
-                            <button
+                            <Button
                               onClick={() => handleDelete(worker.id)}
                               className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200"
                               title={t('workers.actions.delete')}
                             >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </Button>
                           </Can>
                           {!can('update', 'Worker') && !can('delete', 'Worker') && (
                             <span className="text-xs text-gray-400 flex items-center gap-1">

@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface SubscriptionRequiredProps {
   reason?: 'no_subscription' | 'expired' | 'canceled' | 'past_due';
@@ -69,20 +70,20 @@ const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
 
           {/* Actions */}
           <div className="space-y-3">
-            <button
+            <Button
               onClick={() => navigate({ to: '/settings/subscription' })}
               className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <CreditCard className="h-5 w-5" />
               <span>View Subscription Plans</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => navigate({ to: '/settings/organization' })}
               className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
             >
               Organization Settings
-            </button>
+            </Button>
           </div>
 
           {/* Help Text */}

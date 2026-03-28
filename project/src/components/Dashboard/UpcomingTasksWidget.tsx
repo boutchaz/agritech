@@ -16,6 +16,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useAuth } from '../../hooks/useAuth';
 import type { Task } from '../../types/tasks';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const UpcomingTasksWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -144,13 +145,14 @@ const UpcomingTasksWidget: React.FC = () => {
           <Calendar className="h-5 w-5 text-green-600" />
           {t('dashboard.widgets.tasks.title')}
         </h3>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewAllTasks}
-          className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
 
       {/* Mini Calendar */}

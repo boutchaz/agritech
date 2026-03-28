@@ -25,6 +25,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Separator } from "./ui/separator";
 import { ALL_ROLES, ADMIN_ROLES, ADMIN_AND_MANAGER_ROLES } from "../types/auth";
 import type { RoleName } from "../types/auth";
+import { Button } from '@/components/ui/button';
 
 interface SettingsMenuItem {
   id: string;
@@ -224,7 +225,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     const active = isActive(item.path);
 
     return (
-      <button
+      <Button
         key={item.id}
         type="button"
         onClick={() => handleNavigate(item.path)}
@@ -260,7 +261,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
             </div>
           </div>
         </div>
-      </button>
+      </Button>
     );
   };
 
@@ -300,7 +301,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
         {/* Mobile section bar — tap to open Drawer */}
         <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <button
+          <Button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
             className="flex items-center justify-between w-full min-h-[44px]"
@@ -337,7 +338,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
               </span>
               <Menu className="h-5 w-5" />
             </div>
-          </button>
+          </Button>
         </div>
         {children}
       </div>
@@ -350,21 +351,21 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
               <DrawerTitle className="text-base font-semibold">
                 {t("settings.title")}
               </DrawerTitle>
-              <button
+              <Button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-2 -me-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                 aria-label={t("common.close", "Close")}
               >
                 <X className="h-5 w-5 text-gray-500" />
-              </button>
+              </Button>
             </div>
           </DrawerHeader>
           <div
             className="overflow-y-auto px-3 py-2"
             style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
           >
-            <button
+            <Button
               type="button"
               onClick={() => {
                 navigate({ to: "/" });
@@ -378,7 +379,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                   {t("settings.backToDashboard", "Back to Dashboard")}
                 </span>
               </div>
-            </button>
+            </Button>
             {renderSections()}
           </div>
         </DrawerContent>

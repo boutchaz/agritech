@@ -1,0 +1,58 @@
+import {
+  LayoutDashboard, AlertTriangle, Cloud, DollarSign, CheckSquare, Wheat,
+} from 'lucide-react';
+
+// Suggestion chips for empty state
+export const SUGGESTION_CHIPS = [
+  { key: 'chat.suggestions.overview', icon: LayoutDashboard, defaultText: 'Farm overview' },
+  { key: 'chat.suggestions.lowStock', icon: AlertTriangle, defaultText: 'Low stock alerts' },
+  { key: 'chat.suggestions.weather', icon: Cloud, defaultText: 'Weather forecast' },
+  { key: 'chat.suggestions.financial', icon: DollarSign, defaultText: 'Financial summary' },
+  { key: 'chat.suggestions.tasks', icon: CheckSquare, defaultText: 'Worker tasks today' },
+  { key: 'chat.suggestions.harvests', icon: Wheat, defaultText: 'Upcoming harvests' },
+];
+
+// Deep link mapping: module keywords → routes
+export const DEEP_LINK_MAP: Record<string, string> = {
+  'farm management': '/farms',
+  'gestion des fermes': '/farms',
+  'gestion de ferme': '/farms',
+  'إدارة المزارع': '/farms',
+  'parcels': '/parcels',
+  'parcelles': '/parcels',
+  'قطع الأرض': '/parcels',
+  'inventory': '/stock',
+  'stock': '/stock',
+  'inventaire': '/stock',
+  'المخزون': '/stock',
+  'workers': '/workers',
+  'travailleurs': '/workers',
+  'العمال': '/workers',
+  'tasks': '/tasks',
+  'tâches': '/tasks',
+  'المهام': '/tasks',
+  'accounting': '/accounting',
+  'comptabilité': '/accounting',
+  'المحاسبة': '/accounting',
+  'invoices': '/accounting',
+  'factures': '/accounting',
+  'الفواتير': '/accounting',
+  'settings': '/settings',
+  'paramètres': '/settings',
+  'الإعدادات': '/settings',
+  'dashboard': '/dashboard',
+  'tableau de bord': '/dashboard',
+  'لوحة القيادة': '/dashboard',
+  'campaigns': '/campaigns',
+  'campagnes': '/campaigns',
+  'الحملات': '/campaigns',
+  'marketplace': '/marketplace',
+  'marché': '/marketplace',
+  'السوق': '/marketplace',
+  'compliance': '/compliance',
+  'conformité': '/compliance',
+  'الامتثال': '/compliance',
+  'crop cycles': '/crop-cycles',
+  'cycles de culture': '/crop-cycles',
+  'دورات المحاصيل': '/crop-cycles',
+};

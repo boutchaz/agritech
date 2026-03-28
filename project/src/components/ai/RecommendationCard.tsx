@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, X, Play } from 'lucide-react';
 import type { AIRecommendation } from '@/lib/api/ai-recommendations';
+import { Button } from '@/components/ui/button';
 
 interface RecommendationCardProps {
   recommendation: AIRecommendation;
@@ -75,7 +76,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
       {recommendation.status === 'pending' && (
         <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
           {onValidate && (
-            <button
+            <Button
               type="button"
               onClick={() => onValidate(recommendation.id)}
               disabled={isValidating}
@@ -83,10 +84,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             >
               <Check className="w-4 h-4" />
               <span>Validate</span>
-            </button>
+            </Button>
           )}
           {onReject && (
-            <button
+            <Button
               type="button"
               onClick={() => onReject(recommendation.id)}
               disabled={isRejecting}
@@ -94,14 +95,14 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             >
               <X className="w-4 h-4" />
               <span>Reject</span>
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {recommendation.status === 'validated' && onExecute && (
         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <button
+          <Button
             type="button"
             onClick={() => onExecute(recommendation.id)}
             disabled={isExecuting}
@@ -109,7 +110,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           >
             <Play className="w-4 h-4" />
             <span>Execute Action</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

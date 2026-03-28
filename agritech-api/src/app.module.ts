@@ -103,6 +103,7 @@ import { ParcelEventsModule } from "./modules/parcel-events/parcel-events.module
 import { HealthModule } from "./modules/health/health.module";
 import { MonitoringModule } from "./modules/monitoring/monitoring.module";
 import { AuditModule } from "./modules/audit/audit.module";
+import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
 
 @Module({
   imports: [
@@ -125,6 +126,7 @@ import { AuditModule } from "./modules/audit/audit.module";
 
     // Core modules
     DatabaseModule,
+    AiQuotaModule,
     AuditModule,
     AuthModule,
     CaslModule,

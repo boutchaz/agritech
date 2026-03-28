@@ -18,6 +18,7 @@ import {
   useRemoveFarmRole,
 } from '../hooks/useFarmRoles';
 import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface FarmRoleManagerProps {
   farmId: string;
@@ -135,12 +136,12 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
             Assign and manage roles for farm management
           </p>
         </div>
-        <button
+        <Button
           onClick={onClose}
           className="p-2 hover:bg-gray-100 rounded-lg"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -155,13 +156,13 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-gray-900">Current Role Assignments</h4>
-          <button
+          <Button
             onClick={() => setShowAssignRole(true)}
             className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
           >
             <UserPlus className="w-4 h-4 mr-1" />
             Assign Role
-          </button>
+          </Button>
         </div>
 
         {roles.length === 0 ? (
@@ -195,19 +196,19 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
                     className="p-1 hover:bg-gray-200 rounded"
                     title="Edit Role"
                   >
                     <Edit className="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleRemoveRole(role.id)}
                     className="p-1 hover:bg-red-200 rounded text-red-600"
                     title="Remove Role"
                   >
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -276,20 +277,20 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
               )}
 
               <div className="flex justify-end space-x-3 pt-4">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowAssignRole(false)}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={loading || availableUsers.length === 0}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Assigning...' : 'Assign Role'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

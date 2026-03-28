@@ -7,6 +7,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { isToday } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const WorkersActivityWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -102,13 +103,14 @@ const WorkersActivityWidget: React.FC = () => {
             {t('dashboard.widgets.workers.title')}
           </h3>
         </div>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewWorkers}
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -217,13 +219,13 @@ const WorkersActivityWidget: React.FC = () => {
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
             {t('dashboard.widgets.workers.empty')}
           </p>
-          <button
+          <Button
             onClick={handleViewWorkers}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
           >
             <Users className="h-4 w-4" />
             {t('dashboard.widgets.workers.addWorkers')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { Lock, Zap } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../hooks/useSubscription';
 import { canAccessFeature } from '../lib/polar';
+import { Button } from '@/components/ui/button';
 
 interface FeatureGateProps {
   feature: 'analytics' | 'sensorIntegration' | 'aiRecommendations' | 'advancedReporting' | 'apiAccess' | 'prioritySupport';
@@ -38,13 +39,13 @@ const FeatureLockedMessage: React.FC<FeatureLockedMessageProps> = ({ onUpgrade }
       <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
         This feature is available on Professional and Enterprise plans.
       </p>
-      <button
+      <Button
         onClick={onUpgrade}
         className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
       >
         <Zap className="h-5 w-5" />
         <span>Upgrade Now</span>
-      </button>
+      </Button>
     </div>
   );
 };

@@ -9,6 +9,7 @@ import { fr } from 'date-fns/locale';
 import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const HarvestSummaryWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -102,13 +103,14 @@ const HarvestSummaryWidget: React.FC = () => {
             {t('dashboard.widgets.harvests.title')}
           </h3>
         </div>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewHarvests}
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {stats.total > 0 ? (
@@ -207,13 +209,13 @@ const HarvestSummaryWidget: React.FC = () => {
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
             {t('dashboard.widgets.harvests.empty')}
           </p>
-          <button
+          <Button
             onClick={handleViewHarvests}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600 rounded-lg transition-colors"
+            className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600"
           >
             <PackageIcon className="h-4 w-4" />
             {t('dashboard.widgets.harvests.record')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

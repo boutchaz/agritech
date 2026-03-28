@@ -16,6 +16,7 @@ import type { HarvestSummary } from '@/types/harvests';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useServerTableState, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { Button } from '@/components/ui/button';
 
 function HarvestsPage() {
   const { t } = useTranslation();
@@ -135,32 +136,32 @@ function HarvestsPage() {
           onSearch={(query) => tableState.setSearch(query)}
           actions={
             <div className="flex flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-              <button
+              <Button
                 data-tour="harvest-filters"
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 w-full sm:w-auto"
               >
                 <Filter className="h-4 w-4" />
                 {t('harvests.filters')}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={exportToCSV}
                 disabled={harvests.length === 0}
                 className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
               >
                 <Download className="h-4 w-4" />
                 {t('harvests.export')}
-              </button>
+              </Button>
 
-              <button
+              <Button
                 data-tour="harvest-add"
                 onClick={handleAddHarvest}
                 className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 {t('harvests.newHarvest')}
-              </button>
+              </Button>
             </div>
           }
         />
@@ -168,13 +169,13 @@ function HarvestsPage() {
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
         {/* Mobile Add Button - Only visible on mobile */}
         <div className="md:hidden">
-          <button
+          <Button
             onClick={handleAddHarvest}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
           >
             <Plus className="h-5 w-5" />
             {t('harvests.newHarvest')}
-          </button>
+          </Button>
         </div>
 
         {/* Statistics */}
@@ -232,13 +233,13 @@ function HarvestsPage() {
               {tableState.search ? t('harvests.emptyState.modifySearch') : t('harvests.emptyState.startFirst')}
             </p>
             {!tableState.search && (
-              <button
+              <Button
                 onClick={handleAddHarvest}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
               >
                 <Plus className="h-4 w-4" />
                 {t('harvests.newHarvest')}
-              </button>
+              </Button>
             )}
           </div>
         ) : (

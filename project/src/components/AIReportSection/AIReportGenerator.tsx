@@ -20,6 +20,7 @@ import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { useAIProviders, useGenerateAIReport, useAIReportJob, useCalibrationStatus, useCalibrate, useFetchData, usePendingAIReportJobs } from '../../hooks/useAIReports';
 import { useSourceDataFromCalibration, useRefreshSourceData } from '../../hooks/useSourceDataMetadata';
 import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
+import { Button } from '@/components/ui/button';
 
 const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({ onSelectJob }) => {
   const { t } = useTranslation();
@@ -37,7 +38,7 @@ const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({
       </div>
       <div className="space-y-2">
         {data.jobs.map((job) => (
-          <button
+          <Button
             key={job.job_id}
             onClick={() => onSelectJob(job.job_id)}
             className="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-blue-100 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
@@ -57,7 +58,7 @@ const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({
               </div>
               <span className="text-xs text-gray-500">{job.progress}%</span>
             </div>
-          </button>
+          </Button>
         ))}
       </div>
     </div>
@@ -396,7 +397,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
           )}
 
           {/* Generate Button */}
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={
               !selectedProvider ||
@@ -416,7 +417,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 <span>{t('aiReport.generateButton', 'Générer le rapport IA')}</span>
               </>
             )}
-          </button>
+          </Button>
           {calibrationStatus?.status === 'blocked' && (
             <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
               {t(
@@ -464,7 +465,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               </span>
             </div>
             <div className="flex items-center space-x-3">
-              <button
+              <Button
                 onClick={handleRegenerate}
                 disabled={isGenerating}
                 className="flex items-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
@@ -473,7 +474,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                   className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`}
                 />
                 <span>{t('aiReport.regenerate', 'Régénérer')}</span>
-              </button>
+              </Button>
               <AIReportExport
                 sections={generatedReport.sections}
                 parcelName={parcelName}
@@ -520,12 +521,12 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                     generatedAt={generatedReport.generatedAt}
                     provider={generatedReport.provider}
                   />
-                  <button
+                  <Button
                     onClick={() => setShowFullPreview(false)}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                   >
                     <X className="w-6 h-6 text-gray-500" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">

@@ -14,6 +14,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useDataAvailability } from '../../hooks/useAIReports';
+import { Button } from '@/components/ui/button';
 
 interface DataAvailabilityPreviewProps {
   parcelId: string;
@@ -70,13 +71,13 @@ const DataSourceRow: React.FC<DataSourceRowProps> = ({
           </span>
         )}
         {!available && onAction && (
-          <button
+          <Button
             onClick={onAction}
             className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:hover:bg-primary-900/50 rounded transition-colors"
           >
             <Plus className="w-3 h-3" />
             {actionLabel}
-          </button>
+          </Button>
         )}
         {available ? (
           <CheckCircle className="w-5 h-5 text-green-500" />

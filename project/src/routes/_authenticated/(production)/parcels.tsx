@@ -12,6 +12,7 @@ import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader } from '@/components/ui/loader'
 import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery'
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
+import { Button } from '@/components/ui/button';
 
 interface ParcelsListContentProps {
   search: { farmId?: string };
@@ -257,7 +258,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 </p>
                   {!isAllFarmsView && (currentFarm || selectedFarmId) && (
                     <div className="space-x-3" data-tour="parcel-actions">
-                      <button
+                      <Button
                         data-testid="create-parcel-button"
                         onClick={() => {
                           setEditingBoundaryParcelId(null);
@@ -266,8 +267,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                       >
                         {t('parcels.addParcel')}
-                      </button>
-                    <button
+                      </Button>
+                    <Button
                       onClick={() => {
                         // Manual refresh of React Query cache
                         window.location.reload();
@@ -275,7 +276,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       {t('parcels.refresh')}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -284,12 +285,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
             <>
               {showAddParcelMap && parcels.length === 0 && (
                 <div className="mb-4 flex justify-between items-center">
-                  <button
+                  <Button
                     onClick={() => setShowAddParcelMap(false)}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
                   >
                     {t('parcels.back')}
-                  </button>
+                  </Button>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {t('parcels.drawOnMap')}
                   </p>
@@ -345,7 +346,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                             <span>{parcel.name}</span>
                           </h3>
                           <div className="flex space-x-1">
-                            <button
+                            <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingParcel(parcel);
@@ -355,8 +356,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                               title={t('app.edit')}
                             >
                               <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm(t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'))) {
@@ -367,7 +368,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                               title={t('parcels.archive', 'Archiver')}
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         </div>
 
@@ -433,7 +434,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                               <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                                 {t('parcels.noBoundaries')}
                               </p>
-                              <button
+                              <Button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setEditingBoundaryParcelId(parcel.id);
@@ -442,10 +443,10 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                                 className="text-xs text-blue-600 hover:text-blue-700 underline"
                               >
                                 {t('parcels.defineBoundaries')}
-                              </button>
+                              </Button>
                             </div>
                           )}
-                          <button
+                          <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate({ to: `/parcels/${parcel.id}` });
@@ -454,7 +455,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                           >
                             <span>{t('parcels.viewDetails')}</span>
                             <span>→</span>
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     );
@@ -580,7 +581,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">
-              <button
+              <Button
                 onClick={() => {
                   setEditingParcel(null);
                   setShowEditDialog(false);
@@ -588,8 +589,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 {t('parcels.form.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   if (editingParcel) {
                     handleUpdateParcel(editingParcel.id, editingParcel);
@@ -598,7 +599,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 {t('parcels.form.save')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

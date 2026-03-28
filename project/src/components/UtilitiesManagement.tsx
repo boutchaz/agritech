@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
 import InlineFarmSelector from './InlineFarmSelector';
+import { Button } from '@/components/ui/button';
 
 interface Utility {
   id: string;
@@ -648,7 +649,7 @@ const UtilitiesManagement: React.FC = () => {
 
         {/* Mobile: Add button at top */}
         <div className="sm:hidden">
-          <button
+          <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
             className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'} shadow-md`}
@@ -656,53 +657,53 @@ const UtilitiesManagement: React.FC = () => {
           >
             <Plus className="h-5 w-5" />
             <span className="font-medium">Nouvelle Charge</span>
-          </button>
+          </Button>
         </div>
 
         {/* Desktop controls */}
         <div className="hidden sm:flex items-center space-x-4">
-          <button
+          <Button
             onClick={() => navigate({ to: '/accounting-journal' })}
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
           >
             <BookOpen className="h-4 w-4" />
             <span>Journal Comptable</span>
-          </button>
+          </Button>
 
           {/* View Mode Toggle */}
           <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
+            <Button
               onClick={() => setViewMode('grouped')}
               className={`p-2 rounded-md transition-colors ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue groupée"
             >
               <Grid className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setViewMode('cards')}
               className={`p-2 rounded-md transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue cartes"
             >
               <List className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue liste"
             >
               <Calendar className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setViewMode('dashboard')}
               className={`p-2 rounded-md transition-colors ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
               title="Vue tableau de bord"
             >
               <BarChart3 className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
 
           {/* Filter and Sort Controls */}
-          <button
+          <Button
             onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
             className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'} hover:bg-blue-50 dark:hover:bg-blue-900/20`}
             title="Filtres et tri"
@@ -714,9 +715,9 @@ const UtilitiesManagement: React.FC = () => {
             ) : (
               <ChevronDown className="h-3 w-3" />
             )}
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
             className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
@@ -724,44 +725,44 @@ const UtilitiesManagement: React.FC = () => {
           >
             <Plus className="h-5 w-5" />
             <span>Nouvelle Charge</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Mobile: View mode and filter toggle */}
       <div className="sm:hidden flex items-center gap-2">
         <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 overflow-x-auto">
-          <button
+          <Button
             onClick={() => setViewMode('grouped')}
             className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
             title="Vue groupée"
           >
             <Grid className="h-4 w-4 mx-auto" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setViewMode('cards')}
             className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
             title="Vue cartes"
           >
             <List className="h-4 w-4 mx-auto" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setViewMode('list')}
             className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
             title="Vue liste"
           >
             <Calendar className="h-4 w-4 mx-auto" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setViewMode('dashboard')}
             className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
             title="Vue tableau de bord"
           >
             <BarChart3 className="h-4 w-4 mx-auto" />
-          </button>
+          </Button>
         </div>
 
-        <button
+        <Button
           onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
           className={`flex items-center space-x-2 px-3 py-2 border rounded-lg transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}
         >
@@ -771,7 +772,7 @@ const UtilitiesManagement: React.FC = () => {
           ) : (
             <ChevronDown className="h-3 w-3" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Advanced Filters Panel */}
@@ -902,7 +903,7 @@ const UtilitiesManagement: React.FC = () => {
             </div>
 
             {/* Clear Filters Button */}
-            <button
+            <Button
               onClick={() => {
                 setFilters({
                   dateRange: { start: '', end: '' },
@@ -917,7 +918,7 @@ const UtilitiesManagement: React.FC = () => {
               className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md"
             >
               Réinitialiser
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1006,12 +1007,12 @@ const UtilitiesManagement: React.FC = () => {
                 </div>
               )}
             </div>
-            <button
+            <Button
               onClick={() => setError(null)}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1029,13 +1030,13 @@ const UtilitiesManagement: React.FC = () => {
             Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)
           </p>
           <PermissionGuard resource="utilities" action="create">
-            <button
+            <Button
               onClick={() => setShowAddModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
               <Plus className="h-4 w-4 mr-2" />
               Ajouter une charge
-            </button>
+            </Button>
           </PermissionGuard>
         </div>
       )}
@@ -1052,7 +1053,7 @@ const UtilitiesManagement: React.FC = () => {
           <p className="text-gray-500 dark:text-gray-400 mb-6">
             Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.
           </p>
-          <button
+          <Button
             onClick={() => {
               setFilters({
                 dateRange: { start: '', end: '' },
@@ -1067,7 +1068,7 @@ const UtilitiesManagement: React.FC = () => {
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
           >
             Réinitialiser les filtres
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1140,29 +1141,29 @@ const UtilitiesManagement: React.FC = () => {
                       </div>
                       <div className="flex space-x-2">
                         {utility.invoice_url && (
-                          <button
+                          <Button
                             onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
                             className="text-blue-400 hover:text-blue-500"
                             title="Télécharger la facture"
                           >
                             <Download className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                         <PermissionGuard resource="utilities" action="update">
-                          <button
+                          <Button
                             onClick={() => setEditingUtility(utility)}
                             className="text-gray-400 hover:text-gray-500"
                           >
                             <Edit2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </PermissionGuard>
                         <PermissionGuard resource="utilities" action="delete">
-                          <button
+                          <Button
                             onClick={() => handleDeleteUtility(utility.id)}
                             className="text-gray-400 hover:text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </PermissionGuard>
                       </div>
                     </div>
@@ -1205,20 +1206,20 @@ const UtilitiesManagement: React.FC = () => {
                 </div>
                 <div className="flex space-x-2">
                   <PermissionGuard resource="utilities" action="update">
-                    <button
+                    <Button
                       onClick={() => setEditingUtility(utility)}
                       className="text-gray-400 hover:text-gray-500"
                     >
                       <Edit2 className="h-5 w-5" />
-                    </button>
+                    </Button>
                   </PermissionGuard>
                   <PermissionGuard resource="utilities" action="delete">
-                    <button
+                    <Button
                       onClick={() => handleDeleteUtility(utility.id)}
                       className="text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="h-5 w-5" />
-                    </button>
+                    </Button>
                   </PermissionGuard>
                 </div>
               </div>
@@ -1260,12 +1261,12 @@ const UtilitiesManagement: React.FC = () => {
                 {utility.invoice_url && (
                   <div className="flex items-center space-x-2 mt-2">
                     <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <button
+                    <Button
                       onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
                       className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       Télécharger la facture
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1358,29 +1359,29 @@ const UtilitiesManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       {utility.invoice_url && (
-                        <button
+                        <Button
                           onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
                           className="text-blue-400 hover:text-blue-500"
                           title="Télécharger la facture"
                         >
                           <Download className="h-4 w-4" />
-                        </button>
+                        </Button>
                       )}
                       <PermissionGuard resource="utilities" action="update">
-                        <button
+                        <Button
                           onClick={() => setEditingUtility(utility)}
                           className="text-gray-400 hover:text-gray-500"
                         >
                           <Edit2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </PermissionGuard>
                       <PermissionGuard resource="utilities" action="delete">
-                        <button
+                        <Button
                           onClick={() => handleDeleteUtility(utility.id)}
                           className="text-gray-400 hover:text-red-500"
                         >
                           <Trash2 className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </PermissionGuard>
                     </div>
                   </td>
@@ -1712,13 +1713,13 @@ const UtilitiesManagement: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <FileText className="h-4 w-4 text-green-600" />
                         <span className="text-sm text-gray-600">{selectedFile.name}</span>
-                        <button
+                        <Button
                           type="button"
                           onClick={() => setSelectedFile(null)}
                           className="text-red-400 hover:text-red-600"
                         >
                           <X className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -1727,13 +1728,13 @@ const UtilitiesManagement: React.FC = () => {
                   <div className="flex items-center space-x-2">
                     <FileText className="h-4 w-4 text-green-600" />
                     <span className="text-sm text-gray-600">Facture attachée</span>
-                    <button
+                    <Button
                       type="button"
                       onClick={() => downloadInvoice(editingUtility.invoice_url!, `facture-${editingUtility.type}-${editingUtility.billing_date}.pdf`)}
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <Download className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>

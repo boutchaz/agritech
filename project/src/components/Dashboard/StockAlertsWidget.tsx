@@ -4,6 +4,7 @@ import { Package, AlertTriangle, ChevronRight, TrendingDown, CheckCircle } from 
 import { useInventory, type InventoryItem } from '../../hooks/useInventory';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 const StockAlertsWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -74,13 +75,14 @@ const StockAlertsWidget: React.FC = () => {
             {t('dashboard.widgets.stock.title')}
           </h3>
         </div>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewStock}
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Stats Grid */}
@@ -162,12 +164,14 @@ const StockAlertsWidget: React.FC = () => {
             ))}
           </div>
           {lowStockItems.length > 5 && (
-            <button
+            <Button
+              variant="link"
+              size="sm"
               onClick={handleViewStock}
-              className="mt-3 text-xs font-semibold text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+              className="mt-3 p-0 h-auto text-xs text-amber-600 dark:text-amber-400"
             >
               {t('dashboard.widgets.stock.moreItems', { count: lowStockItems.length - 5 })}
-            </button>
+            </Button>
           )}
         </div>
       ) : (

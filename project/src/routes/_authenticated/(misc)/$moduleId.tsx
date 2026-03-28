@@ -5,6 +5,7 @@ import { useModules } from '@/hooks/useModules'
 import { useModuleConfig } from '@/hooks/useModuleConfig'
 import ModuleView from '@/components/ModuleView'
 import type { Module } from '@/types'
+import { Button } from '@/components/ui/button';
 
 const AppContent: React.FC = () => {
   const { currentOrganization } = useAuth();
@@ -118,7 +119,7 @@ const AppContent: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {activeModules.map(mod => (
-                    <button
+                    <Button
                       key={mod.id}
                       onClick={() => navigate({ to: `/${mod.id}` })}
                       className="px-4 py-3 text-left rounded-lg border border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 group"
@@ -126,7 +127,7 @@ const AppContent: React.FC = () => {
                       <div className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400">
                         {mod.name}
                       </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>

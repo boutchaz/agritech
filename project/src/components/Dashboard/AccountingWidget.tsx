@@ -4,6 +4,7 @@ import { Receipt, ChevronRight, TrendingUp, TrendingDown, AlertCircle, CheckCirc
 import { useInvoices, useInvoiceStats } from '../../hooks/useInvoices';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 const AccountingWidget: React.FC = () => {
@@ -115,13 +116,14 @@ const AccountingWidget: React.FC = () => {
             {t('dashboard.widgets.accounting.title', 'Accounting')}
           </h3>
         </div>
-        <button
+        <Button
+          variant="link"
           onClick={handleViewAccounting}
-          className="text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1 transition-colors"
+          className="text-green-600 dark:text-green-400 p-0 h-auto"
         >
           {t('dashboard.widgets.viewAll', 'View All')}
-          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Revenue vs Expenses Overview */}

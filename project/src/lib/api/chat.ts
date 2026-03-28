@@ -32,6 +32,7 @@ export interface ChatResponse {
   response: string;
   context_summary: ChatContextSummary;
   metadata: ChatMetadata;
+  suggestions?: string[];
 }
 
 export interface ChatMessage {
@@ -39,6 +40,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  suggestions?: string[];
 }
 
 export interface ChatHistoryResponse {
@@ -170,7 +172,7 @@ export const chatApi = {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.type === 'token') onToken(data.content);
-            else if (data.type === 'done') onComplete(data.metadata);
+            else if (data.type === 'done') onComplete({ ...data.metadata, suggestions: data.metadata?.suggestions });
             else if (data.type === 'error') onError(new Error(data.message));
           } catch {
             // Skip malformed SSE data

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Droplets, Thermometer, Wind, FlaskRound as Flask, Calendar, LineChart, AlertTriangle, Leaf, Edit2 } from 'lucide-react';
 import type { Parcel, SoilAnalysis } from '../types';
 import SoilAnalysisForm from './SoilAnalysisForm';
+import { Button } from '@/components/ui/button';
 
 interface ParcelViewProps {
   parcel: Parcel;
@@ -69,12 +70,12 @@ const ParcelView: React.FC<ParcelViewProps> = ({ parcel, onSoilDataUpdate }) => 
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Sol</h3>
             <div className="flex items-center space-x-2">
-              <button
+              <Button
                 onClick={() => setShowSoilForm(true)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <Edit2 className="h-5 w-5" />
-              </button>
+              </Button>
               <Flask className="h-6 w-6 text-green-500" />
             </div>
           </div>
@@ -142,12 +143,12 @@ const ParcelView: React.FC<ParcelViewProps> = ({ parcel, onSoilDataUpdate }) => 
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Analyse du Sol</h3>
             <div className="flex items-center space-x-2">
-              <button
+              <Button
                 onClick={() => setShowSoilForm(true)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <Edit2 className="h-5 w-5" />
-              </button>
+              </Button>
               <Leaf className="h-6 w-6 text-green-500" />
             </div>
           </div>

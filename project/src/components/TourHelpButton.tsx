@@ -3,6 +3,7 @@ import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, CloudOff
 import { useTranslation } from 'react-i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface TourInfo {
   id: TourId;
@@ -220,7 +221,7 @@ export const TourHelpButton: React.FC = () => {
               const showReset = completed || dismissed;
               
               return (
-                <button
+                <Button
                   key={tour.id}
                   onClick={() => handleStartTour(tour.id)}
                   className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0 text-left"
@@ -260,34 +261,34 @@ export const TourHelpButton: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     {showReset && (
-                      <button
+                      <Button
                         onClick={(e) => handleResetTour(e, tour.id)}
                         className="p-1 hover:bg-gray-200 rounded transition-colors"
                         title={t('helpCenter.restartTour')}
                       >
                         <RotateCcw className="h-3.5 w-3.5 text-gray-400" />
-                      </button>
+                      </Button>
                     )}
                     <ChevronRight className="h-4 w-4 text-gray-400" />
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
 
           <div className="p-3 bg-gray-50 border-t border-gray-200">
-            <button
+            <Button
               onClick={handleResetAll}
               className="w-full text-sm text-gray-600 hover:text-gray-800 flex items-center justify-center gap-2 py-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <RotateCcw className="h-4 w-4" />
               {t('helpCenter.resetAllTours')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
         className={`
           p-4 rounded-full shadow-lg transition-all duration-300 
@@ -299,7 +300,7 @@ export const TourHelpButton: React.FC = () => {
         title={t('helpCenter.buttonTitle')}
       >
         <HelpCircle className="h-6 w-6" />
-      </button>
+      </Button>
     </div>
   );
 };

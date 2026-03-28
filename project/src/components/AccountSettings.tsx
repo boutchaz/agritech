@@ -38,6 +38,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
 import UserAvatar from '@/components/ui/UserAvatar';
+import { Button } from '@/components/ui/button';
 
 interface UserProfile {
   id: string;
@@ -454,7 +455,7 @@ const AccountSettings: React.FC = () => {
             {t('account.title', 'Account Settings')}
           </h2>
         </div>
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
@@ -465,7 +466,7 @@ const AccountSettings: React.FC = () => {
             <Save className="h-4 w-4" />
           )}
           <span>{saving ? t('profile.saving') : t('profile.save')}</span>
-        </button>
+        </Button>
       </div>
 
       {/* Error/Success Messages */}
@@ -490,7 +491,7 @@ const AccountSettings: React.FC = () => {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              <button
+              <Button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -501,7 +502,7 @@ const AccountSettings: React.FC = () => {
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
-              </button>
+              </Button>
             );
           })}
         </nav>
@@ -527,14 +528,14 @@ const AccountSettings: React.FC = () => {
                     size="xl"
                   />
                   {profile?.avatar_url && (
-                    <button
+                    <Button
                       onClick={handleRemoveAvatar}
                       disabled={uploadingAvatar}
                       className="absolute -top-1 -end-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       title={t('profile.removePhoto')}
                     >
                       <X className="h-3 w-3" />
-                    </button>
+                    </Button>
                   )}
                   {uploadingAvatar && (
                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
@@ -552,22 +553,22 @@ const AccountSettings: React.FC = () => {
                     disabled={uploadingAvatar}
                   />
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <button
+                    <Button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingAvatar}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Camera className="h-4 w-4" />
                       <span>{t('profile.uploadPhoto', 'Upload')}</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={openCamera}
                       disabled={uploadingAvatar}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Camera className="h-4 w-4" />
                       <span>{t('profile.takePhoto', 'Take Photo')}</span>
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-start">
                     {t('profile.photoFormats')}
@@ -823,7 +824,7 @@ const AccountSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.currentPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -833,7 +834,7 @@ const AccountSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -852,7 +853,7 @@ const AccountSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.newPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -862,7 +863,7 @@ const AccountSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -881,7 +882,7 @@ const AccountSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.confirmPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() =>
                       setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
@@ -893,7 +894,7 @@ const AccountSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -909,7 +910,7 @@ const AccountSettings: React.FC = () => {
 
               {/* Submit Button */}
               <div className="pt-4">
-                <button
+                <Button
                   onClick={handlePasswordChange}
                   disabled={
                     changingPassword ||
@@ -928,7 +929,7 @@ const AccountSettings: React.FC = () => {
                       ? t('profile.password.changing')
                       : t('profile.password.change')}
                   </span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -943,12 +944,12 @@ const AccountSettings: React.FC = () => {
               <h3 className="font-semibold text-gray-900 dark:text-white">
                 {t('profile.takePhoto', 'Take Photo')}
               </h3>
-              <button
+              <Button
                 onClick={stopCamera}
                 className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             <div className="relative bg-black aspect-square">
               <video
@@ -960,18 +961,18 @@ const AccountSettings: React.FC = () => {
               />
             </div>
             <div className="flex items-center justify-center gap-4 p-4">
-              <button
+              <Button
                 onClick={stopCamera}
                 className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 {t('app.cancel', 'Cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={capturePhoto}
                 className="px-6 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
               >
                 {t('profile.capture', 'Capture')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

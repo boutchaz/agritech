@@ -1,5 +1,6 @@
 import { Database, FileJson, Sprout } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -157,17 +158,17 @@ export function CalibrationRunInputsPanel({
           </p>
           <div className="flex flex-shrink-0 flex-wrap gap-2">
             {onOpenPartialRecalibration && (
-              <button
+              <Button
                 type="button"
                 onClick={onOpenPartialRecalibration}
                 title={t('calibration.runInputs.btnTargetedTitle')}
                 className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:bg-gray-800 dark:text-blue-300 dark:hover:bg-blue-950/40"
               >
                 {t('calibration.runInputs.btnTargeted')}
-              </button>
+              </Button>
             )}
             {onOpenFullRecalibration && (
-              <button
+              <Button
                 type="button"
                 onClick={onOpenFullRecalibration}
                 disabled={fullRecalibrationDisabled}
@@ -175,7 +176,7 @@ export function CalibrationRunInputsPanel({
                 className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('calibration.runInputs.btnFull')}
-              </button>
+              </Button>
             )}
           </div>
         </div>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { blogsApi, type BlogFilters, type BlogCategory } from '../../lib/api/blogs';
 import { BlogCard } from './BlogCard';
+import { Button } from '@/components/ui/button';
 
 export function BlogList() {
   const [filters, setFilters] = useState<BlogFilters>({
@@ -113,13 +114,13 @@ export function BlogList() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
-              <button
+              <Button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage <= 1}
                 className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
-              </button>
+              </Button>
 
               {[...Array(totalPages)].map((_, i) => {
                 const page = i + 1;
@@ -135,7 +136,7 @@ export function BlogList() {
                 }
 
                 return (
-                  <button
+                  <Button
                     key={page}
                     onClick={() => handlePageChange(page)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -145,17 +146,17 @@ export function BlogList() {
                     }`}
                   >
                     {page}
-                  </button>
+                  </Button>
                 );
               })}
 
-              <button
+              <Button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
                 className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <ChevronRight className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
           )}
         </>

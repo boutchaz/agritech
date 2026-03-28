@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sprout, Globe, User, ArrowRight, Clock } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
+import { Button } from '@/components/ui/button';
 
 interface ProfileData {
   first_name: string;
@@ -130,7 +131,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
           />
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(1)}
           disabled={!profileData.first_name.trim() || !profileData.last_name.trim()}
           data-testid="onboarding-continue-name"
@@ -142,7 +143,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -184,7 +185,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
           ))}
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(2)}
           data-testid="onboarding-continue-language"
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -194,7 +195,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -235,7 +236,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         ))}
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!isValid}
         data-testid="onboarding-next-step-profile"
@@ -247,7 +248,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
       >
         <span>Étape suivante</span>
         <ArrowRight className="w-5 h-5" />
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

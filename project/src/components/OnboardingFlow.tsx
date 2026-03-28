@@ -10,6 +10,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface OnboardingFlowProps {
   user: any;
@@ -614,26 +615,26 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
           {/* Navigation */}
           <div className="flex justify-between mt-8">
-            <button
+            <Button
               type="button"
               onClick={handlePrevious}
               disabled={currentStep === 1}
               className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Précédent
-            </button>
+            </Button>
 
             {currentStep < 3 ? (
-              <button
+              <Button
                 type="button"
                 onClick={handleNext}
                 className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
                 data-testid="onboarding-next-button"
               >
                 {canSkipStep(currentStep) ? 'Continuer' : 'Suivant'}
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
                 onClick={handleComplete}
                 disabled={loading || seedingData}
@@ -650,7 +651,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 ) : (
                   'Terminer'
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>

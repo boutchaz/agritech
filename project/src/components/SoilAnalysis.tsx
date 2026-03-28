@@ -7,6 +7,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useFormErrors } from '@/hooks/useFormErrors';
+import { Button } from '@/components/ui/button';
 
 interface SoilAnalysisProps {
   onSave: (data: SoilAnalysisData) => void;
@@ -131,12 +132,12 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Analyse du Sol</h3>
-        <button
+        <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -433,20 +434,20 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
          </div>
 
         <div className="flex justify-end space-x-3 pt-4">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
             className="px-4 py-2 text-gray-600 hover:text-gray-800"
           >
             Annuler
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
           >
             <Save className="h-4 w-4" />
             <span>Enregistrer</span>
-          </button>
+          </Button>
         </div>
       </form>
     </div>

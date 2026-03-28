@@ -14,6 +14,7 @@ import {
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { ButtonLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface IndicesCalculatorProps {
   parcelId: string;
@@ -361,16 +362,16 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             </div>
           )}
 
-          <button
+          <Button
             onClick={() => refetchCache()}
             disabled={isLoadingCache}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
             Actualiser le cache
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={handleCalculate}
             disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
@@ -386,13 +387,13 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
                 Récupérer depuis satellite
               </>
             )}
-          </button>
+          </Button>
 
           {getDisplayResults() && (
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+            <Button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
               <Download className="w-4 h-4" />
               Exporter les résultats
-            </button>
+            </Button>
           )}
         </div>
       </div>

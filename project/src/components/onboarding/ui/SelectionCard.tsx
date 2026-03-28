@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SelectionCardProps {
   title: string;
@@ -86,7 +87,7 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
   const testIdFromTitle = title.replace(/[^\x00-\x7F]/g, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -159,7 +160,7 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
           animation: scale-in 0.25s ease-out forwards;
         }
       `}</style>
-    </button>
+    </Button>
   );
 };
 

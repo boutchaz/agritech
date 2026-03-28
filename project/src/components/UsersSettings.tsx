@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { organizationUsersApi } from '../lib/api/organization-users';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { Button } from '@/components/ui/button';
 
 interface OrganizationUser {
   id: string;
@@ -335,13 +336,13 @@ const UsersSettings: React.FC = () => {
             </div>
           }
         >
-          <button
+          <Button
             onClick={() => setShowInviteUser(true)}
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
           >
             <Plus className="h-4 w-4" />
             <span>{t('users.invite.button')}</span>
-          </button>
+          </Button>
         </Can>
       </div>
 
@@ -450,7 +451,7 @@ const UsersSettings: React.FC = () => {
                             </option>
                           ))}
                         </select>
-                        <button
+                        <Button
                           onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
                           className={`p-2 rounded-lg ${user.is_active ?
                             'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' :
@@ -459,26 +460,26 @@ const UsersSettings: React.FC = () => {
                           disabled={user.user_id === currentUser?.id}
                         >
                           {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        </button>
+                        </Button>
                         {user.role?.name === 'farm_worker' && (
-                          <button
+                          <Button
                             onClick={() => handleViewPassword(user)}
                             className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
                             title={t('users.actions.viewPassword')}
                           >
                             <Key className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                       </>
                     )}
                     {can('remove', 'User') && user.user_id !== currentUser?.id && (
-                      <button
+                      <Button
                         onClick={() => handleRemoveUser(user.user_id)}
                         className="p-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg"
                         title={t('users.actions.remove')}
                       >
                         <Trash2 className="h-4 w-4" />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}
@@ -599,7 +600,7 @@ const UsersSettings: React.FC = () => {
                             </select>
 
                             {/* Toggle Status */}
-                            <button
+                            <Button
                               onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
                               className={`p-1 rounded ${user.is_active ?
                                 'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400' :
@@ -608,29 +609,29 @@ const UsersSettings: React.FC = () => {
                               disabled={user.user_id === currentUser?.id}
                             >
                               {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                            </button>
+                            </Button>
 
                             {/* Password Management - for worker users */}
                             {user.role?.name === 'farm_worker' && (
-                              <button
+                              <Button
                                 onClick={() => handleViewPassword(user)}
                                 className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                                 title={t('users.actions.viewPassword')}
                               >
                                 <Key className="h-4 w-4" />
-                              </button>
+                              </Button>
                             )}
                           </>
                         )}
 
                         {can('remove', 'User') && user.user_id !== currentUser?.id && (
-                          <button
+                          <Button
                             onClick={() => handleRemoveUser(user.user_id)}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
                             title={t('users.actions.remove')}
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </td>
@@ -654,7 +655,7 @@ const UsersSettings: React.FC = () => {
                   {t('users.invite.title')}
                 </h3>
               </div>
-              <button
+              <Button
                 onClick={() => {
                   setShowInviteUser(false);
                   setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
@@ -663,7 +664,7 @@ const UsersSettings: React.FC = () => {
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -729,7 +730,7 @@ const UsersSettings: React.FC = () => {
             )}
 
             <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-              <button
+              <Button
                 onClick={() => {
                   setShowInviteUser(false);
                   setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
@@ -738,14 +739,14 @@ const UsersSettings: React.FC = () => {
                 className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600"
               >
                 {t('users.invite.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleInviteUser}
                 disabled={!inviteUser.email || !inviteUser.role_id || loading}
                 className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? t('users.invite.inviting') : t('users.invite.invite')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -762,7 +763,7 @@ const UsersSettings: React.FC = () => {
                   {t('users.password.title')}
                 </h3>
               </div>
-              <button
+              <Button
                 onClick={() => {
                   setPasswordDialogUser(null);
                   setTempPassword('');
@@ -772,7 +773,7 @@ const UsersSettings: React.FC = () => {
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
 
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
@@ -793,13 +794,13 @@ const UsersSettings: React.FC = () => {
                     <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono text-gray-900 dark:text-white">
                       {tempPassword}
                     </code>
-                    <button
+                    <Button
                       onClick={handleCopyPassword}
                       className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
                       title={t('users.password.copy')}
                     >
                       {copiedToClipboard ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(dateLocale) })}
@@ -813,7 +814,7 @@ const UsersSettings: React.FC = () => {
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
-                  <button
+                  <Button
                     onClick={() => {
                       setPasswordDialogUser(null);
                       setTempPassword('');
@@ -823,14 +824,14 @@ const UsersSettings: React.FC = () => {
                     className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
                   >
                     {t('users.password.close')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleResetPassword}
                     disabled={passwordLoading}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
                   >
                     {t('users.password.reset')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
@@ -838,13 +839,13 @@ const UsersSettings: React.FC = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('users.password.noPassword')}
                 </p>
-                <button
+                <Button
                   onClick={handleResetPassword}
                   disabled={passwordLoading}
                   className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
                 >
                   {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}
-                </button>
+                </Button>
               </div>
             )}
           </div>

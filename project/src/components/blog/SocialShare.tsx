@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Share2, Copy, Check, Globe, MessageCircle, Briefcase } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SocialShareProps {
   url: string;
@@ -35,28 +36,28 @@ export function SocialShare({ url, title }: SocialShareProps) {
         <Share2 className="h-4 w-4" />
         Share:
       </span>
-      <button
+      <Button
         onClick={() => handleShare('facebook')}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on Facebook"
       >
         <Globe className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => handleShare('twitter')}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on Twitter"
       >
         <MessageCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={() => handleShare('linkedin')}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Share on LinkedIn"
       >
         <Briefcase className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={handleCopy}
         className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         aria-label="Copy link"
@@ -66,7 +67,7 @@ export function SocialShare({ url, title }: SocialShareProps) {
         ) : (
           <Copy className="h-4 w-4 text-gray-600 dark:text-gray-400" />
         )}
-      </button>
+      </Button>
     </div>
   );
 }

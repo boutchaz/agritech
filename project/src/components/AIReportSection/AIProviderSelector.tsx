@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bot, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { AIProvider, AIProviderInfo } from '../../lib/api/ai-reports';
+import { Button } from '@/components/ui/button';
 
 interface AIProviderSelectorProps {
   providers: AIProviderInfo[];
@@ -62,7 +63,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
           const icon = providerIcons[provider.provider] || <Bot className="w-6 h-6" />;
 
           return (
-            <button
+            <Button
               key={provider.provider}
               type="button"
               onClick={() => isAvailable && onSelect(provider.provider)}
@@ -108,7 +109,7 @@ export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
                   </p>
                 )}
               </div>
-            </button>
+            </Button>
           );
         })}
       </div>

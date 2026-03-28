@@ -13,6 +13,7 @@ import {
   trackRegisterFailure,
   trackPageView,
 } from '@/lib/analytics'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(auth)/register')({
   component: RegisterPage,
@@ -208,14 +209,14 @@ function RegisterPage() {
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
           disabled={isLoading}
           className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="register-submit"
         >
           {isLoading ? 'Creating account...' : 'Sign up'}
-        </button>
+        </Button>
       </form>
     </AuthLayout>
   )

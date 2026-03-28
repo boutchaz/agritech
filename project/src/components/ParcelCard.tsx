@@ -10,6 +10,7 @@ import { useAnalyses } from '../hooks/useAnalyses';
 import AnalysisCard from './Analysis/AnalysisCard';
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
 import { AIStatusBadge } from './ai/AIStatusBadge';
+import { Button } from '@/components/ui/button';
 
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
@@ -308,7 +309,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             {/* Analysis Type Tabs */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="flex border-b border-gray-200 dark:border-gray-700">
-                <button
+                <Button
                   onClick={() => setAnalysisTab('soil')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'soil'
@@ -320,8 +321,8 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Flask className="h-4 w-4" />
                     Sol ({soilAnalyses.length})
                   </div>
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAnalysisTab('plant')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'plant'
@@ -333,8 +334,8 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Leaf className="h-4 w-4" />
                     Plante ({plantAnalyses.length})
                   </div>
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAnalysisTab('water')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'water'
@@ -346,18 +347,18 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Droplet className="h-4 w-4" />
                     Eau ({waterAnalyses.length})
                   </div>
-                </button>
+                </Button>
               </div>
 
               {/* Add Analysis Button */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900">
-                <button
+                <Button
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nouvelle analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'}</span>
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -382,13 +383,13 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
-                <button
+                <Button
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Ajouter une première analyse</span>
-                </button>
+                </Button>
               </div>
             )}
 
@@ -883,7 +884,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-hidden">
         <nav className="flex space-x-2 px-3 sm:px-4 overflow-x-auto overscroll-x-contain scrollbar-hide w-full min-w-0" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'}}>
           {tabs.map((tab) => (
-            <button
+            <Button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
               className={`
@@ -896,7 +897,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             >
               <tab.icon className="h-4 w-4" />
               <span>{tab.name}</span>
-            </button>
+            </Button>
           ))}
         </nav>
       </div>

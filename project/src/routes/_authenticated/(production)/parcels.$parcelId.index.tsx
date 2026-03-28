@@ -6,6 +6,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { AlertCircle, Droplets, FlaskRound, RefreshCw, Satellite, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button';
 
 const ParcelOverview = () => {
   const { t } = useTranslation();
@@ -75,13 +76,13 @@ const ParcelOverview = () => {
                 {t('parcels.index.goToSatellite')}
               </Link>
             </div>
-            <button
+            <Button
               onClick={() => refetchIndices()}
               className="p-2 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
               title={t('parcels.index.refreshData')}
             >
               <RefreshCw className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -226,13 +227,13 @@ const ParcelOverview = () => {
           </div>
           <div className="flex items-center gap-2">
             {ability.can('create', 'ProductApplication') && (
-              <button
+              <Button
                 onClick={() => setShowApplicationForm(true)}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <FlaskRound className="h-5 w-5" />
                 {t('parcels.index.addApplication')}
-              </button>
+              </Button>
             )}
             {applicationsData && (
               <span className="text-sm text-gray-500 dark:text-gray-400">

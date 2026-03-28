@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { ChevronRight, User, Mail, Phone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const RTLExample: React.FC = () => {
   return (
@@ -84,18 +85,18 @@ const RTLExample: React.FC = () => {
           </div>
 
           <div className="flex gap-3 justify-end">
-            <button
+            <Button
               type="button"
               className="ps-4 pe-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               className="ps-4 pe-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700"
             >
               Submit
-            </button>
+            </Button>
           </div>
         </form>
       </div>

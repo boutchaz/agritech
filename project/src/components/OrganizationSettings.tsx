@@ -8,6 +8,7 @@ import { DEFAULT_CURRENCY, type Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
 import AIProvidersSettings from './settings/AIProvidersSettings';
 import { getMarketplaceUrl } from '@/lib/marketplace-link';
+import { Button } from '@/components/ui/button';
 
 interface OrganizationData {
   id: string;
@@ -222,7 +223,7 @@ const OrganizationSettings: React.FC = () => {
           </h2>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-           <button
+           <Button
              onClick={async () => {
                const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
                window.open(url, '_blank', 'noopener,noreferrer');
@@ -232,9 +233,9 @@ const OrganizationSettings: React.FC = () => {
              <ExternalLink className="h-4 w-4" />
              <span className="hidden sm:inline">Preview on Marketplace</span>
              <span className="sm:hidden">Preview</span>
-           </button>
+           </Button>
           {activeTab === 'general' && (
-            <button
+            <Button
               onClick={handleSave}
               disabled={saving}
               className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
@@ -245,7 +246,7 @@ const OrganizationSettings: React.FC = () => {
                 <Save className="h-4 w-4" />
               )}
               <span>{saving ? t('organization.saving') : t('organization.save')}</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -256,7 +257,7 @@ const OrganizationSettings: React.FC = () => {
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             return (
-              <button
+              <Button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
@@ -267,7 +268,7 @@ const OrganizationSettings: React.FC = () => {
               >
                 <TabIcon className="h-4 w-4" />
                 <span>{tab.label}</span>
-              </button>
+              </Button>
             );
           })}
         </nav>
@@ -516,7 +517,7 @@ const OrganizationSettings: React.FC = () => {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Default provider card */}
-              <button
+              <Button
                 type="button"
                 disabled={saving}
                 onClick={() => setOrgData({ ...orgData, map_provider: 'default' })}
@@ -538,10 +539,10 @@ const OrganizationSettings: React.FC = () => {
                 <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {t('organization.mapProviderDefaultDesc', 'Free, no API key required. Good general-purpose satellite and street tiles.')}
                 </span>
-              </button>
+              </Button>
 
               {/* Mapbox provider card */}
-              <button
+              <Button
                 type="button"
                 disabled={saving}
                 onClick={() => setOrgData({ ...orgData, map_provider: 'mapbox' })}
@@ -563,7 +564,7 @@ const OrganizationSettings: React.FC = () => {
                 <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {t('organization.mapProviderMapboxDesc', 'Higher-quality satellite imagery. Requires an API token.')}
                 </span>
-              </button>
+              </Button>
             </div>
 
             {/* Mapbox token warning */}

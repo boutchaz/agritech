@@ -1,4 +1,5 @@
 const LegacyUserBanner = () => {
+import { Button } from '@/components/ui/button';
   // This banner is disabled - all users require subscriptions
   // Keeping the component for potential future use
   return null;
@@ -28,19 +29,19 @@ const LegacyUserBanner = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2 ml-4">
-            <button
+            <Button
               onClick={() => navigate({ to: '/settings/subscription' })}
               className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md hover:from-purple-700 hover:to-blue-700 transition-all shadow-sm hover:shadow-md flex items-center space-x-1"
             >
               <Sparkles className="h-4 w-4" />
               <span>View Plans</span>
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleDismiss}
               className="p-1 text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors"
             >
               <X className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import type { Module } from '../types';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { reportsApi, ReportCategory, ReportType, ReportTypeInfo } from '../lib/api/reports';
+import { Button } from '@/components/ui/button';
 
 interface ReportsProps {
   activeModules?: Module[];
@@ -177,14 +178,14 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
                       </div>
                     </div>
 
-                    <button
+                    <Button
                       onClick={() => handleDownloadReport(reportType.id, reportType.name)}
                       className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
                       data-tour="reports-export"
                     >
                       <Download className="h-5 w-5" />
                       <span>Télécharger</span>
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

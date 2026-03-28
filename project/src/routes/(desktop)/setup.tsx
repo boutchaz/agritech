@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tauriCommands } from '@/lib/tauri-bridge';
 import { Building2, User, Lock, Mail, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(desktop)/setup')({
   component: SetupPage,
@@ -178,7 +179,7 @@ function SetupPage() {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -188,7 +189,7 @@ function SetupPage() {
               ) : (
                 t('desktop.setup.createAccount', 'Create Account & Continue')
               )}
-            </button>
+            </Button>
           </form>
 
           <p className="mt-6 text-xs text-center text-gray-500 dark:text-gray-400">

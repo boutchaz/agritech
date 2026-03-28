@@ -6,6 +6,7 @@ import { productApplicationsApi, ProductApplication } from '../lib/api/product-a
 import { inventoryApi, InventoryProduct } from '../lib/api/inventory';
 import { parcelsApi, Parcel } from '../lib/api/parcels';
 import { farmsApi } from '../lib/api/farms';
+import { Button } from '@/components/ui/button';
 
 type Application = ProductApplication;
 
@@ -157,13 +158,13 @@ const ProductApplications: React.FC = () => {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Applications de Produits
         </h2>
-        <button
+        <Button
           onClick={() => setShowAddModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
         >
           <Plus className="h-5 w-5" />
           <span>Nouvelle Application</span>
-        </button>
+        </Button>
       </div>
 
       {/* Applications List */}
@@ -222,12 +223,12 @@ const ProductApplications: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvelle Application
               </h3>
-              <button
+              <Button
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div>
@@ -352,19 +353,19 @@ const ProductApplications: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleAddApplication}
                 disabled={!newApplication.product_id || !newApplication.quantity_used}
                 className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Enregistrer
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
 import { PlanInterventionCard } from '@/components/ai/PlanInterventionCard';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Calendar, RefreshCw, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const AIPlanCalendarPage = () => {
   const { t } = useTranslation('ai');
@@ -46,7 +47,7 @@ const AIPlanCalendarPage = () => {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button
+          <Button
             type="button"
             onClick={() => generateAIPlan()}
             disabled={isGenerating || isRegenerating}
@@ -54,8 +55,8 @@ const AIPlanCalendarPage = () => {
           >
             <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} aria-hidden />
             <span>{isGenerating ? t('plan.calendar.aiGenerating') : t('plan.calendar.aiGenerate')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => regeneratePlan(parcelId)}
             disabled={isRegenerating || isGenerating}
@@ -63,7 +64,7 @@ const AIPlanCalendarPage = () => {
           >
             <RefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} aria-hidden />
             <span>{t('plan.calendar.recalculate')}</span>
-          </button>
+          </Button>
         </div>
       </div>
 

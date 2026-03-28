@@ -22,6 +22,7 @@ import {
   normalizePlanType,
   type PlanType,
 } from '@/lib/polar';
+import { Button } from '@/components/ui/button';
 
 // Icon mapping from database icon names to Lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -217,7 +218,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
 
       {/* Quick actions */}
       <div className="mt-6 flex gap-3 justify-center">
-        <button
+        <Button
           type="button"
           onClick={() => {
             const allSelected: Partial<ModuleSelection> = {};
@@ -229,8 +230,8 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           className="px-4 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
         >
           Tout sélectionner
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => {
             const recommended: Partial<ModuleSelection> = {};
@@ -242,7 +243,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           className="px-4 py-2 text-sm text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors"
         >
           Sélection recommandée
-        </button>
+        </Button>
       </div>
 
       {/* Info box */}
@@ -252,7 +253,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
         </p>
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={onNext}
         disabled={selectedCount === 0 || isSubmitting}
@@ -273,7 +274,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
             <ArrowRight className="w-5 h-5" />
           </>
         )}
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

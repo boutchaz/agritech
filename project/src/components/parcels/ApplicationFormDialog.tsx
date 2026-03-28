@@ -356,7 +356,7 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
             {/* Show auth error if no token */}
             {!getAccessToken() && (
               <p className="text-sm text-red-600 dark:text-red-400">
-                Authentication required. Please <button type="button" onClick={() => window.location.href = '/login'} className="underline font-medium">log in again</button>.
+                Authentication required. Please <Button type="button" onClick={() => window.location.href = '/login'} className="underline font-medium">log in again</Button>.
               </p>
             )}
             {isError && getAccessToken() && (

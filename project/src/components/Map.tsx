@@ -1383,50 +1383,17 @@ const MapComponent: React.FC<MapProps> = ({
           {/* Full-Screen Close Button */}
           {isFullScreen && (
             <div className="absolute top-4 left-4 z-50">
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setIsFullScreen(false)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.exitFullscreen')}
+                aria-label={t('map.exitFullscreen')}
               >
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
+                <X className="h-5 w-5" />
+              </Button>
             </div>
           )}
 
-          {/* First-visit geolocation prompt */}
-          {/* {showGeolocPrompt && (
-          <div className="absolute top-4 left-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-4 w-72 sm:w-80 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-start justify-between">
-                <div className="pr-2">
-                  <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">Activer la localisation ?</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Nous centrerons la carte sur votre position actuelle.</p>
-                </div>
-                <button
-                  className="text-gray-400 hover:text-gray-600"
-                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
-                  aria-label="Fermer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={requestUserLocation}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Activer
-                </button>
-                <button
-                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  Plus tard
-                </button>
-              </div>
-            </div>
-          </div>
-        )} */}
           {/* React-based popup to avoid DOM manipulation conflicts */}
           {popupData.visible && popupData.position && (
             <div
@@ -1454,19 +1421,18 @@ const MapComponent: React.FC<MapProps> = ({
                   autoFocus
                 />
                 <div className="flex justify-end space-x-3">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={cleanupDrawingState}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleNameSubmit}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                     disabled={!parcelName}
                   >
                     {t('map.next')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1877,37 +1843,45 @@ const MapComponent: React.FC<MapProps> = ({
           <div className="absolute top-4 right-4 space-y-2 z-20">
             <div className="flex flex-col space-y-2">
               {/* Location Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={requestUserLocation}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.goToMyPosition')}
+                aria-label={t('map.goToMyPosition')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <Navigation className={`h-5 w-5 ${locationPermission === 'granted' ? 'text-blue-600' : 'text-gray-600'}`} />
-              </button>
+              </Button>
 
               {/* Search Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setShowSearchBox(!showSearchBox)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.searchLocation')}
+                aria-label={t('map.searchLocation')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <Search className="h-5 w-5 text-gray-600" />
-              </button>
+              </Button>
 
               {/* Place Names Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setShowPlaceNames(!showPlaceNames)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={showPlaceNames ? t('map.hidePlaceNames') : t('map.showPlaceNames')}
+                aria-label={showPlaceNames ? t('map.hidePlaceNames') : t('map.showPlaceNames')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
-              </button>
+              </Button>
 
               {/* Map Type Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setMapType(mapType === 'osm' ? 'satellite' : 'osm')}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
+                aria-label={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 {mapType === 'osm' ? (
                   <Satellite className="h-5 w-5 text-gray-600" />
@@ -1916,20 +1890,22 @@ const MapComponent: React.FC<MapProps> = ({
                     <div className="w-4 h-4 border-2 border-gray-600 rounded-sm"></div>
                   </div>
                 )}
-              </button>
+              </Button>
 
               {/* Full-Screen Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setIsFullScreen(!isFullScreen)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={isFullScreen ? t('map.exitFullscreenMode') : t('map.fullscreenMode')}
+                aria-label={isFullScreen ? t('map.exitFullscreenMode') : t('map.fullscreenMode')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 {isFullScreen ? (
                   <Minimize2 className="h-5 w-5 text-gray-600" />
                 ) : (
                   <Maximize2 className="h-5 w-5 text-gray-600" />
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Search Box */}
@@ -1944,23 +1920,25 @@ const MapComponent: React.FC<MapProps> = ({
                     placeholder={t('map.searchPlaceholder')}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button
+                  <Button
+                    size="icon"
                     onClick={handleSearch}
                     disabled={isSearching}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                   >
                     {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={() => {
                       setShowSearchBox(false);
                       setSearchResults([]);
                       setSearchQuery('');
                     }}
-                    className="p-2 text-gray-500 hover:text-gray-700"
+                    aria-label={t('common.close', 'Close')}
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Search Results */}
@@ -2000,27 +1978,24 @@ const MapComponent: React.FC<MapProps> = ({
                 </p>
 
                 <div className="flex items-center space-x-2 mb-3">
-                  <button
+                  <Button
+                    size="sm"
+                    variant={drawingMode === 'assisted' ? 'default' : 'outline'}
                     onClick={() => setDrawingMode(drawingMode === 'manual' ? 'assisted' : 'manual')}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${drawingMode === 'assisted'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
                   >
                     <Wand2 className="h-4 w-4" />
                     <span>{t('map.assistedMode')}</span>
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    size="sm"
+                    variant={autoSnapEnabled ? 'default' : 'outline'}
                     onClick={() => setAutoSnapEnabled(!autoSnapEnabled)}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${autoSnapEnabled
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
+                    className={autoSnapEnabled ? 'bg-green-600 hover:bg-green-700' : ''}
                   >
                     <Grid3x3 className="h-4 w-4" />
                     <span>{t('map.magnetism')}</span>
-                  </button>
+                  </Button>
                 </div>
 
                 {calculatedArea > 0 && (
@@ -2106,20 +2081,19 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
 
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setShowIndicesDialog(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleCalculateIndices}
                     disabled={indicesLoading || selectedIndices.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 flex items-center space-x-2"
                   >
                     {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
                     <span>{t('map.calculate')}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2184,20 +2158,20 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
 
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setShowTimeSeriesDialog(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleGetTimeSeries}
                     disabled={indicesLoading}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 flex items-center space-x-2"
+                    className="bg-purple-600 hover:bg-purple-700"
                   >
                     {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
                     <span>{t('map.analyze')}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2214,22 +2188,23 @@ const MapComponent: React.FC<MapProps> = ({
 
               {/* Actions */}
               <div className="flex space-x-2">
-                <button
+                <Button
+                  size="sm"
                   onClick={() => setShowIndicesDialog(true)}
-                  className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
                   disabled={indicesLoading || !selectedParcel.boundary}
                 >
                   <Satellite className="h-4 w-4" />
-                  <span>Indices</span>
-                </button>
-                <button
+                  <span>{t('map.indices', 'Indices')}</span>
+                </Button>
+                <Button
+                  size="sm"
                   onClick={() => setShowTimeSeriesDialog(true)}
-                  className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
                   disabled={indicesLoading || !selectedParcel.boundary}
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
                   <BarChart3 className="h-4 w-4" />
                   <span>{t('map.timeSeries')}</span>
-                </button>
+                </Button>
                 {/* Delete functionality removed - handled in parent component */}
               </div>
             </div>
@@ -2287,13 +2262,15 @@ const MapComponent: React.FC<MapProps> = ({
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
                           {result.index}
                         </span>
-                        <button
+                        <Button
+                          size="icon"
+                          variant="ghost"
                           onClick={() => handleExportIndexMap(result.index)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title={t('map.downloadMap')}
+                          aria-label={t('map.downloadMap')}
+                          className="h-auto w-auto p-1 text-blue-600 hover:text-blue-800"
                         >
                           <Download className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
                         {result.value.toFixed(3)}

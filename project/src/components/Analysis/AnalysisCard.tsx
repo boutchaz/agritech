@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import type { Analysis, SoilAnalysis, PlantAnalysis, WaterAnalysis } from '../../types/analysis';
+import { Button } from '@/components/ui/button';
 
 interface AnalysisCardProps {
   analysis: Analysis;
@@ -212,12 +213,12 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ analysis, viewMode, parcelN
               </p>
             )}
           </div>
-          <button
+          <Button
             onClick={() => onDelete(analysis.id)}
             className="text-gray-400 hover:text-red-500 ml-2"
           >
             <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
+          </Button>
         </div>
 
         {renderAnalysisData()}
@@ -257,12 +258,12 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ analysis, viewMode, parcelN
                 </p>
               )}
             </div>
-            <button
+            <Button
               onClick={() => onDelete(analysis.id)}
               className="text-gray-400 hover:text-red-500"
             >
               <Trash2 className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
 
           {renderAnalysisData()}

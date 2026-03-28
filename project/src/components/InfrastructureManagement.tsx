@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from './ui/dialog';
 import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 
 // Use the API Structure type
 type Structure = ApiStructure;
@@ -582,20 +583,20 @@ const InfrastructureManagement: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2 flex-shrink-0">
-          <button
+          <Button
             onClick={() => setEditingStructure(structure)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             aria-label={t('infrastructure.actions.edit')}
           >
             <Edit2 className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleDeleteStructure(structure.id)}
             className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             aria-label={t('infrastructure.actions.delete')}
           >
             <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -700,14 +701,14 @@ const InfrastructureManagement: React.FC = () => {
             {t('infrastructure.subtitle')}
           </p>
         </div>
-        <button
+        <Button
           data-tour="infrastructure-add"
           onClick={() => setShowAddModal(true)}
           className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           <span className="font-medium">{t('infrastructure.actions.new')}</span>
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -719,7 +720,7 @@ const InfrastructureManagement: React.FC = () => {
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
         <nav className="-mb-px flex space-x-4 sm:space-x-8 min-w-min">
-          <button
+          <Button
             onClick={() => setActiveTab('organization')}
             className={`
               py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap
@@ -736,8 +737,8 @@ const InfrastructureManagement: React.FC = () => {
                 {organizationStructures.length}
               </span>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setActiveTab('farm')}
             className={`
               py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap
@@ -754,7 +755,7 @@ const InfrastructureManagement: React.FC = () => {
                 {allFarmStructures.length}
               </span>
             </div>
-          </button>
+          </Button>
         </nav>
       </div>
 
@@ -782,7 +783,7 @@ const InfrastructureManagement: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                 {t('infrastructure.empty.organizationDescription')}
               </p>
-              <button
+              <Button
                 onClick={() => {
                   setActiveTab('organization');
                   setShowAddModal(true);
@@ -791,7 +792,7 @@ const InfrastructureManagement: React.FC = () => {
               >
                 <Plus className="h-5 w-5" />
                 <span>{t('infrastructure.actions.add')}</span>
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="infrastructure-list">
@@ -849,7 +850,7 @@ const InfrastructureManagement: React.FC = () => {
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                   {t('infrastructure.empty.farmDescription')}
                 </p>
-                <button
+                <Button
                   onClick={() => {
                     setActiveTab('farm');
                     setShowAddModal(true);
@@ -858,7 +859,7 @@ const InfrastructureManagement: React.FC = () => {
                 >
                   <Plus className="h-5 w-5" />
                   <span>{t('infrastructure.actions.add')}</span>
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

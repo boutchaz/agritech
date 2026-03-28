@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Can } from '../lib/casl';
 import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 // Type aliases from generated database types
 type Farm = Database['public']['Tables']['farms']['Row'];
@@ -208,12 +209,12 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 {farm.farm_name}
               </h3>
             </div>
-            <button
+            <Button
               onClick={() => onManageRoles?.(farm.farm_id)}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
             >
               Gérer Rôles
-            </button>
+            </Button>
           </div>
 
           {/* Parcels */}
@@ -232,20 +233,20 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                   </div>
                   <div className="flex items-center space-x-2">
                     <Can I="update" a="Parcel">
-                      <button
+                      <Button
                         onClick={() => onEditParcel?.(parcel.id)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         Modifier
-                      </button>
+                      </Button>
                     </Can>
                     <Can I="delete" a="Parcel">
-                      <button
+                      <Button
                         onClick={() => onDeleteParcel?.(parcel.id)}
                         className="text-red-600 hover:text-red-800 text-sm font-medium"
                       >
                         Supprimer
-                      </button>
+                      </Button>
                     </Can>
                   </div>
                 </div>
@@ -264,13 +265,13 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </div>
               }
             >
-              <button
+              <Button
                 onClick={() => onAddParcel?.(farm.farm_id)}
                 className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Ajouter une parcelle</span>
-              </button>
+              </Button>
             </Can>
           </div>
         </div>
@@ -343,20 +344,20 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </p>
               )}
             </div>
-            <button
+            <Button
               type="submit"
               disabled={createFarmMutation.isPending}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => reset()}
               className="px-6 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Annuler
-            </button>
+            </Button>
           </div>
           {createFarmMutation.isError && (
             <p className="text-sm text-red-600" role="alert">

@@ -647,7 +647,7 @@ export default function ReceptionBatchForm({
 
           {/* Section: Contrôle qualité (Collapsible) */}
           <div className="bg-green-50 border border-green-200 rounded-lg overflow-hidden">
-            <button
+            <Button
               type="button"
               onClick={() => setShowQualityControl(!showQualityControl)}
               className="w-full flex items-center justify-between p-4 hover:bg-green-100 transition-colors"
@@ -664,7 +664,7 @@ export default function ReceptionBatchForm({
               ) : (
                 <ChevronDown className="w-5 h-5 text-green-600" />
               )}
-            </button>
+            </Button>
 
             {showQualityControl && (
               <div className="p-4 pt-0 space-y-4 border-t border-green-200">

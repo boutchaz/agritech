@@ -6,6 +6,7 @@ import { Map, RefreshCw, Layers, Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from '@/components/ui/skeleton';
 import type { ActivityHeatmapPoint } from '../../services/liveDashboardService';
+import { Button } from '@/components/ui/button';
 
 // Fix Leaflet default icon issue
 if (typeof window !== 'undefined') {
@@ -228,33 +229,35 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
               </span>
             )}
             {data.length > 0 && (
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => fitAllRef.current?.()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                title="Voir toutes les parcelles"
+                aria-label={t('common.viewAll', 'View all')}
+                className="text-xs h-auto py-1.5"
               >
-                ⊞ Tout voir
-              </button>
+                ⊞ {t('common.viewAll', 'View all')}
+              </Button>
             )}
-            <button
+            <Button
+              size="sm"
+              variant={isSatellite ? 'default' : 'outline'}
               onClick={() => setIsSatellite(s => !s)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                isSatellite
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-              title="Basculer vue satellite"
+              aria-label={t('common.toggleSatellite', 'Toggle satellite view')}
+              className="text-xs h-auto py-1.5"
             >
               <Layers className="h-3.5 w-3.5" />
-              {isSatellite ? 'Satellite' : 'Carte'}
-            </button>
-            <button
+              {isSatellite ? t('common.satellite', 'Satellite') : t('common.map', 'Map')}
+            </Button>
+            <Button
+              size="icon"
+              variant="outline"
               onClick={() => setIsFullscreen(s => !s)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+              aria-label={isFullscreen ? t('common.exitFullscreen', 'Exit fullscreen') : t('common.fullscreen', 'Fullscreen')}
+              className="h-auto w-auto p-1.5"
             >
               {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-            </button>
+            </Button>
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>

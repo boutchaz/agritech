@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Ruler, Cloud, Droplets, ArrowRight, Sprout } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { ButtonLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface FarmData {
   name: string;
@@ -89,7 +90,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
           />
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(1)}
           disabled={!farmData.name.trim() || !farmData.location.trim()}
           className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
@@ -100,7 +101,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
         >
           Continuer
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -143,7 +144,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-2">
             {SIZE_UNITS.map((unit) => (
-              <button
+              <Button
                 key={unit.id}
                 type="button"
                 onClick={() => onUpdate({ size_unit: unit.id })}
@@ -156,7 +157,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
                 `}
               >
                 {unit.name}
-              </button>
+              </Button>
             ))}
           </div>
 
@@ -200,7 +201,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
           </div>
         )}
 
-        <button
+        <Button
           onClick={() => setSubStep(2)}
           disabled={!farmData.size || farmData.size <= 0}
           className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
@@ -211,7 +212,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
         >
           Continuer
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -247,7 +248,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
 
         <div className="grid grid-cols-2 gap-3">
           {SOIL_TYPES.map((soil) => (
-            <button
+            <Button
               key={soil.id}
               type="button"
               onClick={() => onUpdate({ soil_type: soil.id })}
@@ -262,19 +263,19 @@ export const FarmStep: React.FC<FarmStepProps> = ({
               <div className="text-2xl mb-2">{soil.icon}</div>
               <div className="font-semibold text-gray-900">{soil.name}</div>
               <div className="text-xs text-gray-500 mt-1">{soil.description}</div>
-            </button>
+            </Button>
           ))}
         </div>
 
         <div className="mt-6 flex gap-3">
-          <button
+          <Button
             onClick={() => setSubStep(3)}
             className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-medium
               hover:bg-gray-200 transition-all duration-200"
           >
             Passer
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setSubStep(3)}
             className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
               shadow-lg shadow-emerald-500/30 hover:shadow-xl
@@ -283,7 +284,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
           >
             Continuer
             <ArrowRight className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
 
         <style>{`
@@ -314,7 +315,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
 
       <div className="grid grid-cols-2 gap-3">
         {CLIMATE_ZONES.map((climate) => (
-          <button
+          <Button
             key={climate.id}
             type="button"
             onClick={() => onUpdate({ climate_zone: climate.id })}
@@ -329,11 +330,11 @@ export const FarmStep: React.FC<FarmStepProps> = ({
             <div className="text-2xl mb-2">{climate.icon}</div>
             <div className="font-semibold text-gray-900">{climate.name}</div>
             <div className="text-xs text-gray-500 mt-1">{climate.description}</div>
-          </button>
+          </Button>
         ))}
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!isValid || isLoading}
         className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
@@ -353,7 +354,7 @@ export const FarmStep: React.FC<FarmStepProps> = ({
             <ArrowRight className="w-5 h-5" />
           </>
         )}
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

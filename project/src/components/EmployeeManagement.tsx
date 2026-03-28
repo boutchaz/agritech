@@ -9,6 +9,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 
 interface Employee {
   id: string;
@@ -225,7 +226,7 @@ const EmployeeManagement: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Gestion des Salariés
         </h2>
-        <button
+        <Button
           type="button"
           onClick={() => { if (!farmId) return; setEditingEmployee(null); setShowAddModal(true); form.reset(emptyDefaults); }}
           disabled={!farmId}
@@ -234,7 +235,7 @@ const EmployeeManagement: React.FC = () => {
         >
           <Plus className="h-5 w-5" />
           <span>Nouveau Salarié</span>
-        </button>
+        </Button>
       </div>
       {!farmId && (
         <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
@@ -252,13 +253,13 @@ const EmployeeManagement: React.FC = () => {
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
           <Calendar className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun salarié pour l’instant.</p>
-          <button
+          <Button
             type="button"
             onClick={() => setShowAddModal(true)}
             className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
           >
             Ajouter votre premier salarié
-          </button>
+          </Button>
         </div>
       )}
 
@@ -277,14 +278,14 @@ const EmployeeManagement: React.FC = () => {
                 <p className="text-sm text-gray-500">{employee.position}</p>
               </div>
               <div className="flex space-x-2">
-                 <button
+                 <Button
                   type="button"
                    onClick={() => { setShowAddModal(true); setEditingEmployee(employee); }}
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <Edit2 className="h-5 w-5" />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => {
                     if (confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
@@ -294,7 +295,7 @@ const EmployeeManagement: React.FC = () => {
                   className="text-red-600 hover:text-red-800"
                 >
                   <Trash2 className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -338,7 +339,7 @@ const EmployeeManagement: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {editingEmployee ? 'Modifier le Salarié' : 'Nouveau Salarié'}
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   setShowAddModal(false);
@@ -347,7 +348,7 @@ const EmployeeManagement: React.FC = () => {
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
 
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -392,7 +393,7 @@ const EmployeeManagement: React.FC = () => {
                   </FormField>
 
                   <div className="mt-6 flex justify-end space-x-3">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => {
                         setShowAddModal(false);
@@ -401,14 +402,14 @@ const EmployeeManagement: React.FC = () => {
                       className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
                     >
                       Annuler
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={addEmployeeMutation.isPending || updateEmployeeMutation.isPending}
                       className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-60"
                     >
                       {editingEmployee ? 'Mettre à jour' : 'Ajouter'}
-                    </button>
+                    </Button>
                   </div>
                 </form>
             

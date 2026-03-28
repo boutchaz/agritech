@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import type { AIAlert } from '@/lib/api/ai-alerts';
+import { Button } from '@/components/ui/button';
 
 interface AlertCardProps {
   alert: AIAlert;
@@ -58,24 +59,24 @@ export const AlertCard: React.FC<AlertCardProps> = ({
         {alert.status !== 'resolved' && (
           <div className="flex flex-col space-y-2 ml-4">
             {alert.status === 'active' && onAcknowledge && (
-              <button
+              <Button
                 type="button"
                 onClick={() => onAcknowledge(alert.id)}
                 disabled={isAcknowledging}
                 className="px-3 py-1.5 text-xs font-medium bg-white/50 hover:bg-white/80 dark:bg-black/20 dark:hover:bg-black/40 rounded-lg transition-colors disabled:opacity-50"
               >
                 {isAcknowledging ? '...' : 'Acknowledge'}
-              </button>
+              </Button>
             )}
             {onResolve && (
-              <button
+              <Button
                 type="button"
                 onClick={() => onResolve(alert.id)}
                 disabled={isResolving}
                 className="px-3 py-1.5 text-xs font-medium bg-white/80 hover:bg-white dark:bg-black/40 dark:hover:bg-black/60 rounded-lg transition-colors disabled:opacity-50"
               >
                 {isResolving ? '...' : 'Resolve'}
-              </button>
+              </Button>
             )}
           </div>
         )}

@@ -9,6 +9,7 @@ import PhenologicalTemperatureCounters from './PhenologicalTemperatureCounters';
 import EvapotranspirationChart from './EvapotranspirationChart';
 import WeatherForecast from '../WeatherForecast';
 import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface WeatherAnalyticsViewProps {
   parcelId?: string;
@@ -144,7 +145,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               onClick={() => handleTimeRangeChange('last-3-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-3-months'
@@ -153,8 +154,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last3Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('last-6-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-6-months'
@@ -163,8 +164,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last6Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('last-12-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-12-months'
@@ -173,8 +174,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last12Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('ytd')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'ytd'
@@ -183,8 +184,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.yearToDate')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('custom')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'custom'
@@ -193,7 +194,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.custom')}
-            </button>
+            </Button>
           </div>
 
           {/* Custom Date Range Inputs */}

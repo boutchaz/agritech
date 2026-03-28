@@ -6,6 +6,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface UserProfile {
   id: string;
@@ -258,7 +259,7 @@ const ProfileSettings: React.FC = () => {
             {t('profile.title')}
           </h2>
         </div>
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
           className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
@@ -269,7 +270,7 @@ const ProfileSettings: React.FC = () => {
             <Save className="h-4 w-4" />
           )}
           <span>{saving ? t('profile.saving') : t('profile.save')}</span>
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -429,14 +430,14 @@ const ProfileSettings: React.FC = () => {
                         alt="Profile"
                         className="w-20 h-20 rounded-full object-cover"
                       />
-                      <button
+                      <Button
                         onClick={handleRemoveAvatar}
                         disabled={uploadingAvatar}
                         className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                         title={t('profile.removePhoto')}
                       >
                         <X className="h-3 w-3" />
-                      </button>
+                      </Button>
                     </>
                   ) : (
                     <div className="w-20 h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
@@ -468,22 +469,22 @@ const ProfileSettings: React.FC = () => {
                     disabled={uploadingAvatar}
                   />
                   <div className="flex gap-2 w-full sm:w-auto">
-                    <button
+                    <Button
                       onClick={() => cameraInputRef.current?.click()}
                       disabled={uploadingAvatar}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Camera className="h-4 w-4" />
                       <span>{t('profile.takePhoto', 'Take Photo')}</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingAvatar}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Upload className="h-4 w-4" />
                       <span>{t('profile.changePhoto')}</span>
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
                     {t('profile.photoFormats')}
@@ -514,12 +515,12 @@ const ProfileSettings: React.FC = () => {
                   {t('profile.password.lastModified')}
                 </p>
               </div>
-              <button
+              <Button
                 onClick={() => setShowPasswordChange(true)}
                 className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 border border-green-600 dark:border-green-400 rounded-lg"
               >
                 {t('profile.password.change')}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -535,7 +536,7 @@ const ProfileSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.currentPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -545,7 +546,7 @@ const ProfileSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -561,7 +562,7 @@ const ProfileSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.newPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -571,7 +572,7 @@ const ProfileSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -587,7 +588,7 @@ const ProfileSettings: React.FC = () => {
                     className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
                     placeholder={t('profile.password.confirmPlaceholder')}
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
@@ -597,12 +598,12 @@ const ProfileSettings: React.FC = () => {
                     ) : (
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4">
-                <button
+                <Button
                   onClick={() => {
                     setShowPasswordChange(false);
                     setPasswordData({
@@ -615,8 +616,8 @@ const ProfileSettings: React.FC = () => {
                   className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 dark:hover:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-lg order-2 sm:order-1"
                 >
                   {t('profile.cancel')}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handlePasswordChange}
                   disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                   className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
@@ -627,7 +628,7 @@ const ProfileSettings: React.FC = () => {
                     <Lock className="h-4 w-4" />
                   )}
                   <span>{changingPassword ? t('profile.password.changing') : t('profile.password.change')}</span>
-                </button>
+                </Button>
               </div>
             </div>
           )}
