@@ -19,8 +19,8 @@ if (import.meta.env.DEV) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes - prevents excessive refetching
-      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+      staleTime: 0, // Always stale — invalidateQueries always triggers immediate refetch
+      gcTime: 5 * 60 * 1000, // Keep unused data in memory for 5 minutes
       retry: 1,
       refetchOnWindowFocus: false, // Disable globally - prevents refetch on tab switch
       refetchOnReconnect: true, // Refetch when network reconnects
