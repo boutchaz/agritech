@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { compression } from 'vite-plugin-compression2';
 import path from 'path';
 
 // https://vitejs.dev/config/
@@ -17,6 +18,18 @@ export default defineConfig({
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
       disable: !process.env.SENTRY_AUTH_TOKEN,
+    }),
+    // Brotli compression — ~70% smaller than uncompressed
+    compression({
+      algorithm: 'brotliCompress',
+      exclude: [/\.(br)$/, /\.(gz)$/],
+      threshold: 1024, // Only compress files > 1KB
+    }),
+    // Gzip fallback for older clients
+    compression({
+      algorithm: 'gzip',
+      exclude: [/\.(br)$/, /\.(gz)$/],
+      threshold: 1024,
     }),
   ],
   // API proxy configuration
@@ -106,10 +119,8 @@ export default defineConfig({
           if (id.includes('@sentry/')) {
             return 'sentry';
           }
-          // Lucide icons — large icon set
-          if (id.includes('lucide-react')) {
-            return 'icons';
-          }
+          // Lucide icons — let them split per route for better code splitting
+          // (no manual chunk — icons tree-shake into each route's chunk)
           // kbar (command palette)
           if (id.includes('kbar')) {
             return 'kbar';

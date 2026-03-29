@@ -167,6 +167,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^7.3.1",
+    "vite-plugin-compression2": "^2.5.3",
     "vitest": "^4.1.2",
     "zod": "^4.3.6"
   },

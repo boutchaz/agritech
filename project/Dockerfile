@@ -66,11 +66,16 @@ server {
     root /usr/share/nginx/html;
     index index.html;
     
-    # Enable gzip compression
+    # Serve pre-compressed .gz files (built by vite-plugin-compression2)
+    # This avoids CPU overhead — nginx serves static .gz files directly
+    gzip_static on;
+    
+    # Fallback: on-the-fly gzip for files without .gz pre-built
     gzip on;
     gzip_vary on;
     gzip_min_length 256;
     gzip_proxied any;
+    gzip_comp_level 4;
     gzip_types
         text/plain
         text/css
@@ -93,8 +98,18 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
     
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+    # Cache static assets with immutable (hashed filenames from Vite)
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        
+        # Security headers (must repeat in location blocks)
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+    
+    # Cache other static files (images, fonts, etc.)
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -103,6 +118,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }
 EOF
 
