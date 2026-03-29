@@ -4475,6 +4475,8 @@
       "ratePerUnitLabel": "Rate per unit (MAD)",
       "ratePerUnitPlaceholder": "E.g.: 5.00 (optional)",
       "estimatedTotal": "Estimated total: {{amount}} MAD",
+      "enableStockAccess": "Use products from stock",
+      "enableStockAccessHint": "Check this if the task requires products from stock (e.g. harvest crates, maintenance supplies...).",
       "productsSection": "Products to Use (Stock)",
       "addProduct": "Add product",
       "noProductsAvailable": "No products available in stock. Add products in Stock > Receipts.",

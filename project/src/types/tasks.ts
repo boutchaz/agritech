@@ -480,9 +480,15 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
 };
 
 /**
- * Task types that consume inventory products (fertilizers, pesticides, seeds, etc.)
+ * Task types that always require stock access (fertilizers, pesticides, seeds).
  */
-export const STOCK_CONSUMING_TASK_TYPES = ['fertilization', 'pest_control', 'irrigation', 'planting', 'soil_preparation'] as const;
+export const STOCK_CONSUMING_TASK_TYPES = ['fertilization', 'pest_control', 'planting'] as const;
+
+/**
+ * Task types where stock access is optional (user can choose to add products or not).
+ * e.g. récolte can need crates, entretien/général/taille/préparation can optionally use products.
+ */
+export const OPTIONAL_STOCK_TASK_TYPES = ['general', 'maintenance', 'harvesting', 'pruning', 'soil_preparation'] as const;
 
 // Helper functions
 export function getTaskTypeLabel(type: TaskType, lang: 'en' | 'fr' = 'fr'): string {

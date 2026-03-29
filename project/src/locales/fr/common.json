@@ -4294,6 +4294,8 @@
       "ratePerUnitLabel": "Tarif par unité (MAD)",
       "ratePerUnitPlaceholder": "Ex: 5.00 (optionnel)",
       "estimatedTotal": "Total estimé: {{amount}} MAD",
+      "enableStockAccess": "Utiliser des produits du stock",
+      "enableStockAccessHint": "Cochez si cette tâche nécessite des produits du stock (ex: caisses de récolte, produits d'entretien...).",
       "productsSection": "Produits à utiliser (Stock)",
       "addProduct": "Ajouter produit",
       "noProductsAvailable": "Aucun produit disponible en stock. Ajoutez des produits dans Stock > Réceptions.",
