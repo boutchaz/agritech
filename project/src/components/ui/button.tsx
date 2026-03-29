@@ -27,7 +27,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "ghost",
       size: "default",
     },
   }
@@ -42,8 +42,15 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    // Default icon-sized buttons to ghost variant to avoid solid-color squares
-    const resolvedVariant = size === "icon" && !variant ? "ghost" : variant
+    // Auto-resolve variant: submit buttons default to primary, everything else to ghost
+    let resolvedVariant = variant
+    if (!variant) {
+      if (props.type === "submit") {
+        resolvedVariant = "default"
+      } else {
+        resolvedVariant = "ghost"
+      }
+    }
     return (
       <Comp
         className={cn(buttonVariants({ variant: resolvedVariant, size, className }))}

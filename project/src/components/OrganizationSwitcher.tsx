@@ -206,7 +206,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
           style={dropdownStyle}
         >
           {/* User Info */}
-          <Button
+          <button
             type="button"
             onClick={handleUserProfile}
             className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -220,17 +220,17 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
                 size="sm"
               />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900 dark:text-white">
+                <div className="font-medium text-gray-900 dark:text-white text-start">
                   {profile?.first_name && profile?.last_name
                     ? `${profile.first_name} ${profile.last_name}`
                     : user?.email?.split('@')[0] || 'User'}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                <div className="text-sm text-gray-500 dark:text-gray-400 truncate text-start">
                   {user?.email || 'No email'}
                 </div>
               </div>
             </div>
-          </Button>
+          </button>
 
           {!showFarms ? (
             // Organization List
@@ -242,7 +242,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
               </div>
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {organizations.map((org) => (
-                  <Button
+                  <button
                     type="button"
                     key={org.id}
                     onClick={() => handleOrganizationSelect(org)}
@@ -264,13 +264,13 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
                     {currentOrganization.id === org.id && (
                       <Check className="h-4 w-4 shrink-0 text-green-600" />
                     )}
-                  </Button>
+                  </button>
                 ))}
               </div>
 
               {/* Actions */}
               <div className="border-t border-gray-200 dark:border-gray-700">
-                <Button
+                <button
                   type="button"
                   className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                   onClick={handleOrganizationSettings}
@@ -279,36 +279,36 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
                   <span className="min-w-0 flex-1 text-gray-700 dark:text-gray-300">
                     {t('orgSwitcher.orgSettings')}
                   </span>
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
                   className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                   onClick={handleTeamManagement}
                 >
                   <Users className="h-4 w-4 shrink-0 text-gray-400" />
                   <span className="min-w-0 flex-1 text-gray-700 dark:text-gray-300">{t('orgSwitcher.manageTeam')}</span>
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
                   onClick={signOut}
                   className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />
                   <span className="min-w-0 flex-1">{t('orgSwitcher.signOut')}</span>
-                </Button>
+                </button>
               </div>
             </>
           ) : (
             // Farm List
             <>
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                <Button
+                <button
                   type="button"
                   onClick={() => setShowFarms(false)}
                   className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   {t('orgSwitcher.backToOrganizations')}
-                </Button>
+                </button>
                 <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-2">
                   {t('orgSwitcher.farms', { orgName: currentOrganization.name })}
                 </div>
@@ -316,7 +316,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {Array.isArray(farms) && farms.length > 0 ? (
                   farms.map((farm) => (
-                    <Button
+                    <button
                       key={farm.id}
                       type="button"
                       onClick={() => handleFarmSelect(farm)}
@@ -336,7 +336,7 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
                       {currentFarm?.id === farm.id && (
                         <Check className="h-4 w-4 text-green-600" />
                       )}
-                    </Button>
+                    </button>
                   ))
                 ) : (
                   <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
