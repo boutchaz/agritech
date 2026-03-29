@@ -7,6 +7,43 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 // Flag to prevent multiple redirects to login
 let isRedirectingToLogin = false;
 
+function isNetworkError(err: unknown): boolean {
+  return (
+    err instanceof TypeError &&
+    (err.message.includes("Failed to fetch") ||
+      err.message.includes("NetworkError") ||
+      err.message.includes("Network request failed") ||
+      err.message.includes("Load failed") ||
+      err.message.includes("fetch"))
+  );
+}
+
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 1,
+): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      if (isNetworkError(err) && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        continue;
+      }
+      if (isNetworkError(err)) {
+        throw new Error(
+          "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+        );
+      }
+      throw err;
+    }
+  }
+  throw new Error(
+    "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+  );
+}
+
 /**
  * Handle session expiration by clearing auth state and redirecting to login
  */
@@ -173,7 +210,7 @@ export async function apiRequest<T>(
   const headers = await getApiHeaders(organizationId);
   const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
 
-  const response = await fetch(fullUrl, {
+  const response = await fetchWithRetry(fullUrl, {
     ...options,
     headers: {
       ...headers,

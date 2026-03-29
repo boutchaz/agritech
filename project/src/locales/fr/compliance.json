@@ -173,6 +173,12 @@
       "cancel": "Annuler",
       "create": "Créer"
     },
+    "updateCheck": {
+      "button": "Modifier",
+      "title": "Modifier le contrôle",
+      "description": "Mettez à jour le statut, le score ou les informations de ce contrôle.",
+      "save": "Enregistrer"
+    },
     "createAction": {
       "button": "Nouvelle action corrective",
       "title": "Créer une action corrective",
@@ -280,5 +286,8 @@
     "documentTypeRequired": "Le type de document est requis",
     "nextAuditDateRequired": "La date du prochain audit est requise"
   },
-  "noChecksFound": "Aucun contrôle de conformité trouvé."
+  "noChecksFound": "Aucun contrôle de conformité trouvé.",
+  "checks": {
+    "deleteConfirm": "Supprimer ce contrôle de conformité ?"
+  }
 }

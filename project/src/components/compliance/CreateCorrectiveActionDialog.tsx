@@ -44,14 +44,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CreateCorrectiveActionDialogProps {
   certificationId: string;
-  complianceCheckId: string;
+  complianceCheckId?: string;
   defaultFinding?: string;
   defaultRequirementCode?: string;
 }
 
 export function CreateCorrectiveActionDialog({
   certificationId,
-  complianceCheckId,
+  complianceCheckId = undefined,
   defaultFinding,
   defaultRequirementCode,
 }: CreateCorrectiveActionDialogProps) {
@@ -102,7 +102,7 @@ export function CreateCorrectiveActionDialog({
         organizationId: currentOrganization.id,
         data: {
           certification_id: certificationId,
-          compliance_check_id: complianceCheckId,
+          ...(complianceCheckId ? { compliance_check_id: complianceCheckId } : {}),
           finding_description: values.finding_description,
           requirement_code: values.requirement_code || undefined,
           priority: values.priority,

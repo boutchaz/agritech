@@ -173,6 +173,12 @@
       "cancel": "إلغاء",
       "create": "إنشاء"
     },
+    "updateCheck": {
+      "button": "تعديل",
+      "title": "تعديل فحص الامتثال",
+      "description": "تحديث الحالة أو النتيجة أو معلومات هذا الفحص.",
+      "save": "حفظ"
+    },
     "createAction": {
       "button": "إجراء تصحيحي جديد",
       "title": "إنشاء إجراء تصحيحي",
@@ -280,5 +286,8 @@
     "documentTypeRequired": "نوع المستند مطلوب",
     "nextAuditDateRequired": "تاريخ المراجعة القادمة مطلوب"
   },
-  "noChecksFound": "لم يتم العثور على فحوصات امتثال."
+  "noChecksFound": "لم يتم العثور على فحوصات امتثال.",
+  "checks": {
+    "deleteConfirm": "حذف فحص الامتثال هذا؟"
+  }
 }

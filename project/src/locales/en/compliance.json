@@ -173,6 +173,12 @@
       "cancel": "Cancel",
       "create": "Create"
     },
+    "updateCheck": {
+      "button": "Edit",
+      "title": "Edit Compliance Check",
+      "description": "Update the status, score or information of this compliance check.",
+      "save": "Save"
+    },
     "createAction": {
       "button": "New corrective action",
       "title": "Create a corrective action",
@@ -280,5 +286,8 @@
     "documentTypeRequired": "Document type is required",
     "nextAuditDateRequired": "Next audit date is required"
   },
-  "noChecksFound": "No compliance checks found."
+  "noChecksFound": "No compliance checks found.",
+  "checks": {
+    "deleteConfirm": "Delete this compliance check?"
+  }
 }
