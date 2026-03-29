@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, UserPlus, AlertCircle, X, Shield } from "lucide-react";
+import { Save, UserPlus, AlertCircle, AlertTriangle, X, Shield } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Worker, WorkerFormData } from "../../types/workers";
@@ -35,7 +35,6 @@ import {
 } from "../ui/drawer";
 import { Button } from "../ui/button";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { Button } from '@/components/ui/button';
 import { ButtonLoader } from '@/components/ui/loader';
 import { Switch } from '@/components/ui/switch';
 
@@ -111,6 +110,7 @@ interface WorkerFormProps {
   worker?: Worker | null;
   organizationId: string;
   farms: Array<{ id: string; name: string }>;
+  existingWorkers?: Worker[];
   onClose: () => void;
   onSuccess?: () => void;
 }
@@ -120,6 +120,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   worker,
   organizationId,
   farms,
+  existingWorkers = [],
   onClose,
   onSuccess,
 }) => {
@@ -140,6 +141,10 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     !!worker?.user_id,
   );
   const [platformAccessLoading, setPlatformAccessLoading] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    matches: Worker[];
+    pendingData: WorkerFormData;
+  } | null>(null);
 
   const {
     register,
@@ -296,7 +301,22 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     }
   }, [grantPlatformAccess, watchEmail]);
 
-  const onSubmit = async (data: WorkerFormData) => {
+  const onSubmit = async (data: WorkerFormData, bypassDuplicateCheck = false) => {
+    // Duplicate check — only on create, skip if user already confirmed
+    if (!isEditing && !bypassDuplicateCheck) {
+      const firstName = data.first_name.trim().toLowerCase();
+      const lastName = data.last_name.trim().toLowerCase();
+      const matches = existingWorkers.filter(
+        (w) =>
+          w.first_name.trim().toLowerCase() === firstName &&
+          w.last_name.trim().toLowerCase() === lastName,
+      );
+      if (matches.length > 0) {
+        setDuplicateWarning({ matches, pendingData: data });
+        return;
+      }
+    }
+
     try {
       let workerId = worker?.id;
 
@@ -496,6 +516,69 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                   </li>
                 ))}
               </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate worker warning */}
+      {duplicateWarning && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                {t("workers.confirmations.duplicateTitle")}
+              </h4>
+              <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1 mb-3">
+                {duplicateWarning.matches.map((w) => (
+                  <li key={w.id} className="flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span className="font-medium">
+                      {w.first_name} {w.last_name}
+                    </span>
+                    {w.cin && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        CIN: {w.cin}
+                      </span>
+                    )}
+                    {w.phone && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        {t("workers.form.fields.phone")}: {w.phone}
+                      </span>
+                    )}
+                    {w.email && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        {w.email}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                {t("workers.confirmations.duplicateQuestion")}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDuplicateWarning(null)}
+                >
+                  {t("workers.form.buttons.cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => {
+                    const data = duplicateWarning.pendingData;
+                    setDuplicateWarning(null);
+                    onSubmit(data, true);
+                  }}
+                >
+                  {t("workers.confirmations.duplicateContinue")}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

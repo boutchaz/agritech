@@ -3470,7 +3470,10 @@
     },
     "confirmations": {
       "deactivate": "Êtes-vous sûr de vouloir désactiver ce travailleur?",
-      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible."
+      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible.",
+      "duplicateTitle": "Un travailleur avec ce nom existe déjà",
+      "duplicateQuestion": "Voulez-vous quand même créer ce travailleur ? (Il peut s'agir de deux personnes différentes.)",
+      "duplicateContinue": "Continuer quand même"
     },
     "workerTypes": {
       "fixed_salary": "Salarié fixe",

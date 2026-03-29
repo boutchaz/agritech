@@ -615,6 +615,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
         worker={selectedWorker}
         organizationId={organizationId}
         farms={farmsArray}
+        existingWorkers={workers}
         onClose={() => {
           setShowForm(false);
           setSelectedWorker(null);
