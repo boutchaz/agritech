@@ -102,17 +102,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Preconnect to external resources -->
-    <link rel="preconnect" href="https://unpkg.com" />
-    <link rel="dns-prefetch" href="https://unpkg.com" />
-
-    <!-- Leaflet CSS -->
+    <!-- Leaflet CSS — loaded async to avoid blocking render -->
     <link
-      rel="stylesheet"
+      rel="preload"
+      as="style"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
+      onload="this.onload=null;this.rel='stylesheet'"
     />
+    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /></noscript>
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -176,7 +175,16 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline loading shell — shown instantly before JS loads -->
+      <div id="app-loader" style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f9fafb;font-family:system-ui,sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:48px;height:48px;border:4px solid #e5e7eb;border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+          <p style="color:#6b7280;font-size:14px;">Chargement d'AgroGina...</p>
+        </div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

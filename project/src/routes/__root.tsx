@@ -2,14 +2,30 @@ import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
 import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
-import { GlobalCommandPalette } from '../components/GlobalCommandPalette'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
-import { TourProvider } from '../contexts/TourContext'
-import { TourHelpButton } from '../components/TourHelpButton'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { lazy, Suspense } from 'react'
+
+// Lazy load non-critical UI — command palette, tour, devtools
+const GlobalCommandPalette = lazy(() =>
+  import('../components/GlobalCommandPalette').then((mod) => ({
+    default: mod.GlobalCommandPalette,
+  }))
+);
+
+const TourProvider = lazy(() =>
+  import('../contexts/TourContext').then((mod) => ({
+    default: mod.TourProvider,
+  }))
+);
+
+const TourHelpButton = lazy(() =>
+  import('../components/TourHelpButton').then((mod) => ({
+    default: mod.TourHelpButton,
+  }))
+);
 
 // Lazy load devtools — they're only used in development
 const TanStackRouterDevtools = import.meta.env.DEV
@@ -38,24 +54,32 @@ export const Route = createRootRoute({
         <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
           <AuthProviderSwitch>
             <ExperienceLevelProvider>
-              <TourProvider>
-                <AbilityProvider>
-                  <GlobalCommandPalette>
-                    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                      <Outlet />
-                      <OfflineIndicator />
-                      {!isOnboardingRoute && <TourHelpButton />}
-                      <Toaster richColors position="top-right" />
-                      {import.meta.env.DEV && (
-                        <Suspense>
-                          <TanStackRouterDevtools />
-                          <ReactQueryDevtools initialIsOpen={false} />
-                        </Suspense>
-                      )}
-                    </div>
-                  </GlobalCommandPalette>
-                </AbilityProvider>
-              </TourProvider>
+              <Suspense>
+                <TourProvider>
+                  <AbilityProvider>
+                    <Suspense>
+                      <GlobalCommandPalette>
+                        <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+                          <Outlet />
+                          <OfflineIndicator />
+                          {!isOnboardingRoute && (
+                            <Suspense>
+                              <TourHelpButton />
+                            </Suspense>
+                          )}
+                          <Toaster richColors position="top-right" />
+                          {import.meta.env.DEV && (
+                            <Suspense>
+                              <TanStackRouterDevtools />
+                              <ReactQueryDevtools initialIsOpen={false} />
+                            </Suspense>
+                          )}
+                        </div>
+                      </GlobalCommandPalette>
+                    </Suspense>
+                  </AbilityProvider>
+                </TourProvider>
+              </Suspense>
             </ExperienceLevelProvider>
           </AuthProviderSwitch>
         </NetworkStatusProvider>
