@@ -157,7 +157,11 @@ const LandingPage: React.FC = () => {
   const faqItems = [1, 2, 3, 4, 5, 6];
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-background text-foreground font-[Inter,sans-serif]" style={{ scrollBehavior: 'smooth' }}>
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-background text-foreground font-[Inter,sans-serif]"
+      style={{ scrollBehavior: 'smooth' }}
+    >
       {/* NAVBAR */}
       <header
         className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${
@@ -293,13 +297,13 @@ const LandingPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => scrollTo('modules')}
-                  className="px-8 py-4 rounded-xl font-semibold text-lg bg-transparent text-white border-2 border-[rgba(255,255,255,0.3)] hover:border-white hover:bg-[rgba(255,255,255,0.1)] transition-all duration-300 cursor-pointer"
+                  className="px-8 py-4 rounded-xl font-semibold text-lg bg-transparent text-white border-2 border-white/30 hover:border-white hover:bg-white/10 transition-all duration-300 cursor-pointer"
                 >
                   {t('landing.hero.ctaDiscover')}
                 </button>
               </div>
 
-              <div className="flex gap-6 justify-center text-muted-foreground text-sm flex-wrap">
+              <div className="flex gap-6 justify-center text-slate-300 text-sm flex-wrap">
                 {[1, 2, 3].map((n) => (
                   <span key={n} className="flex items-center gap-2">
                     <Check className="w-4 h-4" />
@@ -313,13 +317,13 @@ const LandingPage: React.FC = () => {
             <div className="mt-16 w-full max-w-[1000px] reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] delay-200">
               <div
                 onClick={openVideoModal}
-                className="relative rounded-xl overflow-hidden border border-[rgba(255,255,255,0.1)] cursor-pointer aspect-video shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] group"
+                className="relative rounded-xl overflow-hidden border border-white/20 cursor-pointer aspect-video shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] group"
                 style={{ transform: 'perspective(1000px) rotateX(2deg)', transition: 'transform 0.5s ease' }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'perspective(1000px) rotateX(0deg)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'perspective(1000px) rotateX(2deg)'; }}
               >
                 <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover opacity-80 brightness-90" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] bg-[rgba(30,136,229,0.9)] rounded-full flex items-center justify-center backdrop-blur shadow-[0_10px_25px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] bg-blue-500/90 rounded-full flex items-center justify-center backdrop-blur shadow-[0_10px_25px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
                   <Play className="w-7 h-7 text-white ml-1" fill="white" />
                 </div>
                 <div className="absolute bottom-6 left-0 right-0 text-center font-semibold text-white tracking-[2px] text-sm" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
@@ -343,7 +347,7 @@ const LandingPage: React.FC = () => {
                 <div
                   key={key}
                   className={`reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] bg-card p-8 rounded-xl border hover:-translate-y-1 hover:shadow-md hover:border-primary/30 ${
-                    isAi ? 'border-2 border-[rgba(30,136,229,0.3)] bg-gradient-to-br from-white to-[#f0f7ff]' : 'border-border'
+                    isAi ? 'border-2 border-blue-400/45 bg-gradient-to-br from-card to-blue-50/40 dark:to-blue-950/20' : 'border-border'
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${color}`}>
