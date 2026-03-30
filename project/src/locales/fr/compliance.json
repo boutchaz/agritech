@@ -290,5 +290,8 @@
     "documentTypeRequired": "Le type de document est requis",
     "nextAuditDateRequired": "La date du prochain audit est requise"
   },
-  "noChecksFound": "Aucun contrôle de conformité trouvé."
+  "noChecksFound": "Aucun contrôle de conformité trouvé.",
+  "checks": {
+    "deleteConfirm": "Supprimer ce contrôle de conformité ?"
+  }
 }

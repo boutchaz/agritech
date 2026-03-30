@@ -3474,7 +3474,10 @@
     },
     "confirmations": {
       "deactivate": "Are you sure you want to deactivate this worker?",
-      "delete": "Are you sure you want to permanently delete this worker? This action cannot be undone."
+      "delete": "Are you sure you want to permanently delete this worker? This action cannot be undone.",
+      "duplicateTitle": "A worker with this name already exists",
+      "duplicateQuestion": "Do you still want to create this worker? (They may be different people.)",
+      "duplicateContinue": "Continue anyway"
     },
     "workerTypes": {
       "fixed_salary": "Fixed salary",
@@ -4472,6 +4475,8 @@
       "ratePerUnitLabel": "Rate per unit (MAD)",
       "ratePerUnitPlaceholder": "E.g.: 5.00 (optional)",
       "estimatedTotal": "Estimated total: {{amount}} MAD",
+      "enableStockAccess": "Use products from stock",
+      "enableStockAccessHint": "Check this if the task requires products from stock (e.g. harvest crates, maintenance supplies...).",
       "productsSection": "Products to Use (Stock)",
       "addProduct": "Add product",
       "noProductsAvailable": "No products available in stock. Add products in Stock > Receipts.",

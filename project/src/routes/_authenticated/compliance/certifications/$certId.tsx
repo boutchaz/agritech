@@ -303,12 +303,11 @@ function CertificationDetailPage() {
               isLoading={isLoadingChecks}
               onDelete={(check) => {
                 if (!currentOrganization) return;
-                if (confirm(t('checks.deleteConfirm'))) {
-                  deleteComplianceCheck.mutate({
-                    organizationId: currentOrganization.id,
-                    checkId: check.id,
-                  });
-                }
+                showConfirm(
+                  t('checks.deleteConfirm'),
+                  () => deleteComplianceCheck.mutate({ organizationId: currentOrganization.id, checkId: check.id }),
+                  { variant: 'destructive' }
+                );
               }}
             />
           </div>

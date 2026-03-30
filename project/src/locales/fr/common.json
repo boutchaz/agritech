@@ -3470,7 +3470,10 @@
     },
     "confirmations": {
       "deactivate": "Êtes-vous sûr de vouloir désactiver ce travailleur?",
-      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible."
+      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible.",
+      "duplicateTitle": "Un travailleur avec ce nom existe déjà",
+      "duplicateQuestion": "Voulez-vous quand même créer ce travailleur ? (Il peut s'agir de deux personnes différentes.)",
+      "duplicateContinue": "Continuer quand même"
     },
     "workerTypes": {
       "fixed_salary": "Salarié fixe",
@@ -4291,6 +4294,8 @@
       "ratePerUnitLabel": "Tarif par unité (MAD)",
       "ratePerUnitPlaceholder": "Ex: 5.00 (optionnel)",
       "estimatedTotal": "Total estimé: {{amount}} MAD",
+      "enableStockAccess": "Utiliser des produits du stock",
+      "enableStockAccessHint": "Cochez si cette tâche nécessite des produits du stock (ex: caisses de récolte, produits d'entretien...).",
       "productsSection": "Produits à utiliser (Stock)",
       "addProduct": "Ajouter produit",
       "noProductsAvailable": "Aucun produit disponible en stock. Ajoutez des produits dans Stock > Réceptions.",

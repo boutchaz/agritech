@@ -290,5 +290,8 @@
     "documentTypeRequired": "Document type is required",
     "nextAuditDateRequired": "Next audit date is required"
   },
-  "noChecksFound": "No compliance checks found."
+  "noChecksFound": "No compliance checks found.",
+  "checks": {
+    "deleteConfirm": "Delete this compliance check?"
+  }
 }

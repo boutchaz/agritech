@@ -13,7 +13,7 @@ import { workUnitsApi } from '../../lib/api/work-units';
 import { parcelsApi } from '../../lib/api/parcels';
 import { inventoryApi, type InventoryProduct } from '../../lib/api/inventory';
 import type { Task, CreateTaskRequest, TaskType } from '../../types/tasks';
-import { TASK_TYPE_LABELS, STOCK_CONSUMING_TASK_TYPES } from '../../types/tasks';
+import { TASK_TYPE_LABELS, STOCK_CONSUMING_TASK_TYPES, OPTIONAL_STOCK_TASK_TYPES } from '../../types/tasks';
 import type { WorkUnit } from '../../types/work-units';
 import type { Parcel } from '../../lib/api/parcels';
 import { Input } from '../ui/Input';
@@ -95,6 +95,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   // State for planned inventory items (products to consume when task completes)
   const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; variant_id?: string; quantity: number }>>([]);
+  // For optional-stock task types, user must explicitly enable stock access
+  const [stockEnabled, setStockEnabled] = useState(false);
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -177,8 +179,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   });
   const workUnits = Array.isArray(workUnitsData) ? workUnitsData : [];
 
-  // Task types that can consume inventory products
-  const showProductSection = (STOCK_CONSUMING_TASK_TYPES as readonly string[]).includes(formData.task_type);
+  // Task types that always require stock access
+  const isAlwaysStockType = (STOCK_CONSUMING_TASK_TYPES as readonly string[]).includes(formData.task_type);
+  // Task types where stock access is optional
+  const isOptionalStockType = (OPTIONAL_STOCK_TASK_TYPES as readonly string[]).includes(formData.task_type);
+  // Show the product section if always-stock, or optional-stock with user toggle enabled
+  const showProductSection = isAlwaysStockType || (isOptionalStockType && stockEnabled);
 
   // Fetch available products from inventory
   const { data: availableProducts = [] } = useQuery({
@@ -217,6 +223,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
       }
     }
   }, [formData.parcel_id, formData.task_type, selectedParcel, task, formData, reset]);
+
+  // Reset stock toggle and items when switching to a non-stock task type
+  useEffect(() => {
+    if (!isAlwaysStockType && !isOptionalStockType) {
+      setStockEnabled(false);
+      setPlannedItems([]);
+    }
+  }, [formData.task_type, isAlwaysStockType, isOptionalStockType]);
 
   const onSubmit = async (data: TaskFormData) => {
     if (data.due_date < data.scheduled_start) {
@@ -258,8 +272,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
       }
 
 
-      // Add planned items for stock-consuming task types
-      if (plannedItems.length > 0 && (STOCK_CONSUMING_TASK_TYPES as readonly string[]).includes(data.task_type)) {
+      // Add planned items for stock-consuming task types (always or optional with toggle enabled)
+      if (plannedItems.length > 0 && showProductSection) {
         cleanedData.planned_items = plannedItems.filter(item => item.product_id && item.quantity > 0);
       }
       if (task) {
@@ -789,6 +803,30 @@ const TaskForm: React.FC<TaskFormProps> = ({
             )}
           </div>
 
+
+          {/* Optional stock toggle for task types that may or may not need products */}
+          {isOptionalStockType && (
+            <div className="border-t pt-4">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <Checkbox
+                  id="stock-enabled"
+                  checked={stockEnabled}
+                  onCheckedChange={(checked) => {
+                    setStockEnabled(!!checked);
+                    if (!checked) setPlannedItems([]);
+                  }}
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('tasks.form.enableStockAccess')}
+                  </span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('tasks.form.enableStockAccessHint')}
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Product / Stock Selection (for applicable task types) */}
           {showProductSection && (

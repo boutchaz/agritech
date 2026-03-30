@@ -290,5 +290,8 @@
     "documentTypeRequired": "نوع المستند مطلوب",
     "nextAuditDateRequired": "تاريخ المراجعة القادمة مطلوب"
   },
-  "noChecksFound": "لم يتم العثور على فحوصات امتثال."
+  "noChecksFound": "لم يتم العثور على فحوصات امتثال.",
+  "checks": {
+    "deleteConfirm": "حذف فحص الامتثال هذا؟"
+  }
 }
