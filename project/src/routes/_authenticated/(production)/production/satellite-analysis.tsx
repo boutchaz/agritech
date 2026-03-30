@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, lazy, Suspense } from 'react';
-import { Satellite, TrendingUp, BarChart3, MapPin, Lock, Loader2 } from 'lucide-react';
+import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
+import { ContentSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcels } from '@/hooks/useParcels';
 import { IndexCalculationResponse } from '@/lib/satellite-api';
@@ -179,12 +180,7 @@ function SatelliteAnalysisPage() {
               <BarChart3 className="w-5 h-5 text-green-600" />
               <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.vegetationIndicesTitle')}</h2>
             </div>
-            <Suspense fallback={
-              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingAnalysisTools')}</span>
-              </div>
-            }>
+            <Suspense fallback={<ContentSkeleton lines={6} className="p-6 bg-white rounded-lg shadow" />}>
               <IndicesCalculator
                 parcelName={selectedParcel.name}
                 boundary={selectedParcel.boundary}
@@ -199,12 +195,7 @@ function SatelliteAnalysisPage() {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.historicalTrendsTitle')}</h2>
             </div>
-            <Suspense fallback={
-              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingHistoricalData')}</span>
-              </div>
-            }>
+            <Suspense fallback={<ContentSkeleton lines={6} className="p-6 bg-white rounded-lg shadow" />}>
               <TimeSeriesChart
                 parcelId={selectedParcel.id}
                 parcelName={selectedParcel.name}

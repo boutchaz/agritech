@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AiUsageBar } from '@/components/settings/AiUsageBar';
 import { useAiQuota } from '@/hooks/useAiQuota';
 import { useAuth } from '@/hooks/useAuth';
-import { Brain, Loader2 } from 'lucide-react';
+import { Brain } from 'lucide-react';
+import { SettingsPageSkeleton } from '@/components/ui/page-skeletons';
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/ai')({
   component: AiSettingsPage,
@@ -28,9 +29,7 @@ function AiSettingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
+        <SettingsPageSkeleton />
       ) : quota ? (
         <div className="space-y-6">
           <Card>

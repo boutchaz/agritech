@@ -1,5 +1,6 @@
 import React from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import { usePestReport, useUpdatePestReport, useEscalatePestReport } from '@/hooks/usePestAlerts';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -64,11 +65,7 @@ function PestReportDetailPage() {
   const { mutate: escalateReport, isPending: isEscalating } = useEscalatePestReport();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (!report) {

@@ -14,10 +14,10 @@ import {
   PackageCheck,
   Hash,
   MessageSquare,
-  Loader2,
   Timer,
   Banknote,
 } from 'lucide-react';
+import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
 import { useTaskAssignments } from '@/hooks/useTaskAssignments';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
@@ -161,11 +161,7 @@ function TaskDetailPage() {
   }, [availableCrops.length]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-      </div>
-    );
+    return <DetailPageSkeleton />;
   }
 
   if (!task || fetchError) {

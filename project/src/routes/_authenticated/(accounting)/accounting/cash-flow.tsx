@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { ArrowDownCircle, ArrowUpCircle, Banknote, Building2, Calendar, Loader2, AlertCircle, Download, Wheat, CalendarRange } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Banknote, Building2, Calendar, AlertCircle, Download, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,6 +16,7 @@ import { useCashFlow, type CashFlowReport } from '@/hooks/useFinancialReports';
 import { useCampaigns, useFiscalYears } from '@/hooks/useAgriculturalAccounting';
 import { formatCurrency } from '@/lib/utils/format';
 import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
 
 interface CashFlowLineItem {
@@ -371,12 +372,7 @@ const AppContent: React.FC = () => {
         </Card>
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.cashFlow.loading', 'Loading cash flow statement...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (

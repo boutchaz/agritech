@@ -22,9 +22,9 @@ import {
   Wallet,
   DollarSign,
   BarChart3,
-  Loader2,
   Layers,
 } from 'lucide-react';
+import { CardGridSkeleton } from '@/components/ui/page-skeletons';
 
 interface ReportCard {
   id: string;
@@ -225,16 +225,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mx-auto" />
-          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            {t('common.loading', 'Loading...')}
-          </p>
-        </div>
-      </div>
-    );
+    return <CardGridSkeleton count={8} className="p-6" />;
   }
 
   return (
