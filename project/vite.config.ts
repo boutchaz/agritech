@@ -40,6 +40,21 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/blog': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/sitemap.xml': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/rss.xml': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
   esbuild: {
