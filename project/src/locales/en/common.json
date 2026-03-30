@@ -6189,6 +6189,52 @@
       }
     }
   },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Book your meeting with AGROGINA",
+      "subtitle": "Discover how our AgriTech platform transforms farm management. Personalized demo at our stand."
+    },
+    "sections": {
+      "info": "Your information",
+      "farm": "Your farm",
+      "slot": "Choose your slot"
+    },
+    "form": {
+      "namePlaceholder": "Full name *",
+      "companyPlaceholder": "Company / Farm",
+      "phonePlaceholder": "Phone *",
+      "emailPlaceholder": "Email",
+      "surface": "Cultivated area",
+      "region": "Region",
+      "other": "Other",
+      "otherCulturePlaceholder": "Specify your crop",
+      "submit": "Confirm my meeting request",
+      "submitting": "Submitting..."
+    },
+    "surface": {
+      "lt50": "Less than 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "More than 600 ha"
+    },
+    "validation": {
+      "nameMin": "Please enter your full name",
+      "phoneRequired": "Please enter a valid phone number",
+      "emailInvalid": "Please enter a valid email",
+      "slotRequired": "Please choose a time slot"
+    },
+    "success": {
+      "title": "Request sent!",
+      "message": "Hello {{name}}, your request for slot {{slot}} has been received.",
+      "fallbackName": "there",
+      "subtext": "Our team will contact you within 24h."
+    },
+    "error": {
+      "submitFailed": "Unable to send your request. Please try again."
+    }
+  },
   "retry": "Retry",
   "close": "Close",
   "edit": "Edit",

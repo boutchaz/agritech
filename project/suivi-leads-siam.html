@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi Leads SIAM 2026 — AGROGINA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --g:#1D6B3A;--g2:#2E8B50;--gp:#E8F5EC;--gm:#b8d9c4;
+  --gold:#C8892A;--goldp:#FDF6E7;
+  --bg:#F0F2EE;--white:#FFF;--text:#1A1A1A;--text2:#556052;--text3:#8A9A87;
+  --border:#D2D8CF;--radius:12px;
+  --s-new:#185FA5;--s-new-bg:#E6F1FB;
+  --s-contact:#BA7517;--s-contact-bg:#FDF6E7;
+  --s-demo:#1D6B3A;--s-demo-bg:#E8F5EC;
+  --s-devis:#533AB7;--s-devis-bg:#EEEDFE;
+  --s-gagne:#0F6E56;--s-gagne-bg:#E1F5EE;
+  --s-perdu:#993C1D;--s-perdu-bg:#FAECE7;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* NAV */
+.nav{background:var(--g);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100}
+.nav-brand{color:#fff;font-size:16px;font-weight:600}
+.nav-brand span{color:#F0C96A;margin-left:6px;font-size:13px;font-weight:400}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{padding:7px 16px;border-radius:8px;font-size:13px;cursor:pointer;color:rgba(255,255,255,.6);transition:all .15s;border:none;background:transparent;font-family:'DM Sans',sans-serif}
+.nav-tab.active{background:rgba(255,255,255,.15);color:#fff;font-weight:500}
+
+/* METRICS */
+.metrics{padding:16px 16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;max-width:1200px;margin:0 auto}
+.metric{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center}
+.metric-val{font-size:26px;font-weight:600;color:var(--g);line-height:1}
+.metric-lbl{font-size:11px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.8px}
+.metric.gold .metric-val{color:var(--gold)}
+
+/* FILTERS */
+.filters{padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;max-width:1200px;margin:0 auto;align-items:center}
+.filter-chip{padding:6px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;background:var(--white);transition:all .15s;color:var(--text2)}
+.filter-chip.active{border-color:var(--g);background:var(--gp);color:var(--g);font-weight:500}
+.filter-chip.all.active{border-color:var(--g);background:var(--g);color:#fff}
+.search-box{flex:1;min-width:200px;padding:7px 14px;border:1.5px solid var(--border);border-radius:20px;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
+.search-box:focus{border-color:var(--g)}
+.btn-import{padding:7px 16px;border:1.5px solid var(--g);border-radius:20px;font-size:12px;background:var(--gp);color:var(--g);cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500}
+
+/* LIST VIEW */
+#listView{max-width:1200px;margin:0 auto;padding:0 16px 80px}
+.leads-table{width:100%;border-collapse:separate;border-spacing:0 6px}
+.leads-table thead th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);padding:6px 12px;text-align:left;font-weight:500}
+.lead-row{background:var(--white);border-radius:10px;cursor:pointer;transition:box-shadow .15s}
+.lead-row:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.lead-row td{padding:12px 12px;vertical-align:middle;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.lead-row td:first-child{border-left:1px solid var(--border);border-radius:10px 0 0 10px;padding-left:16px}
+.lead-row td:last-child{border-right:1px solid var(--border);border-radius:0 10px 10px 0;padding-right:16px}
+.lead-name-cell{font-size:14px;font-weight:500}
+.lead-meta-cell{font-size:12px;color:var(--text2)}
+.score-dot{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;font-size:13px;font-weight:600;color:#fff}
+.sd1,.sd2{background:#639922}
+.sd3{background:#BA7517}
+.sd4,.sd5{background:var(--g)}
+.statut-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500}
+.st-Nouveau{background:var(--s-new-bg);color:var(--s-new)}
+.st-Contacté{background:var(--s-contact-bg);color:var(--s-contact)}
+.st-Démo{background:var(--s-demo-bg);color:var(--s-demo)}
+.st-Devis{background:var(--s-devis-bg);color:var(--s-devis)}
+.st-Gagné{background:var(--s-gagne-bg);color:var(--s-gagne)}
+.st-Perdu{background:var(--s-perdu-bg);color:var(--s-perdu)}
+
+.action-btn{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;background:var(--white);margin-right:4px;font-family:'DM Sans',sans-serif;transition:all .15s;color:var(--text2)}
+.action-btn:hover{border-color:var(--g);color:var(--g)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-header h2{font-size:17px;font-weight:500}
+.modal-close{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:var(--white);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text2)}
+.modal-section{margin-bottom:18px}
+.modal-section label{display:block;font-size:12px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px}
+.modal-section p{font-size:14px;color:var(--text);line-height:1.5}
+.modal-section select,.modal-section textarea,.modal-section input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.modal-section select:focus,.modal-section textarea:focus,.modal-section input:focus{border-color:var(--g)}
+.modal-section textarea{min-height:80px;resize:vertical}
+.modal-btn{width:100%;padding:13px;background:var(--g);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+.modal-btn:hover{background:var(--g2)}
+.tags-row{display:flex;flex-wrap:wrap;gap:6px}
+.m-tag{font-size:12px;padding:3px 10px;border-radius:10px;background:var(--gp);color:var(--g)}
+
+.history-item{border-left:2px solid var(--border);padding:8px 0 8px 14px;margin-bottom:8px;position:relative}
+.history-item::before{content:'';position:absolute;left:-5px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--g)}
+.history-date{font-size:11px;color:var(--text3);margin-bottom:2px}
+.history-text{font-size:13px;color:var(--text)}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.btn-demo{padding:10px 20px;background:var(--g);color:#fff;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:16px;font-size:13px}
+
+/* IMPORT */
+#importInput{display:none}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--g);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:all .3s;pointer-events:none;z-index:300}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="nav-brand">AGROGINA <span>· Suivi Leads SIAM 2026</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="setView('list')">Liste</button>
+    <button class="nav-tab" onclick="setView('stats')">Statistiques</button>
+  </div>
+</div>
+
+<div class="metrics" id="metricsBar"></div>
+
+<div class="filters">
+  <input class="search-box" id="searchBox" placeholder="Rechercher nom, société, tél..." oninput="renderList()">
+  <span class="filter-chip all active" data-filter="all" onclick="setFilter(this)">Tous</span>
+  <span class="filter-chip" data-filter="Nouveau" onclick="setFilter(this)">Nouveaux</span>
+  <span class="filter-chip" data-filter="Contacté" onclick="setFilter(this)">Contactés</span>
+  <span class="filter-chip" data-filter="Démo" onclick="setFilter(this)">Démo</span>
+  <span class="filter-chip" data-filter="Devis" onclick="setFilter(this)">Devis</span>
+  <span class="filter-chip" data-filter="Gagné" onclick="setFilter(this)">Gagnés</span>
+  <span class="filter-chip" data-filter="Perdu" onclick="setFilter(this)">Perdus</span>
+  <label class="btn-import" for="importInput">↑ Importer CSV</label>
+  <input type="file" id="importInput" accept=".csv" onchange="importCSV(this)">
+</div>
+
+<div id="listView">
+  <table class="leads-table">
+    <thead>
+      <tr>
+        <th>Contact</th>
+        <th>Profil</th>
+        <th>Surface</th>
+        <th>Score</th>
+        <th>Statut</th>
+        <th>RDV souhaité</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="leadsBody"></tbody>
+  </table>
+  <div class="empty" id="emptyState" style="display:none">
+    <p>Aucun lead chargé.<br>Importez le CSV exporté depuis le formulaire de collecte.</p>
+    <button class="btn-demo" onclick="loadDemo()">Charger des données de démo</button>
+  </div>
+</div>
+
+<!-- MODAL DÉTAIL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 id="modalName">Lead</h2>
+      <button class="modal-close" onclick="closeModalDirect()">×</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let leads=JSON.parse(localStorage.getItem('siam_leads')||'[]');
+let filter='all';
+let currentLeadId=null;
+
+const STATUTS=['Nouveau','Contacté','Démo','Devis','Gagné','Perdu'];
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function setFilter(el){
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  filter=el.dataset.filter;
+  renderList();
+}
+
+function setView(v){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+  if(v==='stats'){showStats();}else{renderList();}
+}
+
+function filteredLeads(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  return leads.filter(l=>{
+    const matchFilter=filter==='all'||l.statut===filter;
+    const matchSearch=!q||l.nom.toLowerCase().includes(q)||
+      (l.societe||'').toLowerCase().includes(q)||
+      (l.tel||'').includes(q);
+    return matchFilter&&matchSearch;
+  });
+}
+
+function renderMetrics(){
+  const total=leads.length;
+  const chaud=leads.filter(l=>l.score>=4).length;
+  const gagne=leads.filter(l=>l.statut==='Gagné').length;
+  const rdv=leads.filter(l=>l.rdvSouhait&&l.rdvSouhait!=='Non').length;
+  document.getElementById('metricsBar').innerHTML=`
+    <div class="metric"><div class="metric-val">${total}</div><div class="metric-lbl">Total leads</div></div>
+    <div class="metric gold"><div class="metric-val">${chaud}</div><div class="metric-lbl">Leads chauds</div></div>
+    <div class="metric"><div class="metric-val">${rdv}</div><div class="metric-lbl">RDV souhaités</div></div>
+    <div class="metric"><div class="metric-val">${gagne}</div><div class="metric-lbl">Gagnés</div></div>
+  `;
+}
+
+function renderList(){
+  renderMetrics();
+  const fl=filteredLeads();
+  const body=document.getElementById('leadsBody');
+  const empty=document.getElementById('emptyState');
+  if(!leads.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  if(!fl.length){body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:#888">Aucun lead pour ce filtre</td></tr>`;return;}
+  body.innerHTML=fl.map(l=>`
+    <tr class="lead-row" onclick="openLead(${l.id})">
+      <td>
+        <div class="lead-name-cell">${l.nom}</div>
+        <div class="lead-meta-cell">${l.societe||''} ${l.tel?'· '+l.tel:''}</div>
+      </td>
+      <td><div class="lead-meta-cell">${l.profil||'—'}</div></td>
+      <td><div class="lead-meta-cell">${l.surface||'—'}</div></td>
+      <td><span class="score-dot sd${l.score||0}">${l.score||'?'}</span></td>
+      <td><span class="statut-badge st-${l.statut||'Nouveau'}">${l.statut||'Nouveau'}</span></td>
+      <td><div class="lead-meta-cell" style="font-size:12px">${l.rdvSouhait||'—'}</div></td>
+      <td onclick="event.stopPropagation()">
+        ${STATUTS.filter(s=>s!==l.statut).slice(0,2).map(s=>`<button class="action-btn" onclick="quickStatus(${l.id},'${s}')">${s}</button>`).join('')}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function quickStatus(id,statut){
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+  if(!l.history)l.history=[];
+  l.history.unshift({date:new Date().toLocaleString('fr-FR'),text:'Statut → '+statut});
+  l.statut=statut;
+  save();renderList();
+  showToast(l.nom+' → '+statut);
+}
+
+function openLead(id){
+  const l=leads.find(x=>x.id===id);
+  if(!l)return;
+  currentLeadId=id;
+  document.getElementById('modalName').textContent=l.nom+(l.societe?' · '+l.societe:'');
+  const tags=[...( l.cultures||[]),...(l.interets||[])].filter(Boolean);
+  document.getElementById('modalContent').innerHTML=`
+    <div class="modal-section">
+      <label>Contact</label>
+      <p>${l.tel||''}${l.email?' · '+l.email:''}</p>
+    </div>
+    <div class="modal-section">
+      <label>Exploitation</label>
+      <p>${l.region||'—'} · ${l.surface||'—'}</p>
+      <div class="tags-row" style="margin-top:6px">${tags.map(t=>`<span class="m-tag">${t}</span>`).join('')}</div>
+    </div>
+    ${l.note?`<div class="modal-section"><label>Note terrain</label><p>${l.note}</p></div>`:''}
+    <div class="modal-section">
+      <label>Statut</label>
+      <select id="modalStatut" onchange="updateStatut()">
+        ${STATUTS.map(s=>`<option ${s===l.statut?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
+    <div class="modal-section">
+      <label>Prochaine action</label>
+      <input type="text" id="modalAction" placeholder="Ex: Appeler lundi matin" value="${l.prochaine||''}">
+    </div>
+    <div class="modal-section">
+      <label>Commentaire</label>
+      <textarea id="modalComment" placeholder="Ajouter une note de suivi..."></textarea>
+    </div>
+    <button class="modal-btn" onclick="saveModal()">Enregistrer</button>
+    ${l.history&&l.history.length?`
+    <div class="modal-section" style="margin-top:20px">
+      <label>Historique</label>
+      ${l.history.map(h=>`<div class="history-item"><div class="history-date">${h.date}</div><div class="history-text">${h.text}</div></div>`).join('')}
+    </div>`:''}
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function updateStatut(){
+  const l=leads.find(x=>x.id===currentLeadId);
+  if(l){
+    const ns=document.getElementById('modalStatut').value;
+    if(!l.history)l.history=[];
+    l.history.unshift({date:new Date().toLocaleString('fr-FR'),text:'Statut → '+ns});
+    l.statut=ns;save();renderList();
+  }
+}
+
+function saveModal(){
+  const l=leads.find(x=>x.id===currentLeadId);
+  if(!l)return;
+  const comment=document.getElementById('modalComment').value.trim();
+  const action=document.getElementById('modalAction').value.trim();
+  l.prochaine=action;
+  if(comment){
+    if(!l.history)l.history=[];
+    l.history.unshift({date:new Date().toLocaleString('fr-FR'),text:comment});
+  }
+  save();closeModalDirect();renderList();
+  showToast('Lead mis à jour');
+}
+
+function closeModal(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modalOverlay').classList.remove('open');}
+
+function save(){localStorage.setItem('siam_leads',JSON.stringify(leads));}
+
+function importCSV(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(Boolean);
+    const headers=lines[0].split(',');
+    let count=0;
+    for(let i=1;i<lines.length;i++){
+      const vals=lines[i].split(',');
+      if(vals.length<3)continue;
+      const nom=vals[2]?.trim()||'';
+      if(!nom)continue;
+      const existing=leads.find(l=>l.nom===nom&&l.tel===(vals[4]?.trim()||''));
+      if(existing)continue;
+      leads.push({
+        id:Date.now()+i,
+        ts:vals[1]?.trim()||new Date().toLocaleString('fr-FR'),
+        nom,
+        societe:vals[3]?.trim()||'',
+        tel:vals[4]?.trim()||'',
+        email:vals[5]?.trim()||'',
+        profil:vals[6]?.trim()||'',
+        surface:vals[7]?.trim()||'',
+        region:vals[8]?.trim()||'',
+        cultures:(vals[9]?.trim()||'').split('|').filter(Boolean),
+        interets:(vals[10]?.trim()||'').split('|').filter(Boolean),
+        score:parseInt(vals[11])||0,
+        priority:vals[12]?.trim()||'',
+        rdvSouhait:vals[13]?.trim()||'',
+        note:(vals[14]||'').replace(/^"|"$/g,'').replace(/""/g,'"'),
+        statut:'Nouveau',
+        history:[]
+      });
+      count++;
+    }
+    save();renderList();
+    showToast(count+' leads importés');
+  };
+  reader.readAsText(file,'UTF-8');
+  input.value='';
+}
+
+function loadDemo(){
+  const names=[['Karim Alaoui','Domaine Alaoui'],['Fatima Bennis','Coopérative Souss'],['Hassan Idrissi','Groupe Idrissi Agri'],['Nadia Tahir','Ferme Tahir'],['Youssef Chraibi','Atlas Invest']];
+  names.forEach((n,i)=>{
+    leads.push({
+      id:Date.now()+i,ts:'26/04/2026',
+      nom:n[0],societe:n[1],tel:'06'+(Math.floor(Math.random()*90000000)+10000000),
+      email:n[0].split(' ')[0].toLowerCase()+'@demo.ma',
+      profil:['Agriculteur','Investisseur','Coopérative'][i%3],
+      surface:['50 – 150 ha','150 – 300 ha','300 – 600 ha'][i%3],
+      region:['Souss-Massa','Meknès-Fès','Marrakech-Safi'][i%3],
+      cultures:[['Olivier','Agrumes'],['Avocat'],['Céréales','Maraîchage']][i%3],
+      interets:[['ERP agricole','AgromindIA'],['Satellite'],['Trésorerie','RH']][i%3],
+      score:(i%5)+1,priority:['Haute','Normale','Basse'][i%3],
+      rdvSouhait:['Oui, appel','Oui, démo','Envoyer doc'][i%3],
+      note:'Rencontré au stand, très intéressé.',
+      statut:STATUTS[i%STATUTS.length],history:[]
+    });
+  });
+  save();renderList();showToast('5 leads de démo chargés');
+}
+
+function showStats(){
+  document.getElementById('leadsBody').innerHTML='';
+  document.getElementById('emptyState').style.display='none';
+  const lb=document.getElementById('listView');
+  const byStatut=STATUTS.map(s=>({s,n:leads.filter(l=>l.statut===s).length}));
+  const byScore=[1,2,3,4,5].map(sc=>({sc,n:leads.filter(l=>l.score===sc).length}));
+  lb.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-bottom:40px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:16px">Leads par statut</div>
+        ${byStatut.map(({s,n})=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="statut-badge st-${s}" style="min-width:80px;text-align:center">${s}</span>
+            <div style="flex:1;background:var(--bg);border-radius:4px;height:8px;overflow:hidden">
+              <div style="width:${leads.length?Math.round(n/leads.length*100):0}%;height:100%;background:var(--g);border-radius:4px"></div>
+            </div>
+            <span style="font-size:13px;font-weight:500;min-width:20px;text-align:right">${n}</span>
+          </div>`).join('')}
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:16px">Distribution des scores</div>
+        ${byScore.map(({sc,n})=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span class="score-dot sd${sc}" style="flex-shrink:0">${sc}</span>
+            <div style="flex:1;background:var(--bg);border-radius:4px;height:8px;overflow:hidden">
+              <div style="width:${leads.length?Math.round(n/leads.length*100):0}%;height:100%;background:var(--g);border-radius:4px"></div>
+            </div>
+            <span style="font-size:13px;font-weight:500;min-width:20px;text-align:right">${n}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <button class="btn-demo" style="background:var(--white);color:var(--g);border:1.5px solid var(--g);border-radius:8px;padding:8px 20px;cursor:pointer;font-family:DM Sans,sans-serif;font-size:13px" onclick="setView('list');document.querySelectorAll('.nav-tab').forEach((t,i)=>{t.classList.toggle('active',i===0)})">← Retour à la liste</button>
+  `;
+}
+
+renderList();
+</script>
+</body>
+</html>

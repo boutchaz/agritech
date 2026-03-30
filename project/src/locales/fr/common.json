@@ -6008,6 +6008,52 @@
       }
     }
   },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Reservez votre rendez-vous avec AGROGINA",
+      "subtitle": "Decouvrez comment notre plateforme AgriTech transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
+    },
+    "sections": {
+      "info": "Vos informations",
+      "farm": "Votre exploitation",
+      "slot": "Choisissez votre creneau"
+    },
+    "form": {
+      "namePlaceholder": "Nom complet *",
+      "companyPlaceholder": "Entreprise / Exploitation",
+      "phonePlaceholder": "Telephone *",
+      "emailPlaceholder": "Email",
+      "surface": "Surface cultivee",
+      "region": "Region",
+      "other": "Autre",
+      "otherCulturePlaceholder": "Precisez votre culture",
+      "submit": "Confirmer ma demande de rendez-vous",
+      "submitting": "Envoi en cours..."
+    },
+    "surface": {
+      "lt50": "Moins de 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "Plus de 600 ha"
+    },
+    "validation": {
+      "nameMin": "Veuillez renseigner votre nom complet",
+      "phoneRequired": "Veuillez renseigner un numero de telephone valide",
+      "emailInvalid": "Veuillez renseigner un email valide",
+      "slotRequired": "Veuillez choisir un creneau"
+    },
+    "success": {
+      "title": "Demande envoyee !",
+      "message": "Bonjour {{name}}, votre demande pour le creneau {{slot}} a bien ete recue.",
+      "fallbackName": "a vous",
+      "subtext": "Notre equipe vous contacte dans les 24h."
+    },
+    "error": {
+      "submitFailed": "Impossible d'envoyer votre demande. Veuillez reessayer."
+    }
+  },
   "retry": "Réessayer",
   "close": "Fermer",
   "edit": "Modifier",

@@ -10,14 +10,18 @@ import { NotFoundPage } from '../components/NotFoundPage'
 import { lazy, Suspense } from 'react'
 
 // Lazy load non-critical UI — command palette, tour, devtools
+// Eagerly start loading these chunks since they wrap the main Outlet
+const globalCommandPaletteImport = import('../components/GlobalCommandPalette');
+const tourContextImport = import('../contexts/TourContext');
+
 const GlobalCommandPalette = lazy(() =>
-  import('../components/GlobalCommandPalette').then((mod) => ({
+  globalCommandPaletteImport.then((mod) => ({
     default: mod.GlobalCommandPalette,
   }))
 );
 
 const TourProvider = lazy(() =>
-  import('../contexts/TourContext').then((mod) => ({
+  tourContextImport.then((mod) => ({
     default: mod.TourProvider,
   }))
 );
@@ -54,10 +58,10 @@ function RootComponent() {
         <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
           <AuthProviderSwitch>
             <ExperienceLevelProvider>
-              <Suspense>
+              <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
                 <TourProvider>
                   <AbilityProvider>
-                    <Suspense>
+                    <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
                       <GlobalCommandPalette>
                         <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
                           <Outlet />

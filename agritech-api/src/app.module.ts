@@ -104,6 +104,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { MonitoringModule } from "./modules/monitoring/monitoring.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
+import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
 
 @Module({
   imports: [
@@ -227,6 +228,7 @@ import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
     ParcelEventsModule,
     HealthModule,
     MonitoringModule,
+    PublicRdvModule,
   ],
   controllers: [AppController],
   providers: [AppService, Reflector],

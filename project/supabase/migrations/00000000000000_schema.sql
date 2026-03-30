@@ -15898,3 +15898,22 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   confirmed BOOLEAN DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email);
+
+-- ==========================================
+-- SIAM RDV leads (public, no org scope)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS siam_rdv_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nom VARCHAR(120) NOT NULL,
+  entreprise VARCHAR(160),
+  tel VARCHAR(30) NOT NULL,
+  email VARCHAR(320),
+  surface VARCHAR(60),
+  region VARCHAR(80),
+  cultures TEXT[],
+  creneau VARCHAR(40) NOT NULL,
+  source_ip VARCHAR(45),
+  email_sent BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_siam_rdv_leads_created_at ON siam_rdv_leads(created_at DESC);

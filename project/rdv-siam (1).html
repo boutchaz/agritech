@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rendez-vous SIAM 2026 — AGROGINA</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --green:#1D6B3A;--green-light:#2E8B50;--green-pale:#E8F5EC;--green-mid:#C5E4CF;
+  --gold:#C8892A;--gold-light:#F0C96A;--gold-pale:#FDF6E7;
+  --text:#1A1A1A;--text2:#555;--text3:#888;--white:#FFF;--bg:#F9F7F2;
+  --border:#D9D4C7;--radius:12px;--shadow:0 2px 20px rgba(0,0,0,.07);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0}
+
+.hero{background:var(--green);padding:48px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+.badge{display:inline-block;background:var(--gold);color:var(--white);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border-radius:20px;margin-bottom:20px}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(26px,5vw,40px);color:var(--white);line-height:1.25;margin-bottom:12px}
+.hero h1 span{color:var(--gold-light)}
+.hero p{color:rgba(255,255,255,.75);font-size:15px;max-width:520px;margin:0 auto 24px;line-height:1.6}
+.date-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--white);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:500}
+.chip.active{background:var(--gold);border-color:var(--gold);color:var(--white)}
+
+.container{max-width:680px;margin:0 auto;padding:32px 16px 60px}
+
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;box-shadow:var(--shadow)}
+.card-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--green);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.card-title::before{content:'';display:block;width:4px;height:20px;background:var(--green);border-radius:2px}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:560px){.form-row{grid-template-columns:1fr}}
+
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--text2);margin-bottom:6px;letter-spacing:.3px}
+.field label .req{color:var(--green);margin-left:2px}
+.field input,.field select,.field textarea{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--white);transition:border-color .2s,box-shadow .2s;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-pale)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.5}
+.field select{cursor:pointer}
+
+.slots-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:4px}
+.slot{border:1.5px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .18s;position:relative}
+.slot:hover{border-color:var(--green);background:var(--green-pale)}
+.slot input[type=radio]{position:absolute;opacity:0;inset:0;width:100%;height:100%;cursor:pointer}
+.slot.picked{border-color:var(--green);background:var(--green-pale)}
+.slot.picked .slot-time{color:var(--green);font-weight:500}
+.slot-date{font-size:11px;color:var(--text3);margin-bottom:3px}
+.slot-time{font-size:14px;color:var(--text);font-weight:400}
+.slot.full{opacity:.45;pointer-events:none}
+.slot.full::after{content:'Complet';font-size:10px;color:var(--text3);display:block;margin-top:2px}
+
+.interests{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.interest-chip{position:relative}
+.interest-chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.interest-chip label{display:block;padding:7px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;transition:all .18s;color:var(--text2);user-select:none}
+.interest-chip input:checked+label{border-color:var(--green);background:var(--green-pale);color:var(--green);font-weight:500}
+
+.submit-btn{width:100%;padding:15px;background:var(--green);color:var(--white);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;cursor:pointer;transition:background .2s,transform .1s;margin-top:8px;letter-spacing:.3px}
+.submit-btn:hover{background:var(--green-light)}
+.submit-btn:active{transform:scale(.985)}
+
+.info-bar{background:var(--gold-pale);border:1px solid #EDD08A;border-radius:10px;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:20px}
+.info-bar svg{flex-shrink:0;margin-top:2px}
+.info-bar p{font-size:13px;color:#7A5C1A;line-height:1.5}
+
+.success{display:none;text-align:center;padding:40px 24px}
+.success .checkmark{width:56px;height:56px;background:var(--green-pale);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center}
+.success h2{font-family:'Playfair Display',serif;font-size:22px;color:var(--green);margin-bottom:10px}
+.success p{color:var(--text2);font-size:14px;line-height:1.6}
+
+.footer{text-align:center;padding:20px;font-size:12px;color:var(--text3)}
+.footer strong{color:var(--green)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">SIAM 2026 · Meknès</div>
+  <h1>Réservez votre<br>rendez-vous avec <span>AGROGINA</span></h1>
+  <p>Découvrez comment notre plateforme AgriTech transforme la gestion de vos exploitations. Démonstration personnalisée sur notre stand.</p>
+  <div class="date-chips">
+    <span class="chip active">20 Avr</span>
+    <span class="chip active">21 Avr</span>
+    <span class="chip active">22 Avr</span>
+    <span class="chip active">23 Avr</span>
+    <span class="chip">24 Avr</span>
+    <span class="chip">25 Avr</span>
+    <span class="chip">26 Avr</span>
+    <span class="chip">27 Avr</span>
+  </div>
+  <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:12px">
+    <span style="background:rgba(255,255,255,.15);color:#fff;padding:4px 12px;border-radius:12px">Jours dorés = Professionnels uniquement (20–23)</span>
+    <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);padding:4px 12px;border-radius:12px">24–27 = Grand public & professionnels</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="info-bar">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7.5" stroke="#C8892A"/><path d="M8 7v4M8 5.5v.5" stroke="#C8892A" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <p>Chaque rendez-vous dure <strong>20 minutes</strong>. Notre équipe confirmera votre créneau par téléphone ou email dans les 24h.<br>
+    <span style="margin-top:5px;display:block"><strong>Note :</strong> Les journées 20–23 avril sont réservées aux professionnels. Le grand public peut réserver à partir du 24 avril. Les professionnels peuvent réserver toute la semaine.</span></p>
+  </div>
+
+  <form id="rdvForm">
+
+    <div class="card">
+      <div class="card-title">Vos informations</div>
+      <div class="form-row">
+        <div class="field">
+          <label>Nom complet <span class="req">*</span></label>
+          <input type="text" name="nom" placeholder="Ahmed Benali" required>
+        </div>
+        <div class="field">
+          <label>Entreprise / Exploitation</label>
+          <input type="text" name="entreprise" placeholder="Domaine Al Waha">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Téléphone <span class="req">*</span></label>
+          <input type="tel" name="tel" placeholder="06 XX XX XX XX" required>
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="ahmed@domaine.ma">
+        </div>
+      </div>
+      <div class="field">
+        <label>Vous êtes <span class="req">*</span></label>
+        <select name="profil" required>
+          <option value="">-- Sélectionner --</option>
+          <option>Agriculteur / Exploitant</option>
+          <option>Investisseur / Financeur</option>
+          <option>Coopérative agricole</option>
+          <option>Société agroalimentaire</option>
+          <option>Institution / Organisme</option>
+          <option>Distributeur / Revendeur</option>
+          <option>Autre</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Votre exploitation</div>
+      <div class="form-row">
+        <div class="field">
+          <label>Surface cultivée</label>
+          <select name="surface">
+            <option value="">-- Surface --</option>
+            <option>Moins de 50 ha</option>
+            <option>50 – 150 ha</option>
+            <option>150 – 300 ha</option>
+            <option>300 – 600 ha</option>
+            <option>Plus de 600 ha</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Région</label>
+          <select name="region">
+            <option value="">-- Région --</option>
+            <option>Meknès-Fès</option>
+            <option>Souss-Massa</option>
+            <option>Marrakech-Safi</option>
+            <option>Béni Mellal-Khénifra</option>
+            <option>Rabat-Salé</option>
+            <option>Tanger-Tétouan</option>
+            <option>Oriental</option>
+            <option>Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Cultures principales</label>
+        <div class="interests">
+          <span class="interest-chip"><input type="checkbox" name="culture" value="olivier"><label>Olivier</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="agrumes"><label>Agrumes</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="avocat"><label>Avocat</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="palmier"><label>Palmier dattier</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="cereales"><label>Céréales</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="maraichage"><label>Maraîchage</label></span>
+          <span class="interest-chip"><input type="checkbox" name="culture" value="autre" id="cultureAutreCheck"><label>Autre</label></span>
+        </div>
+        <div id="cultureAutreField" style="display:none;margin-top:10px">
+          <input type="text" name="culture_autre" placeholder="Précisez votre culture (optionnel)" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:DM Sans,sans-serif;font-size:14px;outline:none">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Ce qui vous intéresse</div>
+      <div class="field">
+        <label>Modules AGROGINA</label>
+        <div class="interests">
+          <span class="interest-chip"><input type="checkbox" name="interet" value="erp"><label>ERP agricole</label></span>
+          <span class="interest-chip"><input type="checkbox" name="interet" value="ia"><label>AgromindIA (IA)</label></span>
+          <span class="interest-chip"><input type="checkbox" name="interet" value="satellite"><label>Suivi satellite</label></span>
+          <span class="interest-chip"><input type="checkbox" name="interet" value="fertigation"><label>Fertigation</label></span>
+          <span class="interest-chip"><input type="checkbox" name="interet" value="tresorerie"><label>Trésorerie</label></span>
+          <span class="interest-chip"><input type="checkbox" name="interet" value="equipe"><label>Gestion équipe</label></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Choisissez votre créneau</div>
+      <div class="field">
+        <label>Jour et heure préférés <span class="req">*</span></label>
+        <div class="slots-grid" id="slotsGrid"></div>
+      </div>
+      <div class="field" style="margin-top:16px">
+        <label>Message (optionnel)</label>
+        <textarea name="message" placeholder="Une question spécifique, un défi particulier sur votre exploitation..."></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn">Confirmer ma demande de rendez-vous →</button>
+
+  </form>
+
+  <div class="success" id="successMsg">
+    <div class="checkmark">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="#1D6B3A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h2>Demande envoyée !</h2>
+    <p id="successDetail"></p>
+    <p style="margin-top:12px;font-size:13px;color:#888">Notre équipe vous contacte dans les 24h pour confirmer.<br>À très bientôt au SIAM 2026 !</p>
+  </div>
+
+</div>
+
+<div class="footer"><strong>AGROGINA</strong> · AgriTech Maroc · Stand SIAM 2026 · <a href="https://agrogina.ma" style="color:#1D6B3A">agrogina.ma</a></div>
+
+<script>
+const days=[
+  {label:'Lun 20/04',date:'20/04'},
+  {label:'Mar 21/04',date:'21/04'},
+  {label:'Mer 22/04',date:'22/04'},
+  {label:'Jeu 23/04',date:'23/04'},
+  {label:'Ven 24/04',date:'24/04'},
+  {label:'Sam 25/04',date:'25/04'},
+  {label:'Dim 26/04',date:'26/04'},
+  {label:'Lun 27/04',date:'27/04'},
+];
+const times=['09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
+const fullSlots=['20/04-09:00','20/04-10:00','21/04-09:00'];
+const grid=document.getElementById('slotsGrid');
+
+days.forEach(d=>{
+  times.forEach(t=>{
+    const key=d.date+'-'+t;
+    const div=document.createElement('div');
+    div.className='slot'+(fullSlots.includes(key)?' full':'');
+    div.innerHTML=`<input type="radio" name="creneau" value="${key}" ${fullSlots.includes(key)?'disabled':''}><div class="slot-date">${d.label}</div><div class="slot-time">${t}</div>`;
+    div.querySelector('input').addEventListener('change',()=>{
+      document.querySelectorAll('.slot').forEach(s=>s.classList.remove('picked'));
+      div.classList.add('picked');
+    });
+    grid.appendChild(div);
+  });
+});
+
+document.getElementById('cultureAutreCheck').addEventListener('change',function(){
+  const f=document.getElementById('cultureAutreField');
+  f.style.display=this.checked?'block':'none';
+  if(!this.checked)f.querySelector('input').value='';
+});
+
+document.getElementById('rdvForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const fd=new FormData(this);
+  const creneau=fd.get('creneau');
+  if(!creneau){alert('Veuillez choisir un créneau.');return;}
+  const nom=fd.get('nom')||'';
+  document.getElementById('successDetail').textContent=
+    `Bonjour ${nom}, votre demande pour le créneau ${creneau.replace('-',' à ')} a bien été reçue.`;
+  this.style.display='none';
+  document.getElementById('successMsg').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+</script>
+</body>
+</html>

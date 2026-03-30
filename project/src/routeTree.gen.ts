@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicOnboardingRouteImport } from './routes/(public)/onboarding'
 import { Route as publicCheckoutSuccessRouteImport } from './routes/(public)/checkout-success'
@@ -157,6 +158,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvSiamRoute = publicRdvSiamRouteImport.update({
+  id: '/(public)/rdv-siam',
+  path: '/rdv-siam',
   getParentRoute: () => rootRouteImport,
 } as any)
 const publicPitchDeckRoute = publicPitchDeckRouteImport.update({
@@ -984,6 +990,7 @@ export interface FileRoutesByFullPath {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1124,6 +1131,7 @@ export interface FileRoutesByTo {
   '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1259,6 +1267,7 @@ export interface FileRoutesById {
   '/(public)/checkout-success': typeof publicCheckoutSuccessRoute
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
+  '/(public)/rdv-siam': typeof publicRdvSiamRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1402,6 +1411,7 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/onboarding'
     | '/pitch-deck'
+    | '/rdv-siam'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1542,6 +1552,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
+    | '/rdv-siam'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1676,6 +1687,7 @@ export interface FileRouteTypes {
     | '/(public)/checkout-success'
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
+    | '/(public)/rdv-siam'
     | '/(auth)/auth/callback'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
@@ -1819,6 +1831,7 @@ export interface RootRouteChildren {
   publicCheckoutSuccessRoute: typeof publicCheckoutSuccessRoute
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
+  publicRdvSiamRoute: typeof publicRdvSiamRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
 }
 
@@ -1836,6 +1849,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv-siam': {
+      id: '/(public)/rdv-siam'
+      path: '/rdv-siam'
+      fullPath: '/rdv-siam'
+      preLoaderRoute: typeof publicRdvSiamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/pitch-deck': {
@@ -3353,6 +3373,7 @@ const rootRouteChildren: RootRouteChildren = {
   publicCheckoutSuccessRoute: publicCheckoutSuccessRoute,
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
+  publicRdvSiamRoute: publicRdvSiamRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
