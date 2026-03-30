@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
 import SubscriptionRequired from '../components/SubscriptionRequired'
@@ -16,8 +16,7 @@ import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
 import { usersApi } from '../lib/api/users'
-import { Button } from '@/components/ui/button';
-import { SectionLoader } from '@/components/ui/loader';
+import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 
 
 export const Route = createFileRoute('/_authenticated')({
@@ -46,11 +45,19 @@ function AuthenticatedLayout() {
   const { currentOrganization, profile } = useAuth()
   const { data: subscription, isLoading: subscriptionLoading, isFetched: subscriptionFetched } = useSubscription()
   const { i18n } = useTranslation()
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Initialize from localStorage for instant render, DB value syncs in useEffect
-    const stored = localStorage.getItem('darkMode')
-    return stored === 'true'
-  })
+  /** Set when the user toggles theme; cleared is unnecessary — profile + localStorage cover hydration. */
+  const [darkModeUserOverride, setDarkModeUserOverride] = useState<boolean | null>(null)
+  const isDarkMode = useMemo(() => {
+    if (darkModeUserOverride !== null) return darkModeUserOverride
+    if (profile?.dark_mode !== undefined && profile?.dark_mode !== null) {
+      return profile.dark_mode
+    }
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('darkMode')
+      return stored === 'true'
+    }
+    return false
+  }, [darkModeUserOverride, profile?.dark_mode])
   const [activeModule, setActiveModule] = useState('dashboard')
   const isRTL = isRTLLocale(i18n.language)
   const { style: sidebarStyle } = useSidebarMargin(isRTL)
@@ -58,10 +65,9 @@ function AuthenticatedLayout() {
   // Track user activity for live dashboard concurrent users
   useActivityTracking()
 
-  // Sync dark mode from DB profile on load
+  // Keep localStorage aligned with DB for the next cold load (external storage only — no setState)
   useEffect(() => {
     if (profile?.dark_mode !== undefined && profile?.dark_mode !== null) {
-      setIsDarkMode(profile.dark_mode)
       localStorage.setItem('darkMode', String(profile.dark_mode))
     }
   }, [profile?.dark_mode])
@@ -71,12 +77,12 @@ function AuthenticatedLayout() {
     if (profile?.language && profile.language !== i18n.language) {
       i18n.changeLanguage(profile.language)
     }
-  }, [profile?.language])
+  }, [profile?.language, i18n])
 
   // Toggle dark mode and persist to DB + localStorage
   const handleThemeToggle = useCallback(() => {
     const newValue = !isDarkMode
-    setIsDarkMode(newValue)
+    setDarkModeUserOverride(newValue)
     localStorage.setItem('darkMode', String(newValue))
     // Fire-and-forget DB persistence
     usersApi.updateMe({ dark_mode: newValue }).catch((err) => {
@@ -95,9 +101,7 @@ function AuthenticatedLayout() {
   // isFetched ensures we don't get stuck in infinite spinner when subscription is null
   const isSubscriptionPending = !subscriptionFetched && (subscriptionLoading || !!currentOrganization)
   if (isSubscriptionPending) {
-    return (
-      <SectionLoader />
-    )
+    return <AuthenticatedLayoutSkeleton />
   }
 
   // Check if subscription is valid
