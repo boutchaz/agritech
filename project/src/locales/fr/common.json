@@ -1575,11 +1575,14 @@
       "filesDescription": "Gérer les fichiers et détecter les orphelins",
       "dangerZone": "Zone de Danger",
       "dangerZoneDescription": "Gérer les données de démo et actions critiques",
+      "legal": "Mentions Légales",
+      "legalDescription": "CGU et politique de confidentialité",
       "sections": {
         "personal": "Personnel",
         "organization": "Organisation",
         "accounting": "Comptabilité & Finance",
         "content": "Contenu & Affichage",
+        "legal": "Légal",
         "system": "Système"
       }
     }

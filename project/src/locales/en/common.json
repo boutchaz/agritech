@@ -1579,11 +1579,14 @@
       "filesDescription": "Manage files and detect orphans",
       "dangerZone": "Danger Zone",
       "dangerZoneDescription": "Manage demo data and critical actions",
+      "legal": "Legal",
+      "legalDescription": "Terms of service and privacy policy",
       "sections": {
         "personal": "Personal",
         "organization": "Organization",
         "accounting": "Accounting & Finance",
         "content": "Content & Display",
+        "legal": "Legal",
         "system": "System"
       }
     }

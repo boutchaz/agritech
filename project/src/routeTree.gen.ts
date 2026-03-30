@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
 import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
+import { Route as publicPrivacyPolicyRouteImport } from './routes/(public)/privacy-policy'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicOnboardingRouteImport } from './routes/(public)/onboarding'
 import { Route as publicCheckoutSuccessRouteImport } from './routes/(public)/checkout-success'
@@ -79,6 +81,7 @@ import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './rout
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
+import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
 import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
@@ -160,9 +163,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const publicTermsOfServiceRoute = publicTermsOfServiceRouteImport.update({
+  id: '/(public)/terms-of-service',
+  path: '/terms-of-service',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const publicRdvSiamRoute = publicRdvSiamRouteImport.update({
   id: '/(public)/rdv-siam',
   path: '/rdv-siam',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicPrivacyPolicyRoute = publicPrivacyPolicyRouteImport.update({
+  id: '/(public)/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const publicPitchDeckRoute = publicPitchDeckRouteImport.update({
@@ -550,6 +563,12 @@ const AuthenticatedsettingsSettingsModulesRoute =
   AuthenticatedsettingsSettingsModulesRouteImport.update({
     id: '/modules',
     path: '/modules',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsLegalRoute =
+  AuthenticatedsettingsSettingsLegalRouteImport.update({
+    id: '/legal',
+    path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsFiscalYearsRoute =
@@ -990,7 +1009,9 @@ export interface FileRoutesByFullPath {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
   '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1076,6 +1097,7 @@ export interface FileRoutesByFullPath {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1131,7 +1153,9 @@ export interface FileRoutesByTo {
   '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
   '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1212,6 +1236,7 @@ export interface FileRoutesByTo {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1267,7 +1292,9 @@ export interface FileRoutesById {
   '/(public)/checkout-success': typeof publicCheckoutSuccessRoute
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
+  '/(public)/privacy-policy': typeof publicPrivacyPolicyRoute
   '/(public)/rdv-siam': typeof publicRdvSiamRoute
+  '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1353,6 +1380,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1411,7 +1439,9 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/onboarding'
     | '/pitch-deck'
+    | '/privacy-policy'
     | '/rdv-siam'
+    | '/terms-of-service'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1497,6 +1527,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1552,7 +1583,9 @@ export interface FileRouteTypes {
     | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
+    | '/privacy-policy'
     | '/rdv-siam'
+    | '/terms-of-service'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1633,6 +1666,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1687,7 +1721,9 @@ export interface FileRouteTypes {
     | '/(public)/checkout-success'
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
+    | '/(public)/privacy-policy'
     | '/(public)/rdv-siam'
+    | '/(public)/terms-of-service'
     | '/(auth)/auth/callback'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
@@ -1773,6 +1809,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
     | '/_authenticated/(settings)/settings/fiscal-years'
+    | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
@@ -1831,7 +1868,9 @@ export interface RootRouteChildren {
   publicCheckoutSuccessRoute: typeof publicCheckoutSuccessRoute
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
+  publicPrivacyPolicyRoute: typeof publicPrivacyPolicyRoute
   publicRdvSiamRoute: typeof publicRdvSiamRoute
+  publicTermsOfServiceRoute: typeof publicTermsOfServiceRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
 }
 
@@ -1851,11 +1890,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(public)/terms-of-service': {
+      id: '/(public)/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof publicTermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(public)/rdv-siam': {
       id: '/(public)/rdv-siam'
       path: '/rdv-siam'
       fullPath: '/rdv-siam'
       preLoaderRoute: typeof publicRdvSiamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/privacy-policy': {
+      id: '/(public)/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof publicPrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/pitch-deck': {
@@ -2325,6 +2378,13 @@ declare module '@tanstack/react-router' {
       path: '/modules'
       fullPath: '/settings/modules'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsModulesRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/legal': {
+      id: '/_authenticated/(settings)/settings/legal'
+      path: '/legal'
+      fullPath: '/settings/legal'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/fiscal-years': {
@@ -3117,6 +3177,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
   AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -3148,6 +3209,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsFilesRoute,
     AuthenticatedsettingsSettingsFiscalYearsRoute:
       AuthenticatedsettingsSettingsFiscalYearsRoute,
+    AuthenticatedsettingsSettingsLegalRoute:
+      AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
       AuthenticatedsettingsSettingsModulesRoute,
     AuthenticatedsettingsSettingsOrganizationRoute:
@@ -3373,7 +3436,9 @@ const rootRouteChildren: RootRouteChildren = {
   publicCheckoutSuccessRoute: publicCheckoutSuccessRoute,
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
+  publicPrivacyPolicyRoute: publicPrivacyPolicyRoute,
   publicRdvSiamRoute: publicRdvSiamRoute,
+  publicTermsOfServiceRoute: publicTermsOfServiceRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
 }
 export const routeTree = rootRouteImport

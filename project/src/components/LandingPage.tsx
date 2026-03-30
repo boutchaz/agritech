@@ -604,8 +604,8 @@ const LandingPage: React.FC = () => {
             <div>
               <h4 className="text-primary-foreground font-semibold text-lg mb-6">{t('landing.footer.legal')}</h4>
               <div className="flex flex-col gap-3">
-                <a href="#" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.terms')}</a>
-                <a href="#" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.privacy')}</a>
+                <Link to="/terms-of-service" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.terms')}</Link>
+                <Link to="/privacy-policy" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.privacy')}</Link>
               </div>
             </div>
           </div>

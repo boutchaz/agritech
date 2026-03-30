@@ -178,6 +178,20 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
         ],
       },
       {
+        id: "legal",
+        label: t("settings.menu.sections.legal", "Légal"),
+        items: [
+          {
+            id: "legal",
+            name: t("settings.menu.legal", "Mentions Légales"),
+            icon: FileText,
+            path: "/settings/legal",
+            description: t("settings.menu.legalDescription", "CGU et politique de confidentialité"),
+            roles: ALL_ROLES,
+          },
+        ],
+      },
+      {
         id: "system",
         label: t("settings.menu.sections.system"),
         items: [
