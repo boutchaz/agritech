@@ -28,6 +28,7 @@ const LandingPage: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // SEO
@@ -77,19 +78,52 @@ const LandingPage: React.FC = () => {
 
   // Sticky header
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
+      let current: HTMLElement | null = node;
+      // Walk up until we find an element that can actually scroll vertically.
+      while (current) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        const canScrollY = (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay');
+        if (canScrollY && current.scrollHeight > current.clientHeight) return current;
+        current = current.parentElement;
+      }
+      return window;
+    };
+
+    const scrollParent = getScrollParent(containerRef.current);
+    const getScrollTop = () =>
+      scrollParent === window ? window.scrollY : (scrollParent as HTMLElement).scrollTop;
+
+    const onScroll = () => setScrolled(getScrollTop() > 50);
+    onScroll(); // sync initial state
+
+    if (scrollParent === window) {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }
+
+    scrollParent.addEventListener('scroll', onScroll, { passive: true });
+    return () => scrollParent.removeEventListener('scroll', onScroll);
   }, []);
 
   // Scroll reveal
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('opacity-100', 'translate-y-0'); observer.unobserve(e.target); } }),
-      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting) return;
+          const target = e.target as HTMLElement;
+          target.classList.add('opacity-100', 'translate-y-0');
+          observer.unobserve(e.target);
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' },
     );
     const timer = setTimeout(() => {
-      document.querySelectorAll('.reveal-on-scroll').forEach((el) => observer.observe(el));
+      document.querySelectorAll('.reveal-on-scroll').forEach((el) => {
+        observer.observe(el);
+      });
     }, 100);
     return () => { clearTimeout(timer); observer.disconnect(); };
   }, []);
@@ -123,7 +157,7 @@ const LandingPage: React.FC = () => {
   const faqItems = [1, 2, 3, 4, 5, 6];
 
   return (
-    <div className="min-h-screen bg-white text-[#333] font-[Inter,sans-serif]" style={{ scrollBehavior: 'smooth' }}>
+    <div ref={containerRef} className="min-h-screen bg-white text-[#333] font-[Inter,sans-serif]" style={{ scrollBehavior: 'smooth' }}>
       {/* NAVBAR */}
       <header
         className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${
@@ -137,7 +171,7 @@ const LandingPage: React.FC = () => {
             <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
             <span
               className={`font-[Montserrat,sans-serif] font-extrabold text-2xl tracking-wider transition-all duration-300 ${
-                scrolled ? 'text-[#1E1E1E]' : 'text-white text-shadow-[0_1px_3px_rgba(0,0,0,0.3)]'
+                scrolled ? 'text-white' : 'text-white text-shadow-[0_1px_3px_rgba(0,0,0,0.3)]'
               }`}
             >
               AGROGINA
