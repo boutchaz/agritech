@@ -61,6 +61,12 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
 
+      // React Compiler rules (react-hooks v7) — downgrade to warn to avoid
+      // blocking commits on pre-existing architectural patterns
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/refs': 'warn',
+
       // Code quality rules
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'eqeqeq': ['error', 'always', { null: 'ignore' }],

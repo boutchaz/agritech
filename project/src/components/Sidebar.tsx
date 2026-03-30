@@ -37,7 +37,6 @@ import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
 import { isRTLLocale } from "../lib/is-rtl-locale";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   modules: Module[];
@@ -256,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     viewport.addEventListener("scroll", onScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", onScroll);
-  }, [scrollViewportRef.current]);
+  }, []);
 
   const getButtonClassName = (
     isActive: boolean,
