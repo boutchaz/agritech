@@ -144,20 +144,20 @@ const LandingPage: React.FC = () => {
   }, []);
 
   const modules = [
-    { icon: MapPin, key: 'parcels', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: Monitor, key: 'stocks', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: Users, key: 'hr', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: DollarSign, key: 'finance', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: BookOpen, key: 'accounting', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: Activity, key: 'analytics', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
-    { icon: ShoppingCart, key: 'marketplace', color: 'bg-[rgba(45,90,61,0.1)] text-[#2D5A3D]' },
+    { icon: MapPin, key: 'parcels', color: 'bg-primary/10 text-primary' },
+    { icon: Monitor, key: 'stocks', color: 'bg-primary/10 text-primary' },
+    { icon: Users, key: 'hr', color: 'bg-primary/10 text-primary' },
+    { icon: DollarSign, key: 'finance', color: 'bg-primary/10 text-primary' },
+    { icon: BookOpen, key: 'accounting', color: 'bg-primary/10 text-primary' },
+    { icon: Activity, key: 'analytics', color: 'bg-primary/10 text-primary' },
+    { icon: ShoppingCart, key: 'marketplace', color: 'bg-primary/10 text-primary' },
     { icon: Brain, key: 'ai', color: 'bg-[rgba(30,136,229,0.15)] text-[#1E88E5]', isAi: true },
   ];
 
   const faqItems = [1, 2, 3, 4, 5, 6];
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-white text-[#333] font-[Inter,sans-serif]" style={{ scrollBehavior: 'smooth' }}>
+    <div ref={containerRef} className="min-h-screen bg-background text-foreground font-[Inter,sans-serif]" style={{ scrollBehavior: 'smooth' }}>
       {/* NAVBAR */}
       <header
         className={`fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 ${
@@ -206,7 +206,7 @@ const LandingPage: React.FC = () => {
               to="/login"
               className={`inline-block px-4 py-2 rounded-xl font-semibold text-[0.95rem] border-2 transition-all duration-300 ${
                 scrolled
-                  ? 'bg-[#2D5A3D] border-[#2D5A3D] text-white hover:bg-[#1f3f2a]'
+                  ? 'bg-primary border-primary text-primary-foreground hover:bg-primary/90'
                   : 'border-[rgba(255,255,255,0.3)] text-white hover:border-white hover:bg-[rgba(255,255,255,0.1)]'
               }`}
             >
@@ -214,7 +214,7 @@ const LandingPage: React.FC = () => {
             </Link>
             <button
               onClick={() => scrollTo('contact')}
-              className="inline-block px-4 py-2 rounded-xl font-semibold text-[0.95rem] bg-[#2D5A3D] text-white border-2 border-transparent hover:bg-[#1f3f2a] hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
+              className="inline-block px-4 py-2 rounded-xl font-semibold text-[0.95rem] bg-primary text-primary-foreground border-2 border-transparent hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
             >
               {t('landing.hero.ctaDemo', 'Commencer')}
             </button>
@@ -241,7 +241,12 @@ const LandingPage: React.FC = () => {
             <Link to="/blog" className="text-[#f3f4f6] font-medium" onClick={() => setMobileMenuOpen(false)}>{t('landing.nav.blog')}</Link>
             <div className="flex gap-3 pt-2">
               <Link to="/login" className="px-4 py-2 rounded-xl font-semibold text-white border-2 border-[rgba(255,255,255,0.3)]" onClick={() => setMobileMenuOpen(false)}>{t('auth.login', 'Connexion')}</Link>
-              <button onClick={() => scrollTo('contact')} className="px-4 py-2 rounded-xl font-semibold bg-[#2D5A3D] text-white border-2 border-transparent cursor-pointer">{t('landing.hero.ctaDemo', 'Commencer')}</button>
+              <button
+                onClick={() => scrollTo('contact')}
+                className="px-4 py-2 rounded-xl font-semibold bg-primary text-primary-foreground border-2 border-transparent cursor-pointer"
+              >
+                {t('landing.hero.ctaDemo', 'Commencer')}
+              </button>
             </div>
           </div>
         )}
@@ -272,7 +277,7 @@ const LandingPage: React.FC = () => {
               <h1 className="font-[Montserrat,sans-serif] font-bold text-white text-[clamp(2.5rem,5vw,4rem)] mb-2 max-w-[900px] leading-tight" style={{ textShadow: '0 4px 12px rgba(0,0,0,0.6)' }}>
                 {t('landing.hero.title')}
               </h1>
-              <h2 className="text-[#4ade80] text-[clamp(1.5rem,3vw,2.5rem)] mb-6 font-[Montserrat,sans-serif] font-bold" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+              <h2 className="text-primary-400 text-[clamp(1.5rem,3vw,2.5rem)] mb-6 font-[Montserrat,sans-serif] font-bold" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                 {t('landing.hero.highlight')}
               </h2>
               <p className="text-[#e2e8f0] text-lg max-w-[800px] mx-auto mb-10 leading-relaxed" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
@@ -282,7 +287,7 @@ const LandingPage: React.FC = () => {
               <div className="flex gap-4 justify-center mb-8 flex-wrap">
                 <button
                   onClick={() => scrollTo('contact')}
-                  className="px-8 py-4 rounded-xl font-semibold text-lg bg-[#2D5A3D] text-white border-2 border-transparent hover:bg-[#1f3f2a] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  className="px-8 py-4 rounded-xl font-semibold text-lg bg-primary text-primary-foreground border-2 border-transparent hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 cursor-pointer"
                 >
                   {t('landing.hero.ctaDemo')}
                 </button>
@@ -294,7 +299,7 @@ const LandingPage: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex gap-6 justify-center text-[#a0aec0] text-sm flex-wrap">
+              <div className="flex gap-6 justify-center text-muted-foreground text-sm flex-wrap">
                 {[1, 2, 3].map((n) => (
                   <span key={n} className="flex items-center gap-2">
                     <Check className="w-4 h-4" />
@@ -326,29 +331,29 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* MODULES */}
-        <section id="modules" className="py-20 bg-white">
+        <section id="modules" className="py-20 bg-background">
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="text-center max-w-[600px] mx-auto mb-12 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
-              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] mb-4 text-[#1E1E1E]">{t('landing.modules.title')}</h2>
-              <p className="text-lg text-[#6b7280]">{t('landing.modules.subtitle')}</p>
+              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] mb-4 text-foreground">{t('landing.modules.title')}</h2>
+              <p className="text-lg text-muted-foreground">{t('landing.modules.subtitle')}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {modules.map(({ icon: Icon, key, color, isAi }) => (
                 <div
                   key={key}
-                  className={`reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] bg-white p-8 rounded-xl border hover:-translate-y-1 hover:shadow-md hover:border-[rgba(45,90,61,0.2)] ${
-                    isAi ? 'border-2 border-[rgba(30,136,229,0.3)] bg-gradient-to-br from-white to-[#f0f7ff]' : 'border-[#e2e8f0]'
+                  className={`reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] bg-card p-8 rounded-xl border hover:-translate-y-1 hover:shadow-md hover:border-primary/30 ${
+                    isAi ? 'border-2 border-[rgba(30,136,229,0.3)] bg-gradient-to-br from-white to-[#f0f7ff]' : 'border-border'
                   }`}
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${color}`}>
                     <Icon className="w-6 h-6" />
                   </div>
-                  <h3 className="font-[Montserrat,sans-serif] font-bold text-xl mb-3 text-[#1E1E1E]">{t(`landing.modules.${key}`)}</h3>
-                  <p className="text-[#6b7280] text-[0.95rem] leading-relaxed">{t(`landing.modules.${key}Desc`)}</p>
+                  <h3 className="font-[Montserrat,sans-serif] font-bold text-xl mb-3 text-foreground">{t(`landing.modules.${key}`)}</h3>
+                  <p className="text-muted-foreground text-[0.95rem] leading-relaxed">{t(`landing.modules.${key}Desc`)}</p>
                   <button
                     onClick={() => scrollTo('contact')}
-                    className="mt-4 text-[#1E88E5] font-semibold flex items-center gap-2 bg-transparent border-none cursor-pointer hover:text-[#2D5A3D] hover:gap-3 transition-all duration-300"
+                    className="mt-4 text-primary font-semibold flex items-center gap-2 bg-transparent border-none cursor-pointer hover:text-primary/90 hover:gap-3 transition-all duration-300"
                   >
                     {t('landing.modules.learnMore')} →
                   </button>
@@ -359,24 +364,24 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-20 bg-[#F8F9FA]">
+        <section id="how-it-works" className="py-20 bg-secondary">
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="text-center max-w-[600px] mx-auto mb-12 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
-              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-[#1E1E1E]">{t('landing.steps.title')}</h2>
+              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-foreground">{t('landing.steps.title')}</h2>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-start max-w-[900px] mx-auto relative">
               {[1, 2, 3].map((n, idx) => (
                 <React.Fragment key={n}>
                   <div className={`flex-1 text-center px-4 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] ${idx > 0 ? 'delay-200' : ''}`}>
-                    <div className="w-[60px] h-[60px] bg-white border-2 border-[#2D5A3D] text-[#2D5A3D] rounded-full flex items-center justify-center font-[Montserrat,sans-serif] text-2xl font-bold mx-auto mb-6 shadow-sm">
+                    <div className="w-[60px] h-[60px] bg-background border-2 border-primary text-primary rounded-full flex items-center justify-center font-[Montserrat,sans-serif] text-2xl font-bold mx-auto mb-6 shadow-sm">
                       {n}
                     </div>
-                    <h3 className="font-[Montserrat,sans-serif] font-bold mb-3 text-[#1E1E1E]">{t(`landing.steps.step${n}Title`)}</h3>
-                    <p className="text-[#6b7280] text-[0.95rem]">{t(`landing.steps.step${n}Desc`)}</p>
+                    <h3 className="font-[Montserrat,sans-serif] font-bold mb-3 text-foreground">{t(`landing.steps.step${n}Title`)}</h3>
+                    <p className="text-muted-foreground text-[0.95rem]">{t(`landing.steps.step${n}Desc`)}</p>
                   </div>
                   {idx < 2 && (
-                    <div className="hidden md:block flex-1 h-[2px] bg-[#e2e8f0] mt-[30px]" />
+                    <div className="hidden md:block flex-1 h-[2px] bg-border mt-[30px]" />
                   )}
                 </React.Fragment>
               ))}
@@ -385,10 +390,10 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* WHY AGROGINA */}
-        <section id="why-us" className="py-20 bg-white">
+        <section id="why-us" className="py-20 bg-background">
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="text-center max-w-[600px] mx-auto mb-12 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
-              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-[#1E1E1E]">{t('landing.why.title')}</h2>
+              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-foreground">{t('landing.why.title')}</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[900px] mx-auto">
@@ -402,12 +407,12 @@ const LandingPage: React.FC = () => {
                   key={key}
                   className={`flex gap-6 items-start reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] ${idx % 2 !== 0 ? 'delay-200' : ''}`}
                 >
-                  <div className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-white ${tint ? 'bg-[#1E88E5]' : 'bg-[#2D5A3D]'}`}>
+                  <div className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-white ${tint ? 'bg-[#1E88E5]' : 'bg-primary'}`}>
                     <Icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-[Montserrat,sans-serif] font-bold mb-2 text-[#1E1E1E]">{t(`landing.why.${key}`)}</h3>
-                    <p className="text-[#6b7280]">{t(`landing.why.${key}Desc`)}</p>
+                    <h3 className="font-[Montserrat,sans-serif] font-bold mb-2 text-foreground">{t(`landing.why.${key}`)}</h3>
+                    <p className="text-muted-foreground">{t(`landing.why.${key}Desc`)}</p>
                   </div>
                 </div>
               ))}
@@ -416,19 +421,19 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* PRICING */}
-        <section id="pricing" className="py-20 bg-[#F8F9FA] text-center">
+        <section id="pricing" className="py-20 bg-secondary text-center">
           <div className="max-w-[1200px] mx-auto px-6 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
-            <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] mb-4 text-[#1E1E1E]">{t('landing.pricing.title')}</h2>
-            <p className="text-lg text-[#6b7280] mb-8">{t('landing.pricing.subtitle')}</p>
+            <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] mb-4 text-foreground">{t('landing.pricing.title')}</h2>
+            <p className="text-lg text-muted-foreground mb-8">{t('landing.pricing.subtitle')}</p>
 
-            <div className="bg-white p-12 rounded-xl border border-[#e2e8f0] shadow-md max-w-[600px] mx-auto mt-12">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2D5A3D" strokeWidth="1.5" className="mx-auto mb-6">
+            <div className="bg-card p-12 rounded-xl border border-border shadow-md max-w-[600px] mx-auto mt-12">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto mb-6 text-primary">
                 <rect x="4" y="2" width="16" height="20" rx="2" ry="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="8" y1="10" x2="16" y2="10" /><line x1="8" y1="14" x2="8.01" y2="14" /><line x1="12" y1="14" x2="12.01" y2="14" /><line x1="16" y1="14" x2="16.01" y2="14" /><line x1="8" y1="18" x2="8.01" y2="18" /><line x1="12" y1="18" x2="12.01" y2="18" /><line x1="16" y1="18" x2="16.01" y2="18" />
               </svg>
-              <p className="text-lg text-[#333] mb-8">{t('landing.pricing.text')}</p>
+              <p className="text-lg text-foreground mb-8">{t('landing.pricing.text')}</p>
               <button
                 onClick={() => scrollTo('contact')}
-                className="px-6 py-3 rounded-xl font-semibold bg-[#2D5A3D] text-white border-2 border-transparent hover:bg-[#1f3f2a] hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
+                className="px-6 py-3 rounded-xl font-semibold bg-primary text-primary-foreground border-2 border-transparent hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 cursor-pointer"
               >
                 {t('landing.pricing.cta')}
               </button>
@@ -437,7 +442,7 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* BUSINESS PLAN SIMULATOR */}
-        <section id="business-plan" className="py-20 bg-[#2D5A3D] text-white">
+        <section id="business-plan" className="py-20 bg-primary text-primary-foreground">
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-16 items-center">
               <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
@@ -446,7 +451,7 @@ const LandingPage: React.FC = () => {
                 <p className="text-[rgba(255,255,255,0.7)] mb-8">{t('landing.bp.desc')}</p>
                 <Link
                   to="/register"
-                  className="inline-block px-8 py-4 rounded-xl font-semibold text-lg bg-white text-[#2D5A3D] hover:bg-[#f1f1f1] transition-all duration-300"
+                  className="inline-block px-8 py-4 rounded-xl font-semibold text-lg bg-background text-primary hover:bg-secondary transition-all duration-300"
                 >
                   {t('landing.bp.cta')}
                 </Link>
@@ -456,7 +461,7 @@ const LandingPage: React.FC = () => {
                   <ul className="flex flex-col gap-6">
                     {[1, 2, 3].map((n) => (
                       <li key={n} className="flex items-center gap-4">
-                        <div className="shrink-0 w-10 h-10 bg-white text-[#2D5A3D] rounded-full flex items-center justify-center">
+                        <div className="shrink-0 w-10 h-10 bg-background text-primary rounded-full flex items-center justify-center">
                           <Check className="w-5 h-5" />
                         </div>
                         <span className="text-lg font-medium">{t(`landing.bp.feature${n}`)}</span>
@@ -470,24 +475,24 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="py-20 bg-white">
+        <section id="faq" className="py-20 bg-background">
           <div className="max-w-[800px] mx-auto px-6 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
             <div className="text-center max-w-[600px] mx-auto mb-12">
-              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-[#1E1E1E]">{t('landing.faq.title')}</h2>
+              <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.25rem] text-foreground">{t('landing.faq.title')}</h2>
             </div>
 
             <div className="flex flex-col gap-4">
               {faqItems.map((n) => (
-                <div key={n} className="border border-[#e2e8f0] rounded-lg overflow-hidden">
+                <div key={n} className="border border-border rounded-lg overflow-hidden">
                   <button
-                    className="w-full px-6 py-5 flex justify-between items-center bg-white border-none text-[1.05rem] font-semibold text-[#1E1E1E] cursor-pointer text-left hover:bg-[#F8F9FA] transition-all duration-300"
+                    className="w-full px-6 py-5 flex justify-between items-center bg-background border-none text-[1.05rem] font-semibold text-foreground cursor-pointer text-left hover:bg-secondary transition-all duration-300"
                     onClick={() => setActiveFaq(activeFaq === n ? null : n)}
                   >
                     <span>{t(`landing.faq.q${n}`)}</span>
                     <span className={`text-xl transition-transform duration-300 ${activeFaq === n ? 'rotate-45' : ''}`}>+</span>
                   </button>
                   <div className={`overflow-hidden transition-all duration-300 ${activeFaq === n ? 'max-h-[200px]' : 'max-h-0'}`}>
-                    <p className="px-6 pb-5 text-[#6b7280]">{t(`landing.faq.a${n}`)}</p>
+                    <p className="px-6 pb-5 text-muted-foreground">{t(`landing.faq.a${n}`)}</p>
                   </div>
                 </div>
               ))}
@@ -496,7 +501,7 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* CONTACT */}
-        <section id="contact" className="py-20 bg-[#2D5A3D] text-white">
+        <section id="contact" className="py-20 bg-primary text-primary-foreground">
           <div className="max-w-[1200px] mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
               <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
@@ -504,7 +509,7 @@ const LandingPage: React.FC = () => {
                 <p className="text-lg opacity-90">{t('landing.contact.subtitle')}</p>
               </div>
 
-              <div className="bg-white p-10 rounded-xl text-[#333] reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] delay-200">
+              <div className="bg-background p-10 rounded-xl text-foreground reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] delay-200">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -514,20 +519,20 @@ const LandingPage: React.FC = () => {
                   }}
                 >
                   <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-[#1E1E1E]">{t('landing.contact.formName')}</label>
-                    <input name="name" type="text" required className="w-full px-4 py-3 border border-[#e2e8f0] rounded-md text-base focus:outline-none focus:border-[#2D5A3D] focus:ring-[3px] focus:ring-[rgba(45,90,61,0.1)] transition-all duration-300" />
+                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formName')}</label>
+                    <input name="name" type="text" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
                   </div>
                   <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-[#1E1E1E]">{t('landing.contact.formEmail')}</label>
-                    <input name="email" type="email" required className="w-full px-4 py-3 border border-[#e2e8f0] rounded-md text-base focus:outline-none focus:border-[#2D5A3D] focus:ring-[3px] focus:ring-[rgba(45,90,61,0.1)] transition-all duration-300" />
+                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formEmail')}</label>
+                    <input name="email" type="email" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
                   </div>
                   <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-[#1E1E1E]">{t('landing.contact.formPhone')}</label>
-                    <input name="phone" type="tel" required className="w-full px-4 py-3 border border-[#e2e8f0] rounded-md text-base focus:outline-none focus:border-[#2D5A3D] focus:ring-[3px] focus:ring-[rgba(45,90,61,0.1)] transition-all duration-300" />
+                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formPhone')}</label>
+                    <input name="phone" type="tel" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
                   </div>
                   <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-[#1E1E1E]">{t('landing.contact.formSize')}</label>
-                    <select name="size" required className="w-full px-4 py-3 border border-[#e2e8f0] rounded-md text-base bg-white focus:outline-none focus:border-[#2D5A3D] focus:ring-[3px] focus:ring-[rgba(45,90,61,0.1)] transition-all duration-300">
+                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formSize')}</label>
+                    <select name="size" required className="w-full px-4 py-3 border border-border rounded-md text-base bg-background focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300">
                       <option value="1">{t('landing.contact.formSize1')}</option>
                       <option value="2">{t('landing.contact.formSize2')}</option>
                       <option value="3">{t('landing.contact.formSize3')}</option>
@@ -535,10 +540,13 @@ const LandingPage: React.FC = () => {
                     </select>
                   </div>
                   <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-[#1E1E1E]">{t('landing.contact.formMsg')}</label>
-                    <textarea name="message" rows={3} className="w-full px-4 py-3 border border-[#e2e8f0] rounded-md text-base resize-y focus:outline-none focus:border-[#2D5A3D] focus:ring-[3px] focus:ring-[rgba(45,90,61,0.1)] transition-all duration-300" />
+                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formMsg')}</label>
+                    <textarea name="message" rows={3} className="w-full px-4 py-3 border border-border rounded-md text-base resize-y focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
                   </div>
-                  <button type="submit" className="w-full py-3 rounded-xl font-semibold bg-white text-[#2D5A3D] border-2 border-[#2D5A3D] hover:bg-[#F8F9FA] transition-all duration-300 cursor-pointer text-base">
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-xl font-semibold bg-background text-primary border-2 border-primary hover:bg-secondary transition-all duration-300 cursor-pointer text-base"
+                  >
                     {t('landing.contact.submit')}
                   </button>
                 </form>
@@ -549,7 +557,7 @@ const LandingPage: React.FC = () => {
       </main>
 
       {/* FOOTER */}
-      <footer className="bg-[#1E1E1E] text-[#F8F9FA] pt-20 pb-8">
+      <footer className="bg-foreground text-primary-foreground pt-20 pb-8">
         <div className="max-w-[1200px] mx-auto px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-12 mb-16">
             <div>
@@ -557,7 +565,7 @@ const LandingPage: React.FC = () => {
                 <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
                 <span className="font-[Montserrat,sans-serif] font-extrabold text-2xl tracking-wider text-white">AGROGINA</span>
               </div>
-              <p className="text-sm text-[#a0aec0] mt-4 leading-relaxed">{t('landing.footer.tagline')}</p>
+              <p className="text-sm text-muted-foreground mt-4 leading-relaxed">{t('landing.footer.tagline')}</p>
               <div className="flex gap-4 mt-6">
                 <a href="https://www.linkedin.com/in/agrogina-agrogina-6846853b5" target="_blank" rel="noopener noreferrer" className="text-white opacity-70 hover:opacity-100 transition-opacity">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
@@ -572,33 +580,33 @@ const LandingPage: React.FC = () => {
             </div>
 
             <div>
-              <h4 className="text-white font-semibold text-lg mb-6">{t('landing.footer.product')}</h4>
+              <h4 className="text-primary-foreground font-semibold text-lg mb-6">{t('landing.footer.product')}</h4>
               <div className="flex flex-col gap-3">
-                <button onClick={() => scrollTo('modules')} className="text-[#a0aec0] text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-white transition-colors">{t('landing.footer.features')}</button>
-                <button onClick={() => scrollTo('pricing')} className="text-[#a0aec0] text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-white transition-colors">{t('landing.footer.pricing')}</button>
-                <button onClick={() => scrollTo('faq')} className="text-[#a0aec0] text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-white transition-colors">{t('landing.footer.faq')}</button>
+                <button onClick={() => scrollTo('modules')} className="text-muted-foreground text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-primary-foreground transition-colors">{t('landing.footer.features')}</button>
+                <button onClick={() => scrollTo('pricing')} className="text-muted-foreground text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-primary-foreground transition-colors">{t('landing.footer.pricing')}</button>
+                <button onClick={() => scrollTo('faq')} className="text-muted-foreground text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-primary-foreground transition-colors">{t('landing.footer.faq')}</button>
               </div>
             </div>
 
             <div>
-              <h4 className="text-white font-semibold text-lg mb-6">{t('landing.footer.company')}</h4>
+              <h4 className="text-primary-foreground font-semibold text-lg mb-6">{t('landing.footer.company')}</h4>
               <div className="flex flex-col gap-3">
-                <a href="#" className="text-[#a0aec0] text-[0.95rem] hover:text-white transition-colors">{t('landing.footer.about')}</a>
-                <Link to="/blog" className="text-[#a0aec0] text-[0.95rem] hover:text-white transition-colors">{t('landing.footer.blog')}</Link>
-                <button onClick={() => scrollTo('contact')} className="text-[#a0aec0] text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-white transition-colors">{t('landing.footer.contact')}</button>
+                <a href="#" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.about')}</a>
+                <Link to="/blog" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.blog')}</Link>
+                <button onClick={() => scrollTo('contact')} className="text-muted-foreground text-[0.95rem] text-left bg-transparent border-none cursor-pointer hover:text-primary-foreground transition-colors">{t('landing.footer.contact')}</button>
               </div>
             </div>
 
             <div>
-              <h4 className="text-white font-semibold text-lg mb-6">{t('landing.footer.legal')}</h4>
+              <h4 className="text-primary-foreground font-semibold text-lg mb-6">{t('landing.footer.legal')}</h4>
               <div className="flex flex-col gap-3">
-                <a href="#" className="text-[#a0aec0] text-[0.95rem] hover:text-white transition-colors">{t('landing.footer.terms')}</a>
-                <a href="#" className="text-[#a0aec0] text-[0.95rem] hover:text-white transition-colors">{t('landing.footer.privacy')}</a>
+                <a href="#" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.terms')}</a>
+                <a href="#" className="text-muted-foreground text-[0.95rem] hover:text-primary-foreground transition-colors">{t('landing.footer.privacy')}</a>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-[rgba(255,255,255,0.1)] text-[#a0aec0] text-sm gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-[rgba(255,255,255,0.1)] text-muted-foreground text-sm gap-4">
             <p>&copy; {new Date().getFullYear()} AGROGINA. {t('landing.footer.copyright')}</p>
             <p>{t('landing.footer.madeIn')}</p>
           </div>
@@ -614,11 +622,15 @@ const LandingPage: React.FC = () => {
           <div className="relative w-[90%] max-w-[900px] aspect-video bg-black rounded-lg overflow-visible shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]">
             <button
               onClick={closeVideoModal}
-              className="absolute -top-10 -right-2.5 bg-transparent border-none text-white text-4xl cursor-pointer hover:text-[#1E88E5] transition-colors"
+              className="absolute -top-10 -right-2.5 bg-transparent border-none text-white text-4xl cursor-pointer hover:text-primary transition-colors"
             >
               <X className="w-8 h-8" />
             </button>
-            <video ref={videoRef} controls className="w-full h-full outline-none rounded-lg">
+            <video
+              ref={videoRef}
+              controls
+              className="w-full h-full object-contain outline-none rounded-lg bg-black"
+            >
               <source src="/assets/demo.mp4" type="video/mp4" />
             </video>
           </div>
