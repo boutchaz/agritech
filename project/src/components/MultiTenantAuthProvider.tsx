@@ -27,7 +27,7 @@ import {
   trackSessionStart,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
-import { PageLoader } from '@/components/ui/loader';
+import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 
 
 type Organization = AuthOrganization;
@@ -49,7 +49,7 @@ const toTitleCase = (value: string) =>
     .join(' ');
 
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
@@ -631,11 +631,9 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
     [stableUser, profile, organizations, currentOrganization, farms, currentFarm, userRole, loading, needsOnboarding],
   );
 
-  // Show loading spinner (but not on public routes)
+  // Show full layout skeleton while auth data loads (but not on public routes)
   if (loading && !isPublicRoute) {
-    return (
-      <PageLoader />
-    );
+    return <AuthenticatedLayoutSkeleton />;
   }
 
   // Show authentication form (but not on public routes)

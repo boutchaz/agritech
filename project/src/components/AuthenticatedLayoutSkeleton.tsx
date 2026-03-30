@@ -2,22 +2,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { useTranslation } from 'react-i18next';
-
-const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed';
+import { useSidebarMargin } from '@/hooks/useSidebarLayout';
 
 /**
  * Full-page skeleton that mirrors the authenticated layout:
  * Sidebar + Header + Main content area.
- * 
+ *
  * Shown while subscription is loading (before the real layout mounts).
- * Reads the same localStorage key as the real sidebar to match collapsed state.
+ * Uses the same sidebar margin hook as the real layout.
  */
 export function AuthenticatedLayoutSkeleton() {
   const { i18n } = useTranslation();
   const isRTL = isRTLLocale(i18n.language);
   const isDark = localStorage.getItem('darkMode') === 'true';
-  const isCollapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
-  const sidebarWidth = isCollapsed ? 64 : 256;
+  const { style: sidebarStyle, isSidebarCollapsed: isCollapsed } = useSidebarMargin(isRTL);
 
   return (
     <div className={isDark ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -106,10 +104,8 @@ export function AuthenticatedLayoutSkeleton() {
 
         {/* ===== MAIN CONTENT AREA ===== */}
         <div
-          className="flex flex-col h-screen"
-          style={{
-            [isRTL ? 'marginRight' : 'marginLeft']: `${sidebarWidth}px`,
-          }}
+          className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+          style={sidebarStyle}
         >
           <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-900">
             {/* ===== PAGE HEADER SKELETON ===== */}
