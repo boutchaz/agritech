@@ -24,13 +24,14 @@ export function AuthenticatedLayoutSkeleton() {
         <div
           className={cn(
             'fixed inset-y-0 z-50 h-screen bg-white dark:bg-gray-800 flex-col hidden lg:flex',
+            'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             'border-gray-200 dark:border-gray-700',
-            isCollapsed ? 'w-16' : 'w-64',
+            isCollapsed ? 'lg:w-16' : 'w-64',
           )}
         >
           {/* Sidebar header / logo */}
-          <div className={cn('flex-shrink-0 border-b border-gray-200 dark:border-gray-700 p-4', isCollapsed && 'p-2')}>
+          <div className={cn('flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4', isCollapsed && 'lg:p-2')}>
             <div className="flex items-center gap-2">
               <Skeleton className="h-8 w-8 rounded-lg flex-shrink-0" />
               {!isCollapsed && <Skeleton className="h-5 w-24" />}
@@ -107,7 +108,7 @@ export function AuthenticatedLayoutSkeleton() {
           className="flex flex-col h-screen transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
-          <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-gray-900">
+          <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 lg:pb-0">
             {/* ===== PAGE HEADER SKELETON ===== */}
             <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
               {/* Mobile header */}
