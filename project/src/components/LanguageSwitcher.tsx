@@ -19,9 +19,11 @@ import { Button } from '@/components/ui/button';
 type LanguageSwitcherProps = {
   /** Icon-only trigger; use in tight headers (e.g. next to org switcher on mobile). */
   compact?: boolean;
+  /** Raise the dropdown above high z-index layers (e.g. full-screen mobile nav at z-[1001]). */
+  elevatePopover?: boolean;
 };
 
-const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) => {
+const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false, elevatePopover = false }) => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -88,7 +90,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false }) 
         sideOffset={8}
         collisionPadding={12}
         className={cn(
-          'z-[200] w-48 max-w-[min(12rem,calc(100vw-1.5rem))] border-gray-200 dark:border-gray-700 dark:bg-gray-800',
+          elevatePopover ? 'z-[1100]' : 'z-[200]',
+          'w-48 max-w-[min(12rem,calc(100vw-1.5rem))] border-gray-200 dark:border-gray-700 dark:bg-gray-800',
         )}
       >
         {languages.map((lang) => (

@@ -1167,7 +1167,9 @@
       "features": "Features",
       "howItWorks": "How it works",
       "faq": "FAQ",
-      "blog": "Blog"
+      "blog": "Blog",
+      "menuAria": "Main menu",
+      "closeMenu": "Close menu"
     },
     "hero": {
       "title": "Pilot your farm with artificial intelligence",
@@ -1263,6 +1265,8 @@
       "formSize3": "200 to 500 ha",
       "formSize4": "Over 500 ha",
       "formMsg": "Message (optional)",
+      "formSizePlaceholder": "Select farm size",
+      "validationRequired": "Please fill in all required fields.",
       "submit": "Submit Request"
     },
     "footer": {

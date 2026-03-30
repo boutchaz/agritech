@@ -1167,7 +1167,9 @@
       "features": "Fonctionnalités",
       "howItWorks": "Comment ça marche",
       "faq": "FAQ",
-      "blog": "Blog"
+      "blog": "Blog",
+      "menuAria": "Menu principal",
+      "closeMenu": "Fermer le menu"
     },
     "hero": {
       "title": "AGROGINA : La plateforme 360° qui fusionne votre réalité agronomique et votre gestion.",
@@ -1263,6 +1265,8 @@
       "formSize3": "200 à 500 ha",
       "formSize4": "Plus de 500 ha",
       "formMsg": "Message (optionnel)",
+      "formSizePlaceholder": "Choisir la taille",
+      "validationRequired": "Veuillez remplir tous les champs obligatoires.",
       "submit": "Envoyer la demande"
     },
     "footer": {

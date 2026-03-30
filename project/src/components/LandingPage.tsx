@@ -20,6 +20,7 @@ import {
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/bg-360-day.png';
 import { appConfig } from '@/config/app';
+import { toast } from 'sonner';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
@@ -128,6 +129,20 @@ const LandingPage: React.FC = () => {
     return () => { clearTimeout(timer); observer.disconnect(); };
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [mobileMenuOpen]);
+
   const openVideoModal = useCallback(() => {
     setVideoModalOpen(true);
     setTimeout(() => videoRef.current?.play().catch(() => {}), 100);
@@ -170,7 +185,7 @@ const LandingPage: React.FC = () => {
             : 'bg-transparent py-6'
         }`}
       >
-        <div className="w-full max-w-[1200px] mx-auto px-6 flex items-center justify-between">
+        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 sm:px-6">
           <a href="#" className="flex items-center gap-3 no-underline" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
             <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
             <span
@@ -235,26 +250,84 @@ const LandingPage: React.FC = () => {
             <span className={`block w-[25px] h-[2px] bg-white transition-all duration-300 ${mobileMenuOpen ? '-rotate-45 -translate-y-[7px]' : ''}`} />
           </button>
         </div>
+      </header>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-[#111] px-6 py-6 flex flex-col gap-4">
-            <button onClick={() => scrollTo('modules')} className="text-[#f3f4f6] text-left font-medium bg-transparent border-none cursor-pointer">{t('landing.nav.features')}</button>
-            <button onClick={() => scrollTo('how-it-works')} className="text-[#f3f4f6] text-left font-medium bg-transparent border-none cursor-pointer">{t('landing.nav.howItWorks')}</button>
-            <button onClick={() => scrollTo('faq')} className="text-[#f3f4f6] text-left font-medium bg-transparent border-none cursor-pointer">{t('landing.nav.faq')}</button>
-            <Link to="/blog" className="text-[#f3f4f6] font-medium" onClick={() => setMobileMenuOpen(false)}>{t('landing.nav.blog')}</Link>
-            <div className="flex gap-3 pt-2">
-              <Link to="/login" className="px-4 py-2 rounded-xl font-semibold text-white border-2 border-[rgba(255,255,255,0.3)]" onClick={() => setMobileMenuOpen(false)}>{t('auth.login', 'Connexion')}</Link>
+      {/* Full-screen mobile menu — fixed overlay so content below is not visible / misaligned */}
+      {mobileMenuOpen ? (
+        <div
+          className="fixed inset-0 z-[1001] flex md:hidden flex-col bg-[#111] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('landing.nav.menuAria')}
+        >
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
+            <a
+              href="#"
+              className="flex min-w-0 items-center gap-2 no-underline"
+              onClick={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <img src="/assets/logo.png" alt="AGROGINA" className="h-10 shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+              <span className="font-[Montserrat,sans-serif] text-lg font-extrabold tracking-wider text-white">AGROGINA</span>
+            </a>
+            <button
+              type="button"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/5 text-white hover:bg-white/10"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label={t('landing.nav.closeMenu')}
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex flex-col gap-1">
+              {(['modules', 'how-it-works', 'faq'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => scrollTo(id)}
+                  className="rounded-lg px-3 py-3 text-left text-base font-medium text-[#f3f4f6] hover:bg-white/10"
+                >
+                  {id === 'modules' ? t('landing.nav.features') : id === 'how-it-works' ? t('landing.nav.howItWorks') : t('landing.nav.faq')}
+                </button>
+              ))}
+              <Link
+                to="/blog"
+                className="rounded-lg px-3 py-3 text-base font-medium text-[#f3f4f6] hover:bg-white/10"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t('landing.nav.blog')}
+              </Link>
+            </div>
+          </nav>
+
+          <div className="shrink-0 space-y-4 border-t border-white/10 px-4 py-4">
+            <div className="flex justify-center">
+              <LanguageSwitcher compact elevatePopover />
+            </div>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/login"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border-2 border-white/50 bg-transparent px-4 py-3 text-center font-semibold text-white hover:border-white hover:bg-white/10"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {t('auth.login', 'Connexion')}
+              </Link>
               <button
+                type="button"
                 onClick={() => scrollTo('contact')}
-                className="px-4 py-2 rounded-xl font-semibold bg-primary text-primary-foreground border-2 border-transparent cursor-pointer"
+                className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border-2 border-transparent bg-primary px-4 py-3 font-semibold text-primary-foreground hover:bg-primary/90"
               >
                 {t('landing.hero.ctaDemo', 'Commencer')}
               </button>
             </div>
           </div>
-        )}
-      </header>
+        </div>
+      ) : null}
 
       <main>
         {/* HERO */}
@@ -505,51 +578,107 @@ const LandingPage: React.FC = () => {
         </section>
 
         {/* CONTACT */}
-        <section id="contact" className="py-20 bg-primary text-primary-foreground">
-          <div className="max-w-[1200px] mx-auto px-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-              <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
-                <h2 className="font-[Montserrat,sans-serif] font-bold text-[2.5rem] mb-4">{t('landing.contact.title')}</h2>
-                <p className="text-lg opacity-90">{t('landing.contact.subtitle')}</p>
+        <section id="contact" className="w-full overflow-x-hidden bg-primary py-14 text-primary-foreground md:py-20">
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-6">
+            <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2 md:gap-16">
+              <div className="reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)]">
+                <h2 className="mb-4 font-[Montserrat,sans-serif] text-[clamp(1.75rem,5vw,2.5rem)] font-bold leading-tight">
+                  {t('landing.contact.title')}
+                </h2>
+                <p className="text-base opacity-90 md:text-lg">{t('landing.contact.subtitle')}</p>
               </div>
 
-              <div className="bg-background p-10 rounded-xl text-foreground reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] delay-200">
+              <div className="w-full min-w-0 rounded-xl bg-background p-5 text-foreground shadow-sm reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[800ms] ease-[cubic-bezier(0.5,0,0,1)] delay-200 sm:p-8 md:p-10">
                 <form
+                  noValidate
                   onSubmit={(e) => {
                     e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
-                    const mailtoBody = `Name: ${formData.get('name')}%0AEmail: ${formData.get('email')}%0APhone: ${formData.get('phone')}%0AFarm Size: ${formData.get('size')}%0AMessage: ${formData.get('message')}`;
+                    const form = e.currentTarget;
+                    const formData = new FormData(form);
+                    const name = String(formData.get('name') ?? '').trim();
+                    const email = String(formData.get('email') ?? '').trim();
+                    const phone = String(formData.get('phone') ?? '').trim();
+                    const size = String(formData.get('size') ?? '');
+                    if (!name || !email || !phone || !size) {
+                      toast.error(t('landing.contact.validationRequired'));
+                      return;
+                    }
+                    const mailtoBody = `Name: ${name}%0AEmail: ${email}%0APhone: ${phone}%0AFarm Size: ${size}%0AMessage: ${formData.get('message')}`;
                     window.location.href = `mailto:contact@agrogina.com?subject=Demo Request&body=${mailtoBody}`;
                   }}
                 >
-                  <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formName')}</label>
-                    <input name="name" type="text" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
+                  <div className="mb-5 md:mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-name">
+                      {t('landing.contact.formName')}
+                    </label>
+                    <input
+                      id="landing-contact-name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      aria-required="true"
+                      className="min-h-[44px] w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground shadow-sm transition-all duration-300 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
-                  <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formEmail')}</label>
-                    <input name="email" type="email" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
+                  <div className="mb-5 md:mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-email">
+                      {t('landing.contact.formEmail')}
+                    </label>
+                    <input
+                      id="landing-contact-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      aria-required="true"
+                      className="min-h-[44px] w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground shadow-sm transition-all duration-300 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
-                  <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formPhone')}</label>
-                    <input name="phone" type="tel" required className="w-full px-4 py-3 border border-border rounded-md text-base focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
+                  <div className="mb-5 md:mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-phone">
+                      {t('landing.contact.formPhone')}
+                    </label>
+                    <input
+                      id="landing-contact-phone"
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      aria-required="true"
+                      className="min-h-[44px] w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground shadow-sm transition-all duration-300 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
-                  <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formSize')}</label>
-                    <select name="size" required className="w-full px-4 py-3 border border-border rounded-md text-base bg-background focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300">
+                  <div className="mb-5 md:mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-size">
+                      {t('landing.contact.formSize')}
+                    </label>
+                    <select
+                      id="landing-contact-size"
+                      name="size"
+                      aria-required="true"
+                      className="min-h-[44px] w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground shadow-sm transition-all duration-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">{t('landing.contact.formSizePlaceholder')}</option>
                       <option value="1">{t('landing.contact.formSize1')}</option>
                       <option value="2">{t('landing.contact.formSize2')}</option>
                       <option value="3">{t('landing.contact.formSize3')}</option>
                       <option value="4">{t('landing.contact.formSize4')}</option>
                     </select>
                   </div>
-                  <div className="mb-6">
-                    <label className="block font-medium text-sm mb-2 text-foreground">{t('landing.contact.formMsg')}</label>
-                    <textarea name="message" rows={3} className="w-full px-4 py-3 border border-border rounded-md text-base resize-y focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-300" />
+                  <div className="mb-5 md:mb-6">
+                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-message">
+                      {t('landing.contact.formMsg')}
+                    </label>
+                    <textarea
+                      id="landing-contact-message"
+                      name="message"
+                      rows={3}
+                      className="min-h-[96px] w-full resize-y rounded-md border border-border bg-background px-4 py-3 text-base text-foreground shadow-sm transition-all duration-300 placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-xl font-semibold bg-background text-primary border-2 border-primary hover:bg-secondary transition-all duration-300 cursor-pointer text-base"
+                    className="min-h-[44px] w-full cursor-pointer rounded-xl border-2 border-primary bg-background py-3 text-base font-semibold text-primary transition-all duration-300 hover:bg-secondary"
                   >
                     {t('landing.contact.submit')}
                   </button>
