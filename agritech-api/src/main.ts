@@ -259,7 +259,9 @@ async function bootstrap() {
 
   // Set global prefix
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
-  app.setGlobalPrefix(apiPrefix);
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: ['blog', 'blog/(.*)', 'sitemap.xml', 'rss.xml'],
+  });
 
   logger.log(`Global prefix set to: ${apiPrefix}`);
 

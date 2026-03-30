@@ -93,6 +93,33 @@ server {
         font/woff
         font/woff2;
     
+    # Blog SSR routes - proxy to NestJS backend
+    location /blog {
+        proxy_pass http://agritech-api:3001/blog;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 30s;
+    }
+
+    # Sitemap and RSS - proxy to NestJS backend
+    location = /sitemap.xml {
+        proxy_pass http://agritech-api:3001/sitemap.xml;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location = /rss.xml {
+        proxy_pass http://agritech-api:3001/rss.xml;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
     # React Router support - redirect all requests to index.html
     location / {
         try_files \$uri \$uri/ /index.html;

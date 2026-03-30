@@ -15885,3 +15885,16 @@ CREATE POLICY "Authenticated delete for agritech-documents"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'agritech-documents');
+
+-- ==========================================
+-- Newsletter subscribers (public, no org scope)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(320) NOT NULL UNIQUE,
+  locale VARCHAR(5) DEFAULT 'fr',
+  source_slug VARCHAR(255),
+  subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed BOOLEAN DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email);

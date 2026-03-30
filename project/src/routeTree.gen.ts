@@ -23,7 +23,6 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_authenticated/pest-alerts/index'
 import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_authenticated/compliance/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
-import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
@@ -58,7 +57,6 @@ import { Route as publicOnboardingOrganizationRouteImport } from './routes/(publ
 import { Route as publicOnboardingModulesRouteImport } from './routes/(public)/onboarding/modules'
 import { Route as publicOnboardingFarmRouteImport } from './routes/(public)/onboarding/farm'
 import { Route as publicOnboardingCompleteRouteImport } from './routes/(public)/onboarding/complete'
-import { Route as publicBlogSlugRouteImport } from './routes/(public)/blog/$slug'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
 import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
@@ -222,11 +220,6 @@ const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => publicOnboardingRoute,
-} as any)
-const publicBlogIndexRoute = publicBlogIndexRouteImport.update({
-  id: '/(public)/blog/',
-  path: '/blog/',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPestAlertsReportIdRoute =
   AuthenticatedPestAlertsReportIdRouteImport.update({
@@ -428,11 +421,6 @@ const publicOnboardingCompleteRoute =
     path: '/complete',
     getParentRoute: () => publicOnboardingRoute,
   } as any)
-const publicBlogSlugRoute = publicBlogSlugRouteImport.update({
-  id: '/(public)/blog/$slug',
-  path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
   id: '/(auth)/auth/callback',
   path: '/auth/callback',
@@ -997,7 +985,6 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1032,7 +1019,6 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
@@ -1139,7 +1125,6 @@ export interface FileRoutesByTo {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1170,7 +1155,6 @@ export interface FileRoutesByTo {
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
@@ -1276,7 +1260,6 @@ export interface FileRoutesById {
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
-  '/(public)/blog/$slug': typeof publicBlogSlugRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
   '/(public)/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1311,7 +1294,6 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
@@ -1421,7 +1403,6 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pitch-deck'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1456,7 +1437,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog/'
     | '/onboarding/'
     | '/compliance/'
     | '/pest-alerts/'
@@ -1563,7 +1543,6 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/pitch-deck'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1594,7 +1573,6 @@ export interface FileRouteTypes {
     | '/trees'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog'
     | '/onboarding'
     | '/compliance'
     | '/pest-alerts'
@@ -1699,7 +1677,6 @@ export interface FileRouteTypes {
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
     | '/(auth)/auth/callback'
-    | '/(public)/blog/$slug'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
     | '/(public)/onboarding/modules'
@@ -1734,7 +1711,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
     | '/_authenticated/pest-alerts/$reportId'
-    | '/(public)/blog/'
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
@@ -1844,8 +1820,6 @@ export interface RootRouteChildren {
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
-  publicBlogSlugRoute: typeof publicBlogSlugRoute
-  publicBlogIndexRoute: typeof publicBlogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1947,13 +1921,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/'
       preLoaderRoute: typeof publicOnboardingIndexRouteImport
       parentRoute: typeof publicOnboardingRoute
-    }
-    '/(public)/blog/': {
-      id: '/(public)/blog/'
-      path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof publicBlogIndexRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/pest-alerts/$reportId': {
       id: '/_authenticated/pest-alerts/$reportId'
@@ -2192,13 +2159,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/complete'
       preLoaderRoute: typeof publicOnboardingCompleteRouteImport
       parentRoute: typeof publicOnboardingRoute
-    }
-    '/(public)/blog/$slug': {
-      id: '/(public)/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof publicBlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/(auth)/auth/callback': {
       id: '/(auth)/auth/callback'
@@ -3394,8 +3354,6 @@ const rootRouteChildren: RootRouteChildren = {
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
-  publicBlogSlugRoute: publicBlogSlugRoute,
-  publicBlogIndexRoute: publicBlogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

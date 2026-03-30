@@ -5,6 +5,16 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": false,
-    "tsConfigPath": "tsconfig.json"
+    "tsConfigPath": "tsconfig.json",
+    "assets": [
+      {
+        "include": "modules/blogs/templates/**/*.hbs",
+        "watchAssets": true
+      },
+      {
+        "include": "modules/email/templates/**/*.hbs",
+        "watchAssets": true
+      }
+    ]
   }
 }

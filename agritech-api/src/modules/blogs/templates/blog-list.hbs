@@ -1,0 +1,67 @@
+<div class="container section-lg">
+  <!-- Page header -->
+  <div style="margin-bottom:2.5rem;">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+      <div style="padding:0.5rem;background:#f0fdf4;border-radius:0.5rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </div>
+      <span style="font-size:0.8125rem;font-weight:600;color:#16a34a;text-transform:uppercase;letter-spacing:0.05em;">AgroGina Blog</span>
+    </div>
+    <h1 style="font-size:2rem;font-weight:700;color:#111827;margin-bottom:0.5rem;">{{t.blogTitle}}</h1>
+    <p style="font-size:1.0625rem;color:#6b7280;max-width:40rem;">{{t.blogSubtitle}}</p>
+  </div>
+
+  {{#if featuredPosts.length}}
+  <!-- Featured posts -->
+  <section style="margin-bottom:3rem;">
+    <h2 style="font-size:1.25rem;font-weight:700;color:#111827;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      {{t.featuredArticles}}
+    </h2>
+    <div class="grid grid-cols-2" style="gap:1.5rem;">
+      {{#each featuredPosts}}
+      {{> blog-card this}}
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+
+  {{#if categories.length}}
+  <!-- Category filter -->
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:2rem;">
+    <a href="/blog?lang={{lang}}" class="badge" style="{{#unless activeCategory}}background:#16a34a;color:#fff;{{/unless}}text-decoration:none;">{{t.allCategories}}</a>
+    {{#each categories}}
+    <a href="/blog?category={{this.slug}}&lang={{../lang}}" class="badge" style="{{#if (eq this.slug ../activeCategory)}}background:#16a34a;color:#fff;{{/if}}text-decoration:none;">{{this.name}}</a>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <!-- All posts -->
+  <section>
+    <h2 style="font-size:1.25rem;font-weight:700;color:#111827;margin-bottom:1.25rem;">{{t.allArticles}}</h2>
+    {{#if posts.length}}
+    <div class="grid grid-cols-3" style="gap:1.5rem;">
+      {{#each posts}}
+      {{> blog-card this}}
+      {{/each}}
+    </div>
+
+    {{#if pagination}}
+    <!-- Pagination -->
+    <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:2rem;">
+      {{#if pagination.hasPrev}}
+      <a href="/blog?page={{pagination.prevPage}}&lang={{lang}}{{#if activeCategory}}&category={{activeCategory}}{{/if}}" class="btn btn-outline" style="font-size:0.8125rem;">← {{t.prevPage}}</a>
+      {{/if}}
+      <span style="display:flex;align-items:center;padding:0 1rem;font-size:0.875rem;color:#6b7280;">{{pagination.page}} / {{pagination.pageCount}}</span>
+      {{#if pagination.hasNext}}
+      <a href="/blog?page={{pagination.nextPage}}&lang={{lang}}{{#if activeCategory}}&category={{activeCategory}}{{/if}}" class="btn btn-outline" style="font-size:0.8125rem;">{{t.nextPage}} →</a>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{else}}
+    <div style="text-align:center;padding:4rem 0;color:#6b7280;">
+      <p style="font-size:1.125rem;">{{t.noPosts}}</p>
+    </div>
+    {{/if}}
+  </section>
+</div>
