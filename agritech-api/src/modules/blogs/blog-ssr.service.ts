@@ -168,7 +168,7 @@ export class BlogSsrService implements OnModuleInit {
     private readonly configService: ConfigService,
   ) {
     this.templatesDir = path.join(__dirname, 'templates');
-    this.appUrl = this.configService.get('APP_URL') || this.configService.get('VITE_APP_URL') || 'https://agritech-dashboard.thebzlab.online';
+    this.appUrl = this.configService.get('FRONTEND_URL') || this.configService.get('APP_URL') || this.configService.get('VITE_APP_URL') || 'https://agritech-dashboard.thebzlab.online';
     this.siteUrl = this.appUrl;
   }
 
