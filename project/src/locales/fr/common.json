@@ -818,6 +818,13 @@
       "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
     }
   },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "goHome": "Retour à l'accueil",
+    "goBack": "Page précédente",
+    "hint": "Vérifiez l'URL ou utilisez la navigation"
+  },
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",

@@ -6,6 +6,7 @@ import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { NotFoundPage } from '../components/NotFoundPage'
 import { lazy, Suspense } from 'react'
 
 // Lazy load non-critical UI — command palette, tour, devtools
@@ -44,12 +45,11 @@ const ReactQueryDevtools = import.meta.env.DEV
     )
   : () => null;
 
-export const Route = createRootRoute({
-  component: () => {
-    const location = useLocation();
-    const isOnboardingRoute = location.pathname.startsWith('/onboarding');
+function RootComponent() {
+  const location = useLocation();
+  const isOnboardingRoute = location.pathname.startsWith('/onboarding');
 
-    return (
+  return (
       <ErrorBoundary>
         <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
           <AuthProviderSwitch>
@@ -85,5 +85,9 @@ export const Route = createRootRoute({
         </NetworkStatusProvider>
       </ErrorBoundary>
     );
-  },
+}
+
+export const Route = createRootRoute({
+  notFoundComponent: NotFoundPage,
+  component: RootComponent,
 })

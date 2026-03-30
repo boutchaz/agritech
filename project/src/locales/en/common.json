@@ -818,6 +818,13 @@
       "journalEntryHelp": "Automatically create a journal entry in the accounting ledger"
     }
   },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "goHome": "Back to home",
+    "goBack": "Previous page",
+    "hint": "Check the URL or use the navigation"
+  },
   "auth": {
     "login": "Login",
     "logout": "Logout",
