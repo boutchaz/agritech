@@ -127,7 +127,11 @@
     "actions": "Actions",
     "openMenu": "Open menu",
     "downloadReport": "Download report",
-    "delete": "Delete"
+    "delete": "Delete",
+    "noScore": "—"
+  },
+  "checks": {
+    "deleteConfirm": "Delete this compliance check?"
   },
   "dialogs": {
     "createCertification": {
@@ -172,6 +176,12 @@
       "selectDateOptional": "Choose date (optional)",
       "cancel": "Cancel",
       "create": "Create"
+    },
+    "updateCheck": {
+      "button": "Edit",
+      "title": "Edit Compliance Check",
+      "description": "Update the status, score or information of this compliance check.",
+      "save": "Save"
     },
     "createAction": {
       "button": "New corrective action",

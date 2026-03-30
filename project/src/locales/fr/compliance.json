@@ -127,7 +127,11 @@
     "actions": "Actions",
     "openMenu": "Ouvrir menu",
     "downloadReport": "Télécharger rapport",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "noScore": "—"
+  },
+  "checks": {
+    "deleteConfirm": "Supprimer ce contrôle de conformité ?"
   },
   "dialogs": {
     "createCertification": {
@@ -172,6 +176,12 @@
       "selectDateOptional": "Choisir date (optionnel)",
       "cancel": "Annuler",
       "create": "Créer"
+    },
+    "updateCheck": {
+      "button": "Modifier",
+      "title": "Modifier le contrôle",
+      "description": "Mettez à jour le statut, le score ou les informations de ce contrôle.",
+      "save": "Enregistrer"
     },
     "createAction": {
       "button": "Nouvelle action corrective",

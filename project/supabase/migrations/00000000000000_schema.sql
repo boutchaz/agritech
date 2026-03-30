@@ -14902,6 +14902,65 @@ TO service_role
 USING (true)
 WITH CHECK (true);
 
+-- Corrective Action Plans (standalone action plans linked to certifications)
+CREATE TABLE IF NOT EXISTS corrective_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  certification_id UUID NOT NULL REFERENCES certifications(id) ON DELETE CASCADE,
+  compliance_check_id UUID REFERENCES compliance_checks(id) ON DELETE SET NULL,
+  finding_description TEXT NOT NULL,
+  requirement_code TEXT,
+  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('critical', 'high', 'medium', 'low')),
+  action_description TEXT NOT NULL,
+  responsible_person TEXT NOT NULL,
+  due_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'verified', 'overdue')),
+  resolution_notes TEXT,
+  resolved_at TIMESTAMPTZ,
+  verified_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  notes TEXT,
+  created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+  updated_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_corrective_actions_org ON corrective_actions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_corrective_actions_certification ON corrective_actions(certification_id);
+CREATE INDEX IF NOT EXISTS idx_corrective_actions_check ON corrective_actions(compliance_check_id);
+CREATE INDEX IF NOT EXISTS idx_corrective_actions_status ON corrective_actions(status);
+CREATE INDEX IF NOT EXISTS idx_corrective_actions_due_date ON corrective_actions(due_date);
+
+CREATE OR REPLACE TRIGGER update_corrective_actions_updated_at
+  BEFORE UPDATE ON corrective_actions
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE corrective_actions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Org members can manage corrective actions" ON corrective_actions;
+CREATE POLICY "Org members can manage corrective actions"
+ON corrective_actions FOR ALL
+TO authenticated
+USING (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+  OR is_internal_admin()
+  OR current_setting('role', true) = 'service_role'
+)
+WITH CHECK (
+  organization_id IN (
+    SELECT organization_id FROM organization_users
+    WHERE user_id = auth.uid() AND is_active = true
+  )
+  OR is_internal_admin()
+  OR current_setting('role', true) = 'service_role'
+);
+
+COMMENT ON TABLE corrective_actions IS 'Corrective action plans linked to certifications and compliance checks';
+
 -- ============================================================================
 -- COMPLIANCE DOCUMENTS STORAGE BUCKET
 -- ============================================================================

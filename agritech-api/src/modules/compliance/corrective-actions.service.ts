@@ -158,7 +158,7 @@ export class CorrectiveActionsService {
 
     const { data: actions, error } = await client
       .from('corrective_actions')
-      .select('status, due_date, resolved_at')
+      .select('status, due_date, resolved_at, created_at')
       .eq('organization_id', organizationId);
 
     if (error) {
@@ -215,7 +215,7 @@ export class CorrectiveActionsService {
         action.resolved_at
       ) {
         const resolvedDate = new Date(action.resolved_at);
-        const createdDate = new Date(action.due_date); // Use due_date as proxy for creation if needed
+        const createdDate = new Date(action.created_at);
         const days = Math.floor(
           (resolvedDate.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24),
         );

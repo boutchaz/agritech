@@ -32,6 +32,7 @@ import {
   useCertification,
   useComplianceChecks,
   useDeleteCertification,
+  useDeleteComplianceCheck,
   useCorrectiveActions,
   useDeleteCorrectiveAction,
 } from '@/hooks/useCompliance';
@@ -52,6 +53,7 @@ function CertificationDetailPage() {
   const { data: checks, isLoading: isLoadingChecks } = useComplianceChecks(orgId);
   const { data: correctiveActions, isLoading: isLoadingActions } = useCorrectiveActions(orgId, { certification_id: certId });
   const deleteCertification = useDeleteCertification();
+  const deleteComplianceCheck = useDeleteComplianceCheck();
   const deleteCorrectiveAction = useDeleteCorrectiveAction();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -296,7 +298,19 @@ function CertificationDetailPage() {
               <h2 className="text-xl font-semibold">{t('certifications.complianceChecks')}</h2>
               <CreateComplianceCheckDialog certificationId={certId} />
             </div>
-            <ComplianceChecksList checks={certificationChecks} isLoading={isLoadingChecks} />
+            <ComplianceChecksList
+              checks={certificationChecks}
+              isLoading={isLoadingChecks}
+              onDelete={(check) => {
+                if (!currentOrganization) return;
+                if (confirm(t('checks.deleteConfirm'))) {
+                  deleteComplianceCheck.mutate({
+                    organizationId: currentOrganization.id,
+                    checkId: check.id,
+                  });
+                }
+              }}
+            />
           </div>
 
           <div className="space-y-4">
@@ -310,12 +324,10 @@ function CertificationDetailPage() {
                   </Badge>
                 )}
               </div>
-              {certificationChecks.length > 0 && (
-                <CreateCorrectiveActionDialog
-                  certificationId={certId}
-                  complianceCheckId={certificationChecks[0].id}
-                />
-              )}
+              <CreateCorrectiveActionDialog
+                certificationId={certId}
+                complianceCheckId={certificationChecks[0]?.id}
+              />
             </div>
             <CorrectiveActionsList
               actions={certCorrectiveActions}

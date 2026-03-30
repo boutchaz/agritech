@@ -2,13 +2,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 import {
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  Clock, 
-  MoreHorizontal, 
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Clock,
   FileText,
-  Eye
+  MoreHorizontal,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 
 import {
@@ -31,13 +32,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ComplianceCheckResponseDto, ComplianceCheckStatus } from '@/lib/api/compliance';
+import { UpdateComplianceCheckDialog } from '@/components/compliance/UpdateComplianceCheckDialog';
 
 interface ComplianceChecksListProps {
   checks: ComplianceCheckResponseDto[];
   isLoading?: boolean;
+  onDelete?: (check: ComplianceCheckResponseDto) => void;
 }
 
-export function ComplianceChecksList({ checks, isLoading }: ComplianceChecksListProps) {
+export function ComplianceChecksList({ checks, isLoading, onDelete }: ComplianceChecksListProps) {
   const { t } = useTranslation('compliance');
 
   const getStatusBadge = (status: ComplianceCheckStatus) => {
@@ -135,14 +138,14 @@ export function ComplianceChecksList({ checks, isLoading }: ComplianceChecksList
               </TableCell>
               <TableCell>{check.auditor_name || '-'}</TableCell>
               <TableCell>
-                {check.score !== undefined ? (
+                {check.score != null ? (
                   <span className={`font-bold ${
-                    (check.score || 0) >= 80 ? 'text-green-600' : 
-                    (check.score || 0) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                    check.score >= 80 ? 'text-green-600' :
+                    check.score >= 50 ? 'text-yellow-600' : 'text-red-600'
                   }`}>
                     {check.score}%
                   </span>
-                ) : '-'}
+                ) : <span className="text-muted-foreground">—</span>}
               </TableCell>
               <TableCell>{getStatusBadge(check.status)}</TableCell>
               <TableCell className="text-right">
@@ -155,18 +158,27 @@ export function ComplianceChecksList({ checks, isLoading }: ComplianceChecksList
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>{t('table.actions')}</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      {t('certifications.viewDetails')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <FileText className="mr-2 h-4 w-4" />
-                      {t('table.downloadReport')}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-red-600">
-                      {t('table.delete')}
-                    </DropdownMenuItem>
+                    <UpdateComplianceCheckDialog
+                      check={check}
+                      trigger={
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          {t('dialogs.updateCheck.button')}
+                        </DropdownMenuItem>
+                      }
+                    />
+                    {onDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => onDelete(check)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          {t('table.delete')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

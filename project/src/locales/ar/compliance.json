@@ -127,7 +127,11 @@
     "actions": "الإجراءات",
     "openMenu": "فتح القائمة",
     "downloadReport": "تحميل التقرير",
-    "delete": "حذف"
+    "delete": "حذف",
+    "noScore": "—"
+  },
+  "checks": {
+    "deleteConfirm": "حذف فحص الامتثال هذا؟"
   },
   "dialogs": {
     "createCertification": {
@@ -172,6 +176,12 @@
       "selectDateOptional": "اختر تاريخاً (اختياري)",
       "cancel": "إلغاء",
       "create": "إنشاء"
+    },
+    "updateCheck": {
+      "button": "تعديل",
+      "title": "تعديل فحص الامتثال",
+      "description": "تحديث الحالة أو النتيجة أو معلومات هذا الفحص.",
+      "save": "حفظ"
     },
     "createAction": {
       "button": "إجراء تصحيحي جديد",
