@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
 import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
+import { Route as publicRdvRouteImport } from './routes/(public)/rdv'
 import { Route as publicPrivacyPolicyRouteImport } from './routes/(public)/privacy-policy'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicOnboardingRouteImport } from './routes/(public)/onboarding'
@@ -171,6 +172,11 @@ const publicTermsOfServiceRoute = publicTermsOfServiceRouteImport.update({
 const publicRdvSiamRoute = publicRdvSiamRouteImport.update({
   id: '/(public)/rdv-siam',
   path: '/rdv-siam',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvRoute = publicRdvRouteImport.update({
+  id: '/(public)/rdv',
+  path: '/rdv',
   getParentRoute: () => rootRouteImport,
 } as any)
 const publicPrivacyPolicyRoute = publicPrivacyPolicyRouteImport.update({
@@ -1010,6 +1016,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
   '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
@@ -1154,6 +1161,7 @@ export interface FileRoutesByTo {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
   '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
@@ -1293,6 +1301,7 @@ export interface FileRoutesById {
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
   '/(public)/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/(public)/rdv': typeof publicRdvRoute
   '/(public)/rdv-siam': typeof publicRdvSiamRoute
   '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
@@ -1440,6 +1449,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/pitch-deck'
     | '/privacy-policy'
+    | '/rdv'
     | '/rdv-siam'
     | '/terms-of-service'
     | '/auth/callback'
@@ -1584,6 +1594,7 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/pitch-deck'
     | '/privacy-policy'
+    | '/rdv'
     | '/rdv-siam'
     | '/terms-of-service'
     | '/auth/callback'
@@ -1722,6 +1733,7 @@ export interface FileRouteTypes {
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
     | '/(public)/privacy-policy'
+    | '/(public)/rdv'
     | '/(public)/rdv-siam'
     | '/(public)/terms-of-service'
     | '/(auth)/auth/callback'
@@ -1869,6 +1881,7 @@ export interface RootRouteChildren {
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
   publicPrivacyPolicyRoute: typeof publicPrivacyPolicyRoute
+  publicRdvRoute: typeof publicRdvRoute
   publicRdvSiamRoute: typeof publicRdvSiamRoute
   publicTermsOfServiceRoute: typeof publicTermsOfServiceRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
@@ -1902,6 +1915,13 @@ declare module '@tanstack/react-router' {
       path: '/rdv-siam'
       fullPath: '/rdv-siam'
       preLoaderRoute: typeof publicRdvSiamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv': {
+      id: '/(public)/rdv'
+      path: '/rdv'
+      fullPath: '/rdv'
+      preLoaderRoute: typeof publicRdvRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/privacy-policy': {
@@ -3437,6 +3457,7 @@ const rootRouteChildren: RootRouteChildren = {
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
   publicPrivacyPolicyRoute: publicPrivacyPolicyRoute,
+  publicRdvRoute: publicRdvRoute,
   publicRdvSiamRoute: publicRdvSiamRoute,
   publicTermsOfServiceRoute: publicTermsOfServiceRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
