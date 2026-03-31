@@ -106,7 +106,7 @@ const HarvestSummaryWidget: React.FC = () => {
         <Button
           variant="link"
           onClick={handleViewHarvests}
-          className="text-green-600 dark:text-green-400 p-0 h-auto"
+          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
         >
           {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
@@ -210,8 +210,8 @@ const HarvestSummaryWidget: React.FC = () => {
             {t('dashboard.widgets.harvests.empty')}
           </p>
           <Button
+            variant="orange"
             onClick={handleViewHarvests}
-            className="bg-orange-600 hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600"
           >
             <PackageIcon className="h-4 w-4" />
             {t('dashboard.widgets.harvests.record')}

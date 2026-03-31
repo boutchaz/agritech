@@ -148,7 +148,7 @@ const UpcomingTasksWidget: React.FC = () => {
         <Button
           variant="link"
           onClick={handleViewAllTasks}
-          className="text-green-600 dark:text-green-400 p-0 h-auto"
+          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
         >
           {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
