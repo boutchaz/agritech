@@ -120,9 +120,9 @@ export function LegalPageLayout({
                   className={cn(
                     'prose prose-neutral max-w-none dark:prose-invert',
                     'prose-lg prose-p:leading-relaxed',
-                    'prose-headings:scroll-mt-28 prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground',
-                    'prose-h2:mt-10 prose-h2:border-b prose-h2:border-border/70 prose-h2:pb-3 prose-h2:text-xl prose-h2:first:mt-0 sm:prose-h2:text-2xl',
-                    'prose-h3:mt-6 prose-h3:text-base prose-h3:font-semibold',
+                    'prose-headings:scroll-mt-28 prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-foreground',
+                    'prose-h2:mt-10 prose-h2:border-b-2 prose-h2:border-primary/30 prose-h2:pb-3 prose-h2:text-xl prose-h2:text-primary prose-h2:first:mt-0 sm:prose-h2:text-2xl',
+                    'prose-h3:mt-6 prose-h3:text-base prose-h3:font-semibold prose-h3:text-foreground',
                     'prose-p:text-muted-foreground',
                     'prose-li:text-muted-foreground prose-li:marker:text-primary/70',
                     'prose-strong:text-foreground prose-strong:font-semibold',
