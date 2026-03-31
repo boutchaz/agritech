@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
   Home,
-  Leaf,
+
   Sun,
   Moon,
   Map,
@@ -37,7 +37,6 @@ import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
 import { isRTLLocale } from "../lib/is-rtl-locale";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   modules: Module[];
@@ -256,7 +255,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     viewport.addEventListener("scroll", onScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", onScroll);
-  }, [scrollViewportRef.current]);
+  }, []);
 
   const getButtonClassName = (
     isActive: boolean,
@@ -443,9 +442,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                 isCollapsed && "lg:justify-center",
               )}
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                <Leaf className="h-6 w-6 text-white" />
-              </div>
+              <img
+                src="/assets/logo.png"
+                alt="AGROGINA"
+                className="flex-shrink-0 w-10 h-10 object-contain rounded-lg"
+              />
               <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t("app.name")}
