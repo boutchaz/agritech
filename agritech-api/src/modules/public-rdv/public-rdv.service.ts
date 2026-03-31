@@ -7,14 +7,19 @@ import { CreateSiamRdvDto } from './dto/create-siam-rdv.dto';
 @Injectable()
 export class PublicRdvService {
   private readonly logger = new Logger(PublicRdvService.name);
-  private readonly supabaseAdmin;
+  private readonly supabaseAdmin: ReturnType<DatabaseService['getAdminClient']> | null;
 
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
   ) {
-    this.supabaseAdmin = this.databaseService.getAdminClient();
+    try {
+      this.supabaseAdmin = this.databaseService.getAdminClient();
+    } catch {
+      this.logger.warn('Admin client unavailable — RDV leads will not be persisted to DB (missing SUPABASE_SERVICE_ROLE_KEY)');
+      this.supabaseAdmin = null;
+    }
   }
 
   private getRecipients(): string[] {
@@ -29,27 +34,31 @@ export class PublicRdvService {
   }
 
   async createSiamRdv(dto: CreateSiamRdvDto, sourceIp?: string): Promise<{ success: boolean }> {
-    // Merge cultures into a single array
     const cultures = [...(dto.culture || []), ...(dto.culture_autre ? [dto.culture_autre] : [])];
 
     // Persist lead first — even if email fails, we keep the data
-    const { error: dbError } = await this.supabaseAdmin
-      .from('siam_rdv_leads')
-      .insert({
-        nom: dto.nom,
-        entreprise: dto.entreprise || null,
-        tel: dto.tel,
-        email: dto.email || null,
-        surface: dto.surface || null,
-        region: dto.region || null,
-        cultures: cultures.length ? cultures : null,
-        creneau: dto.creneau,
-        source_ip: sourceIp || null,
-        email_sent: false,
-      });
+    let dbPersisted = false;
+    if (this.supabaseAdmin) {
+      const { error: dbError } = await this.supabaseAdmin
+        .from('siam_rdv_leads')
+        .insert({
+          nom: dto.nom,
+          entreprise: dto.entreprise || null,
+          tel: dto.tel,
+          email: dto.email || null,
+          surface: dto.surface || null,
+          region: dto.region || null,
+          cultures: cultures.length ? cultures : null,
+          creneau: dto.creneau,
+          source_ip: sourceIp || null,
+          email_sent: false,
+        });
 
-    if (dbError) {
-      this.logger.error(`Failed to persist SIAM RDV lead: ${dbError.message}`);
+      if (dbError) {
+        this.logger.error(`Failed to persist SIAM RDV lead: ${dbError.message}`);
+      } else {
+        dbPersisted = true;
+      }
     }
 
     // Send notification emails
@@ -88,8 +97,8 @@ export class PublicRdvService {
 
     const emailSent = sendResults.some(Boolean);
 
-    // Update email_sent status
-    if (!dbError) {
+    // Update email_sent flag
+    if (dbPersisted && this.supabaseAdmin) {
       await this.supabaseAdmin
         .from('siam_rdv_leads')
         .update({ email_sent: emailSent })
@@ -103,7 +112,7 @@ export class PublicRdvService {
       this.logger.error(`Failed to send SIAM RDV email for ${dto.nom}`);
     }
 
-    this.logger.log(`SIAM RDV submitted by ${dto.nom} for slot ${dto.creneau} (persisted: ${!dbError}, emailed: ${emailSent})`);
+    this.logger.log(`SIAM RDV submitted by ${dto.nom} for slot ${dto.creneau} (persisted: ${dbPersisted}, emailed: ${emailSent})`);
     return { success: true };
   }
 }
