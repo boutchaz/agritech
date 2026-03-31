@@ -1,5 +1,5 @@
 // Settings Hub Screen
-import { View, Text, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, Linking } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -157,6 +157,25 @@ export default function SettingsScreen() {
           title={t('settings.about', 'About')}
           subtitle="AgriTech v1.0.0"
           onPress={() => {}}
+          themeColors={themeColors}
+        />
+
+        {/* Legal Section */}
+        <SectionHeader title={t('settings.legal', 'Legal')} themeColors={themeColors} />
+
+        <MenuCard
+          icon="document-text-outline"
+          title={t('settings.termsOfService', "Conditions Générales d'Utilisation")}
+          subtitle={t('settings.termsSubtitle', "Règles d'utilisation de la plateforme")}
+          onPress={() => Linking.openURL('https://app.agrogina.com/terms-of-service')}
+          themeColors={themeColors}
+        />
+
+        <MenuCard
+          icon="shield-checkmark-outline"
+          title={t('settings.privacyPolicy', 'Politique de Confidentialité')}
+          subtitle={t('settings.privacySubtitle', 'Protection de vos données')}
+          onPress={() => Linking.openURL('https://app.agrogina.com/privacy-policy')}
           themeColors={themeColors}
         />
 
