@@ -11,13 +11,25 @@ interface LegalPageLayoutProps {
   title: string
   lastUpdated: string
   children: import('react').ReactNode
+  /** Small label above the title (e.g. "Confidentialité", "CGU"). */
+  heroKicker?: string
+  /** Optional icon shown next to the title (defaults to a shield). */
+  heroIcon?: import('react').ReactNode
   /** Short intro under the title (omit for pages that only need the heading). */
   heroDescription?: string
   /** Optional table of contents (anchors must match heading ids in content). */
   toc?: LegalTocItem[]
 }
 
-export function LegalPageLayout({ title, lastUpdated, children, heroDescription, toc }: LegalPageLayoutProps) {
+export function LegalPageLayout({
+  title,
+  lastUpdated,
+  children,
+  heroKicker,
+  heroIcon,
+  heroDescription,
+  toc,
+}: LegalPageLayoutProps) {
   const hasToc = toc && toc.length > 0
 
   return (
@@ -56,9 +68,14 @@ export function LegalPageLayout({ title, lastUpdated, children, heroDescription,
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                   <div className="flex gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary dark:bg-primary/25">
-                      <Shield className="h-6 w-6" aria-hidden />
+                      {heroIcon ?? <Shield className="h-6 w-6" aria-hidden />}
                     </div>
                     <div>
+                      {heroKicker ? (
+                        <p className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:bg-muted/20">
+                          {heroKicker}
+                        </p>
+                      ) : null}
                       <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                         {title}
                       </h1>

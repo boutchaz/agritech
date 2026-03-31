@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout'
 import { PrivacyPolicyContent } from '@/components/legal/PrivacyPolicyContent'
+import { Shield } from 'lucide-react'
 
 export const Route = createFileRoute('/(public)/privacy-policy')({
   component: PrivacyPolicyPage,
@@ -30,7 +31,9 @@ function PrivacyPolicyPage() {
     <LegalPageLayout
       title="Politique de Confidentialité"
       lastUpdated="30 mars 2026"
-      heroDescription="Ce document décrit comment nous traitons vos données lorsque vous utilisez AgroGina."
+      heroKicker="Confidentialité"
+      heroIcon={<Shield className="h-6 w-6" aria-hidden />}
+      heroDescription="Vos données, vos droits, et nos engagements de conformité au Maroc (loi 09-08 / CNDP)."
       toc={[...privacyToc]}
     >
       <PrivacyPolicyContent />
