@@ -82,9 +82,9 @@ const DashboardSkeleton: React.FC = () => {
           {/* Farm selector skeleton */}
           <Skeleton className="h-14 w-full rounded-lg" />
 
-          {/* Row 1: 3 stat cards (Parcels, Harvest, Sales) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
+          {/* Row 1: 4 stat cards (Parcels, Stock, Harvest, Sales) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
               <WidgetCardSkeleton key={`row1-${i}`} variant="stat" />
             ))}
           </div>
