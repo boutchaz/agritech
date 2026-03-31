@@ -5884,7 +5884,8 @@
       "nameMin": "يرجى إدخال الاسم الكامل",
       "phoneRequired": "يرجى إدخال رقم هاتف صالح",
       "emailInvalid": "يرجى إدخال بريد إلكتروني صالح",
-      "slotRequired": "يرجى اختيار موعد"
+      "slotRequired": "يرجى اختيار موعد",
+      "phoneInvalid": "رقم هاتف غير صالح"
     },
     "success": {
       "title": "تم إرسال الطلب!",
@@ -5894,6 +5895,24 @@
     },
     "error": {
       "submitFailed": "تعذر إرسال الطلب. يرجى المحاولة مرة أخرى."
+    },
+    "crops": {
+      "olive": "زيتون",
+      "citrus": "حوامض",
+      "avocado": "أفوكادو",
+      "datePalm": "نخيل التمر",
+      "cereals": "حبوب",
+      "vegetables": "بستنة"
+    },
+    "regions": {
+      "meknesFes": "مكناس-فاس",
+      "soussMassa": "سوس-ماسة",
+      "marrakechSafi": "مراكش-آسفي",
+      "beniMellal": "بني ملال-خنيفرة",
+      "rabatSale": "الرباط-سلا",
+      "tangerTetouan": "طنجة-تطوان",
+      "oriental": "الشرق",
+      "other": "أخرى"
     }
   },
   "retry": "إعادة المحاولة",

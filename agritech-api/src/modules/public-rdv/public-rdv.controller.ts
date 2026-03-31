@@ -1,5 +1,6 @@
-import { Body, Controller, HttpCode, HttpStatus, InternalServerErrorException, Ip, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, InternalServerErrorException, Ip, Post, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
 import { CreateSiamRdvDto } from './dto/create-siam-rdv.dto';
 import { PublicRdvService } from './public-rdv.service';
@@ -11,6 +12,8 @@ export class PublicRdvController {
 
   @Post('siam')
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute per IP
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Submit SIAM meeting request (public)' })
   @ApiResponse({ status: 200, description: 'Request received' })

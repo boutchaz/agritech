@@ -6230,7 +6230,8 @@
       "nameMin": "Please enter your full name",
       "phoneRequired": "Please enter a valid phone number",
       "emailInvalid": "Please enter a valid email",
-      "slotRequired": "Please choose a time slot"
+      "slotRequired": "Please choose a time slot",
+      "phoneInvalid": "Invalid phone number"
     },
     "success": {
       "title": "Request sent!",
@@ -6240,6 +6241,24 @@
     },
     "error": {
       "submitFailed": "Unable to send your request. Please try again."
+    },
+    "crops": {
+      "olive": "Olive",
+      "citrus": "Citrus",
+      "avocado": "Avocado",
+      "datePalm": "Date palm",
+      "cereals": "Cereals",
+      "vegetables": "Market gardening"
+    },
+    "regions": {
+      "meknesFes": "Meknes-Fes",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Beni Mellal-Khenifra",
+      "rabatSale": "Rabat-Sale",
+      "tangerTetouan": "Tanger-Tetouan",
+      "oriental": "Oriental",
+      "other": "Other"
     }
   },
   "retry": "Retry",

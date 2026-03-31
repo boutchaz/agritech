@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
+import { useSearch } from '@tanstack/react-router'
 import { submitSiamRdv } from '@/lib/api/public-rdv'
 
 const days = [
@@ -24,7 +25,10 @@ const createSchema = (t: TFunction<'common'>) =>
   z.object({
     nom: z.string().min(2, t('siamRdv.validation.nameMin')),
     entreprise: z.string().optional(),
-    tel: z.string().min(8, t('siamRdv.validation.phoneRequired')),
+    tel: z.string().min(8, t('siamRdv.validation.phoneRequired')).regex(
+      /^\+?[0-9\s\-()]{8,30}$/,
+      t('siamRdv.validation.phoneInvalid', { defaultValue: 'Numéro de téléphone invalide' }),
+    ),
     email: z
       .string()
       .email(t('siamRdv.validation.emailInvalid'))
@@ -49,6 +53,8 @@ export function RdvRequestPage({
   subtitle: string
 }) {
   const { t } = useTranslation()
+  const searchParams = useSearch({ strict: false }) as Record<string, string | undefined>
+  const source = searchParams?.source || undefined
   const [showCultureOther, setShowCultureOther] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [submittedName, setSubmittedName] = useState('')
@@ -99,6 +105,7 @@ export function RdvRequestPage({
         culture: data.culture,
         culture_autre: data.culture_autre,
         creneau: data.creneau,
+        source,
       })
       setSubmittedName(data.nom || '')
       setSubmittedSlot(data.creneau || '')
@@ -175,21 +182,28 @@ export function RdvRequestPage({
                 </select>
                 <select {...register('region')} className="rounded-md border border-[#d9d4c7] px-3 py-2">
                   <option value="">{t('siamRdv.form.region', { defaultValue: 'Region' })}</option>
-                  <option>Meknes-Fes</option>
-                  <option>Souss-Massa</option>
-                  <option>Marrakech-Safi</option>
-                  <option>Beni Mellal-Khenifra</option>
-                  <option>Rabat-Sale</option>
-                  <option>Tanger-Tetouan</option>
-                  <option>Oriental</option>
-                  <option>Autre</option>
+                  <option value="Meknes-Fes">{t('siamRdv.regions.meknesFes', { defaultValue: 'Meknès-Fès' })}</option>
+                  <option value="Souss-Massa">{t('siamRdv.regions.soussMassa', { defaultValue: 'Souss-Massa' })}</option>
+                  <option value="Marrakech-Safi">{t('siamRdv.regions.marrakechSafi', { defaultValue: 'Marrakech-Safi' })}</option>
+                  <option value="Beni Mellal-Khenifra">{t('siamRdv.regions.beniMellal', { defaultValue: 'Béni Mellal-Khénifra' })}</option>
+                  <option value="Rabat-Sale">{t('siamRdv.regions.rabatSale', { defaultValue: 'Rabat-Salé' })}</option>
+                  <option value="Tanger-Tetouan">{t('siamRdv.regions.tangerTetouan', { defaultValue: 'Tanger-Tétouan' })}</option>
+                  <option value="Oriental">{t('siamRdv.regions.oriental', { defaultValue: 'Oriental' })}</option>
+                  <option value="Autre">{t('siamRdv.regions.other', { defaultValue: 'Autre' })}</option>
                 </select>
               </div>
               <div className="mt-4 flex flex-wrap gap-2 text-sm">
-                {['Olivier', 'Agrumes', 'Avocat', 'Palmier dattier', 'Cereales', 'Maraichage'].map((crop) => (
-                  <label key={crop} className="rounded-full border border-[#d9d4c7] px-3 py-1">
-                    <input {...register('culture')} value={crop} type="checkbox" className="mr-2" />
-                    {crop}
+                {[
+                  { value: 'Olivier', labelKey: 'siamRdv.crops.olive' },
+                  { value: 'Agrumes', labelKey: 'siamRdv.crops.citrus' },
+                  { value: 'Avocat', labelKey: 'siamRdv.crops.avocado' },
+                  { value: 'Palmier dattier', labelKey: 'siamRdv.crops.datePalm' },
+                  { value: 'Cereales', labelKey: 'siamRdv.crops.cereals' },
+                  { value: 'Maraichage', labelKey: 'siamRdv.crops.vegetables' },
+                ].map((crop) => (
+                  <label key={crop.value} className="rounded-full border border-[#d9d4c7] px-3 py-1">
+                    <input {...register('culture')} value={crop.value} type="checkbox" className="mr-2" />
+                    {t(crop.labelKey, { defaultValue: crop.value })}
                   </label>
                 ))}
                 <label className="rounded-full border border-[#d9d4c7] px-3 py-1">
@@ -247,7 +261,8 @@ export function RdvRequestPage({
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#1d6b3a] px-4 py-3 font-medium text-white hover:bg-[#2e8b50]"
+              disabled={isSubmittingToApi}
+              className="w-full rounded-lg bg-[#1d6b3a] px-4 py-3 font-medium text-white hover:bg-[#2e8b50] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmittingToApi
                 ? t('siamRdv.form.submitting', { defaultValue: 'Envoi en cours...' })

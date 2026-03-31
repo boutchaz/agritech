@@ -37,9 +37,9 @@ export class PublicRdvService {
     const cultures = [...(dto.culture || []), ...(dto.culture_autre ? [dto.culture_autre] : [])];
 
     // Persist lead first — even if email fails, we keep the data
-    let dbPersisted = false;
+    let insertedId: string | null = null;
     if (this.supabaseAdmin) {
-      const { error: dbError } = await this.supabaseAdmin
+      const { data: inserted, error: dbError } = await this.supabaseAdmin
         .from('siam_rdv_leads')
         .insert({
           nom: dto.nom,
@@ -50,14 +50,17 @@ export class PublicRdvService {
           region: dto.region || null,
           cultures: cultures.length ? cultures : null,
           creneau: dto.creneau,
+          source: dto.source || null,
           source_ip: sourceIp || null,
           email_sent: false,
-        });
+        })
+        .select('id')
+        .single();
 
       if (dbError) {
         this.logger.error(`Failed to persist SIAM RDV lead: ${dbError.message}`);
       } else {
-        dbPersisted = true;
+        insertedId = inserted.id;
       }
     }
 
@@ -75,6 +78,7 @@ export class PublicRdvService {
       <p><strong>Région:</strong> ${dto.region || '-'}</p>
       <p><strong>Cultures:</strong> ${cultures.length ? cultures.join(', ') : '-'}</p>
       <p><strong>Créneau:</strong> ${dto.creneau}</p>
+      <p><strong>Source:</strong> ${dto.source || 'direct'}</p>
       <hr />
       <p><small>Source IP: ${sourceIp || 'unknown'}</small></p>
     `;
@@ -88,6 +92,7 @@ export class PublicRdvService {
       `Région: ${dto.region || '-'}`,
       `Cultures: ${cultures.length ? cultures.join(', ') : '-'}`,
       `Créneau: ${dto.creneau}`,
+      `Source: ${dto.source || 'direct'}`,
       `Source IP: ${sourceIp || 'unknown'}`,
     ].join('\n');
 
@@ -97,19 +102,23 @@ export class PublicRdvService {
 
     const emailSent = sendResults.some(Boolean);
 
-    // Update email_sent flag
-    if (dbPersisted && this.supabaseAdmin) {
+    // Update email_sent flag using the inserted row ID
+    if (insertedId && this.supabaseAdmin) {
       await this.supabaseAdmin
         .from('siam_rdv_leads')
         .update({ email_sent: emailSent })
-        .eq('nom', dto.nom)
-        .eq('tel', dto.tel)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .eq('id', insertedId);
     }
 
     if (!emailSent) {
       this.logger.error(`Failed to send SIAM RDV email for ${dto.nom}`);
+    }
+
+    // Fail only if BOTH persistence and email failed — data is truly lost
+    const dbPersisted = !!insertedId;
+    if (!dbPersisted && !emailSent) {
+      this.logger.error(`SIAM RDV completely lost for ${dto.nom} — neither DB nor email succeeded`);
+      return { success: false };
     }
 
     this.logger.log(`SIAM RDV submitted by ${dto.nom} for slot ${dto.creneau} (persisted: ${dbPersisted}, emailed: ${emailSent})`);

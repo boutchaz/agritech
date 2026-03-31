@@ -10,6 +10,7 @@ export interface SiamRdvPayload {
   culture?: string[]
   culture_autre?: string
   creneau: string
+  source?: string
 }
 
 export async function submitSiamRdv(payload: SiamRdvPayload): Promise<void> {

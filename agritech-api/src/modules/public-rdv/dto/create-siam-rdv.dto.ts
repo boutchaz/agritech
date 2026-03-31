@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateSiamRdvDto {
   @ApiProperty({ example: 'Ahmed Benali' })
@@ -18,6 +18,7 @@ export class CreateSiamRdvDto {
   @IsString()
   @MinLength(8)
   @MaxLength(30)
+  @Matches(/^\+?[0-9\s\-()]{8,30}$/, { message: 'Phone number must contain only digits, spaces, dashes, or parentheses' })
   tel: string;
 
   @ApiPropertyOptional({ example: 'ahmed@domaine.ma' })
@@ -54,4 +55,10 @@ export class CreateSiamRdvDto {
   @MinLength(3)
   @MaxLength(40)
   creneau: string;
+
+  @ApiPropertyOptional({ example: 'siam-2026' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  source?: string;
 }

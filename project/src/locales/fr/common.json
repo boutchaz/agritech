@@ -6049,7 +6049,8 @@
       "nameMin": "Veuillez renseigner votre nom complet",
       "phoneRequired": "Veuillez renseigner un numero de telephone valide",
       "emailInvalid": "Veuillez renseigner un email valide",
-      "slotRequired": "Veuillez choisir un creneau"
+      "slotRequired": "Veuillez choisir un creneau",
+      "phoneInvalid": "Numéro de téléphone invalide"
     },
     "success": {
       "title": "Demande envoyee !",
@@ -6059,6 +6060,24 @@
     },
     "error": {
       "submitFailed": "Impossible d'envoyer votre demande. Veuillez reessayer."
+    },
+    "crops": {
+      "olive": "Olivier",
+      "citrus": "Agrumes",
+      "avocado": "Avocat",
+      "datePalm": "Palmier dattier",
+      "cereals": "Céréales",
+      "vegetables": "Maraîchage"
+    },
+    "regions": {
+      "meknesFes": "Meknès-Fès",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Béni Mellal-Khénifra",
+      "rabatSale": "Rabat-Salé",
+      "tangerTetouan": "Tanger-Tétouan",
+      "oriental": "Oriental",
+      "other": "Autre"
     }
   },
   "retry": "Réessayer",
