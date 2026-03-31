@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
+import { HotkeysProvider } from '@tanstack/react-hotkeys'
 import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
@@ -55,38 +56,48 @@ function RootComponent() {
 
   return (
       <ErrorBoundary>
-        <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
-          <AuthProviderSwitch>
-            <ExperienceLevelProvider>
-              <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                <TourProvider>
-                  <AbilityProvider>
-                    <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                      <GlobalCommandPalette>
-                        <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                          <Outlet />
-                          <OfflineIndicator />
-                          {!isOnboardingRoute && (
-                            <Suspense>
-                              <TourHelpButton />
-                            </Suspense>
-                          )}
-                          <Toaster richColors position="top-right" />
-                          {import.meta.env.DEV && (
-                            <Suspense>
-                              <TanStackRouterDevtools />
-                              <ReactQueryDevtools initialIsOpen={false} />
-                            </Suspense>
-                          )}
-                        </div>
-                      </GlobalCommandPalette>
-                    </Suspense>
-                  </AbilityProvider>
-                </TourProvider>
-              </Suspense>
-            </ExperienceLevelProvider>
-          </AuthProviderSwitch>
-        </NetworkStatusProvider>
+        <HotkeysProvider
+          defaultOptions={{
+            hotkey: {
+              preventDefault: true,
+              stopPropagation: true,
+              conflictBehavior: 'warn',
+            },
+          }}
+        >
+          <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
+            <AuthProviderSwitch>
+              <ExperienceLevelProvider>
+                <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
+                  <TourProvider>
+                    <AbilityProvider>
+                      <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
+                        <GlobalCommandPalette>
+                          <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+                            <Outlet />
+                            <OfflineIndicator />
+                            {!isOnboardingRoute && (
+                              <Suspense>
+                                <TourHelpButton />
+                              </Suspense>
+                            )}
+                            <Toaster richColors position="top-right" />
+                            {import.meta.env.DEV && (
+                              <Suspense>
+                                <TanStackRouterDevtools />
+                                <ReactQueryDevtools initialIsOpen={false} />
+                              </Suspense>
+                            )}
+                          </div>
+                        </GlobalCommandPalette>
+                      </Suspense>
+                    </AbilityProvider>
+                  </TourProvider>
+                </Suspense>
+              </ExperienceLevelProvider>
+            </AuthProviderSwitch>
+          </NetworkStatusProvider>
+        </HotkeysProvider>
       </ErrorBoundary>
     );
 }
