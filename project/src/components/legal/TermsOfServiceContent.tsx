@@ -1,6 +1,30 @@
 export function TermsOfServiceContent() {
   return (
     <>
+      <div className="not-prose mb-8 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-border/80 bg-muted/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">En bref</p>
+          <p className="mt-1 text-sm text-foreground">
+            Ces CGU définissent les règles d’accès et d’utilisation d’AgroGina, ainsi que les responsabilités de
+            l’Éditeur et des Utilisateurs.
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-muted/40 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Points clés</p>
+          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+            <li>
+              <span className="font-medium text-foreground">Compte</span> : vous êtes responsable de vos identifiants.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Données</span> : vous restez propriétaire de vos données.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Recommandations</span> : informations indicatives, pas un avis professionnel.
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <h2 id="objet" tabIndex={-1} className="not-prose mt-0 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
         1. Objet
       </h2>
@@ -17,13 +41,36 @@ export function TermsOfServiceContent() {
       <h2 id="definitions" tabIndex={-1}>
         2. Définitions
       </h2>
-      <ul>
-        <li><strong>Plateforme</strong> : l'application web et mobile AgroGina accessible à l'adresse app.agrogina.com et via les applications mobiles.</li>
-        <li><strong>Utilisateur</strong> : toute personne physique ou morale inscrite sur la Plateforme.</li>
-        <li><strong>Organisation</strong> : entité (exploitation agricole, coopérative, entreprise) créée par l'Utilisateur sur la Plateforme.</li>
-        <li><strong>Services</strong> : l'ensemble des fonctionnalités proposées par la Plateforme.</li>
-        <li><strong>Contenu</strong> : toute donnée, texte, image ou fichier téléchargé par l'Utilisateur.</li>
-      </ul>
+      <div className="not-prose mt-4 grid gap-3 rounded-xl border border-border/80 bg-card/60 p-4 sm:p-5">
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border/80 bg-background/70 p-3">
+            <dt className="text-sm font-semibold text-foreground">Plateforme</dt>
+            <dd className="mt-1 text-sm text-muted-foreground">
+              Application web et mobile AgroGina accessible à l’adresse <span className="font-medium text-foreground">app.agrogina.com</span>.
+            </dd>
+          </div>
+          <div className="rounded-lg border border-border/80 bg-background/70 p-3">
+            <dt className="text-sm font-semibold text-foreground">Utilisateur</dt>
+            <dd className="mt-1 text-sm text-muted-foreground">Toute personne physique ou morale inscrite sur la Plateforme.</dd>
+          </div>
+          <div className="rounded-lg border border-border/80 bg-background/70 p-3">
+            <dt className="text-sm font-semibold text-foreground">Organisation</dt>
+            <dd className="mt-1 text-sm text-muted-foreground">
+              Entité (exploitation agricole, coopérative, entreprise) créée par l’Utilisateur sur la Plateforme.
+            </dd>
+          </div>
+          <div className="rounded-lg border border-border/80 bg-background/70 p-3">
+            <dt className="text-sm font-semibold text-foreground">Services</dt>
+            <dd className="mt-1 text-sm text-muted-foreground">Ensemble des fonctionnalités proposées par la Plateforme.</dd>
+          </div>
+          <div className="rounded-lg border border-border/80 bg-background/70 p-3 sm:col-span-2">
+            <dt className="text-sm font-semibold text-foreground">Contenu</dt>
+            <dd className="mt-1 text-sm text-muted-foreground">
+              Toute donnée, texte, image ou fichier téléchargé par l’Utilisateur.
+            </dd>
+          </div>
+        </dl>
+      </div>
 
       <h2 id="inscription-compte" tabIndex={-1}>
         3. Inscription et Compte
@@ -42,16 +89,22 @@ export function TermsOfServiceContent() {
         4. Description des Services
       </h2>
       <p>La Plateforme AgroGina propose les services suivants :</p>
-      <ul>
-        <li>Gestion d'exploitations agricoles et de parcelles</li>
-        <li>Suivi des cultures et des récoltes</li>
-        <li>Planification et gestion des tâches agricoles</li>
-        <li>Analyse d'imagerie satellite (indices de végétation NDVI, NDRE, SAVI)</li>
-        <li>Gestion comptable et facturation</li>
-        <li>Gestion des ressources humaines agricoles</li>
-        <li>Place de marché pour la vente de produits agricoles</li>
-        <li>Suivi météorologique</li>
-      </ul>
+      <div className="not-prose mt-4 grid gap-3 sm:grid-cols-2">
+        {[
+          "Gestion d'exploitations agricoles et de parcelles",
+          'Suivi des cultures et des récoltes',
+          'Planification et gestion des tâches agricoles',
+          "Analyse d'imagerie satellite (indices NDVI, NDRE, SAVI)",
+          'Gestion comptable et facturation',
+          'Gestion des ressources humaines agricoles',
+          'Place de marché pour la vente de produits agricoles',
+          'Suivi météorologique',
+        ].map((item) => (
+          <div key={item} className="rounded-lg border border-border/80 bg-background/70 p-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{item}</span>
+          </div>
+        ))}
+      </div>
       <p>
         L'Éditeur se réserve le droit de modifier, d'ajouter ou de supprimer des fonctionnalités
         à tout moment, sans préavis.
@@ -74,13 +127,19 @@ export function TermsOfServiceContent() {
         6. Obligations de l'Utilisateur
       </h2>
       <p>L'Utilisateur s'engage à :</p>
-      <ul>
-        <li>Utiliser la Plateforme conformément à sa destination et aux lois en vigueur</li>
-        <li>Ne pas tenter d'accéder de manière non autorisée aux systèmes de la Plateforme</li>
-        <li>Ne pas diffuser de contenu illicite, offensant ou portant atteinte aux droits de tiers</li>
-        <li>Respecter les droits de propriété intellectuelle de l'Éditeur et des tiers</li>
-        <li>Ne pas utiliser la Plateforme à des fins de concurrence déloyale</li>
-      </ul>
+      <div className="not-prose mt-4 grid gap-3 sm:grid-cols-2">
+        {[
+          'Utiliser la Plateforme conformément à sa destination et aux lois en vigueur',
+          "Ne pas tenter d'accéder de manière non autorisée aux systèmes de la Plateforme",
+          'Ne pas diffuser de contenu illicite, offensant ou portant atteinte aux droits de tiers',
+          "Respecter les droits de propriété intellectuelle de l'Éditeur et des tiers",
+          'Ne pas utiliser la Plateforme à des fins de concurrence déloyale',
+        ].map((item) => (
+          <div key={item} className="rounded-lg border border-border/80 bg-muted/30 p-3 text-sm text-muted-foreground">
+            {item}
+          </div>
+        ))}
+      </div>
 
       <h2 id="propriete-intellectuelle" tabIndex={-1}>
         7. Propriété Intellectuelle
