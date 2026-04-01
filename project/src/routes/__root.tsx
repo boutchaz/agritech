@@ -44,33 +44,20 @@ class LazyErrorBoundary extends Component<
 const globalCommandPaletteImport = import('../components/GlobalCommandPalette');
 const tourContextImport = import('../contexts/TourContext');
 
-// Retry-on-failure wrapper for lazy imports — handles chunk-load errors
-// (stale deployment, network glitch) by retrying once after a short delay.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function lazyWithRetry<T extends { default: any }>(factory: () => Promise<T>) {
-  return lazy(() =>
-    factory().catch((err) => {
-      console.warn('[lazyWithRetry] First attempt failed, retrying…', err);
-      return new Promise<T>((resolve) =>
-        setTimeout(() => resolve(factory()), 1500),
-      );
-    }),
-  );
-}
 
-const GlobalCommandPalette = lazyWithRetry(() =>
+const GlobalCommandPalette = lazy(() =>
   globalCommandPaletteImport.then((mod) => ({
     default: mod.GlobalCommandPalette,
   }))
 );
 
-const TourProvider = lazyWithRetry(() =>
+const TourProvider = lazy(() =>
   tourContextImport.then((mod) => ({
     default: mod.TourProvider,
   }))
 );
 
-const TourHelpButton = lazyWithRetry(() =>
+const TourHelpButton = lazy(() =>
   import('../components/TourHelpButton').then((mod) => ({
     default: mod.TourHelpButton,
   }))
