@@ -20,13 +20,13 @@ import {
   FileSpreadsheet,
   TrendingUp,
   TrendingDown,
-  Loader2,
   BarChart3,
   Layers,
   ChevronLeft,
   Search,
 } from 'lucide-react';
 import { useProfitabilityAnalysis, type AnalysisFilterType } from '@/hooks/useProfitabilityQuery';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelsWithDetails } from '@/hooks/useParcelsWithDetails';
 
@@ -102,11 +102,7 @@ const AppContent: React.FC = () => {
   const needsValue = filterType !== 'organization';
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
-      </div>
-    );
+    return <AccountingReportSkeleton className="p-6" />;
   }
 
   const kpiColor = (v: number) =>
@@ -278,11 +274,7 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {applied && isLoading && (
-          <div className="flex items-center justify-center h-48">
-            <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-          </div>
-        )}
+        {applied && isLoading && <AccountingReportSkeleton />}
 
         {applied && isError && (
           <div className="flex items-center justify-center h-48">

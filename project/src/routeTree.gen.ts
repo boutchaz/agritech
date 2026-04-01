@@ -11,6 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
+import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
+import { Route as publicRdvRouteImport } from './routes/(public)/rdv'
+import { Route as publicPrivacyPolicyRouteImport } from './routes/(public)/privacy-policy'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicOnboardingRouteImport } from './routes/(public)/onboarding'
 import { Route as publicCheckoutSuccessRouteImport } from './routes/(public)/checkout-success'
@@ -23,7 +27,6 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_authenticated/pest-alerts/index'
 import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_authenticated/compliance/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
-import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
@@ -58,7 +61,6 @@ import { Route as publicOnboardingOrganizationRouteImport } from './routes/(publ
 import { Route as publicOnboardingModulesRouteImport } from './routes/(public)/onboarding/modules'
 import { Route as publicOnboardingFarmRouteImport } from './routes/(public)/onboarding/farm'
 import { Route as publicOnboardingCompleteRouteImport } from './routes/(public)/onboarding/complete'
-import { Route as publicBlogSlugRouteImport } from './routes/(public)/blog/$slug'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
 import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
@@ -80,6 +82,7 @@ import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './rout
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
+import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
 import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
@@ -161,6 +164,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const publicTermsOfServiceRoute = publicTermsOfServiceRouteImport.update({
+  id: '/(public)/terms-of-service',
+  path: '/terms-of-service',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvSiamRoute = publicRdvSiamRouteImport.update({
+  id: '/(public)/rdv-siam',
+  path: '/rdv-siam',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvRoute = publicRdvRouteImport.update({
+  id: '/(public)/rdv',
+  path: '/rdv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicPrivacyPolicyRoute = publicPrivacyPolicyRouteImport.update({
+  id: '/(public)/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const publicPitchDeckRoute = publicPitchDeckRouteImport.update({
   id: '/(public)/pitch-deck',
   path: '/pitch-deck',
@@ -222,11 +245,6 @@ const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => publicOnboardingRoute,
-} as any)
-const publicBlogIndexRoute = publicBlogIndexRouteImport.update({
-  id: '/(public)/blog/',
-  path: '/blog/',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedPestAlertsReportIdRoute =
   AuthenticatedPestAlertsReportIdRouteImport.update({
@@ -428,11 +446,6 @@ const publicOnboardingCompleteRoute =
     path: '/complete',
     getParentRoute: () => publicOnboardingRoute,
   } as any)
-const publicBlogSlugRoute = publicBlogSlugRouteImport.update({
-  id: '/(public)/blog/$slug',
-  path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
   id: '/(auth)/auth/callback',
   path: '/auth/callback',
@@ -556,6 +569,12 @@ const AuthenticatedsettingsSettingsModulesRoute =
   AuthenticatedsettingsSettingsModulesRouteImport.update({
     id: '/modules',
     path: '/modules',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsLegalRoute =
+  AuthenticatedsettingsSettingsLegalRouteImport.update({
+    id: '/legal',
+    path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsFiscalYearsRoute =
@@ -996,8 +1015,11 @@ export interface FileRoutesByFullPath {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1032,7 +1054,6 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
@@ -1083,6 +1104,7 @@ export interface FileRoutesByFullPath {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1138,8 +1160,11 @@ export interface FileRoutesByTo {
   '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1170,7 +1195,6 @@ export interface FileRoutesByTo {
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
@@ -1220,6 +1244,7 @@ export interface FileRoutesByTo {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1275,8 +1300,11 @@ export interface FileRoutesById {
   '/(public)/checkout-success': typeof publicCheckoutSuccessRoute
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
+  '/(public)/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/(public)/rdv': typeof publicRdvRoute
+  '/(public)/rdv-siam': typeof publicRdvSiamRoute
+  '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
-  '/(public)/blog/$slug': typeof publicBlogSlugRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
   '/(public)/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1311,7 +1339,6 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
@@ -1362,6 +1389,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1420,8 +1448,11 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/onboarding'
     | '/pitch-deck'
+    | '/privacy-policy'
+    | '/rdv'
+    | '/rdv-siam'
+    | '/terms-of-service'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1456,7 +1487,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog/'
     | '/onboarding/'
     | '/compliance/'
     | '/pest-alerts/'
@@ -1507,6 +1537,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1562,8 +1593,11 @@ export interface FileRouteTypes {
     | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
+    | '/privacy-policy'
+    | '/rdv'
+    | '/rdv-siam'
+    | '/terms-of-service'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1594,7 +1628,6 @@ export interface FileRouteTypes {
     | '/trees'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog'
     | '/onboarding'
     | '/compliance'
     | '/pest-alerts'
@@ -1644,6 +1677,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1698,8 +1732,11 @@ export interface FileRouteTypes {
     | '/(public)/checkout-success'
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
+    | '/(public)/privacy-policy'
+    | '/(public)/rdv'
+    | '/(public)/rdv-siam'
+    | '/(public)/terms-of-service'
     | '/(auth)/auth/callback'
-    | '/(public)/blog/$slug'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
     | '/(public)/onboarding/modules'
@@ -1734,7 +1771,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
     | '/_authenticated/pest-alerts/$reportId'
-    | '/(public)/blog/'
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
@@ -1785,6 +1821,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
     | '/_authenticated/(settings)/settings/fiscal-years'
+    | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
@@ -1843,9 +1880,11 @@ export interface RootRouteChildren {
   publicCheckoutSuccessRoute: typeof publicCheckoutSuccessRoute
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
+  publicPrivacyPolicyRoute: typeof publicPrivacyPolicyRoute
+  publicRdvRoute: typeof publicRdvRoute
+  publicRdvSiamRoute: typeof publicRdvSiamRoute
+  publicTermsOfServiceRoute: typeof publicTermsOfServiceRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
-  publicBlogSlugRoute: typeof publicBlogSlugRoute
-  publicBlogIndexRoute: typeof publicBlogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1862,6 +1901,34 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/terms-of-service': {
+      id: '/(public)/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof publicTermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv-siam': {
+      id: '/(public)/rdv-siam'
+      path: '/rdv-siam'
+      fullPath: '/rdv-siam'
+      preLoaderRoute: typeof publicRdvSiamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv': {
+      id: '/(public)/rdv'
+      path: '/rdv'
+      fullPath: '/rdv'
+      preLoaderRoute: typeof publicRdvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/privacy-policy': {
+      id: '/(public)/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof publicPrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/pitch-deck': {
@@ -1947,13 +2014,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding/'
       preLoaderRoute: typeof publicOnboardingIndexRouteImport
       parentRoute: typeof publicOnboardingRoute
-    }
-    '/(public)/blog/': {
-      id: '/(public)/blog/'
-      path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof publicBlogIndexRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/pest-alerts/$reportId': {
       id: '/_authenticated/pest-alerts/$reportId'
@@ -2193,13 +2253,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicOnboardingCompleteRouteImport
       parentRoute: typeof publicOnboardingRoute
     }
-    '/(public)/blog/$slug': {
-      id: '/(public)/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof publicBlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(auth)/auth/callback': {
       id: '/(auth)/auth/callback'
       path: '/auth/callback'
@@ -2345,6 +2398,13 @@ declare module '@tanstack/react-router' {
       path: '/modules'
       fullPath: '/settings/modules'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsModulesRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/legal': {
+      id: '/_authenticated/(settings)/settings/legal'
+      path: '/legal'
+      fullPath: '/settings/legal'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/fiscal-years': {
@@ -3137,6 +3197,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
   AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -3168,6 +3229,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsFilesRoute,
     AuthenticatedsettingsSettingsFiscalYearsRoute:
       AuthenticatedsettingsSettingsFiscalYearsRoute,
+    AuthenticatedsettingsSettingsLegalRoute:
+      AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
       AuthenticatedsettingsSettingsModulesRoute,
     AuthenticatedsettingsSettingsOrganizationRoute:
@@ -3393,9 +3456,11 @@ const rootRouteChildren: RootRouteChildren = {
   publicCheckoutSuccessRoute: publicCheckoutSuccessRoute,
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
+  publicPrivacyPolicyRoute: publicPrivacyPolicyRoute,
+  publicRdvRoute: publicRdvRoute,
+  publicRdvSiamRoute: publicRdvSiamRoute,
+  publicTermsOfServiceRoute: publicTermsOfServiceRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
-  publicBlogSlugRoute: publicBlogSlugRoute,
-  publicBlogIndexRoute: publicBlogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

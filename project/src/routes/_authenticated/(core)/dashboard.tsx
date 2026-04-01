@@ -5,7 +5,7 @@ import ModernPageHeader from '@/components/ModernPageHeader'
 import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
 import type { DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { useKBar } from 'kbar'
+import { useCommandPaletteToggle } from '@/components/GlobalCommandPalette'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardSettingsApi } from '@/lib/api/dashboard-settings'
 import { withRouteProtection } from '@/components/authorization/withRouteProtection'
@@ -48,13 +48,30 @@ const defaultDashboardSettings: DashboardSettings = {
   }
 };
 
+const LIVE_MODE_KEY = 'agrogina:dashboard:live-mode';
+
+function getStoredLiveMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(LIVE_MODE_KEY) === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
 const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
 
-  // Live mode toggle state
-  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [isLiveMode, setIsLiveMode] = useState(getStoredLiveMode);
+
+  const toggleLiveMode = (value: boolean) => {
+    setIsLiveMode(value);
+    try {
+      localStorage.setItem(LIVE_MODE_KEY, String(value));
+    } catch { /* localStorage unavailable */ }
+  };
 
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
@@ -172,7 +189,7 @@ const AppContent: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={isLiveMode}
-                  onChange={(e) => setIsLiveMode(e.target.checked)}
+                  onChange={(e) => toggleLiveMode(e.target.checked)}
                   className="sr-only"
                 />
                 <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${isLiveMode ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
@@ -290,10 +307,10 @@ export const Route = createFileRoute('/_authenticated/(core)/dashboard')({
 
 const QuickActionsButton: React.FC = () => {
   const { t } = useTranslation();
-  const { query } = useKBar()
+  const { toggle } = useCommandPaletteToggle();
 
   const handleClick = () => {
-    query.toggle();
+    toggle();
   };
 
   return (

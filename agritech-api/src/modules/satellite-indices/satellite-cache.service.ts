@@ -118,6 +118,76 @@ export class SatelliteCacheService {
     }
   }
 
+  // ── Sync Start Date Resolution ─────────────────────────
+
+  /**
+   * Determine the optimal start date for syncing satellite data for a parcel.
+   * - If data exists: returns (last synced date - 1 day) for delta sync.
+   * - If no data: uses planting_year to determine historical depth:
+   *   - age ≥ 3 years → 36 months
+   *   - age 2-3 years → 24 months
+   *   - age < 2 years → Jan 1 of planting year
+   *   - no planting_year → 24 months (default)
+   */
+  async getParcelSyncStartDate(
+    parcelId: string,
+    organizationId: string,
+    plantingYear?: number | null,
+  ): Promise<string> {
+    try {
+      const client = this.db.getAdminClient();
+
+      const { data, error } = await client
+        .from("satellite_indices_data")
+        .select("date")
+        .eq("parcel_id", parcelId)
+        .eq("organization_id", organizationId)
+        .order("date", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data?.date) {
+        // Delta sync: start from 1 day before last synced date
+        const lastDate = new Date(data.date);
+        lastDate.setDate(lastDate.getDate() - 1);
+        return lastDate.toISOString().split("T")[0];
+      }
+    } catch (err) {
+      this.logger.warn(
+        `[getParcelSyncStartDate] Failed to query max date for ${parcelId}: ${err}`,
+      );
+    }
+
+    // No existing data — determine lookback from planting year
+    const now = new Date();
+
+    if (plantingYear != null) {
+      const parcelAge = now.getFullYear() - plantingYear;
+
+      if (parcelAge >= 3) {
+        // Old parcel: 36 months of history
+        const start = new Date();
+        start.setMonth(start.getMonth() - 36);
+        return start.toISOString().split("T")[0];
+      }
+
+      if (parcelAge < 2) {
+        // Young parcel: from Jan 1 of planting year
+        return `${plantingYear}-01-01`;
+      }
+
+      // 2-3 years: 24 months
+      const start = new Date();
+      start.setMonth(start.getMonth() - 24);
+      return start.toISOString().split("T")[0];
+    }
+
+    // No planting year: default 24 months
+    const start = new Date();
+    start.setMonth(start.getMonth() - 24);
+    return start.toISOString().split("T")[0];
+  }
+
   /**
    * If body contains parcel_id, resolve the AOI from DB and inject it,
    * replacing whatever the frontend sent.

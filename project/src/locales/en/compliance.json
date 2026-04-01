@@ -127,7 +127,11 @@
     "actions": "Actions",
     "openMenu": "Open menu",
     "downloadReport": "Download report",
-    "delete": "Delete"
+    "delete": "Delete",
+    "noScore": "—"
+  },
+  "checks": {
+    "deleteConfirm": "Delete this compliance check?"
   },
   "dialogs": {
     "createCertification": {

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useAuth } from '../hooks/useAuth';
 import { useFarms } from '../hooks/useParcelsQuery';
 import type { AuthFarm } from '../contexts/AuthContext';
@@ -85,17 +86,16 @@ const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange
       }
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsOpen(false);
-    };
-
     document.addEventListener('pointerdown', handlePointerDown, true);
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown, true);
-      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  useHotkey('Escape', () => setIsOpen(false), {
+    enabled: isOpen,
+    meta: { name: t('close', 'Close'), description: 'Close farm switcher' },
+  });
 
   if (loading) {
     return (

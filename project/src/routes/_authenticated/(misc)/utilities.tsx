@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import ModernPageHeader from '@/components/ModernPageHeader'
-import { Loader2, Building2, Zap } from 'lucide-react'
+import { Building2, Zap } from 'lucide-react'
+import { ContentSkeleton } from '@/components/ui/page-skeletons'
 import { PageLoader } from '@/components/ui/loader';
 
 
@@ -36,12 +37,7 @@ const AppContent: React.FC = () => {
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-        <Suspense fallback={
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('utilities.loadingDashboard')}</span>
-          </div>
-        }>
+        <Suspense fallback={<ContentSkeleton lines={8} className="p-6" />}>
           <UtilitiesManagement />
         </Suspense>
       </div>

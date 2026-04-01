@@ -446,9 +446,23 @@
         "stockKeywords": "stock inventaire",
         "infrastructure": "Consulter les infrastructures",
         "infrastructureKeywords": "infrastructure irrigation équipements",
+        "farmHierarchy": "Gérer les fermes",
+        "farmHierarchyKeywords": "fermes hiérarchie",
+        "tasks": "Gérer les tâches",
+        "tasksKeywords": "tâches missions travail",
         "settings": "Ouvrir les paramètres",
         "settingsKeywords": "paramètres settings organisation"
       },
+      "create": {
+        "parcel": "Créer une parcelle",
+        "task": "Créer une tâche",
+        "cycle": "Créer un cycle cultural",
+        "stockEntry": "Créer une entrée de stock",
+        "invoice": "Créer une facture",
+        "worker": "Ajouter un travailleur"
+      },
+      "searchPlaceholder": "Rechercher une action ou une page...",
+      "noResults": "Aucun résultat trouvé.",
       "modules": {
         "subtitle": "Modules disponibles"
       },
@@ -818,6 +832,13 @@
       "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
     }
   },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "goHome": "Retour à l'accueil",
+    "goBack": "Page précédente",
+    "hint": "Vérifiez l'URL ou utilisez la navigation"
+  },
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",
@@ -1156,171 +1177,132 @@
     }
   },
   "landing": {
+    "nav": {
+      "features": "Fonctionnalités",
+      "howItWorks": "Comment ça marche",
+      "faq": "FAQ",
+      "blog": "Blog",
+      "menuAria": "Menu principal",
+      "closeMenu": "Fermer le menu"
+    },
     "hero": {
-      "title": "Transformez votre agriculture avec",
-      "titleHighlight": "la donnée",
-      "subtitle": "Plateforme complète de gestion agricole. Parcelles, équipes, stocks, analyses satellite, sol et rentabilité. Tout en un seul endroit.",
-      "ctaPrimary": "Démarrer maintenant",
-      "ctaSecondary": "Découvrir les fonctionnalités",
-      "freeTrial": "Essai gratuit",
-      "noCommitment": "Sans engagement",
-      "supportIncluded": "Support inclus"
+      "title": "AGROGINA : La plateforme 360° qui fusionne votre réalité agronomique et votre gestion.",
+      "highlight": "Votre exploitation vue dans sa globalité.",
+      "subtitle": "Notre force, c'est le pont entre le terrain et les chiffres. Météo, capteurs IOT, outils RH, marketplace et conformité : AGROGINA centralise tout. Et notre module analytique AgromindIA transforme ces milliers de données en décisions ultra-précises.",
+      "ctaDemo": "Demander une démo",
+      "ctaDiscover": "Découvrir les fonctionnalités",
+      "badge1": "Essai gratuit",
+      "badge2": "Sans engagement",
+      "badge3": "Support inclus",
+      "demoInteractive": "DÉMO INTERACTIVE"
     },
-    "features": {
-      "title": "Fonctionnalités complètes",
-      "subtitle": "Tous les outils dont vous avez besoin pour gérer votre exploitation",
-      "parcelManagement": "Gestion Parcellaire",
-      "parcelDesc": "Gérez vos parcelles avec précision. Suivez les cultures, surfaces et données géospatiales.",
-      "teamManagement": "Gestion des Équipes",
-      "teamDesc": "Employés permanents et journaliers. Présences, salaires et planning optimisés.",
-      "satelliteAnalysis": "Analyse Satellite",
-      "satelliteDesc": "Indices NDVI, NDWI, NDMI pour surveiller la santé des cultures par satellite.",
-      "soilAnalysis": "Analyse du Sol",
-      "soilDesc": "pH, humidité, NPK, matière organique. Analyses en laboratoire et terrain.",
-      "stockManagement": "Gestion des Stocks",
-      "stockDesc": "Intrants, engrais, semences. Alertes de stock bas et gestion des expirations.",
-      "profitability": "Rentabilité Parcellaire",
-      "profitabilityDesc": "Calculez coûts et revenus par parcelle. Optimisez votre rentabilité.",
-      "analytics": "Rapports & Analytics",
-      "analyticsDesc": "Tableaux de bord personnalisables. Exportez vos données et rapports.",
-      "infrastructure": "Gestion Infrastructure",
-      "infrastructureDesc": "Équipements, bâtiments, systèmes d'irrigation. Maintenance et suivi.",
-      "weather": "Météo & Services",
-      "weatherDesc": "Prévisions météo intégrées et services utilitaires pour votre ferme.",
-      "multiOrg": "Multi-Organisation",
-      "multiOrgDesc": "Gérez plusieurs exploitations. Permissions et rôles par organisation.",
-      "secure": "Sécurisé & Conforme",
-      "secureDesc": "Authentification sécurisée, RLS Supabase. Vos données sont protégées.",
-      "realtime": "Temps Réel",
-      "realtimeDesc": "Mises à jour en temps réel avec React Query. Interface réactive."
+    "modules": {
+      "title": "Une suite complète pour chaque aspect de votre exploitation",
+      "subtitle": "Tout ce dont vous avez besoin, dans une seule interface.",
+      "parcels": "Gestion des parcelles",
+      "parcelsDesc": "Cartographiez, suivez vos cultures, gérez multi-sites",
+      "stocks": "Stocks & Intrants",
+      "stocksDesc": "Inventaire temps réel, alertes avant rupture",
+      "hr": "Personnel & Tâches",
+      "hrDesc": "Planifiez, assignez, suivez la progression",
+      "finance": "Finances & Commercial",
+      "financeDesc": "Devis, factures, coûts par parcelle",
+      "accounting": "Comptabilité avancée",
+      "accountingDesc": "Plan comptable, journaux, bilan, fiscalité",
+      "analytics": "Analyses",
+      "analyticsDesc": "Sol, eau, plantes, météo analytique",
+      "marketplace": "Marketplace",
+      "marketplaceDesc": "Achetez intrants, vendez récoltes, connectez partenaires",
+      "ai": "AgromindIA",
+      "aiDesc": "L'IA qui recommande, connecte, optimise",
+      "learnMore": "En savoir plus"
     },
-    "benefits": {
-      "title": "Pourquoi choisir AGROGINA ?",
-      "productivity": "Productivité accrue",
-      "productivityDesc": "Automatisez vos tâches et gagnez du temps sur la gestion quotidienne.",
-      "costReduction": "Réduction des coûts",
-      "costReductionDesc": "Optimisez vos intrants et réduisez le gaspillage grâce aux données.",
-      "betterYields": "Meilleurs rendements",
-      "betterYieldsDesc": "Prenez des décisions basées sur les données pour maximiser vos récoltes.",
-      "sustainable": "Agriculture durable",
-      "sustainableDesc": "Réduisez votre impact environnemental avec une gestion précise."
+    "steps": {
+      "title": "Opérationnel en 3 étapes",
+      "step1Title": "Connectez vos données",
+      "step1Desc": "Importez vos parcelles, stocks, équipes existantes",
+      "step2Title": "Laissez l'IA analyser",
+      "step2Desc": "AgromindIA apprend votre exploitation et génère des recommandations",
+      "step3Title": "Prenez les bonnes décisions",
+      "step3Desc": "Chaque action est connectée, chaque impact est visible"
     },
-    "cta": {
-      "title": "Prêt à moderniser votre agriculture ?",
-      "subtitle": "Rejoignez des équipes agricoles qui optimisent déjà leur exploitation.",
-      "button": "Commencer gratuitement"
+    "why": {
+      "title": "Ce qui nous différencie",
+      "connected": "Tout connecté",
+      "connectedDesc": "Une tâche créée impacte stocks, personnel, coûts automatiquement",
+      "ai": "IA intégrée",
+      "aiDesc": "Pas un gadget, un vrai moteur de décision",
+      "morocco": "Double Expertise",
+      "moroccoDesc": "La seule solution qui lie intimement un événement agronomique à votre rentabilité financière.",
+      "simple": "Simple et accessible",
+      "simpleDesc": "Interface évolutive : mode avancé pour ingénieurs, intermédiaire, ou basique pour une prise en main immédiate."
+    },
+    "pricing": {
+      "title": "Tarification sur mesure",
+      "subtitle": "Chaque exploitation est unique. Contactez-nous pour un devis adapté à vos besoins.",
+      "text": "À partir de votre première parcelle jusqu'à des centaines d'hectares, AGROGINA s'adapte.",
+      "cta": "Demander un devis"
+    },
+    "bp": {
+      "title": "Simulateur Business Plan (FDA)",
+      "subtitle": "Calculez vos aides de l'État marocain en quelques clics.",
+      "desc": "Un outil complet et exclusif pour simuler et générer automatiquement votre business plan pour le Fonds de Développement Agricole. Simple, rapide et conçu pour bloquer les abus.",
+      "feature1": "Gratuit pour les nouveaux inscrits (2 générations maximum)",
+      "feature2": "Cadrage automatique selon les normes DPA/ORMVA",
+      "feature3": "Prêt pour le dépôt officiel",
+      "cta": "Simuler mon projet"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "q1": "AGROGINA fonctionne pour quelle taille d'exploitation ?",
+      "a1": "De 10 à 10 000 hectares, la plateforme s'adapte à votre échelle.",
+      "q2": "Combien de temps pour être opérationnel ?",
+      "a2": "Configuration initiale en quelques jours, accompagnement inclus.",
+      "q3": "Mes données sont-elles sécurisées ?",
+      "a3": "Hébergement sécurisé, sauvegardes automatiques, accès contrôlé.",
+      "q4": "L'IA remplace-t-elle l'agriculteur ?",
+      "a4": "Non. Elle amplifie votre expertise en vous donnant les bonnes informations au bon moment.",
+      "q5": "Puis-je tester avant de m'engager ?",
+      "a5": "Oui, nous proposons une période d'essai gratuite.",
+      "q6": "Comment obtenir un devis ?",
+      "a6": "Remplissez le formulaire de contact, nous vous répondons sous 48h."
+    },
+    "contact": {
+      "title": "Prêt à transformer votre gestion agricole ?",
+      "subtitle": "Demandez une démonstration personnalisée avec notre équipe.",
+      "formName": "Nom complet",
+      "formEmail": "Email professionnel",
+      "formPhone": "Téléphone",
+      "formSize": "Taille d'exploitation",
+      "formSize1": "Moins de 50 ha",
+      "formSize2": "50 à 200 ha",
+      "formSize3": "200 à 500 ha",
+      "formSize4": "Plus de 500 ha",
+      "formMsg": "Message (optionnel)",
+      "formSizePlaceholder": "Choisir la taille",
+      "validationRequired": "Veuillez remplir tous les champs obligatoires.",
+      "submit": "Envoyer la demande"
     },
     "footer": {
-      "tagline": "La plateforme complète pour moderniser votre agriculture.",
+      "tagline": "AGROGINA centralise la gestion de vos parcelles, stocks, équipes, finances, analyses et marketplace.",
       "product": "Produit",
+      "company": "Entreprise",
+      "about": "À propos",
+      "legal": "Légal",
+      "terms": "Mentions légales",
+      "privacy": "Politique de confidentialité",
+      "madeIn": "Made with 🌱 in Morocco",
+      "copyright": "Tous droits réservés.",
       "features": "Fonctionnalités",
       "pricing": "Tarifs",
-      "freeTrial": "Essai gratuit",
-      "blog": "Blog",
-      "support": "Support",
-      "documentation": "Documentation",
-      "contact": "Contact",
       "faq": "FAQ",
-      "legal": "Légal",
-      "privacy": "Confidentialité",
-      "terms": "CGU",
-      "legalNotice": "Mentions légales",
-      "copyright": "Tous droits réservés."
-    },
-    "trustedBy": "Ils nous font confiance",
-    "trusted": {
-      "agronomists": "Agronomes",
-      "coops": "Coopératives",
-      "exporters": "Exportateurs",
-      "labs": "Laboratoires"
-    },
-    "nav": {
-      "blog": "Blog"
+      "blog": "Blog",
+      "contact": "Contact"
     },
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
       "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina, agritech"
-    },
-    "modules": {
-      "title": "Les modules qui orchestrent vos opérations",
-      "subtitle": "Une suite intégrée reliant la planification des parcelles, le travail des équipes, la comptabilité et l'analyse agronomique.",
-      "cta": "Découvrir le module",
-      "parcels": {
-        "title": "Gestion des parcelles",
-        "desc": "Cartographiez vos parcelles, suivez les cultures et reliez-les aux analyses de sol."
-      },
-      "tasks": {
-        "title": "Planification des tâches",
-        "desc": "Assignez vos équipes, mesurez le temps passé et suivez la progression en direct."
-      },
-      "accounting": {
-        "title": "Comptabilité intégrée",
-        "desc": "Automatisez factures, paiements et suivi des coûts par ferme ou parcelle."
-      },
-      "analytics": {
-        "title": "Analyses & services",
-        "desc": "Exploitez les images satellite et commandez vos analyses laboratoire en quelques clics."
-      }
-    },
-    "siam": {
-      "title": "SIAM 2026 • Rencontrez AGROGINA",
-      "description": "Réservez un créneau de démonstration produit sur le stand AGROGINA.",
-      "features": {
-        "demo": "Démonstration en direct de la plateforme.",
-        "focus": "Focus satellite, tâches, stock et comptabilité.",
-        "slots": "Créneaux disponibles depuis le cache local."
-      },
-      "form": {
-        "title": "Demande de rendez-vous",
-        "description": "Nous revenons vers vous rapidement avec confirmation du créneau.",
-        "fullName": "Nom complet",
-        "email": "Email professionnel",
-        "phone": "Téléphone",
-        "submit": "Réserver un RDV SIAM",
-        "success": "Demande enregistrée. Notre équipe vous confirme le créneau RDV sous 24h."
-      }
-    },
-    "blog": {
-      "label": "Blog",
-      "title": "Dernières actualités",
-      "subtitle": "Restez informé des dernières tendances et bonnes pratiques en technologie agricole.",
-      "viewAll": "Voir tous les articles",
-      "readingTime": "min"
-    },
-    "pricing": {
-      "title": "Tarifs simples et transparents",
-      "subtitle": "Choisissez le plan adapté à vos besoins",
-      "mostPopular": "Le plus populaire",
-      "perMonth": "/mois",
-      "perHaYear": "/ha/an HT",
-      "getStarted": "Commencer",
-      "contactUs": "Nous contacter"
-    },
-    "stats": {
-      "farms": "Fermes gérées",
-      "parcels": "Parcelles suivies",
-      "hectares": "Hectares surveillés",
-      "satisfaction": "Satisfaction client"
-    },
-    "testimonials": {
-      "title": "La confiance des agriculteurs marocains",
-      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
-        "author": "Hassan B.",
-        "role": "Producteur d'agrumes, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "La gestion de plus de 50 fermes membres était un cauchemar auparavant. Nous avons maintenant une visibilité complète sur les coûts, les rendements et la rentabilité de chaque parcelle.",
-        "author": "Fatima Z.",
-        "role": "Directrice, Coopérative oléicole, Meknès"
-      },
-      "exporter1": {
-        "quote": "Les fonctionnalités d'analyse satellite et de suivi qualité nous ont aidés à obtenir la certification GlobalGAP pour toutes nos fermes fournisseurs.",
-        "author": "Karim M.",
-        "role": "Directeur Export, AgriExport Maroc"
-      }
     }
   },
   "suppliers": {
@@ -1611,11 +1593,14 @@
       "filesDescription": "Gérer les fichiers et détecter les orphelins",
       "dangerZone": "Zone de Danger",
       "dangerZoneDescription": "Gérer les données de démo et actions critiques",
+      "legal": "Mentions Légales",
+      "legalDescription": "CGU et politique de confidentialité",
       "sections": {
         "personal": "Personnel",
         "organization": "Organisation",
         "accounting": "Comptabilité & Finance",
         "content": "Contenu & Affichage",
+        "legal": "Légal",
         "system": "Système"
       }
     }
@@ -6042,6 +6027,71 @@
         "bank": "Compte bancaire",
         "petty_cash": "Petite caisse"
       }
+    }
+  },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Reservez votre rendez-vous avec AGROGINA",
+      "subtitle": "Decouvrez comment notre plateforme AgriTech transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
+    },
+    "sections": {
+      "info": "Vos informations",
+      "farm": "Votre exploitation",
+      "slot": "Choisissez votre creneau"
+    },
+    "form": {
+      "namePlaceholder": "Nom complet *",
+      "companyPlaceholder": "Entreprise / Exploitation",
+      "phonePlaceholder": "Telephone *",
+      "emailPlaceholder": "Email",
+      "surface": "Surface cultivee",
+      "region": "Region",
+      "other": "Autre",
+      "otherCulturePlaceholder": "Precisez votre culture",
+      "submit": "Confirmer ma demande de rendez-vous",
+      "submitting": "Envoi en cours..."
+    },
+    "surface": {
+      "lt50": "Moins de 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "Plus de 600 ha"
+    },
+    "validation": {
+      "nameMin": "Veuillez renseigner votre nom complet",
+      "phoneRequired": "Veuillez renseigner un numero de telephone valide",
+      "emailInvalid": "Veuillez renseigner un email valide",
+      "slotRequired": "Veuillez choisir un creneau",
+      "phoneInvalid": "Numéro de téléphone invalide"
+    },
+    "success": {
+      "title": "Demande envoyee !",
+      "message": "Bonjour {{name}}, votre demande pour le creneau {{slot}} a bien ete recue.",
+      "fallbackName": "a vous",
+      "subtext": "Notre equipe vous contacte dans les 24h."
+    },
+    "error": {
+      "submitFailed": "Impossible d'envoyer votre demande. Veuillez reessayer."
+    },
+    "crops": {
+      "olive": "Olivier",
+      "citrus": "Agrumes",
+      "avocado": "Avocat",
+      "datePalm": "Palmier dattier",
+      "cereals": "Céréales",
+      "vegetables": "Maraîchage"
+    },
+    "regions": {
+      "meknesFes": "Meknès-Fès",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Béni Mellal-Khénifra",
+      "rabatSale": "Rabat-Salé",
+      "tangerTetouan": "Tanger-Tétouan",
+      "oriental": "Oriental",
+      "other": "Autre"
     }
   },
   "retry": "Réessayer",

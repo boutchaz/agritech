@@ -106,7 +106,7 @@ const WorkersActivityWidget: React.FC = () => {
         <Button
           variant="link"
           onClick={handleViewWorkers}
-          className="text-green-600 dark:text-green-400 p-0 h-auto"
+          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
         >
           {t('dashboard.widgets.viewAll')}
           <ChevronRight className="h-4 w-4" />
@@ -220,8 +220,8 @@ const WorkersActivityWidget: React.FC = () => {
             {t('dashboard.widgets.workers.empty')}
           </p>
           <Button
+            variant="purple"
             onClick={handleViewWorkers}
-            className="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600"
           >
             <Users className="h-4 w-4" />
             {t('dashboard.widgets.workers.addWorkers')}

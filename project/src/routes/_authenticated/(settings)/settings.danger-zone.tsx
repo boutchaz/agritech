@@ -229,8 +229,13 @@ function DangerZonePage() {
         </div>
 
         {statsLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="p-3 rounded-lg border">
+                <div className="h-4 w-16 bg-muted animate-pulse rounded mb-2" />
+                <div className="h-6 w-8 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
           </div>
         ) : (
           <>

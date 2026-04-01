@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -154,20 +155,8 @@ function WorkerDetailPage() {
     setShowPaymentDialog(true);
   };
 
-  if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-      </div>
-    );
-  }
-
-  if (workerLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-      </div>
-    );
+  if (!currentOrganization || workerLoading) {
+    return <DetailPageSkeleton />;
   }
 
   if (!worker) {
@@ -564,8 +553,14 @@ function WorkerDetailPage() {
             </CardHeader>
             <CardContent>
               {paymentsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                <div className="space-y-2 py-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-3">
+                      <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                    </div>
+                  ))}
                 </div>
               ) : payments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -693,8 +688,14 @@ function WorkerDetailPage() {
             </CardHeader>
             <CardContent>
               {workRecordsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                <div className="space-y-2 py-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-4 p-3">
+                      <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                      <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  ))}
                 </div>
               ) : workRecords.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -820,8 +821,13 @@ function WorkerDetailPage() {
               </CardHeader>
               <CardContent>
                 {settlementsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+                  <div className="space-y-2 py-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-4 p-3">
+                        <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
+                        <div className="h-4 w-20 bg-muted animate-pulse rounded" />
+                      </div>
+                    ))}
                   </div>
                 ) : settlements.length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">

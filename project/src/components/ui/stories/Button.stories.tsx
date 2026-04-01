@@ -9,7 +9,7 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
+      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link', 'orange', 'purple', 'green', 'blue', 'amber'],
     },
     size: {
       control: 'select',
@@ -86,6 +86,13 @@ export const AllVariants: Story = {
         <Button variant="link">Link</Button>
       </div>
       <div className="flex flex-wrap gap-3 items-center">
+        <Button variant="orange">Orange</Button>
+        <Button variant="purple">Purple</Button>
+        <Button variant="green">Green</Button>
+        <Button variant="blue">Blue</Button>
+        <Button variant="amber">Amber</Button>
+      </div>
+      <div className="flex flex-wrap gap-3 items-center">
         <Button size="sm">Small</Button>
         <Button size="default">Default</Button>
         <Button size="lg">Large</Button>
@@ -96,6 +103,13 @@ export const AllVariants: Story = {
         <Button variant="destructive"><Trash2 className="h-4 w-4" /> Delete</Button>
         <Button variant="outline"><Download className="h-4 w-4" /> Export</Button>
         <Button variant="ghost">Next <ChevronRight className="h-4 w-4" /></Button>
+      </div>
+      <div className="flex flex-wrap gap-3 items-center">
+        <Button variant="orange"><Plus className="h-4 w-4" /> Record Harvest</Button>
+        <Button variant="purple"><Plus className="h-4 w-4" /> Add Workers</Button>
+        <Button variant="green"><Plus className="h-4 w-4" /> Approve</Button>
+        <Button variant="blue"><Download className="h-4 w-4" /> Export</Button>
+        <Button variant="amber"><Plus className="h-4 w-4" /> Save Draft</Button>
       </div>
       <div className="flex flex-wrap gap-3 items-center">
         <Button disabled>Disabled</Button>

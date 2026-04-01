@@ -20,6 +20,49 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusDot } from '@/components/ui/status-dot';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 
+const formatTooltipValue = (value: number) => {
+  return value?.toFixed(3) ?? 'N/A';
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CustomTooltip = ({ active, payload, label, showTemperature }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="font-semibold text-gray-800 mb-2">{label}</p>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {payload.map((entry: any, idx: number) => {
+          const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
+          const value = isTemp 
+            ? `${entry.value.toFixed(1)} °C`
+            : formatTooltipValue(entry.value);
+
+          return (
+            <div key={idx} className="flex items-center gap-2 text-sm">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ 
+                  backgroundColor: entry.color,
+                  border: isTemp ? '1px dashed #f97316' : undefined 
+                }} 
+              />
+              <span className="font-medium">{entry.name}:</span>
+              <span>{value}</span>
+            </div>
+          );
+        })}
+        {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
+          <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-gray-500 flex gap-3">
+            <span>Min: {payload[0].payload.temperature_min.toFixed(1)}°C</span>
+            <span>Max: {payload[0].payload.temperature_max.toFixed(1)}°C</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
 interface TimeSeriesChartProps {
   parcelId: string;
   parcelName?: string;
@@ -67,8 +110,31 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const cloudCoverage = DEFAULT_CLOUD_COVERAGE;
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+
+  // LocalStorage key for persisting date range
+  const DATE_RANGE_STORAGE_KEY = `timeseries-date-range-${parcelId}`;
+
+  // end_date is ALWAYS today to ensure latest satellite imagery is visible.
+  // start_date is restored from localStorage or defaults to 2 years ago.
+  const [startDate, setStartDate] = useState(() => {
+    try {
+      const persisted = localStorage.getItem(DATE_RANGE_STORAGE_KEY);
+      if (persisted) {
+        const { start } = JSON.parse(persisted);
+        const parsedStart = new Date(start);
+        const fiveYearsAgo = new Date();
+        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+        if (parsedStart >= fiveYearsAgo) {
+          return start;
+        }
+      }
+    } catch (_e) {
+      // Failed to restore date range from localStorage
+    }
+    return getDateRangeLastNDays(730).start_date;
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
@@ -78,44 +144,16 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   } | null>(null);
   const [showTemperature, setShowTemperature] = useState(false);
 
-  // LocalStorage key for persisting date range
-  const DATE_RANGE_STORAGE_KEY = `timeseries-date-range-${parcelId}`;
-
-  // Initialize with persisted date range or default to last 2 years
+  // Persist only start_date to localStorage (end_date is always today on load)
   useEffect(() => {
-    try {
-      const persisted = localStorage.getItem(DATE_RANGE_STORAGE_KEY);
-      if (persisted) {
-        const { start, end } = JSON.parse(persisted);
-        // Validate the dates are reasonable (within last 5 years)
-        const parsedStart = new Date(start);
-        const fiveYearsAgo = new Date();
-        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-        if (parsedStart >= fiveYearsAgo) {
-          setStartDate(start);
-          setEndDate(end);
-          return;
-        }
-       }
-     } catch (_e) {
-       // Failed to restore date range from localStorage
-     }
-    // Fallback to default 2 years
-    const defaultRange = getDateRangeLastNDays(730);
-    setStartDate(defaultRange.start_date);
-    setEndDate(defaultRange.end_date);
-  }, [DATE_RANGE_STORAGE_KEY]);
-
-  // Persist date range changes to localStorage
-  useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate) {
        try {
-          localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate, end: endDate }));
+          localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate }));
         } catch (_e) {
           // Failed to persist date range
         }
     }
-  }, [startDate, endDate, DATE_RANGE_STORAGE_KEY]);
+  }, [startDate, DATE_RANGE_STORAGE_KEY]);
 
   const getIndexColor = (index: TimeSeriesIndexType): string => {
     const colors: Record<string, string> = {
@@ -250,6 +288,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         }
       }
 
+      // Always sync up to today to capture latest Copernicus imagery,
+      // regardless of what the date picker currently shows.
+      const syncEndDate = new Date().toISOString().split('T')[0];
+
       const syncResponse = await satelliteApi.startTimeSeriesSync({
         parcel_id: parcelId,
         farm_id: farmId,
@@ -257,7 +299,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           geometry: convertBoundaryToGeoJSON(boundary),
           name: parcelName || 'Parcel',
         },
-        date_range: { start_date: startDate, end_date: endDate },
+        date_range: { start_date: startDate, end_date: syncEndDate },
         cloud_coverage: cloudCoverage,
         indices: Array.from(indicesToSync),
       });
@@ -435,9 +477,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     });
   };
 
-  const formatTooltipValue = (value: number) => {
-    return value?.toFixed(3) ?? 'N/A';
-  };
 
   const calculateStatistics = (index: TimeSeriesIndexType): IndexStats | null => {
     const data = chartData();
@@ -499,43 +538,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     // Warn if fewer than 10 data points across all selected indices
     return total > 0 && total < 10;
   }, []);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800 mb-2">{label}</p>
-          {payload.map((entry: any, idx: number) => {
-            const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
-            const value = isTemp 
-              ? `${entry.value.toFixed(1)} °C`
-              : formatTooltipValue(entry.value);
-
-            return (
-              <div key={idx} className="flex items-center gap-2 text-sm">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ 
-                    backgroundColor: entry.color,
-                    border: isTemp ? '1px dashed #f97316' : undefined 
-                  }} 
-                />
-                <span className="font-medium">{entry.name}:</span>
-                <span>{value}</span>
-              </div>
-            );
-          })}
-          {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
-            <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-gray-500 flex gap-3">
-              <span>Min: {payload[0].payload.temperature_min.toFixed(1)}°C</span>
-              <span>Max: {payload[0].payload.temperature_max.toFixed(1)}°C</span>
-            </div>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
 
   const isLoading = isLoadingCache || isSyncing;
   const data = chartData();
@@ -856,7 +858,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                    tickFormatter={(val) => val.toFixed(0)} 
                  />
               )}
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip showTemperature={showTemperature} />} />
               <Legend />
               
               <Brush 

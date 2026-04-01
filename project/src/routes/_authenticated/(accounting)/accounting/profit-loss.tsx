@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
+import { Building2, TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,6 +16,7 @@ import { useProfitLoss, type ProfitLossRow } from '@/hooks/useFinancialReports';
 import { useCampaigns, useFiscalYears } from '@/hooks/useAgriculturalAccounting';
 import { exportProfitLossCsv } from '@/lib/utils/report-export';
 import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
@@ -215,12 +216,7 @@ const AppContent: React.FC = () => {
         </Card>
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.profitLoss.loading', 'Loading profit & loss statement...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (

@@ -448,10 +448,10 @@ export function useCreateCorrectiveAction() {
       queryClient.invalidateQueries({
         queryKey: ['compliance', 'dashboard', variables.organizationId],
       });
-      toast.success('Action corrective créée avec succès');
+      toast.success('Corrective action created successfully');
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Échec de la création';
+      const message = error instanceof Error ? error.message : 'Failed to create corrective action';
       toast.error(message);
     },
   });
@@ -485,10 +485,10 @@ export function useUpdateCorrectiveAction() {
       queryClient.invalidateQueries({
         queryKey: ['compliance', 'dashboard', variables.organizationId],
       });
-      toast.success('Action corrective mise à jour');
+      toast.success('Corrective action updated successfully');
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Échec de la mise à jour';
+      const message = error instanceof Error ? error.message : 'Failed to update corrective action';
       toast.error(message);
     },
   });
@@ -517,10 +517,10 @@ export function useDeleteCorrectiveAction() {
       queryClient.invalidateQueries({
         queryKey: ['compliance', 'dashboard', variables.organizationId],
       });
-      toast.success('Action corrective supprimée');
+      toast.success('Corrective action deleted successfully');
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : 'Échec de la suppression';
+      const message = error instanceof Error ? error.message : 'Failed to delete corrective action';
       toast.error(message);
     },
   });

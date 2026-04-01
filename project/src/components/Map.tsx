@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -455,19 +456,13 @@ const MapComponent: React.FC<MapProps> = ({
     }
   }, [showPlaceNames]);
 
-  // Handle full-screen mode
+  useHotkey('Escape', () => setIsFullScreen(false), {
+    enabled: isFullScreen,
+    meta: { name: t('common.actions.exitFullscreen', 'Exit fullscreen (Esc)'), description: 'Exit map fullscreen' },
+  });
+
+  // Resize map when entering/exiting full-screen
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isFullScreen) {
-        setIsFullScreen(false);
-      }
-    };
-
-    if (isFullScreen) {
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    // Resize map when entering/exiting full-screen
     const timer = setTimeout(() => {
       if (mapInstanceRef.current) {
         try {
@@ -479,7 +474,6 @@ const MapComponent: React.FC<MapProps> = ({
     }, 200);
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
       clearTimeout(timer);
     };
   }, [isFullScreen]);

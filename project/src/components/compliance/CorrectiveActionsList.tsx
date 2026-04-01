@@ -11,7 +11,6 @@ import {
   Trash2,
   CircleDot,
   ShieldCheck,
-  FileText,
 } from 'lucide-react';
 
 import {
@@ -248,10 +247,6 @@ export function CorrectiveActionsList({
                       <DropdownMenuItem onClick={() => onUpdateStatus?.(action)}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         {t('correctiveActions.updateStatus')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <FileText className="mr-2 h-4 w-4" />
-                        {t('correctiveActions.viewDetails')}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem

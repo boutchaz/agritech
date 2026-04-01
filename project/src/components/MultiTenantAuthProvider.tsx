@@ -27,7 +27,7 @@ import {
   trackSessionStart,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
-import { PageLoader } from '@/components/ui/loader';
+import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 
 
 type Organization = AuthOrganization;
@@ -49,7 +49,7 @@ const toTitleCase = (value: string) =>
     .join(' ');
 
 export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
@@ -60,7 +60,20 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/onboarding/select-trial', '/set-password', '/auth/callback', '/blog'];
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/onboarding/select-trial',
+    '/set-password',
+    '/auth/callback',
+    '/blog',
+    '/terms-of-service',
+    '/privacy-policy',
+    '/rdv',
+    '/rdv-siam',
+  ];
 
   // Routes that don't require password to be set (accessible with temporary password)
   const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
@@ -631,11 +644,9 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
     [stableUser, profile, organizations, currentOrganization, farms, currentFarm, userRole, loading, needsOnboarding],
   );
 
-  // Show loading spinner (but not on public routes)
+  // Show full layout skeleton while auth data loads (but not on public routes)
   if (loading && !isPublicRoute) {
-    return (
-      <PageLoader />
-    );
+    return <AuthenticatedLayoutSkeleton />;
   }
 
   // Show authentication form (but not on public routes)

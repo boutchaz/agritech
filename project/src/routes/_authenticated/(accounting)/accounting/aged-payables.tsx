@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, Truck, Loader2, AlertCircle, Download, Calendar, DollarSign } from 'lucide-react';
+import { Building2, Truck, AlertCircle, Download, Calendar, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { financialReportsApi, AgedReport } from '@/lib/api/financial-reports';
 import { exportAgedReportCsv } from '@/lib/utils/report-export';
 import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
 
 export const Route = createFileRoute('/_authenticated/(accounting)/accounting/aged-payables')({
@@ -106,12 +107,7 @@ function AppContent() {
           </CardContent>
         </Card>
 
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.agedPayables.loading', 'Loading report...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {error && (
           <Card className="border-red-200 dark:border-red-800">

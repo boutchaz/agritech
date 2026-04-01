@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, BookOpen, Loader2, AlertCircle, Download, Calendar, FileText } from 'lucide-react';
+import { Building2, BookOpen, AlertCircle, Download, Calendar, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -16,6 +16,7 @@ import { useGeneralLedger, useTrialBalance } from '@/hooks/useFinancialReports';
 import { formatCurrency } from '@/lib/utils/format';
 import { exportGeneralLedgerCsv } from '@/lib/utils/report-export';
 import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
 
 const AppContent: React.FC = () => {
@@ -151,12 +152,7 @@ const AppContent: React.FC = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.generalLedger.loading', 'Loading general ledger...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (

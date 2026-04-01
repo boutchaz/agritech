@@ -28,6 +28,10 @@ See request artifacts for full context.
 
 <!-- decisions below this line -->
 
+### Blog SSR via NestJS HTML routes, extract later if needed — 2026-03-30 (Request: blog-next-level)
+
+Blog pages will be server-rendered by NestJS, which already runs and already has the Strapi integration. New routes (GET /blog, GET /blog/:slug, GET /sitemap.xml, GET /rss.xml) return HTML/XML instead of JSON, reusing the existing BlogsService. Nginx proxies /blog/* to NestJS instead of serving the SPA. Considered and rejected: TanStack Start (requires full build system migration from Vite to Vinxi, overkill for 4 routes), separate Astro/Hono service (unnecessary complexity for 5 endpoints), Next.js (too heavy). If the blog grows significantly in the future, extract to a dedicated service then.
+
 ### Morocco accounting_standard normalized to CGNC — 2026-03-26 (Request: generic-accounting-mappings)
 
 SQL schema seeds used 'PCEC' for Morocco while TypeScript code used 'CGNC'. Standardized everything to CGNC (Code Général de Normalisation Comptable) since that's what the chart template metadata and getSupportedCountries() use. All 57 PCEC references in the schema migration were replaced.

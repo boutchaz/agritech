@@ -15947,3 +15947,48 @@ CREATE POLICY "Authenticated delete for agritech-documents"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'agritech-documents');
+
+-- ==========================================
+-- Newsletter subscribers (public, no org scope)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(320) NOT NULL UNIQUE,
+  locale VARCHAR(5) DEFAULT 'fr',
+  source_slug VARCHAR(255),
+  subscribed_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed BOOLEAN DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email);
+
+-- ==========================================
+-- SIAM RDV leads (public, no org scope)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS siam_rdv_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nom VARCHAR(120) NOT NULL,
+  entreprise VARCHAR(160),
+  tel VARCHAR(30) NOT NULL,
+  email VARCHAR(320),
+  surface VARCHAR(60),
+  region VARCHAR(80),
+  cultures TEXT[],
+  creneau VARCHAR(40) NOT NULL,
+  source VARCHAR(80),
+  source_ip VARCHAR(45),
+  email_sent BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_siam_rdv_leads_created_at ON siam_rdv_leads(created_at DESC);
+
+-- RLS: only service_role can access (public table, no org scope)
+ALTER TABLE siam_rdv_leads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_only" ON siam_rdv_leads
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- updated_at trigger
+CREATE TRIGGER set_siam_rdv_leads_updated_at
+  BEFORE UPDATE ON siam_rdv_leads
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();

@@ -69,3 +69,4 @@ supabase/.temp/
 
 # 
 debug_gee.pyproject/.env
+.gstack/

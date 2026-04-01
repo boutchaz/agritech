@@ -264,11 +264,16 @@ export default function ItemGroupsManagement() {
     setExpanded(new Set());
   }, []);
 
+  const [predefinedImported, setPredefinedImported] = useState(false);
+
   const seedMutation = useMutation({
     mutationFn: () => itemsApi.seedPredefinedGroups(currentOrganization?.id),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       setCurrentPage(1);
+      if (result.created === 0 && result.skipped > 0) {
+        setPredefinedImported(true);
+      }
       toast.success(
         t('items.itemGroup.seedSuccess', {
           created: result.created,
@@ -418,18 +423,20 @@ export default function ItemGroupsManagement() {
               <CardDescription>{t('items.itemGroup.manageDescription')}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => seedMutation.mutate()}
-                disabled={seedMutation.isPending}
-              >
-                {seedMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                {t('items.itemGroup.importPredefined')}
-              </Button>
+              {!predefinedImported && (
+                <Button
+                  variant="outline"
+                  onClick={() => seedMutation.mutate()}
+                  disabled={seedMutation.isPending}
+                >
+                  {seedMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  {t('items.itemGroup.importPredefined')}
+                </Button>
+              )}
               <Button onClick={handleOpenCreate}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('items.itemGroup.createNew')}
@@ -446,14 +453,16 @@ export default function ItemGroupsManagement() {
                 {t('items.itemGroup.noGroupsDescription')}
               </p>
               <div className="flex justify-center gap-3">
-                <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
-                  {seedMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  {t('items.itemGroup.importPredefined')}
-                </Button>
+                {!predefinedImported && (
+                  <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+                    {seedMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    {t('items.itemGroup.importPredefined')}
+                  </Button>
+                )}
                 <Button onClick={handleOpenCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   {t('items.itemGroup.createFirst')}

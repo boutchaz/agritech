@@ -14,8 +14,8 @@ The API uses the `@nestjs/schedule` package to register cron jobs via the `@Cron
 | Schedule | Name | Module | Service | Method | Purpose |
 |----------|------|--------|---------|--------|---------|
 | `0 2 * * *` (daily 02:00) | `subscription-lifecycle` | Subscriptions | `SubscriptionsService` | `processLifecycleAutomation()` | Runs daily lifecycle automation: pending migrations, renewal notices, overdue transitions, suspensions, and termination window checks |
-| `0 3 * * *` (daily 03:00) | `satellite-cache-warmup` | Satellite Indices | `SatelliteSyncService` | `scheduledSync()` | Warms the satellite data cache by running a full sync of all parcels with boundaries, fetching last 6 months of core indices (NIRv, EVI, NDRE, NDMI) |
-| `0 4 */5 * *` (every 5 days 04:00) | `satellite-monitoring-5day` | Satellite Indices | `MonitoringCronService` | `runMonitoringCycle()` | Syncs the last 10 days of satellite data (NDVI, NDRE, NDMI, EVI, NIRv) for all parcels in active AI phases. Has a mutex guard to prevent overlapping runs |
+| `0 3 * * *` (daily 03:00) | `satellite-cache-warmup` | Satellite Indices | `SatelliteSyncService` | `scheduledSync()` | Delta-syncs satellite data for all active parcels with boundaries. Uses `getParcelSyncStartDate()` to determine the start date (last synced date − 1 day, or planting-year-based lookback for first sync). Fetches core indices (NIRv, EVI, NDRE, NDMI) via `syncParcelSatelliteData()` with `force_refresh: true` |
+| `0 4 */5 * *` (every 5 days 04:00) | `satellite-monitoring-5day` | Satellite Indices | `MonitoringCronService` | `runMonitoringCycle()` | Delta-syncs satellite data (NDVI, NDRE, NDMI, EVI, NIRv) for all parcels in active AI phases. Uses `getParcelSyncStartDate()` for dynamic date range instead of a fixed window. Has a mutex guard to prevent overlapping runs |
 | `0 6 * * *` (daily 06:00) | `ai-jobs-daily-weather-fetch` | AI Jobs | `AiJobsService` | `runDailyWeatherFetch()` | Fetches the last 7 days of historical weather data for all AI-enabled parcels and upserts into `weather_daily_data` |
 | `30 6 * * *` (daily 06:30) | `monitoring-followup-evaluation` | Monitoring | `FollowupService` | `evaluateExecutedRecommendations()` | Evaluates executed AI recommendations by comparing satellite index values before and after execution to classify efficacy as effective, partial, or ineffective |
 | `0 7 * * 1` (Mondays 07:00) | `ai-jobs-weekly-forecast-update` | AI Jobs | `AiJobsService` | `runWeeklyForecastUpdate()` | Fetches 7-day weather forecasts for all AI-enabled parcels and upserts into `weather_forecasts` |
@@ -52,7 +52,7 @@ Every 6h  check-overdue-tasks (00:00, 06:00, 12:00, 18:00)
 
 Several jobs form a data pipeline where the output of one feeds into the next:
 
-1. **Satellite cache warmup** (03:00) and **satellite monitoring** (every 5 days at 04:00) populate `satellite_indices_data` with fresh vegetation index values.
+1. **Satellite cache warmup** (03:00) and **satellite monitoring** (every 5 days at 04:00) delta-sync `satellite_indices_data` with fresh vegetation index values from the satellite service (FastAPI → GEE/CDSE).
 2. **Daily weather fetch** (06:00) populates `weather_daily_data` with meteorological observations.
 3. **Monitoring followup evaluation** (06:30) reads satellite index data to evaluate whether executed recommendations were effective.
 4. **Weekly forecast update** (Mondays 07:00) populates `weather_forecasts` with 7-day predictions.
@@ -65,6 +65,40 @@ Some jobs include safeguards against overlapping execution:
 
 - **`MonitoringCronService`** uses a `running` boolean flag. If a monitoring cycle is already in progress when the cron fires again, the new invocation is skipped.
 - **`SatelliteSyncService`** checks `this.progress.status === 'running'` before starting a full sync. If a sync is already running, it returns the current progress without starting a new one.
+
+## Delta Sync Strategy
+
+Both satellite cron jobs use **delta sync** to avoid redundant work and ensure fresh data:
+
+### How it works
+
+The shared helper `SatelliteCacheService.getParcelSyncStartDate()` determines the optimal start date for each parcel:
+
+1. **Existing data**: Queries `MAX(date)` from `satellite_indices_data` for the parcel, returns `max_date − 1 day` (1-day overlap as safety margin for timezone edge cases).
+2. **First sync (no data)**: Falls back to `planting_year` on the parcel record:
+
+| Parcel Age | Lookback |
+|---|---|
+| ≥ 3 years | 36 months |
+| 2–3 years | 24 months |
+| < 2 years | From Jan 1 of planting year |
+| No planting year | 24 months (default) |
+
+`end_date` is always **today**.
+
+Both crons call `syncParcelSatelliteData()` which uses `force_refresh: true`, bypassing the cache and making a real request to the satellite provider (FastAPI → GEE/CDSE).
+
+### Why delta sync
+
+Previously, the daily warmup called `getTimeSeries()` without `force_refresh`. Once ≥3 data points existed in the DB for a parcel, the cache always returned a HIT and the cron never contacted the satellite service — making it effectively a no-op. The 5-day monitoring used a fixed 10-day lookback which missed gaps when a sync was delayed.
+
+### Source files
+
+| File | Role |
+|---|---|
+| `satellite-cache.service.ts` | `getParcelSyncStartDate()` — shared helper |
+| `satellite-sync.service.ts` | Daily warmup — uses delta sync |
+| `monitoring-cron.service.ts` | 5-day monitoring — uses delta sync |
 
 ## User Preferences
 
@@ -81,8 +115,9 @@ The **Reminders** and **Compliance** cron jobs respect user notification prefere
 | File | Jobs Defined |
 |------|-------------|
 | `modules/subscriptions/subscriptions.service.ts` | `subscription-lifecycle` |
-| `modules/satellite-indices/satellite-sync.service.ts` | `satellite-cache-warmup` |
-| `modules/satellite-indices/monitoring-cron.service.ts` | `satellite-monitoring-5day` |
+| `modules/satellite-indices/satellite-sync.service.ts` | `satellite-cache-warmup` (daily delta sync) |
+| `modules/satellite-indices/monitoring-cron.service.ts` | `satellite-monitoring-5day` (delta sync for AI-active parcels) |
+| `modules/satellite-indices/satellite-cache.service.ts` | `getParcelSyncStartDate()` — shared delta sync helper |
 | `modules/ai-jobs/ai-jobs.service.ts` | `ai-jobs-daily-weather-fetch`, `ai-jobs-daily-pipeline-trigger`, `ai-jobs-monthly-plan-reminder`, `ai-jobs-weekly-forecast-update`, `ai-jobs-daily-recommendation-weather-verification` |
 | `modules/monitoring/followup.service.ts` | `monitoring-followup-evaluation` |
 | `modules/reminders/reminders.service.ts` | `check-due-tasks`, `check-overdue-tasks` |

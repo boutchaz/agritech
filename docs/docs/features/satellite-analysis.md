@@ -357,13 +357,53 @@ POST /api/satellite/export
 GET /api/satellite/statistics
 ```
 
+## NestJS Caching Layer
+
+The NestJS API sits between the frontend and the FastAPI satellite service, providing a multi-level caching layer via `SatelliteCacheService`:
+
+### Time Series Cache
+
+- **L1**: DB-backed (`satellite_indices_data` table)
+- **Cache key**: `parcel_id + index_name + date`
+- **Read path**: If ≥3 cached points exist for the requested range, returns from DB without calling FastAPI
+- **Write path**: After a cache miss, fetches from FastAPI and persists points to DB in the background
+- **Force refresh**: `syncParcelSatelliteData()` always calls FastAPI with `force_refresh: true` and persists results
+
+### Heatmap Cache
+
+- **L1**: In-memory (`Map<string, CacheEntry>`, 5-minute TTL)
+- **L2**: DB-backed (`satellite_heatmap_cache` table, 5-day TTL matching Sentinel-2 revisit period)
+- **Cache key**: `parcel_id + index_name + date + grid_size`
+
+### Available Dates Cache
+
+- **L1**: In-memory (10-minute TTL)
+- **Derived**: Can reconstruct available dates from existing timeseries data in `satellite_indices_data`
+
+### Delta Sync Helper
+
+`getParcelSyncStartDate(parcelId, organizationId, plantingYear?)` determines the optimal start date for syncing:
+
+- **Existing data**: `MAX(date) − 1 day` from `satellite_indices_data`
+- **First sync**: Based on `planting_year` (≥3yr → 36mo, 2-3yr → 24mo, <2yr → Jan 1 of planting year, none → 24mo)
+
+Used by both satellite cron jobs. See [Cron Jobs > Delta Sync Strategy](./cron-jobs.md#delta-sync-strategy).
+
 ## Frontend Integration
 
 The satellite service integrates with the frontend through:
 
-**Component**: `project/src/components/SatelliteIndices.tsx`
-**Hook**: `project/src/hooks/useSatelliteIndices.ts`
-**API**: `project/src/lib/satellite-api.ts`
+**Component**: `project/src/components/SatelliteAnalysisView/TimeSeriesChart.tsx`
+**API wrapper**: `project/src/lib/satellite-api.ts`
+**DB cache API**: `project/src/lib/api/satellite-indices.ts`
+
+### Time Series Chart Behavior
+
+- **`end_date`** is always set to **today** on page load (never persisted to localStorage)
+- **`start_date`** is persisted per parcel in localStorage and restored on revisit
+- **"Récupérer depuis satellite" button**: Triggers async sync via `POST /indices/timeseries-sync`. Always sends `end_date = today` regardless of the date picker value, ensuring latest Copernicus imagery is fetched
+- **Cache-first display**: Chart data is read from `satellite_indices_data` DB table. Sync button refreshes data from the satellite provider
+- **Polling**: After starting sync, frontend polls `GET /indices/timeseries-sync/:parcelId/status` every 5 seconds until complete
 
 ### Usage in Components
 

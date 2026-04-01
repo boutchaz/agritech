@@ -1,4 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { ContentSkeleton } from '@/components/ui/page-skeletons';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Suspense, lazy } from 'react';
 import { useParcelById } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,7 +10,7 @@ import {
   AlertTriangle,
   Cloud,
   Droplets,
-  Loader2,
+
   Shield,
   Thermometer,
 } from 'lucide-react';
@@ -35,10 +37,9 @@ const DiseaseRiskPanel = ({
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>Loading weather-driven disease risk...</span>
-        </div>
+        <Skeleton className="h-5 w-48 mb-3" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-3/4" />
       </div>
     );
   }
@@ -204,12 +205,7 @@ const AIWeatherPage = () => {
           />
 
           <Suspense
-            fallback={
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600 dark:text-gray-400">Loading weather analytics...</span>
-              </div>
-            }
+            fallback={<ContentSkeleton lines={6} className="p-6" />}
           >
             <WeatherAnalyticsView
               parcelId={parcelId}

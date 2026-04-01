@@ -37,6 +37,7 @@ const formSchema = z.object({
   auditor_name: z.string().optional(),
   score: z.string().optional(),
   next_check_date: z.string().optional(),
+  findings: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +72,7 @@ export function UpdateComplianceCheckDialog({
       next_check_date: check.next_check_date
         ? check.next_check_date.split('T')[0]
         : '',
+      findings: '',
     },
   });
 
@@ -83,6 +85,7 @@ export function UpdateComplianceCheckDialog({
         next_check_date: check.next_check_date
           ? check.next_check_date.split('T')[0]
           : '',
+        findings: '',
       });
     }
   }, [open, check, form]);

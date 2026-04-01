@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Minus, RefreshCw, Settings, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useHotkeys } from '@tanstack/react-hotkeys';
 import type { Module, SensorData } from '../types';
 import { parcelsApi } from '../lib/api/parcels';
 import { useAuth } from '../hooks/useAuth';
@@ -47,22 +48,13 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
   }, [module.id, currentFarm]);
 
   // Keyboard navigation for carousel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        setCurrentParcelIndex(prev => Math.max(0, prev - 1));
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        setCurrentParcelIndex(prev => Math.min(parcelsToDisplay.length - 1, prev + 1));
-      }
-    };
-
-    if (module.id === 'fruit-trees' && parcelsToDisplay.length > 1) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [module.id, parcelsToDisplay.length]);
+  useHotkeys(
+    [
+      { hotkey: 'ArrowLeft', callback: () => setCurrentParcelIndex(prev => Math.max(0, prev - 1)) },
+      { hotkey: 'ArrowRight', callback: () => setCurrentParcelIndex(prev => Math.min(parcelsToDisplay.length - 1, prev + 1)) },
+    ],
+    { enabled: module.id === 'fruit-trees' && parcelsToDisplay.length > 1 },
+  );
 
   const loadParcels = async () => {
     if (!currentFarm) {

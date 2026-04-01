@@ -446,9 +446,23 @@
         "stockKeywords": "stock inventory",
         "infrastructure": "View infrastructure",
         "infrastructureKeywords": "infrastructure irrigation equipment",
+        "farmHierarchy": "Manage farms",
+        "farmHierarchyKeywords": "farms hierarchy",
+        "tasks": "Manage tasks",
+        "tasksKeywords": "tasks missions work",
         "settings": "Open settings",
         "settingsKeywords": "settings organization"
       },
+      "create": {
+        "parcel": "Create parcel",
+        "task": "Create task",
+        "cycle": "Create crop cycle",
+        "stockEntry": "Create stock entry",
+        "invoice": "Create invoice",
+        "worker": "Add worker"
+      },
+      "searchPlaceholder": "Search for an action or page...",
+      "noResults": "No results found.",
       "modules": {
         "subtitle": "Available modules"
       },
@@ -818,6 +832,13 @@
       "journalEntryHelp": "Automatically create a journal entry in the accounting ledger"
     }
   },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "goHome": "Back to home",
+    "goBack": "Previous page",
+    "hint": "Check the URL or use the navigation"
+  },
   "auth": {
     "login": "Login",
     "logout": "Logout",
@@ -1156,171 +1177,132 @@
     }
   },
   "landing": {
+    "nav": {
+      "features": "Features",
+      "howItWorks": "How it works",
+      "faq": "FAQ",
+      "blog": "Blog",
+      "menuAria": "Main menu",
+      "closeMenu": "Close menu"
+    },
     "hero": {
-      "title": "Transform your agriculture with",
-      "titleHighlight": "data",
-      "subtitle": "Complete agricultural management platform. Parcels, teams, inventory, satellite analysis, soil and profitability. All in one place.",
-      "ctaPrimary": "Get started now",
-      "ctaSecondary": "Discover features",
-      "freeTrial": "Free trial",
-      "noCommitment": "No commitment",
-      "supportIncluded": "Support included"
+      "title": "Pilot your farm with artificial intelligence",
+      "highlight": "One platform. One vision. Everything connected.",
+      "subtitle": "AGROGINA centralizes the management of your plots, inventory, teams, finances, analytics, and marketplace — with an AI that transforms your data into decisions.",
+      "ctaDemo": "Request a Demo",
+      "ctaDiscover": "Discover Features",
+      "badge1": "Free Trial",
+      "badge2": "No Commitment",
+      "badge3": "Support Included",
+      "demoInteractive": "INTERACTIVE DEMO"
     },
-    "features": {
-      "title": "Complete features",
-      "subtitle": "All the tools you need to manage your farm",
-      "parcelManagement": "Parcel Management",
-      "parcelDesc": "Manage your parcels with precision. Track crops, surfaces and geospatial data.",
-      "teamManagement": "Team Management",
-      "teamDesc": "Permanent employees and day laborers. Attendance, wages and optimized scheduling.",
-      "satelliteAnalysis": "Satellite Analysis",
-      "satelliteDesc": "NDVI, NDWI, NDMI indices to monitor crop health via satellite.",
-      "soilAnalysis": "Soil Analysis",
-      "soilDesc": "pH, humidity, NPK, organic matter. Laboratory and field analyses.",
-      "stockManagement": "Stock Management",
-      "stockDesc": "Inputs, fertilizers, seeds. Low stock alerts and expiration management.",
-      "profitability": "Parcel Profitability",
-      "profitabilityDesc": "Calculate costs and revenues per parcel. Optimize your profitability.",
-      "analytics": "Reports & Analytics",
-      "analyticsDesc": "Customizable dashboards. Export your data and reports.",
-      "infrastructure": "Infrastructure Management",
-      "infrastructureDesc": "Equipment, buildings, irrigation systems. Maintenance and tracking.",
-      "weather": "Weather & Services",
-      "weatherDesc": "Integrated weather forecasts and utility services for your farm.",
-      "multiOrg": "Multi-Organization",
-      "multiOrgDesc": "Manage multiple farms. Permissions and roles per organization.",
-      "secure": "Secure & Compliant",
-      "secureDesc": "Secure authentication, Supabase RLS. Your data is protected.",
-      "realtime": "Real-time",
-      "realtimeDesc": "Real-time updates with React Query. Reactive interface."
+    "modules": {
+      "title": "A complete suite for every aspect of your farm",
+      "subtitle": "Everything you need, in a single interface.",
+      "parcels": "Plot Management",
+      "parcelsDesc": "Map, track your crops, manage multi-sites",
+      "stocks": "Inventory & Inputs",
+      "stocksDesc": "Real-time inventory, low stock alerts",
+      "hr": "Staff & Tasks",
+      "hrDesc": "Plan, assign, track progress",
+      "finance": "Finance & Sales",
+      "financeDesc": "Quotes, invoices, costs per plot",
+      "accounting": "Advanced Accounting",
+      "accountingDesc": "Chart of accounts, journals, balance sheet, tax",
+      "analytics": "Analytics",
+      "analyticsDesc": "Soil, water, plants, analytical weather",
+      "marketplace": "Marketplace",
+      "marketplaceDesc": "Buy inputs, sell harvest, connect partners",
+      "ai": "AgromindIA",
+      "aiDesc": "The AI that recommends, connects, optimizes",
+      "learnMore": "Learn More"
     },
-    "benefits": {
-      "title": "Why choose AGROGINA?",
-      "productivity": "Increased productivity",
-      "productivityDesc": "Automate your tasks and save time on daily management.",
-      "costReduction": "Cost reduction",
-      "costReductionDesc": "Optimize your inputs and reduce waste through data.",
-      "betterYields": "Better yields",
-      "betterYieldsDesc": "Make data-driven decisions to maximize your harvests.",
-      "sustainable": "Sustainable agriculture",
-      "sustainableDesc": "Reduce your environmental impact with precise management."
+    "steps": {
+      "title": "Operational in 3 steps",
+      "step1Title": "Connect your data",
+      "step1Desc": "Import your existing plots, inventory, and teams",
+      "step2Title": "Let AI analyze",
+      "step2Desc": "AgromindIA learns your farm and generates recommendations",
+      "step3Title": "Make the right decisions",
+      "step3Desc": "Every action is connected, every impact is visible"
     },
-    "cta": {
-      "title": "Ready to modernize your agriculture?",
-      "subtitle": "Join agricultural teams already optimizing their operations.",
-      "button": "Start for free"
+    "why": {
+      "title": "What sets us apart",
+      "connected": "Everything connected",
+      "connectedDesc": "A created task automatically impacts inventory, staff, and costs",
+      "ai": "Integrated AI",
+      "aiDesc": "Not a gimmick, a real decision engine",
+      "morocco": "Made in Morocco",
+      "moroccoDesc": "Designed for Moroccan agricultural realities",
+      "simple": "Simple and accessible",
+      "simpleDesc": "No technical jargon, quick to learn"
+    },
+    "pricing": {
+      "title": "Custom Pricing",
+      "subtitle": "Every farm is unique. Contact us for a quote tailored to your needs.",
+      "text": "From your first plot to hundreds of hectares, AGROGINA scales with you.",
+      "cta": "Request a Quote"
+    },
+    "bp": {
+      "title": "FDA Business Plan Simulator",
+      "subtitle": "Calculate your Moroccan state subsidies in a few clicks.",
+      "desc": "A complete and exclusive tool to simulate and automatically generate your business plan for the Agricultural Development Fund. Simple, fast, and designed to prevent abuse.",
+      "feature1": "Free for new members (Max 2 generations)",
+      "feature2": "Automatic framing according to DPA/ORMVA standards",
+      "feature3": "Ready for official submission",
+      "cta": "Simulate my project"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "What size of farm does AGROGINA work for?",
+      "a1": "From 10 to 10,000 hectares, the platform adapts to your scale.",
+      "q2": "How long does it take to get operational?",
+      "a2": "Initial setup in a few days, onboarding support included.",
+      "q3": "Is my data secure?",
+      "a3": "Secure hosting, automatic backups, controlled access.",
+      "q4": "Does AI replace the farmer?",
+      "a4": "No. It amplifies your expertise by giving you the right information at the right time.",
+      "q5": "Can I test before committing?",
+      "a5": "Yes, we offer a free trial period.",
+      "q6": "How can I get a quote?",
+      "a6": "Fill out the contact form, we will respond within 48h."
+    },
+    "contact": {
+      "title": "Ready to transform your farm management?",
+      "subtitle": "Request a personalized demo with our team.",
+      "formName": "Full Name",
+      "formEmail": "Professional Email",
+      "formPhone": "Phone Number",
+      "formSize": "Farm Size",
+      "formSize1": "Under 50 ha",
+      "formSize2": "50 to 200 ha",
+      "formSize3": "200 to 500 ha",
+      "formSize4": "Over 500 ha",
+      "formMsg": "Message (optional)",
+      "formSizePlaceholder": "Select farm size",
+      "validationRequired": "Please fill in all required fields.",
+      "submit": "Submit Request"
     },
     "footer": {
-      "tagline": "The complete platform to modernize your agriculture.",
+      "tagline": "AGROGINA centralizes the management of your plots, inventory, teams, finances, analytics, and marketplace.",
       "product": "Product",
+      "company": "Company",
+      "about": "About Us",
+      "legal": "Legal",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "madeIn": "Made with 🌱 in Morocco",
+      "copyright": "All rights reserved.",
       "features": "Features",
       "pricing": "Pricing",
-      "freeTrial": "Free trial",
-      "blog": "Blog",
-      "support": "Support",
-      "documentation": "Documentation",
-      "contact": "Contact",
       "faq": "FAQ",
-      "legal": "Legal",
-      "privacy": "Privacy",
-      "terms": "Terms of Service",
-      "legalNotice": "Legal Notice",
-      "copyright": "All rights reserved."
-    },
-    "trustedBy": "Trusted by agricultural professionals",
-    "trusted": {
-      "agronomists": "Agronomists",
-      "coops": "Cooperatives",
-      "exporters": "Exporters",
-      "labs": "Laboratories"
-    },
-    "nav": {
-      "blog": "Blog"
+      "blog": "Blog",
+      "contact": "Contact"
     },
     "seo": {
       "title": "AGROGINA - The All-in-One Agricultural Management Suite | Morocco",
       "description": "AGROGINA revolutionizes agriculture in Morocco. A unique platform to manage production, finance, HR, inventory and marketing. Precision agriculture and simplified farm management.",
       "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina, agritech"
-    },
-    "modules": {
-      "title": "The modules that orchestrate your operations",
-      "subtitle": "An integrated suite connecting parcel planning, team work, accounting and agronomic analysis.",
-      "cta": "Discover the module",
-      "parcels": {
-        "title": "Parcel Management",
-        "desc": "Map your parcels, track crops and link them to soil analyses."
-      },
-      "tasks": {
-        "title": "Task Planning",
-        "desc": "Assign your teams, measure time spent and track progress in real time."
-      },
-      "accounting": {
-        "title": "Integrated Accounting",
-        "desc": "Automate invoices, payments and cost tracking per farm or parcel."
-      },
-      "analytics": {
-        "title": "Analyses & Services",
-        "desc": "Leverage satellite imagery and order your laboratory analyses in a few clicks."
-      }
-    },
-    "siam": {
-      "title": "SIAM 2026 • Meet AGROGINA",
-      "description": "Book a product demonstration slot at the AGROGINA booth.",
-      "features": {
-        "demo": "Live platform demonstration.",
-        "focus": "Focus on satellite, tasks, stock and accounting.",
-        "slots": "Available slots from local cache."
-      },
-      "form": {
-        "title": "Meeting Request",
-        "description": "We will get back to you quickly with confirmation of the time slot.",
-        "fullName": "Full name",
-        "email": "Professional email",
-        "phone": "Phone",
-        "submit": "Book a SIAM Meeting",
-        "success": "Request registered. Our team confirms the meeting slot within 24h."
-      }
-    },
-    "blog": {
-      "label": "Blog",
-      "title": "Latest Insights",
-      "subtitle": "Stay updated with the latest trends and best practices in agricultural technology.",
-      "viewAll": "View all articles",
-      "readingTime": "min"
-    },
-    "pricing": {
-      "title": "Simple and transparent pricing",
-      "subtitle": "Choose the plan that fits your needs",
-      "mostPopular": "Most popular",
-      "perMonth": "/month",
-      "perHaYear": "/ha/year HT",
-      "getStarted": "Get started",
-      "contactUs": "Contact us"
-    },
-    "stats": {
-      "farms": "Farms Managed",
-      "parcels": "Parcels Tracked",
-      "hectares": "Hectares Monitored",
-      "satisfaction": "Customer Satisfaction"
-    },
-    "testimonials": {
-      "title": "Trusted by Moroccan Farmers",
-      "subtitle": "See what agricultural professionals say about AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
-        "author": "Hassan B.",
-        "role": "Citrus Grower, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.",
-        "author": "Fatima Z.",
-        "role": "Director, Olive Cooperative, Meknès"
-      },
-      "exporter1": {
-        "quote": "The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.",
-        "author": "Karim M.",
-        "role": "Export Director, AgriExport Maroc"
-      }
     }
   },
   "suppliers": {
@@ -1615,11 +1597,14 @@
       "filesDescription": "Manage files and detect orphans",
       "dangerZone": "Danger Zone",
       "dangerZoneDescription": "Manage demo data and critical actions",
+      "legal": "Legal",
+      "legalDescription": "Terms of service and privacy policy",
       "sections": {
         "personal": "Personal",
         "organization": "Organization",
         "accounting": "Accounting & Finance",
         "content": "Content & Display",
+        "legal": "Legal",
         "system": "System"
       }
     }
@@ -6223,6 +6208,71 @@
         "bank": "Bank Account",
         "petty_cash": "Petty Cash"
       }
+    }
+  },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Book your meeting with AGROGINA",
+      "subtitle": "Discover how our AgriTech platform transforms farm management. Personalized demo at our stand."
+    },
+    "sections": {
+      "info": "Your information",
+      "farm": "Your farm",
+      "slot": "Choose your slot"
+    },
+    "form": {
+      "namePlaceholder": "Full name *",
+      "companyPlaceholder": "Company / Farm",
+      "phonePlaceholder": "Phone *",
+      "emailPlaceholder": "Email",
+      "surface": "Cultivated area",
+      "region": "Region",
+      "other": "Other",
+      "otherCulturePlaceholder": "Specify your crop",
+      "submit": "Confirm my meeting request",
+      "submitting": "Submitting..."
+    },
+    "surface": {
+      "lt50": "Less than 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "More than 600 ha"
+    },
+    "validation": {
+      "nameMin": "Please enter your full name",
+      "phoneRequired": "Please enter a valid phone number",
+      "emailInvalid": "Please enter a valid email",
+      "slotRequired": "Please choose a time slot",
+      "phoneInvalid": "Invalid phone number"
+    },
+    "success": {
+      "title": "Request sent!",
+      "message": "Hello {{name}}, your request for slot {{slot}} has been received.",
+      "fallbackName": "there",
+      "subtext": "Our team will contact you within 24h."
+    },
+    "error": {
+      "submitFailed": "Unable to send your request. Please try again."
+    },
+    "crops": {
+      "olive": "Olive",
+      "citrus": "Citrus",
+      "avocado": "Avocado",
+      "datePalm": "Date palm",
+      "cereals": "Cereals",
+      "vegetables": "Market gardening"
+    },
+    "regions": {
+      "meknesFes": "Meknes-Fes",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Beni Mellal-Khenifra",
+      "rabatSale": "Rabat-Sale",
+      "tangerTetouan": "Tanger-Tetouan",
+      "oriental": "Oriental",
+      "other": "Other"
     }
   },
   "retry": "Retry",

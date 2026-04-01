@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Suspense, lazy } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
-import { Loader2 } from 'lucide-react'
+import { ContentSkeleton } from '@/components/ui/page-skeletons'
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -25,12 +25,7 @@ const ParcelReportsPage = () => {
   return (
     <div className="space-y-6">
       <Suspense
-        fallback={
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.parcel.detail.reports.loading')}</span>
-          </div>
-        }
+        fallback={<ContentSkeleton lines={6} className="p-6" />}
       >
         <ParcelReportGenerator
           parcelId={parcel.id}
