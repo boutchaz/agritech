@@ -93,7 +93,13 @@ export class ChatController {
     required: false,
     type: Number,
     description: 'Maximum number of messages to retrieve',
-    example: 10,
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'before',
+    required: false,
+    type: String,
+    description: 'Cursor: ISO timestamp to fetch messages before (for loading older messages)',
   })
   @ApiResponse({
     status: 200,
@@ -111,6 +117,7 @@ export class ChatController {
     @Req() req,
     @Param('organizationId') organizationId: string,
     @Query('limit') limit?: number,
+    @Query('before') before?: string,
   ) {
     const userId = req.user?.id || req.user?.sub;
     if (!userId) {
@@ -121,6 +128,7 @@ export class ChatController {
       userId,
       organizationId,
       limit,
+      before,
     );
   }
 

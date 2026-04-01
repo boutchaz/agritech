@@ -78,7 +78,8 @@ export class ConversationService {
   async getConversationHistory(
     userId: string,
     organizationId: string,
-    limit = 10,
+    limit = 20,
+    before?: string,
   ) {
     const client = this.databaseService.getAdminClient();
 
@@ -89,17 +90,26 @@ export class ConversationService {
       .eq('organization_id', organizationId)
       .eq('user_id', userId);
 
-    // Get messages
-    const { data: messages } = await client
+    // Build query — fetch newest first, optionally before a cursor
+    let query = client
       .from('chat_conversations')
       .select('*')
       .eq('organization_id', organizationId)
       .eq('user_id', userId)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
+    if (before) {
+      query = query.lt('created_at', before);
+    }
+
+    const { data: messages } = await query;
+
+    // Reverse to chronological order for the client
+    const sorted = (messages || []).reverse();
+
     return {
-      messages: (messages || []).map((msg: any) => ({
+      messages: sorted.map((msg: any) => ({
         id: msg.id,
         role: msg.role,
         content: msg.content,
@@ -107,6 +117,7 @@ export class ConversationService {
         metadata: msg.metadata,
       })),
       total: count || 0,
+      hasMore: (messages || []).length === limit,
     };
   }
 

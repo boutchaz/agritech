@@ -251,9 +251,9 @@ export class ChatService implements OnModuleInit {
     });
   }
 
-  async getConversationHistory(userId: string, organizationId: string, limit?: number) {
+  async getConversationHistory(userId: string, organizationId: string, limit?: number, before?: string) {
     await this.conversationService.verifyOrganizationAccess(userId, organizationId);
-    return this.conversationService.getConversationHistory(userId, organizationId, limit);
+    return this.conversationService.getConversationHistory(userId, organizationId, limit, before);
   }
 
   async clearConversationHistory(userId: string, organizationId: string) {
