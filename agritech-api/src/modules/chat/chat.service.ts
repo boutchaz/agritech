@@ -181,6 +181,29 @@ export class ChatService implements OnModuleInit {
     const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
     this.zaiProvider.setApiKey(apiKey);
 
+    // Check AI quota before streaming
+    try {
+      const quotaResult = await this.aiQuotaService.checkAndConsume(organizationId, userId, 'chat');
+      if (!quotaResult.allowed) {
+        callbacks.onError(new Error(
+          JSON.stringify({
+            message: 'AI quota exceeded',
+            error: 'AI_QUOTA_EXCEEDED',
+            limit: quotaResult.limit,
+            used: quotaResult.used,
+            resetDate: quotaResult.resetDate,
+          }),
+        ));
+        return;
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        callbacks.onError(error);
+        return;
+      }
+      this.logger.warn(`Quota check failed, proceeding: ${error.message}`);
+    }
+
     if (shouldSaveHistory) {
       await this.conversationService.saveMessage(userId, organizationId, 'user', dto.query, dto.language);
     }
@@ -203,6 +226,9 @@ export class ChatService implements OnModuleInit {
       onComplete: async () => {
         // Parse follow-up suggestions from the complete response
         const { cleanText, suggestions } = this.followUpService.parseSuggestions(fullResponse);
+
+        // Log AI usage (fire-and-forget)
+        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', 'GLM-4.5-Flash', null, false).catch(() => {});
 
         if (shouldSaveHistory) {
           await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
