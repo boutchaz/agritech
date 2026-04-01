@@ -55,9 +55,14 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
     return () => window.removeEventListener('toggle-command-palette', handler);
   }, []);
 
-  useHotkey('Mod+K', () => setOpen((prev) => !prev), {
-    meta: { name: t('keyboardShortcuts', 'Keyboard shortcuts'), description: 'Toggle command palette' },
-  });
+  const togglePaletteHotkeyOptions = useMemo(
+    () => ({
+      meta: { name: t('keyboardShortcuts', 'Keyboard shortcuts'), description: 'Toggle command palette' },
+    }),
+    [t],
+  );
+
+  useHotkey('Mod+K', () => setOpen((prev) => !prev), togglePaletteHotkeyOptions);
 
   const handleSelect = useCallback(
     (action: () => void) => {

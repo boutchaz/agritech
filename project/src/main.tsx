@@ -109,4 +109,22 @@ async function init() {
   )
 }
 
-init()
+init().catch((err) => {
+  console.error('[init] Fatal error during app initialization:', err);
+  // Remove the inline loader so the user doesn't see a forever-spinner
+  const loader = document.getElementById('app-loader');
+  if (loader) loader.remove();
+  // Show a minimal error message so the page isn't blank
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">
+        <div style="text-align:center;max-width:400px;padding:24px;">
+          <h2 style="color:#dc2626;margin-bottom:8px;">Application Error</h2>
+          <p style="color:#6b7280;margin-bottom:16px;">Something went wrong loading the application. Please try refreshing.</p>
+          <button onclick="location.reload()" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Refresh Page</button>
+        </div>
+      </div>
+    `;
+  }
+})

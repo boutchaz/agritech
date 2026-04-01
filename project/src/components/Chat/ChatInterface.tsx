@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatHistory, useClearChatHistory, useStreamMessage } from '@/hooks/useChat';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
-import { Bot, Mic, Loader2, Trash2 } from 'lucide-react';
+import { Bot, Mic, Loader2, Trash2, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { UserMessage } from './UserMessage';
@@ -27,7 +26,13 @@ interface ChatMessage {
 export function ChatInterface() {
   const { t, i18n } = useTranslation();
   const { profile, user } = useAuth();
-  const { data: history, isLoading: isLoadingHistory } = useChatHistory();
+  const {
+    data: historyData,
+    isLoading: isLoadingHistory,
+    fetchPreviousPage,
+    hasPreviousPage,
+    isFetchingPreviousPage,
+  } = useChatHistory();
   const { mutate: clearHistory } = useClearChatHistory();
   const { stream: streamMessage, isStreaming, streamedContent, streamSuggestions, resetStream } = useStreamMessage();
   const isSending = isStreaming;
@@ -48,6 +53,8 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [voiceMode, setVoiceMode] = useState(false);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
   const {
     isListening, transcript, interimTranscript, error: voiceError,
@@ -61,47 +68,130 @@ export function ChatInterface() {
     },
   });
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const streamedContentRef = useRef(streamedContent);
   const lastSentTranscriptRef = useRef('');
   const lastPlayedMessageIdRef = useRef('');
+  const isLoadingOlderRef = useRef(false);
+  const initialScrollDoneRef = useRef(false);
 
-  // Sync history
-  useEffect(() => {
-    if (history?.messages) {
-      const hm = history.messages.map((m) => ({ ...m, timestamp: new Date(m.timestamp) }));
-      setMessages((prev) => {
-        if (hm.length === 0) return [];
-        if (prev.length > 0) {
-          const localOnly = prev.filter((lm) => !hm.some((h) => h.content === lm.content && h.role === lm.role && Math.abs(lm.timestamp.getTime() - h.timestamp.getTime()) < 5000));
-          return [...hm, ...localOnly];
-        }
-        return hm;
-      });
-    } else if (history && !history.messages?.length) setMessages([]);
-  }, [history]);
+  // Helper: get the scrollable viewport element
+  const getViewport = useCallback((): HTMLElement | null => {
+    return scrollContainerRef.current;
+  }, []);
 
-  // Scroll to bottom after history loads (slight delay for DOM to render)
-  useEffect(() => {
-    if (!isLoadingHistory && messages.length > 0) {
-      const timer = setTimeout(() => {
-        if (!scrollRef.current) return;
-        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
-        const el = viewport || scrollRef.current;
-        el.scrollTop = el.scrollHeight;
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoadingHistory, messages.length]);
-
-  // Auto-scroll to bottom on new messages and initial load
-  useEffect(() => {
-    if (!scrollRef.current) return;
-    // ScrollArea ref points to the Root; the actual scrollable element is the Viewport inside it
-    const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
-    const el = viewport || scrollRef.current;
+  // Helper: scroll to bottom
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const el = getViewport();
+    if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, isLoadingHistory]);
+  }, [getViewport]);
+
+  // Helper: check if user is near bottom
+  const isNearBottom = useCallback(() => {
+    const el = getViewport();
+    if (!el) return true;
+    const threshold = 100;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, [getViewport]);
+
+  // Sync history from infinite query pages → messages
+  useEffect(() => {
+    if (!historyData?.pages) return;
+    // Flatten all pages (oldest first) — pages are stored in reverse order by TanStack
+    const allMessages: ChatMessage[] = [];
+    // Pages: index 0 = latest page, previous pages are prepended
+    // We need to combine them in chronological order
+    const pages = [...historyData.pages].reverse();
+    for (const page of pages) {
+      for (const m of page.messages) {
+        allMessages.push({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+          suggestions: m.suggestions,
+        });
+      }
+    }
+
+    setMessages((prev) => {
+      // Keep local-only messages (sent but not yet in server history)
+      const localOnly = prev.filter((lm) =>
+        !allMessages.some((h) =>
+          h.content === lm.content && h.role === lm.role &&
+          Math.abs(lm.timestamp.getTime() - h.timestamp.getTime()) < 5000
+        )
+      );
+      return [...allMessages, ...localOnly];
+    });
+  }, [historyData]);
+
+  // Initial scroll to bottom once history loads
+  useEffect(() => {
+    if (!isLoadingHistory && messages.length > 0 && !initialScrollDoneRef.current) {
+      initialScrollDoneRef.current = true;
+      // Double RAF to ensure DOM has rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      });
+    }
+  }, [isLoadingHistory, messages.length, scrollToBottom]);
+
+  // Reset initial scroll flag when history is cleared
+  useEffect(() => {
+    if (messages.length === 0) {
+      initialScrollDoneRef.current = false;
+    }
+  }, [messages.length]);
+
+  // Auto-scroll on new messages / streaming (only if user is near bottom)
+  useEffect(() => {
+    if (shouldAutoScroll) {
+      requestAnimationFrame(() => scrollToBottom());
+    }
+  }, [messages.length, streamedContent, shouldAutoScroll, scrollToBottom]);
+
+  // Scroll event handler: detect scroll-to-top for loading older + track position
+  useEffect(() => {
+    const el = getViewport();
+    if (!el) return;
+
+    const handleScroll = () => {
+      // Show/hide "scroll to bottom" button
+      const nearBottom = isNearBottom();
+      setShowScrollToBottom(!nearBottom);
+      setShouldAutoScroll(nearBottom);
+
+      // Load older messages when scrolled near top
+      if (
+        el.scrollTop < 80 &&
+        hasPreviousPage &&
+        !isFetchingPreviousPage &&
+        !isLoadingOlderRef.current
+      ) {
+        isLoadingOlderRef.current = true;
+        const prevScrollHeight = el.scrollHeight;
+
+        fetchPreviousPage().then(() => {
+          // Preserve scroll position after prepending older messages
+          requestAnimationFrame(() => {
+            const newScrollHeight = el.scrollHeight;
+            el.scrollTop = newScrollHeight - prevScrollHeight;
+            isLoadingOlderRef.current = false;
+          });
+        }).catch(() => {
+          isLoadingOlderRef.current = false;
+        });
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [getViewport, isNearBottom, hasPreviousPage, isFetchingPreviousPage, fetchPreviousPage]);
 
   // Stop voice when sending
   useEffect(() => { if (isSending && isListening) stopListening(); }, [isSending, isListening, stopListening]);
@@ -121,7 +211,6 @@ export function ChatInterface() {
   }, [messages.length, streamSuggestions]);
 
   const handleStreamError = useCallback((messageText: string, error: any) => {
-    // Check for quota exceeded error first
     if (handleQuotaError(error)) return;
 
     const errorMsg = error?.message || 'Failed to send message';
@@ -136,6 +225,8 @@ export function ChatInterface() {
   }, [voiceMode, handleQuotaError]);
 
   const proceedWithSend = useCallback((messageText: string) => {
+    // Always auto-scroll when user sends a message
+    setShouldAutoScroll(true);
     setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date() }]);
     setInput('');
     if (voiceMode) resetTranscript();
@@ -198,6 +289,11 @@ export function ChatInterface() {
     onSuccess: () => { setMessages([]); if (isListening) stopListening(); resetTranscript(); },
   });
 
+  const handleScrollToBottom = () => {
+    setShouldAutoScroll(true);
+    scrollToBottom('smooth');
+  };
+
   // Find last assistant message with suggestions (for follow-ups)
   const lastSuggestions = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -220,61 +316,107 @@ export function ChatInterface() {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0 overflow-hidden">
-        <ScrollArea className="flex-1 pr-4 min-h-0" ref={scrollRef}>
-          <div className="space-y-4">
-            {messages.length === 0 && !isLoadingHistory && (
-              <WelcomeState onSend={proceedWithSend} disabled={isSending} />
-            )}
-
-            {messages.map((message) =>
-              message.role === 'user' ? (
-                <UserMessage
-                  key={message.id}
-                  content={message.content}
-                  timestamp={message.timestamp}
-                  avatarUrl={profile?.avatar_url}
-                  firstName={profile?.first_name}
-                  lastName={profile?.last_name}
-                  email={user?.email}
-                />
-              ) : (
-                <AssistantMessage
-                  key={message.id}
-                  content={message.content}
-                  timestamp={message.timestamp}
-                  language={currentLanguage}
-                />
-              ),
-            )}
-
-            {isStreaming && streamedContent && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
+        {/* Scrollable chat area — native div instead of ScrollArea for reliable scroll control */}
+        <div className="relative flex-1 min-h-0">
+          <div
+            ref={scrollContainerRef}
+            className="h-full overflow-y-auto pr-2 scroll-smooth"
+          >
+            <div className="space-y-4 py-2">
+              {/* Loading older messages indicator */}
+              {isFetchingPreviousPage && (
+                <div className="flex items-center justify-center py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground mr-2" />
+                  <span className="text-xs text-muted-foreground">
+                    {t('chat.loadingOlder', 'Loading older messages...')}
+                  </span>
                 </div>
-                <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
-                  <div className="text-sm chat-markdown" dangerouslySetInnerHTML={{ __html: streamedContent }} />
-                  <div className="flex items-center gap-1 mt-1">
-                    <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{t('chat.loading.generating', 'Generating...')}</span>
+              )}
+
+              {/* "Load more" indicator when there are older messages */}
+              {hasPreviousPage && !isFetchingPreviousPage && (
+                <div className="flex items-center justify-center py-2">
+                  <span className="text-xs text-muted-foreground">
+                    {t('chat.scrollForMore', '↑ Scroll up to load older messages')}
+                  </span>
+                </div>
+              )}
+
+              {messages.length === 0 && !isLoadingHistory && (
+                <WelcomeState onSend={proceedWithSend} disabled={isSending} />
+              )}
+
+              {isLoadingHistory && messages.length === 0 && (
+                <div className="flex items-center justify-center h-32">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {messages.map((message) =>
+                message.role === 'user' ? (
+                  <UserMessage
+                    key={message.id}
+                    content={message.content}
+                    timestamp={message.timestamp}
+                    avatarUrl={profile?.avatar_url}
+                    firstName={profile?.first_name}
+                    lastName={profile?.last_name}
+                    email={user?.email}
+                  />
+                ) : (
+                  <AssistantMessage
+                    key={message.id}
+                    content={message.content}
+                    timestamp={message.timestamp}
+                    language={currentLanguage}
+                  />
+                ),
+              )}
+
+              {isStreaming && streamedContent && (
+                <div className="flex gap-3 justify-start">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
+                    <div className="text-sm chat-markdown" dangerouslySetInnerHTML={{ __html: streamedContent }} />
+                    <div className="flex items-center gap-1 mt-1">
+                      <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{t('chat.loading.generating', 'Generating...')}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {isSending && !streamedContent && (
-              <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-primary-foreground" />
+              {isSending && !streamedContent && (
+                <div className="flex gap-3 justify-start">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground animate-pulse">{t('chat.loading.analyzing', 'Analyzing your question...')}</span>
+                  </div>
                 </div>
-                <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground animate-pulse">{t('chat.loading.analyzing', 'Analyzing your question...')}</span>
-                </div>
-              </div>
-            )}
+              )}
+
+              {/* Invisible anchor at the bottom */}
+              <div ref={bottomRef} />
+            </div>
           </div>
-        </ScrollArea>
+
+          {/* Scroll to bottom FAB */}
+          {showScrollToBottom && (
+            <Button
+              variant="secondary"
+              size="icon"
+              className="absolute bottom-2 right-4 rounded-full shadow-lg z-10 h-8 w-8"
+              onClick={handleScrollToBottom}
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
 
         {/* Follow-up suggestions */}
         {!isStreaming && lastSuggestions.length > 0 && (

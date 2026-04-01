@@ -514,6 +514,34 @@
   margin-bottom: 0;
 }
 
+/* Custom branded scrollbar — thin, rounded, uses design tokens */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.35);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.55);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Hide scrollbar for horizontal scroll strips */
 .scrollbar-hide {
   -ms-overflow-style: none;

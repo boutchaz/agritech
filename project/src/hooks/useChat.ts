@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { chatApi, type SendMessageDto, type ChatResponse } from '@/lib/api/chat';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -40,17 +40,25 @@ export function useSendMessage() {
 }
 
 /**
- * Hook to fetch chat history
+ * Hook to fetch chat history with infinite scroll (load older messages on scroll up)
  */
 export function useChatHistory(limit = 20) {
   const { currentOrganization } = useAuth();
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['chat-history', currentOrganization?.id, limit],
-    queryFn: () => chatApi.getHistory(currentOrganization?.id, limit),
+    queryFn: ({ pageParam }) =>
+      chatApi.getHistory(currentOrganization?.id, limit, pageParam as string | undefined),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: () => undefined, // We don't load newer pages via infinite query
+    getPreviousPageParam: (firstPage) => {
+      if (!firstPage.hasMore || !firstPage.messages.length) return undefined;
+      // Return the oldest message's timestamp as cursor
+      return firstPage.messages[0].timestamp;
+    },
     enabled: !!currentOrganization?.id,
-    staleTime: 0, // Always refetch when invalidated
-    refetchOnWindowFocus: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false, // Avoid refetch resetting scroll position
   });
 }
 

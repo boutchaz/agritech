@@ -46,6 +46,7 @@ export interface ChatMessage {
 export interface ChatHistoryResponse {
   messages: ChatMessage[];
   total: number;
+  hasMore: boolean;
 }
 
 export const chatApi = {
@@ -67,12 +68,15 @@ export const chatApi = {
   async getHistory(
     organizationId?: string,
     limit = 20,
+    before?: string,
   ): Promise<ChatHistoryResponse> {
     if (!organizationId) {
       throw new OrganizationRequiredError();
     }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (before) params.append('before', before);
     return apiClient.get(
-      `${BASE_URL}/organizations/${organizationId}/chat/history?limit=${limit}`,
+      `${BASE_URL}/organizations/${organizationId}/chat/history?${params.toString()}`,
       {},
       organizationId,
     );

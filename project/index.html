@@ -186,5 +186,39 @@
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Handle chunk-load failures from stale deployments -->
+    <script>
+      window.addEventListener('error', function(e) {
+        // Detect chunk load failure (stale deployment or network error)
+        if (
+          e.message && (
+            e.message.includes('Failed to fetch dynamically imported module') ||
+            e.message.includes('Importing a module script failed') ||
+            e.message.includes('error loading dynamically imported module') ||
+            e.message.includes('ChunkLoadError')
+          )
+        ) {
+          // Only auto-reload once to avoid infinite loops
+          var reloadKey = 'agrogina:chunk-reload';
+          var lastReload = sessionStorage.getItem(reloadKey);
+          if (!lastReload || Date.now() - parseInt(lastReload, 10) > 30000) {
+            sessionStorage.setItem(reloadKey, String(Date.now()));
+            console.warn('[chunk-error-handler] Stale chunk detected, reloading...');
+            window.location.reload();
+          } else {
+            console.error('[chunk-error-handler] Reload already attempted, showing error.');
+            var root = document.getElementById('root');
+            if (root) {
+              root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">' +
+                '<div style="text-align:center;max-width:400px;padding:24px;">' +
+                '<h2 style="color:#dc2626;margin-bottom:8px;">Erreur de chargement</h2>' +
+                '<p style="color:#6b7280;margin-bottom:16px;">Une nouvelle version est disponible. Veuillez rafraîchir la page.</p>' +
+                '<button onclick="sessionStorage.removeItem(\'agrogina:chunk-reload\');location.reload()" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Rafraîchir</button>' +
+                '</div></div>';
+            }
+          }
+        }
+      });
+    </script>
   </body>
 </html>

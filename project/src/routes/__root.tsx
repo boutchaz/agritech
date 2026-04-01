@@ -8,26 +8,68 @@ import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { NotFoundPage } from '../components/NotFoundPage'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from 'react'
+
+/**
+ * Wrapper that catches errors from lazy-loaded components.
+ * Without this, a chunk-load failure would leave the Suspense fallback showing forever
+ * (empty div → "white page").
+ */
+class LazyErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[LazyErrorBoundary] Chunk load failed:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render children directly — the lazy wrapper failed but the rest of the
+      // tree (Outlet, providers, etc.) can still render.
+      return this.props.fallback ?? this.props.children;
+    }
+    return this.props.children;
+  }
+}
 
 // Lazy load non-critical UI — command palette, tour, devtools
 // Eagerly start loading these chunks since they wrap the main Outlet
 const globalCommandPaletteImport = import('../components/GlobalCommandPalette');
 const tourContextImport = import('../contexts/TourContext');
 
-const GlobalCommandPalette = lazy(() =>
+// Retry-on-failure wrapper for lazy imports — handles chunk-load errors
+// (stale deployment, network glitch) by retrying once after a short delay.
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    factory().catch((err) => {
+      console.warn('[lazyWithRetry] First attempt failed, retrying…', err);
+      return new Promise<{ default: React.ComponentType<any> }>((resolve) =>
+        setTimeout(() => resolve(factory()), 1500),
+      );
+    }),
+  );
+}
+
+const GlobalCommandPalette = lazyWithRetry(() =>
   globalCommandPaletteImport.then((mod) => ({
     default: mod.GlobalCommandPalette,
   }))
 );
 
-const TourProvider = lazy(() =>
+const TourProvider = lazyWithRetry(() =>
   tourContextImport.then((mod) => ({
     default: mod.TourProvider,
   }))
 );
 
-const TourHelpButton = lazy(() =>
+const TourHelpButton = lazyWithRetry(() =>
   import('../components/TourHelpButton').then((mod) => ({
     default: mod.TourHelpButton,
   }))
@@ -68,38 +110,65 @@ function RootComponent() {
           <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
             <AuthProviderSwitch>
               <ExperienceLevelProvider>
-                <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                  <TourProvider>
-                    <AbilityProvider>
-                      <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                        <GlobalCommandPalette>
-                          <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                            <Outlet />
-                            <OfflineIndicator />
-                            {!isOnboardingRoute && (
-                              <Suspense>
-                                <TourHelpButton />
-                              </Suspense>
-                            )}
-                            <Toaster richColors position="top-right" />
-                            {import.meta.env.DEV && (
-                              <Suspense>
-                                <TanStackRouterDevtools />
-                                <ReactQueryDevtools initialIsOpen={false} />
-                              </Suspense>
-                            )}
-                          </div>
-                        </GlobalCommandPalette>
-                      </Suspense>
-                    </AbilityProvider>
-                  </TourProvider>
-                </Suspense>
+                <LazyErrorBoundary fallback={<FallbackShell />}>
+                  <Suspense fallback={<FallbackShell />}>
+                    <TourProvider>
+                      <AbilityProvider>
+                        <LazyErrorBoundary fallback={<FallbackShell />}>
+                          <Suspense fallback={<FallbackShell />}>
+                            <GlobalCommandPalette>
+                              <AppShell isOnboardingRoute={isOnboardingRoute} />
+                            </GlobalCommandPalette>
+                          </Suspense>
+                        </LazyErrorBoundary>
+                      </AbilityProvider>
+                    </TourProvider>
+                  </Suspense>
+                </LazyErrorBoundary>
               </ExperienceLevelProvider>
             </AuthProviderSwitch>
           </NetworkStatusProvider>
         </HotkeysProvider>
       </ErrorBoundary>
     );
+}
+
+/**
+ * Fallback shell shown while lazy chunks load.
+ * Renders the Outlet so the page isn't blank — providers
+ * (TourProvider, GlobalCommandPalette) are optional wrappers.
+ */
+function FallbackShell() {
+  return (
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+      <Outlet />
+      <Toaster richColors position="top-right" />
+    </div>
+  );
+}
+
+/**
+ * Inner shell extracted to keep the JSX tree readable.
+ */
+function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
+  return (
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+      <Outlet />
+      <OfflineIndicator />
+      {!isOnboardingRoute && (
+        <Suspense>
+          <TourHelpButton />
+        </Suspense>
+      )}
+      <Toaster richColors position="top-right" />
+      {import.meta.env.DEV && (
+        <Suspense>
+          <TanStackRouterDevtools />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Suspense>
+      )}
+    </div>
+  );
 }
 
 export const Route = createRootRoute({
