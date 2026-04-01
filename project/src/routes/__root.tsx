@@ -134,17 +134,11 @@ function RootComponent() {
 }
 
 /**
- * Fallback shell shown while lazy chunks load.
- * Renders the Outlet so the page isn't blank — providers
- * (TourProvider, GlobalCommandPalette) are optional wrappers.
+ * Fallback shown while lazy chunks load.
+ * Must NOT render <Outlet /> — that can itself suspend, creating an infinite loop.
  */
 function FallbackShell() {
-  return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-      <Outlet />
-      <Toaster richColors position="top-right" />
-    </div>
-  );
+  return <div className="h-screen bg-gray-50 dark:bg-gray-900" />;
 }
 
 /**

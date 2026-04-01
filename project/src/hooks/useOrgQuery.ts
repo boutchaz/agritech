@@ -96,7 +96,6 @@ export function createOrgCrudHooks<
         queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
         options?.onSuccess?.(data, variables, context);
       },
-      ...options,
     });
   }
 
@@ -121,7 +120,6 @@ export function createOrgCrudHooks<
         queryClient.invalidateQueries({ queryKey: [resourceName.replace(/s$/, ''), variables.id] });
         options?.onSuccess?.(data, variables, context);
       },
-      ...options,
     });
   }
 
@@ -145,7 +143,6 @@ export function createOrgCrudHooks<
         queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
         options?.onSuccess?.(data, variables, context);
       },
-      ...options,
     });
   }
 

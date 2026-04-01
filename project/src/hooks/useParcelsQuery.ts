@@ -51,7 +51,7 @@ export const parcelsKeys = {
   all: ['parcels'] as const,
   byFarm: (farmId: string) => ['parcels', 'farm', farmId] as const,
   byOrganization: (organizationId: string) => ['parcels', 'organization', organizationId] as const,
-  byFarms: (farmIds: string[]) => ['parcels', 'farms', farmIds.sort()] as const,
+  byFarms: (farmIds: string[]) => ['parcels', 'farms', [...farmIds].sort().join(',')] as const,
   byId: (parcelId: string) => ['parcels', parcelId] as const,
   applications: (parcelId: string) => ['parcels', parcelId, 'applications'] as const,
 };
