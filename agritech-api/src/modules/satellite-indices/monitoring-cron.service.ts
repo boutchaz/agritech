@@ -27,7 +27,7 @@ export class MonitoringCronService {
       const supabase = this.db.getAdminClient();
       const { data: parcels, error } = await supabase
         .from("parcels")
-        .select("id, organization_id, farm_id, crop_type, ai_phase")
+        .select("id, organization_id, farm_id, crop_type, ai_phase, planting_year")
         .in("ai_phase", [
           "active",
           "pret_calibrage",
@@ -44,12 +44,19 @@ export class MonitoringCronService {
       this.logger.log(`Found ${parcels.length} active parcels to sync`);
 
       const endDate = new Date().toISOString().split("T")[0];
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - 10);
-      const startDateStr = startDate.toISOString().split("T")[0];
 
       for (const parcel of parcels) {
         try {
+          const startDateStr = await this.satelliteCache.getParcelSyncStartDate(
+            parcel.id,
+            parcel.organization_id,
+            parcel.planting_year ?? null,
+          );
+
+          this.logger.log(
+            `[Monitoring] Delta sync for parcel ${parcel.id}: ${startDateStr} → ${endDate}`,
+          );
+
           const syncResult = await this.satelliteCache.syncParcelSatelliteData(
             parcel.id,
             parcel.organization_id,

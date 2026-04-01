@@ -3,6 +3,7 @@ import { Joyride, STATUS, EVENTS, ACTIONS } from 'react-joyride';
 import type { Step, CallBackProps, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
@@ -1341,12 +1342,10 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const shouldRun = tourState.isRunning && currentSteps.length > 0;
 
   // ESC key listener to dismiss running tour
-  useEffect(() => {
-    if (!tourState.isRunning) return;
-    const handler = handleEscKey(endTour);
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [tourState.isRunning, endTour]);
+  useHotkey('Escape', endTour, {
+    enabled: tourState.isRunning,
+    meta: { name: t('close', 'Close'), description: 'End guided tour' },
+  });
 
   useEffect(() => {
     if (isOnboardingRoute && tourState.isRunning) {

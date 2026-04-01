@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import {
   MapPin,
   Monitor,
@@ -133,15 +134,15 @@ const LandingPage: React.FC = () => {
     if (!mobileMenuOpen) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMobileMenuOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', onKey);
     };
   }, [mobileMenuOpen]);
+
+  useHotkey('Escape', () => setMobileMenuOpen(false), {
+    enabled: mobileMenuOpen,
+    meta: { name: t('landing.nav.closeMenu', 'Close menu'), description: 'Close mobile navigation menu' },
+  });
 
   const openVideoModal = useCallback(() => {
     setVideoModalOpen(true);

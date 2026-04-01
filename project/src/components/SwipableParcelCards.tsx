@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useHotkeys } from '@tanstack/react-hotkeys';
 import { Button } from '@/components/ui/button';
 import { StatusDot } from '@/components/ui/status-dot';
 
@@ -44,23 +45,12 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
   }, [selectedParcel, parcels]);
 
   // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        prevSlide();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        nextSlide();
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('keydown', handleKeyDown);
-      return () => container.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [currentIndex, parcels.length]);
+  useHotkeys(
+    [
+      { hotkey: 'ArrowLeft', callback: () => prevSlide() },
+      { hotkey: 'ArrowRight', callback: () => nextSlide() },
+    ],
+  );
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);

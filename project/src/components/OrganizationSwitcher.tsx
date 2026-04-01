@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { Building, ChevronDown, Check, Settings, Users, LogOut } from 'lucide-react';
@@ -55,17 +56,19 @@ const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = f
       }
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-
     document.addEventListener('pointerdown', handlePointerDown, true);
-    window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown, true);
-      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  useHotkey('Escape', () => {
+    setIsOpen(false);
+    setShowFarms(false);
+  }, {
+    enabled: isOpen,
+    meta: { name: t('close', 'Close'), description: 'Close organization switcher' },
+  });
 
   useEffect(() => {
     if (!isOpen || !buttonRef.current) return;

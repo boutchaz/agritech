@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { marked } from 'marked'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+import { useHotkeys } from '@tanstack/react-hotkeys'
 import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/pitch-deck')({
@@ -163,19 +164,12 @@ function PitchDeck() {
     }, [])
 
     // Keyboard navigation
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight' || e.key === 'Space') {
-                nextSlide()
-            } else if (e.key === 'ArrowLeft') {
-                prevSlide()
-            } else if (e.key === 'f') {
-                toggleFullScreen()
-            }
-        }
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [nextSlide, prevSlide])
+    useHotkeys([
+        { hotkey: 'ArrowRight', callback: () => nextSlide() },
+        { hotkey: 'Space', callback: () => nextSlide() },
+        { hotkey: 'ArrowLeft', callback: () => prevSlide() },
+        { hotkey: 'F', callback: () => toggleFullScreen() },
+    ])
 
     const toggleFullScreen = () => {
         if (!document.fullscreenElement) {
