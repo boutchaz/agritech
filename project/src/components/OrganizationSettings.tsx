@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot, Map as MapIcon, ShoppingCart } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Map as MapIcon, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
 import { DEFAULT_CURRENCY, type Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
-import AIProvidersSettings from './settings/AIProvidersSettings';
 import { getMarketplaceUrl } from '@/lib/marketplace-link';
 import { Button } from '@/components/ui/button';
 
@@ -214,7 +213,6 @@ const OrganizationSettings: React.FC = () => {
 
   const tabs = [
     { id: 'general' as const, label: t('organization.tabs.general', 'Général'), icon: Building },
-    { id: 'ai-providers' as const, label: t('organization.tabs.aiProviders', 'Fournisseurs IA'), icon: Bot },
   ];
 
   return (
@@ -292,13 +290,6 @@ const OrganizationSettings: React.FC = () => {
           <p className="text-green-600 dark:text-green-400">
             {t('organization.success')}
           </p>
-        </div>
-      )}
-
-      {/* AI Providers Tab */}
-      {activeTab === 'ai-providers' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <AIProvidersSettings />
         </div>
       )}
 
