@@ -3,15 +3,15 @@ import { useState, useEffect } from 'react'
 const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed'
 
 /**
- * Hook to detect desktop screen size (lg breakpoint = 1024px)
+ * Hook to detect tablet+ screen size (md breakpoint = 768px)
  */
 export function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' && window.innerWidth >= 1024
+    typeof window !== 'undefined' && window.innerWidth >= 768
   )
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const mediaQuery = window.matchMedia('(min-width: 768px)')
     const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
     setIsDesktop(mediaQuery.matches)
     mediaQuery.addEventListener('change', handleChange)

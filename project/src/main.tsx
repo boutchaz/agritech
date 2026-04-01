@@ -54,7 +54,48 @@ declare module '@tanstack/react-router' {
   }
 }
 
+/**
+ * One-time cleanup: unregister any rogue/manually-registered service workers
+ * from before vite-plugin-pwa was set up. Once the new PWA SW takes over,
+ * this is a no-op. Uses a localStorage flag to only run once.
+ */
+async function cleanupLegacyServiceWorkers() {
+  const CLEANUP_KEY = 'agrogina:sw-cleanup-v1';
+  if (localStorage.getItem(CLEANUP_KEY)) return;
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        // Unregister any SW that isn't from vite-plugin-pwa
+        // (vite-plugin-pwa SWs are at /sw.js)
+        if (registration.active?.scriptURL && !registration.active.scriptURL.endsWith('/sw.js')) {
+          console.warn('[sw-cleanup] Unregistering legacy SW:', registration.active.scriptURL);
+          await registration.unregister();
+        }
+      }
+      // Also clear old workbox/cache storage buckets
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          // Only delete non-workbox caches (workbox uses `workbox-` prefix)
+          if (!name.startsWith('workbox-') && !name.startsWith('api-cache')) {
+            console.warn('[sw-cleanup] Deleting legacy cache:', name);
+            await caches.delete(name);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[sw-cleanup] Cleanup failed (non-fatal):', err);
+    }
+  }
+  localStorage.setItem(CLEANUP_KEY, String(Date.now()));
+}
+
 async function init() {
+  // Clean up any legacy service workers from previous PWA attempts
+  await cleanupLegacyServiceWorkers();
+
   // Defer Sentry initialization to not block first paint
   if (import.meta.env.PROD) {
     import('./lib/sentry').then(({ initSentry }) => initSentry(router));

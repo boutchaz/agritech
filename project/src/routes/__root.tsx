@@ -6,6 +6,7 @@ import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
+import { ServiceWorkerUpdate } from '../components/ServiceWorkerUpdate'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { NotFoundPage } from '../components/NotFoundPage'
 import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from 'react'
@@ -152,6 +153,7 @@ function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
     <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
       <Outlet />
       <OfflineIndicator />
+      <ServiceWorkerUpdate />
       {!isOnboardingRoute && (
         <Suspense>
           <TourHelpButton />

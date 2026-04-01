@@ -115,6 +115,35 @@
     overflow: hidden;
   }
 
+  /* ===== Tablet Demo Optimizations ===== */
+
+  /* Standalone PWA: hide status bar gap, use full screen */
+  @media all and (display-mode: standalone) {
+    body {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  /* Prevent pull-to-refresh and overscroll bounce on tablet */
+  html, body, #root {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text selection during demo swipes */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Tablet-specific: smoother scroll in content areas */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    [data-main-scroll] {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
   /* Defend main scroll container against Radix UI / react-remove-scroll
      injecting inline style="overflow: initial" when dialogs close */
   main[data-main-scroll] {

@@ -19,14 +19,23 @@ import {
   HardDrive,
   Calendar,
   Brain,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Separator } from "./ui/separator";
+import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { ALL_ROLES, ADMIN_ROLES, ADMIN_AND_MANAGER_ROLES } from "../types/auth";
 import type { RoleName } from "../types/auth";
-
+import { cn } from "../lib/utils";
 
 interface SettingsMenuItem {
   id: string;
@@ -47,19 +56,30 @@ interface SettingsLayoutProps {
   children: React.ReactNode;
 }
 
+const SETTINGS_COLLAPSED_KEY = "settingsSidebarCollapsed";
+
 const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SETTINGS_COLLAPSED_KEY);
+    return saved === "true";
+  });
+
+  const toggleCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    localStorage.setItem(SETTINGS_COLLAPSED_KEY, String(newValue));
+  };
 
   useEffect(() => {
     const mainEl = document.querySelector('[data-main-scroll]');
     if (mainEl) {
       mainEl.scrollTo({ top: 0 });
     }
-   
   }, [location.pathname]);
 
   // Define menu sections with grouped items
@@ -255,38 +275,77 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     const Icon = item.icon;
     const active = isActive(item.path);
 
+    if (isCollapsed) {
+      return (
+        <Tooltip key={item.id}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => handleNavigate(item.path)}
+              data-tour={`settings-${item.id}`}
+              className={cn(
+                "w-full flex items-center justify-center p-2.5 rounded-lg transition-colors",
+                active
+                  ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400",
+              )}
+            >
+              <Icon
+                className={cn(
+                  "h-5 w-5 flex-shrink-0",
+                  active
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300",
+                )}
+              />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            <p className="font-medium">{item.name}</p>
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
     return (
       <button
         key={item.id}
         type="button"
         onClick={() => handleNavigate(item.path)}
         data-tour={`settings-${item.id}`}
-        className={`w-full text-start p-3 sm:p-4 rounded-lg transition-colors group ${
+        className={cn(
+          "w-full text-start p-3 sm:p-4 rounded-lg transition-colors group",
           active
             ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-            : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-        }`}
+            : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
+        )}
       >
         <div className="flex items-start gap-3">
           <Icon
-            className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+            className={cn(
+              "h-5 w-5 mt-0.5 flex-shrink-0",
               active
                 ? "text-green-600 dark:text-green-400"
-                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-            }`}
+                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300",
+            )}
           />
           <div className="flex-1 min-w-0">
             <div
-              className={`font-medium text-start text-sm sm:text-base ${active ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-white"}`}
+              className={cn(
+                "font-medium text-start text-sm sm:text-base",
+                active ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-white",
+              )}
             >
               {item.name}
             </div>
             <div
-              className={`text-xs sm:text-sm mt-1 text-start ${
+              className={cn(
+                "text-xs sm:text-sm mt-1 text-start",
                 active
                   ? "text-green-600 dark:text-green-400"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
+                  : "text-gray-500 dark:text-gray-400",
+              )}
             >
               {item.description}
             </div>
@@ -300,12 +359,15 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     visibleSections.map((section, sectionIndex) => (
       <div key={section.id} data-tour={`settings-section-${section.id}`}>
         {sectionIndex > 0 && <Separator className="my-3" />}
-        <div className="px-1 pt-2 pb-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            {section.label}
-          </span>
-        </div>
-        <div className="space-y-1">
+        {!isCollapsed && (
+          <div className="px-1 pt-2 pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              {section.label}
+            </span>
+          </div>
+        )}
+        {isCollapsed && sectionIndex > 0 && <div className="py-1" />}
+        <div className={cn("space-y-1", isCollapsed && "flex flex-col items-center")}>
           {section.items.map(renderItem)}
         </div>
       </div>
@@ -314,19 +376,87 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   return (
     <div className="flex h-full relative">
       {/* Desktop Settings Sidebar */}
-      <div className="hidden md:block w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t("settings.title")}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t("settings.subtitle")}
-          </p>
+      <TooltipProvider delayDuration={200}>
+        <div
+          className={cn(
+            "hidden md:flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out",
+            isCollapsed ? "w-16" : "w-80",
+          )}
+        >
+          {/* Header */}
+          <div
+            className={cn(
+              "flex-shrink-0 border-b border-gray-200 dark:border-gray-700",
+              isCollapsed ? "p-2" : "p-6",
+            )}
+          >
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/dashboard" })}
+                    className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {t("settings.backToDashboard", "Back to Dashboard")}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {t("settings.title")}
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {t("settings.subtitle")}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Navigation */}
+          <nav
+            className={cn(
+              "flex-1 overflow-y-auto",
+              isCollapsed ? "p-2" : "p-4",
+            )}
+            data-tour="settings-menu"
+          >
+            {renderSections()}
+          </nav>
+
+          {/* Collapse Toggle */}
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-2">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full h-9 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100",
+                isCollapsed ? "justify-center" : "justify-start",
+              )}
+              onClick={toggleCollapse}
+              title={
+                isCollapsed
+                  ? t("sidebar.expand", "Expand sidebar")
+                  : t("sidebar.collapse", "Collapse sidebar")
+              }
+            >
+              {isCollapsed ? (
+                <PanelLeft className="h-4 w-4" />
+              ) : (
+                <>
+                  <PanelLeftClose className="h-4 w-4 flex-shrink-0 mr-3" />
+                  <span className="flex-1 text-left text-sm">
+                    {t("sidebar.collapse", "Collapse")}
+                  </span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
-        <nav className="p-4" data-tour="settings-menu">
-          {renderSections()}
-        </nav>
-      </div>
+      </TooltipProvider>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
