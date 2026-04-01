@@ -834,21 +834,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
 
   const tourDefinitions = useMemo(() => getTourDefinitions(t), [t]);
 
-  // Load tour preferences on mount and when user changes
-  useEffect(() => {
-    loadTourPreferences();
-
-    return () => {
-      // Invalidate any in-flight preference load for the previous user/render.
-      loadRequestIdRef.current += 1;
-    };
-  }, [user?.id]);
-
-  /**
-   * Load tour preferences from backend API with localStorage fallback
-   */
-  const loadTourPreferences = async () => {
-    // If no user, use localStorage only
+  const loadTourPreferences = useCallback(async () => {
     if (!user) {
       const local = getLocalStorageTours();
       setTourState(prev => ({
@@ -864,7 +850,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     const requestId = ++loadRequestIdRef.current;
     const mutationVersionAtRequestStart = mutationVersionRef.current;
 
-    // Start loading
     setTourState(prev => ({
       ...prev,
       isLoading: true,
@@ -873,7 +858,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     }));
 
     try {
-      // Try to fetch from backend API with retry logic
       const preferences = await retryTourApiCall(
         () => tourPreferencesApi.getTourPreferences()
       );
@@ -885,7 +869,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         return;
       }
 
-      // Update state and localStorage with backend data
       setTourState(prev => ({
         ...prev,
         completedTours: preferences.completed_tours as TourId[],
@@ -895,7 +878,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         lastSyncError: null,
       }));
 
-      // Update localStorage for offline fallback
       setLocalStorageTours(
         preferences.completed_tours as TourId[],
         preferences.dismissed_tours as TourId[]
@@ -912,7 +894,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         return;
       }
 
-      // Fall back to localStorage
       const local = getLocalStorageTours();
       setTourState(prev => ({
         ...prev,
@@ -923,7 +904,12 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         lastSyncError: errorMessage,
       }));
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    const id = setTimeout(() => loadTourPreferences(), 0);
+    return () => { clearTimeout(id); loadRequestIdRef.current += 1; };
+  }, [loadTourPreferences]);
 
   /**
    * Save completed tours to backend with localStorage fallback
@@ -1335,7 +1321,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
    */
   const refetchPreferences = useCallback(async () => {
     await loadTourPreferences();
-  }, [user?.id]);
+  }, [loadTourPreferences]);
 
   const rawSteps = tourState.currentTour ? tourDefinitions[tourState.currentTour] : [];
   const currentSteps = filterStepsByDomPresence(rawSteps);
@@ -1347,11 +1333,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     meta: { name: t('close', 'Close'), description: 'End guided tour' },
   });
 
-  useEffect(() => {
-    if (isOnboardingRoute && tourState.isRunning) {
-      endTour();
-    }
-  }, [endTour, isOnboardingRoute, tourState.isRunning]);
+  if (isOnboardingRoute && tourState.isRunning) {
+    endTour();
+  }
 
   return (
     <TourContext.Provider

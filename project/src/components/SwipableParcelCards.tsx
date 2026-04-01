@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useHotkeys } from '@tanstack/react-hotkeys';
 import { Button } from '@/components/ui/button';
@@ -33,16 +33,17 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
   const [startX, setStartX] = useState(0);
   const [translateX, setTranslateX] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevSelectedParcelIdRef = useRef(selectedParcel?.id);
 
-  // Sync currentIndex with selectedParcel
-  useEffect(() => {
+  if (selectedParcel?.id !== prevSelectedParcelIdRef.current) {
+    prevSelectedParcelIdRef.current = selectedParcel?.id;
     if (selectedParcel && parcels.length > 0) {
       const parcelIndex = parcels.findIndex(p => p.id === selectedParcel.id);
-      if (parcelIndex !== -1 && parcelIndex !== currentIndex) {
+      if (parcelIndex !== -1) {
         setCurrentIndex(parcelIndex);
       }
     }
-  }, [selectedParcel, parcels]);
+  }
 
   // Keyboard navigation
   useHotkeys(
