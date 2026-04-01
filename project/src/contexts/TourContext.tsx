@@ -833,6 +833,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const loadRequestIdRef = useRef(0);
   const mutationVersionRef = useRef(0);
+  const startTourTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     dismissedTours: [],
@@ -1032,7 +1033,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     // Tours that target sidebar nav items - expand sidebar if collapsed
     const sidebarTours: TourId[] = ['welcome', 'full-app'];
     if (sidebarTours.includes(tourId)) {
-      // Expand sidebar by setting localStorage and dispatching event
       const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
       if (isCollapsed) {
         localStorage.setItem('sidebarCollapsed', 'false');
@@ -1040,15 +1040,30 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       }
     }
 
+    // Cancel any pending startTour timeout to prevent race conditions
+    if (startTourTimeoutRef.current) {
+      clearTimeout(startTourTimeoutRef.current);
+      startTourTimeoutRef.current = null;
+    }
+
     if (targetRoute) {
       navigate({ to: targetRoute });
-      setTimeout(() => {
-        setTourState(prev => ({
-          ...prev,
-          currentTour: tourId,
-          isRunning: true,
-          stepIndex: 0,
-        }));
+      // Immediately mark as running to block auto-start hooks during navigation delay.
+      // currentTour stays null so Joyride doesn't render yet (no steps = shouldRun false).
+      setTourState(prev => ({
+        ...prev,
+        isRunning: true,
+        currentTour: null,
+        stepIndex: 0,
+      }));
+      startTourTimeoutRef.current = setTimeout(() => {
+        startTourTimeoutRef.current = null;
+        setTourState(prev => {
+          // Only activate if still in the pending state we set above.
+          // If endTour() was called or another startTour replaced us, bail out.
+          if (!prev.isRunning || prev.currentTour !== null) return prev;
+          return { ...prev, currentTour: tourId, stepIndex: 0 };
+        });
       }, 500);
     } else {
       setTourState(prev => ({
@@ -1061,6 +1076,11 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   }, [isOnboardingRoute, navigate]);
 
   const endTour = useCallback(() => {
+    // Also cancel any pending delayed start
+    if (startTourTimeoutRef.current) {
+      clearTimeout(startTourTimeoutRef.current);
+      startTourTimeoutRef.current = null;
+    }
     setTourState(prev => ({
       ...prev,
       currentTour: null,
@@ -1147,51 +1167,17 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
     const { status, type, action, index, size } = data;
 
-    // Handle status changes first — FINISHED / SKIPPED take priority
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
-      // Let the status handlers below deal with cleanup
-    } else if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
-      // Guard: don't increment past the last step
-      if (index + 1 < size) {
-        setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
-      }
-    } else if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
-      setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
-    }
-
-    // Handle overlay click dismiss
+    // --- 1. Overlay / close button clicked → end immediately ---
     if (action === ACTIONS.CLOSE) {
       endTour();
       return;
     }
 
-    if (status === STATUS.SKIPPED) {
-      const currentTour = tourState.currentTour;
-
-      if (!currentTour) {
-        endTour();
-        return;
-      }
-
-      if (!tourState.dismissedTours.includes(currentTour)) {
-        dismissTour(currentTour);
-        return;
-      }
-
-      endTour();
-      return;
-    }
-
+    // --- 2. Tour finished (last step completed) ---
     if (status === STATUS.FINISHED) {
       setTourState(prev => {
         const { currentTour, completedTours } = prev;
-
-        if (!currentTour) {
-          endTour();
-          return prev;
-        }
-
-        if (!completedTours.includes(currentTour)) {
+        if (currentTour && !completedTours.includes(currentTour)) {
           const newCompletedTours = [...completedTours, currentTour];
           saveCompletedTours(newCompletedTours);
           return {
@@ -1202,15 +1188,46 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
             stepIndex: 0,
           };
         }
-
-        endTour();
-        return {
-          ...prev,
-          currentTour: null,
-          isRunning: false,
-          stepIndex: 0,
-        };
+        return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
       });
+      return;
+    }
+
+    // --- 3. Tour skipped ---
+    if (status === STATUS.SKIPPED) {
+      const currentTour = tourState.currentTour;
+      if (currentTour && !tourState.dismissedTours.includes(currentTour)) {
+        dismissTour(currentTour);
+      } else {
+        endTour();
+      }
+      return;
+    }
+
+    // --- 4. Target not found → skip to next step (or end if last) ---
+    // In controlled mode Joyride does NOT auto-advance; we must handle it.
+    if (type === EVENTS.TARGET_NOT_FOUND) {
+      setTourState(prev => {
+        const nextIndex = prev.stepIndex + 1;
+        if (nextIndex >= size) {
+          // No more steps — end the tour
+          return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
+        }
+        return { ...prev, stepIndex: nextIndex };
+      });
+      return;
+    }
+
+    // --- 5. Step navigation ---
+    if (type === EVENTS.STEP_AFTER) {
+      if (action === ACTIONS.NEXT) {
+        // Don't increment past last step — FINISHED handles that
+        if (index + 1 < size) {
+          setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
+        }
+      } else if (action === ACTIONS.PREV) {
+        setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
+      }
     }
   }, [dismissTour, endTour, saveCompletedTours, tourState.currentTour, tourState.dismissedTours]);
 

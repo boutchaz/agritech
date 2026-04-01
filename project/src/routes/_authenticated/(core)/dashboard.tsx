@@ -75,8 +75,6 @@ const AppContent: React.FC = () => {
 
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
-  // After welcome is done, auto-start the dashboard-specific tour on next visit
-  useAutoStartTour('dashboard', 2500);
 
   // Track dashboard page view (fire once on mount + when live mode changes)
   useEffect(() => {
