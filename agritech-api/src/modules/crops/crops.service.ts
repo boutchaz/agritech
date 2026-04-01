@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { CropFiltersDto, CreateCropDto } from "./dto";
+import { sanitizeSearch } from "../../common/utils/sanitize-search";
 
 @Injectable()
 export class CropsService {
@@ -39,7 +40,7 @@ export class CropsService {
       query = query.eq("status", filters.status);
     }
     if (filters.search) {
-      query = query.ilike("name", `%${filters.search}%`);
+      { const s = sanitizeSearch(filters.search); if (s) query = query.ilike("name", `%${s}%`); }
     }
 
     // Apply sorting

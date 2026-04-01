@@ -217,10 +217,14 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // For thebzlab.online subdomains, allow only HTTPS and single-level subdomains
-      // to prevent abuse via attacker-controlled deep subdomains
+      // For thebzlab.online subdomains, only allow known app prefixes
+      // to prevent abuse via attacker-controlled subdomains
+      const ALLOWED_THEBZLAB_SUBDOMAINS = [
+        'marketplace', 'dashboard', 'agritech', 'agritech-dashboard',
+        'agritech-api', 'agritech-marketplace', 'agritech-satellite',
+      ];
       const thebzlabMatch = origin.match(/^https:\/\/([a-z0-9-]+)\.thebzlab\.online$/);
-      if (thebzlabMatch) {
+      if (thebzlabMatch && ALLOWED_THEBZLAB_SUBDOMAINS.includes(thebzlabMatch[1])) {
         logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
         return callback(null, true);
       }

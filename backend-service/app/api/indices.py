@@ -18,6 +18,7 @@ from app.models.schemas import (
     InteractiveDataResponse,
     HeatmapRequest,
     HeatmapDataResponse,
+    AvailableDatesRequest,
     IndexValue,
     ErrorResponse,
 )
@@ -614,7 +615,7 @@ async def calculate_indices(
             f"dates={request.date_range.start_date} -> {request.date_range.end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/timeseries", response_model=TimeSeriesResponse)
@@ -924,7 +925,7 @@ async def get_time_series(
             f"dates={request.date_range.start_date} -> {request.date_range.end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/export")
@@ -1060,7 +1061,7 @@ async def export_index_map(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/interactive", response_model=InteractiveDataResponse)
@@ -1163,7 +1164,7 @@ async def get_interactive_data(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/heatmap", response_model=HeatmapDataResponse)
@@ -1268,7 +1269,7 @@ async def get_heatmap_data(
             f"error={e}, elapsed={total_elapsed:.2f}s, "
             f"geometry={geo_summary}, date={request.date}"
         )
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail="No data found for the specified parameters")
     except HTTPException:
         raise
     except Exception as e:
@@ -1279,7 +1280,7 @@ async def get_heatmap_data(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/available", response_model=List[str])
@@ -1300,7 +1301,7 @@ async def get_provider_info():
 
 @router.post("/available-dates")
 async def get_available_dates(
-    request: Dict,
+    request: AvailableDatesRequest,
     provider: Optional[str] = Query(
         None, description="Satellite provider (gee, cdse, or auto)"
     ),
@@ -1308,11 +1309,11 @@ async def get_available_dates(
     """Get dates with available satellite imagery for a given AOI and date range"""
     req_id = str(uuid.uuid4())[:8]
 
-    # Parse request parameters
-    aoi_geometry = request.get("aoi", {}).get("geometry")
-    start_date = request.get("start_date")
-    end_date = request.get("end_date")
-    max_cloud_coverage = request.get("cloud_coverage", 30)
+    # Parse request parameters from validated Pydantic model
+    aoi_geometry = request.aoi.geometry.model_dump()
+    start_date = request.start_date
+    end_date = request.end_date
+    max_cloud_coverage = request.cloud_coverage or 30
 
     geo_summary = (
         _geometry_summary(aoi_geometry) if aoi_geometry else {"error": "no_geometry"}
@@ -1323,8 +1324,7 @@ async def get_available_dates(
         f"geometry={geo_summary}, "
         f"dates={start_date} -> {end_date}, "
         f"max_cloud_coverage={max_cloud_coverage}, "
-        f"provider_param={provider!r}, "
-        f"raw_request_keys={list(request.keys())}"
+        f"provider_param={provider!r}"
     )
 
     utm_info = geo_summary.get("utm", {}) if isinstance(geo_summary, dict) else {}
@@ -1354,17 +1354,8 @@ async def get_available_dates(
     t_start = time.monotonic()
 
     try:
-        # --- Validate inputs ---
-        if not all([aoi_geometry, start_date, end_date]):
-            logger.warning(
-                f"[available-dates][{req_id}] Missing required parameters: "
-                f"has_aoi={aoi_geometry is not None}, "
-                f"has_start_date={start_date is not None}, "
-                f"has_end_date={end_date is not None}"
-            )
-            raise HTTPException(status_code=400, detail="Missing required parameters")
-
-        # Validate date format and range
+        # Date format and range already validated by Pydantic model.
+        # Additional runtime checks below for logging purposes.
         try:
             parsed_start = datetime.strptime(start_date, "%Y-%m-%d")
             parsed_end = datetime.strptime(end_date, "%Y-%m-%d")
@@ -1843,4 +1834,4 @@ async def get_available_dates(
             f"dates={start_date} -> {end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

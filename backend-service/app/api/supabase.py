@@ -19,7 +19,7 @@ from app.models.schemas import (
 )
 from app.services import supabase_service, earth_engine_service
 from app.services.satellite import get_satellite_provider
-from app.middleware.auth import require_organization_access
+from app.middleware.auth import require_organization_access, get_current_user
 import logging
 import ee
 
@@ -37,18 +37,18 @@ async def get_organization_farms(
         return {"farms": farms}
     except Exception as e:
         logger.error(f"Error fetching organization farms: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/farms/{farm_id}/parcels")
-async def get_farm_parcels(farm_id: str):
+async def get_farm_parcels(farm_id: str, current_user: dict = Depends(get_current_user)):
     """Get all parcels for a farm"""
     try:
         parcels = await supabase_service.get_farm_parcels(farm_id)
         return {"parcels": parcels}
     except Exception as e:
         logger.error(f"Error fetching farm parcels: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch farm parcels")
 
 
 @router.get("/parcels/{parcel_id}/satellite-data")
@@ -59,6 +59,7 @@ async def get_parcel_satellite_data(
     ),
     end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format"),
     indices: Optional[str] = Query(None, description="Comma-separated list of indices"),
+    current_user: dict = Depends(get_current_user),
 ):
     """Get satellite indices data for a parcel"""
     try:
@@ -79,11 +80,11 @@ async def get_parcel_satellite_data(
         return {"satellite_data": data}
     except Exception as e:
         logger.error(f"Error fetching parcel satellite data: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch satellite data")
 
 
 @router.post("/cloud-coverage/check")
-async def check_cloud_coverage(request: CloudCoverageCheckRequest):
+async def check_cloud_coverage(request: CloudCoverageCheckRequest, current_user: dict = Depends(get_current_user)):
     """Check cloud coverage availability for given parameters"""
     try:
         result = earth_engine_service.check_cloud_coverage(
@@ -96,12 +97,12 @@ async def check_cloud_coverage(request: CloudCoverageCheckRequest):
         return CloudCoverageCheckResponse(**result)
     except Exception as e:
         logger.error(f"Error checking cloud coverage: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to check cloud coverage")
 
 
 @router.post("/processing/batch", response_model=BatchProcessingResponse)
 async def create_batch_processing_job(
-    request: BatchProcessingRequest, background_tasks: BackgroundTasks
+    request: BatchProcessingRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)
 ):
     """Create a batch processing job for satellite indices calculation"""
     try:
@@ -160,11 +161,11 @@ async def create_batch_processing_job(
 
     except Exception as e:
         logger.error(f"Error creating batch processing job: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/processing/jobs/{job_id}")
-async def get_processing_job_status(job_id: str):
+async def get_processing_job_status(job_id: str, current_user: dict = Depends(get_current_user)):
     """Get the status of a processing job"""
     try:
         job = await supabase_service.get_processing_job(job_id)
@@ -175,11 +176,11 @@ async def get_processing_job_status(job_id: str):
         raise
     except Exception as e:
         logger.error(f"Error fetching job status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/processing/jobs/{job_id}/cancel")
-async def cancel_processing_job(job_id: str):
+async def cancel_processing_job(job_id: str, current_user: dict = Depends(get_current_user)):
     """Cancel a processing job"""
     try:
         success = await supabase_service.update_processing_job(
@@ -192,7 +193,7 @@ async def cancel_processing_job(job_id: str):
             raise HTTPException(status_code=500, detail="Failed to cancel job")
     except Exception as e:
         logger.error(f"Error cancelling job: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/organizations/{organization_id}/statistics")
@@ -201,6 +202,7 @@ async def get_organization_statistics(
     start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
     end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
     indices: Optional[str] = Query(None, description="Comma-separated list of indices"),
+    auth_context: dict = Depends(require_organization_access),
 ):
     """Get satellite indices statistics for an organization"""
     try:
@@ -285,7 +287,7 @@ async def get_organization_statistics(
 
     except Exception as e:
         logger.error(f"Error fetching organization statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def process_batch_job(

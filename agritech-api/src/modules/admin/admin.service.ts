@@ -415,7 +415,8 @@ export class AdminService {
       queryBuilder = queryBuilder.eq('subscription_status', query.status);
     }
     if (query.search) {
-      queryBuilder = queryBuilder.ilike('name', `%${query.search}%`);
+      const s = sanitizeSearch(query.search);
+      if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
     }
 
     const sortBy = query.sortBy || 'created_at';

@@ -10,6 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Public } from './decorators/public.decorator';
 import { SignupDto, SignupResponseDto, SetupOrganizationDto, SetupOrganizationResponseDto } from './dto/signup.dto';
 import { IsEmail, IsNotEmpty, IsString, IsBoolean, IsOptional } from 'class-validator';
@@ -110,6 +111,13 @@ export class RefreshTokenDto {
   refreshToken: string;
 }
 
+export class RedeemExchangeCodeDto {
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...' })
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+}
+
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
@@ -194,7 +202,7 @@ export class AuthController {
   }
 
   @Get('me/role')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OrganizationGuard)
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
   @ApiOperation({ summary: 'Get current user role and permissions in organization' })
@@ -208,7 +216,7 @@ export class AuthController {
   }
 
   @Get('me/abilities')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OrganizationGuard)
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
   @ApiOperation({
@@ -341,7 +349,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Redeem exchange code for session tokens' })
   @ApiResponse({ status: 200, description: 'Session tokens returned' })
   @ApiResponse({ status: 401, description: 'Invalid or expired code' })
-  async redeemExchangeCode(@Body() body: { code: string }) {
+  async redeemExchangeCode(@Body() body: RedeemExchangeCodeDto) {
     return this.authService.redeemExchangeCode(body.code);
   }
 }

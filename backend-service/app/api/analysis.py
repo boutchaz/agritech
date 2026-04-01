@@ -99,7 +99,7 @@ async def get_statistics(
 
     except Exception as e:
         logger.error(f"Error calculating statistics: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/compare")
@@ -172,7 +172,7 @@ async def compare_periods(
 
     except Exception as e:
         logger.error(f"Error comparing periods: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/cloud-coverage", response_model=CloudCoverageCheckResponse)
@@ -223,7 +223,7 @@ async def check_cloud_coverage(
 
     except Exception as e:
         logger.error(f"Error checking cloud coverage: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/generate-index-image")
@@ -451,4 +451,4 @@ async def generate_index_image(
 
     except Exception as e:
         logger.error(f"Error generating index image: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

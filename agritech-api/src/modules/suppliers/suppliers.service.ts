@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { CreateSupplierDto, UpdateSupplierDto, SupplierFiltersDto } from './dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class SuppliersService {
@@ -16,7 +17,7 @@ export class SuppliersService {
     return paginate(client, 'suppliers', {
       filters: (q) => {
         q = q.eq('organization_id', organizationId);
-        if (filters?.name) q = q.ilike('name', `%${filters.name}%`);
+        if (filters?.name) { const s = sanitizeSearch(filters.name); if (s) q = q.ilike('name', `%${s}%`); }
         if (filters?.supplier_code) q = q.eq('supplier_code', filters.supplier_code);
         if (filters?.supplier_type) q = q.eq('supplier_type', filters.supplier_type);
         if (filters?.assigned_to) q = q.eq('assigned_to', filters.assigned_to);

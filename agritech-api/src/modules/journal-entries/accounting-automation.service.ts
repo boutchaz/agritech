@@ -3,6 +3,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import { CreateJournalEntryDto, JournalEntryType, JournalEntryStatus } from './dto/create-journal-entry.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class AccountingAutomationService {
@@ -310,7 +311,7 @@ export class AccountingAutomationService {
       .select('account_id, account_code')
       .eq('organization_id', organizationId)
       .eq('mapping_type', mappingType)
-      .or(`mapping_key.eq.${mappingKey.replace(/[,.()'"]/g, '')},source_key.eq.${mappingKey.replace(/[,.()'"]/g, '')}`)
+      .or(`mapping_key.eq.${sanitizeSearch(mappingKey)},source_key.eq.${sanitizeSearch(mappingKey)}`)
       .eq('is_active', true)
       .maybeSingle();
 

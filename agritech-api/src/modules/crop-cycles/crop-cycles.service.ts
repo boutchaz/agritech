@@ -36,10 +36,10 @@ export class CropCyclesService {
       query = query.eq('parcel_id', filters.parcel_id);
     }
     if (filters.variety_name) {
-      query = query.ilike('variety_name', `%${filters.variety_name}%`);
+      { const sv = sanitizeSearch(filters.variety_name); if (sv) query = query.ilike('variety_name', `%${sv}%`); }
     }
     if (filters.crop_type) {
-      query = query.ilike('crop_type', `%${filters.crop_type}%`);
+      { const sc = sanitizeSearch(filters.crop_type); if (sc) query = query.ilike('crop_type', `%${sc}%`); }
     }
     if (filters.planting_date_from) {
       query = query.gte('planting_date', filters.planting_date_from);

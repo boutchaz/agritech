@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreatePieceWorkDto, UpdatePieceWorkDto, PieceWorkFiltersDto } from './dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class PieceWorkService {
@@ -58,7 +59,7 @@ export class PieceWorkService {
       }
 
       if (filters?.search) {
-        query = query.ilike('notes', `%${filters.search}%`);
+        const s = sanitizeSearch(filters.search); if (s) query = query.ilike('notes', `%${s}%`);
       }
 
       // Default ordering: most recent first

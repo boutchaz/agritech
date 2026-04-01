@@ -22,6 +22,7 @@ import {
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto, UpdateSupplierDto, SupplierFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('CRM - Suppliers')
 @ApiBearerAuth('JWT-auth')
@@ -31,7 +32,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
   required: true,
 })
 @Controller('suppliers')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 

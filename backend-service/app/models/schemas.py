@@ -270,6 +270,20 @@ class CreateAOIRequest(BaseModel):
 
 # Cloud Coverage Check Models
 
+class AvailableDatesRequest(BaseModel):
+    aoi: AOIRequest
+    start_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="Start date in YYYY-MM-DD format")
+    end_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="End date in YYYY-MM-DD format")
+    cloud_coverage: Optional[float] = Field(30.0, ge=0, le=100, description="Maximum cloud coverage percentage")
+
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
+        start = info.data.get('start_date') if info.data else None
+        if start and v < start:
+            raise ValueError("End date must be after start date")
+        return v
+
 class CloudCoverageCheckRequest(BaseModel):
     geometry: GeoJSON
     date_range: DateRangeRequest

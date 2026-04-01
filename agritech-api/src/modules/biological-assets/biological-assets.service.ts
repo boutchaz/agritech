@@ -25,10 +25,10 @@ export class BiologicalAssetsService {
       query = query.eq('status', filters.status);
     }
     if (filters.variety) {
-      query = query.ilike('variety', `%${filters.variety}%`);
+      { const sv = sanitizeSearch(filters.variety); if (sv) query = query.ilike('variety', `%${sv}%`); }
     }
     if (filters.rootstock) {
-      query = query.ilike('rootstock', `%${filters.rootstock}%`);
+      { const sr = sanitizeSearch(filters.rootstock); if (sr) query = query.ilike('rootstock', `%${sr}%`); }
     }
     if (filters.farm_id) {
       query = query.eq('farm_id', filters.farm_id);

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateCustomerDto, UpdateCustomerDto, CustomerFiltersDto } from './dto';
 import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class CustomersService {
@@ -17,7 +18,7 @@ export class CustomersService {
 
     const applyFilters = (q: any) => {
       q = q.eq('organization_id', organizationId);
-      if (filters?.name) q = q.ilike('name', `%${filters.name}%`);
+      if (filters?.name) { const s = sanitizeSearch(filters.name); if (s) q = q.ilike('name', `%${s}%`); }
       if (filters?.customer_code) q = q.eq('customer_code', filters.customer_code);
       if (filters?.customer_type) q = q.eq('customer_type', filters.customer_type);
       if (filters?.assigned_to) q = q.eq('assigned_to', filters.assigned_to);

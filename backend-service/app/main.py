@@ -18,6 +18,7 @@ from .api import (
     sync,
     calibration,
 )
+from .middleware.auth import close_http_client
 
 
 class NormalizePathMiddleware(BaseHTTPMiddleware):
@@ -59,6 +60,13 @@ app.add_middleware(
 )
 
 app.add_middleware(NormalizePathMiddleware)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up shared resources on application shutdown."""
+    await close_http_client()
+
 
 # Include routers
 app.include_router(health.router, prefix="/api/health", tags=["health"])
