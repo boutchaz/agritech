@@ -131,7 +131,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
             {t('common.roiCalculator.thankYouTitle')}
           </CardTitle>
           <CardDescription className="text-green-700 dark:text-green-300 max-w-md">
-            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email }) }} />
+            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email: email.replace(/[<>&"']/g, (c: string) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#x27;'}[c] || c)) }) }} />
           </CardDescription>
           <Button
             variant="outline"

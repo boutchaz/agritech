@@ -148,7 +148,7 @@ async def generate_quote_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for quote {quote_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/invoices/{invoice_id}/pdf")
@@ -238,7 +238,7 @@ async def generate_invoice_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for invoice {invoice_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/purchase-orders/{purchase_order_id}/pdf")
@@ -323,7 +323,7 @@ async def generate_purchase_order_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for purchase order {purchase_order_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/supported-document-types")

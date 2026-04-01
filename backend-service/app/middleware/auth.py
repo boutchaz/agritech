@@ -1,7 +1,6 @@
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
-import jwt
 import httpx
 from app.core.config import settings
 import logging
@@ -10,114 +9,105 @@ logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
-class AuthMiddleware:
-    def __init__(self):
-        self.supabase_url = settings.SUPABASE_URL
-        self.supabase_anon_key = settings.SUPABASE_ANON_KEY
-    
-    async def verify_jwt_token(self, token: str) -> dict:
-        """Verify JWT token with Supabase"""
-        try:
-            # Get JWT settings from Supabase
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.supabase_url}/auth/v1/settings",
-                    headers={'apikey': self.supabase_anon_key}
-                )
-                response.raise_for_status()
-                settings_data = response.json()
+# Reusable HTTP client for auth calls (avoids creating a new client per request)
+_http_client: Optional[httpx.AsyncClient] = None
 
-                # Supabase uses RS256 for JWT signing
-                # We need the JWKS (JSON Web Key Set) endpoint to verify RS256 tokens
-                # For simplicity, we'll skip local verification and let Supabase handle it
-                # by fetching the user directly
 
-                # Decode token without verification to get claims (we trust Supabase)
-                # This is safe because we'll validate with Supabase directly
-                payload = jwt.decode(
-                    token,
-                    options={"verify_signature": False},
-                    algorithms=['RS256'],
-                    audience='authenticated'
-                )
-                return payload
-        except Exception as e:
-            logger.error(f"JWT verification failed: {e}")
-            raise HTTPException(status_code=401, detail="Invalid token")
-    
-    async def get_current_user(self, token: str) -> dict:
-        """Get current user from Supabase"""
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{self.supabase_url}/auth/v1/user",
-                    headers={
-                        'apikey': self.supabase_anon_key,
-                        'Authorization': f'Bearer {token}'
-                    }
-                )
-                response.raise_for_status()
-                return response.json()
-        except Exception as e:
-            logger.error(f"Failed to get user: {e}")
-            raise HTTPException(status_code=401, detail="Failed to get user")
+async def _get_http_client() -> httpx.AsyncClient:
+    """Get or create a shared async HTTP client."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=10.0)
+    return _http_client
 
-auth_middleware = AuthMiddleware()
+
+async def verify_token_with_supabase(token: str) -> dict:
+    """
+    Verify a JWT token by calling Supabase's auth.getUser endpoint.
+    This is the ONLY reliable way to validate RS256 Supabase tokens
+    without managing JWKS locally. Supabase verifies the signature
+    server-side and returns the user if valid.
+    """
+    client = await _get_http_client()
+    try:
+        response = await client.get(
+            f"{settings.SUPABASE_URL}/auth/v1/user",
+            headers={
+                "apikey": settings.SUPABASE_ANON_KEY,
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        if response.status_code == 401:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        response.raise_for_status()
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Token verification failed: {e}")
+        raise HTTPException(status_code=401, detail="Token verification failed")
+
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> dict:
-    """Dependency to get current authenticated user"""
+    """FastAPI dependency: extract and validate the Bearer token, return user dict."""
     token = credentials.credentials
-    
-    # Verify JWT token
-    payload = await auth_middleware.verify_jwt_token(token)
-    
-    # Get user details
-    user = await auth_middleware.get_current_user(token)
-    
-    return {
-        'user': user,
-        'payload': payload
-    }
+    user = await verify_token_with_supabase(token)
+    return {"user": user, "token": token}
+
+
+async def get_optional_user(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> Optional[dict]:
+    """FastAPI dependency: optionally authenticate. Returns None if no token."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        return None
+    try:
+        user = await verify_token_with_supabase(token)
+        return {"user": user, "token": token}
+    except HTTPException:
+        return None
+
 
 async def require_organization_access(
     organization_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """Verify user has access to organization"""
-    user_id = current_user['user']['id']
-    
+    """FastAPI dependency: verify the authenticated user belongs to the given organization."""
+    user_id = current_user["user"]["id"]
+
+    client = await _get_http_client()
     try:
-        async with httpx.AsyncClient() as client:
-            # Check if user is member of organization
-            response = await client.get(
-                f"{self.supabase_url}/rest/v1/organization_users",
-                headers={
-                    'apikey': settings.SUPABASE_SERVICE_KEY,
-                    'Authorization': f'Bearer {settings.SUPABASE_SERVICE_KEY}'
-                },
-                params={
-                    'user_id': f'eq.{user_id}',
-                    'organization_id': f'eq.{organization_id}',
-                    'is_active': 'eq.true',
-                    'select': '*'
-                }
+        response = await client.get(
+            f"{settings.SUPABASE_URL}/rest/v1/organization_users",
+            headers={
+                "apikey": settings.SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+            },
+            params={
+                "user_id": f"eq.{user_id}",
+                "organization_id": f"eq.{organization_id}",
+                "is_active": "eq.true",
+                "select": "role_id",
+            },
+        )
+        response.raise_for_status()
+        memberships = response.json()
+
+        if not memberships:
+            raise HTTPException(
+                status_code=403, detail="Access denied to organization"
             )
-            response.raise_for_status()
-            memberships = response.json()
-            
-            if not memberships:
-                raise HTTPException(
-                    status_code=403, 
-                    detail="Access denied to organization"
-                )
-            
-            return {
-                'user': current_user['user'],
-                'organization_id': organization_id,
-                'role': memberships[0]['role']
-            }
+
+        return {
+            "user": current_user["user"],
+            "organization_id": organization_id,
+            "membership": memberships[0],
+        }
     except HTTPException:
         raise
     except Exception as e:

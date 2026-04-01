@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
 import { marked } from 'marked';
+import { sanitizeMarkdownHtml } from '@/lib/sanitize';
 import { DEEP_LINK_MAP } from './chat-utils';
 import { cardRegistry } from './cards';
 import { Button } from '@/components/ui/button';
@@ -140,7 +141,7 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
                   key={idx}
                   className="text-sm chat-markdown"
                   dangerouslySetInnerHTML={{
-                    __html: addDeepLinks(marked.parse(segment.text || '') as string),
+                    __html: sanitizeMarkdownHtml(addDeepLinks(marked.parse(segment.text || '') as string)),
                   }}
                   onClick={(e) => {
                     const target = e.target as HTMLElement;

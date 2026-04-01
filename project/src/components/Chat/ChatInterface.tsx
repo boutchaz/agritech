@@ -13,6 +13,7 @@ import { AssistantMessage } from './AssistantMessage';
 import { ChatInput } from './ChatInput';
 import { WelcomeState } from './WelcomeState';
 import { FollowUpSuggestions } from './FollowUpSuggestions';
+import { sanitizeMarkdownHtml } from '@/lib/sanitize';
 import { AiQuotaExceededModal, useAiQuotaError } from '@/components/ai/AiQuotaExceededModal';
 
 interface ChatMessage {
@@ -379,7 +380,7 @@ export function ChatInterface() {
                     <Bot className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
-                    <div className="text-sm chat-markdown" dangerouslySetInnerHTML={{ __html: streamedContent }} />
+                    <div className="text-sm chat-markdown" dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(streamedContent) }} />
                     <div className="flex items-center gap-1 mt-1">
                       <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                       <span className="text-xs text-muted-foreground">{t('chat.loading.generating', 'Generating...')}</span>

@@ -3,14 +3,16 @@ import logging
 from typing import Any, SupportsFloat, TypedDict, cast
 
 import numpy as np
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
 from ..services.calibration.gdd_service import precompute_gdd
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
 
-router = APIRouter()
+from app.middleware.auth import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
 
 

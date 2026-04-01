@@ -1,5 +1,5 @@
 import math
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from datetime import date
 from typing import Optional
 from app.models.weather_schemas import (
@@ -14,7 +14,9 @@ from app.services.weather_service import weather_service
 from app.services.supabase_service import supabase_service
 import logging
 
-router = APIRouter()
+from app.middleware.auth import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
 
 

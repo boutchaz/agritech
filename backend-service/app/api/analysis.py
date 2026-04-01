@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from app.models.schemas import (
     StatisticsRequest,
@@ -13,7 +13,9 @@ from app.services.satellite import get_satellite_provider
 from datetime import datetime, timedelta
 import logging
 
-router = APIRouter()
+from app.middleware.auth import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
 
 

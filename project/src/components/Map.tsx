@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHotkey } from '@tanstack/react-hotkeys';
+import { sanitizeHtml } from '../lib/sanitize';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -1406,7 +1407,7 @@ const MapComponent: React.FC<MapProps> = ({
                 minWidth: '200px',
                 maxWidth: '300px'
               }}
-              dangerouslySetInnerHTML={{ __html: popupData.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupData.content) }}
             />
           )}
 

@@ -1,5 +1,21 @@
 // Satellite Indices Service for calculating vegetation indices
 import { ErrorHandlers } from '../lib/errors';
+import { useAuthStore } from '../stores/authStore';
+
+/**
+ * Build auth headers for direct calls to the Python backend service.
+ * This ensures the satellite service can verify the user's identity.
+ */
+function getAuthHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 export interface VegetationIndex {
   NDVI: string;
@@ -107,9 +123,7 @@ export class SatelliteIndicesService {
 
       const response = await fetch(`${this.baseUrl}/api/indices/calculate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(requestWithDefaults),
       });
 
@@ -133,9 +147,7 @@ export class SatelliteIndicesService {
     try {
       const response = await fetch(`${this.baseUrl}/api/indices/timeseries`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           aoi,
           date_range: dateRange,
@@ -165,9 +177,7 @@ export class SatelliteIndicesService {
     try {
       const response = await fetch(`${this.baseUrl}/api/indices/export`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           aoi,
           date,
@@ -321,7 +331,9 @@ export class SatelliteIndicesService {
 
   async getAvailableIndices(): Promise<string[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/indices/available`);
+      const response = await fetch(`${this.baseUrl}/api/indices/available`, {
+        headers: getAuthHeaders(),
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

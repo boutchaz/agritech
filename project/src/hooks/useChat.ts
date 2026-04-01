@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { chatApi, type SendMessageDto, type ChatResponse } from '@/lib/api/chat';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -102,7 +102,7 @@ export function useStreamMessage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedContent, setStreamedContent] = useState('');
   const [streamSuggestions, setStreamSuggestions] = useState<string[]>([]);
-  const abortRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const stream = useCallback(
     async (
@@ -115,17 +115,21 @@ export function useStreamMessage() {
         return;
       }
 
+      // Abort any in-flight stream before starting a new one
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       setIsStreaming(true);
       setStreamedContent('');
       setStreamSuggestions([]);
-      abortRef.current = false;
 
       try {
         await chatApi.sendMessageStream(
           data,
           currentOrganization.id,
           (token) => {
-            if (!abortRef.current) {
+            if (!controller.signal.aborted) {
               setStreamedContent((prev) => prev + token);
             }
           },
@@ -143,6 +147,7 @@ export function useStreamMessage() {
             setIsStreaming(false);
             onError?.(error);
           },
+          controller.signal,
         );
       } catch (error) {
         setIsStreaming(false);
@@ -153,15 +158,17 @@ export function useStreamMessage() {
   );
 
   const stopStream = useCallback(() => {
-    abortRef.current = true;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setIsStreaming(false);
   }, []);
 
   const resetStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setStreamedContent('');
     setStreamSuggestions([]);
     setIsStreaming(false);
-    abortRef.current = false;
   }, []);
 
   return { stream, isStreaming, streamedContent, streamSuggestions, stopStream, resetStream };

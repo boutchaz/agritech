@@ -293,13 +293,18 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
       await apiClient.patch(`/api/v1/notifications/${notificationId}/read`, {}, {}, organizationId!);
     },
     onMutate: async (notificationId: string) => {
-      // Optimistic update: mark as read in cache immediately
+      // Cancel in-flight queries to avoid overwriting optimistic update
       await queryClient.cancelQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
 
-      // Update all notification query caches that match this organization
+      // Save previous state for rollback
+      const previousNotifications: Array<[readonly unknown[], NotificationData[] | undefined]> = [];
       const queryCache = queryClient.getQueryCache();
       const queries = queryCache.findAll({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
       for (const query of queries) {
+        previousNotifications.push([
+          query.queryKey,
+          queryClient.getQueryData<NotificationData[]>(query.queryKey),
+        ]);
         queryClient.setQueryData<NotificationData[]>(
           query.queryKey,
           (old = []) =>
@@ -311,15 +316,29 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
         );
       }
 
+      const previousCount = queryClient.getQueryData<number>(
+        [UNREAD_COUNT_QUERY_KEY, organizationId]
+      );
       queryClient.setQueryData<number>(
         [UNREAD_COUNT_QUERY_KEY, organizationId],
         (old = 0) => Math.max(0, old - 1)
       );
+
+      return { previousNotifications, previousCount };
     },
-    onError: () => {
-      // Revert on error
-      queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
-      queryClient.invalidateQueries({ queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId] });
+    onError: (_err, _vars, context) => {
+      // Restore previous data on error
+      if (context?.previousNotifications) {
+        for (const [key, data] of context.previousNotifications) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(
+          [UNREAD_COUNT_QUERY_KEY, organizationId],
+          context.previousCount,
+        );
+      }
     },
   });
 

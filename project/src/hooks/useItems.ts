@@ -1,16 +1,15 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { itemsApi } from '../lib/api/items';
 import type {
   ItemGroupWithChildren,
-  ItemPrice,
   CreateItemInput,
   UpdateItemInput,
   CreateItemGroupInput,
   UpdateItemGroupInput,
   CreateProductVariantInput,
   UpdateProductVariantInput,
-  ProductVariant,
   ItemFilters,
   ItemGroupFilters,
 } from '../types/items';
@@ -62,34 +61,35 @@ export function useItemGroup(groupId: string | null) {
  * Hook to fetch item group tree (hierarchical)
  */
 export function useItemGroupTree() {
-  const { currentOrganization } = useAuth();
   const { data: allGroups } = useItemGroups({ is_active: true });
 
-  return useQuery({
-    queryKey: ['item-group-tree', currentOrganization?.id],
-    queryFn: async () => {
-      if (!allGroups || !currentOrganization?.id) {
-        return [];
-      }
+  // Derive tree from allGroups via useMemo instead of a dependent query.
+  // Using a query here would capture `allGroups` in a stale closure.
+  const tree = React.useMemo(() => {
+    if (!allGroups || allGroups.length === 0) return [];
 
-      // Build tree structure
-      const buildTree = (parentId: string | null = null): ItemGroupWithChildren[] => {
-        return allGroups
-          .filter((group) => 
-            (parentId === null && !group.parent_group_id) ||
-            (parentId !== null && group.parent_group_id === parentId)
-          )
-          .map((group) => ({
-            ...group,
-            children: buildTree(group.id),
-            items_count: 0, // Would need to fetch from items table
-          }));
-      };
+    const buildTree = (parentId: string | null = null): ItemGroupWithChildren[] => {
+      return allGroups
+        .filter((group) =>
+          (parentId === null && !group.parent_group_id) ||
+          (parentId !== null && group.parent_group_id === parentId)
+        )
+        .map((group) => ({
+          ...group,
+          children: buildTree(group.id),
+          items_count: 0,
+        }));
+    };
 
-      return buildTree();
-    },
-    enabled: !!allGroups && !!currentOrganization?.id,
-  });
+    return buildTree();
+  }, [allGroups]);
+
+  // Return a shape compatible with useQuery so callers don't break
+  return {
+    data: tree,
+    isLoading: !allGroups,
+    error: null,
+  };
 }
 
 // =====================================================

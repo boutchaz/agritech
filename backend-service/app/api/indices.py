@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
 from typing import List, Dict, Optional, Tuple
 import uuid
 import hashlib
@@ -27,7 +27,9 @@ import logging
 import ee
 import httpx
 
-router = APIRouter()
+from app.middleware.auth import get_current_user
+
+router = APIRouter(dependencies=[Depends(get_current_user)])
 logger = logging.getLogger(__name__)
 
 

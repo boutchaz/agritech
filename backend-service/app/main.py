@@ -39,13 +39,22 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# CORS: Allow the NestJS API and configured frontend origins.
+# In production, CORS_ORIGINS should be set to the actual frontend/API URLs.
+_cors_origins = settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else [
+    "http://localhost:5173",
+    "http://localhost:3001",
+    "https://agritech-dashboard.thebzlab.online",
+    "https://agritech-api.thebzlab.online",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["Content-Disposition"],
     max_age=3600,
 )
 

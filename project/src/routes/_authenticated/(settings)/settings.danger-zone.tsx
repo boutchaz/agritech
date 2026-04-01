@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OrganizationRequiredError } from '@/lib/errors';
+import { escapeHtml } from '@/lib/sanitize';
 import { toast } from 'sonner';
 import { demoDataApi, ExportData } from '@/lib/api/demo-data';
 import {
@@ -566,7 +567,7 @@ function DangerZonePage() {
           <div className="space-y-4">
             <p
               className="text-red-700 dark:text-red-300 font-medium"
-              dangerouslySetInnerHTML={{ __html: t('dangerZone.deleteAll.confirmPrompt', { name: currentOrganization?.name }) }}
+              dangerouslySetInnerHTML={{ __html: t('dangerZone.deleteAll.confirmPrompt', { name: escapeHtml(currentOrganization?.name || '') }) }}
             />
             <input
               type="text"
