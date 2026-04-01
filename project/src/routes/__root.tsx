@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
+import { createRootRoute, Outlet, useLocation, useRouterState } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
 import { HotkeysProvider } from '@tanstack/react-hotkeys'
 import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
@@ -83,6 +83,21 @@ const ReactQueryDevtools = import.meta.env.DEV
 function RootComponent() {
   const location = useLocation();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
+
+  // Detect not-found state: only the root route matched → no child route matched.
+  // Render the 404 page directly without auth providers to avoid loading skeletons
+  // and auth redirects blocking the not-found page.
+  const matches = useRouterState({ select: (s) => s.matches });
+  const isNotFound = matches.length <= 1;
+
+  if (isNotFound) {
+    return (
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </div>
+    );
+  }
 
   return (
       <ErrorBoundary>

@@ -280,6 +280,8 @@ CREATE TABLE IF NOT EXISTS organization_users (
 
 CREATE INDEX IF NOT EXISTS idx_organization_users_org ON organization_users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_organization_users_user ON organization_users(user_id);
+-- Composite index for OrganizationGuard: called on every authenticated request
+CREATE INDEX IF NOT EXISTS idx_organization_users_membership ON organization_users(user_id, organization_id) WHERE is_active = true;
 
 -- User Profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -2179,7 +2181,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_user ON workers(user_id) WHERE user_id IS
 -- Work Units (for piece-work tracking)
 CREATE TABLE IF NOT EXISTS work_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   name_ar TEXT,
@@ -3791,7 +3793,7 @@ CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_date ON cloud_coverage_chec
 CREATE TABLE IF NOT EXISTS analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   analysis_type analysis_type NOT NULL,
   analysis_date DATE NOT NULL,
   laboratory TEXT,
@@ -3828,7 +3830,7 @@ CREATE INDEX IF NOT EXISTS idx_analysis_recommendations_analysis ON analysis_rec
 CREATE TABLE IF NOT EXISTS soil_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   test_type_id UUID,
   analysis_date TIMESTAMPTZ DEFAULT NOW(),
   physical JSONB,
@@ -3857,7 +3859,7 @@ CREATE TABLE IF NOT EXISTS test_types (
 CREATE TABLE IF NOT EXISTS parcel_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   template_id TEXT NOT NULL,
   title TEXT NOT NULL,
   generated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -4355,7 +4357,7 @@ CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WH
 CREATE TABLE IF NOT EXISTS utilities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   type TEXT NOT NULL,
   provider TEXT,
@@ -4575,7 +4577,7 @@ CREATE POLICY "org_delete_subscriptions" ON subscriptions
 CREATE TABLE IF NOT EXISTS financial_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   category TEXT NOT NULL,
   subcategory TEXT,
@@ -4598,7 +4600,7 @@ CREATE INDEX IF NOT EXISTS idx_financial_transactions_date ON financial_transact
 CREATE TABLE IF NOT EXISTS livestock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   breed TEXT,
   count INTEGER DEFAULT 1,
@@ -5469,7 +5471,7 @@ CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   gdd_daily NUMERIC(6, 2),
@@ -9542,7 +9544,7 @@ CREATE POLICY "Participants can view order items" ON marketplace_order_items
 CREATE TABLE IF NOT EXISTS marketplace_carts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
   session_id TEXT, -- For guest carts (future use)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -11749,7 +11751,7 @@ COMMENT ON COLUMN account_translations.language_code IS 'ISO 639-1 language code
 CREATE TABLE IF NOT EXISTS tax_configurations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   country_code VARCHAR(2),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   tax_name VARCHAR(255) NOT NULL,
   tax_code VARCHAR(50),
   tax_rate DECIMAL(5,2) NOT NULL,

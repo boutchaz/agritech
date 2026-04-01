@@ -64,6 +64,7 @@
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "sanitize-html": "^2.17.2",
     "socket.io": "^4.8.3",
     "uuid": "^13.0.0"
   },
@@ -82,6 +83,7 @@
     "@types/nodemailer": "^6.4.23",
     "@types/passport-jwt": "^4.0.1",
     "@types/pg": "^8.20.0",
+    "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.57.2",

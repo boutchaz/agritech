@@ -378,27 +378,34 @@ export class BlogSsrService implements OnModuleInit {
       contentHtml = post.content || '';
     }
 
-    // Sanitize HTML from CMS — defense-in-depth against stored XSS
-    // NOTE: For production, install and use 'sanitize-html' or 'isomorphic-dompurify' instead.
-    contentHtml = contentHtml
-      // Strip dangerous tags (script, iframe, object, embed, form, svg, math, base, link, meta)
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<\/script>/gi, '')
-      .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
-      .replace(/<object\b[^>]*>[\s\S]*?<\/object>/gi, '')
-      .replace(/<embed\b[^>]*\/?>/gi, '')
-      .replace(/<form\b[^>]*>[\s\S]*?<\/form>/gi, '')
-      .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, '')
-      .replace(/<math\b[^>]*>[\s\S]*?<\/math>/gi, '')
-      .replace(/<base\b[^>]*\/?>/gi, '')
-      .replace(/<link\b[^>]*\/?>/gi, '')
-      .replace(/<meta\b[^>]*\/?>/gi, '')
-      // Strip ALL event handler attributes (on*) regardless of spacing/quoting
-      .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-      // Strip javascript: and data: URIs in attributes
-      .replace(/javascript\s*:/gi, 'blocked:')
-      .replace(/data\s*:\s*text\/html/gi, 'blocked:')
-      .replace(/vbscript\s*:/gi, 'blocked:');
+    // Sanitize HTML from CMS using sanitize-html library
+    const sanitizeHtml = require('sanitize-html');
+    contentHtml = sanitizeHtml(contentHtml, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+        'img', 'figure', 'figcaption', 'picture', 'source',
+        'details', 'summary', 'mark', 'del', 'ins', 'sup', 'sub',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      ]),
+      allowedAttributes: {
+        ...sanitizeHtml.defaults.allowedAttributes,
+        img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'class'],
+        a: ['href', 'name', 'target', 'rel', 'class', 'id'],
+        source: ['srcset', 'type', 'media'],
+        td: ['colspan', 'rowspan'],
+        th: ['colspan', 'rowspan'],
+        '*': ['class', 'id', 'style'],
+      },
+      allowedSchemes: ['http', 'https', 'mailto'],
+      allowedStyles: {
+        '*': {
+          'color': [/.*/],
+          'text-align': [/.*/],
+          'font-size': [/.*/],
+          'font-weight': [/.*/],
+          'background-color': [/.*/],
+        },
+      },
+    });
 
     const headings = this.extractHeadings(contentHtml);
     contentHtml = this.addHeadingIds(contentHtml);

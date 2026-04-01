@@ -7,7 +7,7 @@ export function NotFoundPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 relative overflow-hidden">
+    <div className="h-full flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 relative overflow-hidden">
       {/* Subtle background pattern */}
       <div
         className="absolute inset-0 pointer-events-none opacity-40 dark:opacity-20"
