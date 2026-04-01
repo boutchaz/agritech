@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { ProfitabilityService } from './profitability.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -32,7 +33,7 @@ import {
 
 @ApiTags('profitability')
 @Controller('profitability')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class ProfitabilityController {
   constructor(private profitabilityService: ProfitabilityService) {}
 

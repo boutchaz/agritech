@@ -10,10 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PaymentRecordsService } from './payment-records.service';
 
 @Controller('organizations/:organizationId/payment-records')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class PaymentRecordsController {
   constructor(private readonly paymentRecordsService: PaymentRecordsService) {}
 

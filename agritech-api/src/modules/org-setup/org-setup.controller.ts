@@ -1,12 +1,13 @@
 import { Controller, Post, Get, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { OrgSetupService } from './org-setup.service';
 
 @ApiTags('org-setup')
 @ApiBearerAuth('JWT-auth')
 @Controller('org-setup')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class OrgSetupController {
   constructor(private readonly orgSetupService: OrgSetupService) {}
 

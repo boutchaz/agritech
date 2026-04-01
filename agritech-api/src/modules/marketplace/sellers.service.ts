@@ -64,7 +64,8 @@ export class SellersService {
 
         // Apply city filter
         if (city) {
-            query = query.ilike('city', `%${city}%`);
+            const safeCity = sanitizeSearch(city);
+            if (safeCity) query = query.ilike('city', `%${safeCity}%`);
         }
 
         // Apply search filter

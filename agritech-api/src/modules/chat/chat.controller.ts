@@ -22,13 +22,14 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { SendMessageDto, ChatResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Res } from '@nestjs/common';
 import { Response } from 'express';
 
 @ApiTags('Chat')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

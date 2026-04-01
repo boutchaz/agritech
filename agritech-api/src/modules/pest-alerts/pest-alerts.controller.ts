@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { PestAlertsService } from './pest-alerts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -30,7 +31,7 @@ import { PestReportResponseDto, PestDiseaseLibraryDto } from './dto/pest-report-
 
 @ApiTags('pest-alerts')
 @Controller('pest-alerts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class PestAlertsController {
   constructor(private pestAlertsService: PestAlertsService) {}

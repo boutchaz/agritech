@@ -3,6 +3,7 @@ import { MarketplaceService } from './marketplace.service';
 import { StrapiService } from '../strapi/strapi.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetProductsQueryDto } from './dto/get-products-query.dto';
+import { CreateListingDto, UpdateListingDto } from './dto/create-listing.dto';
 
 @Controller('marketplace')
 export class MarketplaceController {
@@ -87,17 +88,7 @@ export class MarketplaceController {
      */
     @Post('listings')
     @UseGuards(JwtAuthGuard)
-    async createListing(@Request() req: any, @Body() body: {
-        title: string;
-        description: string;
-        short_description?: string;
-        price: number;
-        unit: string;
-        product_category_id?: string;
-        images?: string[];
-        quantity_available?: number;
-        sku?: string;
-    }) {
+    async createListing(@Request() req: any, @Body() body: CreateListingDto) {
         const token = req.headers.authorization?.substring(7);
         try {
             return await this.marketplaceService.createListing(token, body);
@@ -114,19 +105,7 @@ export class MarketplaceController {
     async updateListing(
         @Request() req: any,
         @Param('id') id: string,
-        @Body() body: Partial<{
-            title: string;
-            description: string;
-            short_description: string;
-            price: number;
-            unit: string;
-            product_category_id: string;
-            images: string[];
-            quantity_available: number;
-            sku: string;
-            status: string;
-            is_public: boolean;
-        }>
+        @Body() body: UpdateListingDto,
     ) {
         const token = req.headers.authorization?.substring(7);
         try {

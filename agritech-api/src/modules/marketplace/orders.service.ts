@@ -47,29 +47,31 @@ export class OrdersService {
         }
     }
 
+    /**
+     * Atomically restore stock using SQL addition to prevent double-restore
+     * under concurrent cancellations.
+     */
     private async restoreMarketplaceListingStock(
-        supabase: any,
+        _supabase: any,
         listingId: string,
         quantity: number
     ): Promise<void> {
-        const { data: listing, error: fetchError } = await supabase
-            .from('marketplace_listings')
-            .select('quantity_available')
-            .eq('id', listingId)
-            .single();
+        try {
+            const pool = this.databaseService.getPgPool();
+            const result = await pool.query(
+                `UPDATE marketplace_listings
+                 SET quantity_available = quantity_available + $1,
+                     updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING id, quantity_available`,
+                [quantity, listingId],
+            );
 
-        if (fetchError || !listing) {
-            this.logger.error(`Failed to find listing for stock restore: ${listingId}`);
-            return;
-        }
-
-        const { error: updateError } = await supabase
-            .from('marketplace_listings')
-            .update({ quantity_available: listing.quantity_available + quantity })
-            .eq('id', listingId);
-
-        if (updateError) {
-            this.logger.error(`Failed to restore stock: ${updateError.message}`);
+            if (result.rowCount === 0) {
+                this.logger.error(`Failed to find listing for stock restore: ${listingId}`);
+            }
+        } catch (error) {
+            this.logger.error(`Failed to restore stock for listing ${listingId}: ${error.message}`);
         }
     }
 
