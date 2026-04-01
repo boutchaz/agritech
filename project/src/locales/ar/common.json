@@ -446,9 +446,23 @@
         "stockKeywords": "مخزون جرد",
         "infrastructure": "عرض البنية التحتية",
         "infrastructureKeywords": "بنية تحتية ري معدات",
+        "farmHierarchy": "إدارة المزارع",
+        "farmHierarchyKeywords": "مزارع هيكلية",
+        "tasks": "إدارة المهام",
+        "tasksKeywords": "مهام مهام عمل",
         "settings": "فتح الإعدادات",
         "settingsKeywords": "إعدادات منظمة"
       },
+      "create": {
+        "parcel": "إنشاء قطعة",
+        "task": "إنشاء مهمة",
+        "cycle": "إنشاء دورة محصول",
+        "stockEntry": "إنشاء إدخال مخزون",
+        "invoice": "إنشاء فاتورة",
+        "worker": "إضافة عامل"
+      },
+      "searchPlaceholder": "البحث عن إجراء أو صفحة...",
+      "noResults": "لم يتم العثور على نتائج.",
       "modules": {
         "subtitle": "الوحدات المتاحة"
       },

@@ -5,7 +5,7 @@ import ModernPageHeader from '@/components/ModernPageHeader'
 import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
 import type { DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { useKBar } from 'kbar'
+import { useCommandPaletteToggle } from '@/components/GlobalCommandPalette'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardSettingsApi } from '@/lib/api/dashboard-settings'
 import { withRouteProtection } from '@/components/authorization/withRouteProtection'
@@ -307,10 +307,10 @@ export const Route = createFileRoute('/_authenticated/(core)/dashboard')({
 
 const QuickActionsButton: React.FC = () => {
   const { t } = useTranslation();
-  const { query } = useKBar()
+  const { toggle } = useCommandPaletteToggle();
 
   const handleClick = () => {
-    query.toggle();
+    toggle();
   };
 
   return (

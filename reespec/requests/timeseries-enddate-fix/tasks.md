@@ -2,18 +2,18 @@
 
 ### 1. end_date always initializes to today
 
-- [ ] **RED** — Write `project/src/components/SatelliteAnalysisView/__tests__/timeseries-enddate.test.tsx`: Mock `localStorage` with a stored date range `{ start: '2024-03-25', end: '2026-03-25' }`. Render `TimeSeriesChart` with a stub parcelId/boundary. Assert the end-date input's value equals today's date (`2026-03-31`), NOT the persisted `2026-03-25`. Run `cd project && npx vitest run src/components/SatelliteAnalysisView/__tests__/timeseries-enddate.test.tsx` → fails.
-- [ ] **ACTION** — In `TimeSeriesChart.tsx`, change the `useEffect` that initializes dates: always set `endDate` to `new Date().toISOString().split('T')[0]`. Only read `start` from localStorage. Update the persistence `useEffect` to only save `startDate`.
-- [ ] **GREEN** — Run `cd project && npx vitest run src/components/SatelliteAnalysisView/__tests__/timeseries-enddate.test.tsx` → passes.
+- [x] **RED** — Test: localStorage has stale `end: '2026-03-25'`, assert end-date input shows today. → fails.
+- [x] **ACTION** — Changed date init `useEffect` to always set `endDate = today`, only read `start` from localStorage. Persistence only saves `start`.
+- [x] **GREEN** — All 3 tests pass.
 
 ### 2. forceSync always sends today as end_date
 
-- [ ] **RED** — In the same test file, add a test: mock `satelliteApi.startTimeSeriesSync` and `satelliteApi.getTimeSeriesSyncStatus`. Set displayed `endDate` input to a past date `2026-03-15` (simulating user manually changing it mid-session). Click the "Récupérer depuis satellite" button. Assert `startTimeSeriesSync` was called with `date_range.end_date` equal to today's date, not `2026-03-15`. Run test → fails.
-- [ ] **ACTION** — In `forceSync()`, override `endDate` with `new Date().toISOString().split('T')[0]` before building the sync request body.
-- [ ] **GREEN** — Run test → passes.
+- [x] **RED** — Test: change end-date input to `2026-03-15`, click sync, assert `startTimeSeriesSync` called with today. → fails (sends `2026-03-15`).
+- [x] **ACTION** — In `forceSync()`, compute `syncEndDate = new Date().toISOString().split('T')[0]` and use it in the request body.
+- [x] **GREEN** — All 4 tests pass.
 
 ### 3. Verify no TypeScript regressions
 
-- [ ] **RED** — Run `cd project && npx tsc --noEmit` — check current state compiles.
-- [ ] **ACTION** — Fix any type errors introduced by the changes (if any).
-- [ ] **GREEN** — Run `cd project && npx tsc --noEmit` → zero errors.
+- [x] **RED** — `tsc --noEmit` → zero errors (baseline).
+- [x] **ACTION** — No fixes needed.
+- [x] **GREEN** — `tsc --noEmit` passes. All 20 satellite tests pass.

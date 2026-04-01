@@ -446,9 +446,23 @@
         "stockKeywords": "stock inventory",
         "infrastructure": "View infrastructure",
         "infrastructureKeywords": "infrastructure irrigation equipment",
+        "farmHierarchy": "Manage farms",
+        "farmHierarchyKeywords": "farms hierarchy",
+        "tasks": "Manage tasks",
+        "tasksKeywords": "tasks missions work",
         "settings": "Open settings",
         "settingsKeywords": "settings organization"
       },
+      "create": {
+        "parcel": "Create parcel",
+        "task": "Create task",
+        "cycle": "Create crop cycle",
+        "stockEntry": "Create stock entry",
+        "invoice": "Create invoice",
+        "worker": "Add worker"
+      },
+      "searchPlaceholder": "Search for an action or page...",
+      "noResults": "No results found.",
       "modules": {
         "subtitle": "Available modules"
       },

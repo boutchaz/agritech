@@ -446,9 +446,23 @@
         "stockKeywords": "stock inventaire",
         "infrastructure": "Consulter les infrastructures",
         "infrastructureKeywords": "infrastructure irrigation équipements",
+        "farmHierarchy": "Gérer les fermes",
+        "farmHierarchyKeywords": "fermes hiérarchie",
+        "tasks": "Gérer les tâches",
+        "tasksKeywords": "tâches missions travail",
         "settings": "Ouvrir les paramètres",
         "settingsKeywords": "paramètres settings organisation"
       },
+      "create": {
+        "parcel": "Créer une parcelle",
+        "task": "Créer une tâche",
+        "cycle": "Créer un cycle cultural",
+        "stockEntry": "Créer une entrée de stock",
+        "invoice": "Créer une facture",
+        "worker": "Ajouter un travailleur"
+      },
+      "searchPlaceholder": "Rechercher une action ou une page...",
+      "noResults": "Aucun résultat trouvé.",
       "modules": {
         "subtitle": "Modules disponibles"
       },
