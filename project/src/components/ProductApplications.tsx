@@ -359,11 +359,7 @@ const ProductApplications: React.FC = () => {
               >
                 Annuler
               </Button>
-              <Button
-                onClick={handleAddApplication}
-                disabled={!newApplication.product_id || !newApplication.quantity_used}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button variant="green" onClick={handleAddApplication} disabled={!newApplication.product_id || !newApplication.quantity_used} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
                 Enregistrer
               </Button>
             </div>

@@ -39,6 +39,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   const selectedWorker = metayageWorkers.find(w => w.id === selectedWorkerId);
 
   // Auto-set calculation basis from worker
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (selectedWorker?.calculation_basis) {
       setCalculationBasis(selectedWorker.calculation_basis);
@@ -337,11 +338,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
               {/* Save Button */}
               <div className="flex justify-end">
-                <Button
-                  onClick={handleSaveSettlement}
-                  disabled={createSettlement.isPending || !grossRevenue || !periodStart || !periodEnd}
-                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="purple" onClick={handleSaveSettlement} disabled={createSettlement.isPending || !grossRevenue || !periodStart || !periodEnd} className="flex items-center gap-2 px-6 py-3 rounded-lg disabled:cursor-not-allowed" >
                   {createSettlement.isPending ? (
                     <>
                       <ButtonLoader />

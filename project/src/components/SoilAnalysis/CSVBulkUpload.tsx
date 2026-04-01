@@ -245,10 +245,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       <div>• lab_name (optionnel)</div>
                       <div>• notes (optionnel)</div>
                     </div>
-                    <Button
-                      onClick={downloadTemplate}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
+                    <Button variant="blue" onClick={downloadTemplate} className="flex items-center space-x-2 px-4 py-2 rounded-md transition-colors" >
                       <Download className="w-4 h-4" />
                       <span>Télécharger le modèle</span>
                     </Button>

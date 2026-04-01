@@ -705,10 +705,7 @@ const TasksList: React.FC<TasksListProps> = ({
                           )}
 
                           {canComplete && (
-                            <Button
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              onClick={(e) => handleQuickComplete(e, task)}
+                            <Button variant="green" size="sm" onClick={(e) => handleQuickComplete(e, task)}
                               disabled={updateTask.isPending}
                             >
                               <CheckCircle className="w-4 h-4 mr-1" />

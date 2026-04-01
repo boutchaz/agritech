@@ -131,6 +131,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const { data: accounts = [] } = useAccounts();
   const hasChartOfAccounts = accounts.length > 0;
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (open) {
       setPaymentType(
@@ -152,6 +153,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     defaultDates,
   ]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (requiresCustomAmount) {
       setCalculatedPayment(null);
@@ -489,11 +491,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 </Card>
               )}
 
-              <Button
-                onClick={handleCreatePayment}
-                disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
+              <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts} className="w-full" >
                 {createPayment.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -661,11 +659,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 >
                   {t("dialogs.workerPayment.recalculate")}
                 </Button>
-                <Button
-                  onClick={handleCreatePayment}
-                  disabled={isLoading || !hasChartOfAccounts}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || !hasChartOfAccounts} className="flex-1" >
                   {createPayment.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (

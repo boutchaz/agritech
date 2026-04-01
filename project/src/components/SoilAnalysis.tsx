@@ -441,10 +441,7 @@ const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialDa
           >
             Annuler
           </Button>
-          <Button
-            type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
-          >
+          <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
             <span>Enregistrer</span>
           </Button>

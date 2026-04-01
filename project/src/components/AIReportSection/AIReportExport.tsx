@@ -255,23 +255,13 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
   return (
     <div className="flex items-center gap-2">
       {onPreview && (
-        <Button
-          onClick={onPreview}
-          disabled={!hasContent}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={t('aiReports.export.preview', 'Aperçu complet')}
-        >
+        <Button variant="green" onClick={onPreview} disabled={!hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.preview', 'Aperçu complet')} >
           <Eye className="w-4 h-4" />
           <span>{t('aiReports.export.previewButton', 'Aperçu')}</span>
         </Button>
       )}
 
-      <Button
-        onClick={exportToPDF}
-        disabled={isExporting || !hasContent}
-        className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title={t('aiReports.export.exportPDF', 'Exporter en PDF')}
-      >
+      <Button variant="red" onClick={exportToPDF} disabled={isExporting || !hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.exportPDF', 'Exporter en PDF')} >
         {isExportingPDF ? (
           <>
             <Loader className="w-4 h-4 animate-spin" />
@@ -285,12 +275,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
         )}
       </Button>
 
-      <Button
-        onClick={exportToDOCX}
-        disabled={isExporting || !hasContent}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title={t('aiReports.export.exportDOCX', 'Exporter en Word')}
-      >
+      <Button variant="blue" onClick={exportToDOCX} disabled={isExporting || !hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.exportDOCX', 'Exporter en Word')} >
         {isExportingDOCX ? (
           <>
             <Loader className="w-4 h-4 animate-spin" />

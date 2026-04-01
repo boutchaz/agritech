@@ -293,11 +293,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={loading || availableUsers.length === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
+                <Button variant="blue" type="submit" disabled={loading || availableUsers.length === 0} className="px-4 py-2 rounded-md" >
                   {loading ? 'Assigning...' : 'Assign Role'}
                 </Button>
               </div>

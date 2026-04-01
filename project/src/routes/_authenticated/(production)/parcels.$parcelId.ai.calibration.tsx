@@ -1165,11 +1165,7 @@ const ValidationPanel: React.FC<{
           <div className="flex items-center space-x-3 mt-5">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  disabled={isValidating}
-                  className="inline-flex items-center space-x-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
-                >
+                <Button variant="amber" type="button" disabled={isValidating} className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium" >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
                 </Button>
@@ -1379,12 +1375,7 @@ const PlantingYearPrompt: React.FC<{
                 className="w-28 px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={!isValid || isSaving}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
-            >
+            <Button variant="amber" type="button" onClick={handleSave} disabled={!isValid || isSaving} className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium" >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save & Continue'}</span>
             </Button>
@@ -1587,25 +1578,13 @@ const AICalibrationPage = () => {
         {(calibration || hasV2Report) && (
           <div className="flex items-center gap-2">
             {phase === 'active' && (
-              <Button
-                type="button"
-                onClick={handleOpenPartialRecalibration}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                data-testid="calibration-open-partial-recalibration"
-              >
+              <Button variant="blue" type="button" onClick={handleOpenPartialRecalibration} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" data-testid="calibration-open-partial-recalibration" >
                 <GitCompareArrows className="w-4 h-4" />
                 <span>{tAi('calibration.page.partialUpdate')}</span>
               </Button>
             )}
 
-            <Button
-              type="button"
-              onClick={handleOpenFullRecalibrationWizard}
-              disabled={isBusy || missingPlantingYear}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
-              data-testid="calibration-open-full-recalibration"
-            >
+            <Button variant="green" type="button" onClick={handleOpenFullRecalibrationWizard} disabled={isBusy || missingPlantingYear} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined} data-testid="calibration-open-full-recalibration" >
               {isBusy ? (
                 <BrainCircuit className="w-4 h-4 animate-pulse" />
               ) : (
@@ -1827,12 +1806,7 @@ const AICalibrationPage = () => {
                   <> Reason: <span className="font-medium">{calibration.error_message}</span></>
                 )}
               </p>
-              <Button
-                type="button"
-                onClick={handleOpenFullRecalibrationWizard}
-                disabled={missingPlantingYear}
-                className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
+              <Button variant="red" type="button" onClick={handleOpenFullRecalibrationWizard} disabled={missingPlantingYear} className="mt-4 inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" >
                 <Play className="w-4 h-4" />
                 <span>Retry Calibration</span>
               </Button>

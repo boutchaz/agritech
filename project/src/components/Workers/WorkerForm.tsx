@@ -566,11 +566,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 >
                   {t("workers.form.buttons.cancel")}
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={() => {
+                <Button variant="amber" type="button" size="sm" onClick={() => {
                     const data = duplicateWarning.pendingData;
                     setDuplicateWarning(null);
                     onSubmit(data, true);
@@ -1188,11 +1184,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.specialties")}
             />
-            <Button
-              type="button"
-              onClick={addSpecialty}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addSpecialty} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
             </Button>
           </div>
@@ -1231,11 +1223,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.certifications")}
             />
-            <Button
-              type="button"
-              onClick={addCertification}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addCertification} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
             </Button>
           </div>

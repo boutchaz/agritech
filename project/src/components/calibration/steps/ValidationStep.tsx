@@ -231,13 +231,7 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
       )}
 
       <div className="flex justify-end">
-        <Button
-          type="button"
-          onClick={onLaunchCalibration}
-          disabled={!canLaunch || isLaunching || !readiness?.ready}
-          className="bg-green-600 hover:bg-green-700 text-white"
-          data-testid="calibration-readiness-launch"
-        >
+        <Button variant="green" type="button" onClick={onLaunchCalibration} disabled={!canLaunch || isLaunching || !readiness?.ready} data-testid="calibration-readiness-launch" >
           {isLaunching ? 'Lancement en cours...' : 'Lancer le calibrage'}
         </Button>
       </div>

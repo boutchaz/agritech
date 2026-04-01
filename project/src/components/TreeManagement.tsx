@@ -284,10 +284,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
               placeholder="Nouvelle catégorie..."
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-            <Button
-              onClick={handleAddCategory}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-            >
+            <Button variant="green" onClick={handleAddCategory} className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2" >
               <Plus className="h-4 w-4" />
               <span>Ajouter catégorie</span>
             </Button>
@@ -468,10 +465,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                 placeholder="Arbres/ha"
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <Button
-                onClick={handleAddPlantationType}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-              >
+              <Button variant="green" onClick={handleAddPlantationType} className="px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2" >
                 <Plus className="h-4 w-4" />
                 <span>Ajouter</span>
               </Button>

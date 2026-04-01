@@ -252,11 +252,7 @@ const AppContent: React.FC = () => {
                 />
               </div>
 
-              <Button
-                className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={handleApply}
-                disabled={needsValue && !filterValue}
-              >
+              <Button variant="emerald" className="h-9" onClick={handleApply} disabled={needsValue && !filterValue} >
                 <Search className="h-4 w-4 mr-1.5" />
                 {t('reports.analysis.analyze', 'Analyser')}
               </Button>

@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog';
-import { Button } from './ui/button';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
@@ -45,7 +44,7 @@ const InfrastructureManagement: React.FC = () => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -1171,11 +1170,7 @@ const InfrastructureManagement: React.FC = () => {
             >
               {t('infrastructure.actions.cancel')}
             </Button>
-            <Button
-              type="button"
-              onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" type="button" onClick={editingStructure ? handleUpdateStructure : handleAddStructure} >
               {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
             </Button>
           </DialogFooter>

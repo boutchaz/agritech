@@ -96,14 +96,7 @@ const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({ limitType, onUpgr
               : ' Consider upgrading to avoid interruptions.'}
           </p>
 
-          <Button
-            onClick={handleUpgrade}
-            className={`mt-3 inline-flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm ${
-              isAtLimit
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-            }`}
-          >
+          <Button variant="red" onClick={handleUpgrade} className={`mt-3 inline-flex items-center space-x-2 px-4 py-2 rounded-md font-medium text-sm ${ isAtLimit ? '' : 'bg-yellow-600 hover:bg-yellow-700' }`} >
             <Zap className="h-4 w-4" />
             <span>Upgrade Plan</span>
           </Button>

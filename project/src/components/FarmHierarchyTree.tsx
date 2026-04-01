@@ -344,11 +344,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </p>
               )}
             </div>
-            <Button
-              type="submit"
-              disabled={createFarmMutation.isPending}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="green" type="submit" disabled={createFarmMutation.isPending} className="px-6 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" >
               {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
             </Button>
             <Button

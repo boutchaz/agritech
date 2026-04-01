@@ -526,10 +526,7 @@ const CalendarContent: React.FC<{
                         )}
 
                         {canComplete && (
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
-                            onClick={(e) => handleQuickComplete(e, task)}
+                          <Button variant="green" size="sm" className="h-7 text-xs" onClick={(e) => handleQuickComplete(e, task)}
                             disabled={updateTask.isPending}
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />

@@ -1824,11 +1824,7 @@ const MapComponent: React.FC<MapProps> = ({
                 >
                   {t('map.cancel')}
                 </Button>
-                <Button
-                  onClick={handleSaveParcel}
-                  disabled={isSavingParcel}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleSaveParcel} disabled={isSavingParcel} >
                   {t('map.save')}
                 </Button>
               </DialogFooter>
@@ -2160,11 +2156,7 @@ const MapComponent: React.FC<MapProps> = ({
                   >
                     {t('map.cancel')}
                   </Button>
-                  <Button
-                    onClick={handleGetTimeSeries}
-                    disabled={indicesLoading}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
+                  <Button variant="purple" onClick={handleGetTimeSeries} disabled={indicesLoading} >
                     {indicesLoading && <ButtonLoader />}
                     <span>{t('map.analyze')}</span>
                   </Button>

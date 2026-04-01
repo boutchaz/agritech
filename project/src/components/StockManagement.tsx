@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
-  Package,
-  ShoppingCart,
-  AlertTriangle,
+  Package as _Package,
+  ShoppingCart as _ShoppingCart,
+  AlertTriangle as _AlertTriangle,
   Search,
   Trash2,
   X,
@@ -13,7 +13,7 @@ import {
   Building2,
   Phone,
   Mail,
-  Upload,
+  Upload as _Upload,
   MoreVertical,
   Pencil,
 } from "lucide-react";
@@ -84,26 +84,26 @@ interface Supplier {
 interface WarehouseData {
   id: string;
   organization_id: string;
-  farm_id: string | null;
+  farm_id?: string | null;
   name: string;
-  description: string | null;
-  location: string | null;
-  address: string | null;
-  city: string | null;
-  postal_code: string | null;
-  capacity: number | null;
-  capacity_unit: string | null;
-  temperature_controlled: boolean | null;
-  humidity_controlled: boolean | null;
-  security_level: string | null;
-  manager_name: string | null;
-  manager_phone: string | null;
-  is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
+  description?: string | null;
+  location?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  capacity?: number | null;
+  capacity_unit?: string | null;
+  temperature_controlled?: boolean | null;
+  humidity_controlled?: boolean | null;
+  security_level?: string | null;
+  manager_name?: string | null;
+  manager_phone?: string | null;
+  is_active?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
-const createDefaultPurchaseState = () => ({
+  const _createDefaultPurchaseState = () => ({
   product_id: "",
   product_name: "",
   category: "",
@@ -123,6 +123,7 @@ const createDefaultPurchaseState = () => ({
   invoice_file: null as File | null,
   invoice_number: "",
 });
+void _createDefaultPurchaseState;
 
 const createDefaultSupplierState = () => ({
   name: "",
@@ -164,18 +165,19 @@ interface StockManagementProps {
 const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const { t } = useTranslation('stock');
   const { currentOrganization, currentFarm } = useAuth();
-  const { symbol: currencySymbol } = useCurrency();
+  const { symbol: _currencySymbol } = useCurrency();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
+void _showConfirm;
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [_products, _setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, _setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // showAddPurchase removed - purchases now handled via Stock Entries
   const [showAddSupplier, setShowAddSupplier] = useState(false);
@@ -195,9 +197,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(
     null,
   );
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
-  const [quantityAdjustment, setQuantityAdjustment] = useState<{
+  const [_selectedProduct, _setSelectedProduct] = useState<Product | null>(null);
+  const [_quantityModalOpen, _setQuantityModalOpen] = useState(false);
+  const [_quantityAdjustment, _setQuantityAdjustment] = useState<{
     type: "increase" | "decrease";
     amount: number;
     reason: string;
@@ -206,7 +208,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     amount: 0,
     reason: "",
   });
-  const [isAdjustingQuantity, setIsAdjustingQuantity] = useState(false);
+  const [_isAdjustingQuantity, _setIsAdjustingQuantity] = useState(false);
   const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
   const [isSubmittingWarehouse, setIsSubmittingWarehouse] = useState(false);
 
@@ -220,18 +222,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingWarehouseId(null);
   };
 
-  useEffect(() => {
-    if (currentOrganization) {
-      // Only fetch suppliers and warehouses - stock tab is handled by InventoryStock component
-      fetchSuppliers();
-      fetchWarehouses();
-    }
-  }, [currentOrganization]);
-
   // fetchProducts removed - stock management is now handled by InventoryStock component
   // which uses the items table instead of the obsolete inventory_items table
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     if (!currentOrganization) return;
 
     try {
@@ -244,9 +238,9 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       console.error("Error fetching suppliers:", error);
       setError(t('stockManagement.toast.fetchSuppliersFailed'));
     }
-  };
+  }, [currentOrganization, t]);
 
-  const fetchWarehouses = async () => {
+  const fetchWarehouses = useCallback(async () => {
     if (!currentOrganization) return;
 
     try {
@@ -259,7 +253,15 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       console.error("Error fetching warehouses:", error);
       setError(t('stockManagement.toast.fetchWarehousesFailed'));
     }
-  };
+  }, [currentOrganization, t]);
+
+  useEffect(() => {
+    if (currentOrganization) {
+      // Only fetch suppliers and warehouses - stock tab is handled by InventoryStock component
+      fetchSuppliers();
+      fetchWarehouses();
+    }
+  }, [currentOrganization, fetchSuppliers, fetchWarehouses]);
 
   // openCreatePurchaseModal, closePurchaseModal removed - purchases now handled via Stock Entries
   // openRestockModal removed - stock management now handled by InventoryStock component
@@ -491,19 +493,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
         {/* Stock tab actions removed - handled by InventoryStock component */}
         {activeTab === "suppliers" && (
-          <Button
-            onClick={openCreateSupplierModal}
-            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
+          <Button variant="green" onClick={openCreateSupplierModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>{t('stockManagement.newSupplier')}</span>
           </Button>
         )}
         {activeTab === "warehouses" && (
-          <Button
-            onClick={openCreateWarehouseModal}
-            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
+          <Button variant="green" onClick={openCreateWarehouseModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>{t('stockManagement.newWarehouse')}</span>
           </Button>
@@ -1139,566 +1135,13 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               >
                 Annuler
               </Button>
-              <Button
-                onClick={handleAddProduct}
-                disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-              >
+              <Button variant="green" onClick={handleAddProduct} disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed order-1 sm:order-2" >
                 Ajouter
               </Button>
             </div>
           </div>
         </div>
-      )} */}
-
-      {/* Add Purchase Modal - REMOVED: Purchase functionality now handled via Stock Entries */}
-      {false && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-4 sm:p-6 max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvel Achat de Produit
-              </h3>
-              <Button
-                onClick={closePurchaseModal}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-
-            {/* Toggle between existing product or new product */}
-            <div className="mb-6">
-              <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
-                <Button
-                  onClick={() =>
-                    setNewPurchase({
-                      ...newPurchase,
-                      product_id: "",
-                      product_name: "",
-                    })
-                  }
-                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    !newPurchase.product_id
-                      ? "border-green-500 text-green-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  Nouveau Produit
-                </Button>
-                <Button
-                  onClick={() =>
-                    setNewPurchase({
-                      ...newPurchase,
-                      product_name: "",
-                      product_id: products.length > 0 ? products[0].id : "",
-                    })
-                  }
-                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    newPurchase.product_id
-                      ? "border-green-500 text-green-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                  disabled={products.length === 0}
-                >
-                  Produit Existant
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {/* Product Selection or Creation */}
-              {newPurchase.product_id ? (
-                <div>
-                  <FormField
-                    label="Sélectionner un produit existant *"
-                    htmlFor="purchase_product"
-                    required
-                  >
-                    <Select
-                      id="purchase_product"
-                      value={newPurchase.product_id}
-                      onChange={(e) => {
-                        const value = (e.target as HTMLSelectElement).value;
-                        const product = products.find((p) => p.id === value);
-                        setNewPurchase({
-                          ...newPurchase,
-                          product_id: value,
-                          cost_per_unit: product?.cost_per_unit || 0,
-                          supplier: product?.supplier || "",
-                          unit: product?.unit || "units",
-                          packaging_type: product?.packaging_type || "",
-                          packaging_size: product?.packaging_size || 0,
-                        });
-                      }}
-                      required
-                    >
-                      <option value="">Sélectionner un produit</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.item_name}
-                          {product.packaging_type &&
-                            ` - ${product.packaging_type} ${product.packaging_size}${product.unit}`}
-                          ({product.quantity} {product.unit} en stock)
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-              ) : (
-                <>
-                  {/* New Product Fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                      <FormField
-                        label="Nom du produit *"
-                        htmlFor="product_name"
-                        required
-                      >
-                        <Input
-                          id="product_name"
-                          type="text"
-                          value={newPurchase.product_name}
-                          onChange={(e) =>
-                            setNewPurchase({
-                              ...newPurchase,
-                              product_name: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: Engrais NPK 15-15-15"
-                          required
-                        />
-                      </FormField>
-                    </div>
-
-                    <div>
-                      <FormField
-                        label="Catégorie *"
-                        htmlFor="purchase_category"
-                        required
-                      >
-                        <Select
-                          id="purchase_category"
-                          value={newPurchase.category}
-                          onChange={(e) =>
-                            setNewPurchase({
-                              ...newPurchase,
-                              category: (e.target as HTMLSelectElement).value,
-                            })
-                          }
-                          required
-                        >
-                          <option value="">Sélectionner...</option>
-                          <option value="seeds">Semences</option>
-                          <option value="fertilizers">Engrais</option>
-                          <option value="pesticides">Pesticides</option>
-                          <option value="herbicides">Herbicides</option>
-                          <option value="fungicides">Fongicides</option>
-                          <option value="equipment">Équipement</option>
-                          <option value="tools">Outils</option>
-                          <option value="irrigation">Irrigation</option>
-                          <option value="other">Autre</option>
-                        </Select>
-                      </FormField>
-                    </div>
-
-                    <div>
-                      <FormField label="Marque" htmlFor="purchase_brand">
-                        <Input
-                          id="purchase_brand"
-                          type="text"
-                          value={newPurchase.brand}
-                          onChange={(e) =>
-                            setNewPurchase({
-                              ...newPurchase,
-                              brand: e.target.value,
-                            })
-                          }
-                          placeholder="Ex: Bayer, Syngenta, etc."
-                        />
-                      </FormField>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Packaging Information */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">
-                  Conditionnement
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <FormField
-                      label="Type de conditionnement *"
-                      htmlFor="packaging_type"
-                      required
-                    >
-                      <Select
-                        id="packaging_type"
-                        value={newPurchase.packaging_type}
-                        onChange={(e) =>
-                          setNewPurchase({
-                            ...newPurchase,
-                            packaging_type: (e.target as HTMLSelectElement)
-                              .value,
-                          })
-                        }
-                        required
-                      >
-                        <option value="">Sélectionner...</option>
-                        <option value="bidon">Bidon</option>
-                        <option value="bouteille">Bouteille</option>
-                        <option value="sac">Sac</option>
-                        <option value="boite">Boîte</option>
-                        <option value="carton">Carton</option>
-                        <option value="palette">Palette</option>
-                        <option value="vrac">Vrac</option>
-                        <option value="unite">Unité</option>
-                      </Select>
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField
-                      label="Taille *"
-                      htmlFor="packaging_size"
-                      required
-                    >
-                      <Input
-                        id="packaging_size"
-                        type="number"
-                        step="0.01"
-                        value={newPurchase.packaging_size}
-                        onChange={(e) =>
-                          setNewPurchase({
-                            ...newPurchase,
-                            packaging_size: Number(e.target.value),
-                          })
-                        }
-                        placeholder="Ex: 5, 25, 1000"
-                        required
-                      />
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField label="Unité *" htmlFor="purchase_unit" required>
-                      <Select
-                        id="purchase_unit"
-                        value={newPurchase.unit}
-                        onChange={(e) =>
-                          setNewPurchase({
-                            ...newPurchase,
-                            unit: (e.target as HTMLSelectElement).value,
-                          })
-                        }
-                        required
-                      >
-                        <option value="L">Litres (L)</option>
-                        <option value="mL">Millilitres (mL)</option>
-                        <option value="kg">Kilogrammes (kg)</option>
-                        <option value="g">Grammes (g)</option>
-                        <option value="units">Unités</option>
-                        <option value="pieces">Pièces</option>
-                        <option value="m">Mètres (m)</option>
-                        <option value="m2">Mètres carrés (m²)</option>
-                      </Select>
-                    </FormField>
-                  </div>
-                </div>
-              </div>
-
-              {/* Purchase Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FormField
-                    label="Quantité achetée *"
-                    htmlFor="purchase_qty"
-                    required
-                  >
-                    <Input
-                      id="purchase_qty"
-                      type="number"
-                      value={newPurchase.quantity}
-                      onChange={(e) =>
-                        setNewPurchase({
-                          ...newPurchase,
-                          quantity: Number(e.target.value),
-                          total_cost:
-                            Number(e.target.value) * newPurchase.cost_per_unit,
-                        })
-                      }
-                      placeholder="Nombre de conditionnements"
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField
-                    label={`Prix unitaire (${currencySymbol}) *`}
-                    htmlFor="purchase_cpu"
-                    required
-                  >
-                    <Input
-                      id="purchase_cpu"
-                      type="number"
-                      step="0.01"
-                      value={newPurchase.cost_per_unit}
-                      onChange={(e) =>
-                        setNewPurchase({
-                          ...newPurchase,
-                          cost_per_unit: Number(e.target.value),
-                          total_cost:
-                            newPurchase.quantity * Number(e.target.value),
-                        })
-                      }
-                      placeholder="Prix par conditionnement"
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField
-                    label="Date d'achat *"
-                    htmlFor="purchase_date"
-                    required
-                  >
-                    <Input
-                      id="purchase_date"
-                      type="date"
-                      value={newPurchase.purchase_date}
-                      onChange={(e) =>
-                        setNewPurchase({
-                          ...newPurchase,
-                          purchase_date: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField label="Numéro de lot" htmlFor="purchase_batch">
-                    <Input
-                      id="purchase_batch"
-                      type="text"
-                      value={newPurchase.batch_number}
-                      onChange={(e) =>
-                        setNewPurchase({
-                          ...newPurchase,
-                          batch_number: e.target.value,
-                        })
-                      }
-                      placeholder="Ex: LOT2024001"
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Supplier Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FormField
-                    label="Fournisseur *"
-                    htmlFor="purchase_supplier"
-                    required
-                  >
-                    <Select
-                      id="purchase_supplier"
-                      value={newPurchase.supplier}
-                      onChange={(e) => {
-                        const value = (e.target as HTMLSelectElement).value;
-                        const selectedSupplier = suppliers.find(
-                          (s) => s.name === value,
-                        );
-                        setNewPurchase({
-                          ...newPurchase,
-                          supplier: value,
-                          supplier_id: selectedSupplier?.id || "",
-                        });
-                      }}
-                      required
-                    >
-                      <option value="">Sélectionner un fournisseur</option>
-                      {suppliers.map((supplier) => (
-                        <option key={supplier.id} value={supplier.name}>
-                          {supplier.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField
-                    label="Entrepôt de stockage"
-                    htmlFor="purchase_warehouse"
-                  >
-                    <Select
-                      id="purchase_warehouse"
-                      value={newPurchase.warehouse_id}
-                      onChange={(e) =>
-                        setNewPurchase({
-                          ...newPurchase,
-                          warehouse_id: (e.target as HTMLSelectElement).value,
-                        })
-                      }
-                    >
-                      <option value="">Sélectionner un entrepôt</option>
-                      {warehouses.map((warehouse) => (
-                        <option key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Invoice Upload */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                  Document d'achat
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <FormField
-                      label="Numéro de facture/bon"
-                      htmlFor="invoice_number"
-                    >
-                      <Input
-                        id="invoice_number"
-                        type="text"
-                        value={newPurchase.invoice_number}
-                        onChange={(e) =>
-                          setNewPurchase({
-                            ...newPurchase,
-                            invoice_number: e.target.value,
-                          })
-                        }
-                        placeholder="Ex: FAC-2024-001"
-                      />
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField
-                      label="Importer facture/bon (PDF, Image)"
-                      htmlFor="invoice_file"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <label
-                          htmlFor="invoice_upload"
-                          className="cursor-pointer flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500"
-                        >
-                          <Upload className="h-4 w-4" />
-                          <span className="text-sm">
-                            {newPurchase.invoice_file
-                              ? newPurchase.invoice_file.name
-                              : "Choisir un fichier"}
-                          </span>
-                        </label>
-                        <input
-                          id="invoice_upload"
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setNewPurchase({
-                                ...newPurchase,
-                                invoice_file: file,
-                              });
-                            }
-                          }}
-                          className="hidden"
-                        />
-                        {newPurchase.invoice_file && (
-                          <Button
-                            onClick={() =>
-                              setNewPurchase({
-                                ...newPurchase,
-                                invoice_file: null,
-                              })
-                            }
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </FormField>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <FormField label="Notes" htmlFor="purchase_notes">
-                  <Textarea
-                    id="purchase_notes"
-                    value={newPurchase.notes}
-                    onChange={(e) =>
-                      setNewPurchase({ ...newPurchase, notes: e.target.value })
-                    }
-                    rows={3}
-                    placeholder="Informations supplémentaires sur cet achat..."
-                  />
-                </FormField>
-              </div>
-
-              {/* Total */}
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Total de l'achat
-                  </span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(
-                      2,
-                    )}{" "}
-                    {currencySymbol}
-                  </span>
-                </div>
-                {newPurchase.packaging_type &&
-                  newPurchase.packaging_size > 0 && (
-                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      {newPurchase.quantity} × {newPurchase.packaging_type} de{" "}
-                      {newPurchase.packaging_size}
-                      {newPurchase.unit}
-                    </div>
-                  )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <Button
-                onClick={closePurchaseModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleAddPurchase}
-                disabled={
-                  (!newPurchase.product_id && !newPurchase.product_name) ||
-                  !newPurchase.quantity ||
-                  !newPurchase.cost_per_unit ||
-                  !newPurchase.packaging_type
-                }
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                <span>Enregistrer l'achat</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {null}
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
@@ -1927,11 +1370,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               >
                 {t('stockManagement.supplierForm.cancel')}
               </Button>
-              <Button
-                onClick={handleSubmitSupplier}
-                disabled={isSubmittingSupplier || !newSupplier.name}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button variant="green" onClick={handleSubmitSupplier} disabled={isSubmittingSupplier || !newSupplier.name} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
                 {isSubmittingSupplier
                   ? t('stockManagement.supplierForm.saving')
                   : editingSupplierId
@@ -2214,11 +1653,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               >
                 {t('stockManagement.warehouseForm.cancel')}
               </Button>
-              <Button
-                onClick={handleSubmitWarehouse}
-                disabled={isSubmittingWarehouse || !newWarehouse.name}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button variant="green" onClick={handleSubmitWarehouse} disabled={isSubmittingWarehouse || !newWarehouse.name} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
                 {isSubmittingWarehouse
                   ? t('stockManagement.warehouseForm.saving')
                   : editingWarehouseId
@@ -2230,102 +1665,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
         </div>
       )}
 
-      {quantityModalOpen && selectedProduct && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {t('stockManagement.adjustQuantity.title')}
-              </h3>
-              <Button
-                onClick={closeAdjustQuantityModal}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {t('stockManagement.adjustQuantity.product')}{" "}
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {selectedProduct.item_name || selectedProduct.name}
-                </span>
-              </p>
-              <div className="grid grid-cols-1 gap-4">
-                <FormField label={t('stockManagement.adjustQuantity.adjustmentType')} htmlFor="adjustment_type">
-                  <Select
-                    id="adjustment_type"
-                    value={quantityAdjustment.type}
-                    onChange={(e) =>
-                      setQuantityAdjustment({
-                        ...quantityAdjustment,
-                        type: (e.target as HTMLSelectElement).value as
-                          | "increase"
-                          | "decrease",
-                      })
-                    }
-                  >
-                    <option value="increase">{t('stockManagement.adjustQuantity.increase')}</option>
-                    <option value="decrease">{t('stockManagement.adjustQuantity.decrease')}</option>
-                  </Select>
-                </FormField>
-                <FormField
-                  label={t('stockManagement.adjustQuantity.quantity')}
-                  htmlFor="adjustment_amount"
-                  required
-                >
-                  <Input
-                    id="adjustment_amount"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={quantityAdjustment.amount}
-                    onChange={(e) =>
-                      setQuantityAdjustment({
-                        ...quantityAdjustment,
-                        amount: Number((e.target as HTMLInputElement).value),
-                      })
-                    }
-                    required
-                  />
-                </FormField>
-                <FormField
-                  label={t('stockManagement.adjustQuantity.reason')}
-                  htmlFor="adjustment_reason"
-                  helper={t('stockManagement.adjustQuantity.reasonHint')}
-                >
-                  <Textarea
-                    id="adjustment_reason"
-                    rows={3}
-                    value={quantityAdjustment.reason}
-                    onChange={(e) =>
-                      setQuantityAdjustment({
-                        ...quantityAdjustment,
-                        reason: e.target.value,
-                      })
-                    }
-                  />
-                </FormField>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <Button
-                onClick={closeAdjustQuantityModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
-              >
-                {t('stockManagement.adjustQuantity.cancel')}
-              </Button>
-              <Button
-                onClick={handleAdjustQuantity}
-                disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAdjustingQuantity ? t('stockManagement.adjustQuantity.saving') : t('stockManagement.adjustQuantity.apply')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {null}
+
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

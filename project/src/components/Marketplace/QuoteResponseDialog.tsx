@@ -196,11 +196,7 @@ export function QuoteResponseDialog({
             >
               {t('app.cancel')}
             </Button>
-            <Button
-              type="submit"
-              disabled={submitting || !quotedPrice || !response}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" type="submit" disabled={submitting || !quotedPrice || !response} >
               {submitting ? (
                 <>{t('dialogs.quoteResponse.sending')}</>
               ) : (

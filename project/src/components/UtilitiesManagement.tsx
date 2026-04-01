@@ -12,13 +12,12 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
 import InlineFarmSelector from './InlineFarmSelector';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
@@ -1760,12 +1759,7 @@ const UtilitiesManagement: React.FC = () => {
             >
               Annuler
             </Button>
-            <Button
-              type="button"
-              onClick={editingUtility ? handleUpdateUtility : handleAddUtility}
-              disabled={uploading}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" type="button" onClick={editingUtility ? handleUpdateUtility : handleAddUtility} disabled={uploading} >
               {uploading && (
                 <ButtonLoader />
               )}

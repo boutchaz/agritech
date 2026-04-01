@@ -40,6 +40,7 @@ function CheckoutSuccess() {
   }, [currentOrganization, refetch]);
 
   // Check if subscription is active
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (subscription?.status === 'active') {
       setIsActivating(false);
@@ -160,11 +161,7 @@ function CheckoutSuccess() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={handleContinue}
-              disabled={isActivating}
-              className="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
+            <Button variant="green" onClick={handleContinue} disabled={isActivating} className="inline-flex items-center justify-center px-6 py-3 rounded-lg disabled:cursor-not-allowed transition-colors font-medium" >
               {isActivating ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />

@@ -406,11 +406,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             Actualiser le cache
           </Button>
 
-          <Button
-            onClick={calculateStatistics}
-            disabled={isLoading || !boundary || selectedIndices.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-          >
+          <Button variant="blue" onClick={calculateStatistics} disabled={isLoading || !boundary || selectedIndices.length === 0} className="flex items-center gap-2 px-4 py-2 rounded-md disabled:bg-gray-400" >
             <Satellite className="w-4 h-4" />
             {isLoading ? 'Calcul en cours...' : 'Récupérer depuis satellite'}
           </Button>

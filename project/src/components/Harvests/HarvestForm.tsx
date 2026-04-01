@@ -556,11 +556,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
              >
                {t('harvests.form.buttons.cancel')}
              </Button>
-             <Button
-               type="submit"
-               disabled={isSubmitting}
-               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-             >
+             <Button variant="green" type="submit" disabled={isSubmitting} className="px-5 py-2.5 rounded-lg font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2" >
                {isSubmitting && (
                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                )}

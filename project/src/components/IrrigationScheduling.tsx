@@ -121,11 +121,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           </div>
         )}
 
-        <Button
-          onClick={handleGenerateSchedule}
-          disabled={scheduleMutation.isPending}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button variant="blue" onClick={handleGenerateSchedule} disabled={scheduleMutation.isPending} className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors disabled:cursor-not-allowed" >
           {scheduleMutation.isPending ? (
             <>
               <Loader className="w-5 h-5 animate-spin" />

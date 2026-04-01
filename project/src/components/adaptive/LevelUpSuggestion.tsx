@@ -12,7 +12,7 @@ import { EXPERIENCE_LEVELS } from '@/types/experience-level';
  * Can be dismissed permanently per session
  */
 export const LevelUpSuggestion: React.FC = () => {
-  const { level, setLevel, shouldSuggestUpgrade, dismissHint } = useExperienceLevel();
+  const { level: _level, setLevel, shouldSuggestUpgrade, dismissHint } = useExperienceLevel();
   const [isDismissed, setIsDismissed] = React.useState(false);
 
   const suggestedLevel = shouldSuggestUpgrade();
@@ -55,11 +55,7 @@ export const LevelUpSuggestion: React.FC = () => {
                 {suggestedConfig.description}
               </div>
               <div className="flex space-x-2">
-                <Button
-                  size="sm"
-                  onClick={handleUpgrade}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" size="sm" onClick={handleUpgrade} >
                   Passer au niveau {suggestedConfig.label}
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleDismiss}>

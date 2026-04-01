@@ -140,11 +140,7 @@ const PreferencesSettings: React.FC = () => {
             {t('preferences.title')}
           </h2>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button variant="green" onClick={handleSave} disabled={isSaving} >
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? t('preferences.saving') : t('preferences.save')}
         </Button>

@@ -630,12 +630,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="submit"
-                data-testid="farm-submit-button"
-                disabled={createFarmMutation.isPending}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-              >
+              <Button variant="green" type="submit" data-testid="farm-submit-button" disabled={createFarmMutation.isPending} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
                 {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
               </Button>
               <Button
@@ -672,10 +667,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               >
                 Tout sélectionner
               </Button>
-              <Button
-                onClick={handleBatchDeleteClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-              >
+              <Button variant="red" onClick={handleBatchDeleteClick} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors" >
                 <Trash2 className="w-4 h-4" />
                 Supprimer
               </Button>

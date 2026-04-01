@@ -574,11 +574,7 @@ export function RecalibrationWizard({
             <Button type="button" variant="outline" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1}>
               Precedent
             </Button>
-            <Button
-              type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={!canGoNext}
-              onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
+            <Button variant="blue" type="button" disabled={!canGoNext} onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
             >
               Suivant
             </Button>

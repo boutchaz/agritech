@@ -346,11 +346,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, i
           >
             Annuler
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 flex items-center space-x-2"
-          >
+          <Button variant="green" type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md disabled:bg-green-400 flex items-center space-x-2" >
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />

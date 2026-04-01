@@ -411,11 +411,7 @@ const EmployeeManagement: React.FC = () => {
                     >
                       Annuler
                     </Button>
-                    <Button
-                      type="submit"
-                      disabled={addEmployeeMutation.isPending || updateEmployeeMutation.isPending}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-60"
-                    >
+                    <Button variant="green" type="submit" disabled={addEmployeeMutation.isPending || updateEmployeeMutation.isPending} className="px-4 py-2 text-sm font-medium rounded-md disabled:opacity-60" >
                       {editingEmployee ? 'Mettre à jour' : 'Ajouter'}
                     </Button>
                   </div>

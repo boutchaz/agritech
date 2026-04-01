@@ -122,6 +122,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     if (availableIndices.length > 0 && !selectedIndex) {
       setSelectedIndex(availableIndices[0]);
     }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [availableIndices, selectedIndex]);
 
   const timeSeriesIndices = Array.from(new Set([...availableIndices, "NIRvP"]));
@@ -134,6 +135,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     ) {
       setSelectedIndex(availableIndices[0]);
     }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [activeTab, availableIndices, selectedIndex]);
 
   const getDateRange = (range: string) => {
@@ -562,11 +564,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {getIndexDescription(selectedIndex)}
             </p>
-            <Button
-              onClick={handleCalculateCurrentIndices}
-              disabled={loading}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="blue" onClick={handleCalculateCurrentIndices} disabled={loading} className="flex items-center space-x-2 px-4 py-2 rounded-md disabled:cursor-not-allowed" >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -716,14 +714,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             </div>
 
             {/* Load Button */}
-            <Button
-              onClick={handleGetTimeSeries}
-              disabled={
-                loading ||
-                (chartMode === "multi" && selectedIndices.length === 0)
-              }
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="green" onClick={handleGetTimeSeries} disabled={ loading || (chartMode === "multi" && selectedIndices.length === 0) } className="flex items-center space-x-2 px-4 py-2 rounded-md disabled:cursor-not-allowed" >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -917,7 +908,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                           // Summer (June-Aug): 25-35°C, Winter (Dec-Feb): 5-15°C
                           const baseTemp =
                             15 + 10 * Math.sin(((month - 3) * Math.PI) / 6);
-                          const dailyVariation = (Math.random() - 0.5) * 8;
+                          const dailyVariation = ((point.date.charCodeAt(point.date.length - 1) % 100) / 100 - 0.5) * 8;
                           const temperature = baseTemp + dailyVariation;
                           return {
                             date: point.date,

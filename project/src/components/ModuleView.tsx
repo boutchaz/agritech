@@ -229,11 +229,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
               </p>
             </div>
             <div className="flex space-x-2">
-              <Button
-                onClick={loadParcels}
-                disabled={loadingParcels}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
+              <Button variant="blue" onClick={loadParcels} disabled={loadingParcels} className="flex items-center space-x-2 px-3 py-2 rounded-md" >
                 <RefreshCw className={`h-4 w-4 ${loadingParcels ? 'animate-spin' : ''}`} />
                 <span>{t('moduleView.refresh')}</span>
               </Button>

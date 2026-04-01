@@ -171,15 +171,7 @@ const AddonCard: React.FC<AddonCardProps> = ({
         )}
 
         {!isActive && (
-          <Button
-            onClick={handlePurchase}
-            disabled={purchaseAddon.isPending || !hasAvailableSlots}
-            className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
-              hasAvailableSlots
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            } disabled:opacity-50`}
-          >
+          <Button variant="blue" onClick={handlePurchase} disabled={purchaseAddon.isPending || !hasAvailableSlots} className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${ hasAvailableSlots ? '' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' } disabled:opacity-50`} >
             {purchaseAddon.isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (

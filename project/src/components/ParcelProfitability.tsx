@@ -1195,9 +1195,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             >
               {t('profitability.addRevenue.cancel')}
             </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => addRevenueMutation.mutate(newRevenue)}
+            <Button variant="green" onClick={() => addRevenueMutation.mutate(newRevenue)}
               disabled={addRevenueMutation.isPending || !newRevenue.amount}
             >
               {addRevenueMutation.isPending ? t('profitability.addRevenue.adding') : t('profitability.addRevenue.add')}

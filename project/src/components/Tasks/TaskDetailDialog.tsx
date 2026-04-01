@@ -836,11 +836,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </Button>
 
             {canStart && (
-              <Button
-                onClick={handleStartTask}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button variant="blue" onClick={handleStartTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
                 Démarrer
               </Button>
@@ -858,22 +854,14 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             )}
 
             {canResume && (
-              <Button
-                onClick={handleResumeTask}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button variant="blue" onClick={handleResumeTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
                 Reprendre
               </Button>
             )}
 
             {canComplete && !showHarvestForm && !showPerUnitForm && (
-              <Button
-                onClick={handleCompleteTask}
-                disabled={isLoading}
-                className="bg-green-600 hover:bg-green-700"
-              >
+              <Button variant="green" onClick={handleCompleteTask} disabled={isLoading} >
                 {isHarvestingTask ? (
                   <>
                     <Wheat className="w-4 h-4 mr-2" />
@@ -897,11 +885,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 >
                   Annuler
                 </Button>
-                <Button
-                  onClick={handleCompletePerUnit}
-                  disabled={isLoading || perUnitData.units_completed <= 0}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleCompletePerUnit} disabled={isLoading || perUnitData.units_completed <= 0} >
                   {isLoading ? (
                     'Enregistrement...'
                   ) : (
@@ -926,9 +910,9 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   Annuler
                 </Button>
                 <Button
+                  variant={completionType === 'partial' ? 'amber' : 'green'}
                   onClick={handleCompleteWithHarvest}
                   disabled={isLoading}
-                  className={completionType === 'partial' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
                 >
                   {completionType === 'partial' ? (
                     <PackageCheck className="w-4 h-4 mr-2" />

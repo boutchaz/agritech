@@ -196,11 +196,7 @@ function ImportDataPage() {
               )}
 
               {validation?.valid && (
-                <Button
-                  onClick={handleImport}
-                  disabled={isImporting || importResult?.success}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="emerald" onClick={handleImport} disabled={isImporting || importResult?.success} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition disabled:cursor-not-allowed" >
                   {isImporting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (

@@ -55,7 +55,7 @@ const UsersSettings: React.FC = () => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -396,7 +396,7 @@ const UsersSettings: React.FC = () => {
           <div className="md:hidden space-y-3">
           {users.map((user) => {
             const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-            const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+            const _initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
             const canModify = can('update', 'User') &&
               (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
@@ -537,7 +537,7 @@ const UsersSettings: React.FC = () => {
             <TableBody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
               {users.map((user) => {
                 const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-                const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+                const _initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
                 const canModify = can('update', 'User') &&
                   (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
@@ -749,11 +749,7 @@ const UsersSettings: React.FC = () => {
               >
                 {t('users.invite.cancel')}
               </Button>
-              <Button
-                onClick={handleInviteUser}
-                disabled={!inviteUser.email || !inviteUser.role_id || loading}
-                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button variant="green" onClick={handleInviteUser} disabled={!inviteUser.email || !inviteUser.role_id || loading} className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg disabled:cursor-not-allowed" >
                 {loading ? t('users.invite.inviting') : t('users.invite.invite')}
               </Button>
             </div>
@@ -832,11 +828,7 @@ const UsersSettings: React.FC = () => {
                   >
                     {t('users.password.close')}
                   </Button>
-                  <Button
-                    onClick={handleResetPassword}
-                    disabled={passwordLoading}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
-                  >
+                  <Button variant="blue" onClick={handleResetPassword} disabled={passwordLoading} className="px-4 py-2 text-sm font-medium rounded-md" >
                     {t('users.password.reset')}
                   </Button>
                 </div>
@@ -846,11 +838,7 @@ const UsersSettings: React.FC = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t('users.password.noPassword')}
                 </p>
-                <Button
-                  onClick={handleResetPassword}
-                  disabled={passwordLoading}
-                  className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md disabled:opacity-50"
-                >
+                <Button variant="blue" onClick={handleResetPassword} disabled={passwordLoading} className="mt-4 px-4 py-2 text-sm font-medium rounded-md" >
                   {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}
                 </Button>
               </div>

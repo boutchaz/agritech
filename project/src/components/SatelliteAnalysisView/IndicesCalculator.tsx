@@ -371,11 +371,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             Actualiser le cache
           </Button>
 
-          <Button
-            onClick={handleCalculate}
-            disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
+          <Button variant="blue" onClick={handleCalculate} disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate} className="flex items-center gap-2 px-4 py-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" >
             {isCalculating ? (
               <>
                 <ButtonLoader className="text-white" />

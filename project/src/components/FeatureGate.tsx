@@ -39,10 +39,7 @@ const FeatureLockedMessage: React.FC<FeatureLockedMessageProps> = ({ onUpgrade }
       <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
         This feature is available on Professional and Enterprise plans.
       </p>
-      <Button
-        onClick={onUpgrade}
-        className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
-      >
+      <Button variant="green" onClick={onUpgrade} className="flex items-center space-x-2 px-6 py-3 rounded-md font-medium" >
         <Zap className="h-5 w-5" />
         <span>Upgrade Now</span>
       </Button>

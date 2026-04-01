@@ -571,11 +571,7 @@ const DayLaborerManagement: React.FC = () => {
               >
                 Annuler
               </Button>
-              <Button
-                type="button"
-                onClick={handleAddLaborer}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
+              <Button variant="green" type="button" onClick={handleAddLaborer} className="px-4 py-2 text-sm font-medium rounded-md" >
                 Ajouter
               </Button>
             </div>

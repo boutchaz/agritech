@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tauriCommands } from '@/lib/tauri-bridge';
 import { Building2, User, Lock, Mail, Loader2 } from 'lucide-react';
@@ -179,11 +179,7 @@ function SetupPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="emerald" type="submit" disabled={isLoading} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition disabled:cursor-not-allowed" >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
