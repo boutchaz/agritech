@@ -6,6 +6,7 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiProperty,
+  ApiPropertyOptional,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -31,6 +32,11 @@ export class LoginDto {
 }
 
 export class ChangePasswordDto {
+  @ApiPropertyOptional({ example: 'oldPassword123!', description: 'Current password (required if password was previously set)' })
+  @IsString()
+  @IsOptional()
+  currentPassword?: string;
+
   @ApiProperty({ example: 'newStrongPassword123!' })
   @IsString()
   @IsNotEmpty()
@@ -73,6 +79,35 @@ export class OAuthCallbackDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+}
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ example: 'John' })
+  @IsString()
+  @IsOptional()
+  first_name?: string;
+
+  @ApiPropertyOptional({ example: 'Doe' })
+  @IsString()
+  @IsOptional()
+  last_name?: string;
+
+  @ApiPropertyOptional({ example: '+212612345678' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/avatar.jpg' })
+  @IsString()
+  @IsOptional()
+  avatar_url?: string;
+}
+
+export class RefreshTokenDto {
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...' })
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
 }
 
 @ApiTags('authentication')
@@ -144,7 +179,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async updateProfile(@Request() req, @Body() body: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) {
+  async updateProfile(@Request() req, @Body() body: UpdateProfileDto) {
     return this.authService.updateUserProfile(req.user.id, body);
   }
 
@@ -246,7 +281,7 @@ export class AuthController {
    @ApiResponse({ status: 400, description: 'Bad request' })
    @ApiResponse({ status: 401, description: 'Unauthorized' })
    async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
-     return this.authService.changePassword(req.user.id, dto.newPassword);
+     return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
    }
 
    @Post('logout')
@@ -287,7 +322,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Body() body: { refreshToken: string }) {
+  async refreshToken(@Body() body: RefreshTokenDto) {
     return this.authService.refreshToken(body.refreshToken);
   }
 

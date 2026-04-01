@@ -62,7 +62,7 @@ export class WorkersService {
       select: '*, organizations!inner(name), farms(name)',
       filters: (q) => {
         q = q.eq('organization_id', organizationId);
-        if (farmId) q = q.or(`farm_id.eq.${farmId},farm_id.is.null`);
+        if (farmId) q = q.or(`farm_id.eq.${farmId.replace(/[,.()'"]/g, '')},farm_id.is.null`);
         return q;
       },
       page,
@@ -1110,9 +1110,11 @@ export class WorkersService {
    */
   private generateRandomPassword(): string {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    // Use crypto.randomInt for cryptographically secure random password generation
+    const crypto = require('crypto');
     let password = '';
     for (let i = 0; i < 16; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+      password += chars.charAt(crypto.randomInt(chars.length));
     }
     return password;
   }

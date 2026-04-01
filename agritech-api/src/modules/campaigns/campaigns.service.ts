@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCampaignDto, CampaignStatus } from './dto';
@@ -53,7 +54,8 @@ export class CampaignsService {
       query = query.lte('priority', filters.max_priority);
     }
     if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`name.ilike.%${s}%,description.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting

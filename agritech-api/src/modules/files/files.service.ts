@@ -97,6 +97,10 @@ export class FilesService {
     filePath: string,
     options?: { upsert?: boolean; cacheControl?: string },
   ): Promise<{ path: string; publicUrl: string }> {
+    // Validate bucket and path to prevent path traversal
+    if (/\.\.|[\/\\]\.\./.test(bucket) || /\.\.|[\/\\]\.\./.test(filePath)) {
+      throw new BadRequestException('Invalid bucket or file path');
+    }
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client.storage
@@ -123,6 +127,10 @@ export class FilesService {
   }
 
   async removeFromStorage(bucket: string, filePaths: string[]): Promise<void> {
+    // Validate paths to prevent path traversal
+    if (/\.\.|[\/\\]\.\./.test(bucket) || filePaths.some(p => /\.\.|[\/\\]\.\./.test(p))) {
+      throw new BadRequestException('Invalid bucket or file path');
+    }
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client.storage.from(bucket).remove(filePaths);
@@ -134,6 +142,10 @@ export class FilesService {
   }
 
   async downloadFromStorage(bucket: string, filePath: string): Promise<Buffer> {
+    // Validate paths to prevent path traversal
+    if (/\.\.|[\/\\]\.\./.test(bucket) || /\.\.|[\/\\]\.\./.test(filePath)) {
+      throw new BadRequestException('Invalid bucket or file path');
+    }
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client.storage.from(bucket).download(filePath);

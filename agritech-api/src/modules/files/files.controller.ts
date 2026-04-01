@@ -29,12 +29,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { FilesService } from './files.service';
 import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 
 @ApiTags('files')
 @Controller('files')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
 export class FilesController {

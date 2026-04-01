@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import {
   ReferenceDataTable,
   ImportReferenceDataDto,
@@ -46,7 +47,8 @@ export class AdminService {
       queryBuilder = queryBuilder.not('published_at', 'is', null);
     }
     if (query.search) {
-      queryBuilder = queryBuilder.or(`name.ilike.%${query.search}%,code.ilike.%${query.search}%`);
+      const s = sanitizeSearch(query.search);
+      if (s) queryBuilder = queryBuilder.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
     }
 
     // Apply sorting

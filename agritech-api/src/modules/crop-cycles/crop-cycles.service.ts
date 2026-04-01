@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCropCycleDto, CropCycleStatus } from './dto';
@@ -62,7 +63,8 @@ export class CropCyclesService {
       query = query.eq('is_perennial', filters.is_perennial);
     }
     if (filters.search) {
-      query = query.or(`cycle_name.ilike.%${filters.search}%,variety_name.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`cycle_name.ilike.%${s}%,variety_name.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateAccountMappingDto, UpdateAccountMappingDto } from './dto';
 
 export interface AccountMappingFilters {
@@ -72,7 +73,8 @@ export class AccountMappingsService {
       }
 
       if (filters?.search) {
-        query = query.or(`mapping_key.ilike.%${filters.search}%,source_key.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+        const s = sanitizeSearch(filters.search);
+        if (s) query = query.or(`mapping_key.ilike.%${s}%,source_key.ilike.%${s}%,description.ilike.%${s}%`);
       }
 
       const { data, error } = await query;
@@ -228,7 +230,7 @@ export class AccountMappingsService {
         .select('id')
         .eq('organization_id', dto.organization_id)
         .eq('mapping_type', dto.mapping_type)
-        .or(`mapping_key.eq.${key},source_key.eq.${key}`)
+        .or(`mapping_key.eq.${key.replace(/[,.()'"]/g, '')},source_key.eq.${key.replace(/[,.()'"]/g, '')}`)
         .single();
 
       if (existing) {
@@ -305,7 +307,7 @@ export class AccountMappingsService {
           .select('id')
           .eq('organization_id', organizationId)
           .eq('mapping_type', dto.mapping_type)
-          .or(`mapping_key.eq.${key},source_key.eq.${key}`)
+          .or(`mapping_key.eq.${key.replace(/[,.()'"]/g, '')},source_key.eq.${key.replace(/[,.()'"]/g, '')}`)
           .neq('id', id)
           .single();
 

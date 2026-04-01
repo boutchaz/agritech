@@ -378,6 +378,14 @@ export class BlogSsrService implements OnModuleInit {
       contentHtml = post.content || '';
     }
 
+    // Sanitize HTML from CMS — strip <script>, <iframe>, event handlers to prevent stored XSS
+    contentHtml = contentHtml
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^>]*>.*?<\/iframe>/gi, '')
+      .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/\son\w+\s*=\s*[^\s>]+/gi, '')
+      .replace(/javascript\s*:/gi, '');
+
     const headings = this.extractHeadings(contentHtml);
     contentHtml = this.addHeadingIds(contentHtml);
 
@@ -390,7 +398,8 @@ export class BlogSsrService implements OnModuleInit {
     const canonicalUrl = `${this.siteUrl}/blog/${slug}`;
     const authorInitial = (post.author || 'A').charAt(0).toUpperCase();
 
-    const jsonLdData = JSON.stringify({
+    // Sanitize JSON-LD: escape </script> to prevent script tag breakout
+    const jsonLdRaw = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
@@ -432,7 +441,7 @@ export class BlogSsrService implements OnModuleInit {
       ogImage: post.featured_image?.url || `${this.siteUrl}/og-image.png`,
       ogLocale: LOCALE_MAP[locale] || 'fr_FR',
       canonicalUrl,
-      jsonLd: `<script type="application/ld+json">${jsonLdData}</script>`,
+      jsonLd: `<script type="application/ld+json">${jsonLdRaw.replace(/<\//g, '<\/')}</script>`,
       categories,
       appUrl: this.appUrl,
       year: new Date().getFullYear(),

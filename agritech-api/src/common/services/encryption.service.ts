@@ -14,6 +14,10 @@ export class EncryptionService {
   constructor(private readonly configService: ConfigService) {
     const key = this.configService.get<string>('ENCRYPTION_KEY');
 
+    // Use a configurable salt, falling back to a project-specific default.
+    // For production, ENCRYPTION_SALT should be set as an environment variable.
+    const salt = this.configService.get<string>('ENCRYPTION_SALT', 'agrogina-enc-v1');
+
     if (!key) {
       this.logger.warn(
         'ENCRYPTION_KEY not set. Generating a temporary key. ' +
@@ -21,10 +25,10 @@ export class EncryptionService {
       );
       // Generate a deterministic key based on a secret (not recommended for production)
       const fallbackSecret = this.configService.get<string>('JWT_SECRET', 'default-secret');
-      this.encryptionKey = crypto.scryptSync(fallbackSecret, 'salt', this.keyLength);
+      this.encryptionKey = crypto.scryptSync(fallbackSecret, salt, this.keyLength);
     } else {
       // If key is provided, derive a proper key from it
-      this.encryptionKey = crypto.scryptSync(key, 'agritech-salt', this.keyLength);
+      this.encryptionKey = crypto.scryptSync(key, salt, this.keyLength);
     }
   }
 

@@ -53,15 +53,13 @@ export class SupabaseJwtGuard extends AuthGuard('jwt') {
           };
           return true;
         })
-        .catch((error) => {
-          console.error('[SupabaseJwtGuard] Token validation failed:', error.message);
+        .catch(() => {
           throw new UnauthorizedException('Invalid or expired token');
         });
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      console.error('[SupabaseJwtGuard] Token processing failed:', error.message);
       throw new UnauthorizedException('Invalid token');
     }
   }

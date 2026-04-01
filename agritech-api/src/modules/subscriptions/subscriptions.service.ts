@@ -1273,7 +1273,7 @@ export class SubscriptionsService {
     const { data: module, error: moduleError } = await this.supabaseAdmin
       .from('modules')
       .select('id, required_plan, is_active, is_available, is_required, slug, name')
-      .or(`slug.eq.${normalizedFeature},name.eq.${normalizedFeature}`)
+      .or(`slug.eq.${normalizedFeature.replace(/[,.()'"]/g, '')},name.eq.${normalizedFeature.replace(/[,.()'"]/g, '')}`)
       .maybeSingle();
 
     if (moduleError || !module || !module.is_active || !module.is_available) {

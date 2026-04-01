@@ -277,6 +277,7 @@ export class TasksController {
   }
 
   @Post(':taskId/reprocess-stock')
+  @CanManageTasks()
   @ApiOperation({ summary: 'Reprocess stock deduction for a task (admin fix)' })
   async reprocessStock(@Request() req, @Param('taskId') taskId: string) {
     const organizationId = req.headers['x-organization-id'] as string;
@@ -284,6 +285,7 @@ export class TasksController {
   }
 
   @Post(':taskId/start')
+  @CanUpdateTask()
   @ApiOperation({ summary: 'Start a task and deduct planned stock from inventory' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   async startTask(@Request() req, @Param('taskId') taskId: string) {
@@ -380,9 +382,11 @@ export class TasksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskComments(
+    @Request() req,
     @Param('taskId') taskId: string,
   ) {
-    return this.tasksService.getComments(taskId);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getComments(organizationId, taskId);
   }
 
   @Post(':taskId/comments')
@@ -398,7 +402,8 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Body() createCommentDto: any,
   ) {
-    return this.tasksService.addComment(req.user.id, taskId, createCommentDto);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addComment(req.user.id, organizationId, taskId, createCommentDto);
   }
 
   // =====================================================
@@ -413,9 +418,11 @@ export class TasksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskTimeLogs(
+    @Request() req,
     @Param('taskId') taskId: string,
   ) {
-    return this.tasksService.getTimeLogs(taskId);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getTimeLogs(organizationId, taskId);
   }
 
   @Post(':taskId/clock-in')
@@ -448,7 +455,8 @@ export class TasksController {
     @Param('timeLogId') timeLogId: string,
     @Body() clockOutDto: any,
   ) {
-    return this.tasksService.clockOut(req.user.id, timeLogId, clockOutDto);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.clockOut(req.user.id, organizationId, timeLogId, clockOutDto);
   }
 
   @Get('time-logs/active-session')
@@ -484,7 +492,7 @@ export class TasksController {
   }
 
   @Post('time-logs/auto-clock-out')
-  @CanUpdateTask()
+  @CanManageTasks()
   @ApiOperation({ summary: 'Auto-clock-out stale sessions (admin function)' })
   @ApiResponse({ status: 200, description: 'Stale sessions processed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -492,7 +500,8 @@ export class TasksController {
     @Request() req,
     @Query('maxHours') maxHours?: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     const maxHoursNum = maxHours ? parseInt(maxHours, 10) : 12;
-    return this.tasksService.autoClockOutStaleSessions(maxHoursNum);
+    return this.tasksService.autoClockOutStaleSessions(organizationId, maxHoursNum);
   }
 }

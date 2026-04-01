@@ -94,25 +94,30 @@ async function bootstrap() {
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  // Global request logger middleware - logs every incoming request
+  // Global request logger middleware
+  // In production, only log slow or error responses to reduce log noise
+  const isProduction = configService.get('NODE_ENV') === 'production';
   let requestCounter = 0;
   app.use((req, res, next) => {
     const requestId = ++requestCounter;
+    // Reset counter to prevent overflow (safe since Node.js is single-threaded)
+    if (requestCounter > 1_000_000_000) requestCounter = 0;
     const start = Date.now();
-    console.log(`[Request #${requestId}] ${req.method} ${req.url}`, {
-      headers: {
-        authorization: req.headers.authorization ? 'Bearer ***' : 'missing',
-        'x-organization-id': req.headers['x-organization-id'] || 'missing',
-      },
-    });
 
     // Store requestId on request for later use
     (req as any).requestId = requestId;
 
+    if (!isProduction) {
+      logger.debug(`[Request #${requestId}] ${req.method} ${req.url}`);
+    }
+
     // Log response when finished
     res.on('finish', () => {
       const duration = Date.now() - start;
-      console.log(`[Response #${requestId}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      // In production: only log slow (>3s) or error responses
+      if (!isProduction || res.statusCode >= 400 || duration > 3000) {
+        logger.log(`[${requestId}] ${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+      }
     });
 
     next();
@@ -212,8 +217,10 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // For thebzlab.online subdomains, allow them
-      if (origin.endsWith('.thebzlab.online')) {
+      // For thebzlab.online subdomains, allow only HTTPS and single-level subdomains
+      // to prevent abuse via attacker-controlled deep subdomains
+      const thebzlabMatch = origin.match(/^https:\/\/([a-z0-9-]+)\.thebzlab\.online$/);
+      if (thebzlabMatch) {
         logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
         return callback(null, true);
       }

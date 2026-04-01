@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
@@ -25,7 +26,7 @@ export class WorkUnitsService {
         q = q.eq('organization_id', organizationId);
         if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
         if (filters?.unit_category) q = q.eq('unit_category', filters.unit_category);
-        if (filters?.search) q = q.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
+        if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%`); }
         return q;
       },
       page: filters?.page || 1,

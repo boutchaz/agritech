@@ -384,10 +384,11 @@ export class OrganizationUsersService {
         }
       } else {
         // Create new auth user with temporary password
+        const crypto = require('crypto');
         const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
         let tempPassword = '';
         for (let i = 0; i < 16; i++) {
-          tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+          tempPassword += chars.charAt(crypto.randomInt(chars.length));
         }
 
         const { data: authUser, error: authError } = await client.auth.admin.createUser({
@@ -590,11 +591,12 @@ export class OrganizationUsersService {
 
     const isWorker = !!worker;
 
-    // Generate new temporary password
+    // Generate new temporary password using cryptographically secure RNG
+    const crypto = require('crypto');
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let tempPassword = '';
     for (let i = 0; i < 16; i++) {
-      tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+      tempPassword += chars.charAt(crypto.randomInt(chars.length));
     }
 
     // Update Supabase auth user password

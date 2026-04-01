@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CaslAbilityFactory, AppAbility } from './casl-ability.factory';
 import { CHECK_POLICIES_KEY } from './check-policies.decorator';
@@ -6,19 +6,15 @@ import { PolicyHandler } from './policy.interface';
 
 @Injectable()
 export class PoliciesGuard implements CanActivate {
+    private readonly logger = new Logger(PoliciesGuard.name);
+
     constructor(
         private reflector: Reflector,
         private caslAbilityFactory: CaslAbilityFactory,
-    ) {
-        console.log('[PoliciesGuard] Constructor called, caslAbilityFactory:', !!caslAbilityFactory);
-    }
+    ) {}
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        console.log('[PoliciesGuard] ========== canActivate START ==========');
         const request = context.switchToHttp().getRequest();
-        const requestId = (request as any).requestId || 'unknown';
-        console.log(`[PoliciesGuard #${requestId}] canActivate called for:`, request.url);
-        console.log(`[PoliciesGuard #${requestId}] User on request:`, request.user?.id, request.user?.email);
 
         try {
             const policyHandlers =
@@ -27,10 +23,7 @@ export class PoliciesGuard implements CanActivate {
                     context.getHandler(),
                 ) || [];
 
-            console.log(`[PoliciesGuard #${requestId}] Policy handlers count:`, policyHandlers.length, 'for', request.url);
-
             if (policyHandlers.length === 0) {
-                console.log('[PoliciesGuard] No policies defined, allowing access for:', request.url);
                 return true;
             }
 
@@ -44,64 +37,38 @@ export class PoliciesGuard implements CanActivate {
 
             const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
 
+            // SECURITY: Do NOT read organizationId from request.body to prevent
+            // guard/controller mismatch (same fix as OrganizationGuard)
             const organizationId =
-                request.organizationId ||
                 headerOrgId ||
+                request.organizationId ||
                 request.query?.organizationId ||
                 request.query?.organization_id ||
-                request.body?.organizationId ||
                 request.user?.organizationId;
 
-            // Debug logging for 403 investigation
-            console.log('[PoliciesGuard] Debug info:', {
-                url: request.url,
-                method: request.method,
-                userId: user?.id,
-                userEmail: user?.email,
-                headerOrgId,
-                queryOrgId: request.query?.organization_id || request.query?.organizationId,
-                bodyOrgId: request.body?.organizationId,
-                resolvedOrgId: organizationId,
-                allHeaders: Object.keys(request.headers).filter(h => h.toLowerCase().includes('org')),
-            });
-
             if (!organizationId) {
-                console.error('[PoliciesGuard] No organization ID found in request');
                 throw new BadRequestException('Organization ID is required for permission checks');
             }
 
             const ability = await this.caslAbilityFactory.createForUser(user, organizationId);
 
-            // Log each policy check result for debugging
-            const results = policyHandlers.map((handler, index) => {
-                const result = this.execPolicyHandler(handler, ability);
-                console.log(`[PoliciesGuard] Policy ${index} check:`, {
-                    url: request.url,
-                    handlerType: typeof handler,
-                    result,
-                });
-                return result;
-            });
-
-            const isAllowed = results.every(Boolean);
+            const isAllowed = policyHandlers.every((handler) =>
+                this.execPolicyHandler(handler, ability),
+            );
 
             if (!isAllowed) {
-                console.error('[PoliciesGuard] Permission denied:', {
-                    url: request.url,
-                    userId: user?.id,
-                    organizationId,
-                    policyResults: results,
-                });
+                this.logger.debug(
+                    `Permission denied for user ${user?.id} on ${request.method} ${request.url}`,
+                );
                 throw new ForbiddenException('You do not have sufficient permissions (CASL)');
             }
 
             return true;
         } catch (error) {
-            console.error('[PoliciesGuard] Exception in canActivate:', {
-                url: request.url,
-                error: error.message,
-                stack: error.stack,
-            });
+            if (error instanceof ForbiddenException || error instanceof BadRequestException) {
+                throw error;
+            }
+            this.logger.error(`PoliciesGuard error: ${error.message}`);
             throw error;
         }
     }

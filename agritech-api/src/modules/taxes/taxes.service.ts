@@ -29,7 +29,7 @@ export class TaxesService {
       .order('name', { ascending: true });
 
     // Filter by tax_type if specified (sales, purchase, or both)
-    if (filters?.tax_type) {
+    if (filters?.tax_type && ['sales', 'purchase', 'both'].includes(filters.tax_type)) {
       query = query.or(`tax_type.eq.${filters.tax_type},tax_type.eq.both`);
     }
 

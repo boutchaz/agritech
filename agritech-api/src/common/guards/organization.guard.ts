@@ -47,16 +47,18 @@ export class OrganizationGuard implements CanActivate {
     };
 
     const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
-    
+
+    // Priority: header > already-set requestOrg > params > query
+    // SECURITY: Do NOT accept organizationId from request body to prevent
+    // guard/controller mismatch where the guard validates one org but the
+    // controller reads a different one from the header.
     const organizationId =
+      headerOrgId ||
       request.organizationId ||
       request.params?.organizationId ||
       request.params?.organization_id ||
-      headerOrgId ||
       request.query?.organizationId ||
-      request.query?.organization_id ||
-      request.body?.organizationId ||
-      request.body?.organization_id;
+      request.query?.organization_id;
 
     // Validate that organizationId is a valid UUID (not "undefined", "null", empty string, etc.)
     if (!organizationId || 

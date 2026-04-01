@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateQuoteDto, UpdateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
 import { PaginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
@@ -44,9 +45,12 @@ export class QuotesService {
       .eq('organization_id', organizationId);
 
     if (search) {
-      const searchFilter = `quote_number.ilike.%${search}%,customer_name.ilike.%${search}%`;
-      countQuery = countQuery.or(searchFilter);
-      dataQuery = dataQuery.or(searchFilter);
+      const safeSearch = sanitizeSearch(search);
+      if (safeSearch) {
+        const searchFilter = `quote_number.ilike.%${safeSearch}%,customer_name.ilike.%${safeSearch}%`;
+        countQuery = countQuery.or(searchFilter);
+        dataQuery = dataQuery.or(searchFilter);
+      }
     }
 
     if (status) {

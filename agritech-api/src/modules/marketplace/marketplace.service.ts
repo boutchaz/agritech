@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { GetProductsQueryDto } from './dto/get-products-query.dto';
 
 @Injectable()
@@ -56,7 +57,7 @@ export class MarketplaceService {
 
         // Search filter for listings
         if (search) {
-            listingsQuery = listingsQuery.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+            const safeListing = sanitizeSearch(search); if (safeListing) listingsQuery = listingsQuery.or(`title.ilike.%${safeListing}%,description.ilike.%${safeListing}%`);
         }
 
         // Price filter for listings
@@ -126,7 +127,7 @@ export class MarketplaceService {
 
         // Search filter for items
         if (search) {
-            itemsQuery = itemsQuery.or(`item_name.ilike.%${search}%,description.ilike.%${search}%`);
+            const safeItem = sanitizeSearch(search); if (safeItem) itemsQuery = itemsQuery.or(`item_name.ilike.%${safeItem}%,description.ilike.%${safeItem}%`);
         }
 
         // Price filter for items

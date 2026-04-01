@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
@@ -28,7 +29,7 @@ export class ItemsService {
           : q.eq('parent_group_id', filters.parent_group_id);
       }
       if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
-      if (filters?.search) q = q.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%,description.ilike.%${s}%`); }
       return q;
     };
 
@@ -424,7 +425,7 @@ export class ItemsService {
       if (filters?.is_stock_item !== undefined) q = q.eq('is_stock_item', filters.is_stock_item);
       if (filters?.crop_type) q = q.eq('crop_type', filters.crop_type);
       if (filters?.variety) q = q.eq('variety', filters.variety);
-      if (filters?.search) q = q.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%,barcode.ilike.%${s}%`); }
       return q;
     };
 
@@ -734,7 +735,8 @@ export class ItemsService {
     }
 
     if (filters?.search) {
-      query = query.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%`);
     }
 
     const { data, error } = await query;

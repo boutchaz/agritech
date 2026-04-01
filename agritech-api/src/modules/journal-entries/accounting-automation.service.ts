@@ -310,7 +310,7 @@ export class AccountingAutomationService {
       .select('account_id, account_code')
       .eq('organization_id', organizationId)
       .eq('mapping_type', mappingType)
-      .or(`mapping_key.eq.${mappingKey},source_key.eq.${mappingKey}`)
+      .or(`mapping_key.eq.${mappingKey.replace(/[,.()'"]/g, '')},source_key.eq.${mappingKey.replace(/[,.()'"]/g, '')}`)
       .eq('is_active', true)
       .maybeSingle();
 

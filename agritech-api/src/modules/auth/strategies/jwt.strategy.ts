@@ -56,8 +56,9 @@ export class JwtStrategy implements CanActivate {
           .select('organization_id')
           .eq('user_id', user.id)
           .eq('is_active', true)
+          .order('created_at', { ascending: true })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         organizationId = orgUser?.organization_id || null;
       } catch (orgError) {
