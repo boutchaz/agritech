@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -53,6 +53,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const { userRole } = useAuth();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const mainEl = document.querySelector('[data-main-scroll]');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0 });
+    }
+   
+  }, [location.pathname]);
 
   // Define menu sections with grouped items
   const allSections: SettingsSection[] = useMemo(
