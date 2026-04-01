@@ -81,8 +81,27 @@ export function ChatInterface() {
     } else if (history && !history.messages?.length) setMessages([]);
   }, [history]);
 
-  // Auto-scroll
-  useEffect(() => { scrollRef.current && (scrollRef.current.scrollTop = scrollRef.current.scrollHeight); }, [messages]);
+  // Scroll to bottom after history loads (slight delay for DOM to render)
+  useEffect(() => {
+    if (!isLoadingHistory && messages.length > 0) {
+      const timer = setTimeout(() => {
+        if (!scrollRef.current) return;
+        const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+        const el = viewport || scrollRef.current;
+        el.scrollTop = el.scrollHeight;
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingHistory, messages.length]);
+
+  // Auto-scroll to bottom on new messages and initial load
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    // ScrollArea ref points to the Root; the actual scrollable element is the Viewport inside it
+    const viewport = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+    const el = viewport || scrollRef.current;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, isLoadingHistory]);
 
   // Stop voice when sending
   useEffect(() => { if (isSending && isListening) stopListening(); }, [isSending, isListening, stopListening]);
