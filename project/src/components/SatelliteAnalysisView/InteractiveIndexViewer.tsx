@@ -20,6 +20,7 @@ import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { DatePicker } from '../ui/DatePicker';
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
+import { Trans, useTranslation } from 'react-i18next';
 
 interface InteractiveIndexViewerProps {
   parcelId: string;
@@ -75,6 +76,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   parcelName,
   boundary
 }) => {
+  const { t, i18n } = useTranslation('satellite');
+
   // View mode: single, multi-grid, multi-overlay, or temporal-compare
   const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare'>('single');
 
@@ -120,13 +123,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
   const navMonthLabel = useMemo(() => {
     const d = new Date(navYear, navMonth, 1);
-    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  }, [navYear, navMonth]);
+    return d.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
+  }, [i18n.language, navYear, navMonth]);
 
   const compareNavMonthLabel = useMemo(() => {
     const d = new Date(compareNavYear, compareNavMonth, 1);
-    return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  }, [compareNavYear, compareNavMonth]);
+    return d.toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' });
+  }, [i18n.language, compareNavYear, compareNavMonth]);
 
   const navigateMonth = useCallback((direction: -1 | 1) => {
     setNavMonth(prev => {
@@ -287,7 +290,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
       if (viewMode === 'temporal-compare') {
         if (!compareDate) {
-          setError('Veuillez sélectionner les deux dates pour la comparaison.');
+          setError(t('satellite:heatmap.temporalCompare.selectBothDates'));
           setIsLoading(false);
           return;
         }
@@ -365,19 +368,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to generate interactive visualization';
+      const errorMessage = err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate');
 
       if (errorMessage.includes('No images found')) {
-        setError(`No satellite imagery available for ${selectedDate}. Please select a different date from the calendar.`);
+        setError(t('satellite:heatmap.warnings.noImagesForDate', { date: selectedDate }));
       } else if (errorMessage.includes('cloud coverage')) {
-        setError('Error processing cloud coverage. The selected date may have too much cloud cover.');
+        setError(t('satellite:heatmap.warnings.cloudCoverageError'));
       } else {
         setError(errorMessage);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelName, selectedDate, compareDate, selectedIndex, selectedIndices, visualizationType, viewMode, parcelId, indexColorPalettes]);
+  }, [boundary, parcelName, selectedDate, compareDate, selectedIndex, selectedIndices, visualizationType, viewMode, parcelId, indexColorPalettes, t]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -469,27 +472,27 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold">
           {viewMode === 'single'
-            ? `${selectedIndex} Interactive Visualization`
+            ? t('satellite:heatmap.header.single', { index: selectedIndex })
             : viewMode === 'multi-grid'
-            ? 'Multi-Index Comparison (Grille)'
+            ? t('satellite:heatmap.header.multiGrid')
             : viewMode === 'temporal-compare'
-            ? `Comparaison Temporelle — ${selectedIndex}`
-            : 'Multi-Index Overlay (Même Carte)'}
+            ? t('satellite:heatmap.header.temporalCompare', { index: selectedIndex })
+            : t('satellite:heatmap.header.multiOverlay')}
         </h1>
         <div className="text-lg text-gray-600 mt-2">
           {viewMode === 'single'
             ? VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]
             : viewMode === 'multi-grid'
-            ? 'Comparer plusieurs indices côte à côte'
+            ? t('satellite:heatmap.header.singleDesc')
             : viewMode === 'temporal-compare'
-            ? 'Comparer le même indice entre deux dates différentes'
-            : 'Superposer plusieurs indices sur la même carte'}
+            ? t('satellite:heatmap.header.temporalDesc')
+            : t('satellite:heatmap.header.overlayDesc')}
         </div>
       </div>
 
       {/* Configuration Panel - Enhanced */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-        <h3 className="font-medium text-gray-900">Configuration</h3>
+        <h3 className="font-medium text-gray-900">{t('satellite:heatmap.configuration')}</h3>
 
         {/* View Mode Selector */}
         <div className="flex gap-2">
@@ -498,21 +501,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             className={cn("flex-1", viewMode === 'single' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('single')}
           >
-            Vue Simple
+            {t('satellite:heatmap.viewModes.single')}
           </Button>
           <Button
             variant={viewMode === 'multi-grid' ? 'default' : 'outline'}
             className={cn("flex-1", viewMode === 'multi-grid' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('multi-grid')}
           >
-            Multi-Grille
+            {t('satellite:heatmap.viewModes.multiGrid')}
           </Button>
           <Button
             variant={viewMode === 'multi-overlay' ? 'default' : 'outline'}
             className={cn("flex-1", viewMode === 'multi-overlay' && "bg-green-600 hover:bg-green-700")}
             onClick={() => setViewMode('multi-overlay')}
           >
-            Multi-Overlay
+            {t('satellite:heatmap.viewModes.multiOverlay')}
           </Button>
           <Button
             variant={viewMode === 'temporal-compare' ? 'default' : 'outline'}
@@ -520,28 +523,28 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             onClick={() => setViewMode('temporal-compare')}
           >
             <GitCompareArrows className="w-4 h-4 mr-1" />
-            Comparaison
+            {t('satellite:heatmap.viewModes.temporalCompare')}
           </Button>
         </div>
 
         {/* Base Layer Selector (for leaflet views) */}
         {(viewMode === 'single' && visualizationType === 'leaflet') || viewMode !== 'single' ? (
           <div>
-            <label className="text-sm font-medium mb-2 block">Fond de Carte</label>
+            <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.baseMap.label')}</div>
             <div className="flex gap-2">
               <Button
                 variant={baseLayer === 'osm' ? 'default' : 'outline'}
                 className={cn("flex-1", baseLayer === 'osm' && "bg-blue-600 hover:bg-blue-700")}
                 onClick={() => setBaseLayer('osm')}
               >
-                OpenStreetMap
+                {t('satellite:heatmap.baseMap.osm')}
               </Button>
               <Button
                 variant={baseLayer === 'satellite' ? 'default' : 'outline'}
                 className={cn("flex-1", baseLayer === 'satellite' && "bg-blue-600 hover:bg-blue-700")}
                 onClick={() => setBaseLayer('satellite')}
               >
-                🛰️ Vue Satellite
+                🛰️ {t('satellite:heatmap.baseMap.satellite')}
               </Button>
             </div>
           </div>
@@ -573,7 +576,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
             {datesLoaded && (
               <span className="text-xs text-gray-500">
-                {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+                {t('satellite:heatmap.dateNavigator.datesAvailable', { count: availableDates.length })}
               </span>
             )}
           </div>
@@ -583,7 +586,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
+                <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.temporalCompare.vegetationIndex')}</div>
                 <select
                   value={selectedIndex}
                   onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
@@ -595,7 +598,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
+                <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.temporalCompare.colorPalette')}</div>
                 <select
                   value={colorPalette}
                   onChange={(e) => setColorPalette(e.target.value as ColorPalette)}
@@ -634,19 +637,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 {isLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
                 {datesLoaded && (
                   <span className="text-xs text-gray-500">
-                    {availableDates.length} date{availableDates.length !== 1 ? 's' : ''} disponible{availableDates.length !== 1 ? 's' : ''}
+                    {t('satellite:heatmap.dateNavigator.datesAvailable', { count: availableDates.length })}
                   </span>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Date A (Avant)</label>
+                <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.temporalCompare.dateA')}</div>
                 <DatePicker
                   value={selectedDate}
                   onChange={(date) => date && setSelectedDate(date)}
                   availableDates={availableDates}
                   isLoading={isLoadingDates}
                   disabled={!boundary}
-                  placeholder="Date de référence"
+                  placeholder={t('satellite:heatmap.temporalCompare.dateRefPlaceholder')}
                 />
               </div>
             </div>
@@ -677,19 +680,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 {compareIsLoadingDates && <Loader className="w-4 h-4 text-blue-600 animate-spin" />}
                 {compareDatesLoaded && (
                   <span className="text-xs text-gray-500">
-                    {compareAvailableDates.length} date{compareAvailableDates.length !== 1 ? 's' : ''} disponible{compareAvailableDates.length !== 1 ? 's' : ''}
+                    {t('satellite:heatmap.dateNavigator.datesAvailable', { count: compareAvailableDates.length })}
                   </span>
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Date B (Après)</label>
+                <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.temporalCompare.dateB')}</div>
                 <DatePicker
                   value={compareDate}
                   onChange={(date) => date && setCompareDate(date)}
                   availableDates={compareAvailableDates}
                   isLoading={compareIsLoadingDates}
                   disabled={!boundary}
-                  placeholder="Date à comparer"
+                  placeholder={t('satellite:heatmap.temporalCompare.dateComparePlaceholder')}
                 />
               </div>
             </div>
@@ -697,21 +700,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Date</label>
+              <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.dateNavigator.date')}</div>
               <DatePicker
                 value={selectedDate}
                 onChange={(date) => date && setSelectedDate(date)}
                 availableDates={availableDates}
                 isLoading={isLoadingDates}
                 disabled={!boundary}
-                placeholder="Select date with satellite data"
+                placeholder={t('satellite:heatmap.dateNavigator.placeholder')}
               />
             </div>
 
             {viewMode === 'single' ? (
               <>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Indice de Végétation</label>
+                  <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.vegetationIndex')}</div>
                   <select
                     value={selectedIndex}
                     onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
@@ -724,20 +727,20 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Type de Visualisation</label>
+                  <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.visualizationType')}</div>
                   <select
                     value={visualizationType}
                     onChange={(e) => setVisualizationType(e.target.value as VisualizationType)}
                     className="w-full p-2 border border-gray-300 rounded-md"
                   >
-                    <option value="leaflet">Carte Leaflet (Recommandé)</option>
-                    <option value="scatter">Nuage de Points</option>
+                    <option value="leaflet">{t('satellite:heatmap.labels.leafletMap')}</option>
+                    <option value="scatter">{t('satellite:heatmap.labels.scatterPlot')}</option>
                   </select>
                 </div>
               </>
             ) : (
               <div className="md:col-span-2">
-                <label className="text-sm font-medium mb-2 block">Indices à Comparer</label>
+                <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.indicesToCompare')}</div>
                 <div className="grid grid-cols-3 gap-2">
                   {VEGETATION_INDICES.map(index => (
                     <label key={index} className="flex items-center gap-2 p-2 border rounded-md hover:bg-white cursor-pointer">
@@ -765,7 +768,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         {/* Opacity Controls for Multi-Overlay */}
         {viewMode === 'multi-overlay' && selectedIndices.length > 0 && (
           <div>
-            <label className="text-sm font-medium mb-2 block">Opacité des Overlays</label>
+            <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.overlayOpacity')}</div>
             <div className="space-y-2">
               {selectedIndices.map(index => (
                 <div key={index} className="flex items-center gap-3">
@@ -800,7 +803,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         {/* Color Palette Selector for Single View */}
         {viewMode === 'single' && visualizationType === 'leaflet' && (
           <div>
-            <label className="text-sm font-medium mb-2 block">Palette de Couleurs</label>
+            <div className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.colorPalette')}</div>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
               {(Object.entries(COLOR_PALETTES) as [ColorPalette, typeof COLOR_PALETTES[ColorPalette]][]).map(([key, palette]) => (
                 <Button
@@ -814,8 +817,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 >
                   <div className="text-xs font-medium mb-1">{palette.name}</div>
                   <div className="flex h-4 w-full rounded overflow-hidden">
-                    {palette.colors.map((color, i) => (
-                      <div key={i} style={{ backgroundColor: color, flex: 1 }} />
+                    {palette.colors.map((color) => (
+                      <div key={`${key}-${color}`} style={{ backgroundColor: color, flex: 1 }} />
                     ))}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{palette.description}</div>
@@ -828,7 +831,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         {/* Color Palette Selectors for Multi-Grid View - Per Index */}
         {viewMode === 'multi-grid' && selectedIndices.length > 0 && (
           <div>
-            <label className="text-sm font-medium mb-3 block">Palettes de Couleurs par Indice</label>
+            <div className="text-sm font-medium mb-3 block">{t('satellite:heatmap.labels.colorPalettePerIndex')}</div>
             <div className="space-y-3">
               {selectedIndices.map((index) => (
                 <div key={index} className="bg-white rounded-lg border p-3">
@@ -858,8 +861,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   </div>
                   {/* Show color preview */}
                   <div className="flex h-3 rounded overflow-hidden">
-                    {COLOR_PALETTES[indexColorPalettes.get(index) || 'red-green'].colors.map((color, i) => (
-                      <div key={i} style={{ backgroundColor: color, flex: 1 }} />
+                    {COLOR_PALETTES[indexColorPalettes.get(index) || 'red-green'].colors.map((color) => (
+                      <div key={`${index}-${color}`} style={{ backgroundColor: color, flex: 1 }} />
                     ))}
                   </div>
                 </div>
@@ -869,17 +872,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         )}
 
         <div className="flex items-center gap-4">
-          <Button
-            onClick={generateVisualization}
-            disabled={
-              isLoading || !boundary || !datesLoaded || !selectedDate ||
-              (viewMode === 'temporal-compare' && (!selectedDate || !compareDate)) ||
-              (viewMode !== 'single' && viewMode !== 'temporal-compare' && selectedIndices.length === 0)
-            }
-            className={viewMode === 'temporal-compare' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'}
-          >
+          <Button variant="green" onClick={generateVisualization} disabled={ isLoading || !boundary || !datesLoaded || !selectedDate || (viewMode === 'temporal-compare' && (!selectedDate || !compareDate)) || (viewMode !== 'single' && viewMode !== 'temporal-compare' && selectedIndices.length === 0) } className={viewMode === 'temporal-compare' ? 'bg-purple-600 hover:bg-purple-700' : ''} >
             {isLoading ? <Loader className="w-4 h-4 animate-spin mr-2" /> : viewMode === 'temporal-compare' ? <GitCompareArrows className="w-4 h-4 mr-2" /> : <ZoomIn className="w-4 h-4 mr-2" />}
-            {isLoading ? 'Génération...' : viewMode === 'temporal-compare' ? 'Comparer les Dates' : 'Générer la Visualisation'}
+            {isLoading ? t('satellite:heatmap.actions.generating') : viewMode === 'temporal-compare' ? t('satellite:heatmap.actions.compareDates') : t('satellite:heatmap.actions.generate')}
           </Button>
 
           {((viewMode === 'single' && data) || (viewMode !== 'single' && multiData.size > 0)) && (
@@ -889,7 +884,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               className="border-blue-600 text-blue-600 hover:bg-blue-50"
             >
               <Download className="w-4 h-4 mr-2" />
-              Exporter les Données
+              {t('satellite:heatmap.actions.exportData')}
             </Button>
           )}
         </div>
@@ -907,10 +902,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-800 font-medium text-sm">Date de données différente</p>
+            <p className="text-amber-800 font-medium text-sm">{t('satellite:heatmap.warnings.dateMismatchTitle')}</p>
             <p className="text-amber-700 text-sm mt-1">
-              Aucune image satellite disponible pour le <strong>{dateMismatch.requested}</strong>.
-              Données du <strong>{dateMismatch.actual}</strong> affichées à la place.
+              <Trans
+                i18nKey="satellite:heatmap.warnings.dateMismatchDescription"
+                values={{ requested: dateMismatch.requested, actual: dateMismatch.actual }}
+                components={{ strong: <strong /> }}
+              />
             </p>
           </div>
         </div>
@@ -922,37 +920,37 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <Layers className="w-5 h-5" style={{ color: getIndexColor(selectedIndex) }} />
-              {selectedIndex} Interactive Visualization
+              {t('satellite:heatmap.header.single', { index: selectedIndex })}
             </h3>
             <div className="text-sm text-gray-600">
-              {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
+              {t('satellite:heatmap.labels.indexDescription')}: {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
             </div>
           </div>
 
           {/* Statistics Summary */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg">
             <div className="text-center">
-              <div className="text-sm text-gray-600">Mean</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.mean')}</div>
               <div className="font-semibold">{(data.statistics?.mean ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Median</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.median')}</div>
               <div className="font-semibold">{(data.statistics?.median ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">P10</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.p10')}</div>
               <div className="font-semibold">{(data.statistics?.p10 ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">P90</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.p90')}</div>
               <div className="font-semibold">{(data.statistics?.p90 ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Std Dev</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.std')}</div>
               <div className="font-semibold">{(data.statistics?.std ?? 0).toFixed(3)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-600">Count</div>
+              <div className="text-sm text-gray-600">{t('satellite:heatmap.stats.count')}</div>
               <div className="font-semibold">{(data.statistics?.count ?? 0).toLocaleString()}</div>
             </div>
           </div>
@@ -987,7 +985,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       {/* Multi-Index Grid Comparison View */}
       {viewMode === 'multi-grid' && multiData.size > 0 && (
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold">Comparaison des Indices - {selectedDate}</h3>
+          <h3 className="text-xl font-semibold">{t('satellite:heatmap.multiGrid.title', { date: selectedDate })}</h3>
 
           {/* Comparison Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1010,15 +1008,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 <div className="p-3 bg-gray-50 border-b">
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="text-center">
-                      <div className="text-gray-600">Moy.</div>
+                      <div className="text-gray-600">{t('satellite:heatmap.stats.moy')}</div>
                       <div className="font-semibold">{(indexData.statistics?.mean ?? 0).toFixed(3)}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-gray-600">Min</div>
+                      <div className="text-gray-600">{t('satellite:heatmap.stats.min')}</div>
                       <div className="font-semibold">{(indexData.statistics?.min ?? 0).toFixed(3)}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-gray-600">Max</div>
+                      <div className="text-gray-600">{t('satellite:heatmap.stats.max')}</div>
                       <div className="font-semibold">{(indexData.statistics?.max ?? 0).toFixed(3)}</div>
                     </div>
                   </div>
@@ -1054,7 +1052,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
           {/* Comparison Bar Chart */}
           <div className="bg-white border rounded-lg p-4">
-            <h4 className="font-semibold mb-4">Comparaison des Moyennes</h4>
+            <h4 className="font-semibold mb-4">{t('satellite:heatmap.multiGrid.meanComparison')}</h4>
             <ReactECharts
               option={{
                 tooltip: {
@@ -1076,11 +1074,11 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 },
                 yAxis: {
                   type: 'value',
-                  name: 'Valeur Moyenne'
-                },
-                series: [
-                  {
-                    name: 'Moyenne',
+                   name: t('satellite:heatmap.multiGrid.average')
+                 },
+                 series: [
+                   {
+                     name: t('satellite:heatmap.multiGrid.average'),
                     type: 'bar',
                     data: Array.from(multiData.entries()).map(([index, data]) => ({
                       value: data.statistics.mean,
@@ -1104,22 +1102,22 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               <TableHeader className="bg-gray-50">
                 <TableRow>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Indice
+                    {t('satellite:heatmap.multiGrid.indexComparison')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Moyenne
+                    {t('satellite:heatmap.multiGrid.average')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Médiane
+                    {t('satellite:heatmap.multiGrid.median')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Écart-type
+                    {t('satellite:heatmap.multiGrid.stdDev')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Min / Max
+                    {t('satellite:heatmap.multiGrid.minMax')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pixels
+                    {t('satellite:heatmap.stats.pixels')}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -1162,9 +1160,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       {viewMode === 'multi-overlay' && multiData.size > 0 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold">Superposition des Indices - {selectedDate}</h3>
+            <h3 className="text-xl font-semibold">{t('satellite:heatmap.multiOverlay.title', { date: selectedDate })}</h3>
             <div className="text-sm text-gray-600">
-              Utilisez les curseurs d'opacité pour ajuster la visibilité de chaque indice
+              {t('satellite:heatmap.multiOverlay.opacityHint')}
             </div>
           </div>
 
@@ -1183,7 +1181,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
           {/* Legend for overlays */}
           <div className="bg-gray-50 border rounded-lg p-4">
-            <h4 className="font-semibold mb-3">Légende des Indices</h4>
+            <h4 className="font-semibold mb-3">{t('satellite:heatmap.multiOverlay.indexLegend')}</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Array.from(multiData.keys()).map(index => (
                 <div key={index} className="flex items-center gap-3 p-2 bg-white rounded border">
@@ -1209,7 +1207,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Bar Chart */}
             <div className="bg-white border rounded-lg p-4">
-              <h4 className="font-semibold mb-4">Moyennes par Indice</h4>
+              <h4 className="font-semibold mb-4">{t('satellite:heatmap.multiOverlay.averagesByIndex')}</h4>
               <ReactECharts
                 option={{
                   tooltip: {
@@ -1231,11 +1229,11 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   },
                   yAxis: {
                     type: 'value',
-                    name: 'Valeur'
-                  },
-                  series: [
-                    {
-                      name: 'Moyenne',
+                     name: t('satellite:heatmap.multiOverlay.value')
+                   },
+                   series: [
+                     {
+                       name: t('satellite:heatmap.multiGrid.average'),
                       type: 'bar',
                       data: Array.from(multiData.entries()).map(([index, data]) => ({
                         value: data.statistics.mean,
@@ -1250,15 +1248,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
             {/* Statistics Table */}
             <div className="bg-white border rounded-lg p-4">
-              <h4 className="font-semibold mb-4">Statistiques Détaillées</h4>
+              <h4 className="font-semibold mb-4">{t('satellite:heatmap.multiOverlay.detailedStats')}</h4>
               <div className="overflow-auto max-h-[300px]">
                 <Table className="min-w-full text-sm">
                   <TableHeader className="bg-gray-50 sticky top-0">
                     <TableRow>
-                      <TableHead className="px-3 py-2 text-left">Indice</TableHead>
-                      <TableHead className="px-3 py-2 text-right">Moy.</TableHead>
-                      <TableHead className="px-3 py-2 text-right">Min</TableHead>
-                      <TableHead className="px-3 py-2 text-right">Max</TableHead>
+                      <TableHead className="px-3 py-2 text-left">{t('satellite:heatmap.labels.index')}</TableHead>
+                      <TableHead className="px-3 py-2 text-right">{t('satellite:heatmap.stats.moy')}</TableHead>
+                      <TableHead className="px-3 py-2 text-right">{t('satellite:heatmap.stats.min')}</TableHead>
+                      <TableHead className="px-3 py-2 text-right">{t('satellite:heatmap.stats.max')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="divide-y">
@@ -1292,7 +1290,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-semibold flex items-center gap-2">
               <GitCompareArrows className="w-5 h-5 text-purple-600" />
-              {selectedIndex} — {selectedDate} vs {compareDate}
+              {selectedIndex} — {t('satellite:heatmap.temporalCompare.variationBetween', { dateA: selectedDate, dateB: compareDate })}
             </h3>
           </div>
 
@@ -1302,9 +1300,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             <div className="bg-white border-2 border-purple-200 rounded-lg overflow-hidden">
               <div className="bg-purple-50 p-3 border-b border-purple-200">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-lg text-purple-900">Date A: {selectedDate}</h4>
+                  <h4 className="font-semibold text-lg text-purple-900">{t('satellite:heatmap.temporalCompare.dateALabel', { date: selectedDate })}</h4>
                   <span className="text-sm text-purple-700 font-medium">
-                    Moy: {(leftTemporalData.statistics?.mean ?? 0).toFixed(3)}
+                    {t('satellite:heatmap.stats.moy')} {(leftTemporalData.statistics?.mean ?? 0).toFixed(3)}
                   </span>
                 </div>
               </div>
@@ -1327,9 +1325,9 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
             <div className="bg-white border-2 border-purple-200 rounded-lg overflow-hidden">
               <div className="bg-purple-50 p-3 border-b border-purple-200">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-lg text-purple-900">Date B: {compareDate}</h4>
+                  <h4 className="font-semibold text-lg text-purple-900">{t('satellite:heatmap.temporalCompare.dateBLabel', { date: compareDate })}</h4>
                   <span className="text-sm text-purple-700 font-medium">
-                    Moy: {(rightTemporalData.statistics?.mean ?? 0).toFixed(3)}
+                    {t('satellite:heatmap.stats.moy')} {(rightTemporalData.statistics?.mean ?? 0).toFixed(3)}
                   </span>
                 </div>
               </div>
@@ -1353,32 +1351,32 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           <div className="bg-white border rounded-lg overflow-hidden">
             <div className="bg-purple-50 p-4 border-b">
               <h4 className="font-semibold text-purple-900">
-                Comparaison Statistique — {selectedIndex}
+                {t('satellite:heatmap.temporalCompare.statisticalComparison', { index: selectedIndex })}
               </h4>
               <p className="text-sm text-purple-700 mt-1">
-                Variation entre {selectedDate} et {compareDate}
+                {t('satellite:heatmap.temporalCompare.variationBetween', { dateA: selectedDate, dateB: compareDate })}
               </p>
             </div>
             <div className="overflow-x-auto">
               <Table className="min-w-full divide-y divide-gray-200">
                 <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statistique</TableHead>
-                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date A ({selectedDate})</TableHead>
-                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Date B ({compareDate})</TableHead>
-                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Delta</TableHead>
-                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variation %</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('satellite:heatmap.stats.statistic')}</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('satellite:heatmap.temporalCompare.dateALabel', { date: selectedDate })}</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('satellite:heatmap.temporalCompare.dateBLabel', { date: compareDate })}</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('satellite:heatmap.stats.delta')}</TableHead>
+                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('satellite:heatmap.stats.variation')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-white divide-y divide-gray-200">
                   {([
-                    { label: 'Moyenne', key: 'mean' as const },
-                    { label: 'Médiane', key: 'median' as const },
-                    { label: 'Minimum', key: 'min' as const },
-                    { label: 'Maximum', key: 'max' as const },
-                    { label: 'P10', key: 'p10' as const },
-                    { label: 'P90', key: 'p90' as const },
-                    { label: 'Écart-type', key: 'std' as const },
+                    { label: t('satellite:heatmap.stats.mean'), key: 'mean' as const },
+                    { label: t('satellite:heatmap.stats.median'), key: 'median' as const },
+                    { label: t('satellite:heatmap.stats.min'), key: 'min' as const },
+                    { label: t('satellite:heatmap.stats.max'), key: 'max' as const },
+                    { label: t('satellite:heatmap.stats.p10'), key: 'p10' as const },
+                    { label: t('satellite:heatmap.stats.p90'), key: 'p90' as const },
+                    { label: t('satellite:heatmap.stats.std'), key: 'std' as const },
                   ]).map(({ label, key }) => {
                     const valA = leftTemporalData.statistics?.[key] ?? 0;
                     const valB = rightTemporalData.statistics?.[key] ?? 0;
@@ -1405,7 +1403,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                     );
                   })}
                   <TableRow className="bg-gray-50 font-medium">
-                    <TableCell className="px-6 py-3 text-sm text-gray-900">Pixels</TableCell>
+                    <TableCell className="px-6 py-3 text-sm text-gray-900">{t('satellite:heatmap.stats.pixels')}</TableCell>
                     <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{(leftTemporalData.statistics?.count ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="px-6 py-3 text-sm text-right tabular-nums">{(rightTemporalData.statistics?.count ?? 0).toLocaleString()}</TableCell>
                     <TableCell className="px-6 py-3 text-sm text-right tabular-nums text-gray-500">—</TableCell>
@@ -1418,7 +1416,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
           {/* Comparison Bar Chart */}
           <div className="bg-white border rounded-lg p-4">
-            <h4 className="font-semibold mb-4">Comparaison Visuelle</h4>
+            <h4 className="font-semibold mb-4">{t('satellite:heatmap.temporalCompare.visualComparison')}</h4>
             <ReactECharts
               option={{
                 tooltip: {
@@ -1436,7 +1434,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                 },
                 xAxis: {
                   type: 'category',
-                  data: ['Moyenne', 'Médiane', 'Min', 'Max', 'P10', 'P90', 'Écart-type']
+                  data: t('satellite:heatmap.temporal.barChartLabels', { returnObjects: true }) as string[]
                 },
                 yAxis: {
                   type: 'value',
@@ -1492,6 +1490,7 @@ const MultiIndexOverlayMap: React.FC<{
   selectedDate: string;
   baseLayer: 'osm' | 'satellite';
 }> = ({ boundary, multiData, overlayOpacity, baseLayer }) => {
+  const { t } = useTranslation('satellite');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const indices = Array.from(multiData.keys());
 
@@ -1511,7 +1510,7 @@ const MultiIndexOverlayMap: React.FC<{
       <Button
         onClick={() => setIsFullscreen(!isFullscreen)}
         className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-100 border-2 border-gray-300 rounded-lg p-2 shadow-lg transition-colors"
-        title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+        title={isFullscreen ? t('satellite:heatmap.fullscreen.exit') : t('satellite:heatmap.fullscreen.enter')}
       >
         {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
       </Button>

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusDot } from '@/components/ui/status-dot';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
+import { useTranslation } from 'react-i18next';
 
 const formatTooltipValue = (value: number) => {
   return value?.toFixed(3) ?? 'N/A';
@@ -105,6 +106,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   defaultIndex = 'NIRv'
 }) => {
   const { currentOrganization } = useAuth();
+  const { t, i18n } = useTranslation('satellite');
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
@@ -176,15 +178,15 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return colors[index] || '#6b7280';
   };
 
-   const getIndexDescription = (index: TimeSeriesIndexType): string => {
-     if (index === 'NIRvP') {
-       return 'NIRvP — Productivité photosynthétique (NIRv × PAR)';
-     }
-     if (index === 'TCARI_OSAVI') {
-       return 'TCARI/OSAVI — Ratio chlorophylle résistant au LAI';
-     }
-     return VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType];
-   };
+     const getIndexDescription = (index: TimeSeriesIndexType): string => {
+       if (index === 'NIRvP') {
+         return t('timeSeries.indexDescriptions.NIRvP');
+       }
+       if (index === 'TCARI_OSAVI') {
+         return t('timeSeries.indexDescriptions.TCARI_OSAVI');
+       }
+       return VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType];
+     };
 
   // Query cached data from database
   const {
@@ -510,11 +512,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     const STABILITY_THRESHOLD = 2;
 
     if (percentChange <= STABILITY_THRESHOLD) {
-      return <span title="Stable"><Minus className="w-3 h-3 text-yellow-600" /></span>;
+      return <span title={t('timeSeries.trend.stable')}><Minus className="w-3 h-3 text-yellow-600" /></span>;
     } else if (lastValue > firstValue) {
-      return <span title="En hausse"><TrendingUp className="w-3 h-3 text-green-600" /></span>;
+      return <span title={t('timeSeries.trend.increasing')}><TrendingUp className="w-3 h-3 text-green-600" /></span>;
     } else {
-      return <span title="En baisse"><TrendingDown className="w-3 h-3 text-red-600" /></span>;
+      return <span title={t('timeSeries.trend.decreasing')}><TrendingDown className="w-3 h-3 text-red-600" /></span>;
     }
   };
 
@@ -561,20 +563,22 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5" />
-          <h2 className="text-xl font-semibold">Vegetation Index Time Series</h2>
+          <h2 className="text-xl font-semibold">{t('timeSeries.title')}</h2>
         </div>
 
         {/* Cache indicator (subtle) - now shows post-validation count */}
         {cacheStats.total > 0 && (
           <div className="flex items-center gap-1 text-xs text-gray-400">
             <Database className="w-3 h-3" />
-            <span>{cacheStats.total} points</span>
+            <span>{t('timeSeries.dataPoints', { count: cacheStats.total })}</span>
           </div>
         )}
       </div>
 
       <p className="text-gray-600 mb-4">
-        Tendances historiques pour {parcelName || `Parcelle ${parcelId}`}
+        {parcelName
+          ? t('timeSeries.subtitle', { name: parcelName })
+          : t('timeSeries.subtitleFallback', { id: parcelId })}
       </p>
 
       {/* Warning: Sparse data (Issue 2) */}
@@ -582,18 +586,18 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
-            <span className="font-medium">Données limitées.</span>{' '}
-            Seulement {cacheStats.total} points disponibles pour cette période en raison de la couverture nuageuse ou satellite.
+            <span className="font-medium">{t('timeSeries.warnings.sparseData')}</span>{' '}
+            {t('timeSeries.warnings.sparseDataDescription', { count: cacheStats.total })}
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {([
-          { label: '3 mois', days: 90 },
-          { label: '6 mois', days: 180 },
-          { label: '1 an', days: 365 },
-          { label: '2 ans', days: 730 },
+          { label: t('timeSeries.dateRange.3months'), days: 90 },
+          { label: t('timeSeries.dateRange.6months'), days: 180 },
+          { label: t('timeSeries.dateRange.1year'), days: 365 },
+          { label: t('timeSeries.dateRange.2years'), days: 730 },
         ] as const).map(({ label, days }) => {
           const range = getDateRangeLastNDays(days);
           const isActive = startDate === range.start_date && endDate === range.end_date;
@@ -617,7 +621,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {/* Multi-select Index Dropdown */}
         <div className="relative">
-          <label className="text-sm font-medium mb-2 block">Indices de végétation</label>
+          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.vegetationIndices')}</label>
           <Button
             type="button"
             onClick={() => setShowIndexSelector(!showIndexSelector)}
@@ -626,7 +630,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             <span className="truncate">
               {selectedIndices.length === 1
                 ? selectedIndices[0]
-                : `${selectedIndices.length} indices sélectionnés`}
+                : t('timeSeries.labels.indicesSelected', { count: selectedIndices.length })}
             </span>
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -660,7 +664,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Date de début</label>
+          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.startDate')}</label>
           <input
             type="date"
             value={startDate}
@@ -670,7 +674,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         </div>
 
         <div>
-          <label className="text-sm font-medium mb-2 block">Date de fin</label>
+          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.endDate')}</label>
           <input
             type="date"
             value={endDate}
@@ -693,12 +697,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                ) : (
                  <Thermometer className="w-4 h-4 text-orange-500" />
                )}
-               <span>Afficher T°</span>
+                <span>{t('timeSeries.labels.showTemperature')}</span>
              </div>
            </label>
            {weatherError && showTemperature && (
-             <p className="text-xs text-red-500 mt-1">
-               {(weatherError as Error).message || 'Erreur chargement météo'}
+              <p className="text-xs text-red-500 mt-1">
+                {(weatherError as Error).message || t('timeSeries.warnings.weatherError')}
              </p>
            )}
         </div>
@@ -734,9 +738,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-red-800">
-            <span className="font-medium">Pas de données disponibles pour cette période.</span>{' '}
+            <span className="font-medium">{t('timeSeries.warnings.noDataTitle')}</span>{' '}
             <span className="block mt-1 text-red-600">
-              Essayez d'élargir la plage de dates ou cliquez sur "Récupérer depuis satellite" pour synchroniser les données.
+              {t('timeSeries.warnings.noDataHint')}
             </span>
           </div>
         </div>
@@ -747,7 +751,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-amber-800">
-            <span className="font-medium">Données non disponibles pour :</span>{' '}
+            <span className="font-medium">{t('timeSeries.warnings.partialDataTitle')}</span>{' '}
             {emptyIndices.map(index => (
               <span key={index} className="inline-flex items-center mr-2">
                 <span
@@ -767,12 +771,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           <Table className="w-full text-sm">
             <TableHeader>
               <TableRow className="border-b">
-                <TableHead className="text-left py-2 px-2">Index</TableHead>
-                <TableHead className="text-center py-2 px-2">Moyenne</TableHead>
-                <TableHead className="text-center py-2 px-2">Min</TableHead>
-                <TableHead className="text-center py-2 px-2">Max</TableHead>
-                <TableHead className="text-center py-2 px-2">Écart-type</TableHead>
-                <TableHead className="text-center py-2 px-2">Tendance</TableHead>
+                <TableHead className="text-left py-2 px-2">{t('timeSeries.table.index')}</TableHead>
+                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.mean')}</TableHead>
+                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.min')}</TableHead>
+                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.max')}</TableHead>
+                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.std')}</TableHead>
+                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.trend')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -789,7 +793,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                         </div>
                       </TableCell>
                       <TableCell colSpan={5} className="text-center py-2 px-2 text-gray-400 italic text-xs">
-                        Pas de données disponibles
+                        {t('timeSeries.table.noData')}
                       </TableCell>
                     </TableRow>
                   );
@@ -815,7 +819,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                   <TableCell className="py-2 px-2">
                     <div className="flex items-center gap-2">
                       <StatusDot color="orange" size="md" />
-                      <span className="font-medium text-gray-800">Temp. moyenne</span>
+                      <span className="font-medium text-gray-800">{t('timeSeries.table.tempMean')}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center py-2 px-2">
@@ -867,7 +871,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                 stroke={getIndexColor(selectedIndices[0])}
                 tickFormatter={(value) => {
                   const date = new Date(value);
-                  return date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+                  return date.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: '2-digit' });
                 }}
                 fill="rgba(59, 130, 246, 0.05)"
               >
@@ -889,7 +893,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                      yAxisId="right"
                      type="monotone"
                      dataKey="temperature_min"
-                     name="Temp. Min"
+                     name={t('timeSeries.chart.tempMin')}
                      stroke="#fdba74"
                      strokeWidth={1}
                      strokeDasharray="3 3"
@@ -900,7 +904,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                      yAxisId="right"
                      type="monotone"
                      dataKey="temperature_max"
-                     name="Temp. Max"
+                     name={t('timeSeries.chart.tempMax')}
                      stroke="#ea580c"
                      strokeWidth={1}
                      strokeDasharray="3 3"
@@ -911,7 +915,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                      yAxisId="right"
                      type="monotone"
                      dataKey="temperature_mean"
-                     name="Temp. Moyenne"
+                     name={t('timeSeries.chart.tempMean')}
                      stroke="#f97316"
                      strokeWidth={2}
                      strokeDasharray="5 5"
@@ -940,7 +944,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <BarChart3 className="w-12 h-12 mb-2 text-gray-300" />
-            <p>Aucune donnée disponible pour cette période</p>
+            <p>{t('timeSeries.chart.emptyState')}</p>
           </div>
         )}
       </div>
@@ -972,17 +976,13 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
         >
           <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
-          Actualiser le cache
+          {t('timeSeries.actions.refreshCache')}
         </Button>
-        <Button
-          onClick={forceSync}
-          disabled={isLoading || !boundary}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
+        <Button variant="blue" onClick={forceSync} disabled={isLoading || !boundary} className="flex items-center gap-2 px-4 py-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" >
           <Satellite className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
           {isSyncing && syncProgress
             ? `${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
-            : isSyncing ? 'Lancement...' : 'Récupérer depuis satellite'}
+            : isSyncing ? t('timeSeries.actions.launching') : t('timeSeries.actions.fetchFromSatellite')}
         </Button>
       </div>
     </div>

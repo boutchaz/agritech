@@ -1,0 +1,200 @@
+{
+  "timeSeries": {
+    "title": "Séries temporelles d'indices de végétation",
+    "subtitle": "Tendances historiques pour {{name}}",
+    "subtitleFallback": "Tendances historiques pour Parcelle {{id}}",
+    "dataPoints": "{{count}} points",
+    "warnings": {
+      "sparseData": "Données limitées.",
+      "sparseDataDescription": "Seulement {{count}} points disponibles pour cette période en raison de la couverture nuageuse ou satellite.",
+      "noDataTitle": "Pas de données disponibles pour cette période.",
+      "noDataHint": "Essayez d'élargir la plage de dates ou cliquez sur « Récupérer depuis satellite » pour synchroniser les données.",
+      "partialDataTitle": "Données non disponibles pour :",
+      "weatherError": "Erreur chargement météo"
+    },
+    "dateRange": {
+      "3months": "3 mois",
+      "6months": "6 mois",
+      "1year": "1 an",
+      "2years": "2 ans"
+    },
+    "labels": {
+      "vegetationIndices": "Indices de végétation",
+      "indicesSelected": "{{count}} indices sélectionnés",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "showTemperature": "Afficher T°"
+    },
+    "table": {
+      "index": "Index",
+      "mean": "Moyenne",
+      "min": "Min",
+      "max": "Max",
+      "std": "Écart-type",
+      "trend": "Tendance",
+      "noData": "Pas de données disponibles",
+      "tempMean": "Temp. moyenne"
+    },
+    "trend": {
+      "stable": "Stable",
+      "increasing": "En hausse",
+      "decreasing": "En baisse"
+    },
+    "chart": {
+      "tempMin": "Temp. Min",
+      "tempMax": "Temp. Max",
+      "tempMean": "Temp. Moyenne",
+      "emptyState": "Aucune donnée disponible pour cette période"
+    },
+    "actions": {
+      "refreshCache": "Actualiser le cache",
+      "fetchFromSatellite": "Récupérer depuis satellite",
+      "launching": "Lancement..."
+    },
+    "indexDescriptions": {
+      "NIRvP": "NIRvP — Productivité photosynthétique (NIRv × PAR)",
+      "TCARI_OSAVI": "TCARI/OSAVI — Ratio chlorophylle résistant au LAI"
+    }
+  },
+  "heatmap": {
+    "title": "Analyse interactive de la végétation",
+    "subtitle": "Explorez les données satellitaires interactives avec détails au survol, zoom et déplacement pour {{name}}",
+    "subtitleFallback": "Explorez les données satellitaires interactives avec détails au survol, zoom et déplacement pour Parcelle {{id}}",
+    "viewModes": {
+      "single": "Vue Simple",
+      "multiGrid": "Multi-Grille",
+      "multiOverlay": "Multi-Overlay",
+      "temporalCompare": "Comparaison"
+    },
+    "header": {
+      "single": "Visualisation Interactive {{index}}",
+      "multiGrid": "Comparaison Multi-Indices (Grille)",
+      "temporalCompare": "Comparaison Temporelle — {{index}}",
+      "multiOverlay": "Superposition Multi-Indices (Même Carte)",
+      "singleDesc": "Comparer plusieurs indices côte à côte",
+      "temporalDesc": "Comparer le même indice entre deux dates différentes",
+      "overlayDesc": "Superposer plusieurs indices sur la même carte"
+    },
+    "configuration": "Configuration",
+    "baseMap": {
+      "label": "Fond de Carte",
+      "osm": "OpenStreetMap",
+      "satellite": "Vue Satellite"
+    },
+    "dateNavigator": {
+      "datesAvailable": "{{count}} date(s) disponible(s)",
+      "date": "Date",
+      "placeholder": "Sélectionnez une date avec données satellite"
+    },
+    "temporalCompare": {
+      "vegetationIndex": "Indice de Végétation",
+      "colorPalette": "Palette de Couleurs",
+      "dateA": "Date A (Avant)",
+      "dateB": "Date B (Après)",
+      "dateRefPlaceholder": "Date de référence",
+      "dateComparePlaceholder": "Date à comparer",
+      "selectBothDates": "Veuillez sélectionner les deux dates pour la comparaison.",
+      "dateALabel": "Date A : {{date}}",
+      "dateBLabel": "Date B : {{date}}",
+      "statisticalComparison": "Comparaison Statistique — {{index}}",
+      "variationBetween": "Variation entre {{dateA}} et {{dateB}}",
+      "visualComparison": "Comparaison Visuelle"
+    },
+    "labels": {
+      "vegetationIndex": "Indice de Végétation",
+      "visualizationType": "Type de Visualisation",
+      "leafletMap": "Carte Leaflet (Recommandé)",
+      "scatterPlot": "Nuage de Points",
+      "indicesToCompare": "Indices à Comparer",
+      "overlayOpacity": "Opacité des Overlays",
+      "colorPalette": "Palette de Couleurs",
+      "colorPalettePerIndex": "Palettes de Couleurs par Indice",
+      "indexDescription": "Description de l'Index",
+      "index": "Indice",
+      "mean": "Moyenne",
+      "median": "Médiane",
+      "std": "Écart-type",
+      "count": "Nombre",
+      "pixels": "Pixels",
+      "min": "Min",
+      "max": "Max"
+    },
+    "stats": {
+      "moy": "Moy.",
+      "mean": "Moyenne",
+      "median": "Médiane",
+      "min": "Min",
+      "max": "Max",
+      "std": "Écart-type",
+      "count": "Nombre",
+      "pixels": "Pixels",
+      "p10": "P10",
+      "p90": "P90",
+      "delta": "Delta",
+      "variation": "Variation %",
+      "statistic": "Statistique"
+    },
+    "actions": {
+      "generate": "Générer la Visualisation",
+      "generating": "Génération...",
+      "compareDates": "Comparer les Dates",
+      "exportData": "Exporter les Données",
+      "regenerate": "Régénérer",
+      "loading": "Chargement..."
+    },
+    "multiGrid": {
+      "title": "Comparaison des Indices - {{date}}",
+      "meanComparison": "Comparaison des Moyennes",
+      "indexComparison": "Indices",
+      "average": "Moyenne",
+      "median": "Médiane",
+      "stdDev": "Écart-type",
+      "minMax": "Min / Max"
+    },
+    "multiOverlay": {
+      "title": "Superposition des Indices - {{date}}",
+      "opacityHint": "Utilisez les curseurs d'opacité pour ajuster la visibilité de chaque indice",
+      "indexLegend": "Légende des Indices",
+      "averagesByIndex": "Moyennes par Indice",
+      "detailedStats": "Statistiques Détaillées",
+      "value": "Valeur"
+    },
+    "temporal": {
+      "barChartLabels": ["Moyenne", "Médiane", "Min", "Max", "P10", "P90", "Écart-type"]
+    },
+    "warnings": {
+      "dateMismatchTitle": "Date de données différente",
+      "dateMismatchDescription": "Aucune image satellite disponible pour le <strong>{{requested}}</strong>. Données du <strong>{{actual}}</strong> affichées à la place.",
+      "noImagesForDate": "Aucune image satellite disponible pour le {{date}}. Veuillez sélectionner une autre date dans le calendrier.",
+      "cloudCoverageError": "Erreur lors du traitement de la couverture nuageuse. La date sélectionnée a peut-être trop de couverture nuageuse.",
+      "failedToGenerate": "Échec de la génération de la visualisation interactive",
+      "failedToCheckDates": "Impossible de vérifier les dates disponibles. Utilisation de la date actuelle par défaut.",
+      "noDataForDate": "Aucune donnée pour la date sélectionnée. Recommandé : {{date}}"
+    },
+    "samplePoints": {
+      "label": "Points d'échantillonnage",
+      "fast": "Rapide",
+      "balanced": "Équilibré",
+      "detailed": "Détaillé",
+      "highDetail": "Haute Détaille",
+      "maximumDetail": "Détaille Maximale"
+    },
+    "fullscreen": {
+      "enter": "Plein écran",
+      "exit": "Quitter le plein écran"
+    },
+    "leafletViewer": {
+      "title": "{{index}} - évolution temporelle",
+      "heatmapTitle": "{{index}} Heatmap - {{date}}",
+      "exportData": "Exporter les Données",
+      "checkingAvailability": "Vérification de la disponibilité...",
+      "statistics": {
+        "mean": "Moyenne",
+        "median": "Médiane",
+        "p10": "P10",
+        "p90": "P90",
+        "std": "Écart-type"
+      }
+    }
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "timeSeries": {
+    "title": "السلاسل الزمنية لمؤشرات الغطاء النباتي",
+    "subtitle": "الاتجاهات التاريخية لـ {{name}}",
+    "subtitleFallback": "الاتجاهات التاريخية للقطعة {{id}}",
+    "dataPoints": "{{count}} نقطة",
+    "warnings": {
+      "sparseData": "بيانات محدودة.",
+      "sparseDataDescription": "متاح فقط {{count}} نقطة بيانات لهذه الفترة بسبب الغطاء السحابي أو تغطية القمر الصناعي.",
+      "noDataTitle": "لا توجد بيانات متاحة لهذه الفترة.",
+      "noDataHint": "حاول توسيع نطاق التواريخ أو انقر على « استرجاع من القمر الصناعي » لمزامنة البيانات.",
+      "partialDataTitle": "بيانات غير متاحة لـ:",
+      "weatherError": "خطأ في تحميل بيانات الطقس"
+    },
+    "dateRange": {
+      "3months": "3 أشهر",
+      "6months": "6 أشهر",
+      "1year": "سنة واحدة",
+      "2years": "سنتان"
+    },
+    "labels": {
+      "vegetationIndices": "مؤشرات الغطاء النباتي",
+      "indicesSelected": "{{count}} مؤشرات محددة",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "showTemperature": "عرض الحرارة"
+    },
+    "table": {
+      "index": "المؤشر",
+      "mean": "المتوسط",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى",
+      "std": "الانحراف المعياري",
+      "trend": "الاتجاه",
+      "noData": "لا توجد بيانات متاحة",
+      "tempMean": "متوسط الحرارة"
+    },
+    "trend": {
+      "stable": "مستقر",
+      "increasing": "في ارتفاع",
+      "decreasing": "في انخفاض"
+    },
+    "chart": {
+      "tempMin": "حرارة صغرى",
+      "tempMax": "حرارة عظمى",
+      "tempMean": "متوسط الحرارة",
+      "emptyState": "لا توجد بيانات متاحة لهذه الفترة"
+    },
+    "actions": {
+      "refreshCache": "تحديث ذاكرة التخزين المؤقت",
+      "fetchFromSatellite": "استرجاع من القمر الصناعي",
+      "launching": "جارٍ الإطلاق..."
+    },
+    "indexDescriptions": {
+      "NIRvP": "NIRvP — الإنتاجية الضوئية (NIRv × PAR)",
+      "TCARI_OSAVI": "TCARI/OSAVI — نسبة الكلوروفيل المقاومة لمؤشر LAI"
+    }
+  },
+  "heatmap": {
+    "title": "تحليل الغطاء النباتي التفاعلي",
+    "subtitle": "استكشف بيانات الأقمار الصناعية التفاعلية مع تفاصيل عند التمرير والتكبير والتحريك لـ {{name}}",
+    "subtitleFallback": "استكشف بيانات الأقمار الصناعية التفاعلية مع تفاصيل عند التمرير والتكبير والتحريك للقطعة {{id}}",
+    "viewModes": {
+      "single": "عرض بسيط",
+      "multiGrid": "شبكة متعددة",
+      "multiOverlay": "تراكب متعدد",
+      "temporalCompare": "مقارنة"
+    },
+    "header": {
+      "single": "تصور تفاعلي {{index}}",
+      "multiGrid": "مقارنة متعددة المؤشرات (شبكة)",
+      "temporalCompare": "مقارنة زمنية — {{index}}",
+      "multiOverlay": "تراكب متعدد المؤشرات (نفس الخريطة)",
+      "singleDesc": "مقارنة عدة مؤشرات جنبًا إلى جنب",
+      "temporalDesc": "مقارنة نفس المؤشر بين تاريخين مختلفين",
+      "overlayDesc": "تراكب عدة مؤشرات على نفس الخريطة"
+    },
+    "configuration": "الإعدادات",
+    "baseMap": {
+      "label": "خريطة الأساس",
+      "osm": "خريطة الشوارع المفتوحة",
+      "satellite": "عرض القمر الصناعي"
+    },
+    "dateNavigator": {
+      "datesAvailable": "{{count}} تاريخ/تواريخ متاح/ة",
+      "date": "التاريخ",
+      "placeholder": "اختر تاريخًا مع بيانات قمر صناعي"
+    },
+    "temporalCompare": {
+      "vegetationIndex": "مؤشر الغطاء النباتي",
+      "colorPalette": "لوحة الألوان",
+      "dateA": "التاريخ أ (قبل)",
+      "dateB": "التاريخ ب (بعد)",
+      "dateRefPlaceholder": "تاريخ المرجع",
+      "dateComparePlaceholder": "التاريخ للمقارنة",
+      "selectBothDates": "يرجى اختيار التاريخين للمقارنة.",
+      "dateALabel": "التاريخ أ: {{date}}",
+      "dateBLabel": "التاريخ ب: {{date}}",
+      "statisticalComparison": "مقارنة إحصائية — {{index}}",
+      "variationBetween": "التباين بين {{dateA}} و {{dateB}}",
+      "visualComparison": "مقارنة بصرية"
+    },
+    "labels": {
+      "vegetationIndex": "مؤشر الغطاء النباتي",
+      "visualizationType": "نوع التصور",
+      "leafletMap": "خريطة Leaflet (موصى به)",
+      "scatterPlot": "مخطط الانتشار",
+      "indicesToCompare": "المؤشرات للمقارنة",
+      "overlayOpacity": "شفافية التراكب",
+      "colorPalette": "لوحة الألوان",
+      "colorPalettePerIndex": "لوحات ألوان حسب المؤشر",
+      "indexDescription": "وصف المؤشر",
+      "index": "المؤشر",
+      "mean": "المتوسط",
+      "median": "الوسيط",
+      "std": "الانحراف المعياري",
+      "count": "العدد",
+      "pixels": "البكسلات",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى"
+    },
+    "stats": {
+      "moy": "متوسط",
+      "mean": "المتوسط",
+      "median": "الوسيط",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى",
+      "std": "الانحراف المعياري",
+      "count": "العدد",
+      "pixels": "البكسلات",
+      "p10": "P10",
+      "p90": "P90",
+      "delta": "الفرق",
+      "variation": "نسبة التغير %",
+      "statistic": "إحصائية"
+    },
+    "actions": {
+      "generate": "إنشاء التصور",
+      "generating": "جارٍ الإنشاء...",
+      "compareDates": "مقارنة التواريخ",
+      "exportData": "تصدير البيانات",
+      "regenerate": "إعادة الإنشاء",
+      "loading": "جارٍ التحميل..."
+    },
+    "multiGrid": {
+      "title": "مقارنة المؤشرات - {{date}}",
+      "meanComparison": "مقارنة المتوسطات",
+      "indexComparison": "المؤشرات",
+      "average": "المتوسط",
+      "median": "الوسيط",
+      "stdDev": "الانحراف المعياري",
+      "minMax": "الحد الأدنى / الأقصى"
+    },
+    "multiOverlay": {
+      "title": "تراكب المؤشرات - {{date}}",
+      "opacityHint": "استخدم أشرطة التمرير لضبط شفافية كل مؤشر",
+      "indexLegend": "مفتاح المؤشرات",
+      "averagesByIndex": "المتوسطات حسب المؤشر",
+      "detailedStats": "إحصائيات مفصلة",
+      "value": "القيمة"
+    },
+    "temporal": {
+      "barChartLabels": ["المتوسط", "الوسيط", "الحد الأدنى", "الحد الأقصى", "P10", "P90", "الانحراف المعياري"]
+    },
+    "warnings": {
+      "dateMismatchTitle": "تاريخ بيانات مختلف",
+      "dateMismatchDescription": "لا توجد صورة قمر صناعي متاحة لـ <strong>{{requested}}</strong>. بيانات <strong>{{actual}}</strong> معروضة بدلاً من ذلك.",
+      "noImagesForDate": "لا توجد صور قمر صناعي متاحة لـ {{date}}. يرجى اختيار تاريخ آخر من التقويم.",
+      "cloudCoverageError": "خطأ في معالجة الغطاء السحابي. قد يكون للتاريخ المحدد تغطية سحابية عالية.",
+      "failedToGenerate": "فشل إنشاء التصور التفاعلي",
+      "failedToCheckDates": "فشل التحقق من التواريخ المتاحة. استخدام التاريخ الحالي كبديل.",
+      "noDataForDate": "لا توجد بيانات للتاريخ المحدد. الموصى به: {{date}}"
+    },
+    "samplePoints": {
+      "label": "نقاط العينات",
+      "fast": "سريع",
+      "balanced": "متوازن",
+      "detailed": "مفصل",
+      "highDetail": "تفصيل عالي",
+      "maximumDetail": "أقصى تفصيل"
+    },
+    "fullscreen": {
+      "enter": "ملء الشاشة",
+      "exit": "إنهاء ملء الشاشة"
+    },
+    "leafletViewer": {
+      "title": "{{index}} - التطور الزمني",
+      "heatmapTitle": "{{index}} خريطة حرارية - {{date}}",
+      "exportData": "تصدير البيانات",
+      "checkingAvailability": "جارٍ التحقق من التوفر...",
+      "statistics": {
+        "mean": "المتوسط",
+        "median": "الوسيط",
+        "p10": "P10",
+        "p90": "P90",
+        "std": "الانحراف المعياري"
+      }
+    }
+  }
+}
