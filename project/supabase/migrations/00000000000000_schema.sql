@@ -5512,7 +5512,42 @@ CREATE TABLE IF NOT EXISTS weather_forecasts (
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_location ON weather_forecasts(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_target ON weather_forecasts(target_date);
 
--- RLS: weather_daily_data and weather_forecasts are location caches (NO RLS, like satellite_par_data)
+-- RLS: weather_daily_data and weather_forecasts are location caches (same pattern as satellite_par_data)
+ALTER TABLE IF EXISTS weather_daily_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS weather_forecasts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "read_weather_daily_data" ON weather_daily_data;
+CREATE POLICY "read_weather_daily_data" ON weather_daily_data
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "write_weather_daily_data" ON weather_daily_data;
+CREATE POLICY "write_weather_daily_data" ON weather_daily_data
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "update_weather_daily_data" ON weather_daily_data;
+CREATE POLICY "update_weather_daily_data" ON weather_daily_data
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "delete_weather_daily_data" ON weather_daily_data;
+CREATE POLICY "delete_weather_daily_data" ON weather_daily_data
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "read_weather_forecasts" ON weather_forecasts;
+CREATE POLICY "read_weather_forecasts" ON weather_forecasts
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "write_weather_forecasts" ON weather_forecasts;
+CREATE POLICY "write_weather_forecasts" ON weather_forecasts
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "update_weather_forecasts" ON weather_forecasts;
+CREATE POLICY "update_weather_forecasts" ON weather_forecasts
+  FOR UPDATE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "delete_weather_forecasts" ON weather_forecasts;
+CREATE POLICY "delete_weather_forecasts" ON weather_forecasts
+  FOR DELETE USING (auth.uid() IS NOT NULL);
+
 -- RLS: weather_derived_data is org-scoped
 ALTER TABLE IF EXISTS weather_derived_data ENABLE ROW LEVEL SECURITY;
 
@@ -5672,6 +5707,33 @@ CREATE TRIGGER trg_crop_diseases_updated_at BEFORE UPDATE ON crop_diseases FOR E
 
 DROP TRIGGER IF EXISTS trg_crop_index_thresholds_updated_at ON crop_index_thresholds;
 CREATE TRIGGER trg_crop_index_thresholds_updated_at BEFORE UPDATE ON crop_index_thresholds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS: agronomic reference tables (no org_id — shared read-only data, writable by service_role only)
+ALTER TABLE IF EXISTS phenological_stages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_kc_coefficients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_mineral_exports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_diseases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS crop_index_thresholds ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "read_phenological_stages" ON phenological_stages;
+CREATE POLICY "read_phenological_stages" ON phenological_stages
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "read_crop_kc_coefficients" ON crop_kc_coefficients;
+CREATE POLICY "read_crop_kc_coefficients" ON crop_kc_coefficients
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "read_crop_mineral_exports" ON crop_mineral_exports;
+CREATE POLICY "read_crop_mineral_exports" ON crop_mineral_exports
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "read_crop_diseases" ON crop_diseases;
+CREATE POLICY "read_crop_diseases" ON crop_diseases
+  FOR SELECT USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "read_crop_index_thresholds" ON crop_index_thresholds;
+CREATE POLICY "read_crop_index_thresholds" ON crop_index_thresholds
+  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Seed system crop types with agronomic data
 DO $$
