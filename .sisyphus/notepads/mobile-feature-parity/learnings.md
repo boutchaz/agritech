@@ -104,3 +104,9 @@
 - useRefreshOnFocus: AppState-based refetch trigger
 - useNetworkStatus: NetInfo wrapper
 - api.ts: added 30s timeout + 1 retry on network error
+
+## 2026-04-02 — Notification Redirect Normalization
+- Added shared route mapper at `project/src/lib/notification-routes.ts` to centralize redirect logic for both notification surfaces.
+- Mapper must normalize mixed backend keys (`parcelId`/`parcel_id`, `report_id`) and prefers semantic destination by type for AI, soil analysis, and admin notifications.
+- Marketplace quote notifications should route to `/marketplace/quote-requests/received` (not `/marketplace/quotes`), and order redirects should not pass unsupported search params.
+- `NotificationCenter.tsx` and `NotificationBell.tsx` now both resolve destinations via `getNotificationRedirect`, ensuring toast "View" action availability for all valid redirectable types.

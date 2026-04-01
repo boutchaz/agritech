@@ -117,4 +117,46 @@ export class SatelliteProxyService {
   async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number) {
     return this.proxy('POST', path, { body, organizationId, query, timeout });
   }
+
+  /**
+   * Proxy a request and return the raw Response (for binary content like PDFs).
+   * The caller is responsible for piping to the NestJS response.
+   */
+  async proxyRaw(
+    method: string,
+    path: string,
+    options: { organizationId?: string; timeout?: number } = {},
+  ): Promise<{ buffer: Buffer; contentType: string; status: number }> {
+    const { organizationId, timeout = 60_000 } = options;
+    const url = `${this.satelliteBaseUrl}/api${path}`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    const headers: Record<string, string> = {};
+    if (organizationId) {
+      headers['x-organization-id'] = organizationId;
+    }
+
+    try {
+      const res = await fetch(url, { method, headers, signal: controller.signal });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new HttpException(
+          errorText || `Satellite service error: ${res.statusText}`,
+          res.status >= 500 ? HttpStatus.BAD_GATEWAY : res.status,
+        );
+      }
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const contentType = res.headers.get('content-type') || 'application/octet-stream';
+      return { buffer, contentType, status: res.status };
+    } catch (error) {
+      clearTimeout(timer);
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Satellite service unavailable', HttpStatus.BAD_GATEWAY);
+    }
+  }
 }

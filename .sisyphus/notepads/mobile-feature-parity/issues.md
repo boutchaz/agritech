@@ -20,3 +20,6 @@
 - For drawer: need `@react-navigation/drawer` + `react-native-drawer-layout`
 - Existing `(tabs)` group must be preserved — do NOT delete or move existing screen files
 - The drawer wraps the tabs via layout composition
+
+## 2026-04-02 — Build/verification gotcha
+- Workspace filter `pnpm --filter project build` does not match any package; correct frontend package name is `agriprofy` (`pnpm --filter agriprofy build`).

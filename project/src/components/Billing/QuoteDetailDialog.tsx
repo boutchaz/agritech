@@ -284,14 +284,12 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         return;
       }
 
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_SERVICE_URL ||
-        import.meta.env.VITE_SATELLITE_SERVICE_URL ||
-        'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/quotes/${resolvedQuote.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/quotes/${resolvedQuote.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'X-Organization-Id': resolvedQuote.organization_id || '',
         },
       });
 

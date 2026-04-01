@@ -6,10 +6,12 @@ import {
   Param,
   Query,
   Req,
+  Res,
   UseGuards,
   ValidationPipe,
   UsePipes,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SatelliteProxyService } from './satellite-proxy.service';
 import { SatelliteCacheService } from './satellite-cache.service';
@@ -239,6 +241,41 @@ export class SatelliteProxyController {
   @ApiOperation({ summary: 'Get cache warmup progress' })
   async getCacheWarmupStatus() {
     return this.sync.getProgress();
+  }
+
+  // ── Billing / PDF Generation ───────────────────────────
+
+  @Get('billing/quotes/:quoteId/pdf')
+  @ApiOperation({ summary: 'Generate quote PDF' })
+  async getQuotePdf(@Req() req, @Res() res: Response, @Param('quoteId') quoteId: string) {
+    const { buffer, contentType } = await this.proxy.proxyRaw('GET', `/billing/quotes/${quoteId}/pdf`, {
+      organizationId: req.headers['x-organization-id'],
+    });
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="quote-${quoteId}.pdf"`);
+    res.send(buffer);
+  }
+
+  @Get('billing/invoices/:invoiceId/pdf')
+  @ApiOperation({ summary: 'Generate invoice PDF' })
+  async getInvoicePdf(@Req() req, @Res() res: Response, @Param('invoiceId') invoiceId: string) {
+    const { buffer, contentType } = await this.proxy.proxyRaw('GET', `/billing/invoices/${invoiceId}/pdf`, {
+      organizationId: req.headers['x-organization-id'],
+    });
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${invoiceId}.pdf"`);
+    res.send(buffer);
+  }
+
+  @Get('billing/purchase-orders/:poId/pdf')
+  @ApiOperation({ summary: 'Generate purchase order PDF' })
+  async getPurchaseOrderPdf(@Req() req, @Res() res: Response, @Param('poId') poId: string) {
+    const { buffer, contentType } = await this.proxy.proxyRaw('GET', `/billing/purchase-orders/${poId}/pdf`, {
+      organizationId: req.headers['x-organization-id'],
+    });
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="po-${poId}.pdf"`);
+    res.send(buffer);
   }
 
   // ── Health ─────────────────────────────────────────────
