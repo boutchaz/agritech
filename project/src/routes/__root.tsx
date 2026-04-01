@@ -46,11 +46,12 @@ const tourContextImport = import('../contexts/TourContext');
 
 // Retry-on-failure wrapper for lazy imports — handles chunk-load errors
 // (stale deployment, network glitch) by retrying once after a short delay.
-function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyWithRetry<T extends { default: any }>(factory: () => Promise<T>) {
   return lazy(() =>
     factory().catch((err) => {
       console.warn('[lazyWithRetry] First attempt failed, retrying…', err);
-      return new Promise<{ default: React.ComponentType<any> }>((resolve) =>
+      return new Promise<T>((resolve) =>
         setTimeout(() => resolve(factory()), 1500),
       );
     }),
