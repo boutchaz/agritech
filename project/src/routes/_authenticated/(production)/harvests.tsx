@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
 import { Package, Plus, Filter, Download, Building2, Loader2, Search } from 'lucide-react';
@@ -22,6 +23,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 function HarvestsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+
+  useAutoStartTour('harvests', 1500);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {

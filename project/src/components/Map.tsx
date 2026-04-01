@@ -130,6 +130,7 @@ const MapComponent: React.FC<MapProps> = ({
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
+  const onParcelSelectRef = useRef(onParcelSelect);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [parcelName, setParcelName] = useState('');
   const [tempBoundary, setTempBoundary] = useState<number[][]>([]);
@@ -460,6 +461,11 @@ const MapComponent: React.FC<MapProps> = ({
     enabled: isFullScreen,
     meta: { name: t('common.actions.exitFullscreen', 'Exit fullscreen (Esc)'), description: 'Exit map fullscreen' },
   });
+
+  // Keep onParcelSelect ref in sync so the click handler always calls the latest callback
+  useEffect(() => {
+    onParcelSelectRef.current = onParcelSelect;
+  }, [onParcelSelect]);
 
   // Resize map when entering/exiting full-screen
   useEffect(() => {
@@ -1081,8 +1087,8 @@ const MapComponent: React.FC<MapProps> = ({
                 });
 
                 // Notify parent component
-                if (onParcelSelect && properties.parcelId) {
-                  onParcelSelect(properties.parcelId);
+                if (onParcelSelectRef.current && properties.parcelId) {
+                  onParcelSelectRef.current(properties.parcelId);
                 }
               }
             }
@@ -1226,7 +1232,7 @@ const MapComponent: React.FC<MapProps> = ({
   // Layer visibility for mapType is handled by a separate useEffect that
   // toggles layers without destroying the map — preserving zoom/position.
    
-  }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect, tileProvider]);
+  }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, tileProvider]);
 
   // Helper function to clean up drawing state
   const cleanupDrawingState = () => {

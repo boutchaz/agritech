@@ -2,6 +2,7 @@ import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, BookOpen, TrendingUp, DollarSign, Receipt, CreditCard, AlertCircle } from 'lucide-react';
@@ -18,6 +19,8 @@ const AppContent: React.FC = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
+
+  useAutoStartTour('accounting', 1500);
 
   // Real data from hooks
   const { data: invoices = [] } = useInvoices();

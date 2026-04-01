@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useAutoStartTour } from '@/contexts/TourContext'
 import Map from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader } from '@/components/ui/loader'
@@ -23,6 +24,8 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
+
+  useAutoStartTour('parcels', 1500);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
@@ -128,10 +131,9 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
     }
   };
 
-  const handleParcelSelect = (parcelId: string) => {
-    // Highlight and fly-to the parcel on the map
+  const handleParcelSelect = useCallback((parcelId: string) => {
     setSelectedParcelId(parcelId);
-  };
+  }, []);
 
 
 

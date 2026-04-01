@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, Link, useLocation } from '@tanstack/react-router';
 import { CheckSquare, Calendar, Building2, Columns3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,8 @@ function TasksLayout() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const location = useLocation();
+
+  useAutoStartTour('tasks', 1500);
 
   // Detect if we're on a specific task detail page (e.g. /tasks/some-uuid)
   const isTaskDetailPage = /^\/tasks\/[a-f0-9-]{36}/.test(location.pathname);

@@ -66,7 +66,7 @@ const TOUR_ROUTES: Record<TourId, string> = {
   'inventory': '/stock',
   'harvests': '/harvests',
   'infrastructure': '/infrastructure',
-  'billing': '/billing',
+  'billing': '/accounting/quotes',
   'accounting': '/accounting',
   'satellite': '/satellite-analysis',
   'reports': '/reports',
@@ -311,68 +311,72 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       disableBeacon: true,
     },
     {
-      target: '[data-tour="sidebar"]',
+      target: '[data-tour="org-switcher"]',
       title: t('tour.fullApp.step2.title'),
       content: t('tour.fullApp.step2.content'),
-      placement: 'right',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-tour="org-switcher"]',
-      title: t('tour.fullApp.step3.title'),
-      content: t('tour.fullApp.step3.content'),
       placement: 'bottom',
       disableBeacon: true,
     },
     {
       target: '[data-tour="nav-dashboard"]',
+      title: t('tour.fullApp.step3.title'),
+      content: t('tour.fullApp.step3.content'),
+      placement: 'right',
+      disableBeacon: true,
+    },
+    // --- LAYER 1: Define Your Land ---
+    {
+      target: '[data-tour="nav-farms"]',
       title: t('tour.fullApp.step4.title'),
       content: t('tour.fullApp.step4.content'),
       placement: 'right',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="nav-farms"]',
+      target: '[data-tour="nav-parcels"]',
       title: t('tour.fullApp.step5.title'),
       content: t('tour.fullApp.step5.content'),
       placement: 'right',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="nav-parcels"]',
+      target: '[data-tour="nav-infrastructure"]',
       title: t('tour.fullApp.step6.title'),
       content: t('tour.fullApp.step6.content'),
       placement: 'right',
       disableBeacon: true,
     },
+    // --- LAYER 2: Work the Land ---
     {
-      target: '[data-tour="nav-stock"]',
+      target: '[data-tour="nav-personnel"]',
       title: t('tour.fullApp.step7.title'),
       content: t('tour.fullApp.step7.content'),
       placement: 'right',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="nav-infrastructure"]',
+      target: '[data-tour="nav-stock"]',
       title: t('tour.fullApp.step8.title'),
       content: t('tour.fullApp.step8.content'),
       placement: 'right',
       disableBeacon: true,
     },
+    // --- LAYER 3: Grow & Monitor ---
     {
-      target: '[data-tour="nav-personnel"]',
+      target: '[data-tour="nav-production"]',
       title: t('tour.fullApp.step9.title'),
       content: t('tour.fullApp.step9.content'),
       placement: 'right',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="nav-production"]',
+      target: '[data-tour="nav-compliance"]',
       title: t('tour.fullApp.step10.title'),
       content: t('tour.fullApp.step10.content'),
       placement: 'right',
       disableBeacon: true,
     },
+    // --- LAYER 4: Sell & Account ---
     {
       target: '[data-tour="nav-billing"]',
       title: t('tour.fullApp.step11.title'),
@@ -387,25 +391,33 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       placement: 'right',
       disableBeacon: true,
     },
+    // --- LAYER 5: Intelligence ---
     {
-      target: '[data-tour="nav-reports"]',
+      target: '[data-tour="nav-chat"]',
       title: t('tour.fullApp.step13.title'),
       content: t('tour.fullApp.step13.content'),
       placement: 'right',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="user-menu"]',
+      target: '[data-tour="nav-reports"]',
       title: t('tour.fullApp.step14.title'),
       content: t('tour.fullApp.step14.content'),
+      placement: 'right',
+      disableBeacon: true,
+    },
+    {
+      target: '[data-tour="user-menu"]',
+      title: t('tour.fullApp.step15.title'),
+      content: t('tour.fullApp.step15.content'),
       placement: 'bottom',
       disableBeacon: true,
     },
     {
       target: 'body',
       placement: 'center',
-      title: t('tour.fullApp.step15.title'),
-      content: t('tour.fullApp.step15.content'),
+      title: t('tour.fullApp.step16.title'),
+      content: t('tour.fullApp.step16.content'),
       disableBeacon: true,
     },
   ],
@@ -418,26 +430,26 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       disableBeacon: true,
     },
     {
-      target: '[data-tour="dashboard-tasks"]',
+      target: '[data-tour="dashboard-parcels"]',
       title: t('tour.dashboard.step2.title'),
       content: t('tour.dashboard.step2.content'),
-      placement: 'left',
+      placement: 'top',
       disableBeacon: true,
     },
     {
-      target: '[data-tour="dashboard-parcels"]',
-      title: t('tour.dashboard.step4.title'),
-      content: t('tour.dashboard.step4.content'),
-      placement: 'top',
+      target: '[data-tour="dashboard-tasks"]',
+      title: t('tour.dashboard.step3.title'),
+      content: t('tour.dashboard.step3.content'),
+      placement: 'left',
       disableBeacon: true,
     },
   ],
   'farm-management': [
     {
-      target: '[data-tour="farm-list"]',
+      target: '[data-tour="farm-stats"]',
       title: t('tour.farmManagement.step1.title'),
       content: t('tour.farmManagement.step1.content'),
-      placement: 'right',
+      placement: 'bottom',
       disableBeacon: true,
     },
     {
@@ -448,10 +460,10 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       disableBeacon: true,
     },
     {
-      target: '[data-tour="farm-map"]',
+      target: '[data-tour="farm-list"]',
       title: t('tour.farmManagement.step3.title'),
       content: t('tour.farmManagement.step3.content'),
-      placement: 'left',
+      placement: 'top',
       disableBeacon: true,
     },
   ],
@@ -750,10 +762,10 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       disableBeacon: true,
     },
     {
-      target: '[data-tour="settings-preferences"]',
+      target: '[data-tour="settings-account"]',
       title: t('tour.settings.step6.title'),
       content: t('tour.settings.step6.content'),
-      placement: 'left',
+      placement: 'right',
       disableBeacon: true,
     },
   ],
@@ -1133,14 +1145,18 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   }, [tourState.dismissedTours, tourState.completedTours, endTour, user]);
 
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
-    const { status, type, action, index } = data;
+    const { status, type, action, index, size } = data;
 
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
-      setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
-    }
-
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
-      setTourState(prev => ({ ...prev, stepIndex: index - 1 }));
+    // Handle status changes first — FINISHED / SKIPPED take priority
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      // Let the status handlers below deal with cleanup
+    } else if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
+      // Guard: don't increment past the last step
+      if (index + 1 < size) {
+        setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
+      }
+    } else if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
+      setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
     }
 
     // Handle overlay click dismiss

@@ -3,6 +3,7 @@ import { useState, lazy, Suspense } from 'react';
 import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
 import { ContentSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { useParcels } from '@/hooks/useParcels';
 import { IndexCalculationResponse } from '@/lib/satellite-api';
 import { useCan } from '@/lib/casl';
@@ -17,6 +18,8 @@ const TimeSeriesChart = lazy(() => import('@/components/SatelliteAnalysisView/Ti
 function SatelliteAnalysisPage() {
   const { t } = useTranslation();
   const { currentFarm } = useAuth();
+
+  useAutoStartTour('satellite', 1500);
   const { can } = useCan();
   const navigate = useNavigate();
   const farmId = currentFarm?.id ?? null;

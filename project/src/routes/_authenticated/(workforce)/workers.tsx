@@ -6,6 +6,7 @@ import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
 import WorkersPaymentsList from '@/components/Workers/WorkersPaymentsList';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useCan } from '@/lib/casl/AbilityContext';
@@ -23,6 +24,8 @@ function WorkersPage() {
   const { t, i18n } = useTranslation();
   const isRTL = isRTLLocale(i18n.language);
   const { currentOrganization, currentFarm } = useAuth();
+
+  useAutoStartTour('workers', 1500);
   const { can } = useCan();
   const location = useLocation();
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);

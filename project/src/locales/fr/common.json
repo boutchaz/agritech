@@ -4407,300 +4407,296 @@
     },
     "welcome": {
       "step1": {
-        "title": "Bienvenue sur AgriTech! 🌾",
-        "content": "Découvrez comment gérer efficacement votre exploitation agricole. Cette visite guidée vous présentera les principales fonctionnalités de la plateforme."
+        "title": "Bienvenue sur AgroGina ! 🌾",
+        "content": "Votre plateforme complète de gestion agricole. Cette visite rapide vous montre les zones principales — ça prend moins d'une minute."
       },
       "step2": {
-        "title": "Navigation principale",
-        "content": "Utilisez ce menu pour accéder à toutes les sections de l'application : fermes, parcelles, tâches, stock, comptabilité et plus encore."
+        "title": "Navigation",
+        "content": "Tout est organisé dans cette barre latérale : votre terrain, votre équipe, votre production et vos finances. On va parcourir chaque couche."
       },
       "step3": {
-        "title": "Changement d'organisation",
-        "content": "Si vous gérez plusieurs exploitations, vous pouvez facilement basculer entre elles ici."
+        "title": "Votre Organisation",
+        "content": "Basculez entre organisations si vous gérez plusieurs fermes ou coopératives. Toutes les données sont isolées par organisation."
       },
       "step4": {
-        "title": "Votre profil",
-        "content": "Accédez à vos paramètres, préférences et options de déconnexion depuis ce menu."
+        "title": "Votre Compte",
+        "content": "Accédez à votre profil, préférences, langue et déconnexion depuis ici."
       }
     },
     "fullApp": {
       "step1": {
-        "title": "Tour complet de l'application 🌾",
-        "content": "Découvrez toutes les fonctionnalités d'AgriTech en une visite guidée complète. Nous allons parcourir chaque module de la plateforme."
+        "title": "La Visite Complète 🌾",
+        "content": "AgroGina suit le flux naturel de votre ferme : Définir le terrain → Le travailler → Cultiver & surveiller → Vendre & comptabiliser. Voyons comment chaque module s'intègre."
       },
       "step2": {
-        "title": "1. Navigation principale",
-        "content": "Le menu latéral vous donne accès à tous les modules. Explorons ensemble chaque section de votre exploitation agricole."
+        "title": "Votre Organisation",
+        "content": "Tout commence ici. Basculez entre fermes ou coopératives — chacune a ses propres données, équipe et paramètres."
       },
       "step3": {
-        "title": "2. Multi-organisation",
-        "content": "AgriTech est multi-tenant. Gérez plusieurs exploitations agricoles depuis un seul compte et basculez facilement entre elles."
+        "title": "Tableau de bord — Votre Centre de Commande",
+        "content": "Métriques clés en un coup d'œil : santé des parcelles, tâches urgentes et stats de production. C'est ici que vous commencez votre journée."
       },
       "step4": {
-        "title": "3. Tableau de bord",
-        "content": "Votre centre de commande. Visualisez les statistiques clés, les tâches urgentes et l'état de santé de vos cultures en un coup d'œil."
+        "title": "🌍 Couche 1 : Fermes",
+        "content": "Commencez par définir vos fermes. Une ferme regroupe parcelles, travailleurs et équipements. C'est votre unité d'organisation."
       },
       "step5": {
-        "title": "4. Gestion des fermes",
-        "content": "Organisez vos exploitations en fermes et sous-fermes. Chaque ferme peut contenir plusieurs parcelles avec leurs propres cultures."
+        "title": "🌍 Couche 1 : Parcelles",
+        "content": "Chaque ferme contient des parcelles — les vrais plots de terrain. Définissez leurs limites, type de sol, irrigation et culture actuelle. Les parcelles sont au cœur de tout."
       },
       "step6": {
-        "title": "5. Parcelles",
-        "content": "Définissez vos parcelles avec leurs limites géographiques, types de sol, systèmes d'irrigation et cultures."
+        "title": "🌍 Couche 1 : Infrastructure",
+        "content": "Puits, bassins, stations de pompage, hangars — enregistrez vos actifs physiques. Ils se connectent aux parcelles et apparaissent dans les plannings de maintenance."
       },
       "step7": {
-        "title": "6. Inventaire",
-        "content": "Suivez votre stock d'intrants : semences, engrais, produits phytosanitaires, équipements. Recevez des alertes de stock bas."
+        "title": "👥 Couche 2 : Personnel",
+        "content": "Votre équipe : permanents, journaliers, gérants. Assignez des tâches, suivez les heures, calculez la paie. Les tâches relient les personnes aux parcelles."
       },
       "step8": {
-        "title": "7. Infrastructures",
-        "content": "Gérez vos bâtiments, puits, bassins, stations de pompage et autres équipements."
+        "title": "📦 Couche 2 : Stock",
+        "content": "Semences, engrais, produits phytosanitaires, équipement. Suivez les niveaux, recevez des alertes de stock bas et enregistrez chaque mouvement."
       },
       "step9": {
-        "title": "8. Personnel",
-        "content": "Gérez votre équipe : ouvriers, tâches assignées. Suivez leurs heures et calculez leurs salaires."
+        "title": "🌱 Couche 3 : Production",
+        "content": "Campagnes, cycles de culture, récoltes, contrôle qualité. C'est ici que parcelles + tâches + intrants se transforment en données de production."
       },
       "step10": {
-        "title": "9. Production",
-        "content": "Suivez vos campagnes, cycles de culture, récoltes et contrôle qualité. Traçabilité complète de la production."
+        "title": "✅ Couche 3 : Conformité",
+        "content": "Certifications (GlobalGAP, Bio, etc.), audits et actions correctives. Vos données de traçabilité alimentent automatiquement les rapports de conformité."
       },
       "step11": {
-        "title": "10. Ventes & Achats",
-        "content": "Créez des devis, bons de commande et gérez vos transactions commerciales."
+        "title": "💰 Couche 4 : Ventes & Achats",
+        "content": "Créez des devis, convertissez en commandes, gérez fournisseurs et clients. Le côté commercial de votre exploitation."
       },
       "step12": {
-        "title": "11. Comptabilité",
-        "content": "Comptabilité en partie double adaptée à l'agriculture. Plan comptable, journaux, factures et rapports financiers."
+        "title": "📊 Couche 4 : Comptabilité",
+        "content": "Factures, paiements, écritures, plan comptable — comptabilité en partie double adaptée à l'agriculture. Connectée aux ventes et à la production."
       },
       "step13": {
-        "title": "12. Rapports",
-        "content": "Générez des rapports détaillés : production, rentabilité, main d'œuvre. Exportez en PDF ou Excel."
+        "title": "🤖 AgromindIA — Votre Assistant IA",
+        "content": "Le cerveau d'AgroGina. Posez des questions sur votre ferme en langage naturel. Il voit vos stocks, tâches, météo et coûts pour donner des conseils actionnables."
       },
       "step14": {
-        "title": "13. Paramètres & Profil",
-        "content": "Accédez à vos paramètres personnels, préférences, configuration de l'organisation et options de déconnexion depuis ce menu."
+        "title": "📈 Rapports & Analyses",
+        "content": "Rapports de production, rentabilité par parcelle, coûts de main d'œuvre, états financiers. Export PDF ou Excel."
       },
       "step15": {
-        "title": "Prêt à commencer! 🚀",
-        "content": "Vous avez maintenant une vue d'ensemble de toutes les fonctionnalités. Cliquez sur le bouton d'aide (?) en bas à droite pour revoir cette visite ou accéder aux guides de chaque module."
+        "title": "Paramètres & Profil",
+        "content": "Configurez votre organisation, gérez les accès de l'équipe, activez/désactivez les modules et définissez vos préférences."
+      },
+      "step16": {
+        "title": "Vous êtes prêt ! 🚀",
+        "content": "Commencez par Fermes → Parcelles → Tâches — c'est le flux principal. Cliquez sur le bouton d'aide (?) à tout moment pour relancer une visite."
       }
     },
     "dashboard": {
       "step1": {
-        "title": "Statistiques clés",
-        "content": "Visualisez en un coup d'œil les métriques importantes de votre exploitation : superficie, récoltes, revenus et tâches en cours."
+        "title": "Métriques Clés",
+        "content": "Vos stats de ferme en un coup d'œil — superficie totale, parcelles actives, récoltes et revenus. Mis à jour en temps réel."
       },
       "step2": {
-        "title": "Tâches récentes",
-        "content": "Suivez les tâches urgentes et leur progression directement depuis le tableau de bord."
+        "title": "Santé des Parcelles",
+        "content": "Vue rapide de vos parcelles et leur état actuel. Cliquez pour voir l'analyse satellite, les tâches et la rentabilité."
       },
       "step3": {
-        "title": "Météo",
-        "content": "Consultez les prévisions météo pour planifier vos activités agricoles."
-      },
-      "step4": {
-        "title": "Aperçu des parcelles",
-        "content": "Visualisez l'état de santé de vos cultures grâce aux indices satellite."
+        "title": "Tâches à Venir",
+        "content": "Les tâches qui nécessitent votre attention aujourd'hui. Chaque tâche est liée à une parcelle, un travailleur et des intrants — le cœur des opérations quotidiennes."
       }
     },
     "farmManagement": {
       "step1": {
-        "title": "Vos fermes",
-        "content": "Gérez toutes vos exploitations agricoles depuis cette vue. Chaque ferme peut contenir plusieurs parcelles."
+        "title": "Aperçu des Fermes",
+        "content": "Vos fermes en un coup d'œil — nombre total, superficie combinée et options d'import/export. Les fermes sont le niveau supérieur de votre hiérarchie."
       },
       "step2": {
-        "title": "Ajouter une ferme",
-        "content": "Cliquez ici pour créer une nouvelle ferme et définir ses caractéristiques : nom, localisation, superficie, type de sol, etc."
+        "title": "Créer une Ferme",
+        "content": "Ajoutez une nouvelle ferme pour commencer. Vous y ajouterez ensuite des parcelles, assignerez des travailleurs et commencerez le suivi de production."
       },
       "step3": {
-        "title": "Vue cartographique",
-        "content": "Visualisez vos fermes et parcelles sur la carte. Vous pouvez dessiner les limites de vos parcelles directement sur la carte."
+        "title": "Vos Fermes",
+        "content": "Chaque carte est une ferme avec ses parcelles et sous-fermes. Cliquez pour voir les détails, gérer les parcelles ou assigner un responsable."
       }
     },
     "parcels": {
       "step1": {
-        "title": "Liste des parcelles",
-        "content": "Toutes vos parcelles sont affichées ici avec leurs cultures actuelles, superficies et états de santé."
+        "title": "Vos Parcelles",
+        "content": "Chaque parcelle représente un plot de terrain avec sa culture, superficie et état de santé. C'est là que production, tâches et données satellite se rencontrent."
       },
       "step2": {
-        "title": "Filtres",
-        "content": "Filtrez vos parcelles par culture, ferme ou état pour trouver rapidement ce que vous cherchez."
+        "title": "Filtrer & Chercher",
+        "content": "Filtrez par ferme, type de culture ou statut pour vous concentrer sur l'essentiel. Utile quand vous gérez des dizaines de parcelles."
       },
       "step3": {
-        "title": "Actions rapides",
-        "content": "Accédez rapidement aux analyses satellite, à la météo, aux tâches et à la rentabilité de chaque parcelle."
+        "title": "Actions Parcelle",
+        "content": "Pour chaque parcelle : imagerie satellite, météo, tâches ou analyse de rentabilité. Tout est à un clic."
       }
     },
     "tasks": {
       "step1": {
-        "title": "Gestion des tâches",
-        "content": "Planifiez et suivez toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements, etc."
+        "title": "Liste des Tâches",
+        "content": "Toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements. Chaque tâche est liée à une parcelle et peut être assignée à un travailleur."
       },
       "step2": {
-        "title": "Vue calendrier",
-        "content": "Visualisez vos tâches sur un calendrier pour mieux planifier vos activités."
+        "title": "Vue Calendrier",
+        "content": "Passez en vue calendrier pour planifier votre semaine. Visualisez la répartition des tâches et évitez les conflits de personnel."
       },
       "step3": {
-        "title": "Créer une tâche",
-        "content": "Créez de nouvelles tâches, assignez-les à des ouvriers et définissez des priorités et des échéances."
+        "title": "Créer une Tâche",
+        "content": "Nouvelle tâche : choisissez une parcelle, assignez un travailleur, définissez la priorité. Les tâches avec intrants déduisent automatiquement du stock."
       }
     },
     "workers": {
       "step1": {
-        "title": "Gestion des ouvriers",
-        "content": "Gérez votre équipe : ouvriers permanents, journaliers, et métayers. Suivez leurs paiements et performances."
+        "title": "Votre Équipe",
+        "content": "Tous les travailleurs — permanents, journaliers et métayers. Voyez leurs tâches assignées, disponibilité et historique de paiement."
       },
       "step2": {
         "title": "Paiements",
-        "content": "Calculez automatiquement les salaires basés sur le temps travaillé, les tâches effectuées ou le travail à la pièce."
+        "content": "Calculez la paie selon les heures travaillées, tâches accomplies ou travail à la pièce. Les paiements s'enregistrent automatiquement en comptabilité."
       },
       "step3": {
-        "title": "Ajouter un ouvrier",
-        "content": "Enregistrez de nouveaux membres de votre équipe avec leurs informations et modalités de paiement."
+        "title": "Ajouter un Travailleur",
+        "content": "Enregistrez un nouveau membre avec son rôle, coordonnées et conditions de paie. Il apparaîtra immédiatement dans les menus d'assignation."
       }
     },
     "inventory": {
       "step1": {
-        "title": "Aperçu du stock",
-        "content": "Visualisez l'état de votre inventaire : produits en stock, niveaux bas, et valeur totale."
+        "title": "Aperçu du Stock",
+        "content": "Votre tableau de bord stock : valeur totale, alertes de stock bas et mouvements récents. Le stock est consommé à la complétion des tâches."
       },
       "step2": {
-        "title": "Catalogue d'articles",
-        "content": "Gérez votre catalogue de produits : intrants, engrais, semences, équipements, etc."
+        "title": "Catalogue d'Articles",
+        "content": "Tous vos produits : semences, engrais, phytosanitaires, équipement. Chaque article suit la quantité actuelle, seuil minimum et coût."
       },
       "step3": {
         "title": "Entrepôts",
-        "content": "Organisez votre stock par entrepôt et suivez les mouvements entre sites."
+        "content": "Organisez le stock par emplacement. Transférez entre entrepôts et suivez ce qui est stocké où."
       },
       "step4": {
-        "title": "Mouvements de stock",
-        "content": "Enregistrez les entrées, sorties et transferts de stock avec traçabilité complète."
+        "title": "Mouvements de Stock",
+        "content": "Chaque entrée et sortie est enregistrée : livraisons fournisseurs, consommation terrain, transferts. Traçabilité complète pour la conformité."
       }
     },
     "accounting": {
       "step1": {
-        "title": "Comptabilité",
-        "content": "Gérez toute votre comptabilité agricole : factures, paiements, journaux et rapports financiers."
+        "title": "Centre Comptable",
+        "content": "Votre vue d'ensemble financière : factures en cours, paiements récents et activité du journal. Tout connecté à vos ventes et production."
       },
       "step2": {
         "title": "Factures",
-        "content": "Créez et gérez vos factures clients et fournisseurs. Suivez les paiements et les créances."
+        "content": "Factures clients et fournisseurs. Créées depuis les commandes ou manuellement. Suivez les paiements et envoyez des relances."
       },
       "step3": {
-        "title": "Journal comptable",
-        "content": "Enregistrez vos écritures comptables en partie double selon le plan comptable agricole."
+        "title": "Écritures Comptables",
+        "content": "Comptabilité en partie double avec le plan comptable agricole marocain. Les paiements et mouvements de stock génèrent des écritures automatiquement."
       },
       "step4": {
-        "title": "Rapports financiers",
-        "content": "Générez des rapports : bilan, compte de résultat, balance des comptes, et analyses de rentabilité."
+        "title": "Rapports Financiers",
+        "content": "Bilan, compte de résultat, balance, analyse de rentabilité. Exportez pour votre comptable ou pour les banques."
       }
     },
     "satellite": {
       "step1": {
-        "title": "Analyse satellite",
-        "content": "Visualisez la santé de vos cultures grâce aux images satellite. Les indices NDVI, NDWI et autres vous aident à détecter les problèmes."
+        "title": "Imagerie Satellite",
+        "content": "Voyez vos parcelles depuis l'espace. Le NDVI montre la vigueur des cultures, le NDWI le stress hydrique. Détectez les problèmes avant qu'ils ne soient visibles."
       },
       "step2": {
-        "title": "Indices de végétation",
-        "content": "Comparez différents indices pour comprendre l'état de vos cultures : stress hydrique, vigueur végétative, etc."
+        "title": "Indices de Végétation",
+        "content": "Comparez différents indices côte à côte. Chacun raconte une histoire différente — santé végétative, humidité, concentration en chlorophylle."
       },
       "step3": {
-        "title": "Historique",
-        "content": "Naviguez dans le temps pour voir l'évolution de vos parcelles et détecter les tendances."
+        "title": "Voyage dans le Temps",
+        "content": "Naviguez dans l'historique d'images pour voir l'évolution de vos parcelles. Repérez les tendances et validez les effets des traitements."
       }
     },
     "reports": {
       "step1": {
-        "title": "Rapports",
-        "content": "Accédez à tous vos rapports : production, finances, main d'œuvre, et analyses de rentabilité."
+        "title": "Centre de Rapports",
+        "content": "Tous vos rapports en un seul endroit : production, finances, main d'œuvre et rentabilité. Chaque rapport tire des données en temps réel de tous les modules."
       },
       "step2": {
         "title": "Export",
-        "content": "Exportez vos rapports en PDF ou Excel pour les partager ou les archiver."
+        "content": "Téléchargez en PDF ou Excel. Partagez avec votre équipe, votre banque ou votre auditeur de certification."
       },
       "step3": {
-        "title": "Filtres et périodes",
-        "content": "Personnalisez vos rapports en filtrant par période, ferme, parcelle ou type de culture."
+        "title": "Filtres & Périodes",
+        "content": "Personnalisez par plage de dates, ferme, parcelle ou culture. Comparez cette saison à la précédente pour mesurer les progrès."
       }
     },
     "harvests": {
       "step1": {
-        "title": "Statistiques de récolte",
-        "content": "Visualisez le résumé de vos récoltes : quantités totales, valeur estimée, répartition par culture."
+        "title": "Tableau de Bord Récoltes",
+        "content": "Quantités totales, revenus estimés et répartition par culture. C'est le résultat de toute votre chaîne de production."
       },
       "step2": {
-        "title": "Liste des récoltes",
-        "content": "Toutes vos récoltes sont listées ici avec la date, parcelle, culture, quantité et qualité."
+        "title": "Historique des Récoltes",
+        "content": "Chaque enregistrement est lié à une parcelle avec quantité, grade de qualité et date. Les données qualité alimentent les rapports de conformité."
       },
       "step3": {
-        "title": "Nouvelle récolte",
-        "content": "Enregistrez une nouvelle récolte en spécifiant la parcelle, la quantité récoltée et la qualité du produit."
+        "title": "Enregistrer une Récolte",
+        "content": "Saisissez une récolte : sélectionnez la parcelle, entrez quantité et qualité. Cela met à jour vos stats et peut déclencher une commande de vente."
       },
       "step4": {
-        "title": "Filtres",
-        "content": "Filtrez vos récoltes par période, ferme, culture ou statut pour retrouver rapidement les informations."
+        "title": "Filtrer & Analyser",
+        "content": "Filtrez par période, culture ou ferme pour comparer les rendements. Quelles parcelles sont les plus performantes ? Quelles cultures les plus rentables ?"
       }
     },
     "infrastructure": {
       "step1": {
-        "title": "Vos infrastructures",
-        "content": "Gérez tous vos bâtiments et équipements : puits, bassins, stations de pompage, hangars, bureaux."
+        "title": "Votre Infrastructure",
+        "content": "Puits, bassins, stations de pompage, hangars, bureaux. Chaque actif est lié à une ferme et peut avoir des plannings de maintenance."
       },
       "step2": {
-        "title": "Ajouter une infrastructure",
-        "content": "Créez de nouvelles infrastructures avec leur type, localisation, capacité et date de mise en service."
-      },
-      "step3": {
-        "title": "Maintenance",
-        "content": "Planifiez et suivez la maintenance de vos équipements pour éviter les pannes et optimiser leur durée de vie."
+        "title": "Ajouter une Infrastructure",
+        "content": "Enregistrez un nouvel actif : type, localisation, capacité et date de mise en service. Les rappels de maintenance gardent vos équipements opérationnels."
       }
     },
     "billing": {
       "step1": {
-        "title": "Aperçu facturation",
-        "content": "Visualisez le résumé de votre facturation : devis en cours, commandes à livrer, factures à encaisser."
+        "title": "Aperçu Facturation",
+        "content": "Devis en attente, commandes à livrer, factures à encaisser. Le pipeline commercial qui transforme votre production en revenus."
       },
       "step2": {
         "title": "Devis",
-        "content": "Créez des devis professionnels pour vos clients. Suivez leur statut : envoyé, accepté, converti en commande."
+        "content": "Créez des devis professionnels pour vos acheteurs. Une fois acceptés, convertissez-les en commande en un clic."
       },
       "step3": {
-        "title": "Bons de commande",
-        "content": "Gérez vos commandes clients et fournisseurs. Suivez les livraisons et les réceptions."
+        "title": "Commandes",
+        "content": "Commandes de vente et d'achat. Suivez livraisons et réceptions. Les commandes génèrent des factures et mettent à jour la comptabilité."
       },
       "step4": {
         "title": "Factures",
-        "content": "Émettez des factures et suivez les paiements. Gérez les relances et les créances clients."
+        "content": "Émettez des factures et suivez les paiements. Les factures en retard apparaissent sur votre tableau de bord avec des relances automatiques."
       },
       "step5": {
-        "title": "Clients et fournisseurs",
-        "content": "Gérez votre carnet d'adresses : clients, fournisseurs, transporteurs avec leurs coordonnées et historique."
+        "title": "Contacts",
+        "content": "Vos clients, fournisseurs et transporteurs. Historique des contacts et des transactions en un seul endroit."
       }
     },
     "settings": {
       "step1": {
-        "title": "Paramètres",
-        "content": "Accédez à tous les paramètres de votre organisation depuis ce menu."
+        "title": "Menu Paramètres",
+        "content": "Toutes les options de configuration organisées par catégorie. Commencez par Organisation pour configurer les détails de votre ferme."
       },
       "step2": {
         "title": "Organisation",
-        "content": "Configurez les informations de votre exploitation : nom, adresse, logo, devise et année fiscale."
+        "content": "L'identité de votre ferme : nom, adresse, logo, devise et exercice fiscal. Ces infos apparaissent sur les factures et rapports."
       },
       "step3": {
-        "title": "Utilisateurs",
-        "content": "Gérez les membres de votre équipe, leurs rôles et permissions d'accès à la plateforme."
+        "title": "Membres de l'Équipe",
+        "content": "Invitez des membres et assignez des rôles : admin, responsable de ferme, agronome, travailleur ou observateur. Chaque rôle voit des fonctionnalités différentes."
       },
       "step4": {
         "title": "Abonnement",
-        "content": "Consultez votre formule actuelle, les fonctionnalités incluses et passez à un plan supérieur si besoin."
+        "content": "Votre plan actuel et ses fonctionnalités. Évoluez pour débloquer plus de parcelles, l'analyse satellite ou les recommandations IA avancées."
       },
       "step5": {
         "title": "Modules",
-        "content": "Activez ou désactivez les modules selon vos besoins : comptabilité, satellite, métayage, etc."
+        "content": "Activez uniquement ce dont vous avez besoin : comptabilité, satellite, conformité, arboriculture. Les modules désactivés disparaissent de la barre latérale."
       },
       "step6": {
-        "title": "Préférences",
-        "content": "Personnalisez votre expérience : langue, thème, format de date, notifications."
+        "title": "Votre Profil",
+        "content": "Préférences personnelles : langue (français, anglais, arabe), thème, notifications. Vos paramètres vous suivent sur tous vos appareils."
       }
     }
   },

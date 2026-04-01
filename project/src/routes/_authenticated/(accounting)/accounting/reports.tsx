@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useAccountSummary } from '@/hooks/useFinancialReports';
@@ -49,6 +50,8 @@ const formatCurrency = (amount: number): string => {
 const AppContent: React.FC = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
+
+  useAutoStartTour('reports', 1500);
   const navigate = useNavigate();
   const { data: accountSummary, isLoading: isSummaryLoading } = useAccountSummary();
 

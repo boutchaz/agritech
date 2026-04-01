@@ -435,9 +435,11 @@ const Sidebar: React.FC<SidebarProps> = ({
               isRTL ? "flex-row-reverse" : "",
             )}
           >
-            <div
+            <button
+              type="button"
+              onClick={() => navigate({ to: '/dashboard' })}
               className={cn(
-                "flex items-center min-w-0 flex-1 gap-3",
+                "flex items-center min-w-0 flex-1 gap-3 cursor-pointer bg-transparent border-0 p-0",
                 isRTL && "flex-row-reverse",
                 isCollapsed && "lg:justify-center",
               )}
@@ -455,7 +457,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {appConfig.name} Platform
                 </p>
               </div>
-            </div>
+            </button>
             <div
               className={cn(
                 "flex items-center gap-1",
@@ -706,6 +708,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Chat">
                 <Button
                   variant="ghost"
+                  data-tour="nav-chat"
                   className={getButtonClassName(currentPath === "/chat")}
                   onClick={(e) => handleNavigation("/chat", e)}
                   title={isCollapsed ? t("nav.chat") : undefined}
