@@ -122,14 +122,13 @@ export function AnnualBaselineValidationStep({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button
+        <Button variant="green"
           type="button"
           onClick={async () => {
             await startAnnualRecalibration.mutateAsync({ trigger: 'annual-wizard' });
             onValidated();
           }}
           disabled={startAnnualRecalibration.isPending}
-          className="bg-green-600 hover:bg-green-700 text-white"
         >
           {startAnnualRecalibration.isPending ? (
             <>

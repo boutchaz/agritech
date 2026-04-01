@@ -38,12 +38,6 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 // ============================================================================
 const ModulesSettings: React.FC = () => {
   const { t } = useTranslation();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
 
   const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
   const [showFunctional, setShowFunctional] = useState(false);
@@ -139,9 +133,9 @@ const ModulesSettings: React.FC = () => {
                 : t('modulesSettings.modulesAvailable', { count: getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length })}
             </p>
           </div>
-          <Button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            className="px-4 py-2 rounded-md flex items-center space-x-2"
           >
             <span>{t('modulesSettings.viewSubscription')}</span>
             <ExternalLink className="h-4 w-4" />
@@ -466,6 +460,8 @@ const ModuleSettingsPanel: React.FC<{
   onClose: () => void;
 }> = ({ module, onClose }) => {
   const { t } = useTranslation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const renderModuleSettings = () => {
     switch (module.name) {

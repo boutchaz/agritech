@@ -303,9 +303,8 @@ export function QuoteRequestsReceived() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   {['pending', 'viewed'].includes(quote.status) && (
-                    <Button
+                    <Button variant="green"
                       onClick={() => handleRespond(quote)}
-                      className="bg-green-600 hover:bg-green-700"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Envoyer un Devis

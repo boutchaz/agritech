@@ -190,9 +190,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {t('moduleView.noParcelsDescription')}
           </p>
-          <Button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/parcels' })}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 rounded-md"
           >
             <MapPin className="h-4 w-4 mr-2" />
             {t('moduleView.goToParcels')}
@@ -233,9 +233,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
                 <RefreshCw className={`h-4 w-4 ${loadingParcels ? 'animate-spin' : ''}`} />
                 <span>{t('moduleView.refresh')}</span>
               </Button>
-              <Button
+              <Button variant="green"
                 onClick={() => setShowParcelManager(!showParcelManager)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md"
               >
                 <Settings className="h-4 w-4" />
                 <span>{t('moduleView.manage')}</span>
@@ -353,14 +353,10 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {parcelsToDisplay.length > 1 && (
             <div className="flex justify-center space-x-2 mt-4">
               {parcelsToDisplay.map((_, index) => (
-                <Button
+                <Button variant="green"
                   key={index}
                   onClick={() => setCurrentParcelIndex(index)}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentParcelIndex
-                      ? 'bg-green-600'
-                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-                  }`}
+                  className={`w-3 h-3 rounded-full transition-colors ${ index === currentParcelIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
                   aria-label={t('moduleView.goToParcel', { number: index + 1 })}
                 />
               ))}
@@ -418,9 +414,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t('moduleView.assignDescription')}
             </p>
-            <Button
+            <Button variant="blue"
               onClick={() => setShowParcelManager(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 rounded-md"
             >
               <MapPin className="h-4 w-4 mr-2" />
               {t('moduleView.assignParcels')}

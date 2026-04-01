@@ -154,13 +154,13 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             </div>
           }
         >
-          <Button
+          <Button variant="blue"
             data-tour="worker-add"
             onClick={() => {
               setSelectedWorker(null);
               setShowForm(true);
             }}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base w-full sm:w-auto justify-center"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{t('workers.list.addWorker')}</span>

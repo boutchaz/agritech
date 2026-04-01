@@ -353,9 +353,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               {/* Add Analysis Button */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900">
-                <Button
+                <Button variant="green"
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nouvelle analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'}</span>
@@ -384,9 +384,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
-                <Button
+                <Button variant="green"
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Ajouter une première analyse</span>

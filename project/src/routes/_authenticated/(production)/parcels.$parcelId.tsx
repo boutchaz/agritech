@@ -36,10 +36,10 @@ const ParcelLayout = () => {
       <div className="flex items-center justify-center p-12">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">{t('parcels.detail.notFound')}</p>
-          <Button
+          <Button variant="green"
             type="button"
             onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
-            className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="mt-4 px-4 py-2 rounded-lg"
           >
             {t('parcels.detail.backToParcels')}
           </Button>
@@ -71,17 +71,11 @@ const ParcelLayout = () => {
               const isActive = location.pathname === tab.path;
               const TabIcon = tab.icon;
               return (
-                <Button
+                <Button variant="green"
                   key={tab.id}
                   type="button"
                   onClick={() => navigate({ to: tab.path })}
-                  className={`
-                    flex items-center gap-1.5 lg:gap-3 px-3 py-2 lg:px-6 lg:py-4 rounded-lg font-medium text-xs lg:text-base shadow-sm lg:shadow-md transition-all whitespace-nowrap flex-shrink-0
-                    ${isActive
-                      ? 'bg-green-600 text-white shadow-lg ring-2 lg:ring-4 ring-green-200'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-green-100 dark:hover:bg-gray-700'
-                    }
-                  `}
+                  className={`flex items-center gap-1.5 lg:gap-3 px-3 py-2 lg:px-6 lg:py-4 rounded-lg font-medium text-xs lg:text-base shadow-sm lg:shadow-md transition-all whitespace-nowrap flex-shrink-0 ${ isActive ? 'shadow-lg ring-2 lg:ring-4 ring-green-200' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-green-100 dark:hover:bg-gray-700'}`}
                 >
                   <TabIcon className="h-4 w-4 lg:h-6 lg:w-6" />
                   <span>{tab.name}</span>

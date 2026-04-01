@@ -132,25 +132,17 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
 
         {/* Status filters */}
         <div className="flex flex-wrap gap-2">
-          <Button
+          <Button variant="blue"
             onClick={() => handleStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              !filters.status
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ !filters.status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
           >
             Tous
           </Button>
           {(['pending', 'approved', 'paid'] as PaymentStatus[]).map(status => (
-            <Button
+            <Button variant="blue"
               key={status}
               onClick={() => handleStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                filters.status === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ filters.status === status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
             >
               {getPaymentStatusLabel(status, 'fr')}
             </Button>

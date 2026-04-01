@@ -76,17 +76,12 @@ const AppContent: React.FC = () => {
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
 
-  // Track dashboard page view and mode changes
+  // Track dashboard page view (fire once on mount + when live mode changes)
   useEffect(() => {
     trackPageView({
-      title: isLiveMode ? t('liveDashboard.title') : t('dashboard.pageTitle'),
+      title: isLiveMode ? 'Live Dashboard' : 'Dashboard',
     });
     trackDashboardView(isLiveMode ? 'live' : 'regular');
-  }, [isLiveMode, t]);
-
-  // Track live mode toggle changes
-  useEffect(() => {
-    trackLiveModeToggle(isLiveMode);
   }, [isLiveMode]);
 
   // Fetch dashboard settings from database

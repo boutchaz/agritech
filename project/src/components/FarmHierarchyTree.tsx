@@ -209,9 +209,9 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 {farm.farm_name}
               </h3>
             </div>
-            <Button
+            <Button variant="blue"
               onClick={() => onManageRoles?.(farm.farm_id)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm rounded-lg transition-colors"
             >
               Gérer Rôles
             </Button>
@@ -265,9 +265,9 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </div>
               }
             >
-              <Button
+              <Button variant="green"
                 onClick={() => onAddParcel?.(farm.farm_id)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Ajouter une parcelle</span>

@@ -292,9 +292,8 @@ export function QuoteRequestsSent() {
                 <div className="flex gap-2">
                   {quote.status === 'quoted' && (
                     <>
-                      <Button
+                      <Button variant="green"
                         onClick={() => handleAccept(quote.id)}
-                        className="bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Accepter le Devis

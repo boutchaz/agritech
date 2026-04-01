@@ -165,9 +165,9 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-gray-900">Current Role Assignments</h4>
-          <Button
+          <Button variant="blue"
             onClick={() => setShowAssignRole(true)}
-            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+            className="flex items-center px-3 py-2 rounded-md text-sm"
           >
             <UserPlus className="w-4 h-4 mr-1" />
             Assign Role

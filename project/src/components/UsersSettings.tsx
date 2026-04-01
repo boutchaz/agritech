@@ -347,9 +347,9 @@ const UsersSettings: React.FC = () => {
             </div>
           }
         >
-          <Button
+          <Button variant="green"
             onClick={() => setShowInviteUser(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium"
           >
             <Plus className="h-4 w-4" />
             <span>{t('users.invite.button')}</span>

@@ -252,9 +252,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             <Plus className="h-4 w-4 mr-2" />
             {t('profitability.buttons.addCost')}
           </Button>
-          <Button
+          <Button variant="green"
             onClick={() => setShowAddRevenue(true)}
-            className="bg-green-600 hover:bg-green-700"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />

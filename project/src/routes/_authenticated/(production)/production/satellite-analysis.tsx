@@ -64,9 +64,9 @@ function SatelliteAnalysisPage() {
               <span>{t('production.satelliteAnalysis.featureHistorical')}</span>
             </div>
           </div>
-          <Button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
+            className="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
           >
             {t('production.satelliteAnalysis.upgradeButton')}
             <span>→</span>

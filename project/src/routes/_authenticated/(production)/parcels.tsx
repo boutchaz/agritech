@@ -25,11 +25,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   const { currentOrganization, currentFarm } = useAuth();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
@@ -62,6 +58,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
 
 
   // Sync URL search params to state (URL is source of truth)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isSyncingRef.current) return;
 
@@ -76,6 +73,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
     isSyncingRef.current = false;
 
   }, [search.farmId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Update URL when state changes (state changes trigger URL update)
   useEffect(() => {
@@ -266,22 +264,22 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                 </p>
                   {!isAllFarmsView && (currentFarm || selectedFarmId) && (
                     <div className="space-x-3" data-tour="parcel-actions">
-                      <Button
+                      <Button variant="green"
                         data-testid="create-parcel-button"
                         onClick={() => {
                           setEditingBoundaryParcelId(null);
                           setShowAddParcelMap(true);
                         }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        className="px-4 py-2 rounded-lg"
                       >
                         {t('parcels.addParcel')}
                       </Button>
-                    <Button
+                    <Button variant="blue"
                       onClick={() => {
                         // Manual refresh of React Query cache
                         window.location.reload();
                       }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-4 py-2 rounded-lg"
                     >
                       {t('parcels.refresh')}
                     </Button>
@@ -454,12 +452,12 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
                               </Button>
                             </div>
                           )}
-                          <Button
+                          <Button variant="green"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate({ to: `/parcels/${parcel.id}` });
                             }}
-                            className="w-full mt-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
+                            className="w-full mt-2 px-4 py-2 rounded-md transition-colors font-medium text-sm flex items-center justify-center space-x-2"
                           >
                             <span>{t('parcels.viewDetails')}</span>
                             <span>→</span>
@@ -598,13 +596,13 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
               >
                 {t('parcels.form.cancel')}
               </Button>
-              <Button
+              <Button variant="green"
                 onClick={() => {
                   if (editingParcel) {
                     handleUpdateParcel(editingParcel.id, editingParcel);
                   }
                 }}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="px-4 py-2 rounded-md"
               >
                 {t('parcels.form.save')}
               </Button>

@@ -46,6 +46,7 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
 
   const tasks = missingTasks ?? [];
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (tasks.length === 0) {
       return;
@@ -89,6 +90,7 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
       return nextState;
     });
   }, [tasks]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const allResolved = useMemo(
     () =>
@@ -239,10 +241,9 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
                   </div>
 
                   <div className="md:col-span-2 flex justify-end">
-                    <Button
+                    <Button variant="green"
                       type="button"
                       onClick={() => setTaskStates((previous) => ({ ...previous, [taskKey]: 'completed' }))}
-                      className="bg-green-600 hover:bg-green-700 text-white"
                     >
                       Enregistrer cette saisie
                     </Button>
@@ -280,14 +281,13 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
           Ignorer et continuer
         </Button>
 
-        <Button
+        <Button variant="blue"
           type="button"
           onClick={async () => {
             await persistResolutions();
             onContinue();
           }}
           disabled={!allResolved || resolveMissingTasks.isPending}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           {resolveMissingTasks.isPending ? (
             <>

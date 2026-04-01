@@ -2184,11 +2184,10 @@ const MapComponent: React.FC<MapProps> = ({
                   <Satellite className="h-4 w-4" />
                   <span>{t('map.indices', 'Indices')}</span>
                 </Button>
-                <Button
+                <Button variant="purple"
                   size="sm"
                   onClick={() => setShowTimeSeriesDialog(true)}
                   disabled={indicesLoading || !selectedParcel.boundary}
-                  className="bg-purple-600 hover:bg-purple-700"
                 >
                   <BarChart3 className="h-4 w-4" />
                   <span>{t('map.timeSeries')}</span>

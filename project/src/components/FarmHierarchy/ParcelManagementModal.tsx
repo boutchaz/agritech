@@ -1053,14 +1053,13 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
             <AlertDialogCancel disabled={archiveParcelMutation.isPending}>
               {t("app.cancel")}
             </AlertDialogCancel>
-            <Button
+            <Button variant="amber"
               onClick={() => {
                 if (parcelToDelete && !archiveParcelMutation.isPending) {
                   archiveParcelMutation.mutate(parcelToDelete.id);
                 }
               }}
               disabled={archiveParcelMutation.isPending}
-              className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
             >
               {archiveParcelMutation.isPending
                 ? t("parcels.archiving", "Archivage...")

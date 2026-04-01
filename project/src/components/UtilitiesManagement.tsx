@@ -660,7 +660,8 @@ const UtilitiesManagement: React.FC = () => {
           <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'} shadow-md`}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''} shadow-md`}
             title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
           >
             <Plus className="h-5 w-5" />
@@ -728,7 +729,8 @@ const UtilitiesManagement: React.FC = () => {
           <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
             title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
           >
             <Plus className="h-5 w-5" />
@@ -1038,9 +1040,9 @@ const UtilitiesManagement: React.FC = () => {
             Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)
           </p>
           <PermissionGuard resource="utilities" action="create">
-            <Button
+            <Button variant="green"
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
               <Plus className="h-4 w-4 mr-2" />
               Ajouter une charge

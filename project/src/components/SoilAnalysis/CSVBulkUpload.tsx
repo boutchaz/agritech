@@ -197,9 +197,9 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
 
   return (
     <>
-      <Button
+      <Button variant="blue"
         onClick={() => setShowModal(true)}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
       >
         <Upload className="w-4 h-4" />
         <span>Import CSV</span>
@@ -354,10 +354,10 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
               >
                 Annuler
               </Button>
-              <Button
+              <Button variant="green"
                 onClick={handleImport}
                 disabled={parsedData.length === 0 || errors.length > 0 || importing}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="px-4 py-2 rounded-lg disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {importing && (
                   <ButtonLoader />

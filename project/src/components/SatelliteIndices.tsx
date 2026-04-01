@@ -118,15 +118,17 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     loadAvailableIndices();
   }, [loadAvailableIndices]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- auto-init from async data */
   useEffect(() => {
     if (availableIndices.length > 0 && !selectedIndex) {
       setSelectedIndex(availableIndices[0]);
     }
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [availableIndices, selectedIndex]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const timeSeriesIndices = Array.from(new Set([...availableIndices, "NIRvP"]));
 
+  /* eslint-disable react-hooks/set-state-in-effect -- sync state when tab changes */
   useEffect(() => {
     if (
       activeTab === "current" &&
@@ -135,8 +137,8 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
     ) {
       setSelectedIndex(availableIndices[0]);
     }
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [activeTab, availableIndices, selectedIndex]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const getDateRange = (range: string) => {
     const endDate = new Date();

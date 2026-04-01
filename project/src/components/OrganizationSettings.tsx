@@ -225,12 +225,12 @@ const OrganizationSettings: React.FC = () => {
           </h2>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-           <Button
+           <Button variant="blue"
              onClick={async () => {
                const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
                window.open(url, '_blank', 'noopener,noreferrer');
              }}
-             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm"
            >
              <ExternalLink className="h-4 w-4" />
              <span className="hidden sm:inline">Preview on Marketplace</span>

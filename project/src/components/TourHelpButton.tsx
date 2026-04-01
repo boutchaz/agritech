@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { HelpCircle, BookOpen, ChevronRight, Check, RotateCcw, Loader2, CloudOff, Cloud } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useTour, TourId } from '@/contexts/TourContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -105,6 +106,43 @@ const TOUR_CONFIGS: TourInfo[] = [
   },
 ];
 
+const SyncStatusIndicator: React.FC<{
+  syncStatus: 'syncing' | 'synced' | 'error' | 'idle';
+  lastSyncError: string | null;
+  onRefresh: () => void;
+  t: TFunction;
+}> = ({ syncStatus, lastSyncError, onRefresh, t }) => {
+  if (syncStatus === 'syncing') {
+    return (
+      <div className="flex items-center gap-1 text-xs text-blue-600" title={t('helpCenter.syncing', 'Syncing...')}>
+        <Loader2 className="h-3 w-3 animate-spin" />
+        <span className="hidden sm:inline">{t('helpCenter.syncing', 'Syncing...')}</span>
+      </div>
+    );
+  }
+  if (syncStatus === 'error') {
+    return (
+      <div
+        className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700"
+        onClick={onRefresh}
+        title={lastSyncError || t('helpCenter.syncError', 'Sync failed. Click to retry.')}
+      >
+        <CloudOff className="h-3 w-3" />
+        <span className="hidden sm:inline">{t('helpCenter.offline', 'Offline')}</span>
+      </div>
+    );
+  }
+  if (syncStatus === 'synced') {
+    return (
+      <div className="flex items-center gap-1 text-xs text-emerald-600" title={t('helpCenter.synced', 'Synced')}>
+        <Cloud className="h-3 w-3" />
+        <span className="hidden sm:inline">{t('helpCenter.synced', 'Synced')}</span>
+      </div>
+    );
+  }
+  return null;
+};
+
 export const TourHelpButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -163,39 +201,6 @@ export const TourHelpButton: React.FC = () => {
     await refetchPreferences();
   };
 
-  // Sync status indicator component
-  const SyncStatusIndicator = () => {
-    if (syncStatus === 'syncing') {
-      return (
-        <div className="flex items-center gap-1 text-xs text-blue-600" title={t('helpCenter.syncing', 'Syncing...')}>
-          <Loader2 className="h-3 w-3 animate-spin" />
-          <span className="hidden sm:inline">{t('helpCenter.syncing', 'Syncing...')}</span>
-        </div>
-      );
-    }
-    if (syncStatus === 'error') {
-      return (
-        <div
-          className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700"
-          onClick={handleRefresh}
-          title={lastSyncError || t('helpCenter.syncError', 'Sync failed. Click to retry.')}
-        >
-          <CloudOff className="h-3 w-3" />
-          <span className="hidden sm:inline">{t('helpCenter.offline', 'Offline')}</span>
-        </div>
-      );
-    }
-    if (syncStatus === 'synced') {
-      return (
-        <div className="flex items-center gap-1 text-xs text-emerald-600" title={t('helpCenter.synced', 'Synced')}>
-          <Cloud className="h-3 w-3" />
-          <span className="hidden sm:inline">{t('helpCenter.synced', 'Synced')}</span>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
       {isOpen && (
@@ -203,7 +208,12 @@ export const TourHelpButton: React.FC = () => {
           <div className="p-4 bg-emerald-50 border-b border-emerald-100 shrink-0">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-emerald-800">{t('helpCenter.title')}</h3>
-              <SyncStatusIndicator />
+              <SyncStatusIndicator
+                syncStatus={syncStatus}
+                lastSyncError={lastSyncError}
+                onRefresh={handleRefresh}
+                t={t}
+              />
             </div>
             <p className="text-sm text-emerald-600 mt-1">
               {t('helpCenter.subtitle')}
@@ -288,15 +298,9 @@ export const TourHelpButton: React.FC = () => {
         </div>
       )}
 
-      <Button
+      <Button variant={!(isOpen) ? 'emerald' : undefined}
         onClick={() => setIsOpen(!isOpen)}
-        className={`
-          p-4 rounded-full shadow-lg transition-all duration-300 
-          ${isOpen 
-            ? 'bg-gray-800 text-white rotate-45' 
-            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-110'
-          }
-        `}
+        className={`p-4 rounded-full shadow-lg transition-all duration-300 ${ isOpen ? 'bg-gray-800 text-white rotate-45' : 'hover:scale-110'}`}
         title={t('helpCenter.buttonTitle')}
       >
         <HelpCircle className="h-6 w-6" />

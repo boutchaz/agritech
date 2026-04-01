@@ -22,11 +22,7 @@ const AnalysisPage: React.FC = () => {
   const { t } = useTranslation('common');
   const { currentFarm, currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [activeTab, setActiveTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
@@ -239,10 +235,10 @@ const AnalysisPage: React.FC = () => {
               <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </Button>
           </div>
-          <Button
+          <Button variant="green"
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
-            className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="px-3 sm:px-4 py-2 rounded-md flex items-center justify-center space-x-2 disabled:cursor-not-allowed text-sm"
             title={!selectedParcelId ? t('analysis.selectParcelToAdd') : t('analysis.addNewAnalysis')}
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -294,14 +290,10 @@ const AnalysisPage: React.FC = () => {
                 </Button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
+                    <Button variant="green"
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${
-                        currentPage === page
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
+                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${ currentPage === page ? '' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                     >
                       {page}
                     </Button>

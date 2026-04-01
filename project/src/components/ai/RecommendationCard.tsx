@@ -76,11 +76,11 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
       {recommendation.status === 'pending' && (
         <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
           {onValidate && (
-            <Button
+            <Button variant="green"
               type="button"
               onClick={() => onValidate(recommendation.id)}
               disabled={isValidating}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors"
             >
               <Check className="w-4 h-4" />
               <span>Validate</span>
@@ -102,11 +102,11 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
 
       {recommendation.status === 'validated' && onExecute && (
         <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <Button
+          <Button variant="purple"
             type="button"
             onClick={() => onExecute(recommendation.id)}
             disabled={isExecuting}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors"
           >
             <Play className="w-4 h-4" />
             <span>Execute Action</span>

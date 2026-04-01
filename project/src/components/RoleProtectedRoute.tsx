@@ -54,9 +54,9 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
+            <Button variant="green"
               onClick={() => refreshUserData()}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Réessayer
@@ -93,9 +93,9 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
             Rôle requis: {allowedRoles.join(', ')}
           </p>
-          <Button
+          <Button variant="green"
             onClick={() => window.location.href = redirectTo}
-            className="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 font-medium rounded-lg transition-colors"
           >
             Retour aux paramètres
           </Button>

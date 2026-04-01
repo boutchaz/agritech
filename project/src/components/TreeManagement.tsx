@@ -353,9 +353,9 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                       placeholder="Ajouter un arbre..."
                       className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <Button
+                    <Button variant="green"
                       onClick={() => handleAddTree(category.id)}
-                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                      className="px-3 py-1 rounded text-sm"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>

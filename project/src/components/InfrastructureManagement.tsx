@@ -708,10 +708,10 @@ const InfrastructureManagement: React.FC = () => {
             {t('infrastructure.subtitle')}
           </p>
         </div>
-        <Button
+        <Button variant="green"
           data-tour="infrastructure-add"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
+          className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           <span className="font-medium">{t('infrastructure.actions.new')}</span>
@@ -790,12 +790,12 @@ const InfrastructureManagement: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                 {t('infrastructure.empty.organizationDescription')}
               </p>
-              <Button
+              <Button variant="green"
                 onClick={() => {
                   setActiveTab('organization');
                   setShowAddModal(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md"
               >
                 <Plus className="h-5 w-5" />
                 <span>{t('infrastructure.actions.add')}</span>
@@ -857,12 +857,12 @@ const InfrastructureManagement: React.FC = () => {
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                   {t('infrastructure.empty.farmDescription')}
                 </p>
-                <Button
+                <Button variant="green"
                   onClick={() => {
                     setActiveTab('farm');
                     setShowAddModal(true);
                   }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-5 w-5" />
                   <span>{t('infrastructure.actions.add')}</span>

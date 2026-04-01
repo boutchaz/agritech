@@ -157,14 +157,10 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                   </div>
                 </div>
 
-                <Button
+                <Button variant={!(isCurrentPlan) ? 'green' : undefined}
                   onClick={() => onSelectPlan(plan.id, billingInterval, contractedHectares)}
                   disabled={isCurrentPlan}
-                  className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-colors ${
-                    isCurrentPlan
-                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
+                  className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-colors ${ isCurrentPlan ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
                 >
                   {isCurrentPlan ? 'Current plan' : 'Select plan'}
                 </Button>

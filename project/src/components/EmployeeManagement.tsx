@@ -234,11 +234,11 @@ const EmployeeManagement: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Gestion des Salariés
         </h2>
-        <Button
+        <Button variant="green"
           type="button"
           onClick={() => { if (!farmId) return; setEditingEmployee(null); setShowAddModal(true); form.reset(emptyDefaults); }}
           disabled={!farmId}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${farmId ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${ farmId ? '' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
           title={!farmId ? 'Sélectionnez une ferme pour ajouter un salarié' : undefined}
         >
           <Plus className="h-5 w-5" />
@@ -261,10 +261,10 @@ const EmployeeManagement: React.FC = () => {
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
           <Calendar className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun salarié pour l’instant.</p>
-          <Button
+          <Button variant="green"
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="mt-6 px-4 py-2 rounded-md"
           >
             Ajouter votre premier salarié
           </Button>

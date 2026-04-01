@@ -40,12 +40,13 @@ function CheckoutSuccess() {
   }, [currentOrganization, refetch]);
 
   // Check if subscription is active
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect -- deactivate on active subscription */
   useEffect(() => {
     if (subscription?.status === 'active') {
       setIsActivating(false);
     }
   }, [subscription]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleContinue = () => {
     navigate({ to: '/dashboard' });

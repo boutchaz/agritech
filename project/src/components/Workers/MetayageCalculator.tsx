@@ -39,12 +39,13 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   const selectedWorker = metayageWorkers.find(w => w.id === selectedWorkerId);
 
   // Auto-set calculation basis from worker
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect -- sync state from worker prop */
   useEffect(() => {
     if (selectedWorker?.calculation_basis) {
       setCalculationBasis(selectedWorker.calculation_basis);
     }
   }, [selectedWorker]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Calculate share
   const grossRevenueNum = parseFloat(grossRevenue) || 0;

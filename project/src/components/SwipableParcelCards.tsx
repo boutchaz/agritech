@@ -360,14 +360,10 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
       {parcels.length > 1 && (
         <div className="flex justify-center space-x-2 mt-4">
           {parcels.map((_, index) => (
-            <Button
+            <Button variant="green"
               key={index}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex
-                  ? 'bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-              }`}
+              className={`w-2 h-2 rounded-full transition-colors ${ index === currentIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
             />
           ))}
         </div>

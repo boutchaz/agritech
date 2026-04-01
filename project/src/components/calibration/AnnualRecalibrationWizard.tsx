@@ -166,11 +166,10 @@ export function AnnualRecalibrationWizard({
           </Button>
 
           {currentStep !== 1 && (
-            <Button
+            <Button variant="blue"
               type="button"
               onClick={goNext}
               disabled={currentStep >= 5 || (currentStep === 4 && step4Ready)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {currentStep === 4 && step4Ready ? 'Passage automatique...' : 'Suivant'}
             </Button>

@@ -158,9 +158,9 @@ const ProductApplications: React.FC = () => {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Applications de Produits
         </h2>
-        <Button
+        <Button variant="green"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="flex items-center space-x-2 px-4 py-2 rounded-md"
         >
           <Plus className="h-5 w-5" />
           <span>Nouvelle Application</span>

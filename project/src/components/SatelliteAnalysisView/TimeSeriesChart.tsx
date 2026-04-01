@@ -602,15 +602,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           const range = getDateRangeLastNDays(days);
           const isActive = startDate === range.start_date && endDate === range.end_date;
           return (
-            <Button
+            <Button variant="blue"
               key={days}
               type="button"
               onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
-              className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
-              }`}
+              className={`px-3 py-1 text-sm rounded-full border transition-colors ${ isActive ? 'border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}
             >
               {label}
             </Button>

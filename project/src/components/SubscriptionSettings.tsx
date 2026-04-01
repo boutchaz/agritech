@@ -307,9 +307,9 @@ const SubscriptionSettings: React.FC = () => {
           </h2>
         </div>
 
-        <Button
+        <Button variant="green"
           onClick={() => setShowPlans(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="px-4 py-2 rounded-md"
         >
           {t('subscription.changePlan', 'Change plan')}
         </Button>
@@ -527,9 +527,9 @@ const SubscriptionSettings: React.FC = () => {
                       {t('subscription.addons.active')}
                     </span>
                   ) : (
-                    <Button
+                    <Button variant="blue"
                       onClick={() => purchaseAddon.mutate(module.id)}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      className="px-3 py-1 text-sm rounded-md"
                     >
                       {t('subscription.addons.buy')}
                     </Button>

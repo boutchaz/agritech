@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
-import { initGA, initClarity, markRouterNavigating, markRouterStable } from './lib/analytics'
+import { initGA } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
 import './i18n/config'
 import './index.css'
@@ -83,21 +83,6 @@ async function init() {
       queryClient.clear()
     }
 
-    if (state.isAuthenticated && !prevState.isAuthenticated) {
-      setTimeout(() => {
-        markRouterStable()
-        initClarity()
-      }, 500)
-    }
-  })
-
-  // Track router state for Clarity safety
-  router.subscribe('onBeforeNavigate', () => {
-    markRouterNavigating()
-  })
-
-  router.subscribe('onResolved', () => {
-    markRouterStable()
   })
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

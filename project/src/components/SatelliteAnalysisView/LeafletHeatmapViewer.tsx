@@ -448,9 +448,9 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                     }`}
                   />
                   {recommendedDate && recommendedDate !== selectedDate && (
-                    <Button
+                    <Button variant="blue"
                       onClick={() => setSelectedDate(recommendedDate)}
-                      className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 rounded hover:bg-blue-600"
                       title={`Use recommended date: ${recommendedDate}`}
                     >
                       <Calendar className="w-3 h-3" />

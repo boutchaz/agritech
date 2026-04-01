@@ -113,13 +113,6 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   badge,
   children,
 }) => {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
-
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -1299,7 +1292,7 @@ const NutritionOptionSelector: React.FC<{
       </div>
 
       <div className="flex items-center space-x-3">
-        <Button
+        <Button variant="blue"
           type="button"
           disabled={!effectiveSelection || isConfirming}
           onClick={() => {
@@ -1307,7 +1300,7 @@ const NutritionOptionSelector: React.FC<{
               confirm({ calibrationId, option: effectiveSelection });
             }
           }}
-          className="inline-flex items-center space-x-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
+          className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium"
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>{isConfirming ? 'Confirming...' : 'Confirm Selection'}</span>
@@ -1504,6 +1497,8 @@ const AICalibrationPage = () => {
   const { t } = useTranslation();
   const { t: tAi } = useTranslation('ai');
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
 
@@ -1647,10 +1642,10 @@ const AICalibrationPage = () => {
                 {tAi('calibration.annualBanner.body')}
               </p>
             </div>
-            <Button
+            <Button variant="green"
               type="button"
               onClick={() => setShowAnnualRecalibrationWizard(true)}
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               data-testid="calibration-start-annual-recalibration"
             >
               {tAi('calibration.annualBanner.cta')}
@@ -1692,10 +1687,10 @@ const AICalibrationPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
+              <Button variant="blue"
                 type="button"
                 onClick={() => navigate({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } })}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               >
                 <FileText className="h-4 w-4" />
                 {tAi('calibration.nextStep.openCalendar')}

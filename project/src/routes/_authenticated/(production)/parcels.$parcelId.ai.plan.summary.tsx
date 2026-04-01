@@ -81,11 +81,10 @@ const AIPlanSummaryPage = () => {
                 <p className="mt-2">{t('plan.summary.technicalDetailsBody')}</p>
               </details>
               <div className="flex flex-wrap gap-2">
-                <Button
+                <Button variant="green"
                   type="button"
                   onClick={() => ensurePlan.mutate()}
                   disabled={ensurePlan.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {ensurePlan.isPending ? t('plan.summary.preparing') : t('plan.summary.prepareCalendar')}
                 </Button>
@@ -114,11 +113,10 @@ const AIPlanSummaryPage = () => {
           </div>
 
           {effectiveStatus === 'draft' && (
-            <Button
+            <Button variant="green"
               type="button"
               onClick={() => validatePlan.mutate()}
               disabled={validatePlan.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
             >
               {validatePlan.isPending ? t('plan.summary.confirming') : t('plan.summary.confirmCalendar')}
             </Button>

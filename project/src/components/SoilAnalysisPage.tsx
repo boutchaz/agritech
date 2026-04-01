@@ -189,10 +189,10 @@ const SoilAnalysisPage: React.FC = () => {
             </Button>
           </div>
           <CSVBulkUpload onImportComplete={() => window.location.reload()} />
-          <Button
+          <Button variant="green"
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
-            className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="px-3 sm:px-4 py-2 rounded-md flex items-center justify-center space-x-2 disabled:cursor-not-allowed text-sm"
             title={!selectedParcelId ? 'Sélectionnez une parcelle pour ajouter une analyse' : 'Ajouter une nouvelle analyse'}
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -442,14 +442,10 @@ const SoilAnalysisPage: React.FC = () => {
                 </Button>
                 <div className="flex items-center space-x-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
+                    <Button variant="green"
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${
-                        currentPage === page
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
+                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${ currentPage === page ? '' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                     >
                       {page}
                     </Button>

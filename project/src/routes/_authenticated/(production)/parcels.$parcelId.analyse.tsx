@@ -23,11 +23,7 @@ const ParcelSoilAnalysis = () => {
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: calibrationStatus } = useCalibrationStatus(parcelId);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [analysisTab, setAnalysisTab] = useState<AnalysisType>(search.type || 'soil');
   const [showForm, setShowForm] = useState(false);
@@ -37,12 +33,14 @@ const ParcelSoilAnalysis = () => {
   const returnTo = (search as any).returnTo || 'stay';
 
   // Auto-show form if type is specified in search params (from calibration panel)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (search.type && !showForm && !selectedFormType) {
       setSelectedFormType(search.type as AnalysisType);
       setShowForm(true);
     }
   }, [search.type]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Fetch real analyses data
   const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcel.organization_id);
@@ -303,9 +301,9 @@ const ParcelSoilAnalysis = () => {
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
           {t('parcels.analyse.title')}
         </h3>
-        <Button
+        <Button variant="green"
           onClick={() => setShowTypeSelector(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="h-4 w-4" />
           <span>{t('parcels.analyse.newAnalysis')}</span>
@@ -441,16 +439,12 @@ const ParcelSoilAnalysis = () => {
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {t('parcels.analyse.noAnalyses')}
               </p>
-              <Button
+              <Button variant="blue"
                 onClick={() => {
                   setSelectedFormType(analysisTab);
                   setShowForm(true);
                 }}
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  analysisTab === 'water'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
+                className={`px-4 py-2 text-white rounded-lg transition-colors ${ analysisTab === 'water' ? '' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 {t('parcels.analyse.addAnalysis')}
               </Button>

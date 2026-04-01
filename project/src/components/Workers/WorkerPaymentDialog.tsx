@@ -131,7 +131,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const { data: accounts = [] } = useAccounts();
   const hasChartOfAccounts = accounts.length > 0;
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect -- reset form when dialog opens */
   useEffect(() => {
     if (open) {
       setPaymentType(
@@ -152,13 +152,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     initialPeriodEnd,
     defaultDates,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  /* eslint-disable react-hooks/set-state-in-effect -- clear calculated when type changes */
   useEffect(() => {
     if (requiresCustomAmount) {
       setCalculatedPayment(null);
     }
   }, [paymentType, requiresCustomAmount]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCalculate = async () => {
     setError(null);
