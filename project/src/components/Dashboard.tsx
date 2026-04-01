@@ -23,14 +23,6 @@ interface DashboardProps {
   settings: DashboardSettings;
 }
 
-function DisabledWidgetPlaceholder({ title }: { title: string }) {
-  return (
-    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700/50 p-7 flex items-center justify-center min-h-[320px]">
-      <p className="text-sm text-gray-400 dark:text-gray-500">{title}</p>
-    </div>
-  );
-}
-
 const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
   const { t } = useTranslation();
   const { latestReadings } = useSensorData();
@@ -185,20 +177,20 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
       {/* Row 1: Key Performance Indicators */}
       <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
-        {settings.showStockAlerts ? <StockAlertsWidget /> : <DisabledWidgetPlaceholder title={t('dashboard.widgets.stock.title')} />}
+        <StockAlertsWidget />
         <HarvestSummaryWidget />
         <SalesOverviewWidget />
       </div>
 
       {/* Row 2: Action Items & Financial Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.showTaskAlerts ? <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div> : <DisabledWidgetPlaceholder title={t('dashboard.widgets.tasks.title')} />}
+        <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>
         <AccountingWidget />
       </div>
 
       {/* Row 3: Operational Data */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.showSoilData ? <AnalysisWidget /> : <DisabledWidgetPlaceholder title={t('dashboard.widgets.soil.title')} />}
+        <AnalysisWidget />
         <WorkersActivityWidget />
       </div>
 
