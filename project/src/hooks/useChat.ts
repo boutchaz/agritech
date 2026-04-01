@@ -104,10 +104,11 @@ export function useStreamMessage() {
   const [streamSuggestions, setStreamSuggestions] = useState<string[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  /* eslint-disable react-hooks/preserve-manual-memoization -- currentOrganization?.id is the only reactive dep needed */
   const stream = useCallback(
     async (
       data: SendMessageDto,
-      onComplete?: (metadata: any) => void,
+      onComplete?: (metadata: unknown) => void,
       onError?: (error: Error) => void,
     ) => {
       if (!currentOrganization?.id) {
@@ -156,6 +157,7 @@ export function useStreamMessage() {
     },
     [currentOrganization?.id, queryClient],
   );
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   const stopStream = useCallback(() => {
     abortControllerRef.current?.abort();

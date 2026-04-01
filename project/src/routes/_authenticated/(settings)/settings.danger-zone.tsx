@@ -171,13 +171,16 @@ function DangerZonePage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset form when dialog closes
     if (!showDeleteConfirm) setConfirmText('');
   }, [showDeleteConfirm]);
 
   useEffect(() => {
     if (!showImportConfirm) {
+      /* eslint-disable react-hooks/set-state-in-effect -- reset form when dialog closes */
       setImportFile(null);
       setImportData(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [showImportConfirm]);

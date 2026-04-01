@@ -83,7 +83,7 @@ export function ChatInterface() {
   }, []);
 
   // Helper: scroll to bottom
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+  const scrollToBottom = useCallback((_behavior: ScrollBehavior = 'auto') => {
     const el = getViewport();
     if (!el) return;
     el.scrollTop = el.scrollHeight;
@@ -117,6 +117,7 @@ export function ChatInterface() {
       }
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync server history into local state
     setMessages((prev) => {
       // Keep local-only messages (sent but not yet in server history)
       const localOnly = prev.filter((lm) =>
@@ -211,11 +212,12 @@ export function ChatInterface() {
     });
   }, [messages.length, streamSuggestions]);
 
-  const handleStreamError = useCallback((messageText: string, error: any) => {
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setMessages is a stable React setter
+  const handleStreamError = useCallback((messageText: string, error: unknown) => {
     if (handleQuotaError(error)) return;
 
-    const errorMsg = error?.message || 'Failed to send message';
-    let errorContent = errorMsg.includes('AI quota exceeded') || errorMsg.includes('AI_QUOTA_EXCEEDED')
+    const errorMsg = (error as Error)?.message || 'Failed to send message';
+    const errorContent = errorMsg.includes('AI quota exceeded') || errorMsg.includes('AI_QUOTA_EXCEEDED')
       ? "You've reached your AI usage limit for this month."
       : errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch')
       ? "I'm having trouble connecting to the server."
@@ -225,6 +227,7 @@ export function ChatInterface() {
     if (!voiceMode) setInput(messageText);
   }, [voiceMode, handleQuotaError]);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setMessages/setInput/setShouldAutoScroll are stable React setters
   const proceedWithSend = useCallback((messageText: string) => {
     // Always auto-scroll when user sends a message
     setShouldAutoScroll(true);
