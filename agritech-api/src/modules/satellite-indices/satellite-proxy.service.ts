@@ -24,9 +24,10 @@ export class SatelliteProxyService {
       query?: Record<string, string | string[] | undefined>;
       organizationId?: string;
       timeout?: number;
+      authToken?: string;
     } = {},
   ): Promise<unknown> {
-    const { body, query, organizationId, timeout = 120_000 } = options;
+    const { body, query, organizationId, timeout = 120_000, authToken } = options;
 
     const params = new URLSearchParams();
     if (query) {
@@ -50,6 +51,9 @@ export class SatelliteProxyService {
     };
     if (organizationId) {
       headers['x-organization-id'] = organizationId;
+    }
+    if (authToken) {
+      headers['authorization'] = `Bearer ${authToken}`;
     }
 
     this.logger.debug(`[Proxy] ${method} ${url}`);
@@ -110,12 +114,12 @@ export class SatelliteProxyService {
     }
   }
 
-  async get(path: string, query?: Record<string, string | string[] | undefined>, organizationId?: string) {
-    return this.proxy('GET', path, { query, organizationId });
+  async get(path: string, query?: Record<string, string | string[] | undefined>, organizationId?: string, authToken?: string) {
+    return this.proxy('GET', path, { query, organizationId, authToken });
   }
 
-  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number) {
-    return this.proxy('POST', path, { body, organizationId, query, timeout });
+  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number, authToken?: string) {
+    return this.proxy('POST', path, { body, organizationId, query, timeout, authToken });
   }
 
   /**
@@ -125,9 +129,9 @@ export class SatelliteProxyService {
   async proxyRaw(
     method: string,
     path: string,
-    options: { organizationId?: string; timeout?: number } = {},
+    options: { organizationId?: string; timeout?: number; authToken?: string } = {},
   ): Promise<{ buffer: Buffer; contentType: string; status: number }> {
-    const { organizationId, timeout = 60_000 } = options;
+    const { organizationId, timeout = 60_000, authToken } = options;
     const url = `${this.satelliteBaseUrl}/api${path}`;
 
     const controller = new AbortController();
@@ -136,6 +140,9 @@ export class SatelliteProxyService {
     const headers: Record<string, string> = {};
     if (organizationId) {
       headers['x-organization-id'] = organizationId;
+    }
+    if (authToken) {
+      headers['authorization'] = `Bearer ${authToken}`;
     }
 
     try {
