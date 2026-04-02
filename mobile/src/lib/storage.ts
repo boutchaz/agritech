@@ -33,9 +33,7 @@ try {
     removeItem: (name: string) => mmkvInstance.delete(name),
   };
 
-  console.log('✅ Using MMKV for storage (fast & encrypted)');
-} catch (error) {
-  console.log('⚠️ MMKV not available, using SecureStore for Expo Go');
+} catch {
 }
 
 // Fallback: Use SecureStore (works in Expo Go)
@@ -56,7 +54,6 @@ if (!MMKVStorage) {
       },
     };
 
-    console.log('✅ Using SecureStore for storage (Expo Go compatible)');
   } catch (error) {
     console.error('❌ No storage available!', error);
   }

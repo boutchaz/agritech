@@ -26,11 +26,14 @@ export function SegmentedControl({ options, value, onChange, testID }: Segmented
       {options.map((option) => {
         const isActive = option.key === value;
         return (
-          <Pressable
-            key={option.key}
-            onPress={() => onChange(option.key)}
-            style={({ pressed }) => [
-              styles.pill,
+            <Pressable
+              key={option.key}
+              onPress={() => onChange(option.key)}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+              accessibilityState={{ selected: isActive }}
+              style={({ pressed }) => [
+                styles.pill,
               {
                 backgroundColor: isActive ? colors.primary[600] : colors.gray[100],
               },

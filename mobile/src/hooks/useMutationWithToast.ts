@@ -1,7 +1,6 @@
 import { useMutation, type UseMutationOptions, type UseMutationResult } from '@tanstack/react-query';
 
-function showToast(message: string, type: 'success' | 'error') {
-  console.log(`[${type.toUpperCase()}] ${message}`);
+function showToast() {
 }
 
 export interface MutationWithToastOptions<TData, TError, TVariables, TContext>
@@ -26,7 +25,7 @@ export function useMutationWithToast<
       if (successMessage) {
         const message =
           typeof successMessage === 'function' ? successMessage(data) : successMessage;
-        showToast(message, 'success');
+        showToast();
       }
 
       onSuccess?.(data, variables, onMutateResult, context);
@@ -40,7 +39,7 @@ export function useMutationWithToast<
           : errorMessage
         : defaultMessage;
 
-      showToast(message, 'error');
+      showToast();
       onError?.(error, variables, onMutateResult, context);
     },
   });

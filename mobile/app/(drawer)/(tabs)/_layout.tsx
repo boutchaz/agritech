@@ -3,6 +3,7 @@ import { Platform, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, type UserRole } from '@/stores/authStore';
 import { useTheme } from '@/providers/ThemeProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -106,48 +107,50 @@ export default function TabsLayout() {
   const visibleTabs = new Set(tabs.map((t) => t.name));
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: themeColors.brandPrimary,
-        tabBarInactiveTintColor: themeColors.iconSubtle,
-        tabBarStyle: {
-          backgroundColor: isDark ? themeColors.surface : themeColors.surfaceLowest,
-          borderTopWidth: 0,
-          paddingBottom: Platform.OS === 'ios' ? 4 : 8,
-          paddingTop: 6,
-          height: Platform.OS === 'ios' ? 80 : 64,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-        },
-        headerShown: false,
-      }}
-    >
-      {ALL_SCREENS.map((screenName) => {
-        const tabCfg = tabs.find((t) => t.name === screenName);
-        const isVisible = visibleTabs.has(screenName);
+    <ErrorBoundary>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: themeColors.brandPrimary,
+          tabBarInactiveTintColor: themeColors.iconSubtle,
+          tabBarStyle: {
+            backgroundColor: isDark ? themeColors.surface : themeColors.surfaceLowest,
+            borderTopWidth: 0,
+            paddingBottom: Platform.OS === 'ios' ? 4 : 8,
+            paddingTop: 6,
+            height: Platform.OS === 'ios' ? 80 : 64,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.3,
+          },
+          headerShown: false,
+        }}
+      >
+        {ALL_SCREENS.map((screenName) => {
+          const tabCfg = tabs.find((t) => t.name === screenName);
+          const isVisible = visibleTabs.has(screenName);
 
-        return (
-          <Tabs.Screen
-            key={screenName}
-            name={screenName}
-            options={{
-              title: tabCfg?.title ?? screenName,
-              href: isVisible ? undefined : null,
-              tabBarIcon: tabCfg
-                ? ({ color }) => (
-                    <TabIcon
-                      name={tabCfg.icon}
-                      color={color}
-                    />
-                  )
-                : undefined,
-            }}
-          />
-        );
-      })}
-    </Tabs>
+          return (
+            <Tabs.Screen
+              key={screenName}
+              name={screenName}
+              options={{
+                title: tabCfg?.title ?? screenName,
+                href: isVisible ? undefined : null,
+                tabBarIcon: tabCfg
+                  ? ({ color }) => (
+                      <TabIcon
+                        name={tabCfg.icon}
+                        color={color}
+                      />
+                    )
+                  : undefined,
+              }}
+            />
+          );
+        })}
+      </Tabs>
+    </ErrorBoundary>
   );
 }

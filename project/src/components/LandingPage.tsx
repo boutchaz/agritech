@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
-import heroBg from '../assets/bg-360-day.png';
+import heroBg from '../assets/bg-360-day.webp';
 import { appConfig } from '@/config/app';
 import { toast } from 'sonner';
 
@@ -188,7 +188,10 @@ const LandingPage: React.FC = () => {
       >
         <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 sm:px-6">
           <a href="#" className="flex items-center gap-3 no-underline" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-            <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+            <picture>
+              <source srcSet="/assets/logo.webp" type="image/webp" />
+              <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+            </picture>
             <span
               className={`font-[Montserrat,sans-serif] font-extrabold text-2xl tracking-wider transition-all duration-300 ${
                 scrolled ? 'text-white' : 'text-white text-shadow-[0_1px_3px_rgba(0,0,0,0.3)]'
@@ -271,7 +274,10 @@ const LandingPage: React.FC = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             >
+              <picture>
+              <source srcSet="/assets/logo.webp" type="image/webp" />
               <img src="/assets/logo.png" alt="AGROGINA" className="h-10 shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
+            </picture>
               <span className="font-[Montserrat,sans-serif] text-lg font-extrabold tracking-wider text-white">AGROGINA</span>
             </a>
             <button
@@ -396,7 +402,10 @@ const LandingPage: React.FC = () => {
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'perspective(1000px) rotateX(0deg)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'perspective(1000px) rotateX(2deg)'; }}
               >
-                <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover opacity-80 brightness-90" />
+                <picture>
+                  <source srcSet="/assets/video-thumbnail.webp" type="image/webp" />
+                  <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover opacity-80 brightness-90" loading="lazy" />
+                </picture>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] bg-blue-500/90 rounded-full flex items-center justify-center backdrop-blur shadow-[0_10px_25px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
                   <Play className="w-7 h-7 text-white ml-1" fill="white" />
                 </div>
@@ -696,8 +705,11 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-12 mb-16">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" />
-                <span className="font-[Montserrat,sans-serif] font-extrabold text-2xl tracking-wider text-white">AGROGINA</span>
+                <picture>
+                <source srcSet="/assets/logo.webp" type="image/webp" />
+                <img src="/assets/logo.png" alt="AGROGINA Logo" className="h-12 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" loading="lazy" />
+              </picture>
+              <span className="font-[Montserrat,sans-serif] font-extrabold text-2xl tracking-wider text-white">AGROGINA</span>
               </div>
               <p className="text-sm text-muted-foreground mt-4 leading-relaxed">{t('landing.footer.tagline')}</p>
               <div className="flex gap-4 mt-6">

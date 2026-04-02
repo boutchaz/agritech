@@ -33,7 +33,6 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      console.log('[Login] User authenticated, redirecting to tabs...');
       router.replace(authenticatedHome);
     }
   }, [authenticatedHome, isAuthenticated, router]);
@@ -76,10 +75,8 @@ export default function LoginScreen() {
 
      setIsSubmitting(true);
      try {
-       console.log('[Login] Attempting sign in...');
-       await signIn(email.trim().toLowerCase(), password.trim());
-       console.log('[Login] Sign in successful, navigating...');
-       router.replace(authenticatedHome);
+        await signIn(email.trim().toLowerCase(), password.trim());
+        router.replace(authenticatedHome);
     } catch (error) {
       console.error('[Login] Sign in failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed';

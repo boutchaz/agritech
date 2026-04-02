@@ -19,6 +19,8 @@ export function Divider({
   return (
     <View
       testID={testID}
+      accessibilityRole={'separator' as any}
+      importantForAccessibility="no"
       style={[
         styles.base,
         orientation === 'horizontal'

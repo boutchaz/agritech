@@ -14,6 +14,7 @@ export interface ButtonProps {
   rightIcon?: keyof typeof Ionicons.glyphMap;
   fullWidth?: boolean;
   testID?: string;
+  accessibilityLabel?: string;
 }
 
 const variantStyles = {
@@ -76,16 +77,22 @@ export function Button({
   rightIcon,
   fullWidth = false,
   testID,
+  accessibilityLabel,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const selectedVariant = variantStyles[variant];
   const selectedSize = sizeStyles[size];
+  const computedAccessibilityLabel =
+    accessibilityLabel ??
+    (typeof children === 'string' || typeof children === 'number' ? String(children) : undefined);
 
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={computedAccessibilityLabel}
       style={({ pressed }) => [
         styles.base,
         {

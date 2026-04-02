@@ -19,7 +19,7 @@ if (import.meta.env.DEV) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Always stale — invalidateQueries always triggers immediate refetch
+      staleTime: 30 * 1000, // 30s — prevents duplicate refetches when multiple components mount with the same key
       gcTime: 5 * 60 * 1000, // Keep unused data in memory for 5 minutes
       retry: 1,
       refetchOnWindowFocus: false, // Disable globally - prevents refetch on tab switch

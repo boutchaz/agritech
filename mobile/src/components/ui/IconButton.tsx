@@ -4,6 +4,7 @@ import { colors, borderRadius } from '@/constants/theme';
 
 export interface IconButtonProps {
   icon: keyof typeof Ionicons.glyphMap;
+  accessibilityLabel: string;
   onPress: () => void;
   variant?: 'primary' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
@@ -38,6 +39,7 @@ const sizeMap = {
 
 export function IconButton({
   icon,
+  accessibilityLabel,
   onPress,
   variant = 'primary',
   size = 'md',
@@ -54,6 +56,8 @@ export function IconButton({
       testID={testID}
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.base,
         {

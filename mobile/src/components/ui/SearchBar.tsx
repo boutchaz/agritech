@@ -10,6 +10,7 @@ export interface SearchBarProps {
   onClear?: () => void;
   autoFocus?: boolean;
   testID?: string;
+  accessibilityLabel?: string;
 }
 
 export function SearchBar({
@@ -19,6 +20,7 @@ export function SearchBar({
   onClear,
   autoFocus = false,
   testID,
+  accessibilityLabel,
 }: SearchBarProps) {
   const [focused, setFocused] = useState(false);
 
@@ -46,6 +48,7 @@ export function SearchBar({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        accessibilityLabel={accessibilityLabel}
         placeholderTextColor={colors.gray[400]}
         autoFocus={autoFocus}
         onFocus={() => setFocused(true)}

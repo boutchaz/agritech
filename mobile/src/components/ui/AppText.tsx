@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { AccessibilityRole } from 'react-native';
 import { Text, StyleSheet, TextStyle } from 'react-native';
 import { colors, fontSize, fontWeight } from '@/constants/theme';
 
@@ -9,6 +10,7 @@ export interface AppTextProps {
   numberOfLines?: number;
   children: ReactNode;
   testID?: string;
+  accessibilityRole?: AccessibilityRole;
 }
 
 const variantMap: Record<NonNullable<AppTextProps['variant']>, TextStyle> = {
@@ -46,11 +48,13 @@ export function AppText({
   numberOfLines,
   children,
   testID,
+  accessibilityRole = 'text',
 }: AppTextProps) {
   return (
     <Text
       testID={testID}
       numberOfLines={numberOfLines}
+      accessibilityRole={accessibilityRole}
       style={[styles.base, variantMap[variant], { color, textAlign: align }]}
     >
       {children}

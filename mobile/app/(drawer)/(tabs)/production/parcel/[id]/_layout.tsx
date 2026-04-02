@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useParcel, useFarm, useDeleteParcel } from '@/hooks/useFarms';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Toast } from '@/components/ui/Toast';
 
@@ -76,20 +77,22 @@ export default function ParcelDetailLayout() {
 
   if (isLoading && !parcel) {
     return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
+      <ErrorBoundary>
+        <View style={[styles.container, { backgroundColor: themeColors.background }]}> 
+          <View style={[styles.header, { paddingTop: insets.top }]}> 
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={themeColors.brandPrimary} />
+          </View>
         </View>
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={themeColors.brandPrimary} />
-        </View>
-      </View>
+      </ErrorBoundary>
     );
   }
 
@@ -101,116 +104,118 @@ export default function ParcelDetailLayout() {
         : themeColors.textTertiary;
 
   return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: themeColors.background }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
-            {parcel?.name ?? 'Parcel'}
-          </Text>
-          <View style={styles.headerMeta}>
-            {farm && (
-              <Text style={[styles.headerFarm, { color: themeColors.textSecondary }]} numberOfLines={1}>
-                {farm.name}
-              </Text>
-            )}
-            {parcel && (
-              <View style={[styles.statusPill, { backgroundColor: statusColor + '1A' }]}>
-                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                <Text style={[styles.statusText, { color: statusColor }]}>{parcel.status}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() => setShowDeleteDialog(true)}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="trash-outline" size={20} color={themeColors.error} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Scrollable tab bar */}
-      <View style={[styles.tabBarContainer, { borderBottomColor: themeColors.outlineVariant }]}>
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabBarContent}
-        >
-          {PARCEL_TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[
-                  styles.tabItem,
-                  isActive && [styles.tabItemActive, { borderBottomColor: themeColors.brandPrimary }],
-                ]}
-                onPress={() => {
-                  const target = tab.route === ''
-                    ? `/(drawer)/(tabs)/production/parcel/${id}`
-                    : `/(drawer)/(tabs)/production/parcel/${id}${tab.route}`;
-                  router.replace(target as any);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={isActive ? (tab.icon.replace('-outline', '') as IconName) : tab.icon}
-                  size={18}
-                  color={isActive ? themeColors.brandPrimary : themeColors.iconSubtle}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    {
-                      color: isActive ? themeColors.brandPrimary : themeColors.textTertiary,
-                      fontWeight: isActive ? '600' : '400',
-                    },
-                  ]}
-                >
-                  {tab.label}
+    <ErrorBoundary>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}> 
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top, backgroundColor: themeColors.background }]}> 
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: themeColors.textPrimary }]} numberOfLines={1}>
+              {parcel?.name ?? 'Parcel'}
+            </Text>
+            <View style={styles.headerMeta}>
+              {farm && (
+                <Text style={[styles.headerFarm, { color: themeColors.textSecondary }]} numberOfLines={1}>
+                  {farm.name}
                 </Text>
-              </TouchableOpacity>
-            );
+              )}
+              {parcel && (
+                <View style={[styles.statusPill, { backgroundColor: statusColor + '1A' }]}> 
+                  <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                  <Text style={[styles.statusText, { color: statusColor }]}>{parcel.status}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => setShowDeleteDialog(true)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="trash-outline" size={20} color={themeColors.error} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable tab bar */}
+        <View style={[styles.tabBarContainer, { borderBottomColor: themeColors.outlineVariant }]}> 
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {PARCEL_TABS.map((tab) => {
+              const isActive = activeTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabItem,
+                    isActive && [styles.tabItemActive, { borderBottomColor: themeColors.brandPrimary }],
+                  ]}
+                  onPress={() => {
+                    const target = tab.route === ''
+                      ? `/(drawer)/(tabs)/production/parcel/${id}`
+                      : `/(drawer)/(tabs)/production/parcel/${id}${tab.route}`;
+                    router.replace(target as any);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isActive ? (tab.icon.replace('-outline', '') as IconName) : tab.icon}
+                    size={18}
+                    color={isActive ? themeColors.brandPrimary : themeColors.iconSubtle}
+                  />
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      {
+                        color: isActive ? themeColors.brandPrimary : themeColors.textTertiary,
+                        fontWeight: isActive ? '600' : '400',
+                      },
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Tab content */}
+        <Slot />
+
+        <ConfirmDialog
+          visible={showDeleteDialog}
+          onDismiss={() => setShowDeleteDialog(false)}
+          onConfirm={handleDeleteConfirm}
+          title={t('production.deleteParcel', { defaultValue: 'Delete Parcel' })}
+          message={t('production.deleteParcelWarning', {
+            defaultValue: `Are you sure you want to delete "${parcel?.name}"? All related data (calibrations, plans, tasks, harvests, satellite data, weather data) will be permanently removed. This action cannot be undone.`,
+            name: parcel?.name,
           })}
-        </ScrollView>
+          confirmLabel={t('actions.delete', { defaultValue: 'Delete' })}
+          cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}
+          variant="destructive"
+          loading={deleteParcel.isPending}
+          icon="warning-outline"
+        />
+
+        <Toast
+          visible={toast.visible}
+          message={toast.message}
+          type={toast.type}
+          onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
+        />
       </View>
-
-      {/* Tab content */}
-      <Slot />
-
-      <ConfirmDialog
-        visible={showDeleteDialog}
-        onDismiss={() => setShowDeleteDialog(false)}
-        onConfirm={handleDeleteConfirm}
-        title={t('production.deleteParcel', { defaultValue: 'Delete Parcel' })}
-        message={t('production.deleteParcelWarning', {
-          defaultValue: `Are you sure you want to delete "${parcel?.name}"? All related data (calibrations, plans, tasks, harvests, satellite data, weather data) will be permanently removed. This action cannot be undone.`,
-          name: parcel?.name,
-        })}
-        confirmLabel={t('actions.delete', { defaultValue: 'Delete' })}
-        cancelLabel={t('actions.cancel', { defaultValue: 'Cancel' })}
-        variant="destructive"
-        loading={deleteParcel.isPending}
-        icon="warning-outline"
-      />
-
-      <Toast
-        visible={toast.visible}
-        message={toast.message}
-        type={toast.type}
-        onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
-      />
-    </View>
+    </ErrorBoundary>
   );
 }
 

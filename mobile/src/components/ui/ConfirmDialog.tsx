@@ -38,7 +38,7 @@ export function ConfirmDialog({
   const iconBg = variant === 'destructive' ? colors.red[50] : colors.primary[50];
 
   return (
-    <BottomSheet visible={visible} onDismiss={onDismiss}>
+    <BottomSheet visible={visible} onDismiss={onDismiss} accessibilityViewIsModal>
       <View style={styles.container}>
         {icon && (
           <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
@@ -57,6 +57,7 @@ export function ConfirmDialog({
             onPress={onDismiss}
             disabled={loading}
             fullWidth
+            accessibilityLabel={cancelLabel}
           >
             {cancelLabel}
           </Button>
@@ -65,6 +66,7 @@ export function ConfirmDialog({
             onPress={onConfirm}
             loading={loading}
             fullWidth
+            accessibilityLabel={confirmLabel}
           >
             {confirmLabel}
           </Button>
