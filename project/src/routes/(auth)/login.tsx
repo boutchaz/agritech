@@ -17,7 +17,10 @@ import { useAuthStore, waitForHydration } from '@/stores/authStore'
 import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(auth)/login')({
-  beforeLoad: async ({ context }) => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: (search.redirect as string) || undefined,
+  }),
+  beforeLoad: async ({ context, search }) => {
     await waitForHydration()
     
     const contextUser = context.auth?.user
@@ -25,7 +28,8 @@ export const Route = createFileRoute('/(auth)/login')({
     const storeUser = storeState.isAuthenticated ? storeState.user : null
     
     if (contextUser || storeUser) {
-      throw redirect({ to: '/dashboard' })
+      const redirectTo = search.redirect || '/dashboard'
+      throw redirect({ to: redirectTo })
     }
   },
   component: LoginPage,
@@ -41,19 +45,19 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { redirect: redirectTo } = Route.useSearch()
 
   // Track page view on mount
   useEffect(() => {
     trackPageView({ title: t('auth.signIn.title') })
   }, [t])
 
-  // Redirect to dashboard if user is already logged in
-  // Using useEffect to prevent infinite navigation loop
+  // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
-      navigate({ to: '/dashboard' })
+      navigate({ to: redirectTo || '/dashboard' })
     }
-  }, [user, navigate])
+  }, [user, navigate, redirectTo])
 
   // Don't render login form if user exists
   if (user) {
@@ -71,9 +75,8 @@ function LoginPage() {
       const response = await loginViaApi(email, password, rememberMe)
       if (response?.user) {
         trackLoginSuccess('email')
-        // Small delay to ensure Zustand persists to localStorage before redirect
         await new Promise(resolve => setTimeout(resolve, 100))
-        window.location.href = '/dashboard'
+        window.location.href = redirectTo || '/dashboard'
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('auth.errors.generic')
