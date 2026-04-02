@@ -3,6 +3,7 @@ import type {
   CalibrationV2Output,
   NutritionOption,
 } from "@/types/calibration-v2";
+import type { CalibrationReviewView } from "@/types/calibration-review";
 
 const BASE_URL = "/api/v1/parcels";
 
@@ -388,6 +389,39 @@ export const calibrationV2Api = {
       {},
       organizationId,
     );
+  },
+
+  async getCalibrationReview(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationReviewView | null> {
+    return apiClient.get<CalibrationReviewView | null>(
+      `${BASE_URL}/${parcelId}/calibration/review`,
+      {},
+      organizationId,
+    );
+  },
+
+  async exportCalibration(
+    calibrationId: string,
+    format: "json" | "csv" | "zip",
+    organizationId?: string,
+  ): Promise<Blob> {
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || "/api/v1"}/calibrations/${calibrationId}/export?format=${format}`,
+      {
+        headers: {
+          ...(organizationId
+            ? { "x-organization-id": organizationId }
+            : {}),
+          Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status} ${response.statusText}`);
+    }
+    return response.blob();
   },
 };
 

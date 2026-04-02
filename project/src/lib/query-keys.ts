@@ -151,6 +151,8 @@ export const queryKeys = {
       ['calibration-v2', organizationId ?? 'none', parcelId, 'history'] as const,
     draft: (parcelId: string, organizationId?: string) =>
       ['calibration-v2', organizationId ?? 'none', parcelId, 'draft'] as const,
+    review: (parcelId: string, organizationId?: string) =>
+      ['calibration-v2', organizationId ?? 'none', parcelId, 'review'] as const,
   },
 
   annual: {

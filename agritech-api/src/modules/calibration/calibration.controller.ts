@@ -162,6 +162,18 @@ export class CalibrationController {
     );
   }
 
+  @Get("review")
+  @ApiOperation({ summary: "Get 5-level calibration review for a parcel" })
+  @ApiResponse({ status: 200, description: "Calibration review retrieved" })
+  @ApiResponse({ status: 404, description: "No completed calibration found" })
+  async getCalibrationReview(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCalibrationReview(parcelId, organizationId);
+  }
+
   @Post("validate")
   @ApiOperation({ summary: "Mark the latest parcel calibration as validated" })
   @ApiResponse({

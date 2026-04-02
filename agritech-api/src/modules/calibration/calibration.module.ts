@@ -6,10 +6,13 @@ import { DatabaseModule } from "../database/database.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { SatelliteIndicesModule } from "../satellite-indices/satellite-indices.module";
 import { CalibrationController } from "./calibration.controller";
+import { CalibrationExportController } from "./calibration-export.controller";
+import { CalibrationExportService } from "./calibration-export.service";
 import { CalibrationService } from "./calibration.service";
 import { CalibrationStateMachine } from "./calibration-state-machine";
 import { NutritionOptionService } from "./nutrition-option.service";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
+import { CalibrationReviewAdapter } from "./calibration-review.adapter";
 
 @Module({
   imports: [
@@ -20,12 +23,14 @@ import { AnnualRecalibrationService } from "./annual-recalibration.service";
     SatelliteIndicesModule,
     NotificationsModule,
   ],
-  controllers: [CalibrationController],
+  controllers: [CalibrationController, CalibrationExportController],
   providers: [
     CalibrationService,
+    CalibrationExportService,
     CalibrationStateMachine,
     NutritionOptionService,
     AnnualRecalibrationService,
+    CalibrationReviewAdapter,
   ],
   exports: [
     CalibrationService,

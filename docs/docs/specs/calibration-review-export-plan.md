@@ -2,7 +2,7 @@
 sidebar_position: 8
 title: "Plan — Calibration Review Levels + Export + Expert Lecture"
 date: "2026-04-02"
-status: "DRAFT — CEO Validated, Oracle Round 4 Pending"
+status: "VALIDATED — Ready for Implementation"
 ---
 
 # Plan : Calibration 5-Niveaux + Export Données Brutes + Lecture Expert
@@ -10,7 +10,7 @@ status: "DRAFT — CEO Validated, Oracle Round 4 Pending"
 > **Statut** : Plan révisé après 3 rounds de revue Oracle — CEO validé (D1-D5), Oracle round 2 rejeté (3 petits restants), fixes appliqués en v1.3.
 > **Portée** : Réorganisation de l'affichage calibration + export + audit expert.
 > **Effort estimé** : Medium (phase 1) → Large (phase 2, protocole complet).
-> **Révision** : v1.4 — Fix downloading in frontend validation, export JSON criterion aligned with derived metadata.
+> **Révision** : v1.6 — Fixed 403→404 for cross-org access (anti-enumeration consistency).
 
 ---
 
@@ -383,13 +383,19 @@ interface CalibrationReviewView {
 
 ### 4.3 Endpoints proposés
 
-| Service | Endpoint | Description | Response |
-|---------|----------|-------------|----------|
-| **NestJS** | `GET /calibration/:parcelId/review` | Retourne `CalibrationReviewView` (5 niveaux) | `application/json` — objet unique |
-| **NestJS** | `GET /calibration/:calibrationId/export?format=json` | Export JSON complet (output + review) | `application/json` — objet unique avec `{ output, review, meta }` |
-| **NestJS** | `GET /calibration/:calibrationId/export?format=csv` | Export CSV résumé (tableau unique) | `text/csv` — **un seul fichier** CSV contenant un résumé des 5 niveaux + métriques clés |
-| **NestJS** | `GET /calibration/:calibrationId/export?format=zip` | Export ZIP complet (JSON + CSVs + manifest) | `application/zip` — archive contenant manifest.json + output.json + review.json + csv/ + quality/ |
+| Service | Endpoint | Auth | Description | Response |
+|---------|----------|------|-------------|----------|
+| **NestJS** | `GET /calibration/:parcelId/review` | `JwtAuthGuard`, `PoliciesGuard`, `x-organization-id` | Retourne `CalibrationReviewView` (5 niveaux). **Multi-tenant** : filtre par `organization_id` — un `parcelId` d'une autre org retourne 404. | `application/json` — objet unique |
+| **NestJS** | `GET /calibration/:calibrationId/export?format=json` | `JwtAuthGuard`, `PoliciesGuard`, `x-organization-id` | Export JSON complet (output + review + meta). **Multi-tenant** : vérifie que le `calibrationId` appartient à l'org de l'utilisateur — sinon 404 (anti-enumeration). | `application/json` — objet unique avec `{ output, review, meta }` |
+| **NestJS** | `GET /calibration/:calibrationId/export?format=csv` | `JwtAuthGuard`, `PoliciesGuard`, `x-organization-id` | Export CSV résumé (tableau unique). **Multi-tenant** : même vérification org — sinon 404. | `text/csv` — **un seul fichier** CSV contenant un résumé des 5 niveaux + métriques clés |
+| **NestJS** | `GET /calibration/:calibrationId/export?format=zip` | `JwtAuthGuard`, `PoliciesGuard`, `x-organization-id` | Export ZIP complet (JSON + CSVs + manifest). **Multi-tenant** : même vérification org — sinon 404. | `application/zip` — archive contenant manifest.json + output.json + review.json + csv/ + quality/ |
 
+> **Sécurité multi-tenant** : Tous les endpoints suivent le pattern standard du projet :
+> - Guards : `JwtAuthGuard` → `OrganizationGuard` → `PoliciesGuard`
+> - Extraction : `const organizationId = req.headers['x-organization-id']`
+> - Filtrage : chaque requête filtre par `organization_id` — jamais d'exposition cross-org
+> - Un `calibrationId` ou `parcelId` d'une autre organisation retourne 404 (pas 403, pour éviter l'énumération)
+> 
 > **Note** : `format=csv` retourne **un seul fichier CSV** (résumé exécutable), PAS un ZIP. Pour l'export multi-fichiers complet, utiliser `format=zip`.
 
 **Pourquoi NestJS et pas FastAPI ?**
@@ -649,6 +655,8 @@ Cette phase implémente les features manquantes du protocole.
 | **Export CSV** | `GET /:calibrationId/export?format=csv` | 200 + `text/csv` | Un seul fichier CSV résumé |
 | **Export ZIP** | `GET /:calibrationId/export?format=zip` | 200 + `application/zip` | Archive multi-fichiers conforme §4.4 |
 | **Export avec calibrationId différent** | `GET /:calibrationId/export` | Retourne le snapshot de CE calibration, pas le plus récent | Immuable par ID |
+| **Cross-org export** | `GET /:calibrationId/export` (autre org) | 404 | `calibrationId` n'appartient pas à `organization_id` — pas de data leak |
+| **Cross-org review** | `GET /:parcelId/review` (autre org) | 404 | `parcelId` n'appartient pas à `organization_id` — pas de data leak |
 
 **Frontend (React)** :
 
@@ -677,6 +685,9 @@ Cette phase implémente les features manquantes du protocole.
 - [x] Oracle round 2 : 6 issues identifiés → tous fixés dans v1.2
 - [x] Oracle round 3 : 3 issues identifiés → tous fixés dans v1.3
 - [x] Oracle round 4 : 2 issues identifiés → tous fixés dans v1.4
+- [x] Oracle round 5 : 1 issue identifié (auth/multi-tenant) → fixé dans v1.5
+- [x] Oracle round 6 : 1 issue identifié (403→404) → fixé dans v1.6
+- [x] **PLAN VALIDATED** — prêt pour implémentation Phase 1
 
 **Pré-requis techniques** :
 - [ ] Équipe frontend valide le nouveau layout 5 niveaux

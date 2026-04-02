@@ -26,6 +26,11 @@ import {
   NutritionOptionSuggestion,
 } from "./nutrition-option.service";
 import { getLocalCropReference } from "./crop-reference-loader";
+import {
+  CalibrationReviewAdapter,
+  type CalibrationReviewView,
+  type CalibrationSnapshotInput,
+} from "./calibration-review.adapter";
 
 const CALIBRATION_LOOKBACK_DAYS = 730;
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
@@ -194,6 +199,9 @@ export class CalibrationService {
   @Inject(forwardRef(() => AIReportsService))
   private readonly aiReportsService: AIReportsService;
 
+  @Inject(forwardRef(() => NotificationsGateway))
+  private readonly notificationsGateway: NotificationsGateway;
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly stateMachine: CalibrationStateMachine,
@@ -201,8 +209,7 @@ export class CalibrationService {
     private readonly annualPlanService: AnnualPlanService,
     private readonly satelliteCacheService: SatelliteCacheService,
     private readonly notificationsService: NotificationsService,
-    @Inject(forwardRef(() => NotificationsGateway))
-    private readonly notificationsGateway: NotificationsGateway,
+    private readonly calibrationReviewAdapter: CalibrationReviewAdapter,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════
@@ -1810,6 +1817,75 @@ export class CalibrationService {
       calibration,
       report: this.toJsonObject(calibration.calibration_data),
     };
+  }
+
+  async getCalibrationReview(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<CalibrationReviewView> {
+    const ALLOWED_STATUSES = [
+      "completed",
+      "awaiting_validation",
+      "awaiting_nutrition_option",
+      "active",
+    ];
+
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .select("*")
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .in("status", ALLOWED_STATUSES)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch calibration for review: ${error.message}`,
+      );
+      throw new BadRequestException(
+        `Failed to fetch calibration: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(
+        `No completed calibration found for parcel ${parcelId}`,
+      );
+    }
+
+    const record = data as CalibrationRecord;
+    const calibrationData = this.toJsonObject(record.calibration_data);
+    const output = this.toJsonObject(calibrationData.output);
+    const history = await this.getCalibrationHistory(parcelId, organizationId, 5);
+
+    const snapshotInput: CalibrationSnapshotInput = {
+      calibration_id: record.id,
+      parcel_id: record.parcel_id,
+      generated_at: record.completed_at ?? record.updated_at ?? record.created_at,
+      output,
+      inputs: this.toJsonObject(calibrationData.inputs),
+      confidence_score: this.toNumber(record.confidence_score),
+      status: record.status,
+      parcel_phase:
+        record.phenology_stage ??
+        (typeof output.maturity_phase === "string"
+          ? output.maturity_phase
+          : "unknown"),
+      organization_id: record.organization_id,
+      calibration_history: history.map((item) => ({
+        id: item.id,
+        date: item.completed_at ?? item.created_at,
+        health_score: item.health_score,
+        confidence_score: item.confidence_score,
+        maturity_phase: item.maturity_phase ?? "unknown",
+        status: item.status,
+      })),
+    };
+
+    return this.calibrationReviewAdapter.transform(snapshotInput);
   }
 
   async checkCalibrationReadiness(

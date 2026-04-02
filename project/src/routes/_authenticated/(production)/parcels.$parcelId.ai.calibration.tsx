@@ -93,6 +93,7 @@ import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizar
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
+import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
@@ -1603,6 +1604,10 @@ const AICalibrationPage = () => {
           fullRecalibrationDisabled={isBusy || missingPlantingYear}
           fullRecalibrationTitle={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
         />
+      )}
+
+      {!isCalibrating && (phase === 'awaiting_validation' || phase === 'awaiting_nutrition_option' || phase === 'active') && (
+        <CalibrationReviewSection parcelId={parcelId} />
       )}
 
       <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
