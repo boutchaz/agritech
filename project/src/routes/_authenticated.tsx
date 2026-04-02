@@ -30,6 +30,13 @@ export const Route = createFileRoute('/_authenticated')({
     const user = contextUser || storeUser
     
     if (!user) {
+      const hasRefreshToken = !!storeState.tokens?.refresh_token
+      if (hasRefreshToken && storeState.isTokenExpired()) {
+        const refreshed = await storeState.refreshAccessToken()
+        if (refreshed && useAuthStore.getState().isAuthenticated) {
+          return
+        }
+      }
       throw redirect({
         to: '/login',
         search: {

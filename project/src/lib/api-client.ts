@@ -48,20 +48,12 @@ async function fetchWithRetry(
  * Handle session expiration by clearing auth state and redirecting to login
  */
 function handleSessionExpired(): void {
-  // Prevent multiple redirects — once set, never reset (page will reload anyway)
   if (isRedirectingToLogin) {
     return;
   }
 
   isRedirectingToLogin = true;
 
-  // Clear all auth-related data
-  useAuthStore.getState().clearAuth();
-  useOrganizationStore.getState().clearOrganization();
-  localStorage.removeItem("currentOrganization");
-  localStorage.removeItem("currentFarm");
-
-  // Redirect to login after a short delay to allow error handling
   setTimeout(() => {
     if (
       typeof window !== "undefined" &&
@@ -69,9 +61,7 @@ function handleSessionExpired(): void {
     ) {
       window.location.href = "/login";
     }
-    // Do NOT reset isRedirectingToLogin — the page is navigating away.
-    // Resetting it would allow duplicate redirects from in-flight requests.
-  }, 100);
+  }, 300);
 }
 
 // Device Analytics Headers

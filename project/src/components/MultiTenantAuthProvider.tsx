@@ -560,18 +560,24 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
   useEffect(() => {
     // Only check onboarding if all data is loaded
     if (!loading && !orgsLoading && !profileLoading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
-      // IMPORTANT: Validate session is actually valid before redirecting to onboarding
-      // This prevents redirecting users with expired tokens to onboarding
       const isTokenValid = !useAuthStore.getState().isTokenExpired();
       const hasAccessToken = !!useAuthStore.getState().getAccessToken();
 
-      // Only redirect to onboarding if the session is truly valid
       if (isTokenValid && hasAccessToken) {
         window.location.href = '/onboarding';
       } else {
-        // Session is invalid - clear auth and redirect to login
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
+        const hasRefreshToken = !!useAuthStore.getState().tokens?.refresh_token;
+        if (hasRefreshToken) {
+          useAuthStore.getState().refreshAccessToken().then((refreshed) => {
+            if (refreshed) {
+              window.location.href = '/onboarding';
+            } else {
+              window.location.href = '/login';
+            }
+          });
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
   }, [loading, orgsLoading, profileLoading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
