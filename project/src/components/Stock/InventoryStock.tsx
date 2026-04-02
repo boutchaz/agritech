@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { localizeUnit } from '@/lib/utils/unit-localization';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +26,7 @@ interface InventoryStockLevel {
 }
 
 export default function InventoryStock() {
-  const { t } = useTranslation('stock');
+  const { t, i18n } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -245,7 +246,7 @@ export default function InventoryStock() {
                     {row.warehouse_name}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    {row.total_quantity.toFixed(3)} {row.default_unit}
+                    {row.total_quantity.toFixed(3)} {localizeUnit(row.default_unit, i18n.language)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {formatCurrency(row.total_value)}

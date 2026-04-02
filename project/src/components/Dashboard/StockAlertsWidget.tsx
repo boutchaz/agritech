@@ -5,10 +5,11 @@ import { useInventory, type InventoryItem } from '../../hooks/useInventory';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { localizeUnit } from '@/lib/utils/unit-localization';
 
 const StockAlertsWidget: React.FC = () => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: inventory = [], isLoading } = useInventory();
 
   // Calculate stock alerts
@@ -152,7 +153,7 @@ const StockAlertsWidget: React.FC = () => {
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
                   <div className="text-sm font-bold text-amber-700 dark:text-amber-400">
-                    {item.quantity || 0} {item.unit || t('dashboard.widgets.stock.units')}
+                    {item.quantity || 0} {localizeUnit(item.unit, i18n.language) || t('dashboard.widgets.stock.units')}
                   </div>
                   {item.min_stock_level && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">

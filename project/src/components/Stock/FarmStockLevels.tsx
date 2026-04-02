@@ -1,10 +1,9 @@
 import React from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { Package, Warehouse, Building2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
-import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
+import { localizeUnit } from '@/lib/utils/unit-localization';
 
 interface FarmStockLevelsProps {
   item_id?: string;
@@ -17,9 +16,7 @@ export default function FarmStockLevels({
   farm_id,
   showWarehouseDetails = true,
 }: FarmStockLevelsProps) {
-  const { t } = useTranslation('stock');
-  const navigate = useNavigate();
-  const { format: formatCurrency } = useCurrency();
+  const { t, i18n } = useTranslation('stock');
 
   const { data: stockLevels = [], isLoading } = useFarmStockLevels({
     item_id,
@@ -69,7 +66,6 @@ export default function FarmStockLevels({
 
         // Calculate totals for this farm
         const totalQuantity = farmStocks.reduce((sum, s) => sum + s.total_quantity, 0);
-        const totalValue = farmStocks.reduce((sum, s) => sum + s.total_value, 0);
 
         return (
           <div key={farmKey} className="border rounded-lg p-4">
@@ -106,15 +102,7 @@ export default function FarmStockLevels({
                   {t('stock.farmStockLevels.totalStock', 'Total Stock')}:
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {parseFloat(totalQuantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm mt-1">
-                <span className="text-gray-600 dark:text-gray-400">
-                  {t('stock.farmStockLevels.totalValue', 'Total Value')}:
-                </span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {formatCurrency(totalValue)}
+                  {parseFloat(totalQuantity.toFixed(3))} {localizeUnit(stockLevels[0]?.default_unit, i18n.language)}
                 </span>
               </div>
             </div>
@@ -145,10 +133,7 @@ export default function FarmStockLevels({
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {parseFloat(warehouseStock.total_quantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatCurrency(warehouseStock.total_value)}
+                        {parseFloat(warehouseStock.total_quantity.toFixed(3))} {localizeUnit(stockLevels[0]?.default_unit, i18n.language)}
                       </p>
                     </div>
                   </div>

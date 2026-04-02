@@ -28,6 +28,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/radix-select';
+import { localizeUnit } from '@/lib/utils/unit-localization';
+import type { InventoryProductVariant } from '../../lib/api/inventory';
+
+/**
+ * Greedy allocation: given a total in base units, distribute across variants
+ * smallest container first (1L before 5L). Returns one entry per used variant.
+ */
+function allocateVariants(
+  neededBase: number,
+  variants: InventoryProductVariant[],
+): Array<{ variant_id: string; variant_name: string; quantity: number; unit: string | null }> {
+  const sorted = [...variants]
+    .filter((v) => v.quantity > 0 && v.base_quantity > 0)
+    .sort((a, b) => a.base_quantity - b.base_quantity);
+
+  let remaining = neededBase;
+  const result: Array<{ variant_id: string; variant_name: string; quantity: number; unit: string | null }> = [];
+
+  for (const v of sorted) {
+    const availableBase = v.quantity * v.base_quantity;
+    const takeBase = Math.min(remaining, availableBase);
+    if (takeBase > 0.0001) {
+      const takeUnits = Math.round((takeBase / v.base_quantity) * 1000) / 1000;
+      result.push({ variant_id: v.id, variant_name: v.name, quantity: takeUnits, unit: v.unit });
+      remaining -= takeBase;
+    }
+    if (remaining < 0.0001) break;
+  }
+  return result;
+}
 
 interface TaskFormProps {
   task?: Task | null;
@@ -81,7 +111,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -97,6 +127,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
   const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; variant_id?: string; quantity: number }>>([]);
   // For optional-stock task types, user must explicitly enable stock access
   const [stockEnabled, setStockEnabled] = useState(false);
+  // For smart-allocation mode: total quantity in base unit per product
+  const [totalByProduct, setTotalByProduct] = useState<Record<string, number>>({});
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -274,7 +306,24 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
       // Add planned items for stock-consuming task types (always or optional with toggle enabled)
       if (plannedItems.length > 0 && showProductSection) {
-        cleanedData.planned_items = plannedItems.filter(item => item.product_id && item.quantity > 0);
+        const expanded: Array<{ product_id: string; variant_id?: string; quantity: number }> = [];
+        for (const item of plannedItems) {
+          if (!item.product_id) continue;
+          const prod = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
+          const isSmartMode =
+            (prod?.variants?.length ?? 0) > 0 && prod!.variants.every((v) => v.base_quantity > 1);
+          if (isSmartMode) {
+            const total = totalByProduct[item.product_id] ?? 0;
+            if (total > 0) {
+              allocateVariants(total, prod!.variants).forEach((a) =>
+                expanded.push({ product_id: item.product_id, variant_id: a.variant_id, quantity: a.quantity }),
+              );
+            }
+          } else if (item.quantity > 0) {
+            expanded.push(item);
+          }
+        }
+        cleanedData.planned_items = expanded;
       }
       if (task) {
         await updateTask.mutateAsync({
@@ -861,11 +910,23 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   {plannedItems.map((item, index) => {
                     const selectedProd = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
                     const hasVariants = (selectedProd?.variants?.length ?? 0) > 0;
-                    const selectedVariant = hasVariants
+                    // Smart mode: all variants have a meaningful base_quantity (> 1), so we can auto-allocate
+                    const isSmartMode = hasVariants && selectedProd!.variants.every((v) => v.base_quantity > 1);
+                    const selectedVariant = hasVariants && !isSmartMode
                       ? selectedProd!.variants.find((v) => v.id === item.variant_id)
                       : undefined;
-                    const unitLabel = selectedVariant?.unit ?? selectedProd?.unit ?? '';
+                    const unitLabel = localizeUnit(selectedVariant?.unit ?? selectedProd?.unit, i18n.language);
                     const availableStock = selectedVariant?.quantity ?? selectedProd?.quantity ?? 0;
+
+                    // Smart mode state
+                    const totalBase = isSmartMode ? (totalByProduct[item.product_id] ?? 0) : 0;
+                    const totalAvailableBase = isSmartMode
+                      ? selectedProd!.variants.reduce((s, v) => s + v.quantity * v.base_quantity, 0)
+                      : 0;
+                    const allocation = isSmartMode && totalBase > 0
+                      ? allocateVariants(totalBase, selectedProd!.variants)
+                      : [];
+
                     return (
                       <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex items-end gap-3">
@@ -877,6 +938,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 const newItems = [...plannedItems];
                                 newItems[index] = { product_id: value === '__none__' ? '' : value, variant_id: undefined, quantity: 0 };
                                 setPlannedItems(newItems);
+                                if (value && value !== '__none__') {
+                                  setTotalByProduct((prev) => ({ ...prev, [value]: 0 }));
+                                }
                               }}
                             >
                               <SelectTrigger>
@@ -886,47 +950,81 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 <SelectItem value="__none__">{t('tasks.form.productSelectDefault')}</SelectItem>
                                 {availableProducts.map((product: InventoryProduct) => (
                                   <SelectItem key={product.id} value={product.id}>
-                                    {product.name} ({product.quantity} {product.unit})
+                                    {product.name} ({product.quantity} {localizeUnit(product.unit, i18n.language)})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="w-32 space-y-1">
-                            <Label className="text-xs">
-                              {t('tasks.form.quantityLabel')} {unitLabel ? `(${unitLabel})` : ''}
-                            </Label>
-                            <Input
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              value={item.quantity || ''}
-                              onChange={(e) => {
-                                const newItems = [...plannedItems];
-                                newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
-                                setPlannedItems(newItems);
-                              }}
-                              placeholder="0"
-                            />
-                            {item.quantity > 0 && item.quantity > availableStock && (
-                              <p className="text-xs text-red-500">
-                                {t('tasks.form.exceedsStock', { available: availableStock })}
-                              </p>
-                            )}
-                          </div>
+
+                          {/* Normal mode: quantity input */}
+                          {!isSmartMode && (
+                            <div className="w-32 space-y-1">
+                              <Label className="text-xs">
+                                {t('tasks.form.quantityLabel')} {unitLabel ? `(${unitLabel})` : ''}
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={item.quantity || ''}
+                                onChange={(e) => {
+                                  const newItems = [...plannedItems];
+                                  newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
+                                  setPlannedItems(newItems);
+                                }}
+                                placeholder="0"
+                              />
+                              {item.quantity > 0 && item.quantity > availableStock && (
+                                <p className="text-xs text-red-500">
+                                  {t('tasks.form.exceedsStock', { available: availableStock })}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Smart mode: total quantity input (base unit) */}
+                          {isSmartMode && (
+                            <div className="w-36 space-y-1">
+                              <Label className="text-xs">
+                                {t('tasks.form.quantityLabel')} ({localizeUnit(selectedProd!.unit, i18n.language)})
+                              </Label>
+                              <Input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={totalBase || ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  setTotalByProduct((prev) => ({ ...prev, [item.product_id]: val }));
+                                }}
+                                placeholder="0"
+                              />
+                              {totalBase > 0 && totalBase > totalAvailableBase && (
+                                <p className="text-xs text-red-500">
+                                  {t('tasks.form.exceedsStock', { available: parseFloat(totalAvailableBase.toFixed(3)) })}
+                                </p>
+                              )}
+                            </div>
+                          )}
+
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => {
+                              const pid = item.product_id;
                               setPlannedItems(plannedItems.filter((_, i) => i !== index));
+                              if (pid) setTotalByProduct((prev) => { const next = { ...prev }; delete next[pid]; return next; });
                             }}
                             className="text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        {hasVariants && (
+
+                        {/* Normal mode: manual variant selector */}
+                        {hasVariants && !isSmartMode && (
                           <div className="pl-0 space-y-1">
                             <Label className="text-xs text-muted-foreground">{t('tasks.form.variantLabel', 'Format / conditionnement')}</Label>
                             <Select
@@ -944,11 +1042,43 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 <SelectItem value="__none__">{t('tasks.form.variantSelectDefault', 'Sans format spécifique')}</SelectItem>
                                 {selectedProd!.variants.map((v) => (
                                   <SelectItem key={v.id} value={v.id}>
-                                    {v.name} ({v.quantity} {v.unit ?? selectedProd!.unit})
+                                    {v.name} ({v.quantity} {localizeUnit(v.unit ?? selectedProd!.unit, i18n.language)})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
+                          </div>
+                        )}
+
+                        {/* Smart mode: auto-allocation preview */}
+                        {isSmartMode && totalBase > 0 && (
+                          <div className="pl-0 space-y-1">
+                            <Label className="text-xs text-muted-foreground">
+                              {t('tasks.form.variantAllocation', 'Répartition automatique')}
+                            </Label>
+                            <div className="space-y-1">
+                              {allocation.length > 0 ? (
+                                allocation.map((a) => (
+                                  <div key={a.variant_id} className="flex items-center justify-between text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded border">
+                                    <span className="text-gray-700 dark:text-gray-300">{a.variant_name}</span>
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                      {a.quantity} {localizeUnit(a.unit ?? selectedProd!.unit, i18n.language)}
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                  {t('tasks.form.noStockForAllocation', 'Aucun stock disponible pour cette quantité')}
+                                </p>
+                              )}
+                              {totalBase > totalAvailableBase && allocation.length > 0 && (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                  {t('tasks.form.partialAllocation', 'Stock insuffisant — seulement {{available}} disponibles', {
+                                    available: parseFloat(totalAvailableBase.toFixed(3)),
+                                  })}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
