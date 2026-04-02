@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Platform, View, Text, StyleSheet } from 'react-native';
+import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, type UserRole } from '@/stores/authStore';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -146,6 +146,21 @@ export default function TabsLayout() {
                       />
                     )
                   : undefined,
+                tabBarAccessibilityLabel: `Switch to ${(tabCfg?.title ?? screenName).toLowerCase()} tab`,
+                tabBarButton: (props) => {
+                  const { accessibilityState, ref: _ignoredRef, ...buttonProps } = props as any;
+                  return (
+                    <Pressable
+                      {...buttonProps}
+                      accessibilityRole="tab"
+                      accessibilityLabel={`Switch to ${(tabCfg?.title ?? screenName).toLowerCase()} tab`}
+                      accessibilityState={{
+                        ...accessibilityState,
+                        selected: Boolean(accessibilityState?.selected),
+                      }}
+                    />
+                  );
+                },
               }}
             />
           );

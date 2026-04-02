@@ -17,7 +17,14 @@
     "filter": "تصفية",
     "seeAll": "عرض الكل",
     "loading": "جارٍ التحميل...",
-    "submit": "إرسال"
+    "submit": "إرسال",
+    "creating": "جارٍ الإنشاء...",
+    "submitting": "جارٍ الإرسال..."
+  },
+  "form": {
+    "dateFormat": "YYYY-MM-DD",
+    "quantity": "الكمية",
+    "unitPrice": "سعر الوحدة"
   },
   "status": {
     "pending": "قيد الانتظار",
@@ -47,10 +54,30 @@
     "unauthorized": "ليست لديك صلاحية للقيام بذلك",
     "notFound": "غير موجود"
   },
+  "offline": {
+    "title": "أنت غير متصل بالإنترنت",
+    "message": "بعض الميزات قد تكون غير متوفرة"
+  },
   "empty": {
     "noData": "لا توجد بيانات متاحة",
     "noResults": "لم يتم العثور على نتائج",
-    "noRecentActivity": "لا يوجد نشاط حديث"
+    "noRecentActivity": "لا يوجد نشاط حديث",
+    "noItemsFound": "لم يتم العثور على عناصر",
+    "typeToSearch": "اكتب للبحث"
+  },
+  "severity": {
+    "low": "منخفض",
+    "medium": "متوسط",
+    "high": "مرتفع",
+    "critical": "حرج"
+  },
+  "detectionMethods": {
+    "visual_inspection": "فحص بصري",
+    "trap_monitoring": "مراقبة بالفخاخ",
+    "lab_test": "اختبار مخبري",
+    "field_scout": "مسح ميداني",
+    "automated_sensor": "جهاز استشعار تلقائي",
+    "worker_report": "تقرير عامل"
   },
   "greetings": {
     "morning": "صباح الخير",
@@ -90,5 +117,12 @@
       "assigned": "لا توجد مهام مخصصة لك",
       "filtered": "لا توجد مهام {{status}}"
     }
+  },
+  "inventory": {
+    "toWarehouse": "إلى المستودع",
+    "fromWarehouse": "من المستودع"
+  },
+  "pestAlerts": {
+    "noneManualEntry": "لا شيء (إدخال يدوي)"
   }
 }

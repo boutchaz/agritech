@@ -14,15 +14,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 import { useAuthStore } from '@/stores/authStore';
 import { colors, spacing, borderRadius, fontSize } from '@/constants/theme';
 
+const loginSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasBiometric, setHasBiometric] = useState(false);
+  const { t } = useTranslation(['common', 'auth']);
   const router = useRouter();
 
   const signIn = useAuthStore((s) => s.signIn);
@@ -30,6 +40,17 @@ export default function LoginScreen() {
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const authenticatedHome = '/(drawer)/(tabs)' as Href;
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -44,7 +65,10 @@ export default function LoginScreen() {
       if (success) {
         router.replace(authenticatedHome);
       } else {
-        Alert.alert('Biometric Failed', 'Please use your email and password.');
+        Alert.alert(
+          t('login.biometricFailed', { ns: 'auth', defaultValue: 'Biometric Failed' }),
+          t('login.biometricFallback', { ns: 'auth', defaultValue: 'Please use your email and password.' }),
+        );
       }
     } catch (error) {
       console.error('Biometric error:', error);
@@ -67,24 +91,24 @@ export default function LoginScreen() {
     void checkBiometric();
   }, [checkBiometric]);
 
-  async function handleLogin() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter email and password');
-      return;
-    }
-
-     setIsSubmitting(true);
-     try {
-        await signIn(email.trim().toLowerCase(), password.trim());
-        router.replace(authenticatedHome);
+  const onSubmit = handleSubmit(async (data) => {
+    setIsSubmitting(true);
+    try {
+      await signIn(data.email.trim().toLowerCase(), data.password.trim());
+      router.replace(authenticatedHome);
     } catch (error) {
       console.error('[Login] Sign in failed:', error);
       const message = error instanceof Error ? error.message : 'Login failed';
-      Alert.alert('Login Failed', message);
+      Alert.alert(t('login.failedTitle', { ns: 'auth', defaultValue: 'Login Failed' }), message);
     } finally {
       setIsSubmitting(false);
     }
-  }
+  });
+
+  const loginButtonLabel = isSubmitting
+    ? t('login.submitting', { ns: 'auth', defaultValue: 'Signing in...' })
+    : t('login.submit', { ns: 'auth', defaultValue: 'Sign In' });
+  const biometricButtonLabel = t('login.useBiometric', { ns: 'auth', defaultValue: 'Use Biometric' });
 
   return (
     <LinearGradient
@@ -100,75 +124,109 @@ export default function LoginScreen() {
             <View style={styles.logoContainer}>
               <Ionicons name="leaf" size={48} color={colors.white} />
             </View>
-            <Text style={styles.title}>AgroGina</Text>
-            <Text style={styles.subtitle}>Agricultural Operations Mobile App</Text>
+            <Text style={styles.title}>{t('app.name', 'AgroGina')}</Text>
+            <Text style={styles.subtitle}>
+              {t('login.subtitle', { ns: 'auth', defaultValue: 'Agricultural Operations Mobile App' })}
+            </Text>
           </View>
 
           <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={colors.gray[400]}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor={colors.gray[400]}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                editable={!isSubmitting}
-              />
-            </View>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <View style={styles.inputContainer}>
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
+                      color={colors.gray[400]}
+                      style={styles.inputIcon}
+                    />
+                     <TextInput
+                       style={styles.input}
+                       accessibilityLabel={t('login.email', { ns: 'auth', defaultValue: 'Email' })}
+                       placeholder={t('login.email', { ns: 'auth', defaultValue: 'Email' })}
+                       placeholderTextColor={colors.gray[400]}
+                       value={value}
+                       onChangeText={onChange}
+                      onBlur={onBlur}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="email-address"
+                      editable={!isSubmitting}
+                    />
+                  </View>
+                  {errors.email ? <Text style={styles.fieldError}>{errors.email.message}</Text> : null}
+                </>
+              )}
+            />
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.gray[400]}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor={colors.gray[400]}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCorrect={false}
-                autoCapitalize="none"
-                editable={!isSubmitting}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color={colors.gray[400]}
-                />
-              </TouchableOpacity>
-            </View>
+            <Controller
+              name="password"
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <>
+                  <View style={styles.inputContainer}>
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={20}
+                      color={colors.gray[400]}
+                      style={styles.inputIcon}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      accessibilityLabel={t('login.password', { ns: 'auth', defaultValue: 'Password' })}
+                       placeholder={t('login.password', { ns: 'auth', defaultValue: 'Password' })}
+                      placeholderTextColor={colors.gray[400]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      secureTextEntry={!showPassword}
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      editable={!isSubmitting}
+                    />
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword
+                          ? t('login.hidePassword', { ns: 'auth', defaultValue: 'Hide password' })
+                          : t('login.showPassword', { ns: 'auth', defaultValue: 'Show password' })
+                      }
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color={colors.gray[400]}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password ? <Text style={styles.fieldError}>{errors.password.message}</Text> : null}
+                </>
+              )}
+            />
 
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={loginButtonLabel}
               style={[styles.loginButton, isSubmitting && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              onPress={onSubmit}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                 <Text style={styles.loginButtonText}>{t('login.submit', { ns: 'auth', defaultValue: 'Sign In' })}</Text>
               )}
             </TouchableOpacity>
 
             {hasBiometric && (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={biometricButtonLabel}
                 style={styles.biometricButton}
                 onPress={handleBiometricLogin}
                 disabled={isSubmitting}
@@ -178,7 +236,7 @@ export default function LoginScreen() {
                   size={24}
                   color={colors.white}
                 />
-                <Text style={styles.biometricText}>Use Biometric</Text>
+                 <Text style={styles.biometricText}>{t('login.useBiometric', { ns: 'auth', defaultValue: 'Use Biometric' })}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -251,6 +309,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontSize: fontSize.base,
     color: colors.gray[900],
+  },
+  fieldError: {
+    color: colors.red[600],
+    fontSize: fontSize.xs,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   eyeIcon: {
     padding: spacing.xs,

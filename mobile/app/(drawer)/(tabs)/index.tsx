@@ -46,7 +46,13 @@ function TaskCard({ task, onPress }: { task: Task; onPress: () => void }) {
     : null;
 
   return (
-    <TouchableOpacity activeOpacity={0.92} onPress={onPress} style={[s.taskCard, { borderLeftColor: border }]}>
+    <TouchableOpacity
+      activeOpacity={0.92}
+      onPress={onPress}
+      style={[s.taskCard, { borderLeftColor: border }]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open task ${task.title}`}
+    >
       <View style={s.taskBody}>
         <View style={s.taskBadgeRow}>
           <View style={[s.priorityBadge, { backgroundColor: badge.bg }]}>
@@ -64,7 +70,12 @@ function TaskCard({ task, onPress }: { task: Task; onPress: () => void }) {
             <Text style={[s.dueText, isUrgent && { color: palette.error }]}>{dueLabel}</Text>
           </View>
         )}
-        <TouchableOpacity style={s.taskAction} onPress={onPress}>
+        <TouchableOpacity
+          style={s.taskAction}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`View details for task ${task.title}`}
+        >
           <Text style={s.taskActionText}>View Details</Text>
         </TouchableOpacity>
       </View>
@@ -159,6 +170,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityRole="button"
+                accessibilityLabel="Open navigation menu"
+                accessibilityHint="Opens the drawer navigation"
               >
                 <Ionicons name="menu" size={26} color={palette.white} />
               </TouchableOpacity>
@@ -205,6 +219,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={s.ctaButton}
             onPress={() => router.push('/(drawer)/(tabs)/tasks' as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Navigate to all tasks"
           >
             <LinearGradient colors={[palette.primary, palette.primaryContainer]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.ctaGradient}>
               <Ionicons name="add" size={18} color={palette.white} />
@@ -255,6 +271,8 @@ export default function HomeScreen() {
                   style={[s.bentoModule, !allowed && { opacity: 0.4 }]}
                   onPress={() => allowed && router.push(m.route)}
                   disabled={!allowed}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Navigate to ${m.title}`}
                 >
                   <Ionicons name={m.icon} size={20} color={palette.primary} />
                   <Text style={s.bentoModuleLabel}>{m.title}</Text>
@@ -270,7 +288,11 @@ export default function HomeScreen() {
         <View style={s.section}>
           <View style={s.sectionHeaderRow}>
             <Text style={s.sectionTitle}>Field Overview</Text>
-            <TouchableOpacity onPress={() => router.push('/(drawer)/(tabs)/production' as Href)}>
+            <TouchableOpacity
+              onPress={() => router.push('/(drawer)/(tabs)/production' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Open production map"
+            >
               <Text style={s.linkText}>View Map</Text>
             </TouchableOpacity>
           </View>
@@ -280,6 +302,8 @@ export default function HomeScreen() {
                 key={parcel.id}
                 style={s.fieldCard}
                 onPress={() => router.push(`/(drawer)/(tabs)/production/parcel/${parcel.id}` as Href)}
+                accessibilityRole="button"
+                accessibilityLabel={`Open parcel ${parcel.name}`}
               >
                 <View style={s.fieldCardTop}>
                   <Ionicons name="map" size={20} color={palette.primary} />

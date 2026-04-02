@@ -248,6 +248,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
 
   function renderItem(item: NavItem) {
     const active = isActive(item.route as string);
+    const itemLabel = t(item.labelKey, { ns: 'navigation' });
     return (
       <TouchableOpacity
         key={item.key}
@@ -264,6 +265,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           navigation.closeDrawer();
           router.push(item.route);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={`Navigate to ${itemLabel}`}
+        accessibilityState={{ selected: active }}
       >
         <View
           style={[
@@ -288,7 +292,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
             },
           ]}
         >
-          {t(item.labelKey, { ns: 'navigation' })}
+          {itemLabel}
         </Text>
       </TouchableOpacity>
     );
@@ -304,6 +308,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           navigation.closeDrawer();
           router.push('/(drawer)/(settings)/profile' as Href);
         }}
+        accessibilityRole="button"
+        accessibilityLabel="Open profile settings"
+        accessibilityHint="Opens your profile details and account settings"
       >
         {profile?.avatar_url ? (
           <Image
@@ -361,6 +368,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           style={styles.logoutButton}
           activeOpacity={0.65}
           onPress={handleSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          accessibilityHint="Logs you out and returns to the login screen"
         >
           <Ionicons name="log-out-outline" size={20} color={themeColors.error} />
           <Text style={[styles.logoutLabel, { color: themeColors.error }]}>

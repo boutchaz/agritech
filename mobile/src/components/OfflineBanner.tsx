@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, View, Text } from 'react-native';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import '@/lib/i18n';
 import { useTheme } from '@/providers/ThemeProvider';
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation('common');
   const { colors } = useTheme();
+  const offlineMessage = `${t('offline.title', { defaultValue: 'You are offline' })}. ${t('offline.message', { defaultValue: 'Some features may be unavailable' })}`;
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
@@ -20,7 +24,7 @@ export function OfflineBanner() {
 
   return (
     <View style={[styles.banner, { paddingTop: insets.top, backgroundColor: colors.error }]}>
-      <Text style={styles.text}>You are offline. Some features may be unavailable.</Text>
+      <Text style={styles.text}>{offlineMessage}</Text>
     </View>
   );
 }

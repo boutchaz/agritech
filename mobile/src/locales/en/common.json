@@ -17,7 +17,14 @@
     "filter": "Filter",
     "seeAll": "See All",
     "loading": "Loading...",
-    "submit": "Submit"
+    "submit": "Submit",
+    "creating": "Creating...",
+    "submitting": "Submitting..."
+  },
+  "form": {
+    "dateFormat": "YYYY-MM-DD",
+    "quantity": "Qty",
+    "unitPrice": "Unit Price"
   },
   "status": {
     "pending": "Pending",
@@ -47,10 +54,30 @@
     "unauthorized": "You don't have permission to do this",
     "notFound": "Not found"
   },
+  "offline": {
+    "title": "You are offline",
+    "message": "Some features may be unavailable"
+  },
   "empty": {
     "noData": "No data available",
     "noResults": "No results found",
-    "noRecentActivity": "No recent activity"
+    "noRecentActivity": "No recent activity",
+    "noItemsFound": "No items found",
+    "typeToSearch": "Type to search items"
+  },
+  "severity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "detectionMethods": {
+    "visual_inspection": "Visual Inspection",
+    "trap_monitoring": "Trap Monitoring",
+    "lab_test": "Lab Test",
+    "field_scout": "Field Scout",
+    "automated_sensor": "Automated Sensor",
+    "worker_report": "Worker Report"
   },
   "greetings": {
     "morning": "Good morning",
@@ -90,5 +117,12 @@
       "assigned": "No tasks assigned to you",
       "filtered": "No {{status}} tasks"
     }
+  },
+  "inventory": {
+    "toWarehouse": "To Warehouse",
+    "fromWarehouse": "From Warehouse"
+  },
+  "pestAlerts": {
+    "noneManualEntry": "None (manual entry)"
   }
 }

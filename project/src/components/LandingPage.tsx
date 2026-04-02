@@ -404,7 +404,7 @@ const LandingPage: React.FC = () => {
               >
                 <picture>
                   <source srcSet="/assets/video-thumbnail.webp" type="image/webp" />
-                  <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover opacity-80 brightness-90" loading="lazy" />
+                  <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-contain opacity-80 brightness-90 bg-black/20" loading="lazy" />
                 </picture>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72px] h-[72px] bg-blue-500/90 rounded-full flex items-center justify-center backdrop-blur shadow-[0_10px_25px_rgba(0,0,0,0.5)] group-hover:scale-110 transition-transform duration-300">
                   <Play className="w-7 h-7 text-white ml-1" fill="white" />
