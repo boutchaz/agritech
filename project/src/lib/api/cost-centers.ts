@@ -22,5 +22,5 @@ export interface CreateCostCenterInput {
 export type UpdateCostCenterInput = Partial<CreateCostCenterInput>;
 
 export const costCentersApi = createCrudApi<CostCenter, CreateCostCenterInput, CostCenterFilters>(
-  '/cost-centers'
+  '/api/v1/cost-centers'
 );
