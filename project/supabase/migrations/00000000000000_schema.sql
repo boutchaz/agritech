@@ -15927,6 +15927,39 @@ ALTER TABLE siam_rdv_leads ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_only" ON siam_rdv_leads
   FOR ALL USING (auth.role() = 'service_role');
 
+-- =====================================================
+-- Calibration Wizard Drafts
+-- =====================================================
+-- Stores in-progress calibration wizard form data per parcel/user
+-- so users can resume across sessions.
+
+CREATE TABLE IF NOT EXISTS public.calibration_wizard_drafts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  current_step INTEGER NOT NULL DEFAULT 1 CHECK (current_step BETWEEN 1 AND 8),
+  form_data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_calibration_draft_parcel_org_user UNIQUE(parcel_id, organization_id, user_id)
+);
+
+COMMENT ON TABLE public.calibration_wizard_drafts IS 'Stores in-progress calibration wizard form state per parcel/user so they can resume across sessions.';
+
+CREATE INDEX IF NOT EXISTS idx_calibration_drafts_parcel_org ON public.calibration_wizard_drafts(parcel_id, organization_id, user_id);
+
+-- RLS: only organization members can access their own drafts
+ALTER TABLE public.calibration_wizard_drafts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access" ON public.calibration_wizard_drafts
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+-- updated_at trigger
+CREATE TRIGGER set_calibration_wizard_drafts_updated_at
+  BEFORE UPDATE ON public.calibration_wizard_drafts
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- updated_at trigger
 CREATE TRIGGER set_siam_rdv_leads_updated_at
   BEFORE UPDATE ON siam_rdv_leads
