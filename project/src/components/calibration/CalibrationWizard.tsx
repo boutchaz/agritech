@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { analysesApi } from '@/lib/api/analyses';
 import { useStartCalibrationV2 } from '@/hooks/useCalibrationV2';
 import { useAuth } from '@/hooks/useAuth';
-import { useCalibrationDraft, useSaveCalibrationDraft, useDeleteCalibrationDraft } from '@/hooks/useCalibrationDraft';
+import { useCalibrationDraft, useSaveCalibrationDraft } from '@/hooks/useCalibrationDraft';
 import type { Parcel } from '@/hooks/useParcelsQuery';
 import {
   CalibrationWizardSchema,
@@ -108,7 +108,6 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   // Backend draft persistence
   const { data: backendDraft, isLoading: isDraftLoading } = useCalibrationDraft(parcelId);
   const saveDraftMutation = useSaveCalibrationDraft(parcelId);
-  const deleteDraftMutation = useDeleteCalibrationDraft(parcelId);
 
   // Debounced save to backend (1s delay)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -441,8 +440,8 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       observations: wizardValues.observations,
     });
 
-    // Clear draft from backend and reset store
-    deleteDraftMutation.mutate();
+    // Keep draft until calibration completes successfully.
+    // If processing fails, the user can retry without re-entering data.
     resetStore();
     toast.success('Calibrage lance.');
   };
