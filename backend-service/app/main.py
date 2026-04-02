@@ -18,6 +18,7 @@ from .api import (
     sync,
     calibration,
 )
+from .core.config import settings
 from .middleware.auth import close_http_client
 
 
@@ -42,12 +43,16 @@ app = FastAPI(
 
 # CORS: Allow the NestJS API and configured frontend origins.
 # In production, CORS_ORIGINS should be set to the actual frontend/API URLs.
-_cors_origins = settings.CORS_ORIGINS if settings.CORS_ORIGINS != ["*"] else [
-    "http://localhost:5173",
-    "http://localhost:3001",
-    "https://agritech-dashboard.thebzlab.online",
-    "https://agritech-api.thebzlab.online",
-]
+_cors_origins = (
+    settings.CORS_ORIGINS
+    if settings.CORS_ORIGINS != ["*"]
+    else [
+        "http://localhost:5173",
+        "http://localhost:3001",
+        "https://agritech-dashboard.thebzlab.online",
+        "https://agritech-api.thebzlab.online",
+    ]
+)
 
 app.add_middleware(
     CORSMiddleware,
