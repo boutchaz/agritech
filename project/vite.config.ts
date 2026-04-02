@@ -296,6 +296,8 @@ export default defineConfig({
       'class-variance-authority',
       'axios',
       'lucide-react',
+      'gsap',
+      '@chenglou/pretext',
     ],
   },
   // Fix Leaflet SSR issues

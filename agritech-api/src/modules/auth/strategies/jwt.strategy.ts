@@ -61,6 +61,9 @@ export class JwtStrategy implements CanActivate {
         organizationId,   // Resolved from organization_users table
       };
 
+      // Store raw token for forwarding to internal services (satellite, etc.)
+      request.rawToken = token;
+
       this.logger.debug(`Token validated: user=${user.id}, org=${organizationId}`);
 
       return true;

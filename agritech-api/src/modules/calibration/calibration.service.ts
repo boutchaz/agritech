@@ -320,7 +320,7 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
-    options?: { skipReadinessCheck?: boolean },
+    options?: { skipReadinessCheck?: boolean; authToken?: string },
   ): Promise<CalibrationRecord> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const previousPhase = parcel.aiPhase as
@@ -3270,19 +3270,25 @@ export class CalibrationService {
     path: string,
     payload: unknown,
     organizationId: string,
+    authToken?: string,
     maxRetries: number = 3,
   ): Promise<T> {
     const url = `${this.getSatelliteServiceUrl()}${path}`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-organization-id": organizationId,
+    };
+    if (authToken) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
+
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await fetch(url, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-organization-id": organizationId,
-          },
+          headers,
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(5 * 60 * 1000),
         });
