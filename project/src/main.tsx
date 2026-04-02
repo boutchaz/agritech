@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -88,7 +88,9 @@ async function cleanupLegacyServiceWorkers() {
 }
 
 const App = () => {
-  const [showIntro, setShowIntro] = useState(true);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const isLandingPage = window.location.pathname === '/'
+  const [showIntro, setShowIntro] = useState(!isAuthenticated && isLandingPage);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
