@@ -15965,3 +15965,76 @@ CREATE TRIGGER set_siam_rdv_leads_updated_at
   BEFORE UPDATE ON siam_rdv_leads
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- PEST & DISEASE LIBRARY
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS pest_disease_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  crop_types TEXT[] DEFAULT '{}',
+  symptoms TEXT NOT NULL DEFAULT '',
+  treatment TEXT NOT NULL DEFAULT '',
+  prevention TEXT NOT NULL DEFAULT '',
+  severity TEXT NOT NULL DEFAULT 'medium',
+  image_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE pest_disease_library ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON pest_disease_library
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+-- Index for active library entries
+CREATE INDEX IF NOT EXISTS idx_pest_disease_library_active ON pest_disease_library (is_active, name);
+
+-- ============================================================================
+-- PEST & DISEASE REPORTS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS pest_disease_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  reporter_id UUID NOT NULL REFERENCES user_profiles(id),
+  pest_disease_id UUID REFERENCES pest_disease_library(id) ON DELETE SET NULL,
+  severity TEXT NOT NULL DEFAULT 'low',
+  affected_area_percentage NUMERIC,
+  detection_method TEXT,
+  photo_urls TEXT[] DEFAULT '{}',
+  location JSONB,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  verified_by UUID REFERENCES user_profiles(id),
+  verified_at TIMESTAMPTZ,
+  treatment_applied TEXT,
+  treatment_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE pest_disease_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON pest_disease_reports
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+-- Index for organization queries
+CREATE INDEX IF NOT EXISTS idx_pest_disease_reports_org ON pest_disease_reports (organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pest_disease_reports_status ON pest_disease_reports (status);
+
+-- updated_at triggers
+CREATE TRIGGER set_pest_disease_library_updated_at
+  BEFORE UPDATE ON pest_disease_library
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER set_pest_disease_reports_updated_at
+  BEFORE UPDATE ON pest_disease_reports
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
