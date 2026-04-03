@@ -1,6 +1,35 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Brush } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, BarChart3, Check, Database, Satellite, RefreshCw, Thermometer, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  Legend, 
+  Brush,
+  Area,
+  ComposedChart
+} from 'recharts';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Minus, 
+  BarChart3, 
+  Check, 
+  Database, 
+  Satellite, 
+  RefreshCw, 
+  Thermometer, 
+  AlertTriangle,
+  Calendar as CalendarIcon,
+  Layers,
+  Info,
+  ChevronDown,
+  X,
+  Zap
+} from 'lucide-react';
 import {
   satelliteApi,
   TimeSeriesIndexType,
@@ -20,45 +49,74 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusDot } from '@/components/ui/status-dot';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 import { useTranslation } from 'react-i18next';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 const formatTooltipValue = (value: number) => {
   return value?.toFixed(3) ?? 'N/A';
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label, showTemperature }: any) => {
+const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-        <p className="font-semibold text-gray-800 mb-2">{label}</p>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {payload.map((entry: any, idx: number) => {
-          const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
-          const value = isTemp 
-            ? `${entry.value.toFixed(1)} °C`
-            : formatTooltipValue(entry.value);
+      <Card className="shadow-xl border-slate-200 min-w-[200px] overflow-hidden">
+        <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center">
+          <span className="font-semibold text-slate-700 text-sm flex items-center gap-1.5">
+            <CalendarIcon className="w-3.5 h-3.5" />
+            {label}
+          </span>
+        </div>
+        <CardContent className="p-3 space-y-2">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {payload.map((entry: any, idx: number) => {
+            const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
+            if (isTemp && !showTemperature) return null;
+            
+            const value = isTemp 
+              ? `${entry.value.toFixed(1)} °C`
+              : formatTooltipValue(entry.value);
 
-          return (
-            <div key={idx} className="flex items-center gap-2 text-sm">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ 
-                  backgroundColor: entry.color,
-                  border: isTemp ? '1px dashed #f97316' : undefined 
-                }} 
-              />
-              <span className="font-medium">{entry.name}:</span>
-              <span>{value}</span>
-            </div>
-          );
-        })}
-        {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
-          <div className="mt-1 pt-1 border-t border-gray-100 text-xs text-gray-500 flex gap-3">
-            <span>Min: {payload[0].payload.temperature_min.toFixed(1)}°C</span>
-            <span>Max: {payload[0].payload.temperature_max.toFixed(1)}°C</span>
-          </div>
-        )}
-      </div>
+            return (
+              <div key={idx} className="flex items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-2 h-2 rounded-full shadow-sm" 
+                    style={{ 
+                      backgroundColor: entry.color,
+                      border: isTemp ? '1px dashed #f97316' : 'none' 
+                    }} 
+                  />
+                  <span className="text-slate-500 font-medium truncate max-w-[120px]">{entry.name}</span>
+                </div>
+                <span className="font-bold text-slate-800 tabular-nums">{value}</span>
+              </div>
+            );
+          })}
+          
+          {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
+            <>
+              <Separator className="my-1.5 opacity-50" />
+              <div className="flex justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                <span className="flex items-center gap-1">
+                  Min <span className="text-slate-600">{payload[0].payload.temperature_min.toFixed(1)}°C</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  Max <span className="text-slate-600">{payload[0].payload.temperature_max.toFixed(1)}°C</span>
+                </span>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
     );
   }
   return null;
@@ -113,11 +171,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const cloudCoverage = DEFAULT_CLOUD_COVERAGE;
 
-  // LocalStorage key for persisting date range
   const DATE_RANGE_STORAGE_KEY = `timeseries-date-range-${parcelId}`;
 
-  // end_date is ALWAYS today to ensure latest satellite imagery is visible.
-  // start_date is restored from localStorage or defaults to 2 years ago.
   const [startDate, setStartDate] = useState(() => {
     try {
       const persisted = localStorage.getItem(DATE_RANGE_STORAGE_KEY);
@@ -126,13 +181,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         const parsedStart = new Date(start);
         const fiveYearsAgo = new Date();
         fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-        if (parsedStart >= fiveYearsAgo) {
-          return start;
-        }
+        if (parsedStart >= fiveYearsAgo) return start;
       }
-    } catch (_e) {
-      // Failed to restore date range from localStorage
-    }
+    } catch (_e) {}
     return getDateRangeLastNDays(730).start_date;
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -146,14 +197,11 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   } | null>(null);
   const [showTemperature, setShowTemperature] = useState(false);
 
-  // Persist only start_date to localStorage (end_date is always today on load)
   useEffect(() => {
     if (startDate) {
-       try {
-          localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate }));
-        } catch (_e) {
-          // Failed to persist date range
-        }
+      try {
+        localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate }));
+      } catch (_e) {}
     }
   }, [startDate, DATE_RANGE_STORAGE_KEY]);
 
@@ -175,20 +223,15 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       MCARI: '#ec4899',
       TCARI: '#f43f5e',
     };
-    return colors[index] || '#6b7280';
+    return colors[index] || '#64748b';
   };
 
-     const getIndexDescription = (index: TimeSeriesIndexType): string => {
-       if (index === 'NIRvP') {
-         return t('timeSeries.indexDescriptions.NIRvP');
-       }
-       if (index === 'TCARI_OSAVI') {
-         return t('timeSeries.indexDescriptions.TCARI_OSAVI');
-       }
-       return VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType];
-     };
+  const getIndexDescription = (index: TimeSeriesIndexType): string => {
+    if (index === 'NIRvP') return t('timeSeries.indexDescriptions.NIRvP');
+    if (index === 'TCARI_OSAVI') return t('timeSeries.indexDescriptions.TCARI_OSAVI');
+    return VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType];
+  };
 
-  // Query cached data from database
   const {
     data: cachedData,
     isLoading: isLoadingCache,
@@ -197,39 +240,25 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     queryKey: ['satellite-indices-cache', parcelId, selectedIndices, startDate, endDate],
     queryFn: async () => {
       if (!organizationId || !parcelId || !startDate || !endDate) return {};
-
       const result: Record<string, any[]> = {};
-
-      // Derived indices that are calculated on-demand (not cached)
       const derivedIndices = ['NIRvP', 'TCARI_OSAVI'];
       const cachedIndices = selectedIndices.filter(i => !derivedIndices.includes(i));
       const onDemandIndices = selectedIndices.filter(i => derivedIndices.includes(i));
 
-      // Fetch cached indices from the database
       for (const index of cachedIndices) {
         try {
-          const response = await satelliteIndicesApi.getAll(
-            {
-              parcel_id: parcelId,
-              index_name: index,
-              date_from: startDate,
-              date_to: endDate,
-            },
-            organizationId
-          );
-           result[index] = response;
-          } catch (_err) {
-            result[index] = [];
-          }
+          const response = await satelliteIndicesApi.getAll({
+            parcel_id: parcelId,
+            index_name: index,
+            date_from: startDate,
+            date_to: endDate,
+          }, organizationId);
+          result[index] = response;
+        } catch (_err) { result[index] = []; }
       }
 
-      // Fetch derived indices from the timeseries API (calculated on-demand)
       if (onDemandIndices.length > 0 && boundary) {
-        const aoi = {
-          geometry: convertBoundaryToGeoJSON(boundary),
-          name: parcelName || 'Parcel',
-        };
-
+        const aoi = { geometry: convertBoundaryToGeoJSON(boundary), name: parcelName || 'Parcel' };
         for (const index of onDemandIndices) {
           try {
             const response = await satelliteApi.getTimeSeries({
@@ -240,74 +269,44 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               parcel_id: parcelId,
               farm_id: farmId,
             });
-
-            // Convert timeseries response to same format as cached data
-             result[index] = (response.data || []).map((point) => ({
-               date: point.date,
-               index_value: point.value,
-               mean_value: point.value,
-             }));
-            } catch (_err) {
-              result[index] = [];
-            }
+            result[index] = (response.data || []).map((point) => ({
+              date: point.date,
+              index_value: point.value,
+              mean_value: point.value,
+            }));
+          } catch (_err) { result[index] = []; }
         }
       }
-
       return result;
     },
     enabled: !!organizationId && !!parcelId && selectedIndices.length > 0 && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
-    // Retry on 401 errors (token refresh scenarios)
-    retry: (failureCount, error: any) => {
-      if (error?.status === 401 && failureCount < 2) {
-        return true; // Retry up to 2 times on 401
-      }
-      return failureCount < 1; // Default: 1 retry for other errors
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
   });
-
 
   const forceSync = useCallback(async () => {
     if (!boundary || !organizationId || selectedIndices.length === 0 || !startDate || !endDate) return;
-
     setIsSyncing(true);
     setSyncProgress(null);
 
     try {
-      // Filter out derived indices that cannot be synced directly
-      // NIRvP = NIRv × PAR (calculated on-demand, sync NIRv instead)
-      // TCARI_OSAVI = TCARI / OSAVI (calculated on-demand, sync TCARI and OSAVI instead)
       const indicesToSync = new Set<string>();
       for (const index of selectedIndices) {
-        if (index === 'NIRvP') {
-          indicesToSync.add('NIRv'); // NIRvP depends on NIRv
-        } else if (index === 'TCARI_OSAVI') {
-          indicesToSync.add('TCARI');
-          indicesToSync.add('OSAVI');
-        } else {
-          indicesToSync.add(index);
-        }
+        if (index === 'NIRvP') indicesToSync.add('NIRv');
+        else if (index === 'TCARI_OSAVI') { indicesToSync.add('TCARI'); indicesToSync.add('OSAVI'); }
+        else indicesToSync.add(index);
       }
 
-      // Always sync up to today to capture latest Copernicus imagery,
-      // regardless of what the date picker currently shows.
       const syncEndDate = new Date().toISOString().split('T')[0];
-
       const syncResponse = await satelliteApi.startTimeSeriesSync({
         parcel_id: parcelId,
         farm_id: farmId,
-        aoi: {
-          geometry: convertBoundaryToGeoJSON(boundary),
-          name: parcelName || 'Parcel',
-        },
+        aoi: { geometry: convertBoundaryToGeoJSON(boundary), name: parcelName || 'Parcel' },
         date_range: { start_date: startDate, end_date: syncEndDate },
         cloud_coverage: cloudCoverage,
         indices: Array.from(indicesToSync),
       });
 
       if (syncResponse.status === 'failed') {
-        console.error('Sync start failed');
         setIsSyncing(false);
         return;
       }
@@ -322,7 +321,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       const pollInterval = setInterval(async () => {
         try {
           const status = await satelliteApi.getTimeSeriesSyncStatus(parcelId);
-
           const isDone = status.status === 'completed' || status.status === 'failed' || status.status === 'idle';
 
           if (!isDone) {
@@ -346,25 +344,21 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
             setSyncProgress(null);
           }
         } catch (pollErr) {
-          console.error('Sync poll error:', pollErr);
           clearInterval(pollInterval);
           setIsSyncing(false);
           setSyncProgress(null);
         }
       }, 5000);
     } catch (err) {
-      console.error('Failed to start sync:', err);
       setIsSyncing(false);
       setSyncProgress(null);
     }
   }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
-  // Fetch weather data
   const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
     queryKey: ['weather-history', organizationId, parcelId, startDate, endDate],
     queryFn: async () => {
       if (!parcelId || !startDate || !endDate) return [];
-
       const json = await apiRequest<{ data: WeatherPoint[] }>(
         `/api/v1/satellite-proxy/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
         {},
@@ -374,12 +368,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     },
     enabled: showTemperature && !!organizationId && !!parcelId && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
-    retry: 1,
   });
 
   const isValidIndexValue = useCallback((index: TimeSeriesIndexType, value: number): boolean => {
     if (value == null || isNaN(value)) return false;
-
     const ranges: Record<string, [number, number]> = {
       NDVI: [-0.2, 1], NIRv: [-0.1, 0.8], EVI: [-0.2, 1],
       NDRE: [-0.2, 1], NDMI: [-0.5, 0.8], SAVI: [-0.2, 1],
@@ -387,59 +379,38 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       MCARI: [-0.5, 1], TCARI: [-0.5, 1], TCARI_OSAVI: [-2, 5],
       MSI: [0, 4], MNDWI: [-1, 1], NIRvP: [-50, 500],
     };
-
     const range = ranges[index];
-    if (!range) return true;
-    return value >= range[0] && value <= range[1];
+    return !range || (value >= range[0] && value <= range[1]);
   }, []);
 
-  // Transform data for chart
-  const chartData = useCallback((): MultiIndexData[] => {
+  const chartData = useMemo((): MultiIndexData[] => {
     const dateMap = new Map<string, MultiIndexData>();
-
     for (const index of selectedIndices) {
       const indexData = cachedData?.[index] || [];
       const validPoints = indexData
         .map(item => {
           const date = item.date?.split('T')[0];
           const value = item.mean_value ?? item.index_value;
-          if (!date || date < startDate || date > endDate || !isValidIndexValue(index, value)) {
-            return null;
-          }
+          if (!date || date < startDate || date > endDate || !isValidIndexValue(index, value)) return null;
           return { date, value: Number(value) };
         })
         .filter((point): point is { date: string; value: number } => point !== null)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      // Apply temporal neighbor filter to catch sensor errors / cloud artifacts
-      // Note: IQR filtering was removed because it incorrectly treats seasonal
-      // variation as outliers (e.g. winter→spring vegetation increase).
       const temporallyFilteredPoints = validPoints.filter((point, pointIndex, points) => {
         const neighbors: number[] = [];
         let offset = 1;
-
         while (neighbors.length < 3 && (pointIndex - offset >= 0 || pointIndex + offset < points.length)) {
-          if (pointIndex - offset >= 0) {
-            neighbors.push(points[pointIndex - offset].value);
-          }
-          if (neighbors.length < 3 && pointIndex + offset < points.length) {
-            neighbors.push(points[pointIndex + offset].value);
-          }
+          if (pointIndex - offset >= 0) neighbors.push(points[pointIndex - offset].value);
+          if (neighbors.length < 3 && pointIndex + offset < points.length) neighbors.push(points[pointIndex + offset].value);
           offset += 1;
         }
-
         if (neighbors.length < 2) return true;
-
         const neighborMean = neighbors.reduce((sum, value) => sum + value, 0) / neighbors.length;
         const neighborVariance = neighbors.reduce((sum, value) => sum + Math.pow(value - neighborMean, 2), 0) / neighbors.length;
         const neighborStd = Math.sqrt(neighborVariance);
         const difference = Math.abs(point.value - neighborMean);
-
-        if (neighborStd === 0) {
-          return difference <= 1e-6;
-        }
-
-        return difference <= 3 * neighborStd;
+        return neighborStd === 0 ? difference <= 1e-6 : difference <= 3 * neighborStd;
       });
 
       for (const point of temporallyFilteredPoints) {
@@ -449,7 +420,6 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       }
     }
 
-    // Merge weather data if enabled
     if (showTemperature && weatherData) {
       for (const point of weatherData) {
         const date = point.date?.split('T')[0];
@@ -462,10 +432,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         }
       }
     }
-
-    return Array.from(dateMap.values()).sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue, startDate, endDate]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
@@ -473,516 +440,498 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       if (prev.includes(index)) {
         if (prev.length === 1) return prev;
         return prev.filter(i => i !== index);
-      } else {
-        return [...prev, index];
       }
+      return [...prev, index];
     });
   };
 
-
   const calculateStatistics = (index: TimeSeriesIndexType): IndexStats | null => {
-    const data = chartData();
-    const values = data.map(d => d[index] as number).filter(v => typeof v === 'number' && !isNaN(v));
-
+    const values = chartData.map(d => d[index] as number).filter(v => typeof v === 'number' && !isNaN(v));
     if (values.length === 0) return null;
-
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const min = Math.min(...values);
     const max = Math.max(...values);
     const std = Math.sqrt(values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / values.length);
-
     return { mean, min, max, std };
   };
 
   const getTrendIcon = (index: TimeSeriesIndexType) => {
-    const data = chartData();
-    const values = data.map(d => d[index] as number).filter(v => typeof v === 'number');
-
+    const values = chartData.map(d => d[index] as number).filter(v => typeof v === 'number');
     if (values.length < 2) return null;
-
     const firstValue = values[0];
     const lastValue = values[values.length - 1];
-
-    // Calculate percentage change to determine stability
-    const percentChange = firstValue !== 0
-      ? Math.abs((lastValue - firstValue) / firstValue) * 100
-      : Math.abs(lastValue - firstValue) * 100;
-
-    // Consider stable if change is less than 2%
+    const percentChange = firstValue !== 0 ? Math.abs((lastValue - firstValue) / firstValue) * 100 : Math.abs(lastValue - firstValue) * 100;
     const STABILITY_THRESHOLD = 2;
 
-    if (percentChange <= STABILITY_THRESHOLD) {
-      return <span title={t('timeSeries.trend.stable')}><Minus className="w-3 h-3 text-yellow-600" /></span>;
-    } else if (lastValue > firstValue) {
-      return <span title={t('timeSeries.trend.increasing')}><TrendingUp className="w-3 h-3 text-green-600" /></span>;
-    } else {
-      return <span title={t('timeSeries.trend.decreasing')}><TrendingDown className="w-3 h-3 text-red-600" /></span>;
-    }
+    if (percentChange <= STABILITY_THRESHOLD) return <Minus className="w-3.5 h-3.5 text-yellow-500" />;
+    if (lastValue > firstValue) return <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />;
+    return <TrendingDown className="w-3.5 h-3.5 text-rose-500" />;
   };
 
-  // Get post-validation stats from already computed chart data
-  // This avoids calling chartData() multiple times
-  const getChartStatsFromData = useCallback((chartDataArray: MultiIndexData[]) => {
+  const stats = useMemo(() => {
     const perIndexCount: Record<string, number> = {};
     let totalPoints = 0;
-
     for (const index of selectedIndices) {
-      const count = chartDataArray.filter(d => typeof d[index] === 'number' && !isNaN(d[index] as number)).length;
+      const count = chartData.filter(d => typeof d[index] === 'number' && !isNaN(d[index] as number)).length;
       perIndexCount[index] = count;
       totalPoints += count;
     }
-
     return { total: totalPoints, perIndexCount };
-  }, [selectedIndices]);
+  }, [selectedIndices, chartData]);
 
-  // Check if data is sparse (Issue 2: warn about sparse data)
-  const isDataSparseFromStats = useCallback((total: number) => {
-    // Warn if fewer than 10 data points across all selected indices
-    return total > 0 && total < 10;
-  }, []);
-
+  const dataIsSparse = stats.total > 0 && stats.total < 10;
   const isLoading = isLoadingCache || isSyncing;
-  const data = chartData();
-  const chartStats = getChartStatsFromData(data);
-  const cacheStats = {
-    total: chartStats.total,
-    indices: selectedIndices.filter(i => chartStats.perIndexCount[i] > 0).length,
-    perIndexCount: chartStats.perIndexCount
-  };
-  const emptyIndices = selectedIndices.filter(index => chartStats.perIndexCount[index] === 0);
-  const dataIsSparse = isDataSparseFromStats(chartStats.total);
-
-  // Only show "no data" warning if:
-  // 1. Not loading
-  // 2. We have actually fetched data (cachedData is defined)
-  // 3. Some indices have no data
-  const showNoDataWarning = !isLoading && cachedData !== undefined && emptyIndices.length > 0 && emptyIndices.length === selectedIndices.length;
+  const emptyIndices = selectedIndices.filter(index => (stats.perIndexCount[index] || 0) === 0);
+  const showNoDataWarning = !isLoading && cachedData !== undefined && emptyIndices.length === selectedIndices.length;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="w-5 h-5" />
-          <h2 className="text-xl font-semibold">{t('timeSeries.title')}</h2>
-        </div>
-
-        {/* Cache indicator (subtle) - now shows post-validation count */}
-        {cacheStats.total > 0 && (
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <Database className="w-3 h-3" />
-            <span>{t('timeSeries.dataPoints', { count: cacheStats.total })}</span>
-          </div>
-        )}
-      </div>
-
-      <p className="text-gray-600 mb-4">
-        {parcelName
-          ? t('timeSeries.subtitle', { name: parcelName })
-          : t('timeSeries.subtitleFallback', { id: parcelId })}
-      </p>
-
-      {/* Warning: Sparse data (Issue 2) */}
-      {dataIsSparse && !isLoading && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
-            <span className="font-medium">{t('timeSeries.warnings.sparseData')}</span>{' '}
-            {t('timeSeries.warnings.sparseDataDescription', { count: cacheStats.total })}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {([
-          { label: t('timeSeries.dateRange.3months'), days: 90 },
-          { label: t('timeSeries.dateRange.6months'), days: 180 },
-          { label: t('timeSeries.dateRange.1year'), days: 365 },
-          { label: t('timeSeries.dateRange.2years'), days: 730 },
-        ] as const).map(({ label, days }) => {
-          const range = getDateRangeLastNDays(days);
-          const isActive = startDate === range.start_date && endDate === range.end_date;
-          return (
-            <Button variant="blue"
-              key={days}
-              type="button"
-              onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
-              className={`px-3 py-1 text-sm rounded-full border transition-colors ${ isActive ? 'border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}
-            >
-              {label}
-            </Button>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        {/* Multi-select Index Dropdown */}
-        <div className="relative">
-          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.vegetationIndices')}</label>
-          <Button
-            type="button"
-            onClick={() => setShowIndexSelector(!showIndexSelector)}
-            className="w-full p-2 border border-gray-300 rounded-md bg-white text-left flex items-center justify-between hover:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <span className="truncate">
-              {selectedIndices.length === 1
-                ? selectedIndices[0]
-                : t('timeSeries.labels.indicesSelected', { count: selectedIndices.length })}
-            </span>
-            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </Button>
-
-          {showIndexSelector && (
-            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-              {TIME_SERIES_INDICES.map(index => (
-                <Button
-                  key={index}
-                  type="button"
-                  onClick={() => toggleIndex(index)}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                >
-                  <div
-                    className={`w-4 h-4 min-w-[1rem] rounded border flex items-center justify-center ${
-                      selectedIndices.includes(index) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
-                    }`}
-                  >
-                    {selectedIndices.includes(index) && <Check className="w-3 h-3 text-white" />}
-                  </div>
-                  <div className="w-3 h-3 min-w-[0.75rem] rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                  <span className="truncate flex-1">
-                    {index === 'TCARI_OSAVI' ? 'TCARI/OSAVI' : index}
-                  </span>
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.startDate')}</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-2 block">{t('timeSeries.labels.endDate')}</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-
-        <div className="flex flex-col justify-end">
-           <label className="flex items-center gap-2 p-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 h-[42px]">
-             <input
-               type="checkbox"
-               checked={showTemperature}
-               onChange={(e) => setShowTemperature(e.target.checked)}
-               className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-             />
-             <div className="flex items-center gap-1.5 text-sm text-gray-700">
-               {isLoadingWeather ? (
-                 <ButtonLoader className="w-4 h-4" />
-               ) : (
-                 <Thermometer className="w-4 h-4 text-orange-500" />
-               )}
-                <span>{t('timeSeries.labels.showTemperature')}</span>
-             </div>
-           </label>
-           {weatherError && showTemperature && (
-              <p className="text-xs text-red-500 mt-1">
-                {(weatherError as Error).message || t('timeSeries.warnings.weatherError')}
-             </p>
-           )}
-        </div>
-      </div>
-
-      {showIndexSelector && (
-        <div className="fixed inset-0 z-10" onClick={() => setShowIndexSelector(false)} />
-      )}
-
-      {/* Selected Indices Pills */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {selectedIndices.map(index => (
-          <div
-            key={index}
-            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium text-white"
-            style={{ backgroundColor: getIndexColor(index) }}
-          >
-            {index}
-            {getTrendIcon(index)}
-            {selectedIndices.length > 1 && (
-              <Button onClick={() => toggleIndex(index)} className="ml-1 hover:bg-white/20 rounded-full p-0.5">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </Button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Warning: All indices have no data (Issue 1) */}
-      {showNoDataWarning && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-red-800">
-            <span className="font-medium">{t('timeSeries.warnings.noDataTitle')}</span>{' '}
-            <span className="block mt-1 text-red-600">
-              {t('timeSeries.warnings.noDataHint')}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Warning: Some indices have no data (partial) */}
-      {emptyIndices.length > 0 && !isLoading && cachedData !== undefined && emptyIndices.length < selectedIndices.length && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-800">
-            <span className="font-medium">{t('timeSeries.warnings.partialDataTitle')}</span>{' '}
-            {emptyIndices.map(index => (
-              <span key={index} className="inline-flex items-center mr-2">
-                <span
-                  className="w-2 h-2 rounded-full mr-1"
-                  style={{ backgroundColor: getIndexColor(index) }}
-                />
-                {index}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Statistics Table */}
-      {data.length > 0 && (
-        <div className="mb-6 overflow-x-auto">
-          <Table className="w-full text-sm">
-            <TableHeader>
-              <TableRow className="border-b">
-                <TableHead className="text-left py-2 px-2">{t('timeSeries.table.index')}</TableHead>
-                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.mean')}</TableHead>
-                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.min')}</TableHead>
-                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.max')}</TableHead>
-                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.std')}</TableHead>
-                <TableHead className="text-center py-2 px-2">{t('timeSeries.table.trend')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {selectedIndices.map(index => {
-                const stats = calculateStatistics(index);
-                // Show row with "no data" message instead of hiding (Issue 1 fix)
-                if (!stats) {
-                  return (
-                    <TableRow key={index} className="border-b hover:bg-gray-50 bg-gray-50/50">
-                      <TableCell className="py-2 px-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full opacity-50" style={{ backgroundColor: getIndexColor(index) }} />
-                          <span className="font-medium text-gray-400">{index}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell colSpan={5} className="text-center py-2 px-2 text-gray-400 italic text-xs">
-                        {t('timeSeries.table.noData')}
-                      </TableCell>
-                    </TableRow>
-                  );
-                }
-                return (
-                  <TableRow key={index} className="border-b hover:bg-gray-50">
-                    <TableCell className="py-2 px-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                        <span className="font-medium">{index}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center py-2 px-2">{stats.mean.toFixed(3)}</TableCell>
-                    <TableCell className="text-center py-2 px-2">{stats.min.toFixed(3)}</TableCell>
-                    <TableCell className="text-center py-2 px-2">{stats.max.toFixed(3)}</TableCell>
-                    <TableCell className="text-center py-2 px-2">{stats.std.toFixed(3)}</TableCell>
-                    <TableCell className="text-center py-2 px-2">{getTrendIcon(index)}</TableCell>
-                  </TableRow>
-                );
-              })}
-              {showTemperature && weatherData && weatherData.length > 0 && (
-                <TableRow className="border-b hover:bg-gray-50 bg-orange-50/30">
-                  <TableCell className="py-2 px-2">
-                    <div className="flex items-center gap-2">
-                      <StatusDot color="orange" size="md" />
-                      <span className="font-medium text-gray-800">{t('timeSeries.table.tempMean')}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center py-2 px-2">
-                    {(weatherData.reduce((acc, curr) => acc + curr.temperature_mean, 0) / weatherData.length).toFixed(1)} °C
-                  </TableCell>
-                  <TableCell className="text-center py-2 px-2">
-                    {Math.min(...weatherData.map(d => d.temperature_min)).toFixed(1)} °C
-                  </TableCell>
-                  <TableCell className="text-center py-2 px-2">
-                    {Math.max(...weatherData.map(d => d.temperature_max)).toFixed(1)} °C
-                  </TableCell>
-                  <TableCell className="text-center py-2 px-2">-</TableCell>
-                  <TableCell className="text-center py-2 px-2">-</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Chart */}
-      <div className="h-96 mb-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <SectionLoader />
-          </div>
-        ) : data.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={60} />
-              <YAxis yAxisId="left" tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
-              {showTemperature && (
-                 <YAxis 
-                   yAxisId="right" 
-                   orientation="right" 
-                   tick={{ fontSize: 12, fill: '#f97316' }} 
-                   unit="°C" 
-                   domain={['auto', 'auto']}
-                   tickFormatter={(val) => val.toFixed(0)} 
-                 />
-              )}
-              <Tooltip content={<CustomTooltip showTemperature={showTemperature} />} />
-              <Legend />
-              
-              <Brush 
-                dataKey="date" 
-                height={40} 
-                stroke={getIndexColor(selectedIndices[0])}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : i18n.language === 'fr' ? 'fr-FR' : 'en-US', { month: 'short', year: '2-digit' });
-                }}
-                fill="rgba(59, 130, 246, 0.05)"
-              >
-                <LineChart>
-                  <Line
-                    type="monotone"
-                    dataKey={selectedIndices[0]}
-                    stroke={getIndexColor(selectedIndices[0])}
-                    strokeWidth={1}
-                    dot={false}
-                    connectNulls
-                  />
-                </LineChart>
-              </Brush>
-
-              {showTemperature && (
-                <>
-                   <Line
-                     yAxisId="right"
-                     type="monotone"
-                     dataKey="temperature_min"
-                     name={t('timeSeries.chart.tempMin')}
-                     stroke="#fdba74"
-                     strokeWidth={1}
-                     strokeDasharray="3 3"
-                     dot={false}
-                     connectNulls
-                   />
-                   <Line
-                     yAxisId="right"
-                     type="monotone"
-                     dataKey="temperature_max"
-                     name={t('timeSeries.chart.tempMax')}
-                     stroke="#ea580c"
-                     strokeWidth={1}
-                     strokeDasharray="3 3"
-                     dot={false}
-                     connectNulls
-                   />
-                   <Line
-                     yAxisId="right"
-                     type="monotone"
-                     dataKey="temperature_mean"
-                     name={t('timeSeries.chart.tempMean')}
-                     stroke="#f97316"
-                     strokeWidth={2}
-                     strokeDasharray="5 5"
-                     dot={false}
-                     connectNulls
-                   />
-                </>
-              )}
-
-              {selectedIndices.map(index => (
-                <Line
-                  yAxisId="left"
-                  key={index}
-                  type="monotone"
-                  dataKey={index}
-                  name={index}
-                  stroke={getIndexColor(index)}
-                  strokeWidth={2}
-                  dot={{ fill: getIndexColor(index), r: 3 }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <BarChart3 className="w-12 h-12 mb-2 text-gray-300" />
-            <p>{t('timeSeries.chart.emptyState')}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Index Descriptions */}
-      {selectedIndices.length > 0 && (
-        <div className="space-y-2 mb-6">
-          {selectedIndices.map(index => (
-            <div key={index} className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <div
-                  className="px-2 py-0.5 rounded text-xs font-medium text-white"
-                  style={{ backgroundColor: getIndexColor(index) }}
-                >
-                  {index}
-                </div>
+    <TooltipProvider>
+      <div className="flex flex-col gap-6 max-w-[1600px] mx-auto p-4 md:p-6 bg-slate-50/50 rounded-xl">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 bg-blue-600 rounded-lg shadow-blue-200 shadow-lg">
+                <BarChart3 className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm text-gray-600">{getIndexDescription(index)}</p>
+              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('timeSeries.title')}</h1>
             </div>
-          ))}
-        </div>
-      )}
+            <p className="text-slate-500 text-sm flex items-center gap-2 pl-1">
+              {parcelName ? t('timeSeries.subtitle', { name: parcelName }) : t('timeSeries.subtitleFallback', { id: parcelId })}
+              {stats.total > 0 && (
+                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-medium">
+                  {t('timeSeries.dataPoints', { count: stats.total })}
+                </Badge>
+              )}
+            </p>
+          </div>
 
-      {/* Actions */}
-      <div className="flex gap-2">
-        <Button
-          onClick={() => refetchCache()}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
-          {t('timeSeries.actions.refreshCache')}
-        </Button>
-        <Button variant="blue" onClick={forceSync} disabled={isLoading || !boundary} className="flex items-center gap-2 px-4 py-2 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" >
-          <Satellite className={`w-4 h-4 ${isSyncing ? 'animate-pulse' : ''}`} />
-          {isSyncing && syncProgress
-            ? `${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
-            : isSyncing ? t('timeSeries.actions.launching') : t('timeSeries.actions.fetchFromSatellite')}
-        </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchCache()}
+              disabled={isLoading}
+              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-medium shadow-sm transition-all"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5 mr-2", isLoadingCache && "animate-spin")} />
+              {t('timeSeries.actions.refreshCache')}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={forceSync}
+              disabled={isLoading || !boundary}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-100 transition-all"
+            >
+              {isSyncing ? <Zap className="w-3.5 h-3.5 mr-2 animate-pulse" /> : <Satellite className="w-3.5 h-3.5 mr-2" />}
+              {isSyncing && syncProgress
+                ? `${syncProgress.currentIndex || '...'} (${syncProgress.completedIndices}/${syncProgress.totalIndices})`
+                : isSyncing ? t('timeSeries.actions.launching') : t('timeSeries.actions.fetchFromSatellite')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Sync Progress Bar */}
+        {isSyncing && syncProgress && (
+          <div className="space-y-1.5 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+            <div className="flex justify-between text-xs font-semibold text-blue-700 uppercase tracking-wider">
+              <span>Syncing indices...</span>
+              <span>{Math.round((syncProgress.completedIndices / syncProgress.totalIndices) * 100)}%</span>
+            </div>
+            <Progress value={(syncProgress.completedIndices / syncProgress.totalIndices) * 100} className="h-2 bg-blue-100" />
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main Chart Area */}
+          <div className="lg:col-span-8 space-y-6">
+            <Card className="overflow-hidden border-slate-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-slate-100 px-6 py-4 flex flex-row items-center justify-between space-y-0">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm font-semibold text-slate-700">{t('timeSeries.labels.startDate')} - {t('timeSeries.labels.endDate')}</span>
+                  </div>
+                  <div className="flex gap-1.5 p-1 bg-slate-100 rounded-lg">
+                    {([
+                      { label: '3m', days: 90 },
+                      { label: '6m', days: 180 },
+                      { label: '1y', days: 365 },
+                      { label: '2y', days: 730 },
+                    ] as const).map(({ label, days }) => {
+                      const range = getDateRangeLastNDays(days);
+                      const active = startDate === range.start_date && endDate === range.end_date;
+                      return (
+                        <button
+                          key={days}
+                          onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
+                          className={cn(
+                            "px-2.5 py-1 text-[11px] font-bold rounded-md transition-all uppercase tracking-tight",
+                            active ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+                    <Thermometer className={cn("w-3.5 h-3.5", showTemperature ? "text-orange-500" : "text-slate-300")} />
+                    <Label htmlFor="temp-mode" className="text-[11px] font-bold text-slate-600 uppercase tracking-wider cursor-pointer">Temp.</Label>
+                    <Switch
+                      id="temp-mode"
+                      checked={showTemperature}
+                      onCheckedChange={setShowTemperature}
+                      className="data-[state=checked]:bg-orange-500 scale-75"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                {/* Warnings */}
+                {dataIsSparse && !isLoading && (
+                  <Alert className="mb-6 bg-amber-50 border-amber-200 text-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-sm font-bold">{t('timeSeries.warnings.sparseData')}</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      {t('timeSeries.warnings.sparseDataDescription', { count: stats.total })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {showNoDataWarning && (
+                  <Alert variant="destructive" className="mb-6 bg-rose-50 border-rose-200 text-rose-800">
+                    <AlertTriangle className="h-4 w-4 text-rose-600" />
+                    <AlertTitle className="text-sm font-bold">{t('timeSeries.warnings.noDataTitle')}</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      {t('timeSeries.warnings.noDataHint')}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="h-[450px] w-full mt-2">
+                  {isLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+                      <SectionLoader />
+                      <span className="text-xs font-medium animate-pulse uppercase tracking-widest">Processing Satellite Data...</span>
+                    </div>
+                  ) : chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={chartData}>
+                        <defs>
+                          <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis 
+                          dataKey="date" 
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} 
+                          axisLine={{ stroke: '#e2e8f0' }}
+                          tickLine={false}
+                          dy={10}
+                        />
+                        <YAxis 
+                          yAxisId="left" 
+                          tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} 
+                          axisLine={false}
+                          tickLine={false}
+                          domain={['auto', 'auto']}
+                        />
+                        {showTemperature && (
+                          <YAxis 
+                            yAxisId="right" 
+                            orientation="right" 
+                            tick={{ fontSize: 10, fill: '#f97316', fontWeight: 600 }} 
+                            axisLine={false}
+                            tickLine={false}
+                            unit="°C" 
+                            domain={['auto', 'auto']}
+                          />
+                        )}
+                        <Tooltip content={<CustomTooltip showTemperature={showTemperature} t={t} />} />
+                        <Legend 
+                          verticalAlign="top" 
+                          align="right" 
+                          iconType="circle"
+                          wrapperStyle={{ paddingBottom: 20, fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.025em' }}
+                        />
+                        
+                        <Brush 
+                          dataKey="date" 
+                          height={40} 
+                          stroke="#e2e8f0"
+                          fill="#f8fafc"
+                          gap={10}
+                          travellerWidth={10}
+                        >
+                          <LineChart>
+                            <Line
+                              type="monotone"
+                              dataKey={selectedIndices[0]}
+                              stroke={getIndexColor(selectedIndices[0])}
+                              strokeWidth={1}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </Brush>
+
+                        {showTemperature && (
+                          <>
+                            <Area
+                              yAxisId="right"
+                              type="monotone"
+                              dataKey="temperature_mean"
+                              fill="url(#colorTemp)"
+                              stroke="none"
+                              connectNulls
+                            />
+                            <Line
+                              yAxisId="right"
+                              type="monotone"
+                              dataKey="temperature_mean"
+                              name={t('timeSeries.chart.tempMean')}
+                              stroke="#f97316"
+                              strokeWidth={2}
+                              strokeDasharray="5 5"
+                              dot={false}
+                              connectNulls
+                            />
+                          </>
+                        )}
+
+                        {selectedIndices.map(index => (
+                          <Line
+                            yAxisId="left"
+                            key={index}
+                            type="monotone"
+                            dataKey={index}
+                            name={index}
+                            stroke={getIndexColor(index)}
+                            strokeWidth={3}
+                            dot={{ r: 0, fill: getIndexColor(index), strokeWidth: 2, stroke: '#fff' }}
+                            activeDot={{ r: 6, strokeWidth: 0 }}
+                            connectNulls
+                          />
+                        ))}
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-4 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-100">
+                      <div className="p-4 bg-white rounded-full shadow-sm border border-slate-100">
+                        <BarChart3 className="w-10 h-10 text-slate-200" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-slate-400 uppercase tracking-widest text-xs mb-1">{t('timeSeries.chart.emptyState')}</p>
+                        <p className="text-[10px] text-slate-400">Select a wider range or fetch new data</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Index Descriptions Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {selectedIndices.map(index => (
+                <Card key={index} className="border-slate-100 shadow-none bg-white">
+                  <CardHeader className="p-4 pb-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
+                        <span className="text-sm font-bold text-slate-800">{index}</span>
+                      </div>
+                      <UITooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
+                          {getIndexDescription(index)}
+                        </TooltipContent>
+                      </UITooltip>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed italic">
+                      {getIndexDescription(index)}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Sidebar: Controls & Stats */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Index Selection Card */}
+            <Card className="border-slate-200 shadow-sm overflow-hidden">
+              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3">
+                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                  <Layers className="w-3.5 h-3.5" />
+                  {t('timeSeries.labels.vegetationIndices')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[280px]">
+                  <div className="p-2 space-y-1">
+                    {TIME_SERIES_INDICES.map(index => {
+                      const isSelected = selectedIndices.includes(index);
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => toggleIndex(index)}
+                          className={cn(
+                            "w-full flex items-center justify-between p-2.5 rounded-lg transition-all text-left",
+                            isSelected ? "bg-blue-50/80 border border-blue-100" : "hover:bg-slate-100 border border-transparent"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div 
+                              className={cn(
+                                "w-4 h-4 rounded border flex items-center justify-center transition-all",
+                                isSelected ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
+                              )}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                            </div>
+                            <span className={cn(
+                              "text-xs font-semibold tracking-tight",
+                              isSelected ? "text-blue-700" : "text-slate-600"
+                            )}>
+                              {index === 'TCARI_OSAVI' ? 'TCARI / OSAVI' : index}
+                            </span>
+                          </div>
+                          <div className="w-1.5 h-6 rounded-full opacity-60" style={{ backgroundColor: getIndexColor(index) }} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Date Range Selection */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="p-4 py-3 border-b border-slate-100">
+                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  Custom Range
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('timeSeries.labels.startDate')}</Label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-700"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('timeSeries.labels.endDate')}</Label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-700"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Statistics Section */}
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="p-4 py-3 border-b border-slate-100">
+                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Performance Metrics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-slate-100">
+                  {selectedIndices.map(index => {
+                    const stats = calculateStatistics(index);
+                    if (!stats) return (
+                      <div key={index} className="p-4 flex items-center justify-between opacity-40 grayscale">
+                        <span className="text-xs font-bold text-slate-500 uppercase">{index}</span>
+                        <span className="text-[10px] italic">No data</span>
+                      </div>
+                    );
+                    return (
+                      <div key={index} className="p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{index}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 shadow-sm">
+                            <span className="text-[10px] font-bold text-slate-600 uppercase">Trend</span>
+                            {getTrendIcon(index)}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.mean')}</span>
+                            <div className="text-xs font-bold text-slate-800 tabular-nums">{stats.mean.toFixed(3)}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.std')}</span>
+                            <div className="text-xs font-bold text-slate-800 tabular-nums">{stats.std.toFixed(3)}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.min')}</span>
+                            <div className="text-xs font-semibold text-rose-600 tabular-nums">{stats.min.toFixed(3)}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.max')}</span>
+                            <div className="text-xs font-semibold text-emerald-600 tabular-nums">{stats.max.toFixed(3)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {showTemperature && weatherData && weatherData.length > 0 && (
+                    <div className="p-4 bg-orange-50/30 space-y-2.5 border-t border-orange-100">
+                      <div className="flex items-center gap-2">
+                        <Thermometer className="w-3.5 h-3.5 text-orange-500" />
+                        <span className="text-xs font-bold text-orange-700 uppercase tracking-tight">Temperature</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                         <div className="space-y-0.5">
+                           <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Average</span>
+                           <div className="text-xs font-bold text-orange-700 tabular-nums">
+                             {(weatherData.reduce((acc, curr) => acc + curr.temperature_mean, 0) / weatherData.length).toFixed(1)} °C
+                           </div>
+                         </div>
+                         <div className="space-y-0.5">
+                           <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Range</span>
+                           <div className="text-[10px] font-bold text-orange-700 tabular-nums">
+                             {Math.min(...weatherData.map(d => d.temperature_min)).toFixed(1)}° - {Math.max(...weatherData.map(d => d.temperature_max)).toFixed(1)}°C
+                           </div>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
 export default TimeSeriesChart;
+

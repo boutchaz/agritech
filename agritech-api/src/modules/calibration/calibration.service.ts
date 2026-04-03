@@ -1317,9 +1317,9 @@ export class CalibrationService {
       await this.satelliteProxy.proxy("POST", "/calibration/v2/precompute-gdd", {
         body: {
           crop_type: parcel.cropType,
-          planting_date: dto.planting_date,
-          start_date: sinceDate,
-          end_date: today,
+          planting_date: parcel.plantingYear ? String(parcel.plantingYear) : undefined,
+          start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+          end_date: new Date().toISOString().split("T")[0],
         },
         organizationId,
         timeout: 120000,
