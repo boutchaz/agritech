@@ -208,5 +208,3 @@ function CheckoutSuccess() {
     </div>
   );
 }
-
-export default CheckoutSuccess;

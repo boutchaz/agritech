@@ -700,16 +700,24 @@ class EarthEngineService:
             if idx_image is None:
                 return ee.Feature(None, {"date": None, "value": None, "cloud": None})
 
+            # Combined reducer: mean + stdDev + count + percentiles
+            combined_reducer = (
+                ee.Reducer.mean()
+                .combine(ee.Reducer.stdDev(), "", True)
+                .combine(ee.Reducer.count(), "", True)
+                .combine(ee.Reducer.percentile([2, 25, 50, 75, 90, 98]), "", True)
+            )
+
             # Use CRS parameter to handle AOI crossing UTM zone boundaries
-            mean_val = idx_image.reduceRegion(
-                reducer=ee.Reducer.mean(),
+            stats = idx_image.reduceRegion(
+                reducer=combined_reducer,
                 geometry=aoi,
                 scale=scale,
                 crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
-            ).get(index_name)
+            )
 
             return ee.Feature(
                 None,
@@ -717,7 +725,15 @@ class EarthEngineService:
                     "date": ee.Date(image.get("system:time_start")).format(
                         "YYYY-MM-dd"
                     ),
-                    "value": mean_val,
+                    "value": stats.get(f"{index_name}_mean"),
+                    "min_value": stats.get(f"{index_name}_p2"),
+                    "max_value": stats.get(f"{index_name}_p98"),
+                    "std_value": stats.get(f"{index_name}_stdDev"),
+                    "median_value": stats.get(f"{index_name}_p50"),
+                    "percentile_25": stats.get(f"{index_name}_p25"),
+                    "percentile_75": stats.get(f"{index_name}_p75"),
+                    "percentile_90": stats.get(f"{index_name}_p90"),
+                    "pixel_count": stats.get(f"{index_name}_count"),
                     "cloud": image.get("CLOUDY_PIXEL_PERCENTAGE"),
                 },
             )
@@ -732,7 +748,12 @@ class EarthEngineService:
             value = props.get("value")
             cloud = props.get("cloud", 100)
             if date_str is not None and value is not None:
-                observations.append({"date": date_str, "value": value, "cloud": cloud})
+                obs = {"date": date_str, "value": value, "cloud": cloud}
+                for key in ("min_value", "max_value", "std_value", "median_value",
+                            "percentile_25", "percentile_75", "percentile_90", "pixel_count"):
+                    if props.get(key) is not None:
+                        obs[key] = props[key]
+                observations.append(obs)
 
         logger.info(f"Chunk {start_date}→{end_date}: {len(observations)} observations")
         return observations
