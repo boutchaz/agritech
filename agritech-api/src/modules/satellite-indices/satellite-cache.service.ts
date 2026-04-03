@@ -496,6 +496,7 @@ export class SatelliteCacheService {
   async getTimeSeries(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -510,6 +511,9 @@ export class SatelliteCacheService {
         "/indices/timeseries",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -568,6 +572,9 @@ export class SatelliteCacheService {
       "/indices/timeseries",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     )) as Record<string, unknown>;
     this.logger.log(`[Proxy] timeseries response in ${Date.now() - start}ms`);
 
@@ -677,6 +684,7 @@ export class SatelliteCacheService {
   async getHeatmap(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -727,6 +735,9 @@ export class SatelliteCacheService {
       "/indices/heatmap",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     );
 
     // Store in L1
@@ -838,6 +849,7 @@ export class SatelliteCacheService {
   async getAvailableDates(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -850,6 +862,9 @@ export class SatelliteCacheService {
         "/indices/available-dates",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -858,6 +873,9 @@ export class SatelliteCacheService {
         "/indices/available-dates",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -901,6 +919,9 @@ export class SatelliteCacheService {
       "/indices/available-dates",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     );
     this.logger.log(
       `[Proxy] available-dates response in ${Date.now() - start}ms`,

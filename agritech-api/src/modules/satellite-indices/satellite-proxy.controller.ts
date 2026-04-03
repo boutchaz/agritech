@@ -42,13 +42,21 @@ export class SatelliteProxyController {
   @Post('indices/timeseries')
   @ApiOperation({ summary: 'Get time series data (cache-first, falls back to satellite provider)' })
   async getTimeSeries(@Req() req, @Body() body: Record<string, unknown>) {
-    return this.cache.getTimeSeries(body, req.headers['x-organization-id']);
+    return this.cache.getTimeSeries(
+      body,
+      req.headers['x-organization-id'],
+      req.rawToken,
+    );
   }
 
   @Post('indices/heatmap')
   @ApiOperation({ summary: 'Get heatmap pixel data (cached 24h per parcel/index/date)' })
   async getHeatmap(@Req() req, @Body() body: Record<string, unknown>) {
-    return this.cache.getHeatmap(body, req.headers['x-organization-id']);
+    return this.cache.getHeatmap(
+      body,
+      req.headers['x-organization-id'],
+      req.rawToken,
+    );
   }
 
   @Post('indices/interactive')
@@ -72,7 +80,11 @@ export class SatelliteProxyController {
   @Post('indices/available-dates')
   @ApiOperation({ summary: 'Get available satellite imagery dates (cached: permanent for past months, 24h for current)' })
   async getAvailableDates(@Req() req, @Body() body: Record<string, unknown>) {
-    return this.cache.getAvailableDates(body, req.headers['x-organization-id']);
+    return this.cache.getAvailableDates(
+      body,
+      req.headers['x-organization-id'],
+      req.rawToken,
+    );
   }
 
   @Get('indices/available')
