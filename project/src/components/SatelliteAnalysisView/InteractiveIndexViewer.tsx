@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { 
   Download, 
   Layers, 
-  ZoomIn, 
   Loader, 
   Maximize, 
   Minimize, 
@@ -12,14 +11,10 @@ import {
   Minus, 
   ChevronLeft, 
   ChevronRight, 
-  Calendar, 
   AlertCircle,
   Settings2,
   Map as MapIcon,
-  Palette,
   Eye,
-  Info,
-  ChevronDown,
   BarChart4,
   LayoutGrid,
   Copy,
@@ -35,7 +30,6 @@ import {
    satelliteApi,
    VegetationIndexType,
    VEGETATION_INDICES,
-   VEGETATION_INDEX_DESCRIPTIONS,
    HeatmapDataResponse,
    InteractiveDataResponse,
    convertBoundaryToGeoJSON,
@@ -43,19 +37,17 @@ import {
    formatDateForAPI
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
-import { DatePicker } from '../ui/DatePicker';
+
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
 import { Trans, useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -548,13 +540,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                       <Button variant="ghost" size="icon" onClick={() => navigateMonth(1)} className="h-4 w-4" disabled={navYear === new Date().getFullYear() && navMonth >= new Date().getMonth()}><ChevronRight className="w-3 h-3" /></Button>
                     </div>
                   </div>
-                  <DatePicker
-                    value={selectedDate}
-                    onChange={(date) => date && setSelectedDate(date)}
-                    availableDates={availableDates}
-                    isLoading={isLoadingDates}
-                    disabled={!boundary}
-                  />
+                  <Select value={selectedDate} onValueChange={setSelectedDate} disabled={!boundary || isLoadingDates}>
+                    <SelectTrigger className="h-9 text-xs font-semibold bg-slate-50 border-slate-200">
+                      <SelectValue placeholder={isLoadingDates ? t('satellite:heatmap.dateNavigator.loading', 'Loading dates...') : t('satellite:heatmap.dateNavigator.selectDate', 'Select date')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableDates.length === 0 && !isLoadingDates && (
+                        <div className="px-3 py-2 text-xs text-slate-400">{t('satellite:heatmap.dateNavigator.noDates', 'No dates available')}</div>
+                      )}
+                      {[...availableDates].reverse().map(date => (
+                        <SelectItem key={date} value={date} className="text-xs font-medium">{date}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {viewMode === 'temporal-compare' && (
@@ -567,13 +565,19 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                         <Button variant="ghost" size="icon" onClick={() => navigateCompareMonth(1)} className="h-4 w-4" disabled={compareNavYear === new Date().getFullYear() && compareNavMonth >= new Date().getMonth()}><ChevronRight className="w-3 h-3" /></Button>
                       </div>
                     </div>
-                    <DatePicker
-                      value={compareDate}
-                      onChange={(date) => date && setCompareDate(date)}
-                      availableDates={compareAvailableDates}
-                      isLoading={compareIsLoadingDates}
-                      disabled={!boundary}
-                    />
+                    <Select value={compareDate} onValueChange={setCompareDate} disabled={!boundary || compareIsLoadingDates}>
+                      <SelectTrigger className="h-9 text-xs font-semibold bg-slate-50 border-slate-200">
+                        <SelectValue placeholder={compareIsLoadingDates ? t('satellite:heatmap.dateNavigator.loading', 'Loading dates...') : t('satellite:heatmap.dateNavigator.selectDate', 'Select date')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {compareAvailableDates.length === 0 && !compareIsLoadingDates && (
+                          <div className="px-3 py-2 text-xs text-slate-400">{t('satellite:heatmap.dateNavigator.noDates', 'No dates available')}</div>
+                        )}
+                        {[...compareAvailableDates].reverse().map(date => (
+                          <SelectItem key={date} value={date} className="text-xs font-medium">{date}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 

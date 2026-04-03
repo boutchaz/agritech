@@ -325,525 +325,578 @@ const UsersSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {t('users.title')}
-          </h2>
-          {currentOrganization && (
-            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">
-              {currentOrganization.name}
-            </span>
-          )}
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+              <Users className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              {t('users.title')}
+            </h2>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {t('users.description')}
+          </p>
         </div>
+        
         <Can
           I="invite"
           a="User"
           fallback={
-            <div className="text-sm text-gray-500 italic">
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700">
               {t('users.upgradeToInvite')}
             </div>
           }
         >
-          <Button variant="green"
+          <Button 
+            variant="default" 
             onClick={() => setShowInviteUser(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
           >
-            <Plus className="h-4 w-4" />
-            <span>{t('users.invite.button')}</span>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('users.invite.button')}
           </Button>
         </Can>
       </div>
 
-      {/* Limit Warning */}
-      <LimitWarning
-        resourceType="users"
-        currentCount={users.length}
-      />
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-start text-sm text-gray-600 sm:text-base dark:text-gray-400">
-          {t('users.description')}
-        </p>
-        <div className="shrink-0 text-start text-sm text-gray-500 dark:text-gray-400">
-          {t('users.count', { count: users.length })}
+      {/* Limit Warning & Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="lg:col-span-8">
+          <LimitWarning
+            resourceType="users"
+            currentCount={users.length}
+          />
+        </div>
+        <div className="lg:col-span-4">
+          <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Seats</span>
+            <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums bg-white dark:bg-slate-800 px-3 py-1 rounded-xl shadow-sm">{users.length}</span>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
+        <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
+          <AlertCircle className="h-4 w-4 text-rose-600" />
+          <AlertTitle className="text-sm font-black uppercase tracking-tight">Error</AlertTitle>
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
+        </Alert>
       )}
 
       {loading ? (
-        <SectionLoader />
+        <div className="py-20">
+          <SectionLoader />
+        </div>
       ) : users.length === 0 ? (
-        <div className="text-center py-12">
-          <Users className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+        <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 p-12 text-center">
+          <Users className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-700 mb-4" />
+          <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {t('users.empty.title')}
           </h3>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm font-medium text-slate-400 mt-2 max-w-sm mx-auto">
             {t('users.empty.description')}
           </p>
-        </div>
+        </Card>
       ) : (
-        <>
+        <div className="space-y-6">
           {/* Mobile Card Layout */}
-          <div className="md:hidden space-y-3">
-          {users.map((user) => {
-            const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-            const _initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
-            const canModify = can('update', 'User') &&
-              (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
+          <div className="md:hidden space-y-4">
+            {users.map((user) => {
+              const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
+              const canModify = can('update', 'User') &&
+                (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
 
-            return (
-              <div key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <div className="flex items-start gap-3">
-                  <UserAvatar
-                    src={user.profile?.avatar_url}
-                    firstName={user.profile?.first_name}
-                    lastName={user.profile?.last_name}
-                    email={user.profile?.email}
-                    size="md"
-                    className="flex-shrink-0 h-12 w-12"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900 dark:text-white truncate">
-                        {fullName}
-                      </span>
-                      {user.user_id === currentUser?.id && (
-                        <span className="text-xs text-gray-500">({t('users.you')})</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      {user.profile?.email}
-                    </div>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <div className="flex items-center gap-1">
-                        {getRoleIcon(user.role.name)}
-                        <span className={`px-2 text-xs font-semibold rounded-full ${getRoleColor(user.role.name)}`}>
-                          {user.role.display_name}
-                        </span>
+              return (
+                <Card key={user.id} className="rounded-3xl border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-1 rounded-2xl border-2 border-slate-50 dark:border-slate-800">
+                        <UserAvatar
+                          src={user.profile?.avatar_url}
+                          firstName={user.profile?.first_name}
+                          lastName={user.profile?.last_name}
+                          email={user.profile?.email}
+                          size="lg"
+                          className="h-14 w-14 rounded-xl shadow-sm"
+                        />
                       </div>
-                      <span className={`px-2 text-xs font-semibold rounded-full
-                        ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
-                      >
-                        {user.is_active ? t('users.status.active') : t('users.status.inactive')}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      {t('users.table.joinedOn')}: {new Date(user.created_at).toLocaleDateString(dateLocale)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                {(canModify || (can('remove', 'User') && user.user_id !== currentUser?.id)) && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t dark:border-gray-700 flex-wrap">
-                    {canModify && (
-                      <>
-                        <select
-                          value={user.role_id}
-                          onChange={(e) => handleUpdateUserRole(user.user_id, e.target.value)}
-                          className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white flex-1 min-w-0"
-                          disabled={user.user_id === currentUser?.id}
-                        >
-                          {getAvailableRoles().map(role => (
-                            <option key={role.id} value={role.id}>
-                              {role.display_name}
-                            </option>
-                          ))}
-                        </select>
-                        <Button
-                          onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
-                          className={`p-2 rounded-lg ${user.is_active ?
-                            'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20' :
-                            'text-green-600 bg-green-50 dark:bg-green-900/20'}`}
-                          title={user.is_active ? t('users.actions.deactivate') : t('users.actions.activate')}
-                          disabled={user.user_id === currentUser?.id}
-                        >
-                          {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        </Button>
-                        {user.role?.name === 'farm_worker' && (
-                          <Button
-                            onClick={() => handleViewPassword(user)}
-                            className="p-2 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
-                            title={t('users.actions.viewPassword')}
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </>
-                    )}
-                    {can('remove', 'User') && user.user_id !== currentUser?.id && (
-                      <Button
-                        onClick={() => handleRemoveUser(user.user_id)}
-                        className="p-2 text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg"
-                        title={t('users.actions.remove')}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Desktop Table Layout */}
-        <div className="hidden overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800 md:block">
-          <Table
-            className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
-            dir={isRTL ? 'rtl' : 'ltr'}
-          >
-            <TableHeader className="bg-gray-50 dark:bg-gray-700">
-              <TableRow>
-                <TableHead
-                  scope="col"
-                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  {t('users.table.user')}
-                </TableHead>
-                <TableHead
-                  scope="col"
-                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  {t('users.table.role')}
-                </TableHead>
-                <TableHead
-                  scope="col"
-                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  {t('users.table.status')}
-                </TableHead>
-                <TableHead
-                  scope="col"
-                  className="px-6 py-3 text-start text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
-                >
-                  {t('users.table.joinedOn')}
-                </TableHead>
-                <TableHead scope="col" className="px-6 py-3 text-end text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
-                  {t('users.table.actions')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
-              {users.map((user) => {
-                const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-                const _initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
-                const canModify = can('update', 'User') &&
-                  (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
-
-                return (
-                  <TableRow key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <TableCell className="whitespace-nowrap px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="shrink-0">
-                          <UserAvatar
-                            src={user.profile?.avatar_url}
-                            firstName={user.profile?.first_name}
-                            lastName={user.profile?.last_name}
-                            email={user.profile?.email}
-                            size="md"
-                          />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                            {fullName}
+                          </span>
+                          {user.user_id === currentUser?.id && (
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-black uppercase px-1.5 py-0">SELF</Badge>
+                          )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
-                            <span className="truncate">{fullName}</span>
-                            {user.user_id === currentUser?.id && (
-                              <span className="shrink-0 text-xs text-gray-500">({t('users.you')})</span>
-                            )}
+                        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest">
+                          {user.profile?.email}
+                        </div>
+                        <div className="flex items-center gap-2 pt-2 flex-wrap">
+                          <div className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-none font-black text-[8px] tracking-widest uppercase", getRoleColor(user.role.name))}>
+                            {getRoleIcon(user.role.name)}
+                            {user.role.display_name}
                           </div>
-                          <div className="truncate text-sm text-gray-500 dark:text-gray-400">
-                            {user.profile?.email}
-                          </div>
+                          <Badge className={cn(
+                            "border-none font-black text-[8px] tracking-widest px-2 py-0.5 uppercase",
+                            user.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30'
+                          )}>
+                            {user.is_active ? t('users.status.active') : t('users.status.inactive')}
+                          </Badge>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        {getRoleIcon(user.role.name)}
-                        <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getRoleColor(user.role.name)}`}>
-                          {user.role.display_name}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap px-6 py-4">
-                      <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5
-                        ${user.is_active ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}`}
-                      >
-                        {user.is_active ? t('users.status.active') : t('users.status.inactive')}
-                      </span>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap px-6 py-4 text-start text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(user.created_at).toLocaleDateString(dateLocale, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
+                    </div>
+
+                    {/* Actions */}
+                    {(canModify || (can('remove', 'User') && user.user_id !== currentUser?.id)) && (
+                      <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
                         {canModify && (
                           <>
-                            {/* Role Dropdown */}
-                            <select
+                            <Select
                               value={user.role_id}
-                              onChange={(e) => handleUpdateUserRole(user.user_id, e.target.value)}
-                              className="text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                              onValueChange={(val) => handleUpdateUserRole(user.user_id, val)}
                               disabled={user.user_id === currentUser?.id}
                             >
-                              {getAvailableRoles().map(role => (
-                                <option key={role.id} value={role.id}>
-                                  {role.display_name}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Toggle Status */}
+                              <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold text-[10px] uppercase tracking-widest flex-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl border-slate-200">
+                                {getAvailableRoles().map(role => (
+                                  <SelectItem key={role.id} value={role.id} className="font-bold text-[10px] uppercase tracking-widest">
+                                    {role.display_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            
                             <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
-                              className={`p-1 rounded ${user.is_active ?
-                                'text-yellow-600 hover:text-yellow-800 dark:text-yellow-400' :
-                                'text-green-600 hover:text-green-800 dark:text-green-400'}`}
-                              title={user.is_active ? t('users.actions.deactivate') : t('users.actions.activate')}
+                              className={cn(
+                                "h-10 w-10 rounded-xl",
+                                user.is_active ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
+                              )}
                               disabled={user.user_id === currentUser?.id}
                             >
                               {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                             </Button>
-
-                            {/* Password Management - for worker users */}
+                            
                             {user.role?.name === 'farm_worker' && (
                               <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleViewPassword(user)}
-                                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
-                                title={t('users.actions.viewPassword')}
+                                className="h-10 w-10 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl"
                               >
                                 <Key className="h-4 w-4" />
                               </Button>
                             )}
                           </>
                         )}
-
                         {can('remove', 'User') && user.user_id !== currentUser?.id && (
                           <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleRemoveUser(user.user_id)}
-                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
-                            title={t('users.actions.remove')}
+                            className="h-10 w-10 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-xl"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table Layout */}
+          <Card className="hidden md:block rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <Table dir={isRTL ? 'rtl' : 'ltr'}>
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                <TableRow>
+                  <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {t('users.table.user')}
+                  </TableHead>
+                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {t('users.table.role')}
+                  </TableHead>
+                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {t('users.table.status')}
+                  </TableHead>
+                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {t('users.table.joinedOn')}
+                  </TableHead>
+                  <TableHead className="px-8 py-5 text-end text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    {t('users.table.actions')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white dark:bg-slate-800">
+                {users.map((user) => {
+                  const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
+                  const canModify = can('update', 'User') &&
+                    (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
+
+                  return (
+                    <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
+                      <TableCell className="px-8 py-5">
+                        <div className="flex items-center gap-4">
+                          <UserAvatar
+                            src={user.profile?.avatar_url}
+                            firstName={user.profile?.first_name}
+                            lastName={user.profile?.last_name}
+                            email={user.profile?.email}
+                            size="md"
+                            className="rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
+                          />
+                          <div className="min-w-0 space-y-0.5">
+                            <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                              <span className="truncate">{fullName}</span>
+                              {user.user_id === currentUser?.id && (
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0 h-4">YOU</Badge>
+                              )}
+                            </div>
+                            <div className="truncate text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                              {user.profile?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-5">
+                        <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-xl border-none font-black text-[9px] tracking-widest uppercase", getRoleColor(user.role.name))}>
+                          {getRoleIcon(user.role.name)}
+                          {user.role.display_name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-5">
+                        <Badge className={cn(
+                          "border-none font-black text-[9px] tracking-widest px-3 py-1 uppercase",
+                          user.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30'
+                        )}>
+                          {user.is_active ? t('users.status.active') : t('users.status.inactive')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-6 py-5">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums">
+                          {new Date(user.created_at).toLocaleDateString(dateLocale, {
+                            day: '2-digit', month: 'short', year: 'numeric'
+                          })}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-8 py-5">
+                        <div className="flex items-center justify-end gap-3">
+                          {canModify && (
+                            <>
+                              <Select
+                                value={user.role_id}
+                                onValueChange={(val) => handleUpdateUserRole(user.user_id, val)}
+                                disabled={user.user_id === currentUser?.id}
+                              >
+                                <SelectTrigger className="h-9 w-40 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-700 font-bold text-[10px] uppercase tracking-widest">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-slate-200">
+                                  {getAvailableRoles().map(role => (
+                                    <SelectItem key={role.id} value={role.id} className="font-bold text-[10px] uppercase tracking-widest">
+                                      {role.display_name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleToggleUserStatus(user.user_id, user.is_active)}
+                                className={cn(
+                                  "h-9 w-9 rounded-xl transition-all",
+                                  user.is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
+                                )}
+                                disabled={user.user_id === currentUser?.id}
+                              >
+                                {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                              </Button>
+
+                              {user.role?.name === 'farm_worker' && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewPassword(user)}
+                                  className="h-9 w-9 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                >
+                                  <Key className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
+
+                          {can('remove', 'User') && user.user_id !== currentUser?.id && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveUser(user.user_id)}
+                              className="h-9 w-9 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
         </div>
-        </>
       )}
 
       {/* Invite User Modal */}
       {showInviteUser && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-green-600" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {t('users.invite.title')}
-                </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-lg w-full overflow-hidden">
+            <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                    <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    {t('users.invite.title')}
+                  </CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowInviteUser(false);
+                    setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
+                    setError(null);
+                  }}
+                  className="h-10 w-10 rounded-xl text-slate-400"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
-              <Button
-                onClick={() => {
-                  setShowInviteUser(false);
-                  setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
-                  setError(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
+            </CardHeader>
 
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('users.invite.description')}
-            </p>
+            <CardContent className="p-8 space-y-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+                {t('users.invite.description')}
+              </p>
 
-            <div className="space-y-4">
-              <div>
-                <FormField label={t('users.invite.fields.email')} htmlFor="invite_email" required>
+              <div className="space-y-6 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.email')} *</Label>
                   <Input
-                    id="invite_email"
                     type="email"
                     value={inviteUser.email}
                     onChange={(e) => setInviteUser({ ...inviteUser, email: e.target.value })}
+                    className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
                     placeholder={t('users.invite.placeholders.email')}
                   />
-                </FormField>
-              </div>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField label={t('users.invite.fields.firstName')} htmlFor="invite_first_name">
-                  <Input
-                    id="invite_first_name"
-                    type="text"
-                    value={inviteUser.first_name}
-                    onChange={(e) => setInviteUser({ ...inviteUser, first_name: e.target.value })}
-                    placeholder={t('users.invite.placeholders.firstName')}
-                  />
-                </FormField>
-                <FormField label={t('users.invite.fields.lastName')} htmlFor="invite_last_name">
-                  <Input
-                    id="invite_last_name"
-                    type="text"
-                    value={inviteUser.last_name}
-                    onChange={(e) => setInviteUser({ ...inviteUser, last_name: e.target.value })}
-                    placeholder={t('users.invite.placeholders.lastName')}
-                  />
-                </FormField>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.firstName')}</Label>
+                    <Input
+                      type="text"
+                      value={inviteUser.first_name}
+                      onChange={(e) => setInviteUser({ ...inviteUser, first_name: e.target.value })}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                      placeholder={t('users.invite.placeholders.firstName')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.lastName')}</Label>
+                    <Input
+                      type="text"
+                      value={inviteUser.last_name}
+                      onChange={(e) => setInviteUser({ ...inviteUser, last_name: e.target.value })}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                      placeholder={t('users.invite.placeholders.lastName')}
+                    />
+                  </div>
+                </div>
 
-              <div>
-                <FormField label={t('users.invite.fields.role')} htmlFor="invite_role" required>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.role')} *</Label>
                   <Select
-                    id="invite_role"
                     value={inviteUser.role_id}
-                    onChange={(e) => setInviteUser({ ...inviteUser, role_id: e.target.value })}
+                    onValueChange={(val) => setInviteUser({ ...inviteUser, role_id: val })}
                   >
-                    <option value="">{t('users.invite.placeholders.selectRole')}</option>
-                    {getAvailableRoles().map(role => (
-                      <option key={role.id} value={role.id}>
-                        {role.display_name}
-                      </option>
-                    ))}
+                    <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5">
+                      <SelectValue placeholder={t('users.invite.placeholders.selectRole')} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-slate-200">
+                      {getAvailableRoles().map(role => (
+                        <SelectItem key={role.id} value={role.id} className="font-bold text-[10px] uppercase tracking-widest">
+                          {role.display_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
-                </FormField>
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              {error && (
+                <div className="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                  <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">{error}</p>
+                </div>
+              )}
+
+              <div className="pt-6 flex flex-col sm:flex-row justify-end gap-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setShowInviteUser(false);
+                    setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
+                    setError(null);
+                  }}
+                  className="h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400"
+                >
+                  {t('users.invite.cancel')}
+                </Button>
+                <Button 
+                  variant="default" 
+                  onClick={handleInviteUser} 
+                  disabled={!inviteUser.email || !inviteUser.role_id || loading}
+                  className="h-12 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
+                  {loading ? t('users.invite.inviting') : t('users.invite.invite')}
+                </Button>
               </div>
-            )}
-
-            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-              <Button
-                onClick={() => {
-                  setShowInviteUser(false);
-                  setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
-                  setError(null);
-                }}
-                className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600"
-              >
-                {t('users.invite.cancel')}
-              </Button>
-              <Button variant="green" onClick={handleInviteUser} disabled={!inviteUser.email || !inviteUser.role_id || loading} className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg disabled:cursor-not-allowed" >
-                {loading ? t('users.invite.inviting') : t('users.invite.invite')}
-              </Button>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      {/* Password Dialog */}
+      {/* Password Management Dialog - Using same modern modal style */}
       {passwordDialogUser && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center space-x-2">
-                <Key className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {t('users.password.title')}
-                </h3>
-              </div>
-              <Button
-                onClick={() => {
-                  setPasswordDialogUser(null);
-                  setTempPassword('');
-                  setPasswordExpiresAt('');
-                  setCopiedToClipboard(false);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('users.password.description', { email: passwordDialogUser.profile?.email })}
-            </p>
-
-            {passwordLoading ? (
-              <SectionLoader />
-            ) : tempPassword ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('users.password.tempPassword')}
-                  </label>
-                  <div className="flex items-center space-x-2">
-                    <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono text-gray-900 dark:text-white">
-                      {tempPassword}
-                    </code>
-                    <Button
-                      onClick={handleCopyPassword}
-                      className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
-                      title={t('users.password.copy')}
-                    >
-                      {copiedToClipboard ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden">
+            <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                    <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(dateLocale) })}
-                  </p>
+                  <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    {t('users.password.title')}
+                  </CardTitle>
                 </div>
-
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    {t('users.password.warning')}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-center pt-2">
-                  <Button
-                    onClick={() => {
-                      setPasswordDialogUser(null);
-                      setTempPassword('');
-                      setPasswordExpiresAt('');
-                      setCopiedToClipboard(false);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
-                  >
-                    {t('users.password.close')}
-                  </Button>
-                  <Button variant="blue" onClick={handleResetPassword} disabled={passwordLoading} className="px-4 py-2 text-sm font-medium rounded-md" >
-                    {t('users.password.reset')}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('users.password.noPassword')}
-                </p>
-                <Button variant="blue" onClick={handleResetPassword} disabled={passwordLoading} className="mt-4 px-4 py-2 text-sm font-medium rounded-md" >
-                  {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setPasswordDialogUser(null);
+                    setTempPassword('');
+                    setPasswordExpiresAt('');
+                    setCopiedToClipboard(false);
+                  }}
+                  className="h-10 w-10 rounded-xl text-slate-400"
+                >
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
-            )}
-          </div>
+            </CardHeader>
+
+            <CardContent className="p-8 space-y-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+                {t('users.password.description', { email: passwordDialogUser.profile?.email })}
+              </p>
+
+              {passwordLoading ? (
+                <div className="py-10">
+                  <SectionLoader />
+                </div>
+              ) : tempPassword ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.password.tempPassword')}</Label>
+                    <div className="flex items-center gap-2 p-1 pl-5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner group">
+                      <code className="flex-1 font-mono text-base font-black tracking-wider text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                        {tempPassword}
+                      </code>
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={handleCopyPassword}
+                        className={cn(
+                          "h-10 w-10 rounded-xl transition-all",
+                          copiedToClipboard ? "bg-emerald-500 text-white" : "bg-white dark:bg-slate-800 text-slate-400 hover:text-blue-600 shadow-sm"
+                        )}
+                      >
+                        {copiedToClipboard ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 px-1">
+                      <Clock className="h-3 w-3 text-slate-300" />
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                        {t('users.password.expiresAt', { date: new Date(passwordExpiresAt).toLocaleString(dateLocale) })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Alert className="bg-amber-50 border-amber-100 text-amber-800 rounded-2xl">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-[10px] font-black uppercase tracking-widest leading-tight">
+                      {t('users.password.warning')}
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="pt-4 flex justify-between items-center">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setPasswordDialogUser(null)}
+                      className="h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    >
+                      {t('users.password.close')}
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      onClick={handleResetPassword} 
+                      disabled={passwordLoading}
+                      className="h-11 px-8 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[10px] uppercase tracking-widest shadow-xl"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                      {t('users.password.reset')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10 space-y-6">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full w-fit mx-auto border border-slate-100 dark:border-slate-800">
+                    <Key className="h-10 w-10 text-slate-200" />
+                  </div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                    {t('users.password.noPassword')}
+                  </p>
+                  <Button 
+                    variant="default" 
+                    onClick={handleResetPassword} 
+                    disabled={passwordLoading}
+                    className="h-12 px-10 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100"
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       )}
       <ConfirmDialog
