@@ -32,7 +32,46 @@ import {
   type CalibrationSnapshotInput,
 } from "./calibration-review.adapter";
 
-const CALIBRATION_LOOKBACK_DAYS = 730;
+/**
+ * Calibration satellite lookback depth depends on tree age, per spec.
+ *
+ * | Parcel Age        | Lookback                  |
+ * |-------------------|---------------------------|
+ * | ≥ 3 years         | 36 months                 |
+ * | 2–3 years         | 24 months                 |
+ * | < 2 years         | Jan 1 of planting year    |
+ * | No planting year  | 24 months (default)       |
+ *
+ * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
+ * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
+ */
+function getCalibrationLookbackDate(plantingYear: number | null): string {
+  const now = new Date();
+
+  if (plantingYear != null) {
+    const parcelAge = now.getFullYear() - plantingYear;
+
+    if (parcelAge >= 3) {
+      const start = new Date();
+      start.setMonth(start.getMonth() - 36);
+      return start.toISOString().split("T")[0];
+    }
+
+    if (parcelAge < 2) {
+      return `${plantingYear}-01-01`;
+    }
+
+    // 2–3 years: 24 months
+    const start = new Date();
+    start.setMonth(start.getMonth() - 24);
+    return start.toISOString().split("T")[0];
+  }
+
+  // No planting year: default 24 months
+  const start = new Date();
+  start.setMonth(start.getMonth() - 24);
+  return start.toISOString().split("T")[0];
+}
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
 
@@ -387,7 +426,7 @@ export class CalibrationService {
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
-          request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           parcel: {
             id: parcel.id,
             crop_type: parcel.cropType,
@@ -557,7 +596,7 @@ export class CalibrationService {
         calibration_version: "v2",
         calibration_data: {
           version: "v2",
-          request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+          request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           recalibration: {
             motif,
             motif_detail: dto.recalibration_motif_detail ?? null,
@@ -897,13 +936,14 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 5;
     const completedAt = new Date().toISOString();
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
     emitProgress(1, "data_collection", "Collecte des données satellite, météo et analyses...");
 
     const [satelliteImages, initialWeatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
-      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
       this.fetchWeatherRows(parcel),
       this.fetchAnalyses(parcelId),
       this.fetchHarvestRecords(parcelId),
@@ -1003,7 +1043,7 @@ export class CalibrationService {
     const calibrationData = {
       ...existingPartialData,
       version: "v2",
-      request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
       recalibration: {
         motif,
         motif_detail: dto.recalibration_motif_detail ?? null,
@@ -1093,6 +1133,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         primaryLanguage,
+        calibrationDataStart,
       ),
       this.runCalibrationAI(
         calibrationId,
@@ -1100,6 +1141,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         secondaryLanguage,
+        calibrationDataStart,
       ),
     ]);
 
@@ -1208,6 +1250,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 7;
     const completedAt = new Date().toISOString();
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -1220,7 +1263,7 @@ export class CalibrationService {
       harvestRecords,
       referenceData,
     ] = await Promise.all([
-      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
       this.fetchWeatherRows(parcel),
       this.fetchAnalyses(parcelId),
       this.fetchHarvestRecords(parcelId),
@@ -1241,7 +1284,7 @@ export class CalibrationService {
           organizationId,
           undefined,
           {
-            startDate: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+            startDate: getCalibrationLookbackDate(parcel.plantingYear),
             endDate: new Date().toISOString().split("T")[0],
             indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
             authToken,
@@ -1255,6 +1298,7 @@ export class CalibrationService {
       satelliteImages = await this.fetchSatelliteImages(
         parcelId,
         organizationId,
+        calibrationDataStart,
       );
     }
 
@@ -1289,7 +1333,7 @@ export class CalibrationService {
         return coord;
       });
 
-      const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+      const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
       const today = new Date().toISOString().split("T")[0];
 
       const rasterResult = await this.satelliteProxy.proxy("POST", "/calibration/v2/extract-raster", {
@@ -1330,7 +1374,7 @@ export class CalibrationService {
         body: {
           crop_type: parcel.cropType,
           planting_date: parcel.plantingYear ? String(parcel.plantingYear) : undefined,
-          start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+          start_date: getCalibrationLookbackDate(parcel.plantingYear),
           end_date: new Date().toISOString().split("T")[0],
         },
         organizationId,
@@ -1425,7 +1469,7 @@ export class CalibrationService {
       request: {
         ...this.toJsonObject(existingCalibrationData.request),
         ...dto,
-        lookback_days: CALIBRATION_LOOKBACK_DAYS,
+        lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear),
       },
       parcel: {
         id: parcel.id,
@@ -1513,6 +1557,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         primaryLanguage,
+        calibrationDataStart,
       ),
       this.runCalibrationAI(
         calibrationId,
@@ -1520,6 +1565,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         secondaryLanguage,
+        calibrationDataStart,
       ),
     ]);
 
@@ -1663,6 +1709,7 @@ export class CalibrationService {
     organizationId: string,
     v2Output: CalibrationResponse,
     language: string = "fr",
+    dataStartDate?: string,
   ): Promise<Record<string, unknown> | null> {
     try {
       this.logger.log(
@@ -1679,7 +1726,7 @@ export class CalibrationService {
           model: resolved.model,
           reportType: AgromindReportType.CALIBRATION,
           language,
-          data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+          data_start_date: dataStartDate ?? new Date().toISOString().split("T")[0],
           data_end_date: new Date().toISOString().split("T")[0],
         },
       );
@@ -1993,6 +2040,7 @@ export class CalibrationService {
     const satelliteImages = await this.fetchSatelliteImages(
       parcelId,
       organizationId,
+      getCalibrationLookbackDate(parcel.plantingYear),
     );
     const hasMinSatellite = satelliteImages.length >= 10;
     checks.push(
@@ -2326,7 +2374,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcelAiRow } = await supabase
       .from("parcels")
-      .select("ai_phase, ai_enabled, ai_observation_only")
+      .select("ai_phase, ai_enabled, ai_observation_only, planting_year")
       .eq("id", parcelId)
       .maybeSingle();
 
@@ -2345,7 +2393,7 @@ export class CalibrationService {
     );
 
     const dataEnd = new Date().toISOString().split("T")[0];
-    const dataStart = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const dataStart = getCalibrationLookbackDate(parcelAiRow?.planting_year ?? null);
 
     // Resolve provider: org-configured first, then system fallback
     const { provider, model } = await this.aiReportsService.resolveProvider(organizationId);
@@ -2716,16 +2764,17 @@ export class CalibrationService {
   private async fetchNdviValues(
     parcelId: string,
     organizationId: string,
+    sinceDate?: string,
   ): Promise<number[]> {
     const supabase = this.databaseService.getAdminClient();
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(null);
     const { data, error } = await supabase
       .from("satellite_indices_data")
       .select("mean_value")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
       .eq("index_name", "NDVI")
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true });
 
     if (error) {
@@ -2751,15 +2800,16 @@ export class CalibrationService {
   private async fetchSatelliteImages(
     parcelId: string,
     organizationId: string,
+    sinceDate?: string,
   ): Promise<Array<Record<string, unknown>>> {
     const supabase = this.databaseService.getAdminClient();
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(null);
     const { data, error } = await supabase
       .from("satellite_indices_data")
       .select("date, index_name, mean_value, cloud_coverage_percentage")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true })
       .order("index_name", { ascending: true });
 
@@ -2816,7 +2866,7 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
 
     const { data, error } = await supabase
       .from("weather_daily_data")
@@ -2851,7 +2901,7 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const startDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const startDate = getCalibrationLookbackDate(parcel.plantingYear);
     const endDate = new Date().toISOString().split("T")[0];
 
     const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
@@ -3261,12 +3311,6 @@ export class CalibrationService {
 
     const keys = Object.keys(meanDates);
     return keys.length > 0 ? keys[0] : null;
-  }
-
-  private getLookbackDate(days: number): string {
-    const lookbackDate = new Date();
-    lookbackDate.setDate(lookbackDate.getDate() - days);
-    return lookbackDate.toISOString().split("T")[0];
   }
 
   private extractFarmOrganizationId(farms: unknown): string | null {
