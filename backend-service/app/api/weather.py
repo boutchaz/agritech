@@ -14,9 +14,9 @@ from app.services.weather_service import weather_service
 from app.services.supabase_service import supabase_service
 import logging
 
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user_or_service
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 

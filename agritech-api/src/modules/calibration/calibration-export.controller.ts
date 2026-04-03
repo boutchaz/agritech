@@ -18,12 +18,15 @@ import {
 import { Request, Response } from "express";
 import { OrganizationGuard } from "../../common/guards/organization.guard";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { PoliciesGuard } from "../casl/policies.guard";
+import { CanReadParcels } from "../casl/permissions.decorator";
 import { CalibrationExportService } from "./calibration-export.service";
 
 @ApiTags("calibration-export")
 @ApiBearerAuth()
 @Controller("calibrations/:calibrationId/export")
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@CanReadParcels()
 export class CalibrationExportController {
   constructor(
     private readonly calibrationExportService: CalibrationExportService,
