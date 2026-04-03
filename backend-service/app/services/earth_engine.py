@@ -63,6 +63,107 @@ def _serialize_ts_dict_for_api(obs: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
+_TS_OPTIONAL_OBS_KEYS = (
+    "min_value",
+    "max_value",
+    "std_value",
+    "median_value",
+    "percentile_25",
+    "percentile_75",
+    "percentile_90",
+    "pixel_count",
+)
+
+
+def _log_per_observation_chunk_debug(
+    index_name: str,
+    chunk_start: str,
+    chunk_end: str,
+    results: Dict[str, Any],
+    observations: List[Dict[str, Any]],
+) -> None:
+    """Log raw GEE feature property keys vs parsed observations (debug null stats)."""
+    raw_features = results.get("features") or []
+    logger.info(
+        "[gee_ts] chunk raw_features=%s observations_kept=%s index=%s range=%s→%s",
+        len(raw_features),
+        len(observations),
+        index_name,
+        chunk_start,
+        chunk_end,
+    )
+    if not raw_features:
+        return
+
+    sample_props: Dict[str, Any] = {}
+    for feat in raw_features[:20]:
+        props = feat.get("properties") or {}
+        if props.get("value") is not None:
+            sample_props = dict(props)
+            break
+    if sample_props:
+        keys_sorted = sorted(sample_props.keys())
+        logger.info("[gee_ts] sample_feature_property_keys=%s", keys_sorted)
+        try:
+            logger.debug(
+                "[gee_ts] sample_feature_properties_json=%s",
+                json.dumps(sample_props, default=str)[:4000],
+            )
+        except (TypeError, ValueError):
+            logger.debug("[gee_ts] sample_feature_properties=%s", sample_props)
+
+    if observations:
+        filled = {
+            k: sum(1 for o in observations if o.get(k) is not None)
+            for k in _TS_OPTIONAL_OBS_KEYS
+        }
+        logger.info(
+            "[gee_ts] chunk optional_fields_nonnull_counts (of %s)=%s",
+            len(observations),
+            filled,
+        )
+
+
+def _log_serialized_time_series_debug(
+    index: str, serialized: List[Dict[str, Any]]
+) -> None:
+    """Log API-shaped points after _serialize_ts_dict_for_api."""
+    if not serialized:
+        logger.info("[gee_ts] serialized_series index=%s points=0", index)
+        return
+    optional = (
+        "min_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+        "pixel_count",
+        "cloud_coverage",
+    )
+    counts = {k: sum(1 for p in serialized if p.get(k) is not None) for k in optional}
+    logger.info(
+        "[gee_ts] serialized_series index=%s points=%s date_range=%s→%s optional_nonnull=%s",
+        index,
+        len(serialized),
+        serialized[0].get("date"),
+        serialized[-1].get("date"),
+        counts,
+    )
+    try:
+        logger.debug(
+            "[gee_ts] serialized_first_point=%s",
+            json.dumps(serialized[0], default=str),
+        )
+        if len(serialized) > 1:
+            logger.debug(
+                "[gee_ts] serialized_last_point=%s",
+                json.dumps(serialized[-1], default=str),
+            )
+    except (TypeError, ValueError):
+        logger.debug("[gee_ts] serialized_first_point=%s", serialized[0])
+
+
 def _find_system_font() -> str:
     _FONT_PATHS = {
         "Darwin": [
@@ -608,6 +709,14 @@ class EarthEngineService:
         scale = 30 if total_days > 365 else settings.DEFAULT_SCALE
 
         try:
+            logger.info(
+                "[gee_ts] get_time_series path=per_observation index=%s scale=%s "
+                "max_cloud=%s days=%s",
+                index,
+                scale,
+                max_cloud,
+                total_days,
+            )
             return self._get_time_series_per_observation(
                 geometry,
                 aoi,
@@ -620,10 +729,18 @@ class EarthEngineService:
             )
         except Exception as e:
             logger.warning(
-                f"Per-observation time series failed ({e}), falling back to composite"
+                "[gee_ts] per_observation failed (%s), falling back to composite",
+                e,
+                exc_info=logger.isEnabledFor(logging.DEBUG),
             )
             interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
             step = interval_days.get(interval, 30)
+            logger.info(
+                "[gee_ts] get_time_series path=batched_composite index=%s step_days=%s "
+                "(mean-only points, no per-pixel percentiles)",
+                index,
+                step,
+            )
             try:
                 return self._get_time_series_batched(
                     geometry,
@@ -640,7 +757,14 @@ class EarthEngineService:
                 )
             except Exception as e2:
                 logger.warning(
-                    f"Batched time series also failed ({e2}), falling back to sequential"
+                    "[gee_ts] batched_composite failed (%s), falling back to sequential",
+                    e2,
+                    exc_info=logger.isEnabledFor(logging.DEBUG),
+                )
+                logger.info(
+                    "[gee_ts] get_time_series path=sequential_composite index=%s step_days=%s",
+                    index,
+                    step,
                 )
                 return self._get_time_series_sequential(
                     geometry,
@@ -711,7 +835,9 @@ class EarthEngineService:
             f"Per-observation time series: {len(time_series)} real observations "
             f"for {index} ({start_date}→{end_date})"
         )
-        return [_serialize_ts_dict_for_api(p) for p in time_series]
+        serialized = [_serialize_ts_dict_for_api(p) for p in time_series]
+        _log_serialized_time_series_debug(index, serialized)
+        return serialized
 
     def _per_observation_chunk(
         self,
@@ -733,6 +859,11 @@ class EarthEngineService:
             use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
 
+        if use_aoi_cloud_filter:
+            collection = CloudMaskingService.filter_by_scl_coverage(
+                collection, aoi, max_cloud
+            )
+
         index_name = index
 
         def extract_observation(image):
@@ -741,12 +872,16 @@ class EarthEngineService:
             if idx_image is None:
                 return ee.Feature(None, {"date": None, "value": None, "cloud": None})
 
-            # Combined reducer: mean + stdDev + count + percentiles
+            # Combined reducer: same order as automated_processing.py so reduceRegion keys are
+            # {index_name}_p2, _p25, …, _mean, _stdDev, _count (percentile-first chain).
             combined_reducer = (
-                ee.Reducer.mean()
+                ee.Reducer.percentile(
+                    [2, 25, 50, 75, 90, 98],
+                    ["p2", "p25", "p50", "p75", "p90", "p98"],
+                )
+                .combine(ee.Reducer.mean(), "", True)
                 .combine(ee.Reducer.stdDev(), "", True)
                 .combine(ee.Reducer.count(), "", True)
-                .combine(ee.Reducer.percentile([2, 25, 50, 75, 90, 98]), "", True)
             )
 
             # Use CRS parameter to handle AOI crossing UTM zone boundaries
@@ -790,13 +925,24 @@ class EarthEngineService:
             cloud = props.get("cloud", 100)
             if date_str is not None and value is not None:
                 obs = {"date": date_str, "value": value, "cloud": cloud}
-                for key in ("min_value", "max_value", "std_value", "median_value",
-                            "percentile_25", "percentile_75", "percentile_90", "pixel_count"):
+                for key in (
+                    "min_value",
+                    "max_value",
+                    "std_value",
+                    "median_value",
+                    "percentile_25",
+                    "percentile_75",
+                    "percentile_90",
+                    "pixel_count",
+                ):
                     if props.get(key) is not None:
                         obs[key] = props[key]
                 observations.append(obs)
 
         logger.info(f"Chunk {start_date}→{end_date}: {len(observations)} observations")
+        _log_per_observation_chunk_debug(
+            index_name, start_date, end_date, results, observations
+        )
         return observations
 
     def _get_time_series_batched(
@@ -827,6 +973,11 @@ class EarthEngineService:
             max_cloud,
             use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
+
+        if use_aoi_cloud_filter:
+            base_collection = CloudMaskingService.filter_by_scl_coverage(
+                base_collection, aoi, max_cloud
+            )
 
         windows = []
         current = start_dt
@@ -951,6 +1102,11 @@ class EarthEngineService:
                     max_cloud,
                     use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
+
+                if use_aoi_cloud_filter:
+                    sub_collection = CloudMaskingService.filter_by_scl_coverage(
+                        sub_collection, aoi, max_cloud
+                    )
 
                 count = sub_collection.size().getInfo()
                 if count == 0:

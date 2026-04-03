@@ -108,7 +108,7 @@ class CloudMaskingService:
                 reducer=ee.Reducer.sum(),
                 geometry=region,
                 scale=60,  # QA60 is native 60m; reduces pixel pressure on large AOIs
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -116,8 +116,10 @@ class CloudMaskingService:
 
             # Count total pixels
             total_pixels = cloud_mask.gt(-1).reduceRegion(
-                reducer=ee.Reducer.count(), geometry=region, scale=60,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                reducer=ee.Reducer.count(),
+                geometry=region,
+                scale=60,
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -205,7 +207,7 @@ class CloudMaskingService:
                 reducer=ee.Reducer.sum(),
                 geometry=region,
                 scale=60,  # QA60 is native 60m; reduces pixel pressure on large AOIs
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -215,8 +217,10 @@ class CloudMaskingService:
             total_pixels = (
                 cloud_mask.gt(-1)
                 .reduceRegion(
-                    reducer=ee.Reducer.count(), geometry=region, scale=60,
-                    crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                    reducer=ee.Reducer.count(),
+                    geometry=region,
+                    scale=60,
+                    crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                     maxPixels=settings.MAX_PIXELS,
                     bestEffort=True,
                     tileScale=4,
@@ -275,6 +279,50 @@ class CloudMaskingService:
         cloud_coverage = best.get("AOI_CLOUD_COVERAGE").getInfo()
 
         return best, cloud_coverage
+
+    @staticmethod
+    def filter_by_scl_coverage(
+        collection: ee.ImageCollection,
+        aoi: ee.Geometry,
+        max_cloud_coverage: float,
+    ) -> ee.ImageCollection:
+        """
+        Filter collection by SCL-based AOI cloud coverage.
+        Matches the available-dates endpoint logic exactly:
+        SCL classes 3 (shadow), 8 (cloud medium), 9 (cloud high), 10 (cirrus)
+        at 20m native resolution, no spatial buffer.
+        """
+
+        def score_scl(image):
+            scl = image.select("SCL")
+            cloud_mask = scl.eq(3).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
+            cloud_pixels = cloud_mask.reduceRegion(
+                reducer=ee.Reducer.sum(),
+                geometry=aoi,
+                scale=20,
+                maxPixels=1e13,
+                bestEffort=True,
+                tileScale=4,
+            ).get("SCL")
+            total_pixels = (
+                scl.mask()
+                .reduceRegion(
+                    reducer=ee.Reducer.count(),
+                    geometry=aoi,
+                    scale=20,
+                    maxPixels=1e13,
+                    bestEffort=True,
+                    tileScale=4,
+                )
+                .get("SCL")
+            )
+            pct = ee.Number(cloud_pixels).divide(ee.Number(total_pixels)).multiply(100)
+            return image.set("AOI_SCL_CLOUD_COVERAGE", pct)
+
+        scored = collection.map(score_scl)
+        return scored.filter(
+            ee.Filter.lte("AOI_SCL_CLOUD_COVERAGE", max_cloud_coverage)
+        )
 
     @staticmethod
     def create_cloud_probability_mask(
