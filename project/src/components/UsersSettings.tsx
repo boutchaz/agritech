@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check } from 'lucide-react';
+import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check, AlertCircle, Clock, RefreshCw, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../stores/authStore';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
-import { Select } from './ui/Select';
 import type { Role } from '../types/auth';
 import { Can, useCan } from '../lib/casl';
 import { LimitWarning } from './authorization/LimitWarning';
@@ -17,6 +16,12 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/radix-select';
 
 
 interface OrganizationUser {

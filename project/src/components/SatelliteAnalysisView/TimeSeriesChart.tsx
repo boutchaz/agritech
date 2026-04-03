@@ -26,7 +26,6 @@ import {
   Calendar as CalendarIcon,
   Layers,
   Info,
-  ChevronDown,
   X,
   Zap
 } from 'lucide-react';

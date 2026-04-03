@@ -5,7 +5,7 @@ import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SettingsLayout from '@/components/SettingsLayout'
-import { ArrowLeft, Home } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
 import { PageLoader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button';

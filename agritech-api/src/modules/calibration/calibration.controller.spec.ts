@@ -75,6 +75,7 @@ describe('CalibrationController', () => {
         parcelId,
         organizationId,
         dto,
+        { authToken: undefined },
       );
       expect(result).toEqual(serviceResult);
     });
@@ -274,7 +275,11 @@ describe('CalibrationController', () => {
       const req = makeRequest(parcelId, organizationId);
       const result = await controller.getPercentiles(parcelId, req);
 
-      expect(mockCalibrationService.getPercentiles).toHaveBeenCalledWith(parcelId, organizationId);
+      expect(mockCalibrationService.getPercentiles).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+        undefined,
+      );
       expect(result).toEqual(serviceResult);
     });
 
@@ -305,7 +310,11 @@ describe('CalibrationController', () => {
       const req = makeRequest(parcelId, organizationId);
       const result = await controller.getZones(parcelId, req);
 
-      expect(mockCalibrationService.getZones).toHaveBeenCalledWith(parcelId, organizationId);
+      expect(mockCalibrationService.getZones).toHaveBeenCalledWith(
+        parcelId,
+        organizationId,
+        undefined,
+      );
       expect(result).toEqual(serviceResult);
     });
 

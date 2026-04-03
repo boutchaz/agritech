@@ -536,6 +536,7 @@ export class AnnualRecalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<CalibrationRecord> {
     const eligibility = await this.checkEligibility(parcelId, organizationId);
 
@@ -575,7 +576,7 @@ export class AnnualRecalibrationService {
         mode_calibrage: "annual",
         recalibration_motif: "post_campaign",
       },
-      { skipReadinessCheck: true },
+      { skipReadinessCheck: true, authToken },
     );
 
     const supabase = this.databaseService.getAdminClient();

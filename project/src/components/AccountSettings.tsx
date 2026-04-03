@@ -26,12 +26,14 @@ import {
   X,
   Bell,
   ShieldCheck,
+  FileText,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usersApi } from '@/lib/api/users';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { useTranslation } from 'react-i18next';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { useQueryClient } from '@tanstack/react-query';
@@ -40,6 +42,12 @@ import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSe
 import UserAvatar from '@/components/ui/UserAvatar';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfile {
   id: string;

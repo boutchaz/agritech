@@ -422,6 +422,7 @@ export class CalibrationService {
       organizationId,
       parcel,
       dto,
+      options?.authToken,
     ).catch((error) => {
       this.logger.error(
         `Background calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
@@ -435,6 +436,7 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
+    options?: { authToken?: string },
   ): Promise<CalibrationRecord> {
     const mode = dto.mode_calibrage ?? "partial";
     if (mode !== "partial") {
@@ -480,7 +482,7 @@ export class CalibrationService {
         parcelId,
         organizationId,
         fullCalibrationDto,
-        { skipReadinessCheck: true },
+        { skipReadinessCheck: true, authToken: options?.authToken },
       );
     }
 
@@ -604,6 +606,7 @@ export class CalibrationService {
       affectedBlocks,
       updatedBlocks,
       previousBaseline,
+      options?.authToken,
     ).catch((error) => {
       this.logger.error(
         `Background partial recalibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
@@ -719,6 +722,7 @@ export class CalibrationService {
     organizationId: string,
     parcel: ParcelContext,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<void> {
     try {
       await Promise.race([
@@ -728,6 +732,7 @@ export class CalibrationService {
           organizationId,
           parcel,
           dto,
+          authToken,
         ),
         new Promise<never>((_, reject) => {
           setTimeout(
@@ -798,6 +803,7 @@ export class CalibrationService {
     affectedBlocks: string[],
     updatedBlocks: Record<string, unknown>,
     previousBaseline: JsonObject,
+    authToken?: string,
   ): Promise<void> {
     try {
       await Promise.race([
@@ -811,6 +817,7 @@ export class CalibrationService {
           affectedBlocks,
           updatedBlocks,
           previousBaseline,
+          authToken,
         ),
         new Promise<never>((_, reject) => {
           setTimeout(
@@ -885,6 +892,7 @@ export class CalibrationService {
     affectedBlocks: string[],
     updatedBlocks: Record<string, unknown>,
     previousBaseline: JsonObject,
+    authToken?: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 5;
@@ -906,7 +914,7 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(1, "weather_sync", "Synchronisation des données météo...");
-      await this.syncWeatherData(parcel, organizationId);
+      await this.syncWeatherData(parcel, organizationId, authToken);
       weatherRows = await this.fetchWeatherRows(parcel);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
@@ -963,6 +971,7 @@ export class CalibrationService {
         weather_rows: weatherRows,
       },
       organizationId,
+      authToken,
     }) as CalibrationResponse;
 
     emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
@@ -1194,6 +1203,7 @@ export class CalibrationService {
     organizationId: string,
     parcel: ParcelContext,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 7;
@@ -1234,6 +1244,7 @@ export class CalibrationService {
             startDate: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
             endDate: new Date().toISOString().split("T")[0],
             indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+            authToken,
           },
         );
 
@@ -1251,7 +1262,7 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(2, "weather_sync", "Synchronisation des données météo...");
-      await this.syncWeatherData(parcel, organizationId);
+      await this.syncWeatherData(parcel, organizationId, authToken);
       weatherRows = await this.fetchWeatherRows(parcel);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
@@ -1290,6 +1301,7 @@ export class CalibrationService {
         },
         organizationId,
         timeout: 120000,
+        authToken,
       }) as { pixels: Array<{ lon: number; lat: number; value: number }>; count: number };
 
       if (rasterResult.count > 1) {
@@ -1323,6 +1335,7 @@ export class CalibrationService {
         },
         organizationId,
         timeout: 120000,
+        authToken,
       });
     }
 
@@ -1373,6 +1386,7 @@ export class CalibrationService {
         ndvi_raster_pixels: ndviRasterPixels,
       },
       organizationId,
+      authToken,
     }) as CalibrationResponse;
 
     emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
@@ -2501,6 +2515,7 @@ export class CalibrationService {
   async getPercentiles(
     parcelId: string,
     organizationId: string,
+    authToken?: string,
   ): Promise<PercentilesResponse> {
     const ndviValues = await this.fetchNdviValues(parcelId, organizationId);
 
@@ -2514,12 +2529,14 @@ export class CalibrationService {
         percentiles: NDVI_PERCENTILES,
       },
       organizationId,
+      authToken,
     })) as PercentilesResponse;
   }
 
   async getZones(
     parcelId: string,
     organizationId: string,
+    authToken?: string,
   ): Promise<ZonesResponse> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const [ndviValues, thresholds] = await Promise.all([
@@ -2537,6 +2554,7 @@ export class CalibrationService {
         thresholds,
       },
       organizationId,
+      authToken,
     })) as ZonesResponse;
   }
 
@@ -2822,6 +2840,7 @@ export class CalibrationService {
   private async syncWeatherData(
     parcel: ParcelContext,
     organizationId: string,
+    authToken?: string,
   ): Promise<void> {
     if (!parcel.boundary.length) {
       return;
@@ -2843,6 +2862,7 @@ export class CalibrationService {
         end_date: endDate,
       },
       organizationId,
+      authToken,
     }) as {
       latitude: number;
       longitude: number;

@@ -14,8 +14,25 @@ export class SatelliteProxyService {
   ) {
     const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
-    this.internalServiceToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN') || '';
+    this.internalServiceToken = (
+      this.configService.get<string>('INTERNAL_SERVICE_TOKEN') ?? ''
+    ).trim();
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
+  }
+
+  /**
+   * Prefer INTERNAL_SERVICE_TOKEN for Nest→satellite calls so the satellite service
+   * authenticates with the shared secret even when a user JWT is present (user JWT
+   * can fail if satellite Supabase env differs from the API project).
+   */
+  private bearerAuthHeaders(authToken?: string): Record<string, string> {
+    if (this.internalServiceToken) {
+      return { authorization: `Bearer ${this.internalServiceToken}` };
+    }
+    if (authToken) {
+      return { authorization: `Bearer ${authToken}` };
+    }
+    return {};
   }
 
   async proxy(
@@ -50,14 +67,10 @@ export class SatelliteProxyService {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...this.bearerAuthHeaders(authToken),
     };
     if (organizationId) {
       headers['x-organization-id'] = organizationId;
-    }
-    if (authToken) {
-      headers['authorization'] = `Bearer ${authToken}`;
-    } else if (this.internalServiceToken) {
-      headers['authorization'] = `Bearer ${this.internalServiceToken}`;
     }
 
     this.logger.debug(`[Proxy] ${method} ${url}`);
@@ -141,14 +154,11 @@ export class SatelliteProxyService {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = {
+      ...this.bearerAuthHeaders(authToken),
+    };
     if (organizationId) {
       headers['x-organization-id'] = organizationId;
-    }
-    if (authToken) {
-      headers['authorization'] = `Bearer ${authToken}`;
-    } else if (this.internalServiceToken) {
-      headers['authorization'] = `Bearer ${this.internalServiceToken}`;
     }
 
     try {

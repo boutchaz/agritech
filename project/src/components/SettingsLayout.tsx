@@ -21,6 +21,8 @@ import {
   Brain,
   PanelLeftClose,
   PanelLeft,
+  ChevronDown,
+  Home,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";

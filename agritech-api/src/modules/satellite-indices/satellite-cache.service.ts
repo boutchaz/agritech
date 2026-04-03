@@ -230,7 +230,13 @@ export class SatelliteCacheService {
     parcelId: string,
     organizationId: string,
     farmId?: string,
-    options?: { startDate?: string; endDate?: string; indices?: string[] },
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      indices?: string[];
+      /** User JWT for satellite service auth when INTERNAL_SERVICE_TOKEN is unset */
+      authToken?: string;
+    },
   ): Promise<{ totalPoints: number }> {
     const resolvedAoi = await this.resolveAoiFromParcel(
       parcelId,
@@ -269,6 +275,7 @@ export class SatelliteCacheService {
           organizationId,
           undefined,
           300_000,
+          options?.authToken,
         )) as Record<string, unknown>;
 
         const points = (result.data as TimeSeriesPoint[]) || [];

@@ -95,7 +95,8 @@ async def get_current_user_or_service(
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    if settings.INTERNAL_SERVICE_TOKEN and token == settings.INTERNAL_SERVICE_TOKEN:
+    internal_expected = (settings.INTERNAL_SERVICE_TOKEN or "").strip()
+    if internal_expected and token == internal_expected:
         return {"user": {"id": "internal-service"}, "token": token, "is_internal": True}
     user = await verify_token_with_supabase(token)
     return {"user": user, "token": token}
