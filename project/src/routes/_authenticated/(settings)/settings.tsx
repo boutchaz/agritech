@@ -5,7 +5,7 @@ import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import SettingsLayout from '@/components/SettingsLayout'
-import { ArrowLeft, Home } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useAutoStartTour } from '@/contexts/TourContext'
 import { PageLoader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button';
@@ -27,42 +27,38 @@ const SettingsLayoutComponent: React.FC = () => {
   return (
     <PageLayout activeModule="settings">
       {/* Mobile-optimized header */}
-      <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Back button on mobile */}
+      <div className="sticky top-0 z-30 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm transition-all duration-300">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
             <Button
+              variant="ghost"
+              size="icon"
               onClick={handleBackToDashboard}
-              className="md:hidden flex-shrink-0 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg -ml-2"
+              className="flex-shrink-0 h-9 w-9 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl -ml-2"
               aria-label="Back to dashboard"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">
-              {currentOrganization.name}
-            </h1>
-            {currentFarm && (
-              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate hidden sm:inline">
-                • {currentFarm.name}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Home button on mobile */}
-            <Button
-              onClick={handleBackToDashboard}
-              className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              aria-label="Go to home"
-            >
-              <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-            </Button>
-            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-              <OrganizationSwitcher />
-              <LanguageSwitcher />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-base font-black text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">
+                {currentOrganization.name}
+              </h1>
+              {currentFarm && (
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest mt-1">
+                  {currentFarm.name}
+                </p>
+              )}
             </div>
+          </div>
+          
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <OrganizationSwitcher compact />
+            <div className="w-px h-4 bg-slate-100 dark:bg-slate-800 mx-1" />
+            <LanguageSwitcher compact />
           </div>
         </div>
       </div>
+      
       <SettingsLayout>
         <Outlet />
       </SettingsLayout>

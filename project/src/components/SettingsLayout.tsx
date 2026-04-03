@@ -21,6 +21,8 @@ import {
   Brain,
   PanelLeftClose,
   PanelLeft,
+  ChevronDown,
+  Home,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -284,25 +286,18 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
               onClick={() => handleNavigate(item.path)}
               data-tour={`settings-${item.id}`}
               className={cn(
-                "w-full flex items-center justify-center p-2.5 rounded-lg transition-colors",
+                "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300",
                 active
-                  ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400",
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20"
+                  : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600"
               )}
             >
-              <Icon
-                className={cn(
-                  "h-5 w-5 flex-shrink-0",
-                  active
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300",
-                )}
-              />
+              <Icon className="h-5 w-5 flex-shrink-0" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8}>
-            <p className="font-medium">{item.name}</p>
-            <p className="text-xs text-muted-foreground">{item.description}</p>
+          <TooltipContent side="right" sideOffset={12} className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl bg-white dark:bg-slate-800 p-3">
+            <p className="font-black text-[10px] uppercase tracking-widest text-slate-900 dark:text-white">{item.name}</p>
+            <p className="text-[10px] font-medium text-slate-400 mt-1 max-w-[180px]">{item.description}</p>
           </TooltipContent>
         </Tooltip>
       );
@@ -315,40 +310,24 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
         onClick={() => handleNavigate(item.path)}
         data-tour={`settings-${item.id}`}
         className={cn(
-          "w-full text-start p-3 sm:p-4 rounded-lg transition-colors group",
+          "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 group",
           active
-            ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-            : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300",
+            ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 shadow-sm"
+            : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent"
         )}
       >
-        <div className="flex items-start gap-3">
-          <Icon
-            className={cn(
-              "h-5 w-5 mt-0.5 flex-shrink-0",
-              active
-                ? "text-green-600 dark:text-green-400"
-                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300",
-            )}
-          />
-          <div className="flex-1 min-w-0">
-            <div
-              className={cn(
-                "font-medium text-start text-sm sm:text-base",
-                active ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-white",
-              )}
-            >
-              {item.name}
-            </div>
-            <div
-              className={cn(
-                "text-xs sm:text-sm mt-1 text-start",
-                active
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-gray-500 dark:text-gray-400",
-              )}
-            >
-              {item.description}
-            </div>
+        <div className={cn(
+          "p-2 rounded-xl transition-colors duration-300",
+          active ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="font-black text-[11px] uppercase tracking-widest truncate">
+            {item.name}
+          </div>
+          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-0.5">
+            {item.description}
           </div>
         </div>
       </button>
@@ -357,99 +336,83 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
   const renderSections = () =>
     visibleSections.map((section, sectionIndex) => (
-      <div key={section.id} data-tour={`settings-section-${section.id}`}>
-        {sectionIndex > 0 && <Separator className="my-3" />}
+      <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
         {!isCollapsed && (
-          <div className="px-1 pt-2 pb-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          <div className="px-3 mb-2 flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
               {section.label}
             </span>
+            {sectionIndex === 0 && <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 ml-4 opacity-50" />}
           </div>
         )}
-        {isCollapsed && sectionIndex > 0 && <div className="py-1" />}
-        <div className={cn("space-y-1", isCollapsed && "flex flex-col items-center")}>
+        <div className={cn("space-y-1", isCollapsed && "flex flex-col items-center gap-2")}>
           {section.items.map(renderItem)}
         </div>
       </div>
     ));
 
   return (
-    <div className="flex h-full relative">
+    <div className="flex h-full relative bg-slate-50/50 dark:bg-slate-900/50">
       {/* Desktop Settings Sidebar */}
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
-            "hidden md:flex flex-col bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out",
-            isCollapsed ? "w-16" : "w-80",
+            "hidden md:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 transition-all duration-500 ease-in-out z-20",
+            isCollapsed ? "w-20" : "w-80",
           )}
         >
           {/* Header */}
-          <div
-            className={cn(
-              "flex-shrink-0 border-b border-gray-200 dark:border-gray-700",
-              isCollapsed ? "p-2" : "p-6",
-            )}
-          >
+          <div className={cn("flex-shrink-0 p-6", isCollapsed && "px-4")}>
             {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => navigate({ to: "/dashboard" })}
-                    className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <ArrowLeft className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {t("settings.backToDashboard", "Back to Dashboard")}
-                </TooltipContent>
-              </Tooltip>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate({ to: "/dashboard" })}
+                className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-emerald-600 transition-all"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
             ) : (
-              <>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {t("settings.title")}
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {t("settings.subtitle")}
-                </p>
-              </>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                  <Menu className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">
+                    {t("settings.title")}
+                  </h1>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
+                    Workspace Management
+                  </p>
+                </div>
+              </div>
             )}
           </div>
 
+          <Separator className="mx-6 w-auto opacity-50" />
+
           {/* Navigation */}
-          <nav
-            className={cn(
-              "flex-1 overflow-y-auto",
-              isCollapsed ? "p-2" : "p-4",
-            )}
-            data-tour="settings-menu"
-          >
+          <nav className={cn("flex-1 overflow-y-auto no-scrollbar py-6", isCollapsed ? "px-4" : "px-4")} data-tour="settings-menu">
             {renderSections()}
           </nav>
 
           {/* Collapse Toggle */}
-          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-2">
+          <div className="p-4 mt-auto">
             <Button
               variant="ghost"
               className={cn(
-                "w-full h-9 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100",
-                isCollapsed ? "justify-center" : "justify-start",
+                "w-full h-12 rounded-2xl text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-all",
+                isCollapsed ? "justify-center px-0" : "justify-start px-4",
               )}
               onClick={toggleCollapse}
-              title={
-                isCollapsed
-                  ? t("sidebar.expand", "Expand sidebar")
-                  : t("sidebar.collapse", "Collapse sidebar")
-              }
             >
               {isCollapsed ? (
-                <PanelLeft className="h-4 w-4" />
+                <PanelLeft className="h-5 w-5" />
               ) : (
                 <>
-                  <PanelLeftClose className="h-4 w-4 flex-shrink-0 mr-3" />
-                  <span className="flex-1 text-left text-sm">
-                    {t("sidebar.collapse", "Collapse")}
+                  <PanelLeftClose className="h-5 w-5 mr-3 shrink-0" />
+                  <span className="text-[11px] font-black uppercase tracking-widest truncate">
+                    {t("sidebar.collapse", "Collapse Sidebar")}
                   </span>
                 </>
               )}
@@ -459,72 +422,72 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       </TooltipProvider>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
-        {/* Mobile section bar — tap to open Drawer */}
-        <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="flex-1 overflow-auto w-full flex flex-col min-h-0 bg-slate-50/30 dark:bg-slate-900/30" data-main-scroll>
+        {/* Mobile section title bar */}
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-between w-full min-h-[44px]"
+            className="flex items-center justify-between w-full h-11 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner"
           >
             <div className="flex items-center gap-3">
               {(() => {
-                const currentItem = allVisibleItems.find((item) =>
-                  isActive(item.path),
-                );
+                const currentItem = allVisibleItems.find((item) => isActive(item.path));
                 if (currentItem) {
                   const Icon = currentItem.icon;
                   return (
                     <>
-                      <Icon className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                        <Icon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
                         {currentItem.name}
                       </span>
                     </>
                   );
                 }
                 return (
-                  <>
-                    <Menu className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {t("settings.title")}
-                    </span>
-                  </>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                    {t("settings.title")}
+                  </span>
                 );
               })()}
             </div>
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <span className="text-sm">
-                {t("settings.menu.changeSection", "Menu")}
-              </span>
-              <Menu className="h-5 w-5" />
-            </div>
+            <ChevronDown className="h-4 w-4 text-slate-400" />
           </button>
         </div>
-        {children}
+        
+        <div className="flex-1 p-4 md:p-8 lg:p-10 max-w-[1400px] mx-auto w-full">
+          {children}
+        </div>
       </div>
 
       {/* Mobile Settings Drawer */}
       <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <DrawerContent side="bottom" hideClose className="max-h-[80vh] rounded-t-2xl p-0">
-          <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <DrawerContent side="bottom" hideClose className="max-h-[85vh] rounded-t-[2.5rem] p-0 bg-white dark:bg-slate-900 border-none shadow-2xl">
+          <DrawerHeader className="px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
             <div className="flex items-center justify-between">
-              <DrawerTitle className="text-base font-semibold">
-                {t("settings.title")}
-              </DrawerTitle>
-              <button
-                type="button"
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <DrawerTitle className="text-lg font-black uppercase tracking-tight">
+                  {t("settings.title")}
+                </DrawerTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 -me-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label={t("common.close", "Close")}
+                className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800"
               >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+                <X className="h-5 w-5 text-slate-400" />
+              </Button>
             </div>
           </DrawerHeader>
           <div
-            className="overflow-y-auto px-3 py-2"
-            style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+            className="overflow-y-auto px-4 py-6 no-scrollbar"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 24px)" }}
           >
             <button
               type="button"
@@ -532,14 +495,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                 navigate({ to: "/" });
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full text-start p-3 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 mb-2"
+              className="w-full flex items-center gap-4 p-4 rounded-[1.5rem] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-inner mb-8 group"
             >
-              <div className="flex items-center gap-3">
-                <ArrowLeft className="h-5 w-5 flex-shrink-0 text-gray-600 dark:text-gray-300" />
-                <span className="font-medium text-sm text-gray-900 dark:text-white">
-                  {t("settings.backToDashboard", "Back to Dashboard")}
-                </span>
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm group-active:scale-95 transition-all">
+                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
+              <span className="font-black text-xs uppercase tracking-[0.15em] text-slate-900 dark:text-white">
+                {t("settings.backToDashboard", "Return to Dashboard")}
+              </span>
             </button>
             {renderSections()}
           </div>
