@@ -155,6 +155,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [isLoadingDates, setIsLoadingDates] = useState(false);
   const [datesLoaded, setDatesLoaded] = useState(false);
+  // Ref-based lock to prevent concurrent fetchAvailableDates calls (e.g. React Strict Mode double-invoke)
+  const isFetchingDatesRef = React.useRef(false);
 
   const [navYear, setNavYear] = useState(() => new Date().getFullYear());
   const [navMonth, setNavMonth] = useState(() => new Date().getMonth());
@@ -163,6 +165,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
   const [compareAvailableDates, setCompareAvailableDates] = useState<string[]>([]);
   const [compareIsLoadingDates, setCompareIsLoadingDates] = useState(false);
   const [compareDatesLoaded, setCompareDatesLoaded] = useState(false);
+  const isFetchingCompareDatesRef = React.useRef(false);
 
   const navMonthLabel = useMemo(() => {
     const d = new Date(navYear, navMonth, 1);
@@ -187,6 +190,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       }
       return newMonth;
     });
+    isFetchingDatesRef.current = false;
     setDatesLoaded(false);
     setAvailableDates([]);
   }, []);
@@ -204,13 +208,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       }
       return newMonth;
     });
+    isFetchingCompareDatesRef.current = false;
     setCompareDatesLoaded(false);
     setCompareAvailableDates([]);
   }, []);
 
   const fetchAvailableDates = useCallback(async () => {
-    if (!boundary || isLoadingDates) return;
+    if (!boundary || isFetchingDatesRef.current) return;
 
+    isFetchingDatesRef.current = true;
     setIsLoadingDates(true);
     try {
       const aoi = {
@@ -227,7 +233,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         formatDateForAPI(monthEnd),
         DEFAULT_CLOUD_COVERAGE,
         parcelId,
-        true // force_refresh
+        false // use cache on initial load; force_refresh only on explicit navigation
       );
 
       const dates = result.available_dates
@@ -245,12 +251,14 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       setDatesLoaded(true);
     } finally {
       setIsLoadingDates(false);
+      isFetchingDatesRef.current = false;
     }
-  }, [boundary, parcelName, isLoadingDates, navYear, navMonth, parcelId]);
+  }, [boundary, parcelName, navYear, navMonth, parcelId]);
 
   const fetchCompareAvailableDates = useCallback(async () => {
-    if (!boundary || compareIsLoadingDates) return;
+    if (!boundary || isFetchingCompareDatesRef.current) return;
 
+    isFetchingCompareDatesRef.current = true;
     setCompareIsLoadingDates(true);
     try {
       const aoi = {
@@ -267,7 +275,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
         formatDateForAPI(monthEnd),
         DEFAULT_CLOUD_COVERAGE,
         parcelId,
-        true // force_refresh
+        false // use cache; force_refresh only on explicit navigation
       );
 
       const dates = result.available_dates
@@ -286,21 +294,22 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
       setCompareDatesLoaded(true);
     } finally {
       setCompareIsLoadingDates(false);
+      isFetchingCompareDatesRef.current = false;
     }
-  }, [boundary, parcelName, compareIsLoadingDates, compareNavYear, compareNavMonth, parcelId, selectedDate]);
+  }, [boundary, parcelName, compareNavYear, compareNavMonth, parcelId, selectedDate]);
 
   useEffect(() => {
-    if (boundary && !datesLoaded && !isLoadingDates) {
+    if (boundary && !datesLoaded) {
       fetchAvailableDates();
     }
-  }, [boundary, datesLoaded, isLoadingDates, fetchAvailableDates]);
+  }, [boundary, datesLoaded, fetchAvailableDates]);
 
   useEffect(() => {
     if (viewMode !== 'temporal-compare') return;
-    if (boundary && !compareDatesLoaded && !compareIsLoadingDates) {
+    if (boundary && !compareDatesLoaded) {
       fetchCompareAvailableDates();
     }
-  }, [viewMode, boundary, compareDatesLoaded, compareIsLoadingDates, fetchCompareAvailableDates]);
+  }, [viewMode, boundary, compareDatesLoaded, fetchCompareAvailableDates]);
 
   useEffect(() => {
     if (viewMode !== 'temporal-compare' || !selectedDate) return;

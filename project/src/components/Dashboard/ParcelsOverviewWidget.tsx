@@ -6,6 +6,8 @@ import { useFarms, useParcelsByFarms } from '../../hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const ParcelsOverviewWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -35,22 +37,25 @@ const ParcelsOverviewWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 h-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-xl" />
-            <Skeleton className="h-5 w-20" />
+            <Skeleton className="h-10 w-10 rounded-2xl" />
+            <Skeleton className="h-5 w-24 rounded-lg" />
           </div>
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-8 rounded-xl" />
         </div>
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-28 rounded-xl" />
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
         </div>
-        <div className="space-y-3">
-          <Skeleton className="h-3 w-20" />
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-center justify-between px-1 mb-3">
+            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-px flex-1 mx-3 rounded" />
+          </div>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-10 rounded-lg" />
+            <Skeleton key={i} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       </div>
@@ -58,56 +63,50 @@ const ParcelsOverviewWidget: React.FC = () => {
   }
 
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7 hover:shadow-md hover:border-green-200 dark:hover:border-green-700 transition-all duration-300">
+    <div className="group bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 hover:shadow-xl hover:shadow-green-500/5 transition-all duration-500 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/40 dark:to-green-900/20 rounded-xl">
+          <div className="p-2.5 bg-green-50 dark:bg-green-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.parcels.title')}
           </h3>
         </div>
         <Button
-          variant="link"
+          variant="ghost"
+          size="sm"
           onClick={handleViewParcels}
-          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
+          className="text-slate-400 hover:text-green-600 dark:hover:text-green-400 h-8 rounded-xl px-2 transition-colors"
         >
-          {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="relative bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/10 rounded-xl p-4 overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">{t('dashboard.widgets.parcels.total')}</span>
-              <Layers className="h-4 w-4 text-green-600 dark:text-green-400" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.parcels.total')}</span>
+            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
               {parcels.length}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <div className="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1 uppercase tracking-tighter">
               {t('dashboard.widgets.parcels.parcels')}
             </div>
           </div>
         </div>
 
-        <div className="relative bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-900/30 dark:to-blue-900/10 rounded-xl p-4 overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 bg-blue-200/20 dark:bg-blue-400/10 rounded-full blur-2xl"></div>
+        <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{t('dashboard.widgets.parcels.surface')}</span>
-              <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.parcels.surface')}</span>
+            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
               {totalArea.toFixed(1)}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tighter">
               {t('dashboard.widgets.parcels.hectares')}
             </div>
           </div>
@@ -115,39 +114,38 @@ const ParcelsOverviewWidget: React.FC = () => {
       </div>
 
       {/* Top Crops */}
-      {topCrops.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-            {t('dashboard.widgets.parcels.topCrops')}
-          </h4>
+      {topCrops.length > 0 ? (
+        <div className="mt-auto">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              {t('dashboard.widgets.parcels.topCrops')}
+            </h4>
+            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
+          </div>
           <div className="space-y-2">
             {topCrops.map(([crop, count]) => (
-              <div key={crop} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900/70 transition-colors">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+              <div key={crop} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow group/item">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
                   {crop}
                 </span>
-                <span className="text-sm font-bold text-green-600 dark:text-green-400 ml-2 flex items-center gap-1">
+                <Badge variant="secondary" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-none font-bold tabular-nums">
                   {count}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">{t('dashboard.widgets.parcels.parcels')}</span>
-                </span>
+                </Badge>
               </div>
             ))}
           </div>
         </div>
-      )}
-
-      {parcels.length === 0 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl flex items-center justify-center">
-            <MapPin className="h-8 w-8 text-gray-300 dark:text-gray-600" />
-          </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+      ) : parcels.length > 0 ? null : (
+        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
+          <MapPin className="h-8 w-8 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.parcels.empty')}
           </p>
           <Button
+            size="sm"
             onClick={handleViewParcels}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
           >
-            <MapPin className="h-4 w-4" />
             {t('dashboard.widgets.parcels.create')}
           </Button>
         </div>

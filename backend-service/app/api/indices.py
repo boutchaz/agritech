@@ -28,9 +28,9 @@ import logging
 import ee
 import httpx
 
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user_or_service
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 

@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 import logging
 import math
 
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user_or_service
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 CORE_INDICES = ["NIRv", "EVI", "NDRE", "NDMI"]

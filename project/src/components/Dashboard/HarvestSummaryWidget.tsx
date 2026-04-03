@@ -10,6 +10,8 @@ import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const HarvestSummaryWidget: React.FC = () => {
   const navigate = useNavigate();
@@ -65,85 +67,80 @@ const HarvestSummaryWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 h-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-xl" />
-            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-10 w-10 rounded-2xl" />
+            <Skeleton className="h-5 w-24 rounded-lg" />
           </div>
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-8 rounded-xl" />
         </div>
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          <Skeleton className="h-28 rounded-xl" />
-          <Skeleton className="h-28 rounded-xl" />
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
         </div>
-        <div className="space-y-3">
-          <Skeleton className="h-3 w-20" />
-          <Skeleton className="h-16 rounded-lg" />
-        </div>
-        <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-5 w-8" />
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-center justify-between px-1 mb-3">
+            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
+          <Skeleton className="h-24 w-full rounded-2xl" />
+        </div>
+        <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
+          <Skeleton className="h-3 w-24 rounded" />
+          <Skeleton className="h-6 w-8 rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7 hover:shadow-md hover:border-orange-200 dark:hover:border-orange-700 transition-all duration-300">
+    <div className="group bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-500 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-orange-100 to-orange-50 dark:from-orange-900/40 dark:to-orange-900/20 rounded-xl">
+          <div className="p-2.5 bg-orange-50 dark:bg-orange-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <PackageIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.harvests.title')}
           </h3>
         </div>
         <Button
-          variant="link"
+          variant="ghost"
+          size="sm"
           onClick={handleViewHarvests}
-          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
+          className="text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 h-8 rounded-xl px-2 transition-colors"
         >
-          {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
       {stats.total > 0 ? (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <div className="relative bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/30 dark:to-orange-900/10 rounded-xl p-4 overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-orange-200/20 dark:bg-orange-400/10 rounded-full blur-2xl"></div>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.thisMonth')}</span>
-                  <Calendar className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.thisMonth')}</span>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
                   {stats.thisMonth}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1 uppercase tracking-tighter">
                   {t('dashboard.widgets.harvests.harvests')}
                 </div>
               </div>
             </div>
 
-            <div className="relative bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-900/10 rounded-xl p-4 overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-green-200/20 dark:bg-green-400/10 rounded-full blur-2xl"></div>
+            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.quantity')}</span>
-                  <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-0.5">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.quantity')}</span>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
                   {stats.thisMonthQuantity.toFixed(0)}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">
                   {t('dashboard.widgets.harvests.kgThisMonth')}
                 </div>
               </div>
@@ -152,68 +149,62 @@ const HarvestSummaryWidget: React.FC = () => {
 
           {/* Latest Harvest */}
           {stats.lastHarvest && (
-            <div>
-              <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-                {t('dashboard.widgets.harvests.lastHarvest')}
-              </h4>
-              <div className="p-3 bg-gradient-to-r from-gray-50 to-gray-50/50 dark:from-gray-900/50 dark:to-gray-900/20 rounded-lg hover:from-orange-50 hover:to-orange-50/50 dark:hover:from-orange-900/20 dark:hover:to-orange-900/10 transition-all duration-200">
-                <div className="flex items-start justify-between mb-2">
+            <div className="mt-auto">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  {t('dashboard.widgets.harvests.lastHarvest')}
+                </h4>
+                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
+              </div>
+              <div className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow group/item">
+                <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
                       {stats.lastHarvest.parcel_name || t('dashboard.widgets.harvests.parcel')}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      {format(parseISO(stats.lastHarvest.harvest_date), 'dd MMMM yyyy', { locale: getLocale() })}
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
+                      {format(parseISO(stats.lastHarvest.harvest_date), 'dd MMM yyyy', { locale: getLocale() })}
                     </p>
-                    {stats.lastHarvest.crop_name && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mt-1">
-                        {stats.lastHarvest.crop_name}
-                      </p>
-                    )}
                   </div>
                   <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                    <div className="text-lg font-black text-orange-600 dark:text-orange-400 tabular-nums leading-none">
                       {stats.lastHarvest.quantity?.toFixed(0) || 0}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
                       {stats.lastHarvest.unit || t('dashboard.widgets.harvests.kg')}
                     </div>
                   </div>
                 </div>
 
                 {stats.lastHarvest.quality_grade && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.widgets.harvests.quality')}:</span>
-                    <span className="text-xs font-bold px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg">
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.quality')}</span>
+                    <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-black text-[9px] tracking-widest px-2 py-0.5">
                       {stats.lastHarvest.quality_grade}
-                    </span>
+                    </Badge>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Total Stats */}
-          <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{t('dashboard.widgets.harvests.totalHarvests')}</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{stats.total}</span>
-            </div>
+          {/* Total Footer */}
+          <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.totalHarvests')}</span>
+            <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-lg">{stats.total}</span>
           </div>
         </>
       ) : (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-2xl flex items-center justify-center">
-            <PackageIcon className="h-8 w-8 text-gray-300 dark:text-gray-600" />
-          </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
+          <PackageIcon className="h-8 w-8 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.harvests.empty')}
           </p>
           <Button
-            variant="orange"
+            size="sm"
             onClick={handleViewHarvests}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
           >
-            <PackageIcon className="h-4 w-4" />
             {t('dashboard.widgets.harvests.record')}
           </Button>
         </div>

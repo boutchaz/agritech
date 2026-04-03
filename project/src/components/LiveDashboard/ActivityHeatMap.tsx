@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -204,73 +205,86 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
   }
 
   return (
-    <div className={isFullscreen
-      ? 'fixed inset-0 z-[2000] bg-white dark:bg-gray-800 flex flex-col'
-      : 'group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-300'
-    }>
+    <div className={cn(
+      "transition-all duration-500",
+      isFullscreen
+        ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-900 flex flex-col'
+        : 'group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-emerald-500/5'
+    )}>
       {/* Header */}
-      <div className="p-5 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-900/20 rounded-xl">
+      <div className="p-6 border-b border-slate-50 dark:border-slate-700/50">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
               <Map className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
                 {t('liveDashboard.heatmap.title')}
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
                 {t('liveDashboard.heatmap.subtitle')}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex flex-wrap items-center gap-3">
             {lastUpdated && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <RefreshCw className="h-3 w-3" />
+              <span className="hidden sm:flex text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
+                <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
                 {new Date(lastUpdated).toLocaleTimeString()}
               </span>
             )}
-            {data.length > 0 && (
+            
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
               <Button
                 size="sm"
-                variant="outline"
-                onClick={() => fitAllRef.current?.()}
-                aria-label={t('common.viewAll', 'View all')}
-                className="text-xs h-auto py-1.5"
+                variant={isSatellite ? 'default' : 'ghost'}
+                onClick={() => setIsSatellite(true)}
+                className={cn(
+                  "h-8 text-[10px] font-black uppercase tracking-widest rounded-lg px-3",
+                  isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
               >
-                ⊞ {t('common.viewAll', 'View all')}
+                <Layers className="h-3 w-3 mr-1.5" />
+                Satellite
               </Button>
-            )}
-            <Button
-              size="sm"
-              variant={isSatellite ? 'default' : 'outline'}
-              onClick={() => setIsSatellite(s => !s)}
-              aria-label={t('common.toggleSatellite', 'Toggle satellite view')}
-              className="text-xs h-auto py-1.5"
-            >
-              <Layers className="h-3.5 w-3.5" />
-              {isSatellite ? t('common.satellite', 'Satellite') : t('common.map', 'Map')}
-            </Button>
+              <Button
+                size="sm"
+                variant={!isSatellite ? 'default' : 'ghost'}
+                onClick={() => setIsSatellite(false)}
+                className={cn(
+                  "h-8 text-[10px] font-black uppercase tracking-widest rounded-lg px-3",
+                  !isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                <Map className="h-3 w-3 mr-1.5" />
+                Plan
+              </Button>
+            </div>
+
             <Button
               size="icon"
               variant="outline"
-              onClick={() => setIsFullscreen(s => !s)}
-              aria-label={isFullscreen ? t('common.exitFullscreen', 'Exit fullscreen') : t('common.fullscreen', 'Fullscreen')}
-              className="h-auto w-auto p-1.5"
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="h-10 w-10 rounded-xl border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm"
             >
-              {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
+
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800 h-10">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Map — always shown */}
-      <div className={isFullscreen ? 'flex-1 relative min-h-0' : 'h-96 relative'}>
+      {/* Map Content */}
+      <div className={cn("relative overflow-hidden", isFullscreen ? "flex-1 min-h-0" : "h-[500px]")}>
         <MapContainer
           key={isFullscreen ? 'fullscreen' : 'normal'}
           center={defaultCenter}
@@ -290,7 +304,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
             </>
           ) : (
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              attribution='&copy; OSM'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
           )}
@@ -299,16 +313,16 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
           <ActivityCircles data={data} />
         </MapContainer>
 
-        {/* Empty state overlay — shown on top of the map */}
+        {/* Empty state overlay */}
         {data.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-[1000] pointer-events-none">
-            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-lg px-6 py-4 text-center max-w-xs">
-              <Map className="h-8 w-8 opacity-30 mx-auto mb-2" />
-              <p className="font-medium text-gray-600 dark:text-gray-300 text-sm">
-                {t('liveDashboard.heatmap.noFarms', 'Aucune ferme localisée')}
-              </p>
-              <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">
-                {t('liveDashboard.heatmap.noFarmsHint', 'Dessinez des parcelles sur la carte pour voir vos fermes ici')}
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-700 px-10 py-8 text-center max-w-sm">
+              <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-3xl w-fit mx-auto mb-4 border border-slate-100 dark:border-slate-800">
+                <Map className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+              </div>
+              <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('liveDashboard.heatmap.noFarms')}</h4>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+                {t('liveDashboard.heatmap.noFarmsHint')}
               </p>
             </div>
           </div>
@@ -316,42 +330,54 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
 
         {data.length > 0 && (
           <>
-            {/* Légende */}
-            <div className="absolute bottom-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3 z-[1000] max-w-[180px]">
-              <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">Légende</h4>
-              <div className="space-y-1.5">
-                {/* Active types */}
+            {/* Legend Overlay */}
+            <div className="absolute bottom-6 left-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-5 z-[1000] min-w-[200px]">
+              <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Legend</h4>
+              <div className="space-y-3">
                 {presentTypes.map(type => (
-                  <div key={type} className="flex items-center gap-2 text-xs">
+                  <div key={type} className="flex items-center gap-3 group/item cursor-default">
                     <span
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 transition-transform group-hover/item:scale-125"
                       style={{ background: ACTIVITY_COLORS[type] ?? '#6b7280' }}
                     />
-                    <span className="text-gray-600 dark:text-gray-400">
+                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
                       {ACTIVITY_LABELS[type] ?? type}
                     </span>
                   </div>
                 ))}
-                {/* Idle */}
-                <div className="flex items-center gap-2 text-xs border-t border-gray-100 dark:border-gray-700 pt-1 mt-1">
-                  <span className="w-3 h-3 rounded-full flex-shrink-0 border-2 border-dashed border-gray-400 bg-gray-200 dark:bg-gray-600" />
-                  <span className="text-gray-400 dark:text-gray-500 italic">Inactif</span>
+                <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-50 dark:border-slate-700 opacity-60">
+                  <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 border-dashed border-slate-400 bg-slate-100 dark:bg-slate-900" />
+                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">Idle / Farm</span>
                 </div>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-lg p-3 z-[1000]">
-              <div className="text-xs text-gray-500 dark:text-gray-400">Fermes actives</div>
-              <div className="text-xl font-bold text-green-600 dark:text-green-400">
-                {activeFarmsCount}
-                <span className="text-sm font-normal text-gray-400"> / {totalFarmsCount}</span>
-              </div>
-              {activeCount > 0 && (
-                <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {activeCount} activité{activeCount > 1 ? 's' : ''} en cours
+            {/* Live Stats Overlay */}
+            <div className="absolute top-6 right-6 flex flex-col gap-3 z-[1000]">
+              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 min-w-[160px]">
+                <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Active Assets</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{activeFarmsCount}</span>
+                  <span className="text-[10px] font-bold text-slate-400">/ {totalFarmsCount} FARMS</span>
                 </div>
-              )}
+                {activeCount > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg w-fit">
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
+                      {activeCount} OPERATING
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => fitAllRef.current?.()}
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-slate-100 dark:border-slate-700 shadow-lg text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-white transition-all h-10 px-4"
+              >
+                Reset View
+              </Button>
             </div>
           </>
         )}

@@ -171,46 +171,70 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
   };
 
   return (
-    <div className="space-y-6">
-      <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
-
-      {/* Row 1: Key Performance Indicators */}
-      <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
-        <StockAlertsWidget />
-        <HarvestSummaryWidget />
-        <SalesOverviewWidget />
+    <div className="space-y-8">
+      {/* Farm Selection Context */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
+        <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
       </div>
 
-      {/* Row 2: Action Items & Financial Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>
-        <AccountingWidget />
+      {/* Primary KPI Tier: Critical Business Metrics */}
+      <div data-tour="dashboard-stats" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div data-tour="dashboard-parcels" className="h-full">
+          <ParcelsOverviewWidget />
+        </div>
+        <div className="h-full">
+          <StockAlertsWidget />
+        </div>
+        <div className="h-full">
+          <HarvestSummaryWidget />
+        </div>
+        <div className="h-full">
+          <SalesOverviewWidget />
+        </div>
       </div>
 
-      {/* Row 3: Operational Data */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AnalysisWidget />
-        <WorkersActivityWidget />
+      {/* Main Operational Tier: Actionable Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: Tasks & Workforce */}
+        <div className="lg:col-span-7 space-y-8">
+          <div data-tour="dashboard-tasks" className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <UpcomingTasksWidget />
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <WorkersActivityWidget />
+          </div>
+        </div>
+
+        {/* Right Column: Financials & Data Analysis */}
+        <div className="lg:col-span-5 space-y-8">
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <AccountingWidget />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <AnalysisWidget />
+          </div>
+        </div>
       </div>
 
-      {/* Additional Widgets from Settings */}
-      {settings.layout?.middleRow && settings.layout.middleRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Dynamic Widgets Tier */}
+      {(settings.layout?.middleRow?.length ?? 0) > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {settings.layout.middleRow
-            .filter(w => !['tasks', 'soil'].includes(w))
+            .filter(w => !['tasks', 'soil', 'parcels', 'stock', 'workers', 'harvests'].includes(w))
             .map((widgetType, index) => (
-              <div key={`middle-${widgetType}-${index}`}>
+              <div key={`middle-${widgetType}-${index}`} className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                 {renderWidget(widgetType)}
               </div>
             ))}
         </div>
       )}
 
-      {settings.layout?.bottomRow && settings.layout.bottomRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {(settings.layout?.bottomRow?.length ?? 0) > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {settings.layout.bottomRow.map((widgetType, index) => (
-            <div key={`bottom-${widgetType}-${index}`}>
+            <div key={`bottom-${widgetType}-${index}`} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
               {renderWidget(widgetType)}
             </div>
           ))}

@@ -59,7 +59,8 @@ function handleSessionExpired(): void {
       typeof window !== "undefined" &&
       window.location.pathname !== "/login"
     ) {
-      window.location.href = "/login";
+      const redirectPath = window.location.pathname + window.location.search;
+      window.location.href = `/login?redirect=${encodeURIComponent(redirectPath)}`;
     }
   }, 300);
 }
