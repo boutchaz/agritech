@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Any
 import uuid
 import hashlib
 import json
@@ -32,6 +32,26 @@ from app.middleware.auth import get_current_user_or_service
 
 router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
+
+
+def _interfaces_ts_point_to_api_dict(p: Any) -> Dict[str, Any]:
+    """Serialize provider dataclass TimeSeriesPoint for TimeSeriesResponse.data."""
+    d: Dict[str, Any] = {"date": p.date, "value": p.value}
+    for key in (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+        "pixel_count",
+        "cloud_coverage",
+    ):
+        v = getattr(p, key, None)
+        if v is not None:
+            d[key] = v
+    return d
 
 
 def _geometry_fingerprint(geometry: Dict) -> str:
@@ -724,7 +744,7 @@ async def get_time_series(
             )
             cdse_elapsed = time.monotonic() - t_cdse
             time_series_data = [
-                {"date": p.date, "value": p.value} for p in ts_result.data
+                _interfaces_ts_point_to_api_dict(p) for p in ts_result.data
             ]
             logger.info(
                 f"[timeseries][{req_id}] CDSE: Returned {len(time_series_data)} data points, "

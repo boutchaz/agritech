@@ -72,6 +72,7 @@ function getCalibrationLookbackDate(plantingYear: number | null): string {
   start.setMonth(start.getMonth() - 24);
   return start.toISOString().split("T")[0];
 }
+
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
 

@@ -22,6 +22,47 @@ GEE_INIT_TIMEOUT = 30  # seconds
 logger = logging.getLogger(__name__)
 
 
+def _serialize_ts_dict_for_api(obs: Dict[str, Any]) -> Dict[str, Any]:
+    """Map internal per-observation stats to API / Pydantic TimeSeriesPoint fields.
+
+    GEE chunk observations use ``cloud`` (tile-level %); API expects ``cloud_coverage``.
+    """
+    out: Dict[str, Any] = {
+        "date": obs["date"],
+        "value": obs["value"],
+    }
+    for key in (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+    ):
+        raw = obs.get(key)
+        if raw is not None:
+            try:
+                out[key] = float(raw)
+            except (TypeError, ValueError):
+                pass
+    pc = obs.get("pixel_count")
+    if pc is not None:
+        try:
+            out["pixel_count"] = int(pc)
+        except (TypeError, ValueError):
+            pass
+    cloud = obs.get("cloud_coverage")
+    if cloud is None:
+        cloud = obs.get("cloud")
+    if cloud is not None:
+        try:
+            out["cloud_coverage"] = float(cloud)
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
 def _find_system_font() -> str:
     _FONT_PATHS = {
         "Darwin": [
@@ -670,7 +711,7 @@ class EarthEngineService:
             f"Per-observation time series: {len(time_series)} real observations "
             f"for {index} ({start_date}→{end_date})"
         )
-        return [{"date": p["date"], "value": p["value"]} for p in time_series]
+        return [_serialize_ts_dict_for_api(p) for p in time_series]
 
     def _per_observation_chunk(
         self,
