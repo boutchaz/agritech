@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, CheckCircle, User } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, CheckCircle, User, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -423,7 +423,7 @@ const OrganizationSettings: React.FC = () => {
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.country')}</Label>
                     <Select
-                      value={orgData.country || ''}
+                      value={orgData.country || undefined}
                       onValueChange={(val) => handleInputChange('country', val)}
                     >
                       <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5">
