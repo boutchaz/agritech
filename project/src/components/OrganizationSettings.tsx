@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Map as MapIcon, ShoppingCart } from 'lucide-react';
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,7 +29,6 @@ interface OrganizationData {
   timezone?: string;
   currency_code?: string;
   is_active?: boolean;
-  map_provider?: 'default' | 'mapbox' | null;
   allow_negative_stock?: boolean;
 }
 
@@ -88,7 +87,6 @@ const OrganizationSettings: React.FC = () => {
           contact_person: data.contact_person,
           website: data.website,
           currency_symbol: undefined,
-          map_provider: data.map_provider,
           allow_negative_stock: data.accounting_settings?.allow_negative_stock ?? true,
         });
       } catch (err) {
@@ -126,7 +124,6 @@ const OrganizationSettings: React.FC = () => {
         country: cleanString(orgData.country),
         contact_person: cleanString(orgData.contact_person),
         website: cleanString(orgData.website),
-        map_provider: orgData.map_provider,
         accounting_settings: { allow_negative_stock: orgData.allow_negative_stock ?? true },
       });
 
@@ -152,7 +149,6 @@ const OrganizationSettings: React.FC = () => {
         contact_person: updatedOrg.contact_person ?? orgData.contact_person,
         website: updatedOrg.website ?? orgData.website,
         currency_symbol: orgData.currency_symbol,
-        map_provider: updatedOrg.map_provider ?? orgData.map_provider,
         allow_negative_stock: updatedOrg.accounting_settings?.allow_negative_stock ?? orgData.allow_negative_stock ?? true,
       });
 
@@ -494,80 +490,6 @@ const OrganizationSettings: React.FC = () => {
             onChange={handleCurrencyChange}
             disabled={saving}
           />
-        </div>
-
-        {/* Map Configuration */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <MapIcon className="inline h-5 w-5 mr-2" />
-            {t('organization.sections.mapConfiguration', 'Map Configuration')}
-          </h3>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('organization.mapProviderDescription', 'Select the tile source for map backgrounds.')}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Default provider card */}
-              <Button
-                type="button"
-                disabled={saving}
-                onClick={() => setOrgData({ ...orgData, map_provider: 'default' })}
-                className={`relative flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
-                  (orgData.map_provider || 'default') === 'default'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {(orgData.map_provider || 'default') === 'default' && (
-                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">
-                    &#10003;
-                  </span>
-                )}
-                <Globe className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('organization.mapProviderDefault', 'Default (OpenStreetMap / ESRI)')}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('organization.mapProviderDefaultDesc', 'Free, no API key required. Good general-purpose satellite and street tiles.')}
-                </span>
-              </Button>
-
-              {/* Mapbox provider card */}
-              <Button
-                type="button"
-                disabled={saving}
-                onClick={() => setOrgData({ ...orgData, map_provider: 'mapbox' })}
-                className={`relative flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
-                  orgData.map_provider === 'mapbox'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {orgData.map_provider === 'mapbox' && (
-                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">
-                    &#10003;
-                  </span>
-                )}
-                <MapIcon className="h-6 w-6 text-purple-600 dark:text-purple-400 mb-2" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('organization.mapProviderMapbox', 'Mapbox')}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('organization.mapProviderMapboxDesc', 'Higher-quality satellite imagery. Requires an API token.')}
-                </span>
-              </Button>
-            </div>
-
-            {/* Mapbox token warning */}
-            {orgData.map_provider === 'mapbox' && !import.meta.env.VITE_MAPBOX_TOKEN && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {t('organization.mapProviderTokenWarning', 'Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.')}
-                </p>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Sales & Stock Settings */}

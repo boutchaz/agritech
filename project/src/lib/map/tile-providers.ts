@@ -99,15 +99,6 @@ export function createTileLayers(provider: MapTileProvider, options: TileLayerOp
   }
 }
 
-export function resolveMapProvider(orgProvider?: string | null): MapTileProvider {
-  if (orgProvider === 'mapbox' || orgProvider === 'default') {
-    return orgProvider;
-  }
-
-  const envProvider = import.meta.env.VITE_MAP_PROVIDER;
-  if (envProvider === 'mapbox' || envProvider === 'default') {
-    return envProvider;
-  }
-
-  return 'default';
+export function resolveMapProvider(): MapTileProvider {
+  return import.meta.env.VITE_MAPBOX_TOKEN ? 'mapbox' : 'default';
 }
