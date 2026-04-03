@@ -15987,8 +15987,11 @@ CREATE TABLE IF NOT EXISTS pest_disease_library (
 
 ALTER TABLE pest_disease_library ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "org_access" ON pest_disease_library
-  FOR ALL USING (public.is_organization_member(organization_id));
+CREATE POLICY "authenticated_read" ON pest_disease_library
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "admin_all" ON pest_disease_library
+  FOR ALL TO postgres USING (true);
 
 -- Index for active library entries
 CREATE INDEX IF NOT EXISTS idx_pest_disease_library_active ON pest_disease_library (is_active, name);
