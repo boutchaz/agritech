@@ -1,5 +1,4 @@
 import {
-  BadGatewayException,
   BadRequestException,
   Inject,
   Injectable,
@@ -15,6 +14,7 @@ import {
 } from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import { SatelliteProxyService } from "../satellite-indices/satellite-proxy.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
 import { NotificationType } from "../notifications/dto/notification.dto";
@@ -208,6 +208,7 @@ export class CalibrationService {
     private readonly nutritionOptionService: NutritionOptionService,
     private readonly annualPlanService: AnnualPlanService,
     private readonly satelliteCacheService: SatelliteCacheService,
+    private readonly satelliteProxy: SatelliteProxyService,
     private readonly notificationsService: NotificationsService,
     private readonly calibrationReviewAdapter: CalibrationReviewAdapter,
   ) {}
@@ -955,15 +956,14 @@ export class CalibrationService {
 
     emitProgress(2, "calibration_engine", "Exécution du moteur de calibration V2...");
 
-    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
-      "/api/calibration/v2/run",
-      {
+    const v2Output = await this.satelliteProxy.proxy("POST", "/calibration/v2/run", {
+      body: {
         calibration_input: calibrationInput,
         satellite_images: satelliteImages,
         weather_rows: weatherRows,
       },
       organizationId,
-    );
+    }) as CalibrationResponse;
 
     emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
 
@@ -1281,21 +1281,16 @@ export class CalibrationService {
       const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
       const today = new Date().toISOString().split("T")[0];
 
-      const rasterResult = await this.postCalibrationApi<{
-        pixels: Array<{ lon: number; lat: number; value: number }>;
-        count: number;
-      }>(
-        "/api/calibration/v2/extract-raster",
-        {
+      const rasterResult = await this.satelliteProxy.proxy("POST", "/calibration/v2/extract-raster", {
+        body: {
           geometry: wgs84Boundary,
           start_date: sinceDate,
           end_date: today,
           scale: 10,
         },
         organizationId,
-        undefined,
-        1,
-      );
+        timeout: 120000,
+      }) as { pixels: Array<{ lon: number; lat: number; value: number }>; count: number };
 
       if (rasterResult.count > 1) {
         ndviRasterPixels = rasterResult.pixels;
@@ -1319,19 +1314,16 @@ export class CalibrationService {
       const latitude = this.toNumber(firstRow?.latitude) ?? 0;
       const longitude = this.toNumber(firstRow?.longitude) ?? 0;
 
-      await this.postCalibrationApi<{
-        crop_type: string;
-        updated_rows: number;
-      }>(
-        "/api/calibration/v2/precompute-gdd",
-        {
-          latitude,
-          longitude,
+      await this.satelliteProxy.proxy("POST", "/calibration/v2/precompute-gdd", {
+        body: {
           crop_type: parcel.cropType,
-          rows: weatherRows,
+          planting_date: dto.planting_date,
+          start_date: sinceDate,
+          end_date: today,
         },
         organizationId,
-      );
+        timeout: 120000,
+      });
     }
 
     emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
@@ -1373,16 +1365,15 @@ export class CalibrationService {
       reference_data: referenceData,
     };
 
-    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
-      "/api/calibration/v2/run",
-      {
+    const v2Output = await this.satelliteProxy.proxy("POST", "/calibration/v2/run", {
+      body: {
         calibration_input: calibrationInput,
         satellite_images: satelliteImages,
         weather_rows: weatherRows,
         ndvi_raster_pixels: ndviRasterPixels,
       },
       organizationId,
-    );
+    }) as CalibrationResponse;
 
     emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
 
@@ -2517,14 +2508,13 @@ export class CalibrationService {
       throw new NotFoundException("No NDVI readings found for parcel");
     }
 
-    return this.postCalibrationApi<PercentilesResponse>(
-      "/api/calibration/percentiles",
-      {
+    return (await this.satelliteProxy.proxy("POST", "/calibration/percentiles", {
+      body: {
         values: ndviValues,
         percentiles: NDVI_PERCENTILES,
       },
       organizationId,
-    );
+    })) as PercentilesResponse;
   }
 
   async getZones(
@@ -2541,14 +2531,13 @@ export class CalibrationService {
       throw new NotFoundException("No NDVI readings found for parcel");
     }
 
-    return this.postCalibrationApi<ZonesResponse>(
-      "/api/calibration/classify-zones",
-      {
+    return (await this.satelliteProxy.proxy("POST", "/calibration/classify-zones", {
+      body: {
         ndvi_values: ndviValues,
         thresholds,
       },
       organizationId,
-    );
+    })) as ZonesResponse;
   }
 
   private async getParcelContext(
@@ -2846,28 +2835,15 @@ export class CalibrationService {
     const startDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
     const endDate = new Date().toISOString().split("T")[0];
 
-    const url = new URL(
-      `${this.getSatelliteServiceUrl()}/api/weather/historical`,
-    );
-    url.searchParams.set("latitude", String(roundedLatitude));
-    url.searchParams.set("longitude", String(roundedLongitude));
-    url.searchParams.set("start_date", startDate);
-    url.searchParams.set("end_date", endDate);
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: { "x-organization-id": organizationId },
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!response.ok) {
-      this.logger.warn(
-        `Weather auto-sync failed for parcel ${parcel.id}: HTTP ${response.status}`,
-      );
-      return;
-    }
-
-    const body = (await response.json()) as {
+    const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
+      query: {
+        latitude: String(roundedLatitude),
+        longitude: String(roundedLongitude),
+        start_date: startDate,
+        end_date: endDate,
+      },
+      organizationId,
+    }) as {
       latitude: number;
       longitude: number;
       source?: string;
@@ -3265,105 +3241,6 @@ export class CalibrationService {
 
     const keys = Object.keys(meanDates);
     return keys.length > 0 ? keys[0] : null;
-  }
-
-  private async postCalibrationApi<T>(
-    path: string,
-    payload: unknown,
-    organizationId: string,
-    authToken?: string,
-    maxRetries: number = 3,
-  ): Promise<T> {
-    const url = `${this.getSatelliteServiceUrl()}${path}`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-organization-id": organizationId,
-    };
-    if (authToken) {
-      headers["Authorization"] = `Bearer ${authToken}`;
-    }
-
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(5 * 60 * 1000),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          const message =
-            errorText ||
-            `Calibration service request failed with status ${response.status}`;
-
-          if (response.status >= 500 && attempt < maxRetries) {
-            lastError = new BadGatewayException(message);
-            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-            this.logger.warn(
-              `Calibration API ${path} returned ${response.status}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, delay));
-            continue;
-          }
-
-          throw response.status >= 500
-            ? new BadGatewayException(message)
-            : new BadRequestException(message);
-        }
-
-        const responseBody: T = await response.json();
-        return responseBody;
-      } catch (error) {
-        if (error instanceof BadRequestException) {
-          throw error;
-        }
-
-        const isRetryable =
-          error instanceof BadGatewayException ||
-          (error instanceof Error &&
-            (error.name === "AbortError" ||
-              error.name === "TimeoutError" ||
-              error.message.includes("fetch failed")));
-
-        if (isRetryable && attempt < maxRetries) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-          this.logger.warn(
-            `Calibration API ${path} failed (${lastError.message}), retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
-
-        if (error instanceof BadGatewayException) {
-          throw error;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unknown calibration service error";
-        this.logger.error(`Calibration API call failed for ${url}: ${message}`);
-        throw new BadGatewayException(
-          `Calibration service unavailable: ${message}`,
-        );
-      }
-    }
-
-    throw (
-      lastError ??
-      new BadGatewayException("Calibration service unavailable after retries")
-    );
-  }
-
-  private getSatelliteServiceUrl(): string {
-    const baseUrl =
-      process.env.SATELLITE_SERVICE_URL || "http://localhost:8001";
-    return baseUrl.replace(/\/+$/, "");
   }
 
   private getLookbackDate(days: number): string {
