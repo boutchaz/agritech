@@ -87,6 +87,20 @@ async def get_optional_user(
         return None
 
 
+async def get_current_user_or_service(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if settings.INTERNAL_SERVICE_TOKEN and token == settings.INTERNAL_SERVICE_TOKEN:
+        return {"user": {"id": "internal-service"}, "token": token, "is_internal": True}
+    user = await verify_token_with_supabase(token)
+    return {"user": user, "token": token}
+
+
 async def require_organization_access(
     organization_id: str,
     current_user: dict = Depends(get_current_user),
@@ -113,9 +127,7 @@ async def require_organization_access(
         memberships = response.json()
 
         if not memberships:
-            raise HTTPException(
-                status_code=403, detail="Access denied to organization"
-            )
+            raise HTTPException(status_code=403, detail="Access denied to organization")
 
         return {
             "user": current_user["user"],

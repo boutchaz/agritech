@@ -5,7 +5,9 @@ import os
 
 # Load .env file before reading environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
+
 
 class Settings(BaseSettings):
     # Service configuration
@@ -60,14 +62,14 @@ class Settings(BaseSettings):
     DEFAULT_INDICES: List[str] = ["NDVI", "NDRE", "NIRv", "EVI", "GCI", "SAVI"]
     DEFAULT_DAYS_BACK: int = 7
 
+    # Shared secret for NestJS→FastAPI internal calls (bypasses user JWT validation)
+    INTERNAL_SERVICE_TOKEN: str = ""
+
     # Background tasks
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
-    model_config = ConfigDict(
-        env_file=".env",
-        case_sensitive=True,
-        extra="ignore"
-    )
+    model_config = ConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+
 
 settings = Settings()

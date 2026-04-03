@@ -10,9 +10,9 @@ from ..services.calibration.gdd_service import precompute_gdd
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
 
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user_or_service
 
-router = APIRouter(dependencies=[Depends(get_current_user)])
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 

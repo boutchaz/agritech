@@ -6,6 +6,7 @@ import { AlertService } from '../health/alert.service';
 export class SatelliteProxyService {
   private readonly logger = new Logger(SatelliteProxyService.name);
   private readonly satelliteBaseUrl: string;
+  private readonly internalServiceToken: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -13,6 +14,7 @@ export class SatelliteProxyService {
   ) {
     const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
+    this.internalServiceToken = this.configService.get<string>('INTERNAL_SERVICE_TOKEN') || '';
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
   }
 
@@ -54,6 +56,8 @@ export class SatelliteProxyService {
     }
     if (authToken) {
       headers['authorization'] = `Bearer ${authToken}`;
+    } else if (this.internalServiceToken) {
+      headers['authorization'] = `Bearer ${this.internalServiceToken}`;
     }
 
     this.logger.debug(`[Proxy] ${method} ${url}`);
@@ -143,6 +147,8 @@ export class SatelliteProxyService {
     }
     if (authToken) {
       headers['authorization'] = `Bearer ${authToken}`;
+    } else if (this.internalServiceToken) {
+      headers['authorization'] = `Bearer ${this.internalServiceToken}`;
     }
 
     try {
