@@ -975,7 +975,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   };
 
   const saveCompletedToursRef = useRef(saveCompletedTours);
-  saveCompletedToursRef.current = saveCompletedTours;
+  useEffect(() => {
+    saveCompletedToursRef.current = saveCompletedTours;
+  });
 
   /**
    * Save dismissed tours to backend with localStorage fallback
@@ -1092,6 +1094,33 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     }));
   }, []);
 
+  /**
+   * Normal completion: mark current tour completed, persist, stop Joyride.
+   * In controlled mode, react-joyride ignores internal index bumps, so after the
+   * last step `controls.next()` never drives `index >= size` → no STATUS.FINISHED /
+   * TOUR_END. We must complete explicitly on STEP_AFTER + NEXT for the final step.
+   */
+  const completeRunningTour = useCallback(() => {
+    setTourState(prev => {
+      const { currentTour, completedTours } = prev;
+      if (!currentTour) {
+        return { ...prev, isRunning: false, stepIndex: 0 };
+      }
+      if (!completedTours.includes(currentTour)) {
+        const newCompletedTours = [...completedTours, currentTour];
+        void saveCompletedToursRef.current(newCompletedTours);
+        return {
+          ...prev,
+          completedTours: newCompletedTours,
+          currentTour: null,
+          isRunning: false,
+          stepIndex: 0,
+        };
+      }
+      return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
+    });
+  }, []);
+
   const isTourCompleted = useCallback((tourId: TourId) => {
     return tourState.completedTours.includes(tourId);
   }, [tourState.completedTours]);
@@ -1180,26 +1209,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       return;
     }
 
-    // --- 2. Tour finished ---
+    // --- 2. Tour finished (uncontrolled / overlay paths) ---
     if (status === STATUS.FINISHED || type === EVENTS.TOUR_END) {
-      setTourState(prev => {
-        const { currentTour, completedTours } = prev;
-        if (!currentTour) {
-          return { ...prev, isRunning: false, stepIndex: 0 };
-        }
-        if (!completedTours.includes(currentTour)) {
-          const newCompletedTours = [...completedTours, currentTour];
-          void saveCompletedToursRef.current(newCompletedTours);
-          return {
-            ...prev,
-            completedTours: newCompletedTours,
-            currentTour: null,
-            isRunning: false,
-            stepIndex: 0,
-          };
-        }
-        return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
-      });
+      completeRunningTour();
       return;
     }
 
@@ -1226,17 +1238,22 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       return;
     }
 
-    // --- 5. After a step completes — advance controlled index ---
+    // --- 5. After a step completes — advance controlled index or finish ---
+    // Joyride emits `action: lastAction ?? ACTIONS.UPDATE` for STEP_AFTER; if `lastAction`
+    // is not set yet, Finir/Next on the last step sends UPDATE — we must still complete or
+    // `isRunning` stays true and the overlay remains (seen on /infrastructure).
     if (type === EVENTS.STEP_AFTER) {
-      if (action === ACTIONS.NEXT) {
+      if (action === ACTIONS.PREV) {
+        setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
+      } else if (action === ACTIONS.NEXT || action === ACTIONS.UPDATE) {
         if (index + 1 < size) {
           setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
+        } else {
+          completeRunningTour();
         }
-      } else if (action === ACTIONS.PREV) {
-        setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
       }
     }
-  }, [dismissTour, endTour, tourState.currentTour, tourState.dismissedTours]);
+  }, [completeRunningTour, dismissTour, endTour, tourState.currentTour, tourState.dismissedTours]);
 
   /**
    * Reset a specific tour - allows tour to show again
@@ -1374,9 +1391,13 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     meta: { name: t('close', 'Close'), description: 'End guided tour' },
   });
 
-  if (isOnboardingRoute && tourState.isRunning) {
-    endTour();
-  }
+  useEffect(() => {
+    if (!(isOnboardingRoute && tourState.isRunning)) return;
+    const id = window.setTimeout(() => {
+      endTour();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [isOnboardingRoute, tourState.isRunning, endTour]);
 
   return (
     <TourContext.Provider
@@ -1402,6 +1423,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       {children}
       {!isOnboardingRoute && !isMobile && (
         <Joyride
+          key={tourState.currentTour ?? 'joyride-idle'}
           steps={rawSteps}
           run={shouldRun}
           stepIndex={tourState.stepIndex}

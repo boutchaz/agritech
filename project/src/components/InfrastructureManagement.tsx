@@ -782,7 +782,10 @@ const InfrastructureManagement: React.FC = () => {
           </div>
 
           {organizationStructures.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <div
+              data-tour="infrastructure-list"
+              className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600"
+            >
               <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {t('infrastructure.empty.organizationTitle')}
