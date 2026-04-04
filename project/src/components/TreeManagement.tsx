@@ -428,7 +428,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
               Ajouter un type de plantation
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
               <input
                 type="text"
                 value={newPlantationType.type}

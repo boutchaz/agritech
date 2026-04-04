@@ -150,7 +150,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
           </div>
 
           {/* Sources Grid */}
-          <div className={cn('grid gap-2', compact ? 'grid-cols-5' : 'grid-cols-2 md:grid-cols-5')}>
+          <div className={cn('grid gap-2', compact ? 'grid-cols-5' : 'grid-cols-2 lg:grid-cols-5')}>
             {Object.entries(metadata.sources).map(([name, source]) => (
               <SourceCard
                 key={name}

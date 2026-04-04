@@ -935,7 +935,7 @@ const UtilitiesManagement: React.FC = () => {
 
       {/* Summary Cards */}
       {utilities.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">

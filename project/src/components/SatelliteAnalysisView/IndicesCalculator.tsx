@@ -363,7 +363,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedIndices.length} Selected</span>
               </div>
               
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                 {VEGETATION_INDICES.map((index: VegetationIndexType) => {
                   const isSelected = selectedIndices.includes(index);
                   const colors = getIndexColors(index);

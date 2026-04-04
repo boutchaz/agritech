@@ -326,7 +326,7 @@ export default function StockEntryForm({
   const formContent = (
     <form id="stock-entry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Entry Type Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
             {Object.values(STOCK_ENTRY_TYPES).map((type) => {
               const Icon =
                 type.icon === 'PackagePlus'

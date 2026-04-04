@@ -249,7 +249,7 @@ const CalendarContent: React.FC<{
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {/* Total */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow border-l-4 border-slate-500">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('tasks.calendarPage.stats.total', 'Total')}</p>

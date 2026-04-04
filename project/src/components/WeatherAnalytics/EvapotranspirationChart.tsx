@@ -145,7 +145,7 @@ const EvapotranspirationChart: React.FC<EvapotranspirationChartProps> = ({
 
       {/* Summary Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               {t('weather.et.totalET', 'Total ET₀')}

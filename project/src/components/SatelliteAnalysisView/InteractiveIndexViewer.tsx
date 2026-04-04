@@ -849,7 +849,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
               </Card>
 
               {/* Statistics Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
                 {(data as any).statistics && [
                   { label: t('satellite:heatmap.stats.mean'), value: (data as any).statistics.mean, icon: Activity, color: 'text-blue-600' },
                   { label: t('satellite:heatmap.stats.median'), value: (data as any).statistics.median, icon: Minus, color: 'text-slate-600' },

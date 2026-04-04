@@ -2249,7 +2249,7 @@ const MapComponent: React.FC<MapProps> = ({
                   <Satellite className="h-4 w-4 text-blue-600" />
                   <span>{t('map.vegetationIndices')}</span>
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {indicesResults.map((result, index) => (
                     <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex justify-between items-center">
@@ -2287,7 +2287,7 @@ const MapComponent: React.FC<MapProps> = ({
                 </h4>
 
                 {timeSeriesResults.statistics && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                       <p className="text-xs text-gray-500">{t('map.average')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.mean.toFixed(3)}</p>

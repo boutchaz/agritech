@@ -127,7 +127,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Statistiques détaillées
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {chartData.costByType.length}

@@ -358,7 +358,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         {/* Index Selection */}
         <div>
           <label className="text-sm font-medium mb-3 block">Vegetation Indices</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {VEGETATION_INDICES.map(index => (
               <label key={index} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
                 <input
@@ -426,7 +426,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             <h3 className="font-medium">Cloud Coverage Analysis</h3>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Available Images:</span>
               <div className="font-medium">{cloudCoverageInfo.available_images_count}</div>
@@ -481,7 +481,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             return (
               <>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-blue-600">Images utilisées:</span>
                       <div className="font-medium">{displayStats.cloud_coverage_info.images_found}</div>
@@ -528,7 +528,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+                      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
                         <div className="bg-gray-50 p-2 rounded">
                           <div className="text-gray-600">Moyenne</div>
                           <div className="font-medium">{stats.mean.toFixed(3)}</div>

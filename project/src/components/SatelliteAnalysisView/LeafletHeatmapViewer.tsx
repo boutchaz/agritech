@@ -425,7 +425,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
           <div className="bg-gray-50 rounded-lg p-4 space-y-4">
             <h3 className="font-medium text-gray-900">{t('satellite:heatmap.configuration')}</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Date

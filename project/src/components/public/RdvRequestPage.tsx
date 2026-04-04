@@ -231,7 +231,7 @@ export function RdvRequestPage({
               <h2 className="mb-4 text-xl font-semibold text-[#1d6b3a]">
                 {t('siamRdv.sections.slot', { defaultValue: 'Choisissez votre creneau' })}
               </h2>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
                 {slots.map((slot) => {
                   const isFull = fullSlots.has(slot.key)
                   const picked = selectedSlot === slot.key

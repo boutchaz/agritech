@@ -87,7 +87,7 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
           <p className="text-sm text-green-600 dark:text-green-400 mb-1">Total payé</p>
           <p className="text-2xl font-bold text-green-900 dark:text-green-100">

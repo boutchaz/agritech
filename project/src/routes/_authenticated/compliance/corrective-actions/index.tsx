@@ -126,7 +126,7 @@ function CorrectiveActionsPage() {
     >
     <div className="container mx-auto px-4 py-6 space-y-8">
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title={t('status.open')}
           value={stats?.open ?? 0}

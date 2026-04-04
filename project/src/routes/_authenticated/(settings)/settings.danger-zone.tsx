@@ -233,7 +233,7 @@ function DangerZonePage() {
         </div>
 
         {statsLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="p-3 rounded-lg border">
                 <div className="h-4 w-16 bg-muted animate-pulse rounded mb-2" />
@@ -243,7 +243,7 @@ function DangerZonePage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
               {statsData?.stats && Object.entries(statsData.stats).map(([key, count]) => {
                 const Icon = STAT_ICONS[key] || Package;
                 return (

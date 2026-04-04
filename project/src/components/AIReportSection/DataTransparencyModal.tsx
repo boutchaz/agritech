@@ -512,7 +512,7 @@ const SourceDetails: React.FC<{
   return (
     <div className="space-y-4">
       {/* Basic Info Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {t('dataTransparency.dataPoints', 'Data Points')}

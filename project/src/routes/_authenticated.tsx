@@ -134,7 +134,7 @@ function AuthenticatedLayout() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <div className="h-screen min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
         <Sidebar
           modules={modules}
           activeModule={activeModule}
@@ -144,7 +144,7 @@ function AuthenticatedLayout() {
         />
         {/* Main content with margin for fixed sidebar (desktop only) */}
         <div
-          className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+          className="flex min-h-0 min-w-0 flex-col h-screen transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
           <LegacyUserBanner />
@@ -166,7 +166,7 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </header> */}
-          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 lg:pb-0">
+          <main data-main-scroll className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 lg:pb-0">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

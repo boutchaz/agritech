@@ -407,7 +407,7 @@ const DashboardSettings: React.FC = () => {
           {t('dashboard.preview.title')}
         </h3>
         <div className="space-y-3 sm:space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {layout.topRow.map((item, index) => (
               <div key={index} className="min-h-9 sm:h-8 px-1 bg-green-100 dark:bg-green-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-green-800 dark:text-green-200">
                 {t(`dashboard.layoutOptions.${item}`)}

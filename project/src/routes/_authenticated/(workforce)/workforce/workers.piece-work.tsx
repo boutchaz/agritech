@@ -131,7 +131,7 @@ function PieceWorkPage() {
       </Card>
 
       {/* Statistics Cards (optional) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-sm text-muted-foreground">Total Records</div>
           <div className="text-2xl font-bold mt-1">-</div>

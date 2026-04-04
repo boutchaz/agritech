@@ -740,7 +740,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   ✕
                 </Button>
               </div>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
                 {timeSeriesIndices.map((index) => {
                   const isSelected = selectedIndices.includes(index);
                   return (
@@ -773,7 +773,7 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             <div className="space-y-4">
               {/* Statistics */}
               {timeSeriesData.statistics && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       Moyenne

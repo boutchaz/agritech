@@ -252,7 +252,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4" data-tour="billing-stats">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 sm:gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
