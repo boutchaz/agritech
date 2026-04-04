@@ -26,6 +26,20 @@ const defaultSettings: DashboardSettingsType = {
   }
 };
 
+/** API may omit or partially return `layout` — never read `.topRow` on undefined */
+function normalizeDashboardLayout(raw: unknown): DashboardSettingsType['layout'] {
+  const d = defaultSettings.layout;
+  if (!raw || typeof raw !== 'object') {
+    return { topRow: [...d.topRow], middleRow: [...d.middleRow], bottomRow: [...d.bottomRow] };
+  }
+  const L = raw as Record<string, unknown>;
+  return {
+    topRow: Array.isArray(L.topRow) ? L.topRow.map(String) : [...d.topRow],
+    middleRow: Array.isArray(L.middleRow) ? L.middleRow.map(String) : [...d.middleRow],
+    bottomRow: Array.isArray(L.bottomRow) ? L.bottomRow.map(String) : [...d.bottomRow],
+  };
+}
+
 const DashboardSettings: React.FC = () => {
   const { user, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -42,16 +56,16 @@ const DashboardSettings: React.FC = () => {
       const data = await dashboardSettingsApi.getSettings(currentOrganization.id);
 
       if (data) {
-        const fetchedSettings = {
-          showSoilData: data.show_soil_data,
-          showClimateData: data.show_climate_data,
-          showIrrigationData: data.show_irrigation_data,
-          showMaintenanceData: data.show_maintenance_data,
-          showProductionData: data.show_production_data,
-          showFinancialData: data.show_financial_data,
-          showStockAlerts: data.show_stock_alerts,
-          showTaskAlerts: data.show_task_alerts,
-          layout: data.layout
+        const fetchedSettings: DashboardSettingsType = {
+          showSoilData: data.show_soil_data ?? defaultSettings.showSoilData,
+          showClimateData: data.show_climate_data ?? defaultSettings.showClimateData,
+          showIrrigationData: data.show_irrigation_data ?? defaultSettings.showIrrigationData,
+          showMaintenanceData: data.show_maintenance_data ?? defaultSettings.showMaintenanceData,
+          showProductionData: data.show_production_data ?? defaultSettings.showProductionData,
+          showFinancialData: data.show_financial_data ?? defaultSettings.showFinancialData,
+          showStockAlerts: data.show_stock_alerts ?? defaultSettings.showStockAlerts,
+          showTaskAlerts: data.show_task_alerts ?? defaultSettings.showTaskAlerts,
+          layout: normalizeDashboardLayout(data.layout),
         };
         setSettings(fetchedSettings);
         return fetchedSettings;
@@ -101,15 +115,18 @@ const DashboardSettings: React.FC = () => {
   });
 
   const handleSettingChange = (key: keyof DashboardSettingsType, value: boolean) => {
-    const newSettings = {
+    setSettings({
       ...settings,
-      [key]: value
-    };
-    setSettings(newSettings);
+      [key]: value,
+      layout: normalizeDashboardLayout(settings.layout),
+    });
   };
 
   const handleSave = () => {
-    saveMutation.mutate(settings);
+    saveMutation.mutate({
+      ...settings,
+      layout: normalizeDashboardLayout(settings.layout),
+    });
   };
 
   if (isLoading) {
@@ -120,18 +137,23 @@ const DashboardSettings: React.FC = () => {
     );
   }
 
+  const layout = normalizeDashboardLayout(settings.layout);
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <LayoutGrid className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <div className="space-y-4 sm:space-y-6 w-full min-w-0">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="shrink-0 p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30">
+            <LayoutGrid className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
             {t('dashboard.title')}
           </h2>
         </div>
         <Button
           onClick={handleSave}
           disabled={saveMutation.isPending}
+          className="w-full sm:w-auto shrink-0 h-11 sm:h-10 rounded-xl"
         >
           {saveMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -143,8 +165,8 @@ const DashboardSettings: React.FC = () => {
       </div>
 
       {saveMutation.isError && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <div className="flex items-center space-x-2">
+        <div className="bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 rounded-xl">
+          <div className="flex items-start gap-2 sm:items-center sm:gap-3">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <p className="text-red-600 dark:text-red-400">
               {saveMutation.error instanceof Error
@@ -156,31 +178,31 @@ const DashboardSettings: React.FC = () => {
       )}
 
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+        <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-xl">
           <p className="text-green-600 dark:text-green-400">
             {t('dashboard.save.success')}
           </p>
         </div>
       )}
 
-      <p className="text-gray-600 dark:text-gray-400">
+      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
         {t('dashboard.description')}
       </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Data Display Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
             {t('dashboard.sections.dataDisplay')}
           </h3>
 
-          <div className="space-y-4">
-            <label className="flex items-center space-x-3">
+          <div className="space-y-3 sm:space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showSoilData}
                 onChange={(e) => handleSettingChange('showSoilData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.soil.title')}</span>
@@ -188,12 +210,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showClimateData}
                 onChange={(e) => handleSettingChange('showClimateData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.climate.title')}</span>
@@ -201,12 +223,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showIrrigationData}
                 onChange={(e) => handleSettingChange('showIrrigationData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.irrigation.title')}</span>
@@ -214,12 +236,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showMaintenanceData}
                 onChange={(e) => handleSettingChange('showMaintenanceData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.maintenance.title')}</span>
@@ -227,12 +249,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showProductionData}
                 onChange={(e) => handleSettingChange('showProductionData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.production.title')}</span>
@@ -240,12 +262,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showFinancialData}
                 onChange={(e) => handleSettingChange('showFinancialData', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.data.financial.title')}</span>
@@ -256,18 +278,18 @@ const DashboardSettings: React.FC = () => {
         </div>
 
         {/* Alerts Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
             {t('dashboard.sections.alerts')}
           </h3>
 
-          <div className="space-y-4">
-            <label className="flex items-center space-x-3">
+          <div className="space-y-3 sm:space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showStockAlerts}
                 onChange={(e) => handleSettingChange('showStockAlerts', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.alerts.stock.title')}</span>
@@ -275,12 +297,12 @@ const DashboardSettings: React.FC = () => {
               </div>
             </label>
 
-            <label className="flex items-center space-x-3">
+            <label className="flex items-start gap-3 cursor-pointer touch-manipulation">
               <input
                 type="checkbox"
                 checked={settings.showTaskAlerts}
                 onChange={(e) => handleSettingChange('showTaskAlerts', e.target.checked)}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="mt-0.5 shrink-0 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
               />
               <div>
                 <span className="font-medium text-gray-900 dark:text-white">{t('dashboard.alerts.tasks.title')}</span>
@@ -292,29 +314,30 @@ const DashboardSettings: React.FC = () => {
       </div>
 
       {/* Layout Configuration */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
           {t('dashboard.sections.layout')}
         </h3>
 
-        <div className="space-y-6">
-          <div>
+        <div className="space-y-5 sm:space-y-6">
+          <div className="min-w-0">
             <FormField label={t('dashboard.layout.topRow')} htmlFor="topRow" helper={t('dashboard.layout.helper')}>
               <Select
                 id="topRow"
                 multiple
-                value={settings.layout.topRow}
+                value={layout.topRow}
                 onChange={(e) => {
                   const values = Array.from(e.target.selectedOptions, option => option.value);
                   setSettings({
                     ...settings,
                     layout: {
-                      ...settings.layout,
+                      ...layout,
                       topRow: values
                     }
                   });
                 }}
                 size={4}
+                className="w-full min-h-[10rem] sm:min-h-[9rem] text-base"
               >
               <option value="soil">{t('dashboard.layoutOptions.soil')}</option>
               <option value="climate">{t('dashboard.layoutOptions.climate')}</option>
@@ -324,23 +347,24 @@ const DashboardSettings: React.FC = () => {
             </FormField>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <FormField label={t('dashboard.layout.middleRow')} htmlFor="middleRow">
               <Select
                 id="middleRow"
                 multiple
-                value={settings.layout.middleRow}
+                value={layout.middleRow}
                 onChange={(e) => {
                   const values = Array.from(e.target.selectedOptions, option => option.value);
                   setSettings({
                     ...settings,
                     layout: {
-                      ...settings.layout,
+                      ...layout,
                       middleRow: values
                     }
                   });
                 }}
                 size={3}
+                className="w-full min-h-[8rem] sm:min-h-[7rem] text-base"
               >
               <option value="production">{t('dashboard.layoutOptions.production')}</option>
               <option value="financial">{t('dashboard.layoutOptions.financial')}</option>
@@ -349,23 +373,24 @@ const DashboardSettings: React.FC = () => {
             </FormField>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <FormField label={t('dashboard.layout.bottomRow')} htmlFor="bottomRow">
               <Select
                 id="bottomRow"
                 multiple
-                value={settings.layout.bottomRow}
+                value={layout.bottomRow}
                 onChange={(e) => {
                   const values = Array.from(e.target.selectedOptions, option => option.value);
                   setSettings({
                     ...settings,
                     layout: {
-                      ...settings.layout,
+                      ...layout,
                       bottomRow: values
                     }
                   });
                 }}
                 size={3}
+                className="w-full min-h-[8rem] sm:min-h-[7rem] text-base"
               >
               <option value="alerts">{t('dashboard.layoutOptions.alerts')}</option>
               <option value="tasks">{t('dashboard.layoutOptions.tasks')}</option>
@@ -377,28 +402,28 @@ const DashboardSettings: React.FC = () => {
       </div>
 
       {/* Preview */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           {t('dashboard.preview.title')}
         </h3>
-        <div className="space-y-3">
-          <div className="grid grid-cols-4 gap-2">
-            {settings.layout.topRow.map((item, index) => (
-              <div key={index} className="h-8 bg-green-100 dark:bg-green-900 rounded text-xs flex items-center justify-center text-green-800 dark:text-green-200">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {layout.topRow.map((item, index) => (
+              <div key={index} className="min-h-9 sm:h-8 px-1 bg-green-100 dark:bg-green-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-green-800 dark:text-green-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            {settings.layout.middleRow.map((item, index) => (
-              <div key={index} className="h-8 bg-blue-100 dark:bg-blue-900 rounded text-xs flex items-center justify-center text-blue-800 dark:text-blue-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {layout.middleRow.map((item, index) => (
+              <div key={index} className="min-h-9 sm:h-8 px-1 bg-blue-100 dark:bg-blue-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-blue-800 dark:text-blue-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            {settings.layout.bottomRow.map((item, index) => (
-              <div key={index} className="h-8 bg-purple-100 dark:bg-purple-900 rounded text-xs flex items-center justify-center text-purple-800 dark:text-purple-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+            {layout.bottomRow.map((item, index) => (
+              <div key={index} className="min-h-9 sm:h-8 px-1 bg-purple-100 dark:bg-purple-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-purple-800 dark:text-purple-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}

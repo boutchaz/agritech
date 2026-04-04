@@ -421,8 +421,11 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
         </div>
       </TooltipProvider>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-auto w-full flex flex-col min-h-0 bg-slate-50/30 dark:bg-slate-900/30" data-main-scroll>
+      {/* Main Content Area — extra bottom padding on small screens (global bottom nav + safe area) */}
+      <div
+        className="flex-1 overflow-auto w-full flex flex-col min-h-0 bg-slate-50/30 dark:bg-slate-900/30 pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
+        data-main-scroll
+      >
         {/* Mobile section title bar */}
         <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
           <button
@@ -457,7 +460,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
           </button>
         </div>
         
-        <div className="flex-1 p-4 md:p-8 lg:p-10 max-w-[1400px] mx-auto w-full">
+        <div className="flex-1 px-3 pt-3 pb-20 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-6 md:p-8 md:pb-8 lg:p-10 lg:pb-10 min-w-0">
           {children}
         </div>
       </div>
